@@ -377,6 +377,12 @@ obsidian-vaults/researcher/
 5. ✅ Monitoring показывает статус агентов
 6. ✅ Rollback работает (версионирование + восстановление)
 7. ✅ Safety mechanisms работают (loop detection, timeouts)
+8. ✅ Secrets management (API keys в .env, не в коде)
+9. ✅ Automated backups (SQLite + Obsidian)
+10. ✅ Rate limiting для Claude API
+11. ✅ Graceful shutdown handler
+12. ✅ Basic testing (unit + integration)
+13. ✅ Deployment strategy (systemd/Docker)
 
 ### Should Have (Post-MVP)
 
@@ -384,12 +390,16 @@ obsidian-vaults/researcher/
 - Learning & Adaptation System
 - Strategic Planning System
 - Decision Arbiter
+- Distributed tracing
+- Cost tracking per agent
+- Database migrations strategy
 
 ### Nice to Have
 
 - Web UI для мониторинга
 - Grafana dashboards
-- Automated testing framework
+- Multi-tenancy support
+- GDPR compliance tools
 
 ---
 
@@ -417,10 +427,273 @@ obsidian-vaults/researcher/
 |------|--------|------------|
 | Context explosion | High | 40% rule, auto-compact, `/clear` |
 | Infinite loops | High | Loop detection, max depth, timeouts |
-| API costs | Medium | Rate limiting, caching, monitoring |
-| Data loss | High | Event sourcing, immutable log, backups |
+| API costs | Medium | Rate limiting, caching, monitoring, budget alerts |
+| Data loss | High | Event sourcing, immutable log, automated backups |
 | Agent conflicts | Medium | Decision Arbiter, clear rules |
 | Slow performance | Medium | Async-first, SQLite for events |
+| Secrets exposure | High | .env files, never commit secrets, encryption at rest |
+| SQLite corruption | High | Regular backups, WAL mode, integrity checks |
+| Obsidian vault deletion | Medium | Automated backups, version control |
+| Scalability limits | Medium | Monitor agent count, test at 100+ agents |
+| No alerting | Medium | Telegram/Slack integration, email alerts |
+| Migration failures | Medium | Database migration strategy, rollback plan |
+| Testing gaps | Medium | Unit + integration tests, mocking Claude API |
+
+---
+
+## Operational Requirements
+
+### 1. Secrets Management
+
+**Strategy:**
+- API keys в `.env` файле (gitignored)
+- Использовать `python-dotenv` для загрузки
+- Никогда не коммитить секреты в git
+- Rotation strategy: manual (MVP), automated (Post-MVP)
+
+**Implementation:**
+```python
+# .env
+ANTHROPIC_API_KEY=sk-ant-...
+DATABASE_URL=sqlite+aiosqlite:///./data/meai.db
+OBSIDIAN_VAULT_PATH=./obsidian
+
+# src/meai/config.py
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    anthropic_api_key: str
+    database_url: str
+    obsidian_vault_path: str
+    
+    class Config:
+        env_file = ".env"
+```
+
+### 2. Backup & Recovery
+
+**Automated Backups:**
+- SQLite: daily backup через cron/systemd timer
+- Obsidian: git auto-commit + push каждый час
+- Event log: append-only, никогда не удалять
+
+**Backup Script:**
+```bash
+#!/bin/bash
+# scripts/backup.sh
+DATE=$(date +%Y%m%d_%H%M%S)
+sqlite3 data/meai.db ".backup data/backups/meai_$DATE.db"
+cd obsidian && git add -A && git commit -m "Auto-backup $DATE" && git push
+```
+
+**Recovery:**
+- RPO (Recovery Point Objective): 1 час
+- RTO (Recovery Time Objective): 15 минут
+- Restore from latest backup + replay event log
+
+### 3. Rate Limiting
+
+**Claude API Rate Limiter:**
+```python
+# src/meai/core/rate_limiter.py
+from aiolimiter import AsyncLimiter
+
+# 50 requests per minute (adjust based on tier)
+rate_limiter = AsyncLimiter(max_rate=50, time_period=60)
+
+async def call_claude_api(prompt: str):
+    async with rate_limiter:
+        response = await anthropic.messages.create(...)
+        return response
+```
+
+**Budget Alerts:**
+- Track API costs в SQLite
+- Alert при 80% бюджета
+- Auto-shutdown при 100% (опционально)
+
+### 4. Deployment Strategy
+
+**Option A: systemd (Linux)**
+```ini
+# /etc/systemd/system/meai.service
+[Unit]
+Description=meAI Architect Service
+After=network.target
+
+[Service]
+Type=simple
+User=meai
+WorkingDirectory=/opt/meai
+ExecStart=/opt/meai/.venv/bin/uvicorn meai.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Option B: Docker**
+```dockerfile
+# Dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["uvicorn", "meai.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+### 5. Graceful Shutdown
+
+**Shutdown Handler:**
+```python
+# src/meai/main.py
+import signal
+import asyncio
+
+shutdown_event = asyncio.Event()
+
+def handle_shutdown(signum, frame):
+    print("Shutting down gracefully...")
+    shutdown_event.set()
+
+signal.signal(signal.SIGINT, handle_shutdown)
+signal.signal(signal.SIGTERM, handle_shutdown)
+
+@app.on_event("shutdown")
+async def shutdown():
+    # Close all connections
+    await db.close()
+    await event_bus.close()
+    # Save state
+    await save_state()
+```
+
+### 6. Testing Strategy
+
+**Unit Tests:**
+```python
+# tests/unit/test_agent_factory.py
+import pytest
+from meai.core.agent_factory import AgentFactory
+
+@pytest.mark.asyncio
+async def test_create_agent():
+    factory = AgentFactory()
+    agent = await factory.create_agent("test-agent", "subagent")
+    assert agent.name == "test-agent"
+    assert agent.vault_path.exists()
+```
+
+**Integration Tests:**
+```python
+# tests/integration/test_event_bus.py
+@pytest.mark.asyncio
+async def test_message_flow():
+    bus = EventBus()
+    await bus.publish("test", {"data": "hello"})
+    message = await bus.consume("test")
+    assert message["data"] == "hello"
+```
+
+**Mocking Claude API:**
+```python
+# tests/conftest.py
+@pytest.fixture
+def mock_claude_api(monkeypatch):
+    async def mock_create(*args, **kwargs):
+        return MockResponse(content="test response")
+    monkeypatch.setattr("anthropic.messages.create", mock_create)
+```
+
+### 7. Monitoring & Alerting
+
+**Health Check Endpoint:**
+```python
+# src/meai/main.py
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "uptime": get_uptime(),
+        "agents_count": await get_agents_count(),
+        "event_bus": await event_bus.health(),
+        "database": await db.health()
+    }
+```
+
+**Alerting:**
+- Telegram bot для критичных алертов
+- Email для некритичных
+- Slack integration (опционально)
+
+### 8. Database Migrations
+
+**Alembic для SQLAlchemy:**
+```bash
+# Создать миграцию
+alembic revision --autogenerate -m "add new table"
+
+# Применить миграцию
+alembic upgrade head
+
+# Откатить миграцию
+alembic downgrade -1
+```
+
+**Migration Strategy:**
+- Все изменения схемы через миграции
+- Тестировать на копии production данных
+- Rollback plan для каждой миграции
+
+### 9. Scalability Limits
+
+**Known Limits:**
+- SQLite: max 1000 concurrent connections (WAL mode)
+- Obsidian: no hard limit, но performance degradation при 10K+ files
+- Event Bus: limited by asyncio queue size (default 0 = unlimited)
+
+**Monitoring:**
+- Track agent count
+- Alert при > 80 агентах
+- Test at 100+ agents before production
+
+### 10. Documentation
+
+**Required Docs:**
+- `README.md` — Quick start
+- `ARCHITECTURE.md` — System design
+- `DEPLOYMENT.md` — How to deploy
+- `OPERATIONS.md` — Runbooks
+- `API.md` — API documentation
+- `ADRs/` — Architecture Decision Records
+
+---
+
+## Security Considerations
+
+### 1. Secrets Management
+- ✅ API keys в .env (gitignored)
+- ✅ No secrets in code
+- ⚠️ Encryption at rest (Post-MVP)
+- ⚠️ Secrets rotation (Post-MVP)
+
+### 2. Access Control
+- ✅ Obsidian vaults: file system permissions
+- ✅ SQLite: file system permissions
+- ⚠️ API authentication (Post-MVP)
+- ⚠️ Role-based access (Post-MVP)
+
+### 3. Data Privacy
+- ⚠️ GDPR compliance (if collecting personal data)
+- ⚠️ Data deletion on request
+- ⚠️ Audit trail for data access
+
+### 4. Network Security
+- ✅ HTTPS for API (if exposed)
+- ✅ Firewall rules
+- ⚠️ VPN for remote access (Post-MVP)
 
 ---
 
