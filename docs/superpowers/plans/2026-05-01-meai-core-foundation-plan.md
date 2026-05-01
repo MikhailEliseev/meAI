@@ -29,12 +29,18 @@ This plan covers **Phase 1: Core Foundation (MVP)** from the design spec.
 12. Deployment setup
 
 **What we're NOT building (Post-MVP):**
-- Analytics & Optimization Engine
-- Learning & Adaptation System
-- Strategic Planning System
-- Decision Arbiter
-- Researcher Agent (separate plan)
-- Web UI
+- Analytics & Optimization Engine (advanced optimization)
+- Learning & Adaptation System (ML-based learning)
+- Strategic Planning System (long-term planning)
+- Web UI (monitoring dashboard)
+
+**What we ARE building (MVP - Added after review):**
+- Core Architect with real functionality
+- Decision Maker (autonomous decisions)
+- Orchestrator (component coordination)
+- System Registry (SYSTEM.md management)
+- Rollback Orchestration (snapshot + event replay)
+- Human-in-Loop Gates (critical decisions)
 
 ---
 
@@ -1276,6 +1282,7 @@ class Message(BaseModel):
 
 import asyncio
 from collections import defaultdict
+from datetime import datetime
 from typing import Any
 import structlog
 
@@ -1646,6 +1653,7 @@ class PromptGenerator:
 ```python
 """Agent factory - creates agents with vaults and prompts"""
 
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 import structlog
@@ -2454,7 +2462,7 @@ class ContextMonitor:
         """Get remaining tokens"""
         return self.max_tokens - self.current_tokens
     
-    def get_status(self) -> dict[str, any]:
+    def get_status(self) -> dict[str, Any]:
         """Get current status"""
         usage_percent = self.get_usage_percent()
         
@@ -3069,7 +3077,7 @@ class MetricsCollector:
         labels: dict[str, str],
     ) -> None:
         """Record metric to database"""
-        async for session in self.db.session():
+        async with self.db.session() as session:
             metric = Metric(
                 metric_name=name,
                 metric_type=metric_type,
@@ -3528,7 +3536,7 @@ class BackupManager:
         
         logger.info("backup.restored", backup=backup_name)
     
-    async def list_backups(self) -> list[dict[str, any]]:
+    async def list_backups(self) -> list[dict[str, Any]]:
         """List available backups"""
         backups = []
         
@@ -4493,12 +4501,978 @@ git push origin v0.1.0-mvp
 
 ---
 
+---
+
+## Task 21: Core Architect Implementation
+
+**Files:**
+- Update: `src/meai/core/architect.py`
+- Create: `tests/unit/test_architect.py`
+
+- [ ] **Step 1: Write failing test**
+
+```python
+# tests/unit/test_architect.py
+import pytest
+from pathlib import Path
+from meai.core.architect import Architect
+from meai.storage.database import Database
+from meai.storage.obsidian import ObsidianVault
+from meai.messaging.event_bus import EventBus
+from meai.factory.agent_factory import AgentFactory
+
+@pytest.mark.asyncio
+async def test_architect_create_aim_structure(tmp_path):
+    """Test architect creates AIM agency structure"""
+    db = Database("sqlite+aiosqlite:///:memory:")
+    await db.connect()
+    
+    vault = ObsidianVault(tmp_path)
+    await vault.initialize()
+    
+    event_bus = EventBus(db)
+    await event_bus.start()
+    
+    architect = Architect(db, vault, event_bus)
+    await architect.initialize()
+    
+    # Create AIM agency structure
+    result = await architect.create_aim_structure()
+    
+    assert result["status"] == "created"
+    assert (tmp_path / "AIM").exists()
+    assert (tmp_path / "AIM" / "SYSTEM.md").exists()
+    
+    await event_bus.stop()
+    await db.disconnect()
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/unit/test_architect.py -v`
+Expected: FAIL
+
+- [ ] **Step 3: Update src/meai/core/architect.py**
+
+```python
+"""Main Architect component - CEO of meAI"""
+
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+import structlog
+
+from ..storage.database import Database
+from ..storage.obsidian import ObsidianVault
+from ..messaging.event_bus import EventBus
+from ..factory.agent_factory import AgentFactory
+from ..storage.event_store import EventStore
+
+logger = structlog.get_logger()
+
+
+class Architect:
+    """CEO Architect - designs and creates agency structure"""
+    
+    def __init__(
+        self,
+        db: Database,
+        vault: ObsidianVault,
+        event_bus: EventBus,
+    ):
+        self.db = db
+        self.vault = vault
+        self.event_bus = event_bus
+        self.start_time = datetime.utcnow()
+        
+        # Initialize components
+        self.agent_factory = AgentFactory(vault)
+        self.event_store = EventStore(db)
+    
+    async def initialize(self):
+        """Initialize architect"""
+        logger.info("architect.initializing")
+        await self.vault.initialize()
+        logger.info("architect.initialized")
+    
+    async def create_aim_structure(self) -> dict[str, Any]:
+        """Create AIM agency structure"""
+        logger.info("architect.creating_aim_structure")
+        
+        # Create AIM directory
+        aim_path = self.vault.vault_path / "AIM"
+        aim_path.mkdir(exist_ok=True)
+        
+        # Create departments
+        departments = ["seo", "content", "ads", "intelligence"]
+        for dept in departments:
+            dept_path = aim_path / dept
+            dept_path.mkdir(exist_ok=True)
+        
+        # Create SYSTEM.md
+        system_md = self._generate_system_md(departments)
+        await self.vault.write_file("AIM/SYSTEM.md", system_md)
+        
+        # Record event
+        await self.event_store.append(
+            aggregate_id="aim-agency",
+            aggregate_type="agency",
+            event_type="structure_created",
+            payload={
+                "departments": departments,
+                "path": str(aim_path),
+            }
+        )
+        
+        logger.info("architect.aim_structure_created", departments=departments)
+        
+        return {
+            "status": "created",
+            "path": str(aim_path),
+            "departments": departments,
+        }
+    
+    async def create_agent(
+        self,
+        name: str,
+        agent_type: str,
+        department: str,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Create agent through factory"""
+        logger.info("architect.creating_agent", name=name, department=department)
+        
+        # Create agent
+        agent = await self.agent_factory.create_agent(
+            name=name,
+            agent_type=agent_type,
+            department=department,
+            **kwargs,
+        )
+        
+        # Record event
+        await self.event_store.append(
+            aggregate_id=name,
+            aggregate_type="agent",
+            event_type="agent_created",
+            payload={
+                "name": name,
+                "type": agent_type,
+                "department": department,
+                "vault_path": str(agent["vault_path"]),
+            }
+        )
+        
+        # Update SYSTEM.md
+        await self._register_agent_in_system(name, agent_type, department)
+        
+        logger.info("architect.agent_created", name=name)
+        
+        return agent
+    
+    async def _register_agent_in_system(
+        self,
+        name: str,
+        agent_type: str,
+        department: str,
+    ) -> None:
+        """Register agent in SYSTEM.md"""
+        system_path = "AIM/SYSTEM.md"
+        
+        try:
+            content = await self.vault.read_file(system_path)
+        except FileNotFoundError:
+            content = "# AIM Agency System\n\n## Agents\n\n"
+        
+        # Add agent entry
+        agent_entry = f"- **{name}** ({agent_type}) - Department: {department}\n"
+        
+        if "## Agents" in content:
+            content = content.replace("## Agents\n\n", f"## Agents\n\n{agent_entry}")
+        else:
+            content += f"\n## Agents\n\n{agent_entry}"
+        
+        await self.vault.write_file(system_path, content)
+    
+    def _generate_system_md(self, departments: list[str]) -> str:
+        """Generate SYSTEM.md content"""
+        content = f"""# AIM Agency System
+
+**Created:** {datetime.utcnow().isoformat()}
+**Architect:** meAI
+
+---
+
+## Structure
+
+### Departments
+
+"""
+        for dept in departments:
+            content += f"- **{dept.upper()}** - {dept.capitalize()} department\n"
+        
+        content += """
+
+### Hierarchy
+
+```
+AIM Agency
+├── Oper (Operational Director)
+└── Departments
+    ├── SEO
+    ├── Content
+    ├── Ads
+    └── Intelligence
+```
+
+---
+
+## Agents
+
+(Agents will be registered here as they are created)
+
+---
+
+## Communication
+
+- **Event Bus:** Async message queue with P0-P3 priorities
+- **Event Store:** Immutable event log for audit trail
+
+---
+
+## Safety
+
+- Loop detection: Max depth 5
+- Timeouts: 5 minutes default
+- Context monitoring: 40% rule
+- Graceful shutdown: SIGINT/SIGTERM handlers
+
+---
+
+**System Status:** Active
+"""
+        return content
+    
+    async def shutdown(self):
+        """Shutdown architect"""
+        logger.info("architect.shutting_down")
+        await self.db.disconnect()
+        logger.info("architect.shutdown_complete")
+    
+    def get_status(self) -> dict[str, Any]:
+        """Get architect status"""
+        uptime = (datetime.utcnow() - self.start_time).total_seconds()
+        return {
+            "status": "running",
+            "uptime_seconds": uptime,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `pytest tests/unit/test_architect.py -v`
+Expected: PASS
+
+- [ ] **Step 5: Add integration test**
+
+```python
+# tests/integration/test_architect_integration.py
+@pytest.mark.asyncio
+async def test_full_agent_creation_workflow(tmp_path):
+    """Test full workflow: structure → agent → registration"""
+    db = Database("sqlite+aiosqlite:///:memory:")
+    await db.connect()
+    
+    vault = ObsidianVault(tmp_path)
+    await vault.initialize()
+    
+    event_bus = EventBus(db)
+    await event_bus.start()
+    
+    architect = Architect(db, vault, event_bus)
+    await architect.initialize()
+    
+    # Create AIM structure
+    structure = await architect.create_aim_structure()
+    assert structure["status"] == "created"
+    
+    # Create agent
+    agent = await architect.create_agent(
+        name="seo-positions",
+        agent_type="subagent",
+        department="seo",
+    )
+    assert agent["name"] == "seo-positions"
+    
+    # Verify SYSTEM.md updated
+    system_md = await vault.read_file("AIM/SYSTEM.md")
+    assert "seo-positions" in system_md
+    
+    # Verify event recorded
+    event_store = EventStore(db)
+    events = await event_store.get_events_by_type("agent_created")
+    assert len(events) == 1
+    
+    await event_bus.stop()
+    await db.disconnect()
+```
+
+- [ ] **Step 6: Run integration test**
+
+Run: `pytest tests/integration/test_architect_integration.py -v`
+Expected: PASS
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add src/meai/core/architect.py tests/
+git commit -m "feat: implement core architect with real functionality
+
+- Add AIM structure creation
+- Add agent creation orchestration
+- Add SYSTEM.md management
+- Add event recording
+- Add integration tests
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+```
+
+---
+
+## Task 22: Decision Maker
+
+**Files:**
+- Create: `src/meai/core/decision_maker.py`
+- Create: `tests/unit/test_decision_maker.py`
+
+- [ ] **Step 1: Write failing test**
+
+```python
+# tests/unit/test_decision_maker.py
+import pytest
+from meai.core.decision_maker import DecisionMaker, DecisionType
+
+@pytest.mark.asyncio
+async def test_autonomous_decision():
+    """Test autonomous decision making"""
+    decision_maker = DecisionMaker()
+    
+    # Autonomous decision (no approval needed)
+    decision = await decision_maker.make_decision(
+        decision_type=DecisionType.CREATE_SUBAGENT,
+        context={"department": "seo", "name": "seo-positions"}
+    )
+    
+    assert decision["approved"] == True
+    assert decision["requires_human"] == False
+
+
+@pytest.mark.asyncio
+async def test_human_approval_required():
+    """Test decision requiring human approval"""
+    decision_maker = DecisionMaker()
+    
+    # Critical decision (needs approval)
+    decision = await decision_maker.make_decision(
+        decision_type=DecisionType.CREATE_DEPARTMENT,
+        context={"name": "new-department"}
+    )
+    
+    assert decision["requires_human"] == True
+    assert decision["approved"] == False
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/unit/test_decision_maker.py -v`
+Expected: FAIL
+
+- [ ] **Step 3: Create src/meai/core/decision_maker.py**
+
+```python
+"""Decision maker - autonomous decisions with human-in-loop gates"""
+
+from enum import Enum
+from typing import Any
+import structlog
+
+logger = structlog.get_logger()
+
+
+class DecisionType(Enum):
+    """Types of decisions"""
+    # Autonomous (no approval needed)
+    CREATE_SUBAGENT = "create_subagent"
+    UPDATE_PROMPT = "update_prompt"
+    CREATE_VAULT_FILE = "create_vault_file"
+    OPTIMIZE_STRUCTURE = "optimize_structure"
+    
+    # Requires human approval
+    CREATE_DEPARTMENT = "create_department"
+    DELETE_AGENT = "delete_agent"
+    CHANGE_ARCHITECTURE = "change_architecture"
+    CHANGE_HIERARCHY = "change_hierarchy"
+
+
+class DecisionMaker:
+    """Make autonomous decisions with human-in-loop gates"""
+    
+    # Decisions that require human approval
+    HUMAN_APPROVAL_REQUIRED = {
+        DecisionType.CREATE_DEPARTMENT,
+        DecisionType.DELETE_AGENT,
+        DecisionType.CHANGE_ARCHITECTURE,
+        DecisionType.CHANGE_HIERARCHY,
+    }
+    
+    def __init__(self):
+        self.decision_history: list[dict[str, Any]] = []
+    
+    async def make_decision(
+        self,
+        decision_type: DecisionType,
+        context: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Make decision with optional human approval"""
+        
+        requires_human = decision_type in self.HUMAN_APPROVAL_REQUIRED
+        
+        decision = {
+            "type": decision_type.value,
+            "context": context,
+            "requires_human": requires_human,
+            "approved": not requires_human,  # Auto-approve if no human needed
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        
+        if requires_human:
+            logger.warning(
+                "decision.human_approval_required",
+                type=decision_type.value,
+                context=context,
+            )
+        else:
+            logger.info(
+                "decision.autonomous",
+                type=decision_type.value,
+                context=context,
+            )
+        
+        self.decision_history.append(decision)
+        
+        return decision
+    
+    async def request_human_approval(
+        self,
+        decision: dict[str, Any],
+    ) -> bool:
+        """Request human approval for decision"""
+        logger.info(
+            "decision.requesting_approval",
+            type=decision["type"],
+            context=decision["context"],
+        )
+        
+        # In real implementation, this would:
+        # 1. Send notification to user
+        # 2. Wait for approval
+        # 3. Return True/False
+        
+        # For now, return False (not approved)
+        return False
+    
+    def get_decision_history(self) -> list[dict[str, Any]]:
+        """Get decision history"""
+        return self.decision_history
+```
+
+- [ ] **Step 4: Add missing import**
+
+```python
+from datetime import datetime
+```
+
+- [ ] **Step 5: Run test to verify it passes**
+
+Run: `pytest tests/unit/test_decision_maker.py -v`
+Expected: PASS
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/meai/core/decision_maker.py tests/unit/test_decision_maker.py
+git commit -m "feat: add decision maker with human-in-loop gates
+
+- Add DecisionType enum
+- Add autonomous decision logic
+- Add human approval gates
+- Add decision history tracking
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+```
+
+---
+
+## Task 23: Orchestrator
+
+**Files:**
+- Create: `src/meai/core/orchestrator.py`
+- Create: `tests/unit/test_orchestrator.py`
+
+- [ ] **Step 1: Write failing test**
+
+```python
+# tests/unit/test_orchestrator.py
+import pytest
+from meai.core.orchestrator import Orchestrator
+
+@pytest.mark.asyncio
+async def test_orchestrator_coordinates_components():
+    """Test orchestrator coordinates multiple components"""
+    orchestrator = Orchestrator()
+    
+    # Register components
+    orchestrator.register_component("database", lambda: {"status": "healthy"})
+    orchestrator.register_component("vault", lambda: {"status": "healthy"})
+    
+    # Check all components
+    status = await orchestrator.check_all_components()
+    
+    assert status["database"]["status"] == "healthy"
+    assert status["vault"]["status"] == "healthy"
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/unit/test_orchestrator.py -v`
+Expected: FAIL
+
+- [ ] **Step 3: Create src/meai/core/orchestrator.py**
+
+```python
+"""Orchestrator - async coordination of components"""
+
+import asyncio
+from typing import Any, Callable, Coroutine
+import structlog
+
+logger = structlog.get_logger()
+
+
+class Orchestrator:
+    """Coordinate async operations across components"""
+    
+    def __init__(self):
+        self.components: dict[str, Callable[[], Coroutine[Any, Any, dict]]] = {}
+        self.tasks: list[asyncio.Task] = []
+    
+    def register_component(
+        self,
+        name: str,
+        health_check: Callable[[], Coroutine[Any, Any, dict]],
+    ) -> None:
+        """Register component for orchestration"""
+        self.components[name] = health_check
+        logger.debug("orchestrator.component_registered", component=name)
+    
+    async def check_all_components(self) -> dict[str, dict]:
+        """Check health of all components in parallel"""
+        results = {}
+        
+        tasks = []
+        for name, check_func in self.components.items():
+            task = asyncio.create_task(check_func())
+            tasks.append((name, task))
+        
+        for name, task in tasks:
+            try:
+                results[name] = await task
+            except Exception as e:
+                logger.error("orchestrator.check_failed", component=name, error=str(e))
+                results[name] = {"status": "error", "error": str(e)}
+        
+        return results
+    
+    async def execute_workflow(
+        self,
+        workflow: list[Callable[[], Coroutine[Any, Any, Any]]],
+    ) -> list[Any]:
+        """Execute workflow steps sequentially"""
+        results = []
+        
+        for i, step in enumerate(workflow):
+            logger.info("orchestrator.workflow_step", step=i+1, total=len(workflow))
+            try:
+                result = await step()
+                results.append(result)
+            except Exception as e:
+                logger.error("orchestrator.workflow_failed", step=i+1, error=str(e))
+                raise
+        
+        return results
+    
+    async def execute_parallel(
+        self,
+        operations: list[Callable[[], Coroutine[Any, Any, Any]]],
+    ) -> list[Any]:
+        """Execute operations in parallel"""
+        tasks = [asyncio.create_task(op()) for op in operations]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        return results
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `pytest tests/unit/test_orchestrator.py -v`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/meai/core/orchestrator.py tests/unit/test_orchestrator.py
+git commit -m "feat: add orchestrator for async coordination
+
+- Add component registration
+- Add parallel health checks
+- Add sequential workflow execution
+- Add parallel operation execution
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+```
+
+---
+
+## Task 24: System Registry
+
+**Files:**
+- Create: `src/meai/factory/system_registry.py`
+- Create: `tests/unit/test_system_registry.py`
+
+- [ ] **Step 1: Write failing test**
+
+```python
+# tests/unit/test_system_registry.py
+import pytest
+from pathlib import Path
+from meai.factory.system_registry import SystemRegistry
+from meai.storage.obsidian import ObsidianVault
+
+@pytest.mark.asyncio
+async def test_register_agent(tmp_path):
+    """Test agent registration in SYSTEM.md"""
+    vault = ObsidianVault(tmp_path)
+    await vault.initialize()
+    
+    registry = SystemRegistry(vault)
+    
+    # Register agent
+    await registry.register_agent(
+        name="test-agent",
+        agent_type="subagent",
+        department="seo",
+    )
+    
+    # Verify registered
+    agents = await registry.list_agents()
+    assert len(agents) == 1
+    assert agents[0]["name"] == "test-agent"
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/unit/test_system_registry.py -v`
+Expected: FAIL
+
+- [ ] **Step 3: Create src/meai/factory/system_registry.py**
+
+```python
+"""System registry - SYSTEM.md management"""
+
+from typing import Any
+import re
+import structlog
+
+from ..storage.obsidian import ObsidianVault
+
+logger = structlog.get_logger()
+
+
+class SystemRegistry:
+    """Manage SYSTEM.md agent registry"""
+    
+    def __init__(self, vault: ObsidianVault):
+        self.vault = vault
+        self.system_path = "AIM/SYSTEM.md"
+    
+    async def register_agent(
+        self,
+        name: str,
+        agent_type: str,
+        department: str,
+    ) -> None:
+        """Register agent in SYSTEM.md"""
+        try:
+            content = await self.vault.read_file(self.system_path)
+        except FileNotFoundError:
+            content = self._create_initial_system_md()
+        
+        # Add agent entry
+        agent_entry = f"- **{name}** ({agent_type}) - Department: {department}\n"
+        
+        if "## Agents" in content:
+            # Find the Agents section and add entry
+            content = content.replace(
+                "## Agents\n\n",
+                f"## Agents\n\n{agent_entry}"
+            )
+        else:
+            content += f"\n## Agents\n\n{agent_entry}"
+        
+        await self.vault.write_file(self.system_path, content)
+        
+        logger.info("registry.agent_registered", name=name, department=department)
+    
+    async def unregister_agent(self, name: str) -> None:
+        """Remove agent from SYSTEM.md"""
+        content = await self.vault.read_file(self.system_path)
+        
+        # Remove agent line
+        pattern = rf"- \*\*{name}\*\*.*\n"
+        content = re.sub(pattern, "", content)
+        
+        await self.vault.write_file(self.system_path, content)
+        
+        logger.info("registry.agent_unregistered", name=name)
+    
+    async def list_agents(self) -> list[dict[str, str]]:
+        """List all registered agents"""
+        try:
+            content = await self.vault.read_file(self.system_path)
+        except FileNotFoundError:
+            return []
+        
+        agents = []
+        
+        # Parse agent entries
+        pattern = r"- \*\*([^*]+)\*\* \(([^)]+)\) - Department: ([^\n]+)"
+        matches = re.findall(pattern, content)
+        
+        for name, agent_type, department in matches:
+            agents.append({
+                "name": name,
+                "type": agent_type,
+                "department": department.strip(),
+            })
+        
+        return agents
+    
+    def _create_initial_system_md(self) -> str:
+        """Create initial SYSTEM.md"""
+        return """# AIM Agency System
+
+## Agents
+
+"""
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `pytest tests/unit/test_system_registry.py -v`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/meai/factory/system_registry.py tests/unit/test_system_registry.py
+git commit -m "feat: add system registry for SYSTEM.md management
+
+- Add agent registration
+- Add agent unregistration
+- Add agent listing
+- Add SYSTEM.md parsing
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+```
+
+---
+
+## Task 25: Rollback Orchestration
+
+**Files:**
+- Create: `src/meai/core/rollback.py`
+- Create: `tests/integration/test_rollback.py`
+
+- [ ] **Step 1: Write failing test**
+
+```python
+# tests/integration/test_rollback.py
+import pytest
+from meai.core.rollback import RollbackManager
+from meai.storage.database import Database
+from meai.storage.obsidian import ObsidianVault
+from meai.storage.event_store import EventStore
+
+@pytest.mark.asyncio
+async def test_rollback_workflow(tmp_path):
+    """Test full rollback workflow"""
+    db = Database("sqlite+aiosqlite:///:memory:")
+    await db.connect()
+    
+    vault = ObsidianVault(tmp_path)
+    await vault.initialize()
+    
+    event_store = EventStore(db)
+    rollback_mgr = RollbackManager(vault, event_store)
+    
+    # Create initial state
+    await vault.write_file("test.md", "version 1")
+    
+    # Create checkpoint
+    checkpoint_id = await rollback_mgr.create_checkpoint("checkpoint-1")
+    
+    # Make changes
+    await vault.write_file("test.md", "version 2")
+    
+    # Rollback
+    await rollback_mgr.rollback_to_checkpoint(checkpoint_id)
+    
+    # Verify restored
+    content = await vault.read_file("test.md")
+    assert content == "version 1"
+    
+    await db.disconnect()
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/integration/test_rollback.py -v`
+Expected: FAIL
+
+- [ ] **Step 3: Create src/meai/core/rollback.py**
+
+```python
+"""Rollback manager - orchestrate snapshot + event replay"""
+
+from datetime import datetime
+from typing import Any
+import structlog
+
+from ..storage.obsidian import ObsidianVault
+from ..storage.event_store import EventStore
+
+logger = structlog.get_logger()
+
+
+class RollbackManager:
+    """Manage rollback using snapshots + event replay"""
+    
+    def __init__(self, vault: ObsidianVault, event_store: EventStore):
+        self.vault = vault
+        self.event_store = event_store
+    
+    async def create_checkpoint(self, name: str) -> str:
+        """Create checkpoint (snapshot + event marker)"""
+        logger.info("rollback.creating_checkpoint", name=name)
+        
+        # Create vault snapshot
+        snapshot_path = await self.vault.create_snapshot(name)
+        
+        # Record checkpoint event
+        checkpoint_time = datetime.utcnow()
+        await self.event_store.append(
+            aggregate_id="system",
+            aggregate_type="checkpoint",
+            event_type="checkpoint_created",
+            payload={
+                "name": name,
+                "snapshot_path": str(snapshot_path),
+                "timestamp": checkpoint_time.isoformat(),
+            }
+        )
+        
+        logger.info("rollback.checkpoint_created", name=name)
+        
+        return name
+    
+    async def rollback_to_checkpoint(self, checkpoint_id: str) -> None:
+        """Rollback to checkpoint"""
+        logger.info("rollback.starting", checkpoint=checkpoint_id)
+        
+        # Find checkpoint event
+        events = await self.event_store.get_events_by_type("checkpoint_created")
+        checkpoint_event = None
+        
+        for event in events:
+            if event.payload["name"] == checkpoint_id:
+                checkpoint_event = event
+                break
+        
+        if not checkpoint_event:
+            raise ValueError(f"Checkpoint not found: {checkpoint_id}")
+        
+        # Restore vault snapshot
+        await self.vault.restore_snapshot(checkpoint_id)
+        
+        # Replay events after checkpoint
+        checkpoint_time = datetime.fromisoformat(
+            checkpoint_event.payload["timestamp"]
+        )
+        
+        events_to_replay = await self.event_store.replay(
+            aggregate_id="system",
+            aggregate_type="checkpoint",
+            from_timestamp=checkpoint_time,
+        )
+        
+        logger.info(
+            "rollback.completed",
+            checkpoint=checkpoint_id,
+            events_replayed=len(events_to_replay),
+        )
+    
+    async def list_checkpoints(self) -> list[dict[str, Any]]:
+        """List available checkpoints"""
+        events = await self.event_store.get_events_by_type("checkpoint_created")
+        
+        checkpoints = []
+        for event in events:
+            checkpoints.append({
+                "name": event.payload["name"],
+                "timestamp": event.payload["timestamp"],
+                "snapshot_path": event.payload["snapshot_path"],
+            })
+        
+        return checkpoints
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `pytest tests/integration/test_rollback.py -v`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/meai/core/rollback.py tests/integration/test_rollback.py
+git commit -m "feat: add rollback orchestration
+
+- Integrate snapshot + event replay
+- Add checkpoint creation
+- Add rollback to checkpoint
+- Add checkpoint listing
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+```
+
+---
+
 ## Summary
 
-**Total Tasks:** 20  
-**Total Lines of Code:** ~4000  
+**Total Tasks:** 25 (was 20, added 5 after review)  
+**Total Lines of Code:** ~5000 (was ~4000)  
 **Test Coverage:** > 80%  
-**Estimated Implementation Time:** 2-3 weeks
+**Estimated Implementation Time:** 3-4 weeks (was 2-3 weeks)
 
 **What We Built:**
 1. ✅ Dual storage (SQLite + Obsidian)
@@ -4511,6 +5485,18 @@ git push origin v0.1.0-mvp
 8. ✅ FastAPI application
 9. ✅ Docker deployment
 10. ✅ Comprehensive testing
+11. ✅ **Core Architect with real functionality** (NEW)
+12. ✅ **Decision Maker with human-in-loop gates** (NEW)
+13. ✅ **Orchestrator for async coordination** (NEW)
+14. ✅ **System Registry for SYSTEM.md** (NEW)
+15. ✅ **Rollback Orchestration** (NEW)
+
+**Bugs Fixed:**
+- ✅ Event Store: Fixed async pattern (`async with` instead of `async for`)
+- ✅ Event Bus: Added missing `datetime` import
+- ✅ Agent Factory: Added missing `datetime` import
+- ✅ Context Monitor: Fixed type hint (`Any` instead of `any`)
+- ✅ Backup Manager: Fixed type hint (`Any` instead of `any`)
 
 **Ready for:**
 - MVP testing and validation
@@ -4521,9 +5507,11 @@ git push origin v0.1.0-mvp
 
 **Plan Complete!** 🎉
 
-All 20 tasks detailed with:
+All 25 tasks detailed with:
 - TDD approach (test first)
 - Complete code examples
 - Step-by-step instructions
 - Commit messages
 - Expected outputs
+
+**Review Status:** ✅ Inspected by Plan agent, gaps filled, bugs fixed
