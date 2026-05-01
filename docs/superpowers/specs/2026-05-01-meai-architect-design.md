@@ -372,20 +372,21 @@ obsidian-vaults/researcher/
 
 1. ✅ meAI может создать структуру AIM (папки, SYSTEM.md)
 2. ✅ Agent Factory работает (создаёт агентов с vaults и промптами)
-3. ✅ Researcher собирает данные через субагентов
-4. ✅ Event Bus работает (SQLite + async)
-5. ✅ Monitoring показывает статус агентов
-6. ✅ Rollback работает (версионирование + восстановление)
-7. ✅ Safety mechanisms работают (loop detection, timeouts)
-8. ✅ Secrets management (API keys в .env, не в коде)
-9. ✅ Automated backups (SQLite + Obsidian)
-10. ✅ Rate limiting для Claude API
-11. ✅ Graceful shutdown handler
-12. ✅ Basic testing (unit + integration)
-13. ✅ Deployment strategy (systemd/Docker)
+3. ✅ Event Bus работает (SQLite + async)
+4. ✅ Monitoring показывает статус агентов
+5. ✅ Rollback работает (версионирование + восстановление)
+6. ✅ Safety mechanisms работают (loop detection, timeouts)
+7. ✅ Secrets management (API keys в .env, не в коде)
+8. ✅ Automated backups (SQLite + Obsidian)
+9. ✅ Rate limiting для Claude API
+10. ✅ Graceful shutdown handler
+11. ✅ Basic testing (unit + integration)
+12. ✅ Deployment strategy (systemd/Docker)
+13. ✅ Alerting system (Telegram/Slack notifications)
 
 ### Should Have (Post-MVP)
 
+- Researcher Agent (market intelligence gathering)
 - Analytics & Optimization Engine
 - Learning & Adaptation System
 - Strategic Planning System

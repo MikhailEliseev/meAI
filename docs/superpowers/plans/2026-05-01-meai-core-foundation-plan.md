@@ -2967,16 +2967,172 @@ async def test_check_specific_component():
 Run: `pytest tests/unit/test_health.py -v`
 Expected: All tests PASS
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Add Telegram alerting (optional but recommended)**
+
+```python
+# src/meai/monitoring/alerting.py
+"""Alerting system for health check failures"""
+
+import os
+from typing import Optional
+import structlog
+import httpx
+
+logger = structlog.get_logger()
+
+
+class TelegramAlerter:
+    """Send alerts via Telegram"""
+    
+    def __init__(self):
+        self.bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+        self.chat_id = os.getenv("TELEGRAM_CHAT_ID")
+        self.enabled = bool(self.bot_token and self.chat_id)
+        
+        if not self.enabled:
+            logger.warning("telegram.alerting_disabled", reason="missing_credentials")
+    
+    async def send_alert(self, message: str) -> bool:
+        """Send alert message"""
+        if not self.enabled:
+            logger.debug("telegram.alert_skipped", reason="disabled")
+            return False
+        
+        url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    url,
+                    json={
+                        "chat_id": self.chat_id,
+                        "text": message,
+                        "parse_mode": "Markdown",
+                    },
+                    timeout=5.0,
+                )
+                response.raise_for_status()
+                logger.info("telegram.alert_sent")
+                return True
+        except Exception as e:
+            logger.error("telegram.alert_failed", error=str(e))
+            return False
+
+
+class HealthAlerter:
+    """Monitor health and send alerts on failures"""
+    
+    def __init__(self, health_checker, alerter: Optional[TelegramAlerter] = None):
+        self.health_checker = health_checker
+        self.alerter = alerter or TelegramAlerter()
+        self.last_status = {}
+    
+    async def check_and_alert(self) -> dict:
+        """Check health and send alerts if status changed"""
+        health = await self.health_checker.check_health()
+        
+        # Check if status changed
+        current_status = health["status"]
+        previous_status = self.last_status.get("overall")
+        
+        if current_status != previous_status:
+            if current_status == "unhealthy":
+                await self._send_unhealthy_alert(health)
+            elif current_status == "healthy" and previous_status == "unhealthy":
+                await self._send_recovered_alert()
+        
+        # Check component status changes
+        for component, status in health.get("components", {}).items():
+            prev_comp_status = self.last_status.get(component)
+            curr_comp_status = status.get("status")
+            
+            if curr_comp_status != prev_comp_status:
+                if curr_comp_status == "unhealthy":
+                    await self._send_component_alert(component, status)
+        
+        # Update last status
+        self.last_status["overall"] = current_status
+        for component, status in health.get("components", {}).items():
+            self.last_status[component] = status.get("status")
+        
+        return health
+    
+    async def _send_unhealthy_alert(self, health: dict) -> None:
+        """Send alert for unhealthy system"""
+        message = "🚨 *meAI System Unhealthy*\n\n"
+        
+        for component, status in health.get("components", {}).items():
+            if status["status"] == "unhealthy":
+                error = status.get("error", "Unknown error")
+                message += f"❌ {component}: {error}\n"
+        
+        await self.alerter.send_alert(message)
+    
+    async def _send_recovered_alert(self) -> None:
+        """Send alert for system recovery"""
+        message = "✅ *meAI System Recovered*\n\nAll components are healthy."
+        await self.alerter.send_alert(message)
+    
+    async def _send_component_alert(self, component: str, status: dict) -> None:
+        """Send alert for component failure"""
+        error = status.get("error", "Unknown error")
+        message = f"⚠️ *Component Alert*\n\n❌ {component}: {error}"
+        await self.alerter.send_alert(message)
+```
+
+Add to `.env.example`:
+```bash
+# Telegram Alerting (optional)
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+TELEGRAM_CHAT_ID=your_chat_id_here
+```
+
+Add test:
+```python
+# tests/unit/test_alerting.py
+import pytest
+from meai.monitoring.alerting import TelegramAlerter, HealthAlerter
+from meai.monitoring.health import HealthChecker
+
+@pytest.mark.asyncio
+async def test_health_alerter():
+    """Test health alerting"""
+    checker = HealthChecker()
+    alerter = HealthAlerter(checker)
+    
+    # Register healthy component
+    async def db_health():
+        return {"status": "healthy"}
+    
+    checker.register_component("database", db_health)
+    
+    # First check - no alert (initial state)
+    health = await alerter.check_and_alert()
+    assert health["status"] == "healthy"
+    
+    # Simulate failure
+    async def db_health_fail():
+        return {"status": "unhealthy", "error": "Connection failed"}
+    
+    checker.components["database"] = db_health_fail
+    
+    # Second check - should detect change
+    health = await alerter.check_and_alert()
+    assert health["status"] == "unhealthy"
+```
+
+- [ ] **Step 9: Commit**
 
 ```bash
-git add src/meai/monitoring/health.py tests/unit/test_health.py
-git commit -m "feat: add health check system
+git add src/meai/monitoring/health.py src/meai/monitoring/alerting.py tests/
+git commit -m "feat: add health check system with Telegram alerting
 
 - Add HealthChecker with component registration
 - Add overall and per-component health checks
 - Add uptime tracking
 - Add error handling for failed checks
+- Add Telegram alerting for health failures
+- Add HealthAlerter for status change detection
 - Add comprehensive tests
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
@@ -3421,15 +3577,231 @@ async def test_monthly_reset():
 Run: `pytest tests/unit/test_rate_limiter.py -v`
 Expected: All tests PASS
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Add cost persistence to SQLite**
+
+Update `src/meai/utils/rate_limiter.py` to persist costs:
+
+```python
+"""Rate limiter for Claude API calls with cost persistence"""
+
+from aiolimiter import AsyncLimiter
+from datetime import datetime
+from typing import Optional
+import structlog
+
+logger = structlog.get_logger()
+
+
+class RateLimiter:
+    """Rate limiter with budget tracking and persistence"""
+    
+    def __init__(
+        self,
+        max_rate: int = 50,
+        time_period: float = 60.0,
+        monthly_budget: float = 100.0,
+        db = None,  # Database instance for persistence
+    ):
+        self.limiter = AsyncLimiter(max_rate=max_rate, time_period=time_period)
+        self.monthly_budget = monthly_budget
+        self.current_spend = 0.0
+        self.db = db
+    
+    async def acquire(self) -> None:
+        """Acquire rate limit token"""
+        async with self.limiter:
+            logger.debug("rate_limiter.acquired")
+    
+    async def track_cost(
+        self,
+        cost: float,
+        agent_id: Optional[str] = None,
+        operation: Optional[str] = None,
+    ) -> None:
+        """Track API call cost and persist to database"""
+        self.current_spend += cost
+        
+        usage_percent = (self.current_spend / self.monthly_budget) * 100
+        
+        logger.info(
+            "rate_limiter.cost_tracked",
+            cost=cost,
+            total_spend=self.current_spend,
+            budget=self.monthly_budget,
+            usage_percent=usage_percent,
+            agent_id=agent_id,
+            operation=operation,
+        )
+        
+        # Persist to database
+        if self.db:
+            await self._persist_cost(cost, agent_id, operation)
+        
+        # Alert at 80% budget
+        if usage_percent >= 80:
+            logger.warning(
+                "rate_limiter.budget_warning",
+                usage_percent=usage_percent,
+            )
+        
+        # Raise error at 100% budget
+        if self.current_spend >= self.monthly_budget:
+            logger.error(
+                "rate_limiter.budget_exceeded",
+                spend=self.current_spend,
+                budget=self.monthly_budget,
+            )
+            raise RuntimeError(
+                f"Monthly budget exceeded: ${self.current_spend:.2f} / ${self.monthly_budget:.2f}"
+            )
+    
+    async def _persist_cost(
+        self,
+        cost: float,
+        agent_id: Optional[str],
+        operation: Optional[str],
+    ) -> None:
+        """Persist cost to database"""
+        async with self.db.session() as session:
+            await session.execute(
+                """
+                INSERT INTO api_costs (timestamp, cost, agent_id, operation)
+                VALUES (?, ?, ?, ?)
+                """,
+                (datetime.utcnow().isoformat(), cost, agent_id, operation),
+            )
+            await session.commit()
+    
+    async def get_monthly_spend(self) -> float:
+        """Get total spend for current month from database"""
+        if not self.db:
+            return self.current_spend
+        
+        current_month = datetime.utcnow().strftime("%Y-%m")
+        
+        async with self.db.session() as session:
+            result = await session.execute(
+                """
+                SELECT SUM(cost) as total
+                FROM api_costs
+                WHERE strftime('%Y-%m', timestamp) = ?
+                """,
+                (current_month,),
+            )
+            row = await result.fetchone()
+            return row[0] if row and row[0] else 0.0
+    
+    async def get_spend_by_agent(self, agent_id: str) -> float:
+        """Get total spend for specific agent"""
+        if not self.db:
+            return 0.0
+        
+        async with self.db.session() as session:
+            result = await session.execute(
+                """
+                SELECT SUM(cost) as total
+                FROM api_costs
+                WHERE agent_id = ?
+                """,
+                (agent_id,),
+            )
+            row = await result.fetchone()
+            return row[0] if row and row[0] else 0.0
+    
+    def reset_monthly_spend(self) -> None:
+        """Reset monthly spend counter (in-memory only)"""
+        logger.info(
+            "rate_limiter.monthly_reset",
+            previous_spend=self.current_spend,
+        )
+        self.current_spend = 0.0
+```
+
+Add database migration for api_costs table:
+
+```python
+# alembic/versions/003_add_api_costs_table.py
+"""Add api_costs table
+
+Revision ID: 003
+Revises: 002
+Create Date: 2026-05-01
+"""
+
+from alembic import op
+import sqlalchemy as sa
+
+def upgrade():
+    op.create_table(
+        'api_costs',
+        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('timestamp', sa.String(), nullable=False),
+        sa.Column('cost', sa.Float(), nullable=False),
+        sa.Column('agent_id', sa.String(), nullable=True),
+        sa.Column('operation', sa.String(), nullable=True),
+    )
+    op.create_index('idx_api_costs_timestamp', 'api_costs', ['timestamp'])
+    op.create_index('idx_api_costs_agent_id', 'api_costs', ['agent_id'])
+
+def downgrade():
+    op.drop_table('api_costs')
+```
+
+Add test:
+
+```python
+# tests/unit/test_rate_limiter_persistence.py
+import pytest
+from meai.utils.rate_limiter import RateLimiter
+from meai.storage.database import Database
+
+@pytest.mark.asyncio
+async def test_cost_persistence():
+    """Test cost tracking persists to database"""
+    db = Database("sqlite+aiosqlite:///:memory:")
+    await db.connect()
+    
+    # Create table
+    async with db.session() as session:
+        await session.execute("""
+            CREATE TABLE api_costs (
+                id INTEGER PRIMARY KEY,
+                timestamp TEXT NOT NULL,
+                cost REAL NOT NULL,
+                agent_id TEXT,
+                operation TEXT
+            )
+        """)
+        await session.commit()
+    
+    limiter = RateLimiter(monthly_budget=100.0, db=db)
+    
+    # Track cost
+    await limiter.track_cost(5.0, agent_id="agent-1", operation="create_agent")
+    
+    # Verify persisted
+    monthly_spend = await limiter.get_monthly_spend()
+    assert monthly_spend == 5.0
+    
+    # Verify per-agent tracking
+    agent_spend = await limiter.get_spend_by_agent("agent-1")
+    assert agent_spend == 5.0
+    
+    await db.disconnect()
+```
+
+- [ ] **Step 9: Commit**
 
 ```bash
-git add src/meai/utils/rate_limiter.py tests/unit/test_rate_limiter.py
-git commit -m "feat: add rate limiter with budget tracking
+git add src/meai/utils/rate_limiter.py alembic/versions/003_add_api_costs_table.py tests/
+git commit -m "feat: add rate limiter with budget tracking and persistence
 
 - Add RateLimiter with configurable rate limits
 - Add budget tracking and alerts
 - Add monthly spend reset
+- Add cost persistence to SQLite
+- Add per-agent cost tracking
+- Add database migration for api_costs table
 - Add comprehensive tests
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
@@ -4998,16 +5370,257 @@ from datetime import datetime
 Run: `pytest tests/unit/test_decision_maker.py -v`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Add notification system for human approval**
+
+Update `src/meai/core/decision_maker.py` to add Telegram notifications:
+
+```python
+"""Decision maker - autonomous decisions with human-in-loop gates"""
+
+from enum import Enum
+from typing import Any, Optional
+from datetime import datetime
+import structlog
+from ..monitoring.alerting import TelegramAlerter
+
+logger = structlog.get_logger()
+
+
+class DecisionType(Enum):
+    """Types of decisions"""
+    # Autonomous (no approval needed)
+    CREATE_SUBAGENT = "create_subagent"
+    UPDATE_PROMPT = "update_prompt"
+    CREATE_VAULT_FILE = "create_vault_file"
+    OPTIMIZE_STRUCTURE = "optimize_structure"
+    
+    # Requires human approval
+    CREATE_DEPARTMENT = "create_department"
+    DELETE_AGENT = "delete_agent"
+    CHANGE_ARCHITECTURE = "change_architecture"
+    CHANGE_HIERARCHY = "change_hierarchy"
+
+
+class DecisionMaker:
+    """Make autonomous decisions with human-in-loop gates"""
+    
+    # Decisions that require human approval
+    HUMAN_APPROVAL_REQUIRED = {
+        DecisionType.CREATE_DEPARTMENT,
+        DecisionType.DELETE_AGENT,
+        DecisionType.CHANGE_ARCHITECTURE,
+        DecisionType.CHANGE_HIERARCHY,
+    }
+    
+    def __init__(self, alerter: Optional[TelegramAlerter] = None):
+        self.decision_history: list[dict[str, Any]] = []
+        self.alerter = alerter or TelegramAlerter()
+        self.pending_approvals: dict[str, dict[str, Any]] = {}
+    
+    async def make_decision(
+        self,
+        decision_type: DecisionType,
+        context: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Make decision with optional human approval"""
+        
+        requires_human = decision_type in self.HUMAN_APPROVAL_REQUIRED
+        
+        decision = {
+            "id": f"decision-{len(self.decision_history)}",
+            "type": decision_type.value,
+            "context": context,
+            "requires_human": requires_human,
+            "approved": not requires_human,  # Auto-approve if no human needed
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        
+        if requires_human:
+            logger.warning(
+                "decision.human_approval_required",
+                type=decision_type.value,
+                context=context,
+            )
+            # Send notification
+            await self._send_approval_request(decision)
+            # Store as pending
+            self.pending_approvals[decision["id"]] = decision
+        else:
+            logger.info(
+                "decision.autonomous",
+                type=decision_type.value,
+                context=context,
+            )
+        
+        self.decision_history.append(decision)
+        
+        return decision
+    
+    async def _send_approval_request(self, decision: dict[str, Any]) -> None:
+        """Send approval request via Telegram"""
+        message = f"""
+🔔 *Decision Approval Required*
+
+**Type:** {decision['type']}
+**Context:** {decision['context']}
+
+Reply with:
+- `/approve {decision['id']}` to approve
+- `/reject {decision['id']}` to reject
+
+**Decision ID:** `{decision['id']}`
+"""
+        await self.alerter.send_alert(message)
+    
+    async def approve_decision(self, decision_id: str) -> bool:
+        """Approve pending decision"""
+        if decision_id not in self.pending_approvals:
+            logger.error("decision.not_found", decision_id=decision_id)
+            return False
+        
+        decision = self.pending_approvals[decision_id]
+        decision["approved"] = True
+        decision["approved_at"] = datetime.utcnow().isoformat()
+        
+        # Remove from pending
+        del self.pending_approvals[decision_id]
+        
+        logger.info("decision.approved", decision_id=decision_id)
+        
+        # Send confirmation
+        await self.alerter.send_alert(
+            f"✅ Decision `{decision_id}` approved"
+        )
+        
+        return True
+    
+    async def reject_decision(self, decision_id: str, reason: str = "") -> bool:
+        """Reject pending decision"""
+        if decision_id not in self.pending_approvals:
+            logger.error("decision.not_found", decision_id=decision_id)
+            return False
+        
+        decision = self.pending_approvals[decision_id]
+        decision["approved"] = False
+        decision["rejected_at"] = datetime.utcnow().isoformat()
+        decision["rejection_reason"] = reason
+        
+        # Remove from pending
+        del self.pending_approvals[decision_id]
+        
+        logger.info("decision.rejected", decision_id=decision_id, reason=reason)
+        
+        # Send confirmation
+        await self.alerter.send_alert(
+            f"❌ Decision `{decision_id}` rejected\nReason: {reason}"
+        )
+        
+        return True
+    
+    def get_pending_approvals(self) -> list[dict[str, Any]]:
+        """Get all pending approval requests"""
+        return list(self.pending_approvals.values())
+    
+    def get_decision_history(self) -> list[dict[str, Any]]:
+        """Get decision history"""
+        return self.decision_history
+```
+
+Add CLI commands for approval (in FastAPI app):
+
+```python
+# src/meai/main.py - Add these endpoints
+
+@app.post("/decisions/{decision_id}/approve")
+async def approve_decision(decision_id: str):
+    """Approve pending decision"""
+    from .core.decision_maker import decision_maker
+    
+    success = await decision_maker.approve_decision(decision_id)
+    
+    if not success:
+        return JSONResponse(
+            {"error": "Decision not found"},
+            status_code=404
+        )
+    
+    return {"status": "approved", "decision_id": decision_id}
+
+
+@app.post("/decisions/{decision_id}/reject")
+async def reject_decision(decision_id: str, reason: str = ""):
+    """Reject pending decision"""
+    from .core.decision_maker import decision_maker
+    
+    success = await decision_maker.reject_decision(decision_id, reason)
+    
+    if not success:
+        return JSONResponse(
+            {"error": "Decision not found"},
+            status_code=404
+        )
+    
+    return {"status": "rejected", "decision_id": decision_id}
+
+
+@app.get("/decisions/pending")
+async def get_pending_decisions():
+    """Get all pending approval requests"""
+    from .core.decision_maker import decision_maker
+    
+    pending = decision_maker.get_pending_approvals()
+    return {"pending": pending}
+```
+
+Add test:
+
+```python
+# tests/unit/test_decision_maker_notifications.py
+import pytest
+from meai.core.decision_maker import DecisionMaker, DecisionType
+from meai.monitoring.alerting import TelegramAlerter
+
+@pytest.mark.asyncio
+async def test_approval_workflow():
+    """Test full approval workflow"""
+    decision_maker = DecisionMaker()
+    
+    # Make decision requiring approval
+    decision = await decision_maker.make_decision(
+        decision_type=DecisionType.CREATE_DEPARTMENT,
+        context={"name": "new-dept"}
+    )
+    
+    assert decision["requires_human"] == True
+    assert decision["approved"] == False
+    
+    # Check pending
+    pending = decision_maker.get_pending_approvals()
+    assert len(pending) == 1
+    
+    # Approve
+    success = await decision_maker.approve_decision(decision["id"])
+    assert success == True
+    
+    # Check no longer pending
+    pending = decision_maker.get_pending_approvals()
+    assert len(pending) == 0
+```
+
+- [ ] **Step 7: Commit**
 
 ```bash
-git add src/meai/core/decision_maker.py tests/unit/test_decision_maker.py
-git commit -m "feat: add decision maker with human-in-loop gates
+git add src/meai/core/decision_maker.py src/meai/main.py tests/
+git commit -m "feat: add decision maker with human-in-loop gates and notifications
 
 - Add DecisionType enum
 - Add autonomous decision logic
 - Add human approval gates
 - Add decision history tracking
+- Add Telegram notification system
+- Add approval/rejection workflow
+- Add FastAPI endpoints for approval
+- Add comprehensive tests
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ```
