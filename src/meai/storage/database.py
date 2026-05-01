@@ -18,6 +18,18 @@ class Base(DeclarativeBase):
     pass
 
 
+# Import models to register them with Base.metadata
+# This must be after Base definition but before DatabaseManager.create_tables()
+def _import_models():
+    """Import all models to register them"""
+    try:
+        from . import models  # noqa: F401
+    except ImportError:
+        pass
+
+_import_models()
+
+
 class DatabaseManager:
     """Manages database connections and sessions"""
 
@@ -57,6 +69,17 @@ class DatabaseManager:
             class_=AsyncSession,
             expire_on_commit=False,
         )
+
+        # Create tables
+        await self.create_tables()
+
+    async def create_tables(self) -> None:
+        """Create all tables"""
+        if self._engine is None:
+            raise RuntimeError("Database not connected")
+
+        async with self._engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
     async def disconnect(self) -> None:
         """Disconnect from database"""
@@ -105,3 +128,7 @@ class DatabaseManager:
             return True
         except Exception:
             return False
+
+
+# Alias for convenience
+Database = DatabaseManager
