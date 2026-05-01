@@ -1,66 +1,130 @@
-"""Obsidian vault integration for memory management."""
+"""Obsidian vault integration for meAI memory system"""
 
+import asyncio
+import shutil
 from pathlib import Path
-from typing import Optional
-import re
-from datetime import datetime
+from typing import Any
+
+import aiofiles
+import yaml
 
 
-class ObsidianMemory:
-    """Manages reading and writing to Obsidian vault."""
+class ObsidianVault:
+    """Manages Obsidian vault operations with async file I/O"""
 
-    def __init__(self, vault_path: str = "./obsidian"):
+    def __init__(self, vault_path: str):
+        """Initialize Obsidian vault manager
+
+        Args:
+            vault_path: Path to Obsidian vault directory
+        """
         self.vault_path = Path(vault_path)
+        self._locks: dict[str, asyncio.Lock] = {}
+
+    async def initialize(self) -> None:
+        """Initialize vault directory structure"""
         self.vault_path.mkdir(parents=True, exist_ok=True)
 
-    def read_note(self, path: str) -> Optional[str]:
-        """Read a note from the vault."""
-        note_path = self.vault_path / path
-        if not note_path.exists():
-            return None
-        return note_path.read_text(encoding="utf-8")
+    async def create_agent_vault(self, agent_id: str) -> Path:
+        """Create agent-specific vault directory
 
-    def write_note(self, path: str, content: str, frontmatter: Optional[dict] = None) -> None:
-        """Write a note to the vault with optional frontmatter."""
-        note_path = self.vault_path / path
-        note_path.parent.mkdir(parents=True, exist_ok=True)
+        Args:
+            agent_id: Unique agent identifier
 
-        if frontmatter:
-            fm_lines = ["---"]
-            for key, value in frontmatter.items():
-                fm_lines.append(f"{key}: {value}")
-            fm_lines.append("---\n")
-            content = "\n".join(fm_lines) + content
+        Returns:
+            Path to agent vault directory
+        """
+        agent_vault = self.vault_path / agent_id
+        agent_vault.mkdir(parents=True, exist_ok=True)
+        return agent_vault
 
-        note_path.write_text(content, encoding="utf-8")
+    def _get_lock(self, file_path: str) -> asyncio.Lock:
+        """Get or create lock for file path
 
-    def append_to_note(self, path: str, content: str) -> None:
-        """Append content to an existing note."""
-        note_path = self.vault_path / path
-        note_path.parent.mkdir(parents=True, exist_ok=True)
+        Args:
+            file_path: Relative file path
 
-        existing = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
-        note_path.write_text(existing + "\n" + content, encoding="utf-8")
+        Returns:
+            Lock for the file
+        """
+        if file_path not in self._locks:
+            self._locks[file_path] = asyncio.Lock()
+        return self._locks[file_path]
 
-    def create_daily_note(self) -> str:
-        """Create or get today's daily note path."""
-        today = datetime.now().strftime("%Y-%m-%d")
-        daily_path = f"daily/{today}.md"
+    async def write_file(
+        self, file_path: str, content: str, metadata: dict[str, Any] | None = None
+    ) -> None:
+        """Write file to vault with optional frontmatter
 
-        if not (self.vault_path / daily_path).exists():
-            self.write_note(
-                daily_path,
-                f"# {today}\n\n## Tasks\n\n## Notes\n\n## Learnings\n",
-                frontmatter={"date": today, "type": "daily"},
-            )
+        Args:
+            file_path: Relative path within vault
+            content: File content
+            metadata: Optional YAML frontmatter metadata
+        """
+        full_path = self.vault_path / file_path
+        full_path.parent.mkdir(parents=True, exist_ok=True)
 
-        return daily_path
+        # Use file lock to prevent concurrent writes
+        lock = self._get_lock(file_path)
+        async with lock:
+            # Build content with frontmatter if provided
+            if metadata:
+                frontmatter = yaml.dump(metadata, default_flow_style=False)
+                full_content = f"---\n{frontmatter}---\n{content}"
+            else:
+                full_content = content
 
-    def search_notes(self, query: str) -> list[Path]:
-        """Search for notes containing the query."""
-        results = []
-        for note_path in self.vault_path.rglob("*.md"):
-            content = note_path.read_text(encoding="utf-8")
-            if re.search(query, content, re.IGNORECASE):
-                results.append(note_path.relative_to(self.vault_path))
-        return results
+            async with aiofiles.open(full_path, "w", encoding="utf-8") as f:
+                await f.write(full_content)
+
+    async def read_file(self, file_path: str) -> str:
+        """Read file from vault
+
+        Args:
+            file_path: Relative path within vault
+
+        Returns:
+            File content
+        """
+        full_path = self.vault_path / file_path
+
+        async with aiofiles.open(full_path, "r", encoding="utf-8") as f:
+            return await f.read()
+
+    async def create_snapshot(self, snapshot_name: str) -> Path:
+        """Create snapshot of current vault state
+
+        Args:
+            snapshot_name: Name for the snapshot
+
+        Returns:
+            Path to snapshot directory
+        """
+        snapshot_path = self.vault_path.parent / f".snapshots/{snapshot_name}"
+        snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Copy vault to snapshot (sync operation, but fast for small vaults)
+        await asyncio.to_thread(
+            shutil.copytree, self.vault_path, snapshot_path, dirs_exist_ok=True
+        )
+
+        return snapshot_path
+
+    async def restore_snapshot(self, snapshot_name: str) -> None:
+        """Restore vault from snapshot
+
+        Args:
+            snapshot_name: Name of snapshot to restore
+        """
+        snapshot_path = self.vault_path.parent / f".snapshots/{snapshot_name}"
+
+        if not snapshot_path.exists():
+            raise FileNotFoundError(f"Snapshot not found: {snapshot_name}")
+
+        # Remove current vault
+        await asyncio.to_thread(shutil.rmtree, self.vault_path)
+
+        # Restore from snapshot
+        await asyncio.to_thread(
+            shutil.copytree, snapshot_path, self.vault_path, dirs_exist_ok=True
+        )
