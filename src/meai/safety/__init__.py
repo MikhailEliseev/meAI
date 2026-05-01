@@ -2,5 +2,6 @@
 
 from .loop_detector import LoopDetector
 from .timeout_manager import TimeoutManager
+from .context_monitor import ContextMonitor
 
-__all__ = ["LoopDetector", "TimeoutManager"]
+__all__ = ["LoopDetector", "TimeoutManager", "ContextMonitor"]
