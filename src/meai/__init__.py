@@ -1,3 +1,3 @@
-"""meAI - Personal AI assistant for building AIM agency."""
+"""meAI - CEO Architect for AIM Agency"""
 
 __version__ = "0.1.0"
