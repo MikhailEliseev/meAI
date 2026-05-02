@@ -53,62 +53,363 @@ scripts/
 - Create: `src/meai/learning/experience_tracker.py`
 - Create: `tests/unit/test_experience_tracker.py`
 
-**Implementation:** Track task outcomes and link them to knowledge used.
+- [ ] **Step 1: Write failing test for Experience Tracker**
 
-**Key features:**
-- Record task execution (success/failure)
-- Link tasks to knowledge sources
-- Track knowledge usage frequency
-- Calculate success rates per knowledge item
-
-**Database tables:**
-```sql
-CREATE TABLE experiences (
-    id TEXT PRIMARY KEY,
-    magister_id TEXT NOT NULL,
-    task_id TEXT NOT NULL,
-    knowledge_ids TEXT NOT NULL,  -- JSON array
-    outcome TEXT NOT NULL,         -- success/failure/partial
-    outcome_score REAL,            -- 0.0-1.0
-    feedback TEXT,
-    created_at TIMESTAMP NOT NULL
-);
-
-CREATE TABLE knowledge_usage (
-    id TEXT PRIMARY KEY,
-    knowledge_id TEXT NOT NULL,
-    magister_id TEXT NOT NULL,
-    used_at TIMESTAMP NOT NULL,
-    task_outcome TEXT NOT NULL,
-    outcome_score REAL
-);
-```
-
-**Key methods:**
 ```python
-async def record_experience(
-    magister_id: str,
-    task_id: str,
-    knowledge_ids: list[str],
-    outcome: str,
-    outcome_score: float,
-    feedback: str = None,
-) -> str:
-    """Record task experience"""
+# tests/unit/test_experience_tracker.py
+import pytest
+from datetime import datetime, timezone
 
-async def get_knowledge_success_rate(
-    knowledge_id: str,
-) -> float:
-    """Calculate success rate for knowledge"""
+from meai.learning.experience_tracker import ExperienceTracker
 
-async def get_magister_experiences(
-    magister_id: str,
-    limit: int = 100,
-) -> list[dict]:
-    """Get Magister's experience history"""
+
+@pytest.mark.asyncio
+async def test_experience_tracker_initialization():
+    """Test ExperienceTracker can be initialized"""
+    tracker = ExperienceTracker(database_url="sqlite+aiosqlite:///:memory:")
+    
+    await tracker.initialize()
+    
+    assert tracker is not None
+    
+    await tracker.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_record_experience():
+    """Test recording task experience"""
+    tracker = ExperienceTracker(database_url="sqlite+aiosqlite:///:memory:")
+    await tracker.initialize()
+    
+    # Record successful experience
+    experience_id = await tracker.record_experience(
+        magister_id="seo-magister-1",
+        task_id="task-123",
+        knowledge_ids=["knowledge-1", "knowledge-2"],
+        outcome="success",
+        outcome_score=0.9,
+        feedback="Task completed successfully",
+    )
+    
+    assert experience_id is not None
+    assert experience_id.startswith("exp-")
+    
+    await tracker.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_get_knowledge_success_rate():
+    """Test calculating knowledge success rate"""
+    tracker = ExperienceTracker(database_url="sqlite+aiosqlite:///:memory:")
+    await tracker.initialize()
+    
+    # Record multiple experiences
+    for i in range(10):
+        outcome = "success" if i < 8 else "failure"
+        score = 0.9 if i < 8 else 0.2
+        
+        await tracker.record_experience(
+            magister_id="seo-magister-1",
+            task_id=f"task-{i}",
+            knowledge_ids=["knowledge-test"],
+            outcome=outcome,
+            outcome_score=score,
+        )
+    
+    # Calculate success rate
+    success_rate = await tracker.get_knowledge_success_rate("knowledge-test")
+    
+    assert success_rate == 0.8  # 8 out of 10
+    
+    await tracker.shutdown()
 ```
 
-**Commit:** `feat: add experience tracking system`
+- [ ] **Step 2: Run test to verify it fails**
+
+```bash
+pytest tests/unit/test_experience_tracker.py -v
+```
+
+Expected: FAIL
+
+- [ ] **Step 3: Create learning package**
+
+```python
+# src/meai/learning/__init__.py
+"""Experience-based learning system"""
+
+from meai.learning.experience_tracker import ExperienceTracker
+
+__all__ = ["ExperienceTracker"]
+```
+
+- [ ] **Step 4: Write Experience Tracker implementation**
+
+```python
+# src/meai/learning/experience_tracker.py
+"""Track task outcomes and knowledge usage"""
+
+import json
+from datetime import datetime, timezone
+from typing import Any
+from uuid import uuid4
+
+from sqlalchemy import text
+
+from meai.storage.database import Database
+
+
+class ExperienceTracker:
+    """Track task experiences and knowledge usage"""
+
+    def __init__(self, database_url: str = "sqlite+aiosqlite:///./data/meai.db"):
+        """Initialize Experience Tracker
+        
+        Args:
+            database_url: Database URL
+        """
+        self.db = Database(database_url)
+
+    async def initialize(self) -> None:
+        """Initialize tracker"""
+        await self.db.connect()
+        await self._create_tables()
+
+    async def shutdown(self) -> None:
+        """Shutdown tracker"""
+        await self.db.disconnect()
+
+    async def _create_tables(self) -> None:
+        """Create experience tracking tables"""
+        async with self.db.session() as session:
+            # Experiences table
+            await session.execute(
+                text("""
+                CREATE TABLE IF NOT EXISTS experiences (
+                    id TEXT PRIMARY KEY,
+                    magister_id TEXT NOT NULL,
+                    task_id TEXT NOT NULL,
+                    knowledge_ids TEXT NOT NULL,
+                    outcome TEXT NOT NULL,
+                    outcome_score REAL,
+                    feedback TEXT,
+                    created_at TIMESTAMP NOT NULL
+                )
+                """)
+            )
+            
+            # Knowledge usage table
+            await session.execute(
+                text("""
+                CREATE TABLE IF NOT EXISTS knowledge_usage (
+                    id TEXT PRIMARY KEY,
+                    knowledge_id TEXT NOT NULL,
+                    magister_id TEXT NOT NULL,
+                    used_at TIMESTAMP NOT NULL,
+                    task_outcome TEXT NOT NULL,
+                    outcome_score REAL
+                )
+                """)
+            )
+            
+            await session.commit()
+
+    async def record_experience(
+        self,
+        magister_id: str,
+        task_id: str,
+        knowledge_ids: list[str],
+        outcome: str,
+        outcome_score: float,
+        feedback: str = None,
+    ) -> str:
+        """Record task experience
+        
+        Args:
+            magister_id: Magister ID
+            task_id: Task ID
+            knowledge_ids: List of knowledge IDs used
+            outcome: Task outcome (success/failure/partial)
+            outcome_score: Outcome score (0.0-1.0)
+            feedback: Optional feedback
+            
+        Returns:
+            Experience ID
+        """
+        experience_id = f"exp-{uuid4().hex[:8]}"
+        
+        async with self.db.session() as session:
+            # Record experience
+            await session.execute(
+                text("""
+                INSERT INTO experiences
+                (id, magister_id, task_id, knowledge_ids, outcome, 
+                 outcome_score, feedback, created_at)
+                VALUES (:id, :magister_id, :task_id, :knowledge_ids, :outcome,
+                        :outcome_score, :feedback, :created_at)
+                """),
+                {
+                    "id": experience_id,
+                    "magister_id": magister_id,
+                    "task_id": task_id,
+                    "knowledge_ids": json.dumps(knowledge_ids),
+                    "outcome": outcome,
+                    "outcome_score": outcome_score,
+                    "feedback": feedback,
+                    "created_at": datetime.now(timezone.utc),
+                },
+            )
+            
+            # Record knowledge usage for each knowledge item
+            for knowledge_id in knowledge_ids:
+                usage_id = f"usage-{uuid4().hex[:8]}"
+                
+                await session.execute(
+                    text("""
+                    INSERT INTO knowledge_usage
+                    (id, knowledge_id, magister_id, used_at, 
+                     task_outcome, outcome_score)
+                    VALUES (:id, :knowledge_id, :magister_id, :used_at,
+                            :task_outcome, :outcome_score)
+                    """),
+                    {
+                        "id": usage_id,
+                        "knowledge_id": knowledge_id,
+                        "magister_id": magister_id,
+                        "used_at": datetime.now(timezone.utc),
+                        "task_outcome": outcome,
+                        "outcome_score": outcome_score,
+                    },
+                )
+            
+            await session.commit()
+        
+        return experience_id
+
+    async def get_knowledge_success_rate(self, knowledge_id: str) -> float:
+        """Calculate success rate for knowledge
+        
+        Args:
+            knowledge_id: Knowledge ID
+            
+        Returns:
+            Success rate (0.0-1.0)
+        """
+        async with self.db.session() as session:
+            # Get all usage records
+            result = await session.execute(
+                text("""
+                SELECT task_outcome, outcome_score
+                FROM knowledge_usage
+                WHERE knowledge_id = :knowledge_id
+                """),
+                {"knowledge_id": knowledge_id},
+            )
+            
+            rows = result.fetchall()
+            
+            if len(rows) == 0:
+                return 0.0
+            
+            # Calculate success rate
+            successful = sum(1 for row in rows if row[0] == "success")
+            total = len(rows)
+            
+            return successful / total if total > 0 else 0.0
+
+    async def get_magister_experiences(
+        self,
+        magister_id: str,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """Get Magister's experience history
+        
+        Args:
+            magister_id: Magister ID
+            limit: Maximum number of experiences
+            
+        Returns:
+            List of experiences
+        """
+        async with self.db.session() as session:
+            result = await session.execute(
+                text("""
+                SELECT id, task_id, knowledge_ids, outcome, 
+                       outcome_score, feedback, created_at
+                FROM experiences
+                WHERE magister_id = :magister_id
+                ORDER BY created_at DESC
+                LIMIT :limit
+                """),
+                {"magister_id": magister_id, "limit": limit},
+            )
+            
+            rows = result.fetchall()
+            
+            experiences = []
+            for row in rows:
+                experiences.append({
+                    "id": row[0],
+                    "task_id": row[1],
+                    "knowledge_ids": json.loads(row[2]),
+                    "outcome": row[3],
+                    "outcome_score": row[4],
+                    "feedback": row[5],
+                    "created_at": row[6].isoformat() if row[6] else None,
+                })
+            
+            return experiences
+
+    async def get_knowledge_usage_count(self, knowledge_id: str) -> int:
+        """Get usage count for knowledge
+        
+        Args:
+            knowledge_id: Knowledge ID
+            
+        Returns:
+            Usage count
+        """
+        async with self.db.session() as session:
+            result = await session.execute(
+                text("""
+                SELECT COUNT(*) FROM knowledge_usage
+                WHERE knowledge_id = :knowledge_id
+                """),
+                {"knowledge_id": knowledge_id},
+            )
+            
+            count = result.scalar()
+            return count if count else 0
+```
+
+- [ ] **Step 5: Run tests**
+
+```bash
+pytest tests/unit/test_experience_tracker.py -v
+```
+
+Expected: PASS (3 tests)
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/meai/learning/ tests/unit/test_experience_tracker.py
+git commit -m "feat: add Experience Tracker for learning system
+
+Experience Tracker features:
+- Record task outcomes with knowledge used
+- Track knowledge usage per Magister
+- Calculate knowledge success rates
+- Get Magister experience history
+
+Database tables:
+- experiences (task outcomes)
+- knowledge_usage (knowledge usage tracking)
+
+Tests cover initialization, recording, and success rate calculation.
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+```
 
 ---
 
@@ -118,13 +419,10 @@ async def get_magister_experiences(
 - Create: `src/meai/learning/quality_updater.py`
 - Create: `tests/unit/test_quality_updater.py`
 
-**Implementation:** Update knowledge quality scores based on real-world outcomes.
+**Implementation:** Update knowledge quality scores based on experiences
 
-**Quality Update Algorithm:**
+**Key algorithm:**
 ```python
-# Initial quality score (from Teacher evaluation): 1-10
-# Experience-based adjustment: -3 to +3
-
 new_score = initial_score + experience_adjustment
 
 experience_adjustment = (
@@ -132,58 +430,9 @@ experience_adjustment = (
     usage_frequency_factor +   # -0.5 to +0.5
     recency_factor            # -1.0 to +0.5
 )
-
-# Success rate factor
-if success_rate >= 0.8: +1.5
-elif success_rate >= 0.6: +0.5
-elif success_rate >= 0.4: 0.0
-elif success_rate >= 0.2: -0.5
-else: -1.5
-
-# Usage frequency factor
-if usage_count >= 20: +0.5
-elif usage_count >= 10: +0.3
-elif usage_count >= 5: 0.0
-else: -0.5
-
-# Recency factor
-if last_used < 7 days ago: +0.5
-elif last_used < 30 days ago: 0.0
-elif last_used < 90 days ago: -0.5
-else: -1.0
 ```
 
-**Database tables:**
-```sql
-CREATE TABLE quality_updates (
-    id TEXT PRIMARY KEY,
-    knowledge_id TEXT NOT NULL,
-    old_score REAL NOT NULL,
-    new_score REAL NOT NULL,
-    adjustment_reason TEXT NOT NULL,  -- JSON
-    updated_at TIMESTAMP NOT NULL
-);
-```
-
-**Key methods:**
-```python
-async def update_quality_score(
-    knowledge_id: str,
-) -> dict:
-    """Update quality score based on experiences"""
-
-async def batch_update_scores(
-    knowledge_ids: list[str] = None,
-) -> int:
-    """Batch update quality scores"""
-
-async def get_quality_history(
-    knowledge_id: str,
-) -> list[dict]:
-    """Get quality score history"""
-```
-
-**Commit:** `feat: add quality score updater with experience-based algorithm`
+**Commit:** `feat: add Quality Updater with experience-based algorithm`
 
 ---
 
@@ -193,60 +442,14 @@ async def get_quality_history(
 - Create: `src/meai/learning/deprecation_manager.py`
 - Create: `tests/unit/test_deprecation_manager.py`
 
-**Implementation:** Automatically deprecate low-performing or outdated knowledge.
+**Implementation:** Automatically deprecate low-performing knowledge
 
-**Deprecation Criteria:**
-```python
-# Knowledge should be deprecated if:
-1. Quality score < 4.0 after 10+ uses
-2. Success rate < 30% after 10+ uses
-3. Not used in 180+ days
-4. Marked as outdated by Magister
-5. Superseded by newer knowledge
-```
+**Deprecation criteria:**
+- Quality score < 4.0 after 10+ uses
+- Success rate < 30% after 10+ uses
+- Not used in 180+ days
 
-**Deprecation Levels:**
-- **Warning:** Quality 4.0-5.0, still usable but flagged
-- **Deprecated:** Quality < 4.0, not recommended
-- **Archived:** Not used in 180+ days, removed from active search
-
-**Database tables:**
-```sql
-CREATE TABLE deprecations (
-    id TEXT PRIMARY KEY,
-    knowledge_id TEXT NOT NULL,
-    deprecation_level TEXT NOT NULL,  -- warning/deprecated/archived
-    reason TEXT NOT NULL,
-    deprecated_at TIMESTAMP NOT NULL,
-    superseded_by TEXT  -- knowledge_id that replaces this
-);
-```
-
-**Key methods:**
-```python
-async def check_deprecation(
-    knowledge_id: str,
-) -> dict:
-    """Check if knowledge should be deprecated"""
-
-async def deprecate_knowledge(
-    knowledge_id: str,
-    level: str,
-    reason: str,
-    superseded_by: str = None,
-) -> None:
-    """Deprecate knowledge"""
-
-async def scan_for_deprecation() -> list[str]:
-    """Scan all knowledge for deprecation candidates"""
-
-async def archive_old_knowledge(
-    days_threshold: int = 180,
-) -> int:
-    """Archive knowledge not used in X days"""
-```
-
-**Commit:** `feat: add deprecation manager with automatic detection`
+**Commit:** `feat: add Deprecation Manager with automatic detection`
 
 ---
 
@@ -256,44 +459,15 @@ async def archive_old_knowledge(
 - Create: `src/meai/learning/learning_analytics.py`
 - Create: `tests/unit/test_learning_analytics.py`
 
-**Implementation:** Analytics and insights about learning system.
+**Implementation:** Analytics and insights
 
 **Key metrics:**
 - Knowledge quality distribution
 - Success rate trends
 - Deprecation rate
 - Most/least used knowledge
-- Magister learning curves
 
-**Key methods:**
-```python
-async def get_system_metrics() -> dict:
-    """Get overall system metrics"""
-    return {
-        "total_knowledge": 1234,
-        "avg_quality_score": 7.2,
-        "deprecated_count": 45,
-        "avg_success_rate": 0.78,
-        "total_experiences": 5678,
-    }
-
-async def get_magister_metrics(
-    magister_id: str,
-) -> dict:
-    """Get Magister-specific metrics"""
-
-async def get_knowledge_metrics(
-    knowledge_id: str,
-) -> dict:
-    """Get knowledge-specific metrics"""
-
-async def get_quality_trends(
-    days: int = 30,
-) -> list[dict]:
-    """Get quality score trends over time"""
-```
-
-**Commit:** `feat: add learning analytics and metrics`
+**Commit:** `feat: add Learning Analytics and metrics`
 
 ---
 
@@ -301,15 +475,10 @@ async def get_quality_trends(
 
 **Files:**
 - Modify: `src/meai/agents/magisters/base_magister.py`
-- Modify: `tests/unit/test_base_magister.py`
 
-**Implementation:** Add experience tracking to Magister task execution.
-
-**Changes to BaseMagister:**
+**Changes:**
 ```python
 async def execute_task(self, task: Task) -> TaskResult:
-    """Execute task with experience tracking"""
-    
     # Track knowledge used
     knowledge_ids = self._get_knowledge_used(task)
     
@@ -323,19 +492,9 @@ async def execute_task(self, task: Task) -> TaskResult:
         knowledge_ids=knowledge_ids,
         outcome=result.status,
         outcome_score=self._calculate_outcome_score(result),
-        feedback=result.metadata.get("feedback"),
     )
     
     return result
-
-async def provide_feedback(
-    self,
-    task_id: str,
-    knowledge_id: str,
-    feedback: str,
-    helpful: bool,
-) -> None:
-    """Provide feedback on knowledge usefulness"""
 ```
 
 **Commit:** `feat: integrate experience tracking into Magisters`
@@ -346,45 +505,20 @@ async def provide_feedback(
 
 **Files:**
 - Modify: `src/meai/agents/teacher.py`
-- Modify: `tests/unit/test_teacher.py`
 
-**Implementation:** Add quality update capability to Teacher.
-
-**Changes to TeacherAgent:**
+**Changes:**
 ```python
-async def update_knowledge_quality(
-    self,
-    knowledge_id: str,
-) -> dict:
-    """Update knowledge quality based on experiences"""
-    
+async def update_knowledge_quality(self, knowledge_id: str) -> dict:
     # Get new quality score
     update_result = await self.quality_updater.update_quality_score(knowledge_id)
     
     # Update in database
     await self._update_quality_in_db(knowledge_id, update_result["new_score"])
     
-    # Update in Qdrant (metadata)
+    # Update in Qdrant
     await self._update_quality_in_qdrant(knowledge_id, update_result["new_score"])
     
-    # Notify Magisters if significant change
-    if abs(update_result["adjustment"]) >= 2.0:
-        await self._notify_quality_change(knowledge_id, update_result)
-    
     return update_result
-
-async def batch_update_qualities(self) -> int:
-    """Batch update all knowledge qualities"""
-    
-    # Get all knowledge IDs
-    knowledge_ids = await self._get_all_knowledge_ids()
-    
-    # Update in batches
-    updated = 0
-    for batch in self._batch(knowledge_ids, size=100):
-        updated += await self.quality_updater.batch_update_scores(batch)
-    
-    return updated
 ```
 
 **Commit:** `feat: integrate quality updates into Teacher`
@@ -396,14 +530,7 @@ async def batch_update_qualities(self) -> int:
 **Files:**
 - Create: `scripts/update_qualities.py`
 
-**Implementation:** Cron job to periodically update quality scores.
-
-**Functionality:**
-- Run daily at 2 AM
-- Update all knowledge qualities
-- Scan for deprecation candidates
-- Archive old knowledge
-- Generate daily report
+**Implementation:** Cron job to update quality scores daily
 
 **Usage:**
 ```bash
@@ -423,17 +550,12 @@ python scripts/update_qualities.py
 **Files:**
 - Create: `tests/integration/test_experience_learning_flow.py`
 
-**Implementation:** Test complete experience learning flow.
-
 **Test scenario:**
-1. Magister executes task using knowledge A
-2. Task succeeds → record positive experience
-3. Magister executes 10 more tasks with knowledge A (8 success, 2 failure)
-4. Quality updater runs → quality score increases
-5. Magister executes task using knowledge B
-6. Task fails 5 times in a row
-7. Quality updater runs → quality score decreases
-8. Deprecation manager runs → knowledge B deprecated
+1. Magister executes tasks using knowledge A (8 success, 2 failure)
+2. Quality updater runs → quality score increases
+3. Magister executes tasks using knowledge B (5 failures)
+4. Quality updater runs → quality score decreases
+5. Deprecation manager runs → knowledge B deprecated
 
 **Commit:** `test: add experience learning integration test`
 
@@ -444,14 +566,12 @@ python scripts/update_qualities.py
 **Files:**
 - Create: `tests/integration/test_quality_update_propagation.py`
 
-**Implementation:** Test quality updates propagate correctly.
-
 **Test scenario:**
 1. Knowledge stored in Teacher's Qdrant
 2. Magister caches knowledge locally
 3. Experiences recorded → quality updated
 4. Teacher updates quality in Qdrant
-5. Teacher notifies Magisters of quality change
+5. Teacher notifies Magisters
 6. Magisters update local cache
 
 **Commit:** `test: add quality update propagation test`
@@ -463,7 +583,7 @@ python scripts/update_qualities.py
 **Files:**
 - Create: `scripts/analyze_learning.py`
 
-**Implementation:** Generate learning analytics report.
+**Implementation:** Generate learning analytics report
 
 **Report includes:**
 - System-wide metrics
@@ -471,53 +591,6 @@ python scripts/update_qualities.py
 - Top/bottom performing knowledge
 - Quality trends
 - Deprecation statistics
-
-**Output:**
-```
-📊 University Learning Analytics Report
-   Generated: 2026-05-02 18:30
-
-═══════════════════════════════════════════════════════════════
-
-📈 System Metrics:
-   Total Knowledge: 1,234
-   Avg Quality Score: 7.2 / 10
-   Deprecated: 45 (3.6%)
-   Avg Success Rate: 78%
-   Total Experiences: 5,678
-
-═══════════════════════════════════════════════════════════════
-
-🏆 Top Performing Knowledge:
-   1. "SEO best practices 2026" - Quality: 9.5, Success: 95%
-   2. "Content marketing strategies" - Quality: 9.2, Success: 92%
-   3. "Google Ads optimization" - Quality: 8.8, Success: 88%
-
-═══════════════════════════════════════════════════════════════
-
-⚠️  Low Performing Knowledge:
-   1. "Old SEO tactics" - Quality: 3.2, Success: 25% → DEPRECATED
-   2. "Outdated content tips" - Quality: 4.1, Success: 35% → WARNING
-   3. "Legacy ad strategies" - Quality: 4.5, Success: 40% → WARNING
-
-═══════════════════════════════════════════════════════════════
-
-📊 Quality Trends (Last 30 Days):
-   Week 1: Avg 6.8
-   Week 2: Avg 7.0 (+0.2)
-   Week 3: Avg 7.1 (+0.1)
-   Week 4: Avg 7.2 (+0.1)
-
-═══════════════════════════════════════════════════════════════
-
-🤖 Magister Performance:
-   SEO Magister: 85% success rate, 234 tasks
-   Content Magister: 82% success rate, 189 tasks
-   Ads Magister: 78% success rate, 156 tasks
-   SMM Magister: 80% success rate, 145 tasks
-   Analytics Magister: 88% success rate, 123 tasks
-   Intelligence Magister: 75% success rate, 98 tasks
-```
 
 **Commit:** `feat: add learning analytics report script`
 
@@ -528,17 +601,14 @@ python scripts/update_qualities.py
 **Files:**
 - Create: `scripts/test_experience_learning.py`
 
-**Implementation:** Complete E2E test of experience learning system.
-
 **Test flow:**
-1. Initialize system (Teacher, Magisters, Learning components)
-2. SEO Magister executes 20 tasks using various knowledge
+1. Initialize system
+2. SEO Magister executes 20 tasks
 3. Record experiences (15 success, 5 failure)
-4. Run quality updater → scores adjusted
-5. Run deprecation scan → 2 items deprecated
+4. Run quality updater
+5. Run deprecation scan
 6. Generate analytics report
-7. Verify quality changes propagated to Qdrant
-8. Verify Magisters notified of changes
+7. Verify quality changes propagated
 
 **Commit:** `test: add end-to-end test for experience learning`
 
@@ -547,42 +617,14 @@ python scripts/update_qualities.py
 ## Success Criteria
 
 - [ ] ✅ Experience tracking implemented
-- [ ] ✅ Quality updater working with experience-based algorithm
-- [ ] ✅ Deprecation manager automatically detecting low-performing knowledge
+- [ ] ✅ Quality updater working
+- [ ] ✅ Deprecation manager detecting low-performing knowledge
 - [ ] ✅ Learning analytics generating insights
-- [ ] ✅ Magisters recording experiences after tasks
-- [ ] ✅ Teacher updating qualities in Qdrant
-- [ ] ✅ Quality updates propagating to Magisters
+- [ ] ✅ Magisters recording experiences
+- [ ] ✅ Teacher updating qualities
+- [ ] ✅ Quality updates propagating
 - [ ] ✅ Scheduled updates running
-- [ ] ✅ All unit tests passing
-- [ ] ✅ All integration tests passing
-- [ ] ✅ End-to-end test passing
+- [ ] ✅ All tests passing
 
 ---
 
-## Next Steps
-
-After completing this plan:
-
-**System is complete!** 🎉
-
-All three plans implemented:
-- ✅ Plan 1: Infrastructure + Core (Qdrant, Teacher, Researcher)
-- ✅ Plan 2: Magisters + Hybrid Search
-- ✅ Plan 3: Experience Learning
-
-**Ready for production use:**
-- University knowledge system fully operational
-- 6 specialized Magisters
-- Hybrid search with 3-layer fallback
-- Self-improving through experience learning
-
----
-
-## Notes
-
-- **Quality updates:** Run daily at 2 AM via cron
-- **Deprecation threshold:** Quality < 4.0 after 10+ uses
-- **Archive threshold:** Not used in 180+ days
-- **Success rate calculation:** (successful_tasks / total_tasks) * 100
-- **Quality adjustment range:** -3 to +3 points
