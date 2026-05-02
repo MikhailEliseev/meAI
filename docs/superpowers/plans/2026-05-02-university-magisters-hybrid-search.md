@@ -819,6 +819,308 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 
 ---
 
+## Task 1.5: Wiki-style Knowledge Management (Karpathy Pattern)
+
+**Files:**
+- Modify: `src/meai/agents/magisters/base_magister.py`
+- Create: `src/meai/memory/obsidian.py`
+- Create: `tests/unit/test_obsidian.py`
+
+**Goal:** Implement wiki-style knowledge management in Magisters' Obsidian vaults with wikilinks, cross-references, and graph metadata.
+
+- [ ] **Step 1: Write ObsidianVault class**
+
+```python
+# src/meai/memory/obsidian.py
+"""Obsidian vault management with wiki-style features"""
+
+import re
+from pathlib import Path
+from typing import Any
+from datetime import datetime, timezone
+
+
+class ObsidianVault:
+    """Manage Obsidian vault with wiki-style features
+    
+    Features:
+    - Wikilinks [[topic]] support
+    - Backlinks tracking
+    - Graph metadata
+    - Cross-references
+    """
+
+    def __init__(self, vault_path: str):
+        """Initialize vault
+        
+        Args:
+            vault_path: Path to Obsidian vault
+        """
+        self.vault_path = Path(vault_path)
+        self.wikilink_pattern = re.compile(r'\[\[([^\]]+)\]\]')
+
+    def save_note(
+        self,
+        filename: str,
+        content: str,
+        metadata: dict[str, Any] = None,
+    ) -> Path:
+        """Save note with frontmatter and wikilinks
+        
+        Args:
+            filename: Note filename (without .md)
+            content: Note content
+            metadata: Frontmatter metadata
+            
+        Returns:
+            Path to saved note
+        """
+        # Extract wikilinks
+        wikilinks = self.extract_wikilinks(content)
+        
+        # Add wikilinks to metadata
+        if metadata is None:
+            metadata = {}
+        metadata["wikilinks"] = wikilinks
+        metadata["updated_at"] = datetime.now(timezone.utc).isoformat()
+        
+        # Create markdown with frontmatter
+        markdown = self._create_markdown(metadata, content)
+        
+        # Save file
+        file_path = self.vault_path / "knowledge" / f"{filename}.md"
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(markdown, encoding="utf-8")
+        
+        # Update backlinks
+        self._update_backlinks(filename, wikilinks)
+        
+        return file_path
+
+    def extract_wikilinks(self, content: str) -> list[str]:
+        """Extract wikilinks from content"""
+        matches = self.wikilink_pattern.findall(content)
+        return [match.strip().lower() for match in matches]
+
+    def _update_backlinks(self, source: str, targets: list[str]) -> None:
+        """Update backlinks for target notes
+        
+        Args:
+            source: Source note filename
+            targets: Target note filenames (wikilinks)
+        """
+        for target in targets:
+            target_file = self.vault_path / "knowledge" / f"{target}.md"
+            
+            if not target_file.exists():
+                continue
+            
+            # Read existing content
+            content = target_file.read_text(encoding="utf-8")
+            
+            # Extract frontmatter
+            metadata = self._extract_frontmatter(content)
+            
+            # Add backlink
+            backlinks = metadata.get("backlinks", [])
+            if source not in backlinks:
+                backlinks.append(source)
+                metadata["backlinks"] = backlinks
+            
+            # Update file
+            body = self._extract_body(content)
+            markdown = self._create_markdown(metadata, body)
+            target_file.write_text(markdown, encoding="utf-8")
+
+    def get_graph_data(self) -> dict[str, Any]:
+        """Get graph data for visualization
+        
+        Returns:
+            Graph data with nodes and edges
+        """
+        nodes = []
+        edges = []
+        
+        knowledge_dir = self.vault_path / "knowledge"
+        if not knowledge_dir.exists():
+            return {"nodes": [], "edges": []}
+        
+        for md_file in knowledge_dir.glob("*.md"):
+            node_id = md_file.stem
+            content = md_file.read_text(encoding="utf-8")
+            metadata = self._extract_frontmatter(content)
+            
+            # Add node
+            nodes.append({
+                "id": node_id,
+                "label": node_id.replace("-", " ").title(),
+                "wikilinks": metadata.get("wikilinks", []),
+                "backlinks": metadata.get("backlinks", []),
+            })
+            
+            # Add edges (wikilinks)
+            for target in metadata.get("wikilinks", []):
+                edges.append({
+                    "source": node_id,
+                    "target": target,
+                    "type": "wikilink",
+                })
+        
+        return {
+            "nodes": nodes,
+            "edges": edges,
+        }
+
+    def _create_markdown(self, metadata: dict, content: str) -> str:
+        """Create markdown with YAML frontmatter"""
+        lines = ["---"]
+        for key, value in metadata.items():
+            if isinstance(value, list):
+                lines.append(f"{key}:")
+                for item in value:
+                    lines.append(f"  - {item}")
+            else:
+                lines.append(f"{key}: {value}")
+        lines.append("---")
+        lines.append("")
+        lines.append(content)
+        return "\n".join(lines)
+
+    def _extract_frontmatter(self, content: str) -> dict[str, Any]:
+        """Extract YAML frontmatter"""
+        if not content.startswith("---\n"):
+            return {}
+        
+        end_index = content.find("\n---\n", 4)
+        if end_index == -1:
+            return {}
+        
+        frontmatter_text = content[4:end_index]
+        metadata = {}
+        
+        current_key = None
+        for line in frontmatter_text.split("\n"):
+            if ":" in line and not line.startswith("  "):
+                key, value = line.split(":", 1)
+                key = key.strip()
+                value = value.strip()
+                
+                if value:
+                    metadata[key] = value
+                else:
+                    metadata[key] = []
+                    current_key = key
+            elif line.startswith("  - ") and current_key:
+                metadata[current_key].append(line[4:].strip())
+        
+        return metadata
+
+    def _extract_body(self, content: str) -> str:
+        """Extract body (without frontmatter)"""
+        if not content.startswith("---\n"):
+            return content
+        
+        end_index = content.find("\n---\n", 4)
+        if end_index == -1:
+            return content
+        
+        return content[end_index + 5:].strip()
+```
+
+- [ ] **Step 2: Update BaseMagister to use ObsidianVault**
+
+```python
+# src/meai/agents/magisters/base_magister.py (modify)
+
+from meai.memory.obsidian import ObsidianVault
+
+class BaseMagister(Agent):
+    async def _initialize_vault(self) -> None:
+        """Initialize Obsidian vault"""
+        self.vault_path.mkdir(parents=True, exist_ok=True)
+        (self.vault_path / "knowledge").mkdir(exist_ok=True)
+        (self.vault_path / "tasks").mkdir(exist_ok=True)
+        (self.vault_path / "decisions").mkdir(exist_ok=True)
+        
+        # Initialize vault with wiki features
+        self.vault = ObsidianVault(str(self.vault_path))
+    
+    async def _cache_knowledge(self, knowledge: dict[str, Any]) -> None:
+        """Cache knowledge with wiki-style features"""
+        knowledge_id = knowledge.get("id", f"knowledge-{uuid4().hex[:8]}")
+        content = knowledge.get("content", "")
+        
+        # Save with ObsidianVault (handles wikilinks automatically)
+        self.vault.save_note(
+            filename=knowledge_id,
+            content=content,
+            metadata={
+                "id": knowledge_id,
+                "source": knowledge.get("source", "unknown"),
+                "quality_score": knowledge.get("quality_score", 0),
+                "cached_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/meai/memory/obsidian.py src/meai/agents/magisters/base_magister.py
+git commit -m "feat: add wiki-style knowledge management to Magisters
+
+Obsidian vault features:
+- Wikilinks [[topic]] support
+- Automatic backlinks tracking
+- Graph metadata for visualization
+- Cross-references between notes
+
+Magisters now maintain wiki-style knowledge base.
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+```
+
+---
+
+## Task 11.5: Lint Operation (Karpathy Pattern)
+
+**Files:**
+- Create: `src/meai/agents/magisters/wiki_linter.py`
+- Create: `tests/unit/test_wiki_linter.py`
+- Create: `scripts/lint_wiki.py`
+
+**Goal:** Health-check for wiki: contradictions, stale claims, orphaned pages.
+
+**Key implementation:**
+```python
+class WikiLinter:
+    async def lint_vault(self, vault_path: str) -> dict:
+        """Run all lint checks"""
+        return {
+            "contradictions": await self.find_contradictions(vault_path),
+            "stale_pages": await self.find_stale_pages(vault_path, days=90),
+            "orphaned_pages": await self.find_orphaned_pages(vault_path),
+            "duplicate_content": await self.find_duplicates(vault_path),
+        }
+    
+    async def find_contradictions(self, vault_path: str) -> list:
+        """Find contradictory statements"""
+        # Check for negation conflicts in same topic
+        pass
+    
+    async def find_stale_pages(self, vault_path: str, days: int) -> list:
+        """Find pages not updated in X days"""
+        pass
+    
+    async def find_orphaned_pages(self, vault_path: str) -> list:
+        """Find pages with no wikilinks or backlinks"""
+        pass
+```
+
+**Commit:** `feat: add wiki lint operation for health checks`
+
+---
+
 ## Task 2: SEO Magister
 
 **Files:**
@@ -2639,471 +2941,6 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 8. Second query → local hit (cached)
 
 **Commit:** `test: add end-to-end test for Magisters system`
-
----
-
-## Task 9: Integration Test - Magister → Teacher Flow
-
-**Files:**
-- Create: `tests/integration/test_magister_teacher_flow.py`
-
-- [ ] **Step 1: Write integration test**
-
-```python
-# tests/integration/test_magister_teacher_flow.py
-"""Integration test: Magister-Teacher communication"""
-
-import pytest
-import asyncio
-from pathlib import Path
-
-from meai.agents.magisters.seo_magister import SEOMagister
-from meai.agents.teacher import TeacherAgent
-from meai.events.event_bus import EventBus, Event
-from meai.knowledge.qdrant_client import QdrantClient
-from meai.knowledge.embeddings import EmbeddingsModel
-from meai.knowledge.fallback_storage import FallbackStorage
-
-
-@pytest.mark.asyncio
-async def test_magister_queries_teacher():
-    """Test Magister queries Teacher and receives results"""
-    event_bus = EventBus()
-    
-    # Initialize components
-    qdrant = QdrantClient(url="http://localhost:6333")
-    embeddings = EmbeddingsModel(model_name="BAAI/bge-m3")
-    fallback = FallbackStorage(database_url="sqlite+aiosqlite:///:memory:")
-    
-    teacher = TeacherAgent(
-        agent_id="teacher-1",
-        event_bus=event_bus,
-        qdrant_client=qdrant,
-        embeddings_model=embeddings,
-        fallback_storage=fallback,
-        database_url="sqlite+aiosqlite:///:memory:",
-    )
-    
-    await teacher.initialize()
-    
-    # Store knowledge in Teacher
-    knowledge = {
-        "content": "Advanced SEO techniques for 2026",
-        "source": "teacher",
-        "sources": [],
-        "metadata": {},
-    }
-    await teacher.store_knowledge(knowledge, "seo_knowledge")
-    
-    # Create Magister
-    magister = SEOMagister(
-        agent_id="seo-magister-1",
-        event_bus=event_bus,
-        teacher=teacher,
-        vault_path="./test_flow_vault",
-        database_url="sqlite+aiosqlite:///:memory:",
-    )
-    
-    await magister.initialize()
-    
-    # Query Teacher
-    result = await magister.hybrid_search("Advanced SEO techniques")
-    
-    assert result["source"] == "teacher"
-    assert len(result["results"]) > 0
-    
-    # Cleanup
-    import shutil
-    shutil.rmtree("./test_flow_vault")
-    await qdrant.client.delete_collection("seo_knowledge")
-    await magister.shutdown()
-    await teacher.shutdown()
-
-
-@pytest.mark.asyncio
-async def test_teacher_notifies_magister():
-    """Test Teacher notifies Magister of new knowledge"""
-    event_bus = EventBus()
-    
-    # Initialize components
-    qdrant = QdrantClient(url="http://localhost:6333")
-    embeddings = EmbeddingsModel(model_name="BAAI/bge-m3")
-    fallback = FallbackStorage(database_url="sqlite+aiosqlite:///:memory:")
-    
-    teacher = TeacherAgent(
-        agent_id="teacher-1",
-        event_bus=event_bus,
-        qdrant_client=qdrant,
-        embeddings_model=embeddings,
-        fallback_storage=fallback,
-        database_url="sqlite+aiosqlite:///:memory:",
-    )
-    
-    await teacher.initialize()
-    
-    # Create Magister
-    magister = SEOMagister(
-        agent_id="seo-magister-1",
-        event_bus=event_bus,
-        teacher=teacher,
-        vault_path="./test_notify_vault",
-        database_url="sqlite+aiosqlite:///:memory:",
-    )
-    
-    await magister.initialize()
-    
-    # Store knowledge in Teacher (should trigger notification)
-    knowledge = {
-        "content": "New SEO trends for 2026",
-        "source": "teacher",
-        "sources": [],
-        "metadata": {},
-    }
-    knowledge_id = await teacher.store_knowledge(knowledge, "seo_knowledge")
-    
-    # Distribute to Magisters
-    await teacher.distribute_to_magisters(knowledge_id, "seo_knowledge")
-    
-    # Give event bus time to process
-    await asyncio.sleep(0.2)
-    
-    # Verify Magister received and cached knowledge
-    cached_files = list(Path("./test_notify_vault/knowledge").glob("*.md"))
-    assert len(cached_files) > 0
-    
-    # Cleanup
-    import shutil
-    shutil.rmtree("./test_notify_vault")
-    await qdrant.client.delete_collection("seo_knowledge")
-    await magister.shutdown()
-    await teacher.shutdown()
-```
-
-- [ ] **Step 2: Run tests**
-
-```bash
-pytest tests/integration/test_magister_teacher_flow.py -v
-```
-
-Expected: PASS (2 tests)
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add tests/integration/test_magister_teacher_flow.py
-git commit -m "test: add Magister-Teacher integration tests
-
-Tests cover:
-- Magister queries Teacher and receives results
-- Teacher notifies Magister of new knowledge
-- Knowledge caching after notification
-
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
-```
-
----
-
-## Task 11: End-to-End Test
-
-**Files:**
-- Create: `scripts/test_magisters_core.py`
-
-- [ ] **Step 1: Write E2E test script**
-
-```python
-# scripts/test_magisters_core.py
-"""Complete end-to-end test of Magisters system"""
-
-import asyncio
-import sys
-from pathlib import Path
-from datetime import datetime
-from unittest.mock import AsyncMock, patch
-
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from meai.agents.magisters.seo_magister import SEOMagister
-from meai.agents.teacher import TeacherAgent
-from meai.agents.researcher import ResearcherAgent
-from meai.events.event_bus import EventBus
-from meai.knowledge.qdrant_client import QdrantClient
-from meai.knowledge.embeddings import EmbeddingsModel
-from meai.knowledge.fallback_storage import FallbackStorage
-
-
-def print_header(title: str):
-    print()
-    print("=" * 60)
-    print(f"TEST: {title}")
-    print("=" * 60)
-
-
-def print_success(message: str):
-    print(f"✅ {message}")
-
-
-def print_error(message: str):
-    print(f"❌ {message}")
-
-
-def print_info(message: str):
-    print(f"📋 {message}")
-
-
-async def test_1_initialize_magisters():
-    """Test 1: Initialize all Magisters"""
-    print_header("Initialize Magisters")
-    
-    try:
-        event_bus = EventBus()
-        print_success("Event Bus initialized")
-        
-        # Initialize Teacher
-        qdrant = QdrantClient(url="http://localhost:6333")
-        await qdrant.connect()
-        print_success("Qdrant connected")
-        
-        embeddings = EmbeddingsModel(model_name="BAAI/bge-m3")
-        await embeddings.load()
-        print_success(f"Embeddings loaded ({embeddings.dimension} dimensions)")
-        
-        fallback = FallbackStorage(database_url="sqlite+aiosqlite:///:memory:")
-        await fallback.initialize()
-        print_success("Fallback storage initialized")
-        
-        teacher = TeacherAgent(
-            agent_id="teacher-1",
-            event_bus=event_bus,
-            qdrant_client=qdrant,
-            embeddings_model=embeddings,
-            fallback_storage=fallback,
-            database_url="sqlite+aiosqlite:///:memory:",
-        )
-        await teacher.initialize()
-        print_success("Teacher initialized")
-        
-        # Initialize SEO Magister
-        seo_magister = SEOMagister(
-            agent_id="seo-magister-1",
-            event_bus=event_bus,
-            teacher=teacher,
-            vault_path="./test_e2e_vault",
-            database_url="sqlite+aiosqlite:///:memory:",
-        )
-        await seo_magister.initialize()
-        print_success("SEO Magister initialized")
-        
-        return {
-            "event_bus": event_bus,
-            "qdrant": qdrant,
-            "embeddings": embeddings,
-            "fallback": fallback,
-            "teacher": teacher,
-            "seo_magister": seo_magister,
-        }
-    
-    except Exception as e:
-        print_error(f"Initialization failed: {e}")
-        raise
-
-
-async def test_2_hybrid_search_flow(components: dict):
-    """Test 2: Complete hybrid search flow"""
-    print_header("Hybrid Search Flow")
-    
-    teacher = components["teacher"]
-    seo_magister = components["seo_magister"]
-    
-    # Query 1: Not found anywhere (should request Researcher)
-    print_info("Query 1: 'Quantum SEO 2026' (not found)")
-    result1 = await seo_magister.hybrid_search("Quantum SEO 2026")
-    
-    if result1["source"] == "researcher_requested":
-        print_success("Researcher request sent")
-    else:
-        print_error("Expected researcher request")
-        return False
-    
-    # Store knowledge in Teacher
-    print_info("Storing knowledge in Teacher...")
-    knowledge = {
-        "content": "SEO best practices for 2026 include Core Web Vitals",
-        "source": "teacher",
-        "sources": [],
-        "metadata": {},
-    }
-    await teacher.store_knowledge(knowledge, "seo_knowledge")
-    print_success("Knowledge stored in Teacher")
-    
-    # Query 2: Found in Teacher (should cache locally)
-    print_info("Query 2: 'SEO best practices 2026' (Teacher hit)")
-    result2 = await seo_magister.hybrid_search("SEO best practices 2026")
-    
-    if result2["source"] == "teacher":
-        print_success(f"Found in Teacher ({result2['response_time_ms']}ms)")
-    else:
-        print_error("Expected Teacher hit")
-        return False
-    
-    # Query 3: Same query (should hit local cache)
-    print_info("Query 3: 'SEO best practices 2026' (local cache)")
-    result3 = await seo_magister.hybrid_search("SEO best practices 2026")
-    
-    if result3["source"] == "local":
-        print_success(f"Found in local cache ({result3['response_time_ms']}ms)")
-        print_info(f"Speed improvement: {result2['response_time_ms'] - result3['response_time_ms']}ms")
-    else:
-        print_error("Expected local cache hit")
-        return False
-    
-    return True
-
-
-async def cleanup(components: dict):
-    """Cleanup test resources"""
-    print_header("Cleanup")
-    
-    try:
-        # Delete test collection
-        qdrant = components["qdrant"]
-        if await qdrant.collection_exists("seo_knowledge"):
-            await qdrant.client.delete_collection("seo_knowledge")
-            print_success("Deleted test collection")
-        
-        # Shutdown components
-        await components["seo_magister"].shutdown()
-        await components["teacher"].shutdown()
-        await qdrant.disconnect()
-        await components["fallback"].shutdown()
-        
-        # Remove test vault
-        import shutil
-        if Path("./test_e2e_vault").exists():
-            shutil.rmtree("./test_e2e_vault")
-            print_success("Removed test vault")
-        
-        print_success("All components shut down")
-    
-    except Exception as e:
-        print_error(f"Cleanup failed: {e}")
-
-
-async def main():
-    """Run all tests"""
-    print()
-    print("🧪 Testing Magisters Core System")
-    print(f"   Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    
-    components = None
-    all_passed = True
-    
-    try:
-        # Test 1: Initialize
-        components = await test_1_initialize_magisters()
-        
-        # Test 2: Hybrid search
-        if not await test_2_hybrid_search_flow(components):
-            all_passed = False
-    
-    except Exception as e:
-        print_error(f"Test suite failed: {e}")
-        all_passed = False
-    
-    finally:
-        # Cleanup
-        if components:
-            await cleanup(components)
-    
-    # Final result
-    print()
-    print("=" * 60)
-    if all_passed:
-        print("🎉 ALL TESTS PASSED!")
-    else:
-        print("❌ SOME TESTS FAILED")
-    print("=" * 60)
-    print()
-    
-    return 0 if all_passed else 1
-
-
-if __name__ == "__main__":
-    exit_code = asyncio.run(main())
-    sys.exit(exit_code)
-```
-
-- [ ] **Step 2: Run E2E test**
-
-```bash
-# Make sure Qdrant is running
-docker-compose up -d qdrant
-
-# Run test
-python scripts/test_magisters_core.py
-```
-
-Expected output:
-```
-🧪 Testing Magisters Core System
-   Time: 2026-05-02 18:40
-
-============================================================
-TEST: Initialize Magisters
-============================================================
-✅ Event Bus initialized
-✅ Qdrant connected
-✅ Embeddings loaded (1024 dimensions)
-✅ Fallback storage initialized
-✅ Teacher initialized
-✅ SEO Magister initialized
-
-============================================================
-TEST: Hybrid Search Flow
-============================================================
-📋 Query 1: 'Quantum SEO 2026' (not found)
-✅ Researcher request sent
-📋 Storing knowledge in Teacher...
-✅ Knowledge stored in Teacher
-📋 Query 2: 'SEO best practices 2026' (Teacher hit)
-✅ Found in Teacher (245ms)
-📋 Query 3: 'SEO best practices 2026' (local cache)
-✅ Found in local cache (12ms)
-📋 Speed improvement: 233ms
-
-============================================================
-TEST: Cleanup
-============================================================
-✅ Deleted test collection
-✅ Removed test vault
-✅ All components shut down
-
-============================================================
-🎉 ALL TESTS PASSED!
-============================================================
-```
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add scripts/test_magisters_core.py
-git commit -m "test: add end-to-end test for Magisters system
-
-Complete E2E test covering:
-1. Initialize all Magisters
-2. Hybrid search flow (local → Teacher → Researcher)
-3. Caching behavior verification
-4. Performance comparison
-
-Features:
-- Clear progress output
-- Performance metrics
-- Automatic cleanup
-
-Usage: python scripts/test_magisters_core.py
-
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
-```
 
 ---
 

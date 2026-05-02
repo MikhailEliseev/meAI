@@ -726,32 +726,128 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 
 ---
 
-## Task 3: Deprecation Manager
+## Task 3 (Updated): Deprecation Manager + Lint (Karpathy Pattern)
 
 **Files:**
-- Create: `src/meai/learning/deprecation_manager.py`
-- Create: `tests/unit/test_deprecation_manager.py`
+- Modify: `src/meai/learning/deprecation_manager.py`
+- Add lint-style checks
 
-**Key implementation:**
+**Updates to existing Task 3:**
+
+**Add to DeprecationManager class:**
+
 ```python
+# src/meai/learning/deprecation_manager.py (add methods)
+
 class DeprecationManager:
-    async def check_deprecation(self, knowledge_id: str) -> dict:
-        quality_score = await self._get_quality_score(knowledge_id)
-        success_rate = await self.tracker.get_knowledge_success_rate(knowledge_id)
-        usage_count = await self.tracker.get_knowledge_usage_count(knowledge_id)
+    # ... existing code ...
+    
+    async def lint_knowledge_base(
+        self,
+        collection: str = "general_knowledge",
+    ) -> dict[str, Any]:
+        """Run lint checks on knowledge base (Karpathy pattern)
         
-        # Deprecation criteria
-        if quality_score < 4.0 and usage_count >= 10:
-            return {"should_deprecate": True, "level": "deprecated", "reason": "low_quality"}
-        elif success_rate < 0.3 and usage_count >= 10:
-            return {"should_deprecate": True, "level": "deprecated", "reason": "low_success_rate"}
-        elif quality_score < 5.0 and usage_count >= 10:
-            return {"should_deprecate": True, "level": "warning", "reason": "moderate_quality"}
+        Returns:
+            Lint report with issues found
+        """
+        return {
+            "contradictions": await self._find_contradictions(collection),
+            "stale_knowledge": await self._find_stale_knowledge(collection),
+            "orphaned_knowledge": await self._find_orphaned_knowledge(collection),
+            "low_quality": await self._find_low_quality(collection),
+        }
+    
+    async def _find_contradictions(self, collection: str) -> list[dict]:
+        """Find contradictory knowledge items
         
-        return {"should_deprecate": False}
+        Uses wiki synthesizer to detect conflicts
+        """
+        # Get all knowledge
+        all_knowledge = await self._get_all_knowledge(collection)
+        
+        # Use wiki synthesizer to find contradictions
+        from meai.knowledge.wiki_synthesizer import WikiSynthesizer
+        synthesizer = WikiSynthesizer()
+        
+        contradictions = synthesizer.find_contradictions(all_knowledge)
+        
+        return contradictions
+    
+    async def _find_stale_knowledge(
+        self,
+        collection: str,
+        days_threshold: int = 180,
+    ) -> list[dict]:
+        """Find knowledge not used in X days"""
+        # Query knowledge_usage table
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_threshold)
+        
+        async with self.db.session() as session:
+            result = await session.execute(
+                text("""
+                SELECT DISTINCT k.knowledge_id
+                FROM knowledge k
+                LEFT JOIN knowledge_usage u ON k.id = u.knowledge_id
+                WHERE u.used_at IS NULL OR u.used_at < :cutoff_date
+                """),
+                {"cutoff_date": cutoff_date},
+            )
+            
+            stale_ids = [row[0] for row in result.fetchall()]
+            
+            return [{"knowledge_id": kid, "reason": "not_used_recently"} for kid in stale_ids]
+    
+    async def _find_orphaned_knowledge(self, collection: str) -> list[dict]:
+        """Find knowledge with no wikilinks or backlinks"""
+        all_knowledge = await self._get_all_knowledge(collection)
+        
+        orphaned = []
+        for item in all_knowledge:
+            metadata = item.get("metadata", {})
+            wikilinks = metadata.get("wikilinks", [])
+            backlinks = metadata.get("backlinks", [])
+            
+            if not wikilinks and not backlinks:
+                orphaned.append({
+                    "knowledge_id": item["id"],
+                    "reason": "no_connections",
+                })
+        
+        return orphaned
+    
+    async def _find_low_quality(self, collection: str) -> list[dict]:
+        """Find low quality knowledge (existing deprecation logic)"""
+        # Use existing check_deprecation logic
+        all_knowledge = await self._get_all_knowledge(collection)
+        
+        low_quality = []
+        for item in all_knowledge:
+            check = await self.check_deprecation(item["id"])
+            if check["should_deprecate"]:
+                low_quality.append({
+                    "knowledge_id": item["id"],
+                    "reason": check["reason"],
+                    "level": check["level"],
+                })
+        
+        return low_quality
 ```
 
-**Commit:** `feat: add Deprecation Manager with automatic detection`
+**Commit message update:**
+```
+feat: add Deprecation Manager with lint-style checks (Karpathy pattern)
+
+Deprecation Manager now includes wiki lint operations:
+- Find contradictions between knowledge items
+- Find stale knowledge (not used in 180+ days)
+- Find orphaned knowledge (no wikilinks/backlinks)
+- Find low quality knowledge (existing logic)
+
+Integrates with wiki synthesizer for contradiction detection.
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+```
 
 ---
 

@@ -1798,6 +1798,399 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 
 ---
 
+## Task 10.5: Knowledge Synthesis (Karpathy Pattern)
+
+**Files:**
+- Modify: `src/meai/agents/teacher.py`
+- Create: `src/meai/knowledge/wiki_synthesizer.py`
+- Create: `tests/unit/test_wiki_synthesizer.py`
+
+**Goal:** Implement wiki-style knowledge synthesis — Teacher не просто хранит, а синтезирует знания, создаёт wikilinks, обновляет существующие страницы.
+
+- [ ] **Step 1: Write failing test for WikiSynthesizer**
+
+```python
+# tests/unit/test_wiki_synthesizer.py
+import pytest
+from meai.knowledge.wiki_synthesizer import WikiSynthesizer
+
+
+@pytest.mark.asyncio
+async def test_wiki_synthesizer_initialization():
+    """Test WikiSynthesizer can be initialized"""
+    synthesizer = WikiSynthesizer()
+    assert synthesizer is not None
+
+
+@pytest.mark.asyncio
+async def test_extract_wikilinks():
+    """Test extracting wikilinks from content"""
+    synthesizer = WikiSynthesizer()
+    
+    content = """
+    SEO best practices include [[keyword research]] and [[on-page optimization]].
+    See also: [[content marketing]], [[link building]]
+    """
+    
+    links = synthesizer.extract_wikilinks(content)
+    
+    assert "keyword research" in links
+    assert "on-page optimization" in links
+    assert "content marketing" in links
+    assert "link building" in links
+    assert len(links) == 4
+
+
+@pytest.mark.asyncio
+async def test_synthesize_knowledge():
+    """Test synthesizing multiple knowledge items"""
+    synthesizer = WikiSynthesizer()
+    
+    knowledge_items = [
+        {
+            "id": "k1",
+            "content": "SEO requires [[keyword research]] and [[content optimization]].",
+            "topic": "seo",
+        },
+        {
+            "id": "k2",
+            "content": "[[Keyword research]] helps identify search terms.",
+            "topic": "seo",
+        },
+    ]
+    
+    synthesized = await synthesizer.synthesize(knowledge_items)
+    
+    assert "seo" in synthesized
+    assert "wikilinks" in synthesized
+    assert "keyword research" in synthesized["wikilinks"]
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+```bash
+pytest tests/unit/test_wiki_synthesizer.py -v
+```
+
+Expected: FAIL
+
+- [ ] **Step 3: Write WikiSynthesizer implementation**
+
+```python
+# src/meai/knowledge/wiki_synthesizer.py
+"""Wiki-style knowledge synthesis (Karpathy pattern)"""
+
+import re
+from typing import Any
+from collections import defaultdict
+
+
+class WikiSynthesizer:
+    """Synthesize knowledge into wiki-style pages with cross-references
+    
+    Based on Karpathy's LLM-maintained wiki pattern:
+    - Extract wikilinks [[topic]] from content
+    - Build cross-reference graph
+    - Merge duplicate/related knowledge
+    - Create backlinks
+    """
+
+    def __init__(self):
+        """Initialize synthesizer"""
+        self.wikilink_pattern = re.compile(r'\[\[([^\]]+)\]\]')
+
+    def extract_wikilinks(self, content: str) -> list[str]:
+        """Extract wikilinks from content
+        
+        Args:
+            content: Markdown content with [[wikilinks]]
+            
+        Returns:
+            List of linked topics
+        """
+        matches = self.wikilink_pattern.findall(content)
+        # Normalize: lowercase, strip whitespace
+        return [match.strip().lower() for match in matches]
+
+    def add_wikilinks(self, content: str, related_topics: list[str]) -> str:
+        """Add wikilinks to content for related topics
+        
+        Args:
+            content: Original content
+            related_topics: Topics to link
+            
+        Returns:
+            Content with wikilinks added
+        """
+        # Simple implementation: add "See also" section
+        if not related_topics:
+            return content
+        
+        see_also = "\n\n## See Also\n\n"
+        for topic in related_topics:
+            see_also += f"- [[{topic}]]\n"
+        
+        return content + see_also
+
+    async def synthesize(
+        self,
+        knowledge_items: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Synthesize multiple knowledge items into wiki structure
+        
+        Args:
+            knowledge_items: List of knowledge items with content
+            
+        Returns:
+            Synthesized wiki structure with cross-references
+        """
+        # Build wikilink graph
+        wikilinks = defaultdict(list)  # topic -> [linked topics]
+        backlinks = defaultdict(list)  # topic -> [topics that link here]
+        
+        for item in knowledge_items:
+            topic = item.get("topic", "unknown")
+            content = item.get("content", "")
+            
+            # Extract links from this item
+            links = self.extract_wikilinks(content)
+            wikilinks[topic].extend(links)
+            
+            # Build backlinks
+            for link in links:
+                backlinks[link].append(topic)
+        
+        # Deduplicate
+        for topic in wikilinks:
+            wikilinks[topic] = list(set(wikilinks[topic]))
+        
+        for topic in backlinks:
+            backlinks[topic] = list(set(backlinks[topic]))
+        
+        return {
+            "wikilinks": dict(wikilinks),
+            "backlinks": dict(backlinks),
+            "topics": list(set(wikilinks.keys()) | set(backlinks.keys())),
+        }
+
+    def merge_duplicate_knowledge(
+        self,
+        items: list[dict[str, Any]],
+        similarity_threshold: float = 0.8,
+    ) -> list[dict[str, Any]]:
+        """Merge duplicate or highly similar knowledge items
+        
+        Args:
+            items: Knowledge items
+            similarity_threshold: Similarity threshold for merging
+            
+        Returns:
+            Merged knowledge items
+        """
+        # Simple implementation: merge by exact topic match
+        # In production, would use embeddings similarity
+        
+        merged = {}
+        
+        for item in items:
+            topic = item.get("topic", "unknown")
+            
+            if topic in merged:
+                # Merge content
+                merged[topic]["content"] += "\n\n" + item["content"]
+                merged[topic]["sources"].extend(item.get("sources", []))
+            else:
+                merged[topic] = item.copy()
+                if "sources" not in merged[topic]:
+                    merged[topic]["sources"] = []
+        
+        return list(merged.values())
+
+    def find_contradictions(
+        self,
+        items: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Find potential contradictions between knowledge items
+        
+        Args:
+            items: Knowledge items
+            
+        Returns:
+            List of potential contradictions
+        """
+        contradictions = []
+        
+        # Simple heuristic: look for negation words in same topic
+        negation_words = ["not", "no", "never", "don't", "doesn't", "isn't"]
+        
+        by_topic = defaultdict(list)
+        for item in items:
+            topic = item.get("topic", "unknown")
+            by_topic[topic].append(item)
+        
+        for topic, topic_items in by_topic.items():
+            if len(topic_items) < 2:
+                continue
+            
+            # Check for negations
+            has_negation = []
+            no_negation = []
+            
+            for item in topic_items:
+                content_lower = item["content"].lower()
+                if any(word in content_lower for word in negation_words):
+                    has_negation.append(item)
+                else:
+                    no_negation.append(item)
+            
+            if has_negation and no_negation:
+                contradictions.append({
+                    "topic": topic,
+                    "items": [has_negation[0]["id"], no_negation[0]["id"]],
+                    "reason": "potential_negation_conflict",
+                })
+        
+        return contradictions
+```
+
+- [ ] **Step 4: Update Teacher to use WikiSynthesizer**
+
+```python
+# src/meai/agents/teacher.py (add to existing file)
+
+from meai.knowledge.wiki_synthesizer import WikiSynthesizer
+
+class TeacherAgent(Agent):
+    def __init__(self, ...):
+        # ... existing code ...
+        self.wiki_synthesizer = WikiSynthesizer()
+    
+    async def store_knowledge(
+        self,
+        knowledge: dict[str, Any],
+        collection: str = "general_knowledge",
+    ) -> str:
+        """Store knowledge with wiki synthesis"""
+        
+        # Extract wikilinks from content
+        content = knowledge.get("content", "")
+        wikilinks = self.wiki_synthesizer.extract_wikilinks(content)
+        
+        # Add wikilinks to metadata
+        if "metadata" not in knowledge:
+            knowledge["metadata"] = {}
+        knowledge["metadata"]["wikilinks"] = wikilinks
+        
+        # Store in Qdrant (existing code)
+        knowledge_id = await self._store_in_qdrant(knowledge, collection)
+        
+        # Update backlinks for linked topics
+        await self._update_backlinks(wikilinks, knowledge_id, collection)
+        
+        return knowledge_id
+    
+    async def _update_backlinks(
+        self,
+        wikilinks: list[str],
+        source_id: str,
+        collection: str,
+    ) -> None:
+        """Update backlinks for linked topics"""
+        
+        for topic in wikilinks:
+            # Search for existing knowledge about this topic
+            results = await self.search_knowledge(
+                query=topic,
+                collection=collection,
+                limit=5,
+            )
+            
+            # Add backlink to each result
+            for result in results:
+                existing_backlinks = result.get("metadata", {}).get("backlinks", [])
+                if source_id not in existing_backlinks:
+                    existing_backlinks.append(source_id)
+                    
+                    # Update in Qdrant
+                    await self._update_metadata(
+                        result["id"],
+                        {"backlinks": existing_backlinks},
+                        collection,
+                    )
+    
+    async def synthesize_topic(
+        self,
+        topic: str,
+        collection: str = "general_knowledge",
+    ) -> dict[str, Any]:
+        """Synthesize all knowledge about a topic into wiki page
+        
+        Args:
+            topic: Topic to synthesize
+            collection: Qdrant collection
+            
+        Returns:
+            Synthesized wiki page with cross-references
+        """
+        # Search for all knowledge about topic
+        results = await self.search_knowledge(
+            query=topic,
+            collection=collection,
+            limit=20,
+        )
+        
+        # Merge duplicates
+        merged = self.wiki_synthesizer.merge_duplicate_knowledge(results)
+        
+        # Synthesize into wiki structure
+        wiki_structure = await self.wiki_synthesizer.synthesize(merged)
+        
+        # Find contradictions
+        contradictions = self.wiki_synthesizer.find_contradictions(merged)
+        
+        return {
+            "topic": topic,
+            "knowledge_items": merged,
+            "wikilinks": wiki_structure["wikilinks"].get(topic, []),
+            "backlinks": wiki_structure["backlinks"].get(topic, []),
+            "contradictions": contradictions,
+        }
+```
+
+- [ ] **Step 5: Run tests**
+
+```bash
+pytest tests/unit/test_wiki_synthesizer.py -v
+pytest tests/unit/test_teacher.py -v
+```
+
+Expected: PASS
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/meai/knowledge/wiki_synthesizer.py src/meai/agents/teacher.py tests/unit/test_wiki_synthesizer.py
+git commit -m "feat: add wiki-style knowledge synthesis (Karpathy pattern)
+
+Implements LLM-maintained wiki pattern:
+- Extract wikilinks [[topic]] from content
+- Build cross-reference graph (wikilinks + backlinks)
+- Merge duplicate knowledge
+- Find contradictions
+- Synthesize topic into wiki page
+
+Teacher now:
+- Extracts wikilinks when storing knowledge
+- Updates backlinks automatically
+- Can synthesize topic into wiki page
+
+Based on: https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+```
+
+---
+
 ## Task 11: Teacher Agent - Search & Distribution
 
 **Files:**
