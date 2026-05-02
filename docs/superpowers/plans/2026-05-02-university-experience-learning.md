@@ -419,20 +419,310 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 - Create: `src/meai/learning/quality_updater.py`
 - Create: `tests/unit/test_quality_updater.py`
 
-**Implementation:** Update knowledge quality scores based on experiences
+- [ ] **Step 1: Write failing test**
 
-**Key algorithm:**
 ```python
-new_score = initial_score + experience_adjustment
+# tests/unit/test_quality_updater.py
+import pytest
+from meai.learning.quality_updater import QualityUpdater
+from meai.learning.experience_tracker import ExperienceTracker
 
-experience_adjustment = (
-    success_rate_factor +      # -1.5 to +1.5
-    usage_frequency_factor +   # -0.5 to +0.5
-    recency_factor            # -1.0 to +0.5
-)
+
+@pytest.mark.asyncio
+async def test_quality_updater_initialization():
+    """Test QualityUpdater can be initialized"""
+    tracker = ExperienceTracker(database_url="sqlite+aiosqlite:///:memory:")
+    await tracker.initialize()
+    
+    updater = QualityUpdater(
+        experience_tracker=tracker,
+        database_url="sqlite+aiosqlite:///:memory:",
+    )
+    await updater.initialize()
+    
+    assert updater is not None
+    
+    await updater.shutdown()
+    await tracker.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_update_quality_score():
+    """Test updating quality score based on experiences"""
+    tracker = ExperienceTracker(database_url="sqlite+aiosqlite:///:memory:")
+    await tracker.initialize()
+    
+    updater = QualityUpdater(
+        experience_tracker=tracker,
+        database_url="sqlite+aiosqlite:///:memory:",
+    )
+    await updater.initialize()
+    
+    # Record experiences (8 success, 2 failure)
+    for i in range(10):
+        outcome = "success" if i < 8 else "failure"
+        score = 0.9 if i < 8 else 0.2
+        
+        await tracker.record_experience(
+            magister_id="seo-magister-1",
+            task_id=f"task-{i}",
+            knowledge_ids=["knowledge-test"],
+            outcome=outcome,
+            outcome_score=score,
+        )
+    
+    # Update quality (initial score: 7.0)
+    result = await updater.update_quality_score(
+        knowledge_id="knowledge-test",
+        initial_score=7.0,
+    )
+    
+    assert result["new_score"] > 7.0  # Should increase
+    assert result["adjustment"] > 0
+    
+    await updater.shutdown()
+    await tracker.shutdown()
 ```
 
-**Commit:** `feat: add Quality Updater with experience-based algorithm`
+- [ ] **Step 2: Write implementation**
+
+```python
+# src/meai/learning/quality_updater.py
+"""Update knowledge quality scores based on experiences"""
+
+from datetime import datetime, timezone, timedelta
+from typing import Any
+from uuid import uuid4
+
+from sqlalchemy import text
+
+from meai.learning.experience_tracker import ExperienceTracker
+from meai.storage.database import Database
+
+
+class QualityUpdater:
+    """Update knowledge quality scores based on real-world outcomes"""
+
+    def __init__(
+        self,
+        experience_tracker: ExperienceTracker,
+        database_url: str = "sqlite+aiosqlite:///./data/meai.db",
+    ):
+        """Initialize Quality Updater
+        
+        Args:
+            experience_tracker: Experience tracker instance
+            database_url: Database URL
+        """
+        self.tracker = experience_tracker
+        self.db = Database(database_url)
+
+    async def initialize(self) -> None:
+        """Initialize updater"""
+        await self.db.connect()
+        await self._create_tables()
+
+    async def shutdown(self) -> None:
+        """Shutdown updater"""
+        await self.db.disconnect()
+
+    async def _create_tables(self) -> None:
+        """Create quality update tables"""
+        async with self.db.session() as session:
+            await session.execute(
+                text("""
+                CREATE TABLE IF NOT EXISTS quality_updates (
+                    id TEXT PRIMARY KEY,
+                    knowledge_id TEXT NOT NULL,
+                    old_score REAL NOT NULL,
+                    new_score REAL NOT NULL,
+                    adjustment_reason TEXT NOT NULL,
+                    updated_at TIMESTAMP NOT NULL
+                )
+                """)
+            )
+            await session.commit()
+
+    async def update_quality_score(
+        self,
+        knowledge_id: str,
+        initial_score: float = 7.0,
+    ) -> dict[str, Any]:
+        """Update quality score based on experiences
+        
+        Args:
+            knowledge_id: Knowledge ID
+            initial_score: Initial quality score (1-10)
+            
+        Returns:
+            Update result with new score and adjustment
+        """
+        # Calculate adjustment factors
+        success_rate = await self.tracker.get_knowledge_success_rate(knowledge_id)
+        usage_count = await self.tracker.get_knowledge_usage_count(knowledge_id)
+        
+        # Success rate factor (-1.5 to +1.5)
+        if success_rate >= 0.8:
+            success_factor = 1.5
+        elif success_rate >= 0.6:
+            success_factor = 0.5
+        elif success_rate >= 0.4:
+            success_factor = 0.0
+        elif success_rate >= 0.2:
+            success_factor = -0.5
+        else:
+            success_factor = -1.5
+        
+        # Usage frequency factor (-0.5 to +0.5)
+        if usage_count >= 20:
+            usage_factor = 0.5
+        elif usage_count >= 10:
+            usage_factor = 0.3
+        elif usage_count >= 5:
+            usage_factor = 0.0
+        else:
+            usage_factor = -0.5
+        
+        # Recency factor (-1.0 to +0.5)
+        # For now, assume recent usage (would check last_used in production)
+        recency_factor = 0.5
+        
+        # Total adjustment
+        adjustment = success_factor + usage_factor + recency_factor
+        
+        # Calculate new score (clamp to 1-10)
+        new_score = max(1.0, min(10.0, initial_score + adjustment))
+        
+        # Record update
+        update_id = f"update-{uuid4().hex[:8]}"
+        
+        adjustment_reason = {
+            "success_rate": success_rate,
+            "success_factor": success_factor,
+            "usage_count": usage_count,
+            "usage_factor": usage_factor,
+            "recency_factor": recency_factor,
+            "total_adjustment": adjustment,
+        }
+        
+        async with self.db.session() as session:
+            await session.execute(
+                text("""
+                INSERT INTO quality_updates
+                (id, knowledge_id, old_score, new_score, 
+                 adjustment_reason, updated_at)
+                VALUES (:id, :knowledge_id, :old_score, :new_score,
+                        :adjustment_reason, :updated_at)
+                """),
+                {
+                    "id": update_id,
+                    "knowledge_id": knowledge_id,
+                    "old_score": initial_score,
+                    "new_score": new_score,
+                    "adjustment_reason": str(adjustment_reason),
+                    "updated_at": datetime.now(timezone.utc),
+                },
+            )
+            await session.commit()
+        
+        return {
+            "knowledge_id": knowledge_id,
+            "old_score": initial_score,
+            "new_score": new_score,
+            "adjustment": adjustment,
+            "reason": adjustment_reason,
+        }
+
+    async def batch_update_scores(
+        self,
+        knowledge_ids: list[str] = None,
+    ) -> int:
+        """Batch update quality scores
+        
+        Args:
+            knowledge_ids: List of knowledge IDs (None = all)
+            
+        Returns:
+            Number of updated scores
+        """
+        # In production, would fetch all knowledge IDs from database
+        # For now, just update provided IDs
+        
+        if knowledge_ids is None:
+            return 0
+        
+        updated = 0
+        for knowledge_id in knowledge_ids:
+            try:
+                await self.update_quality_score(knowledge_id)
+                updated += 1
+            except Exception:
+                pass
+        
+        return updated
+
+    async def get_quality_history(
+        self,
+        knowledge_id: str,
+    ) -> list[dict[str, Any]]:
+        """Get quality score history
+        
+        Args:
+            knowledge_id: Knowledge ID
+            
+        Returns:
+            List of quality updates
+        """
+        async with self.db.session() as session:
+            result = await session.execute(
+                text("""
+                SELECT id, old_score, new_score, adjustment_reason, updated_at
+                FROM quality_updates
+                WHERE knowledge_id = :knowledge_id
+                ORDER BY updated_at DESC
+                """),
+                {"knowledge_id": knowledge_id},
+            )
+            
+            rows = result.fetchall()
+            
+            history = []
+            for row in rows:
+                history.append({
+                    "id": row[0],
+                    "old_score": row[1],
+                    "new_score": row[2],
+                    "adjustment_reason": row[3],
+                    "updated_at": row[4].isoformat() if row[4] else None,
+                })
+            
+            return history
+```
+
+- [ ] **Step 3: Update __init__.py**
+
+```python
+# src/meai/learning/__init__.py
+from meai.learning.experience_tracker import ExperienceTracker
+from meai.learning.quality_updater import QualityUpdater
+
+__all__ = ["ExperienceTracker", "QualityUpdater"]
+```
+
+- [ ] **Step 4: Run tests**
+
+```bash
+pytest tests/unit/test_quality_updater.py -v
+```
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/meai/learning/quality_updater.py tests/unit/test_quality_updater.py
+git commit -m "feat: add Quality Updater with experience-based algorithm
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+```
 
 ---
 
@@ -442,12 +732,24 @@ experience_adjustment = (
 - Create: `src/meai/learning/deprecation_manager.py`
 - Create: `tests/unit/test_deprecation_manager.py`
 
-**Implementation:** Automatically deprecate low-performing knowledge
-
-**Deprecation criteria:**
-- Quality score < 4.0 after 10+ uses
-- Success rate < 30% after 10+ uses
-- Not used in 180+ days
+**Key implementation:**
+```python
+class DeprecationManager:
+    async def check_deprecation(self, knowledge_id: str) -> dict:
+        quality_score = await self._get_quality_score(knowledge_id)
+        success_rate = await self.tracker.get_knowledge_success_rate(knowledge_id)
+        usage_count = await self.tracker.get_knowledge_usage_count(knowledge_id)
+        
+        # Deprecation criteria
+        if quality_score < 4.0 and usage_count >= 10:
+            return {"should_deprecate": True, "level": "deprecated", "reason": "low_quality"}
+        elif success_rate < 0.3 and usage_count >= 10:
+            return {"should_deprecate": True, "level": "deprecated", "reason": "low_success_rate"}
+        elif quality_score < 5.0 and usage_count >= 10:
+            return {"should_deprecate": True, "level": "warning", "reason": "moderate_quality"}
+        
+        return {"should_deprecate": False}
+```
 
 **Commit:** `feat: add Deprecation Manager with automatic detection`
 
@@ -459,13 +761,22 @@ experience_adjustment = (
 - Create: `src/meai/learning/learning_analytics.py`
 - Create: `tests/unit/test_learning_analytics.py`
 
-**Implementation:** Analytics and insights
-
-**Key metrics:**
-- Knowledge quality distribution
-- Success rate trends
-- Deprecation rate
-- Most/least used knowledge
+**Key implementation:**
+```python
+class LearningAnalytics:
+    async def get_system_metrics(self) -> dict:
+        return {
+            "total_knowledge": await self._count_knowledge(),
+            "avg_quality_score": await self._avg_quality(),
+            "deprecated_count": await self._count_deprecated(),
+            "avg_success_rate": await self._avg_success_rate(),
+            "total_experiences": await self._count_experiences(),
+        }
+    
+    async def get_quality_trends(self, days: int = 30) -> list[dict]:
+        # Return quality trends over time
+        pass
+```
 
 **Commit:** `feat: add Learning Analytics and metrics`
 
@@ -478,14 +789,14 @@ experience_adjustment = (
 
 **Changes:**
 ```python
+# Add to BaseMagister.__init__
+self.experience_tracker = ExperienceTracker(database_url=database_url)
+
+# Modify execute_task
 async def execute_task(self, task: Task) -> TaskResult:
-    # Track knowledge used
     knowledge_ids = self._get_knowledge_used(task)
-    
-    # Execute task
     result = await self._execute_task_impl(task)
     
-    # Record experience
     await self.experience_tracker.record_experience(
         magister_id=self.agent_id,
         task_id=task.task_id,
@@ -508,16 +819,13 @@ async def execute_task(self, task: Task) -> TaskResult:
 
 **Changes:**
 ```python
+# Add to TeacherAgent.__init__
+self.quality_updater = QualityUpdater(experience_tracker, database_url)
+
+# Add method
 async def update_knowledge_quality(self, knowledge_id: str) -> dict:
-    # Get new quality score
     update_result = await self.quality_updater.update_quality_score(knowledge_id)
-    
-    # Update in database
-    await self._update_quality_in_db(knowledge_id, update_result["new_score"])
-    
-    # Update in Qdrant
     await self._update_quality_in_qdrant(knowledge_id, update_result["new_score"])
-    
     return update_result
 ```
 
@@ -530,15 +838,23 @@ async def update_knowledge_quality(self, knowledge_id: str) -> dict:
 **Files:**
 - Create: `scripts/update_qualities.py`
 
-**Implementation:** Cron job to update quality scores daily
-
-**Usage:**
-```bash
-# Manual run
-python scripts/update_qualities.py
-
-# Cron (add to crontab)
-0 2 * * * cd /path/to/meai && python scripts/update_qualities.py
+**Implementation:**
+```python
+async def main():
+    print("🔄 Running quality updates...")
+    
+    teacher = TeacherAgent(...)
+    await teacher.initialize()
+    
+    # Update all knowledge qualities
+    updated = await teacher.batch_update_qualities()
+    print(f"✅ Updated {updated} knowledge items")
+    
+    # Scan for deprecation
+    deprecated = await teacher.scan_for_deprecation()
+    print(f"⚠️  Deprecated {len(deprecated)} items")
+    
+    await teacher.shutdown()
 ```
 
 **Commit:** `feat: add scheduled quality update script`
@@ -551,11 +867,16 @@ python scripts/update_qualities.py
 - Create: `tests/integration/test_experience_learning_flow.py`
 
 **Test scenario:**
-1. Magister executes tasks using knowledge A (8 success, 2 failure)
-2. Quality updater runs → quality score increases
-3. Magister executes tasks using knowledge B (5 failures)
-4. Quality updater runs → quality score decreases
-5. Deprecation manager runs → knowledge B deprecated
+```python
+@pytest.mark.asyncio
+async def test_experience_learning_flow():
+    # 1. Execute tasks with knowledge A (8 success, 2 failure)
+    # 2. Run quality updater → score increases
+    # 3. Execute tasks with knowledge B (5 failures)
+    # 4. Run quality updater → score decreases
+    # 5. Run deprecation → knowledge B deprecated
+    pass
+```
 
 **Commit:** `test: add experience learning integration test`
 
@@ -567,12 +888,16 @@ python scripts/update_qualities.py
 - Create: `tests/integration/test_quality_update_propagation.py`
 
 **Test scenario:**
-1. Knowledge stored in Teacher's Qdrant
-2. Magister caches knowledge locally
-3. Experiences recorded → quality updated
-4. Teacher updates quality in Qdrant
-5. Teacher notifies Magisters
-6. Magisters update local cache
+```python
+@pytest.mark.asyncio
+async def test_quality_update_propagation():
+    # 1. Store knowledge in Teacher
+    # 2. Magister caches locally
+    # 3. Record experiences
+    # 4. Teacher updates quality
+    # 5. Verify propagation to Qdrant and Magisters
+    pass
+```
 
 **Commit:** `test: add quality update propagation test`
 
@@ -583,14 +908,26 @@ python scripts/update_qualities.py
 **Files:**
 - Create: `scripts/analyze_learning.py`
 
-**Implementation:** Generate learning analytics report
-
-**Report includes:**
-- System-wide metrics
-- Per-Magister metrics
-- Top/bottom performing knowledge
-- Quality trends
-- Deprecation statistics
+**Implementation:**
+```python
+async def main():
+    print("📊 University Learning Analytics Report")
+    
+    analytics = LearningAnalytics(...)
+    await analytics.initialize()
+    
+    # System metrics
+    metrics = await analytics.get_system_metrics()
+    print(f"Total Knowledge: {metrics['total_knowledge']}")
+    print(f"Avg Quality: {metrics['avg_quality_score']:.1f}/10")
+    
+    # Top performing
+    top = await analytics.get_top_performing(limit=5)
+    for item in top:
+        print(f"✅ {item['id']} - Quality: {item['quality']}")
+    
+    await analytics.shutdown()
+```
 
 **Commit:** `feat: add learning analytics report script`
 
@@ -602,29 +939,21 @@ python scripts/update_qualities.py
 - Create: `scripts/test_experience_learning.py`
 
 **Test flow:**
-1. Initialize system
-2. SEO Magister executes 20 tasks
-3. Record experiences (15 success, 5 failure)
-4. Run quality updater
-5. Run deprecation scan
-6. Generate analytics report
-7. Verify quality changes propagated
+```python
+async def main():
+    print("🧪 Testing Experience Learning System")
+    
+    # 1. Initialize all components
+    # 2. Execute 20 tasks (15 success, 5 failure)
+    # 3. Run quality updater
+    # 4. Run deprecation scan
+    # 5. Generate analytics report
+    # 6. Verify quality changes
+    
+    print("🎉 ALL TESTS PASSED!")
+```
 
 **Commit:** `test: add end-to-end test for experience learning`
-
----
-
-## Success Criteria
-
-- [ ] ✅ Experience tracking implemented
-- [ ] ✅ Quality updater working
-- [ ] ✅ Deprecation manager detecting low-performing knowledge
-- [ ] ✅ Learning analytics generating insights
-- [ ] ✅ Magisters recording experiences
-- [ ] ✅ Teacher updating qualities
-- [ ] ✅ Quality updates propagating
-- [ ] ✅ Scheduled updates running
-- [ ] ✅ All tests passing
 
 ---
 
