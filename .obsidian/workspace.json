@@ -4,21 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "f785207013fe4689",
+        "id": "3e035f338b5c5e2c",
         "type": "tabs",
         "children": [
           {
-            "id": "95dfcf6cc0a31932",
+            "id": "4846668212bcf8e1",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "obsidian/daily/2026-05-01-checkpoint.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "2026-05-01-checkpoint"
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Граф"
             }
           }
         ]
@@ -127,7 +123,7 @@
               },
               "pinned": true,
               "icon": "terminal",
-              "title": "Terminal: ⠐ Claude Code"
+              "title": "Terminal: ⠂ Claude Code"
             }
           },
           {
@@ -224,40 +220,41 @@
   },
   "active": "e02859846769d7fa",
   "lastOpenFiles": [
+    "docs/FINAL-SUMMARY.md",
+    "docs/adr/005-obsidian-memory.md",
+    "docs/adr/004-tdd-approach.md",
+    "docs/adr/003-async-first.md",
+    "docs/adr/002-event-sourcing.md",
+    "docs/adr/001-dual-storage.md",
+    "docs/architecture/safety.md",
+    "docs/architecture/agents.md",
+    "docs/architecture/event-sourcing.md",
+    "docs/architecture/storage.md",
+    "docs/architecture/overview.md",
+    "docs/tutorials/04-rollback.md",
+    "docs/tutorials/03-event-sourcing.md",
+    "docs/tutorials/02-memory-system.md",
+    "docs/api/safety.md",
+    "docs/api/system-registry.md",
+    "docs/api/prompt-generator.md",
+    "docs/api/database.md",
+    "docs/api/obsidian.md",
+    "docs/api/event-bus.md",
+    "docs/api/agent-factory.md",
+    "docs/api/event-store.md",
+    "docs/PULL_REQUEST.md",
+    "docs/README.md",
+    "docs/tutorials/01-first-agent.md",
+    "docs/api/rollback.md",
+    "docs/adr",
+    "docs/architecture",
+    "docs/tutorials",
+    "docs/api",
+    "tests/__pycache__/test_memory.cpython-314-pytest-9.0.3.pyc",
     "src/meai/core/__pycache__/rollback.cpython-314.pyc",
     "tests/integration/__pycache__/test_rollback.cpython-314-pytest-9.0.3.pyc",
     "src/meai/core/__pycache__/orchestrator.cpython-314.pyc",
     "tests/unit/__pycache__/test_orchestrator.cpython-314-pytest-9.0.3.pyc",
-    "src/meai/core/__pycache__/decision_maker.cpython-314.pyc",
-    "src/meai/core/rollback.py",
-    "tests/integration/test_rollback.py",
-    "src/meai/core/orchestrator.py",
-    "tests/unit/test_orchestrator.py",
-    "obsidian/daily/2026-05-01-checkpoint.md",
-    "src/meai/core/decision_maker.py",
-    "tests/unit/__pycache__/test_decision_maker.cpython-314-pytest-9.0.3.pyc",
-    "obsidian/AIM/context.md",
-    "CLAUDE.md",
-    "docs/planning/charter.md",
-    "docs/planning/plan-review-summary.md",
-    "docs/planning/plan-v1.1.md",
-    "docs/planning/spec-review-summary.md",
-    "docs/planning/spec-v1.1.md",
-    "docs/planning/event-sourcing-design.md",
-    "obsidian/daily/2026-05-01.md",
-    "docs/superpowers/archive/v1.0-2026-05-01/README.md",
-    "docs/superpowers/archive/v1.0-2026-05-01/2026-05-01-final-checkpoint.md",
-    "docs/superpowers/archive/v1.0-2026-05-01/SESSION-HANDOFF.md",
-    "docs/superpowers/archive/v1.0-2026-05-01/IMPLEMENTATION-STRATEGY.md",
-    "docs/superpowers/archive/v1.0-2026-05-01/2026-05-01-meai-architect-design.md",
-    "docs/superpowers/archive/v1.0-2026-05-01/2026-05-01-meai-core-foundation-plan.md",
-    "docs/superpowers/IMPLEMENTATION-STRATEGY.md",
-    "obsidian/daily/2026-05-01-final-checkpoint.md",
-    "docs/superpowers/SESSION-HANDOFF.md",
-    "docs/superpowers/plans/REMAINING-TASKS.md",
-    "docs/superpowers/plans/2026-05-01-meai-core-foundation-plan.md",
-    "docs/superpowers/NEXT-STEPS.md",
-    "docs/superpowers/specs/2026-05-01-meai-architect-design.md",
-    "README.md"
+    "src/meai/core/__pycache__/decision_maker.cpython-314.pyc"
   ]
 }
