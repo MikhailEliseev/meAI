@@ -97,6 +97,7 @@ class TeacherAgent(Agent):
             "evaluate_knowledge",
             "store_knowledge",
             "search_knowledge",
+            "handle_magister_query",
         ]
 
     async def execute_task(self, task: Task) -> TaskResult:
@@ -117,6 +118,8 @@ class TeacherAgent(Agent):
                 result = await self._store_knowledge(task)
             elif task.action == "search_knowledge":
                 result = await self._search_knowledge(task)
+            elif task.action == "handle_magister_query":
+                result = await self._handle_magister_query(task)
             else:
                 raise ValueError(f"Unknown action: {task.action}")
 
@@ -332,6 +335,80 @@ class TeacherAgent(Agent):
         return {
             "query": query,
             "results": results[:10],  # Top 10 results
+            "count": len(results),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+    async def _handle_magister_query(self, task: Task) -> dict[str, Any]:
+        """Handle query from Magister agent
+
+        Args:
+            task: Task with Magister query in description
+
+        Returns:
+            Search results for Magister
+        """
+        # Parse query from task description
+        # Format: "query: <text> | collection: <name> | magister_id: <id>"
+        query_text = task.description
+        collection = None
+        magister_id = None
+
+        # Simple parsing
+        if "|" in query_text:
+            parts = query_text.split("|")
+            for part in parts:
+                if "query:" in part:
+                    query_text = part.split("query:")[1].strip()
+                elif "collection:" in part:
+                    collection = part.split("collection:")[1].strip()
+                elif "magister_id:" in part:
+                    magister_id = part.split("magister_id:")[1].strip()
+
+        # Generate query embedding
+        query_embedding = await self.embeddings.encode(query_text)
+
+        results = []
+
+        # Search in specified collection or all collections
+        collections_to_search = [collection] if collection else self.collections
+
+        try:
+            for coll in collections_to_search:
+                if await self.qdrant.collection_exists(coll):
+                    search_results = await self.qdrant.search(
+                        collection_name=coll,
+                        query_vector=query_embedding,
+                        limit=5,
+                    )
+
+                    for hit in search_results:
+                        results.append({
+                            "content": hit.payload.get("content", ""),
+                            "score": hit.score,
+                            "collection": coll,
+                            "source": hit.payload.get("source", "unknown"),
+                        })
+
+        except Exception:
+            # Fallback to SQLite search
+            fallback_results = await self.fallback.search_knowledge(query_text, limit=10)
+            for item in fallback_results:
+                results.append({
+                    "content": item["content"],
+                    "score": 0.5,
+                    "collection": item["metadata"].get("collection", "unknown"),
+                    "source": item["metadata"].get("source", "unknown"),
+                })
+
+        # Sort by score
+        results.sort(key=lambda x: x["score"], reverse=True)
+
+        return {
+            "status": "success",
+            "query": query_text,
+            "magister_id": magister_id,
+            "results": results[:10],
             "count": len(results),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
