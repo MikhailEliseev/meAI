@@ -175,6 +175,24 @@ class BaseMagister(Agent):
         (self.vault_path / "tasks").mkdir(parents=True, exist_ok=True)
         (self.vault_path / "decisions").mkdir(parents=True, exist_ok=True)
 
+        # Create .obsidian folder for Obsidian recognition
+        obsidian_path = self.vault_path / ".obsidian"
+        obsidian_path.mkdir(parents=True, exist_ok=True)
+
+        # Create app.json
+        app_json = obsidian_path / "app.json"
+        if not app_json.exists():
+            app_json.write_text(json.dumps({
+                "name": f"{self.magister_type.upper()} Magister Vault"
+            }, indent=2))
+
+        # Create appearance.json
+        appearance_json = obsidian_path / "appearance.json"
+        if not appearance_json.exists():
+            appearance_json.write_text(json.dumps({
+                "attachmentFolderPath": "assets"
+            }, indent=2))
+
         # Create index file
         index_path = self.vault_path / "INDEX.md"
         if not index_path.exists():
