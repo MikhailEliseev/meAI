@@ -3,7 +3,7 @@ subtask_id: subtask-001
 action: test_action
 status: success
 duration: 0.1s
-completed: 2026-05-02T09:02:44.360892+00:00
+completed: 2026-05-02T17:11:48.222874+00:00
 ---
 
 # Result: test_action
@@ -17,7 +17,7 @@ SUCCESS
 ## Result
 ```json
 {
-  "message": "Task test_action completed successfully"
+  "message": "Task completed"
 }
 ```
 
