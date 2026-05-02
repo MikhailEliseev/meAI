@@ -43,18 +43,31 @@ Subagents
 **Capabilities:**
 - `research_topic` — deep research via Perplexity API
 - `monitor_sources` — RSS/blog/documentation monitoring
+- `monitor_youtube` — YouTube channels monitoring
+- `monitor_telegram` — Telegram channels monitoring
 - `validate_source` — source quality validation
 
 **Workflow:**
 1. Receives request from Teacher: "Research topic X"
-2. Uses Perplexity API for deep search
+2. Uses multiple sources:
+   - Perplexity API for deep search
+   - YouTube API for video content (transcripts)
+   - Telegram API for channel messages
+   - RSS/web scraping as fallback
 3. Collects information from multiple sources
 4. Evaluates source quality (authority, freshness)
 5. Sends findings to Teacher via Event Bus
 
+**Source Management:**
+- **Manual sources:** User provides list of YouTube/Telegram channels to monitor
+- **Automatic discovery:** Researcher can suggest new sources based on quality
+- **Channel list storage:** `researcher/sources/youtube_channels.md`, `telegram_channels.md`
+
 **Database tables:**
 - `researcher_tasks` — research tasks
-- `researcher_sources` — information sources
+- `researcher_sources` — information sources (RSS, web, etc.)
+- `researcher_youtube_channels` — monitored YouTube channels
+- `researcher_telegram_channels` — monitored Telegram channels
 - `researcher_findings` — discovered materials
 
 **Obsidian vault:**
@@ -64,6 +77,8 @@ Subagents
 
 **Integration:**
 - Perplexity API for deep research
+- YouTube API — channel monitoring, video transcripts
+- Telegram API — channel monitoring, message collection
 - Web scraping (optional, fallback)
 - RSS monitoring (optional)
 
@@ -335,6 +350,8 @@ magister_collections = {
 
 ### Research Integration
 - **Perplexity API** — deep research
+- **YouTube API** — video transcripts, channel monitoring
+- **Telegram API** — channel messages, monitoring
 - **Web scraping** — fallback (optional)
 - **RSS monitoring** — fallback (optional)
 
@@ -391,6 +408,8 @@ magister_collections = {
 2. Embeddings model integration (`bge-m3`)
 3. Qdrant collections creation
 4. SQLite fallback implementation
+5. YouTube API integration
+6. Telegram API integration
 
 ### Phase 2: Core Agents
 1. Researcher Agent (inherits from Agent base class)
