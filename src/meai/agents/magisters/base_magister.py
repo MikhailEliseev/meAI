@@ -151,6 +151,21 @@ class BaseMagister(Agent):
                 """)
             )
 
+            # Errors table (NEW)
+            await session.execute(
+                text("""
+                CREATE TABLE IF NOT EXISTS magister_errors (
+                    id TEXT PRIMARY KEY,
+                    magister_id TEXT NOT NULL,
+                    task_id TEXT NOT NULL,
+                    error_type TEXT NOT NULL,
+                    error_message TEXT NOT NULL,
+                    stack_trace TEXT,
+                    occurred_at TIMESTAMP NOT NULL
+                )
+                """)
+            )
+
             await session.commit()
 
     async def _create_vault_structure(self) -> None:
@@ -238,7 +253,7 @@ class BaseMagister(Agent):
         ]
 
     async def execute_task(self, task: Task) -> TaskResult:
-        """Execute a task based on capability
+        """Execute a task based on capability with error handling
 
         Args:
             task: Task to execute
@@ -246,23 +261,69 @@ class BaseMagister(Agent):
         Returns:
             Task result
         """
+        start_time = datetime.now(timezone.utc)
+
+        try:
+            # Execute task implementation
+            result = await self._execute_task_impl(task)
+            return result
+        except Exception as e:
+            # Log error
+            await self._log_error(task, e)
+
+            # Return failed result
+            duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+            return TaskResult(
+                task_id=task.task_id,
+                agent_id=self.agent_id,
+                action=task.metadata.get("action", "unknown"),
+                status="failed",
+                result={},
+                error=str(e),
+                duration_seconds=duration,
+                completed_at=datetime.now(timezone.utc),
+            )
+
+    async def _execute_task_impl(self, task: Task) -> TaskResult:
+        """Execute task implementation (internal)
+
+        Args:
+            task: Task to execute
+
+        Returns:
+            Task result
+        """
+        start_time = datetime.now(timezone.utc)
         capability = task.metadata.get("capability")
 
         if capability == "search_knowledge":
-            return await self._handle_search_knowledge(task)
+            result = await self._handle_search_knowledge(task)
         elif capability == "cache_knowledge":
-            return await self._handle_cache_knowledge(task)
+            result = await self._handle_cache_knowledge(task)
         elif capability == "query_teacher":
-            return await self._handle_query_teacher(task)
+            result = await self._handle_query_teacher(task)
         elif capability == "request_research":
-            return await self._handle_request_research(task)
+            result = await self._handle_request_research(task)
         else:
-            return TaskResult(
+            result = TaskResult(
                 task_id=task.task_id,
+                agent_id=self.agent_id,
+                action=task.metadata.get("action", "unknown"),
                 status="failed",
-                result=None,
+                result={},
                 error=f"Unknown capability: {capability}",
+                duration_seconds=0.0,
+                completed_at=datetime.now(timezone.utc),
             )
+
+        # Add duration
+        duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+        result.duration_seconds = duration
+        result.agent_id = self.agent_id
+        result.action = task.metadata.get("action", capability or "unknown")
+        result.completed_at = datetime.now(timezone.utc)
+
+        return result
 
     async def _handle_search_knowledge(self, task: Task) -> TaskResult:
         """Handle knowledge search task"""
@@ -278,9 +339,13 @@ class BaseMagister(Agent):
 
         return TaskResult(
             task_id=task.task_id,
+            agent_id=self.agent_id,
+            action="search_knowledge",
             status="completed",
             result={"results": results, "count": len(results)},
-            metadata={"searched_at": datetime.now(timezone.utc).isoformat()},
+            error=None,
+            duration_seconds=0.0,
+            completed_at=datetime.now(timezone.utc),
         )
 
     async def _handle_cache_knowledge(self, task: Task) -> TaskResult:
@@ -292,9 +357,13 @@ class BaseMagister(Agent):
 
         return TaskResult(
             task_id=task.task_id,
+            agent_id=self.agent_id,
+            action="cache_knowledge",
             status="completed",
             result={"cached": True},
-            metadata={"cached_at": datetime.now(timezone.utc).isoformat()},
+            error=None,
+            duration_seconds=0.0,
+            completed_at=datetime.now(timezone.utc),
         )
 
     async def _handle_query_teacher(self, task: Task) -> TaskResult:
@@ -305,9 +374,13 @@ class BaseMagister(Agent):
 
         return TaskResult(
             task_id=task.task_id,
+            agent_id=self.agent_id,
+            action="query_teacher",
             status="completed",
             result={"results": results},
-            metadata={"queried_at": datetime.now(timezone.utc).isoformat()},
+            error=None,
+            duration_seconds=0.0,
+            completed_at=datetime.now(timezone.utc),
         )
 
     async def _handle_request_research(self, task: Task) -> TaskResult:
@@ -318,9 +391,13 @@ class BaseMagister(Agent):
 
         return TaskResult(
             task_id=task.task_id,
+            agent_id=self.agent_id,
+            action="request_research",
             status="completed",
             result={"requested": True},
-            metadata={"requested_at": datetime.now(timezone.utc).isoformat()},
+            error=None,
+            duration_seconds=0.0,
+            completed_at=datetime.now(timezone.utc),
         )
 
     async def search_knowledge(
@@ -670,3 +747,68 @@ cached_at: {datetime.now(timezone.utc).isoformat()}
 
         # Publish to Event Bus
         await self.event_bus.publish(message)
+
+    async def _log_error(self, task: Task, error: Exception) -> None:
+        """Log task execution error
+
+        Args:
+            task: Task that failed
+            error: Exception that occurred
+        """
+        import traceback
+
+        error_id = f"error-{uuid4().hex[:8]}"
+
+        async with self.db.session() as session:
+            await session.execute(
+                text("""
+                INSERT INTO magister_errors
+                (id, magister_id, task_id, error_type, error_message,
+                 stack_trace, occurred_at)
+                VALUES (:id, :magister_id, :task_id, :error_type,
+                        :error_message, :stack_trace, :occurred_at)
+                """),
+                {
+                    "id": error_id,
+                    "magister_id": self.agent_id,
+                    "task_id": task.task_id,
+                    "error_type": type(error).__name__,
+                    "error_message": str(error),
+                    "stack_trace": traceback.format_exc(),
+                    "occurred_at": datetime.now(timezone.utc),
+                },
+            )
+            await session.commit()
+
+        # Also write to vault
+        error_content = f"""---
+error_id: {error_id}
+task_id: {task.task_id}
+error_type: {type(error).__name__}
+occurred_at: {datetime.now(timezone.utc).isoformat()}
+---
+
+# Error: {type(error).__name__}
+
+## Task
+{task.description}
+
+## Error Message
+```
+{str(error)}
+```
+
+## Stack Trace
+```
+{traceback.format_exc()}
+```
+
+## Task Metadata
+```json
+{json.dumps(task.metadata, indent=2)}
+```
+"""
+
+        error_path = self.vault_path / "errors" / f"{error_id}.md"
+        error_path.parent.mkdir(parents=True, exist_ok=True)
+        error_path.write_text(error_content)
