@@ -95,6 +95,9 @@ Subagents
 - `store_knowledge` — save to Qdrant
 - `distribute_to_magisters` — knowledge distribution
 - `search_knowledge` — Qdrant search for Magisters
+- `update_from_experience` — update knowledge based on real work results
+- `deprecate_knowledge` — mark methods that don't work
+- `boost_quality` — increase quality_score for successful methods
 
 **Workflow (receiving knowledge):**
 1. Receives findings from Researcher
@@ -156,6 +159,8 @@ If Teacher becomes overloaded, methods can be extracted into helper agents:
 - `query_teacher` — query Teacher (hybrid search)
 - `train_subagents` — train subagents
 - `escalate_problem` — escalate problem to Teacher
+- `analyze_experience` — analyze subagent work results
+- `report_experience` — report experience to Teacher
 
 **Workflow (receiving knowledge from Teacher):**
 1. Receives notification from Teacher: "New knowledge on topic X"
@@ -188,12 +193,22 @@ collections = {
         "vectors": {"size": 768, "distance": "Cosine"},
         "payload_schema": {
             "content": "text",
-            "source": "string",
+            "source": "string",  # "perplexity", "youtube", "telegram", "internal_experience"
             "quality_score": "float",  # 1-10
             "date_added": "datetime",
             "tags": "string[]",
             "researcher_id": "string",
-            "language": "string"  # ru, en, etc.
+            "language": "string",  # ru, en, etc.
+            
+            # Experience tracking (for internal_experience source)
+            "validated_in_practice": "boolean",  # tested in real work
+            "success_rate": "float",  # 0.0-1.0 (percentage of successful uses)
+            "total_uses": "integer",  # how many times used
+            "last_validated": "datetime",  # last successful use
+            "failed_contexts": "string[]",  # where it doesn't work
+            "success_contexts": "string[]",  # where it works best
+            "deprecated": "boolean",  # marked as not working
+            "deprecation_reason": "string"  # why deprecated
         }
     },
     "content_knowledge": {...},
@@ -267,6 +282,61 @@ magister_collections = {
 3. Teacher analyzes problem
    ↓ requests Researcher: "Update knowledge on topic X"
 4. Researcher investigates → Flow 1
+```
+
+#### Flow 4: Experience Learning (Subagent → Magister → Teacher → Knowledge Base)
+
+**Purpose:** Learn from actual work results to improve knowledge quality
+
+```
+1. Subagent executes task using knowledge from base
+   ↓ Result: success or failure
+   
+2. Magister analyzes execution:
+   ↓ Event: magister.experience_report
+   - What method was used?
+   - Did it work? (success/failure)
+   - In what context?
+   - What was the outcome?
+   
+3. Teacher processes experience:
+   ↓ Updates knowledge quality scores
+   ↓ Marks deprecated methods
+   ↓ Creates new knowledge from discoveries
+   ↓ Saves to Qdrant with "experience" metadata
+   
+4. Knowledge base improves:
+   - Successful methods: quality_score ↑
+   - Failed methods: marked deprecated
+   - New discoveries: added to base
+```
+
+**Experience Types:**
+
+**Negative Experience (what doesn't work):**
+- Subagent tried method → failed
+- Magister reports: "Method X failed in context Y"
+- Teacher marks knowledge: `deprecated: true, reason: "failed in practice"`
+- Future queries avoid this method
+
+**Positive Experience (what works):**
+- Subagent tried method → success
+- Magister reports: "Method X works excellently"
+- Teacher increases `quality_score` of this knowledge
+- Future queries prioritize this method
+
+**New Discoveries:**
+- Subagent found new approach (not from knowledge base)
+- Magister escalates: "Discovered new method Z"
+- Teacher saves as new knowledge with tag `discovered_internally`
+- Researcher validates (optional): searches for similar approaches
+
+**Quality Metrics Tracking:**
+- `success_rate`: percentage of successful applications
+- `total_uses`: how many times method was used
+- `last_validated`: date of last successful use
+- `failed_contexts`: where it doesn't work
+- `success_contexts`: where it works best
 ```
 
 ---
@@ -377,17 +447,30 @@ magister_collections = {
 - Qdrant storage and retrieval
 - Fallback to SQLite
 - Embeddings generation
+- Experience processing (update_from_experience)
+- Quality score updates based on real results
+- Deprecation marking
 
 **Magister Agent:**
 - Knowledge adaptation
 - Hybrid search (local vs Teacher)
 - Subagent training
+- Experience analysis (analyze_experience)
+- Experience reporting to Teacher
 
 ### Integration Tests
 
 **Full cycle:**
 - Researcher → Teacher → Magister
 - Subagent → Magister → Teacher → Researcher (feedback loop)
+- Subagent → Magister → Teacher (experience learning loop)
+
+**Experience learning cycle:**
+- Subagent executes task with method from knowledge base
+- Magister analyzes result (success/failure)
+- Teacher updates knowledge quality scores
+- Verify deprecated methods are not recommended
+- Verify successful methods have higher priority
 
 ### Performance Tests
 
@@ -423,9 +506,10 @@ magister_collections = {
 4. Qdrant collections for each Magister
 
 ### Phase 4: Integration
-1. Full data flows (3 flows)
+1. Full data flows (4 flows: knowledge, query, feedback, experience)
 2. Error handling
 3. Feedback loops
+4. Experience learning system
 
 ### Phase 5: Testing
 1. Unit tests
@@ -437,14 +521,17 @@ magister_collections = {
 
 ## Success Criteria
 
-1. ✅ Researcher autonomously collects knowledge from Perplexity API
+1. ✅ Researcher autonomously collects knowledge from Perplexity API, YouTube, Telegram
 2. ✅ Teacher evaluates and stores knowledge in Qdrant
 3. ✅ Magisters receive and adapt knowledge for their domains
 4. ✅ Subagents can query knowledge through Magisters (hybrid search)
 5. ✅ Feedback loop works: Subagent → Magister → Teacher → Researcher
-6. ✅ Error handling: Qdrant fallback to SQLite
-7. ✅ Performance: Teacher search < 1s, Magister local search < 200ms
-8. ✅ All tests passing
+6. ✅ Experience learning works: Subagent results → Magister → Teacher → Knowledge updates
+7. ✅ Quality scores update based on real work results
+8. ✅ Deprecated methods are marked and avoided
+9. ✅ Error handling: Qdrant fallback to SQLite
+10. ✅ Performance: Teacher search < 1s, Magister local search < 200ms
+11. ✅ All tests passing
 
 ---
 
