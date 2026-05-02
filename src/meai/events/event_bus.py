@@ -118,7 +118,7 @@ class EventBus:
             )
 
             messages = []
-            for row in await result.fetchall():
+            for row in result.fetchall():
                 messages.append(
                     Message(
                         message_id=row[0],

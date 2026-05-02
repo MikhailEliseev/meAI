@@ -48,13 +48,16 @@ class BaseMagister(Agent):
         super().__init__(
             agent_id=agent_id,
             agent_type=f"{magister_type}-magister",
-            event_bus=event_bus,
+            database_url=database_url,
+            vault_path=str(vault_path),
         )
 
         self.magister_type = magister_type
         self.domain = domain
         self.vault_path = Path(vault_path)
-        self.db = Database(database_url)
+
+        # Replace Agent's event_bus with shared one
+        self.event_bus = event_bus
 
         # Cache settings
         self.cache_ttl_hours = 24  # Cache for 24 hours
@@ -64,16 +67,27 @@ class BaseMagister(Agent):
 
     async def initialize(self) -> None:
         """Initialize Magister"""
+        # Initialize database and vault
         await self.db.connect()
+        await self.vault.initialize()
+
+        # Initialize shared event_bus (already set in __init__)
+        if not self.event_bus._initialized:
+            await self.event_bus.initialize()
+
+        # Create base Agent tables
         await self._create_tables()
+
+        # Create Magister-specific tables
+        await self._create_magister_tables()
+
+        # Create vault structure
         await self._create_vault_structure()
+
+        # Subscribe to events
         await self._subscribe_to_events()
 
-    async def shutdown(self) -> None:
-        """Shutdown Magister"""
-        await self.db.disconnect()
-
-    async def _create_tables(self) -> None:
+    async def _create_magister_tables(self) -> None:
         """Create Magister-specific database tables"""
         async with self.db.session() as session:
             # Tasks table
@@ -170,10 +184,14 @@ class BaseMagister(Agent):
     async def _subscribe_to_events(self) -> None:
         """Subscribe to relevant events"""
         # Subscribe to knowledge distribution for this domain
-        await self.event_bus.subscribe(
+        self.event_bus.subscribe(
             "knowledge.distributed",
             self._handle_knowledge_distribution,
         )
+
+        # Start polling for task assignments from Operator
+        # Note: Messages use queue pattern, not pub/sub
+        # Magisters will poll messages in their main loop
 
     async def _handle_knowledge_distribution(self, event: Event) -> None:
         """Handle knowledge distribution from Teacher
@@ -560,3 +578,95 @@ cached_at: {datetime.now(timezone.utc).isoformat()}
                 },
             )
             await session.commit()
+
+    async def poll_and_process_tasks(self) -> None:
+        """Poll for task assignments from Operator and process them
+
+        This method should be called periodically by the Magister's main loop.
+        It checks for pending messages from Operator and processes them.
+        """
+        # Get pending messages for this agent
+        messages = await self.event_bus.get_messages(
+            agent_id=self.agent_id,
+            status="pending",
+            limit=10,
+        )
+
+        for message in messages:
+            if message.message_type == "task_assignment":
+                try:
+                    await self._handle_task_assignment(message)
+                    await self.event_bus.mark_processed(message.message_id)
+                except Exception as e:
+                    await self.event_bus.mark_failed(
+                        message.message_id,
+                        str(e),
+                    )
+
+    async def _handle_task_assignment(self, message) -> None:
+        """Handle task assignment from Operator
+
+        Args:
+            message: Message from Operator with task details
+
+        Steps:
+        1. Extract task details from message
+        2. Create Task object
+        3. Execute task
+        4. Report result back to Operator
+        """
+        from meai.events.event_bus import Message
+
+        # Extract payload
+        payload = message.payload
+
+        # Create Task
+        task = Task(
+            task_id=payload["subtask_id"],
+            description=payload["description"],
+            metadata={
+                "action": payload["action"],
+                "parent_task_id": payload["parent_task_id"],
+            },
+        )
+
+        # Execute task
+        result = await self.execute_task(task)
+
+        # Report result back to Operator
+        await self._report_result_to_operator(
+            result=result,
+            parent_task_id=payload["parent_task_id"],
+        )
+
+    async def _report_result_to_operator(
+        self,
+        result: TaskResult,
+        parent_task_id: str,
+    ) -> None:
+        """Report task result back to Operator
+
+        Args:
+            result: Task execution result
+            parent_task_id: Parent task ID from Operator
+        """
+        from meai.events.event_bus import Message
+
+        # Create result message
+        message = Message(
+            from_agent=self.agent_id,
+            to_agent="operator",
+            message_type="task_result",
+            priority=1,
+            payload={
+                "subtask_id": result.task_id,
+                "parent_task_id": parent_task_id,
+                "status": result.status,
+                "result": result.result,
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            },
+            timestamp=datetime.now(timezone.utc).isoformat(),
+        )
+
+        # Publish to Event Bus
+        await self.event_bus.publish(message)

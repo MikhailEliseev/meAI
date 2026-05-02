@@ -117,16 +117,22 @@ class Operator:
 
     # Agent timeouts (configurable)
     AGENT_TIMEOUTS = {
-        "seo-agent": timedelta(minutes=30),
-        "content-agent": timedelta(minutes=45),
-        "ads-agent": timedelta(minutes=20),
+        "seo-magister-1": timedelta(minutes=30),
+        "content-magister-1": timedelta(minutes=45),
+        "ads-magister-1": timedelta(minutes=20),
+        "smm-magister-1": timedelta(minutes=25),
+        "analytics-magister-1": timedelta(minutes=35),
+        "intelligence-magister-1": timedelta(minutes=40),
     }
 
     # Agent capabilities
     AGENT_CAPABILITIES = {
-        "seo-agent": ["analyze_competitors", "keyword_research", "optimize_content", "monitor_rankings"],
-        "content-agent": ["generate_content", "edit_content", "optimize_seo", "plan_publications"],
-        "ads-agent": ["create_campaign", "optimize_budget", "ab_test", "analyze_conversions"],
+        "seo-magister-1": ["analyze_keywords", "optimize_content", "analyze_competitors", "track_rankings", "audit_technical_seo"],
+        "content-magister-1": ["generate_content", "edit_content", "plan_content", "analyze_performance", "optimize_for_seo"],
+        "ads-magister-1": ["create_campaign", "optimize_budget", "analyze_performance", "ab_test", "target_audience"],
+        "smm-magister-1": ["create_post", "schedule_posts", "engage_audience", "analyze_metrics", "manage_campaigns"],
+        "analytics-magister-1": ["analyze_data", "create_report", "track_metrics", "predict_trends", "optimize_performance"],
+        "intelligence-magister-1": ["research_market", "analyze_trends", "monitor_competitors", "identify_opportunities", "strategic_insights"],
     }
 
     def __init__(self, database_url: str, vault_path: str = "./obsidian"):
@@ -238,7 +244,8 @@ class Operator:
 
     async def _subscribe_to_events(self) -> None:
         """Subscribe to agent result events"""
-        # This will be implemented when we add event subscription to EventBus
+        # Operator uses message polling pattern, not event subscription
+        # Results are collected via poll_and_collect_results() method
         pass
 
     async def receive_task(self, task: Task) -> None:
@@ -389,16 +396,28 @@ class Operator:
         desc_lower = task.description.lower()
 
         # SEO capabilities
-        if any(kw in goal_lower or kw in desc_lower for kw in ["seo", "keyword", "ranking", "competitor"]):
-            capabilities.extend(["analyze_competitors", "keyword_research", "optimize_content"])
+        if any(kw in goal_lower or kw in desc_lower for kw in ["seo", "keyword", "ranking", "competitor", "search"]):
+            capabilities.extend(["analyze_keywords", "optimize_content", "analyze_competitors"])
 
         # Content capabilities
-        if any(kw in goal_lower or kw in desc_lower for kw in ["content", "article", "blog", "write"]):
-            capabilities.extend(["generate_content", "edit_content", "optimize_seo"])
+        if any(kw in goal_lower or kw in desc_lower for kw in ["content", "article", "blog", "write", "post"]):
+            capabilities.extend(["generate_content", "edit_content", "optimize_for_seo"])
 
         # Ads capabilities
-        if any(kw in goal_lower or kw in desc_lower for kw in ["ads", "campaign", "advertising", "ppc"]):
+        if any(kw in goal_lower or kw in desc_lower for kw in ["ads", "campaign", "advertising", "ppc", "budget"]):
             capabilities.extend(["create_campaign", "optimize_budget", "ab_test"])
+
+        # SMM capabilities
+        if any(kw in goal_lower or kw in desc_lower for kw in ["social", "smm", "facebook", "instagram", "linkedin"]):
+            capabilities.extend(["create_post", "schedule_posts", "engage_audience"])
+
+        # Analytics capabilities
+        if any(kw in goal_lower or kw in desc_lower for kw in ["analytics", "data", "metrics", "report", "analyze"]):
+            capabilities.extend(["analyze_data", "create_report", "track_metrics"])
+
+        # Intelligence capabilities
+        if any(kw in goal_lower or kw in desc_lower for kw in ["market", "research", "intelligence", "trends", "insights"]):
+            capabilities.extend(["research_market", "analyze_trends", "monitor_competitors"])
 
         return list(set(capabilities))  # Remove duplicates
 
@@ -445,9 +464,10 @@ class Operator:
         """
         # Define capability dependencies
         dependencies = {
-            "optimize_content": ["keyword_research"],  # Need keywords before optimizing
-            "optimize_seo": ["generate_content"],  # Need content before SEO optimization
+            "optimize_content": ["analyze_keywords"],  # Need keywords before optimizing
+            "optimize_for_seo": ["generate_content"],  # Need content before SEO optimization
             "ab_test": ["create_campaign"],  # Need campaign before testing
+            "analyze_performance": ["create_campaign", "generate_content"],  # Need content/campaign before analysis
         }
 
         for cap in capabilities:
@@ -482,7 +502,7 @@ class Operator:
 
         # Create subtasks
         for i, capability in enumerate(required_capabilities):
-            agent_id = capability_to_agent.get(capability, "seo-agent")  # Default to SEO
+            agent_id = capability_to_agent.get(capability, "seo-magister-1")  # Default to SEO Magister
 
             # Determine dependencies based on strategy
             dependencies = []
@@ -490,10 +510,10 @@ class Operator:
                 dependencies.append(subtasks[i - 1].subtask_id)
             elif strategy == ExecutionStrategy.HYBRID:
                 # Group into phases (simplified)
-                if capability in ["optimize_content", "optimize_seo", "ab_test"]:
+                if capability in ["optimize_content", "optimize_for_seo", "ab_test", "analyze_performance"]:
                     # These depend on earlier tasks
                     for st in subtasks:
-                        if st.action in ["keyword_research", "generate_content", "create_campaign"]:
+                        if st.action in ["analyze_keywords", "generate_content", "create_campaign"]:
                             dependencies.append(st.subtask_id)
 
             subtask = Subtask(
@@ -885,3 +905,314 @@ P{subtask.priority}
 """
 
         await self.vault.write_file(f"operator/delegations/{subtask.subtask_id}.md", content)
+
+    async def poll_and_collect_results(self) -> None:
+        """Poll for task results from agents and process them
+
+        This method should be called periodically to check for completed tasks.
+        """
+        # Get pending messages for Operator
+        messages = await self.event_bus.get_messages(
+            agent_id=self.agent_id,
+            status="pending",
+            limit=50,
+        )
+
+        for message in messages:
+            if message.message_type == "task_result":
+                try:
+                    await self._handle_task_result(message)
+                    await self.event_bus.mark_processed(message.message_id)
+                except Exception as e:
+                    await self.event_bus.mark_failed(
+                        message.message_id,
+                        str(e),
+                    )
+
+    async def _handle_task_result(self, message: Message) -> None:
+        """Handle task result from agent
+
+        Args:
+            message: Message from agent with task result
+        """
+        payload = message.payload
+
+        # Update subtask in database
+        await self._update_subtask_result(
+            subtask_id=payload["subtask_id"],
+            status=payload["status"],
+            result=payload["result"],
+            completed_at=payload.get("completed_at"),
+        )
+
+        # Check if all subtasks completed
+        parent_task_id = payload["parent_task_id"]
+        if await self._all_subtasks_completed(parent_task_id):
+            await self._finalize_task(parent_task_id)
+
+    async def _update_subtask_result(
+        self,
+        subtask_id: str,
+        status: str,
+        result: dict[str, Any],
+        completed_at: str | None = None,
+    ) -> None:
+        """Update subtask with result
+
+        Args:
+            subtask_id: Subtask ID
+            status: Task status
+            result: Task result
+            completed_at: Completion timestamp
+        """
+        async with self.db.session() as session:
+            await session.execute(
+                text("""
+                UPDATE operator_subtasks
+                SET status = :status,
+                    result = :result,
+                    completed_at = :completed_at
+                WHERE subtask_id = :subtask_id
+                """),
+                {
+                    "status": status,
+                    "result": json.dumps(result),
+                    "completed_at": completed_at,
+                    "subtask_id": subtask_id,
+                },
+            )
+            await session.commit()
+
+    async def _all_subtasks_completed(self, task_id: str) -> bool:
+        """Check if all subtasks for a task are completed
+
+        Args:
+            task_id: Parent task ID
+
+        Returns:
+            True if all subtasks completed
+        """
+        async with self.db.session() as session:
+            result = await session.execute(
+                text("""
+                SELECT COUNT(*) as total,
+                       SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
+                FROM operator_subtasks
+                WHERE parent_task_id = :task_id
+                """),
+                {"task_id": task_id},
+            )
+            row = result.fetchone()
+
+        if row is None:
+            return False
+
+        total, completed = row[0], row[1]
+        return total > 0 and total == completed
+
+    async def _finalize_task(self, task_id: str) -> None:
+        """Finalize task after all subtasks completed
+
+        Args:
+            task_id: Task ID
+
+        Steps:
+        1. Collect all subtask results
+        2. Aggregate into report
+        3. Store in database
+        4. Write to vault
+        5. Update task status
+        """
+        # Collect results
+        results = await self._collect_subtask_results(task_id)
+
+        # Aggregate report
+        report = await self._aggregate_report(task_id, results)
+
+        # Store report
+        await self._store_report(report)
+
+        # Write to vault
+        await self._write_report_to_vault(report)
+
+        # Update task status
+        task = self.active_tasks.get(task_id)
+        if task:
+            task.status = TaskStatus.COMPLETED
+            await self._update_task_status(task)
+
+    async def _collect_subtask_results(self, task_id: str) -> list[dict[str, Any]]:
+        """Collect all subtask results for a task
+
+        Args:
+            task_id: Parent task ID
+
+        Returns:
+            List of subtask results
+        """
+        async with self.db.session() as session:
+            result = await session.execute(
+                text("""
+                SELECT subtask_id, agent_id, action, description, result, completed_at
+                FROM operator_subtasks
+                WHERE parent_task_id = :task_id
+                ORDER BY completed_at ASC
+                """),
+                {"task_id": task_id},
+            )
+            rows = result.fetchall()
+
+        results = []
+        for row in rows:
+            results.append({
+                "subtask_id": row[0],
+                "agent_id": row[1],
+                "action": row[2],
+                "description": row[3],
+                "result": json.loads(row[4]) if row[4] else {},
+                "completed_at": row[5],
+            })
+
+        return results
+
+    async def _aggregate_report(
+        self,
+        task_id: str,
+        results: list[dict[str, Any]],
+    ) -> Report:
+        """Aggregate subtask results into a report
+
+        Args:
+            task_id: Task ID
+            results: List of subtask results
+
+        Returns:
+            Aggregated report
+        """
+        task = self.active_tasks.get(task_id)
+        if not task:
+            raise ValueError(f"Task {task_id} not found")
+
+        # Generate summary
+        summary = f"Completed {len(results)} subtasks for: {task.goal}"
+
+        # Extract insights
+        insights = []
+        for result in results:
+            if "insights" in result["result"]:
+                insights.extend(result["result"]["insights"])
+
+        # Collect metrics
+        metrics = {
+            "total_subtasks": len(results),
+            "agents_involved": len(set(r["agent_id"] for r in results)),
+            "completion_time": self._calculate_completion_time(results),
+        }
+
+        # Identify issues
+        issues = []
+        for result in results:
+            if "errors" in result["result"]:
+                issues.extend(result["result"]["errors"])
+
+        # Generate recommendations
+        recommendations = [
+            f"Review {result['action']} results from {result['agent_id']}"
+            for result in results
+        ]
+
+        return Report(
+            report_id=f"report-{uuid4().hex[:8]}",
+            task_id=task_id,
+            summary=summary,
+            insights=insights,
+            metrics=metrics,
+            issues=issues,
+            recommendations=recommendations,
+            created_at=datetime.now(timezone.utc),
+        )
+
+    def _calculate_completion_time(self, results: list[dict[str, Any]]) -> str:
+        """Calculate total completion time
+
+        Args:
+            results: List of subtask results
+
+        Returns:
+            Completion time as string
+        """
+        if not results:
+            return "0s"
+
+        # Find earliest and latest completion times
+        completed_times = [
+            datetime.fromisoformat(r["completed_at"])
+            for r in results
+            if r.get("completed_at")
+        ]
+
+        if not completed_times:
+            return "0s"
+
+        duration = max(completed_times) - min(completed_times)
+        return str(duration)
+
+    async def _store_report(self, report: Report) -> None:
+        """Store report in database
+
+        Args:
+            report: Report to store
+        """
+        async with self.db.session() as session:
+            await session.execute(
+                text("""
+                INSERT INTO operator_reports
+                (report_id, task_id, summary, insights, metrics, issues, recommendations, created_at)
+                VALUES (:report_id, :task_id, :summary, :insights, :metrics, :issues, :recommendations, :created_at)
+                """),
+                {
+                    "report_id": report.report_id,
+                    "task_id": report.task_id,
+                    "summary": report.summary,
+                    "insights": json.dumps(report.insights),
+                    "metrics": json.dumps(report.metrics),
+                    "issues": json.dumps(report.issues),
+                    "recommendations": json.dumps(report.recommendations),
+                    "created_at": report.created_at,
+                },
+            )
+            await session.commit()
+
+    async def _write_report_to_vault(self, report: Report) -> None:
+        """Write report to vault
+
+        Args:
+            report: Report to write
+        """
+        content = f"""---
+report_id: {report.report_id}
+task_id: {report.task_id}
+created: {report.created_at.isoformat()}
+---
+
+# Task Report: {report.task_id}
+
+## Summary
+{report.summary}
+
+## Insights
+{chr(10).join(f"- {insight}" for insight in report.insights) if report.insights else "None"}
+
+## Metrics
+```json
+{json.dumps(report.metrics, indent=2)}
+```
+
+## Issues
+{chr(10).join(f"- {issue}" for issue in report.issues) if report.issues else "None"}
+
+## Recommendations
+{chr(10).join(f"- {rec}" for rec in report.recommendations)}
+"""
+
+        await self.vault.write_file(f"operator/reports/{report.report_id}.md", content)
