@@ -1,0 +1,5 @@
+"""Knowledge management components"""
+
+from meai.knowledge.qdrant_client import QdrantClient
+
+__all__ = ["QdrantClient"]
