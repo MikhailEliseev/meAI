@@ -192,11 +192,62 @@ class Agent(ABC):
 - Pydantic for data validation
 - SQLAlchemy 2.0 async for database
 
-### Memory Management
-- All context goes to `obsidian/` as markdown
-- Use frontmatter for metadata
-- Link related notes with `[[wikilinks]]`
-- Daily notes in `obsidian/daily/YYYY-MM-DD.md`
+### Memory Management - LLM Wiki Pattern (FUNDAMENTAL)
+
+**CRITICAL RULE:** Все Obsidian vaults и пространства субагентов ОБЯЗАНЫ следовать паттерну LLM Wiki от Andrej Karpathy.
+
+**Паттерн как "Отче наш":**
+- Wiki = persistent, compounding artifact (не RAG, а compiled knowledge)
+- Три слоя: raw sources (immutable) → wiki (LLM-generated) → schema (rules)
+- Три операции: Ingest (обработка), Query (вопросы), Lint (проверка здоровья)
+
+**Обязательная структура для КАЖДОГО vault:**
+
+```
+vault/
+├── raw/                    # Слой 1: Источники (immutable)
+├── wiki/                   # Слой 2: Структурированное знание
+│   ├── index.md           # Content-oriented каталог
+│   ├── log.md             # Chronological запись операций
+│   ├── concepts/          # Концепции и паттерны
+│   ├── technologies/      # Технологии и инструменты
+│   ├── strategies/        # Стратегии и методы
+│   ├── agents/            # Агенты системы
+│   ├── workflows/         # Процессы и workflow
+│   ├── projects/          # Проекты
+│   ├── sources/           # Обработанные источники (summary)
+│   └── connections/       # Связи и синтезы
+├── decisions/             # Слой 3: Стратегические решения
+└── SCHEMA.md             # Правила и конвенции vault
+```
+
+**Коммуникация между vaults:**
+- Каждый vault имеет свой wiki/ с 8 категориями
+- Субагенты читают wiki/ других агентов (не raw/)
+- Синтезы создаются в connections/
+- Решения фиксируются в decisions/
+
+**Операции (обязательные):**
+1. **Ingest** - raw/ → wiki/ (создание/обновление страниц по категориям)
+2. **Query** - вопрос → чтение wiki/ → ответ с цитатами → новая страница
+3. **Lint** - проверка противоречий, orphans, gaps, устаревших данных
+
+**Специальные файлы:**
+- `index.md` - каталог всех страниц с статистикой
+- `log.md` - хронология всех операций (формат: `## [YYYY-MM-DD HH:MM] operation | Description`)
+
+**Правило обработки:**
+- ВСЕГДА проверяй frontmatter `status: processed` перед чтением
+- Если `status: processed` → читай wiki/ (из поля `output`)
+- Если нет → читай raw/ и обрабатывай
+
+**Примеры vaults:**
+- `obsidian/architect/` - Architect's strategic vault
+- `obsidian/operator/` - Operator's tactical vault
+- `obsidian/seo-agent/` - SEO agent's execution vault
+- `obsidian/content-agent/` - Content agent's execution vault
+
+Это НЕ рекомендация - это ЗАКОН для всех Obsidian пространств в системе.
 
 ### AIM Agency Context
 - Medical marketing focus
