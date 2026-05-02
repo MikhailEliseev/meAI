@@ -1,4 +1,4 @@
-# meAI Assistant
+що# meAI Assistant
 
 ## Project Overview
 

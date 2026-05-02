@@ -1,23 +1,21 @@
 """Tests for Rollback Manager"""
 
 import pytest
-from datetime import datetime, timezone
 from meai.core.rollback import RollbackManager
-from meai.storage.database import Database
-from meai.storage.obsidian import ObsidianVault
-from meai.storage.event_store import EventStore
+from meai.memory.obsidian import ObsidianVault
+from meai.events.event_store import EventStore
 
 
 @pytest.mark.asyncio
 async def test_rollback_workflow(tmp_path):
     """Test full rollback workflow"""
-    db = Database("sqlite+aiosqlite:///:memory:")
-    await db.connect()
+    db_url = "sqlite+aiosqlite:///:memory:"
+    event_store = EventStore(db_url)
+    await event_store.initialize()
 
     vault = ObsidianVault(str(tmp_path))
     await vault.initialize()
 
-    event_store = EventStore(db)
     rollback_mgr = RollbackManager(vault, event_store)
 
     # Create initial state
@@ -36,19 +34,19 @@ async def test_rollback_workflow(tmp_path):
     content = await vault.read_file("test.md")
     assert content == "version 1"
 
-    await db.disconnect()
+    await event_store.close()
 
 
 @pytest.mark.asyncio
 async def test_create_checkpoint(tmp_path):
     """Test creating checkpoint"""
-    db = Database("sqlite+aiosqlite:///:memory:")
-    await db.connect()
+    db_url = "sqlite+aiosqlite:///:memory:"
+    event_store = EventStore(db_url)
+    await event_store.initialize()
 
     vault = ObsidianVault(str(tmp_path))
     await vault.initialize()
 
-    event_store = EventStore(db)
     rollback_mgr = RollbackManager(vault, event_store)
 
     # Create checkpoint
@@ -57,23 +55,23 @@ async def test_create_checkpoint(tmp_path):
     assert checkpoint_id == "test-checkpoint"
 
     # Verify checkpoint event was recorded
-    events = await event_store.get_events_by_type("checkpoint_created")
+    events = await event_store.get_events(event_type="checkpoint_created")
     assert len(events) > 0
     assert events[0].payload["name"] == "test-checkpoint"
 
-    await db.disconnect()
+    await event_store.close()
 
 
 @pytest.mark.asyncio
 async def test_list_checkpoints(tmp_path):
     """Test listing checkpoints"""
-    db = Database("sqlite+aiosqlite:///:memory:")
-    await db.connect()
+    db_url = "sqlite+aiosqlite:///:memory:"
+    event_store = EventStore(db_url)
+    await event_store.initialize()
 
     vault = ObsidianVault(str(tmp_path))
     await vault.initialize()
 
-    event_store = EventStore(db)
     rollback_mgr = RollbackManager(vault, event_store)
 
     # Create multiple checkpoints
@@ -89,38 +87,38 @@ async def test_list_checkpoints(tmp_path):
     assert checkpoints[1]["name"] == "checkpoint-2"
     assert checkpoints[2]["name"] == "checkpoint-3"
 
-    await db.disconnect()
+    await event_store.close()
 
 
 @pytest.mark.asyncio
 async def test_rollback_to_nonexistent_checkpoint(tmp_path):
     """Test rollback to nonexistent checkpoint raises error"""
-    db = Database("sqlite+aiosqlite:///:memory:")
-    await db.connect()
+    db_url = "sqlite+aiosqlite:///:memory:"
+    event_store = EventStore(db_url)
+    await event_store.initialize()
 
     vault = ObsidianVault(str(tmp_path))
     await vault.initialize()
 
-    event_store = EventStore(db)
     rollback_mgr = RollbackManager(vault, event_store)
 
     # Try to rollback to nonexistent checkpoint
     with pytest.raises(ValueError, match="Checkpoint not found"):
         await rollback_mgr.rollback_to_checkpoint("nonexistent")
 
-    await db.disconnect()
+    await event_store.close()
 
 
 @pytest.mark.asyncio
 async def test_multiple_rollbacks(tmp_path):
     """Test multiple rollbacks in sequence"""
-    db = Database("sqlite+aiosqlite:///:memory:")
-    await db.connect()
+    db_url = "sqlite+aiosqlite:///:memory:"
+    event_store = EventStore(db_url)
+    await event_store.initialize()
 
     vault = ObsidianVault(str(tmp_path))
     await vault.initialize()
 
-    event_store = EventStore(db)
     rollback_mgr = RollbackManager(vault, event_store)
 
     # Version 1
@@ -144,4 +142,4 @@ async def test_multiple_rollbacks(tmp_path):
     content = await vault.read_file("test.md")
     assert content == "version 1"
 
-    await db.disconnect()
+    await event_store.close()
