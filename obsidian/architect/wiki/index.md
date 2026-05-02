@@ -1,46 +1,67 @@
-# Architect Wiki Index
+# Architect Wiki - Index
 
-**Last updated:** 2026-05-02 22:54  
-**Total pages:** 1  
-**Total sources:** 0  
-**Status:** Initialized
+Структурированный каталог знаний по паттерну LLM Wiki (Andrej Karpathy).
 
 ---
 
-## Overview
+## Concepts (1)
 
-- [[overview]] - High-level synthesis of all knowledge (coming soon)
+- [[concepts/llm-wiki-pattern]] - Паттерн LLM Wiki от Карпатого (1 source)
 
-## Concepts
+## Technologies (0)
 
-*No concept pages yet. Add raw notes to get started.*
+*Пусто - будет заполнено при extraction*
 
-## Improvements
+## Strategies (0)
 
-*No improvement ideas yet. Add raw notes to get started.*
+*Пусто - будет заполнено при extraction*
 
-## Decisions
+## Agents (2)
 
-*No decisions recorded yet. Add raw notes to get started.*
+- [[agents/medical-content-agent]] - Анализ медицинских статей (HIGH priority, MVP approved)
+- [[agents/gatekeeper-agent]] - Контроль качества входящей информации (CRITICAL priority)
 
-## Connections
+## Workflows (1)
 
-*No connections identified yet. Add raw notes to get started.*
+- [[workflows/inbox-processing]] - Обработка raw/ с улучшениями (ACTIVE)
+
+## Projects (0)
+
+*Пусто - будет создано*
+
+## Sources (2)
+
+- [[sources/2026-05-02-blackhat-seo]] - BlackHat SEO для iGaming - Анализ методов
+- [[sources/2026-05-02-claude-design]] - Claude Design для создания сайтов
+
+## Connections (1)
+
+- [[connections/synthesis-strategy-aim-agency]] - Стратегия автоматизации синтеза инсайтов (CRITICAL priority)
 
 ---
 
-## Getting Started
+## Stats
 
-1. Drop a note in `raw/` with your idea
-2. Tell Architect: "process raw notes"
-3. Watch the wiki grow!
+**Total pages:** 7  
+**Sources processed:** 2  
+**Concepts extracted:** 1  
+**Agents designed:** 2  
+**Workflows documented:** 1  
+**Connections created:** 1
 
-**Example:**
-```bash
-echo "Idea: Add exponential backoff to retry logic" > raw/$(date +%Y%m%d-%H%M)-retry-idea.md
-```
+**By priority:**
+- CRITICAL: 2 (gatekeeper-agent, synthesis-strategy)
+- HIGH: 1 (medical-content-agent)
 
 ---
 
-**Last ingest:** Never  
-**Next action:** Add your first raw note!
+## Next Steps
+
+1. **Extraction** - Извлечь концепции из sources/
+2. **Synthesis** - Создать connections/ для AIM Agency
+3. **Lint** - Проверить здоровье wiki
+
+---
+
+**Last updated:** 2026-05-02T21:05:00Z  
+**Structure:** LLM Wiki Pattern (Karpathy)

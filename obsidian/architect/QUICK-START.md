@@ -20,20 +20,33 @@
 ### 1. Добавить заметку
 
 ```bash
-# Любым способом создай файл в raw/
-cd obsidian/architect/raw
+# Вариант 1: Quick note (самый быстрый!)
+qnote "Твоя идея здесь"
 
-# Вариант 1: Через echo
+# Или из буфера обмена
+pbpaste | qnote
+
+# Вариант 2: Через echo
+cd obsidian/architect/raw
 echo "Твоя идея здесь" > $(date +%Y%m%d-%H%M)-topic.md
 
-# Вариант 2: Через редактор
+# Вариант 3: Через редактор
 vim 20260502-2300-my-idea.md
 
-# Вариант 3: Через Obsidian
+# Вариант 4: Через Obsidian
 # Просто создай файл в папке raw/
 ```
 
 **Формат имени:** `YYYYMMDD-HHMM-topic.md` (с timestamp)
+
+**Setup для qnote:**
+```bash
+# Добавь в ~/.zshrc (уже сделано!)
+alias qnote='/Users/mikhaileliseev/Desktop/Dev/!meAI/scripts/quick_note.sh'
+
+# Перезагрузи shell
+source ~/.zshrc
+```
 
 ### 2. Обработать заметки
 
@@ -290,11 +303,17 @@ Wiki растёт с каждой заметкой. Connections укрепляю
 ## Quick Commands
 
 ```bash
-# Add note
+# Add note (fastest!)
+./scripts/quick_note.sh "Your idea"
+
+# Or traditional way
 echo "Your idea" > obsidian/architect/raw/$(date +%Y%m%d-%H%M)-topic.md
 
-# Process
-python scripts/architect_ingest.py
+# Check inbox once
+python scripts/architect_inbox_monitor.py --once
+
+# Start monitoring (continuous)
+python scripts/architect_inbox_monitor.py
 
 # View
 cat obsidian/architect/wiki/index.md
@@ -303,4 +322,65 @@ cat obsidian/architect/wiki/index.md
 open obsidian/architect/
 ```
 
+---
+
+## 🤖 Автоматический мониторинг
+
+### Запуск монитора
+
+```bash
+# Однократная проверка
+python scripts/architect_inbox_monitor.py --once
+
+# Непрерывный мониторинг (каждые 60 секунд)
+python scripts/architect_inbox_monitor.py
+
+# Кастомный интервал (каждые 5 минут)
+python scripts/architect_inbox_monitor.py --interval 300
+```
+
+### Что делает монитор:
+
+1. **Отслеживает новые файлы** в `raw/`
+2. **Классифицирует** по типам (strategy, question, idea, technical, note)
+3. **Генерирует промпты** для Claude
+4. **Сохраняет состояние** в `.inbox_state.yaml`
+5. **Логирует операции** в `wiki/log.md`
+
+### Типы файлов:
+
+- `strategy` - стратегические документы → передаёт Architect
+- `question` - вопросы → определяет кому делегировать
+- `idea` - идеи → оценивает и структурирует
+- `technical` - технические документы → создаёт заметки
+- `note` - обычные заметки → структурирует
+
+### Алиасы для удобства
+
+Добавь в `~/.zshrc`:
+
+```bash
+# Architect shortcuts
+alias note='~/Desktop/Dev/!meAI/scripts/quick_note.sh'
+alias inbox-check='python ~/Desktop/Dev/!meAI/scripts/architect_inbox_monitor.py --once'
+alias inbox-monitor='python ~/Desktop/Dev/!meAI/scripts/architect_inbox_monitor.py'
+```
+
+Теперь:
+
+```bash
+# Быстро создать заметку
+note "Идея: интеграция с Telegram"
+
+# Проверить inbox
+inbox-check
+
+# Запустить мониторинг
+inbox-monitor
+```
+
+---
+
 **Начни прямо сейчас!** 🎯
+
+**Обновлено:** 2026-05-02 23:37 - добавлен автоматический мониторинг
