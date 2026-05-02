@@ -26,3 +26,11 @@ Chronological record of all operations.
 ## [2026-05-02T19:55] ingest | 20260502-2255-exponential-backoff.md
 - Processed: raw/20260502-2255-exponential-backoff.md
 - Status: Integrated into wiki
+
+## [2026-05-02T20:06] ingest | 20260502-2306-circuit-breaker.md
+- Processed: raw/20260502-2306-circuit-breaker.md
+- Status: Integrated into wiki
+
+## [2026-05-02T20:07] ingest | 20260502-2307-test-complete.md
+- Processed: raw/20260502-2307-test-complete.md
+- Status: Integrated into wiki
