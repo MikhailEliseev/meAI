@@ -3,7 +3,9 @@ title: "SEO Strategy for Medical Clinics"
 source: "architect-wiki"
 source_file: "seo-medical-clinics.md"
 received_at: "2026-05-03T13:05:41.844975"
-status: raw
+status: processed
+output: "[[seo-medical-clinics-simple]]"
+processed_at: "2026-05-03T13:12:51Z"
 tags: ['seo', 'medical-marketing', 'strategy', 'local-seo']
 ---
 

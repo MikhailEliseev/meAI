@@ -22,3 +22,19 @@ Chronological record of all operations.
 - `adapt` - Adapt knowledge for subagents
 - `feedback` - Send feedback to Teacher
 - `monitor` - Monitor knowledge gaps
+
+## [2026-05-03 13:12] process | seo-medical-clinics.md
+
+- Source: architect-wiki (seo-medical-clinics.md)
+- Action: Адаптировано "на пальцах" для субагентов
+- Output: [[seo-medical-clinics-simple]]
+- For subagents: positions, content, links, technical
+- Status: Processed
+
+**Что сделано:**
+- Упрощены сложные концепции (3 кита SEO)
+- Добавлены практические примеры
+- Создан actionable план на неделю
+- Указаны инструменты для работы
+- Определены метрики успеха
+
