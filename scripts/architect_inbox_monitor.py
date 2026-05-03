@@ -3,27 +3,57 @@
 Architect Raw Inbox Monitor
 
 Автоматически мониторит obsidian/architect/raw/ и обрабатывает новые файлы.
+Интегрирован с Gatekeeper для контроля качества.
 Запускается как фоновый процесс или через cron.
 """
 
 import asyncio
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any
 import yaml
 import hashlib
 
+# Импортируем Gatekeeper
+sys.path.insert(0, str(Path(__file__).parent))
+from gatekeeper_agent import GatekeeperAgent
+
 
 class ArchitectInboxMonitor:
     """Мониторинг и обработка raw inbox для Architect"""
 
-    def __init__(self, raw_dir: Path, wiki_dir: Path, decisions_dir: Path):
+    def __init__(self, raw_dir: Path, wiki_dir: Path, decisions_dir: Path, use_gatekeeper: bool = True):
         self.raw_dir = raw_dir
         self.wiki_dir = wiki_dir
         self.decisions_dir = decisions_dir
         self.state_file = raw_dir.parent / ".inbox_state.yaml"
         self.processed_files: Dict[str, str] = {}
+        self.use_gatekeeper = use_gatekeeper
+
+        # Инициализируем Gatekeeper
+        if self.use_gatekeeper:
+            quarantine_dir = raw_dir.parent / "quarantine"
+            system_context = """
+meAI - CEO-архитектор для AIM Agency (AI-first medical marketing agency).
+
+Фокус:
+- AI-агенты для автоматизации маркетинга
+- Медицинский маркетинг
+- SEO, контент, реклама
+- Конкурентная разведка
+- Автоматизация процессов
+
+Релевантные темы:
+- AI и LLM технологии
+- Медицинский маркетинг
+- Автоматизация маркетинга
+- SEO и контент-маркетинг
+- Конкурентный анализ
+- Бизнес-стратегии для агентств
+"""
+            self.gatekeeper = GatekeeperAgent(raw_dir, quarantine_dir, system_context)
 
     def load_state(self) -> None:
         """Загрузить состояние обработанных файлов"""
@@ -191,7 +221,7 @@ class ArchitectInboxMonitor:
         return prompts.get(file_type, prompts['note'])
 
     async def process_file(self, file_path: Path) -> None:
-        """Обработать один файл"""
+        """Обработать один файл с Gatekeeper проверкой"""
         print(f"\n🔍 Обрабатываю: {file_path.name}")
 
         # Проверяем, не обработан ли уже
@@ -199,6 +229,19 @@ class ArchitectInboxMonitor:
             print(f"✅ Уже обработан: {file_path.name}")
             self.processed_files[file_path.name] = self.get_file_hash(file_path)
             return
+
+        # НОВОЕ: Gatekeeper проверка качества
+        if self.use_gatekeeper:
+            print(f"\n🛡️  Gatekeeper: проверка качества...")
+            passed = await self.gatekeeper.process_file(file_path)
+
+            if not passed:
+                print(f"\n🚫 Файл не прошёл Gatekeeper и отправлен в карантин")
+                print(f"   Проверьте: {self.raw_dir.parent / 'quarantine' / file_path.name}")
+                # Не обновляем processed_files - файл в карантине
+                return
+
+            print(f"\n✅ Gatekeeper: файл прошёл проверку")
 
         # Умная проверка: читать raw или wiki?
         source_type, source_path = self.should_read_raw_or_wiki(file_path)
@@ -219,8 +262,14 @@ class ArchitectInboxMonitor:
         print(f"\n💡 Промпт для Claude:\n{prompt}")
         print(f"\n⏳ Жду обработки от Claude...")
 
-        # Здесь Claude должен обработать файл
-        # В реальности это будет вызов через API или интерактивно
+        # TODO: Здесь должна быть автоматическая обработка через Claude API
+        # Пока что Monitor только обнаруживает и классифицирует
+        # Фактическая обработка (создание wiki) делается вручную через Claude Code
+
+        print(f"\n📋 Файл готов к обработке:")
+        print(f"   Тип: {file_type}")
+        print(f"   Путь: {file_path}")
+        print(f"   Следующий шаг: создать wiki-документ в соответствующей категории")
 
         # Обновляем состояние
         self.processed_files[file_path.name] = self.get_file_hash(file_path)
@@ -287,6 +336,7 @@ async def main():
     parser = argparse.ArgumentParser(description='Architect Raw Inbox Monitor')
     parser.add_argument('--once', action='store_true', help='Обработать один раз и выйти')
     parser.add_argument('--interval', type=int, default=60, help='Интервал проверки в секундах')
+    parser.add_argument('--no-gatekeeper', action='store_true', help='Отключить Gatekeeper проверку')
     args = parser.parse_args()
 
     # Пути
@@ -295,8 +345,14 @@ async def main():
     wiki_dir = base_dir / "obsidian" / "architect" / "wiki"
     decisions_dir = base_dir / "obsidian" / "architect" / "decisions"
 
-    # Создаём монитор
-    monitor = ArchitectInboxMonitor(raw_dir, wiki_dir, decisions_dir)
+    # Создаём монитор с Gatekeeper (по умолчанию включён)
+    use_gatekeeper = not args.no_gatekeeper
+    monitor = ArchitectInboxMonitor(raw_dir, wiki_dir, decisions_dir, use_gatekeeper=use_gatekeeper)
+
+    if use_gatekeeper:
+        print("🛡️  Gatekeeper: ВКЛЮЧЁН (контроль качества)")
+    else:
+        print("⚠️  Gatekeeper: ОТКЛЮЧЁН")
 
     if args.once:
         await monitor.process_once()

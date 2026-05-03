@@ -153,27 +153,27 @@ class Agent(ABC):
 
 ## Key Files
 
-| File | Purpose | Status |
-|------|---------|--------|
-| `src/meai/core/architect.py` | Strategic decision making | ✅ IMPLEMENTED |
-| `src/meai/core/decision_maker.py` | Strategy selection with learning | ✅ IMPLEMENTED |
-| `src/meai/core/orchestrator.py` | Async coordination | ✅ IMPLEMENTED |
-| `src/meai/core/rollback.py` | Snapshot + event replay | ✅ IMPLEMENTED |
-| `src/meai/agents/operator.py` | Autonomous Operator | ✅ IMPLEMENTED |
-| `src/meai/agents/base_agent.py` | Base agent class | ✅ IMPLEMENTED |
-| `src/meai/agents/seo_agent.py` | SEO agent implementation | ⏳ TODO |
-| `src/meai/agents/content_agent.py` | Content agent implementation | ⏳ TODO |
-| `src/meai/agents/ads_agent.py` | Ads agent implementation | ⏳ TODO |
-| `src/meai/events/event_bus.py` | Async messaging system | ✅ IMPLEMENTED |
-| `src/meai/events/event_store.py` | Immutable audit log | ✅ IMPLEMENTED |
-| `src/meai/memory/obsidian.py` | Obsidian vault integration | ✅ IMPLEMENTED |
-| `src/meai/agents/factory.py` | Agent creation | ✅ IMPLEMENTED |
-| `scripts/aim_cli.py` | CLI for Architect | ✅ IMPLEMENTED |
-| `scripts/use_architect.py` | Architect usage examples | ✅ IMPLEMENTED |
-| `scripts/create_aim_agency.py` | Agency creation script | ✅ IMPLEMENTED |
-| `scripts/test_aim_agency.py` | Agency testing script | ✅ IMPLEMENTED |
-| `scripts/test_operator.py` | Operator testing script | ✅ IMPLEMENTED |
-| `scripts/test_base_agent.py` | Base agent testing script | ✅ IMPLEMENTED |
+| File                               | Purpose                          | Status        |
+| ---------------------------------- | -------------------------------- | ------------- |
+| `src/meai/core/architect.py`       | Strategic decision making        | ✅ IMPLEMENTED |
+| `src/meai/core/decision_maker.py`  | Strategy selection with learning | ✅ IMPLEMENTED |
+| `src/meai/core/orchestrator.py`    | Async coordination               | ✅ IMPLEMENTED |
+| `src/meai/core/rollback.py`        | Snapshot + event replay          | ✅ IMPLEMENTED |
+| `src/meai/agents/operator.py`      | Autonomous Operator              | ✅ IMPLEMENTED |
+| `src/meai/agents/base_agent.py`    | Base agent class                 | ✅ IMPLEMENTED |
+| `src/meai/agents/seo_agent.py`     | SEO agent implementation         | ⏳ TODO        |
+| `src/meai/agents/content_agent.py` | Content agent implementation     | ⏳ TODO        |
+| `src/meai/agents/ads_agent.py`     | Ads agent implementation         | ⏳ TODO        |
+| `src/meai/events/event_bus.py`     | Async messaging system           | ✅ IMPLEMENTED |
+| `src/meai/events/event_store.py`   | Immutable audit log              | ✅ IMPLEMENTED |
+| `src/meai/memory/obsidian.py`      | Obsidian vault integration       | ✅ IMPLEMENTED |
+| `src/meai/agents/factory.py`       | Agent creation                   | ✅ IMPLEMENTED |
+| `scripts/aim_cli.py`               | CLI for Architect                | ✅ IMPLEMENTED |
+| `scripts/use_architect.py`         | Architect usage examples         | ✅ IMPLEMENTED |
+| `scripts/create_aim_agency.py`     | Agency creation script           | ✅ IMPLEMENTED |
+| `scripts/test_aim_agency.py`       | Agency testing script            | ✅ IMPLEMENTED |
+| `scripts/test_operator.py`         | Operator testing script          | ✅ IMPLEMENTED |
+| `scripts/test_base_agent.py`       | Base agent testing script        | ✅ IMPLEMENTED |
 
 ## Commands
 

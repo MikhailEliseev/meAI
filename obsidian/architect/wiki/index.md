@@ -16,14 +16,19 @@
 
 *Пусто - будет заполнено при extraction*
 
-## Agents (2)
+## Agents (4)
 
 - [[agents/medical-content-agent]] - Анализ медицинских статей (HIGH priority, MVP approved)
-- [[agents/gatekeeper-agent]] - Контроль качества входящей информации (CRITICAL priority)
+- [[agents/gatekeeper-agent]] - Контроль качества входящей информации (CRITICAL priority, IMPLEMENTED)
+- [[agents/competitor-intelligence-agent]] - Мониторинг конкурентов (HIGH priority, approved)
+- [[agents/teacher-agent-implementation]] - Иерархическая система обучения (CRITICAL priority, design)
 
-## Workflows (1)
+## Workflows (4)
 
 - [[workflows/inbox-processing]] - Обработка raw/ с улучшениями (ACTIVE)
+- [[workflows/monitor-gatekeeper-integration]] - Monitor + Gatekeeper интеграция и улучшения (CRITICAL priority)
+- [[workflows/session-2026-05-03-analysis-summary]] - Анализ и улучшения workflow (HIGH priority)
+- [[workflows/session-2026-05-03-teacher-summary]] - Teacher Agent implementation summary (CRITICAL priority)
 
 ## Projects (0)
 
@@ -34,24 +39,30 @@
 - [[sources/2026-05-02-blackhat-seo]] - BlackHat SEO для iGaming - Анализ методов
 - [[sources/2026-05-02-claude-design]] - Claude Design для создания сайтов
 
-## Connections (1)
+## Connections (2)
 
 - [[connections/synthesis-strategy-aim-agency]] - Стратегия автоматизации синтеза инсайтов (CRITICAL priority)
+- [[connections/synthesis-strategy-aim-agency-v2]] - Synthesis Agent для actionable plans (CRITICAL priority)
 
 ---
 
 ## Stats
 
-**Total pages:** 7  
+**Total pages:** 13  
 **Sources processed:** 2  
 **Concepts extracted:** 1  
-**Agents designed:** 2  
-**Workflows documented:** 1  
-**Connections created:** 1
+**Agents designed:** 4  
+**Workflows documented:** 4  
+**Connections created:** 2
 
 **By priority:**
-- CRITICAL: 2 (gatekeeper-agent, synthesis-strategy)
-- HIGH: 1 (medical-content-agent)
+- CRITICAL: 6 (gatekeeper-agent, synthesis-strategy, monitor-gatekeeper-integration, synthesis-strategy-v2, teacher-agent, teacher-summary)
+- HIGH: 2 (medical-content-agent, competitor-intelligence-agent)
+
+**Implementation status:**
+- ✅ IMPLEMENTED: gatekeeper-agent, teacher-agent (базовая версия)
+- 📋 DESIGN: medical-content-agent, competitor-intelligence-agent, synthesis-agent
+- ⏳ IN PROGRESS: monitor improvements (Level 2)
 
 ---
 
@@ -63,5 +74,5 @@
 
 ---
 
-**Last updated:** 2026-05-02T21:05:00Z  
+**Last updated:** 2026-05-03T08:41:00Z  
 **Structure:** LLM Wiki Pattern (Karpathy)

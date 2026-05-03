@@ -192,3 +192,146 @@ Chronological record of all operations.
 - Communication: Субагенты читают wiki/ других агентов (не raw/)
 - Rule: "Отче наш" - фундаментальное правило, переживает compaction
 - Status: Committed to git, permanent rule established
+
+## [2026-05-03T08:01] ingest | Competitor Intelligence Agent
+- Processed: raw/20260503-0800-test-inbox.md
+- Created: agents/competitor-intelligence-agent.md
+- Type: idea (HIGH priority)
+- Key insights:
+  - Автоматический мониторинг конкурентов для AIM Agency
+  - 5-layer pipeline (Collector → Analyzer → Insights → Reporter → Alerter)
+  - Экономика: 98% маржа, 425k₽/месяц потенциал
+  - Интеграция с Medical Content Agent и SEO Agent
+- Decision: ОДОБРЕНО для разработки после Medical Content Agent
+- Roadmap: MVP (2 недели) → Beta (1 месяц) → Scale (3 месяца)
+- Status: Design complete, ready for prioritization
+
+## [2026-05-03T08:11] implementation | Gatekeeper Agent with Fact-Checking
+- Implemented: scripts/gatekeeper_agent.py
+- Created: agents/gatekeeper-implementation-report.md
+- Type: implementation (CRITICAL priority)
+- Features:
+  - 7 quality checks (size, language, structure, source, facts, relevance, duplicate)
+  - Fact-checking через Claude CLI (opus) с fallback эвристикой
+  - Relevance check через Claude CLI (sonnet)
+  - Hypothesis validation system с отслеживанием результатов
+  - Quarantine system (PASS/WARN/FAIL вердикты)
+- Components:
+  - FactChecker: проверка достоверности фактов
+  - RelevanceChecker: проверка применимости к системе
+  - HypothesisValidator: регистрация и валидация гипотез
+- Database: .hypothesis_db.yaml для отслеживания гипотез
+- Test results:
+  - ✅ Базовые проверки работают
+  - ✅ Relevance check: 0.95 (отлично)
+  - ✅ Fact-checking fallback: 0.60 (эвристика)
+  - ✅ Quarantine system работает
+- Next steps:
+  1. Интеграция с Monitor (сегодня)
+  2. Исправить Claude CLI для fact-checking (эта неделя)
+  3. Dashboard для гипотез (следующая неделя)
+- Status: Implemented and tested, ready for integration
+
+## [2026-05-03T08:34] analysis | Monitor + Gatekeeper Integration Analysis
+
+- Created: workflows/monitor-gatekeeper-integration.md
+- Type: workflow analysis (CRITICAL priority)
+- Problem identified: Monitor обрабатывает raw, но НЕ создаёт wiki-документы
+- Root cause: Workflow останавливается на генерации промпта (строка 264)
+- Impact:
+  - ❌ Wiki-слой не создаётся (нарушение LLM Wiki Pattern)
+  - ❌ Raw-транскрипты читаются напрямую (3x больше токенов)
+  - ❌ Нет структурированных инсайтов
+  - ❌ Невозможен автоматический синтез
+- Current flow (НЕПРАВИЛЬНЫЙ):
+  raw/ → Monitor → Gatekeeper → PASS → файл остаётся в raw/ → ❌ wiki не создаётся
+- Correct flow (LLM Wiki Pattern):
+  raw/ → Monitor → Gatekeeper → PASS → wiki создаётся → frontmatter обновляется
+- Solutions proposed:
+  - Level 1: Manual (текущий) - человек создаёт wiki вручную
+  - Level 2: Semi-Automatic (рекомендуется) - Claude CLI создаёт wiki автоматически
+  - Level 3: Fully Automatic (будущее) - полная автоматизация без участия человека
+- Recommendation: Реализовать Level 2 (Semi-Automatic)
+- Implementation: Добавить метод create_wiki_document() в Monitor
+- Next steps:
+  1. Реализовать create_wiki_document() с Claude CLI
+  2. Интегрировать в process_file()
+  3. Обновлять frontmatter автоматически
+  4. Логировать в log.md
+- Status: Analysis complete, ready for implementation
+
+## [2026-05-03T08:34] synthesis | Synthesis Strategy v2 - Actionable Plans
+
+- Created: connections/synthesis-strategy-aim-agency-v2.md
+- Type: connection (CRITICAL priority)
+- Problem: Wiki заполняется, но инсайты не синтезируются в actionable plans
+- Solution: Synthesis Agent для автоматического синтеза
+- Architecture: 3-Layer Synthesis Pipeline
+  - Layer 1: Collection (сбор wiki-документов)
+  - Layer 2: Synthesis (поиск связей и синтез)
+  - Layer 3: Actionable Plans (приоритизация и планирование)
+- Key components:
+  - collect_relevant_docs() - сбор по домену
+  - extract_insights() - извлечение инсайтов через Claude CLI
+  - find_connections() - поиск связей между инсайтами
+  - create_actionable_plan() - создание плана с фазами
+  - prioritize_connections() - приоритизация по impact × feasibility
+- Example synthesis:
+  - Input: BlackHat SEO + Medical Content Agent + Competitor Intelligence
+  - Output: "AI-Powered Medical Content Automation" actionable plan
+  - Phases: Quick Wins (1-2 weeks) → Core Infrastructure (1-2 months) → Advanced (2-3 months)
+- Implementation roadmap:
+  - Priority 1: Базовая версия (1-2 дня) - чтение wiki, извлечение инсайтов, простой поиск связей
+  - Priority 2: Автоматизация (1 неделя) - интеграция с Monitor, автообновление index.md
+  - Priority 3: Advanced (2-3 недели) - ML для связей, ROI приоритизация, dashboard
+- Target metrics:
+  - Connections: автоматически (vs вручную сейчас)
+  - Время синтеза: минуты (vs часы сейчас)
+  - Actionable plans: генерируются автоматически
+- Next steps:
+  1. Реализовать базовую версию Synthesis Agent (сегодня)
+  2. Протестировать на существующих wiki-документах
+  3. Интегрировать с Monitor (эта неделя)
+- Status: Strategy documented, ready for implementation
+
+## [2026-05-03T08:37] design | Teacher Agent - Hierarchical Learning System
+
+- Created: agents/teacher-agent-implementation.md
+- Type: agent design (CRITICAL priority)
+- Problem: Знания не распределяются систематически, нет обратной связи, нет улучшения системы обучения
+- Solution: Иерархическая система Teacher → Magisters → Subagents с feedback loop
+- Architecture:
+  - Teacher (Ректор) - центр обучающей системы
+  - Magisters (Магистры) - специалисты по направлениям (SEO, Content, Ads, AI)
+  - Subagents - узкоспециализированные исполнители
+- Key components:
+  1. KnowledgeDistributor - распределение знаний из wiki магистрам
+  2. MagisterManager - управление магистрами и их базами знаний
+  3. FeedbackProcessor - обработка 4 типов обратной связи (missing knowledge, outdated info, system improvement, escalation)
+  4. LearningStrategyManager - управление стратегией обучения и метрики
+- Integration:
+  - Monitor + Gatekeeper → wiki → Synthesis Agent → Teacher Agent → Magisters → Subagents
+  - Feedback loop: Subagents → Magisters → Teacher → Operator → YOU
+- Obsidian structure:
+  - teacher/ - Teacher Agent vault (LLM Wiki Pattern)
+  - magisters/ - vaults для каждого магистра (seo-magister, content-magister, ads-magister, ai-magister)
+  - subagents/ - узкие базы знаний "на пальцах"
+- Workflow examples:
+  1. Новое знание: wiki → Teacher → Magisters → Subagents
+  2. Запрос знаний: Magister → Teacher → Monitor → wiki → Teacher → Magister
+  3. Системное улучшение: Magister → Teacher → Operator → новая стратегия → Magisters
+- Implementation roadmap:
+  - Phase 1: Core Components (1 неделя) - базовые классы, KnowledgeDistributor, MagisterManager
+  - Phase 2: Feedback Loop (1 неделя) - FeedbackProcessor, эскалация, создание магистров
+  - Phase 3: Learning Strategy (2 недели) - LearningStrategyManager, метрики, dashboard
+- Target metrics:
+  - Knowledge distribution: <5 минут
+  - Feedback response: <1 час
+  - Magister satisfaction: >80%
+  - System improvements: 1+/неделя
+- Next steps:
+  1. Создать базовую структуру Teacher Agent (сегодня)
+  2. Создать Obsidian vaults для Teacher и Magisters (сегодня)
+  3. Реализовать KnowledgeDistributor (эта неделя)
+  4. Создать первого магистра - SEO Magister (эта неделя)
+- Status: Design complete, ready for implementation
