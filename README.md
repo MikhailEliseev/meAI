@@ -18,36 +18,83 @@
 ```
 YOU (Human)
   ↓ strategic questions
-ARCHITECT (Strategy Layer)
+ARCHITECT (Strategy Layer) ✅
   ↓ strategic decisions
-OPERATOR (Tactical Layer)
+OPERATOR (Tactical Layer) ✅
   ↓ task delegation
-MAGISTERS (Execution Layer)
-  ├─ SEO Magister
-  ├─ Content Magister
-  ├─ Ads Magister
-  ├─ SMM Magister
-  ├─ Analytics Magister
-  └─ Intelligence Magister
-  ↓ knowledge requests
-TEACHER (Knowledge Management)
-  ↓ research requests
-RESEARCHER (Knowledge Collection)
+TEACHER (Knowledge Management) ✅ NEW!
+  ↓ knowledge distribution
+MAGISTERS (Execution Layer) ⏳
+  ├─ SEO Magister (structure ready)
+  ├─ Content Magister (structure ready)
+  ├─ Ads Magister (structure ready)
+  └─ AI Magister (structure ready)
+  ↓ adapted knowledge
+SUBAGENTS (Specialized Executors) ⏳
+  └─ (next step)
 ```
+
+**Status Legend:**
+- ✅ Implemented
+- ⏳ In Progress
+- 📋 Designed
 
 ## ✨ Key Features
 
-### 🎓 University Knowledge System
+### 🎓 Hierarchical Learning System (NEW!)
 
-**Three-layer knowledge architecture:**
+**Teacher Agent - центр обучающей системы:**
 
-1. **Researcher** - Собирает знания из Perplexity, YouTube, Telegram
-2. **Teacher** - Хранит знания в Qdrant, синтезирует с Karpathy Pattern
-3. **Magisters** - Используют знания с hybrid search
+```
+Teacher (Ректор)
+  ↓ distributes knowledge
+Magisters (Магистры по направлениям)
+  ↓ adapts "на пальцах"
+Subagents (Узкоспециализированные исполнители)
+  ↓ feedback loop
+Continuous Improvement
+```
 
-### 🔍 Hybrid Search
+**Компоненты:**
+- **KnowledgeDistributor** - распределение знаний магистрам
+- **MagisterManager** - управление магистрами и их базами знаний
+- **FeedbackProcessor** - обработка обратной связи (4 типа)
+- **LearningStrategyManager** - улучшение стратегии обучения
 
-Трёхуровневая система поиска знаний:
+### 🛡️ Gatekeeper Agent (NEW!)
+
+**7 проверок качества перед обработкой:**
+
+1. Size check (100 байт - 1 MB)
+2. Language check (ru/en)
+3. Structure check (frontmatter + content)
+4. Source reliability (white/black list)
+5. **Fact-checking** (confidence 0.0-1.0) ⭐
+6. **Relevance check** (applicability 0.0-1.0) ⭐
+7. Duplicate detection
+
+**Quarantine system:** PASS/WARN/FAIL вердикты
+
+### 📚 LLM Wiki Pattern (Karpathy)
+
+**ЗАКОН для всех Obsidian vaults:**
+
+```
+vault/
+├── raw/           # Immutable sources
+├── wiki/          # Compiled knowledge (8 categories)
+│   ├── concepts/
+│   ├── technologies/
+│   ├── strategies/
+│   ├── agents/
+│   ├── workflows/
+│   ├── projects/
+│   ├── sources/
+│   └── connections/
+└── decisions/     # Strategic decisions
+```
+
+**3 операции:** Ingest, Query, Lint
 
 ```
 Local Cache (1-5ms) → Teacher/Qdrant (50-200ms) → Researcher (2-10s)
@@ -344,3 +391,69 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 ---
 
 **Built with ❤️ by Claude Opus 4.6**
+
+## 🚀 Quick Start
+
+### For New Sessions
+
+```bash
+# 1. Restore context
+cat CHECKPOINTS.md | tail -100
+
+# 2. Check current state
+grep -A 20 "## Current State" CHECKPOINTS.md
+
+# 3. See priorities
+cat QUICK_START.md
+```
+
+### Development Checkpoints System
+
+**Система чекпоинтов для сохранения контекста между сессиями:**
+
+- `CHECKPOINTS.md` - лог разработки (начни отсюда!)
+- `CHECKPOINTS_GUIDE.md` - инструкция по использованию
+- `QUICK_START.md` - шпаргалка для быстрого старта
+
+**Каждый чекпоинт содержит:**
+- Что сделано (с ✅)
+- Ключевые файлы
+- Контекст для продолжения
+- Следующий шаг
+
+### Run Teacher Agent
+
+```bash
+# Activate venv
+source venv/bin/activate
+
+# Run Teacher Agent
+python scripts/teacher_agent.py
+```
+
+## 📊 Current Status (Checkpoint #5)
+
+**Implemented:**
+- ✅ Architect (strategic decisions)
+- ✅ Operator (tactical management)
+- ✅ Event Bus (async communication)
+- ✅ Obsidian integration (agent memory)
+- ✅ LLM Wiki Pattern (for all vaults)
+- ✅ Gatekeeper Agent (quality control)
+- ✅ Teacher Agent (hierarchical learning)
+
+**In Progress:**
+- ⏳ Monitor Level 2 (auto wiki creation)
+- ⏳ Synthesis Agent (insights synthesis)
+- ⏳ Magisters (knowledge bases)
+- ⏳ Subagents (specialized executors)
+
+**Next Priorities:**
+1. Test Teacher Agent
+2. Implement Monitor Level 2
+3. Implement Synthesis Agent
+4. Create subagent knowledge bases
+
+---
+
+**Last updated:** 2026-05-03T08:46:00Z
