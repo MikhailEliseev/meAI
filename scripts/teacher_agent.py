@@ -12,7 +12,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import yaml
 
-from src.meai.events.event_bus import EventBus, Event, Priority
+from src.meai.events.event_bus import EventBus, Event
 from src.meai.memory.obsidian import ObsidianVault
 
 
@@ -88,13 +88,12 @@ class KnowledgeDistributor:
         try:
             # Создаём событие для магистра
             event = Event(
-                type="knowledge_update",
-                data={
+                event_type="knowledge_update",
+                payload={
                     "magister": magister,
                     "source": str(wiki_doc),
                     "timestamp": datetime.now().isoformat()
-                },
-                priority=Priority.P1
+                }
             )
 
             # Публикуем через Event Bus
@@ -294,13 +293,13 @@ class MagisterManager:
 
         # Создаём событие для Operator
         event = Event(
-            type="escalation",
-            data={
+            event_type="escalation",
+            payload={
                 "from_magister": magister,
                 "feedback": feedback,
-                "timestamp": datetime.now().isoformat()
-            },
-            priority=Priority.P0
+                "timestamp": datetime.now().isoformat(),
+                "priority": "P0"  # Высокий приоритет для эскалаций
+            }
         )
 
         await self.event_bus.publish(event)
@@ -364,7 +363,7 @@ class TeacherAgent:
     async def _handle_new_knowledge(self, event: Event):
         """Обработать новое знание из Architect wiki"""
 
-        wiki_doc = Path(event.data["wiki_doc"])
+        wiki_doc = Path(event.payload["wiki_doc"])
 
         # Распределяем знание магистрам
         magisters = await self.knowledge_distributor.distribute_new_knowledge(wiki_doc)
@@ -374,8 +373,8 @@ class TeacherAgent:
     async def _handle_magister_feedback(self, event: Event):
         """Обработать feedback от магистра"""
 
-        magister = event.data["magister"]
-        feedback = event.data["feedback"]
+        magister = event.payload["magister"]
+        feedback = event.payload["feedback"]
 
         await self.magister_manager.process_magister_feedback(magister, feedback)
 
