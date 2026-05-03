@@ -1,4 +1,22 @@
 hypotheses:
+  50da1958:
+    hypothesis: Регулярная публикация качественного образовательного контента увеличит
+      органический трафик на 200% за 6 месяцев и конверсию в запись на 50%.
+    metadata:
+      author: meAI
+      created: 2026-05-03 14:18:00+00:00
+      source: internal
+      status: raw
+      tags:
+      - content
+      - medical-marketing
+      - strategy
+      - blogging
+      title: Content Marketing Strategy for Medical Clinics
+    registered_at: '2026-05-03T17:18:20.006596'
+    source_file: 20260503-1418-content-marketing-test.md
+    status: pending
+    validations: []
   514faf5a:
     hypothesis: '**'
     metadata:
