@@ -1,15 +1,16 @@
 # Current Session State
 
-**Last Updated:** 2026-05-03T19:21 GMT+3
+**Last Updated:** 2026-05-03T20:52 GMT+3
 
 ## Current Task
-✅ ARCHITECT SKILL CREATED! 🎉
+✅ GLOBAL ALIAS CREATED! 🎉
 
 ## What We Just Completed
-✅ Created `/architect` skill for direct communication with Architect
-✅ Full integration: YOU → Architect → Claude Code → Implementation
-✅ Documentation created: `ARCHITECT_USAGE.md`
-✅ Skill registered in Claude Code
+✅ Created global `architect` alias for terminal
+✅ Setup script: `setup_alias.sh`
+✅ One-click access from anywhere
+✅ Documentation: `ALIAS_GUIDE.md`
+✅ 4 коммита сделано
 
 ## System Complete
 - 4 Magisters ✅
@@ -20,14 +21,65 @@
 - End-to-end tested ✅
 - **Architect CLI** ✅
 - **Telegram Bot** ✅
-- **`/architect` Skill** ✅ NEW!
+- **`/architect` Skill** ✅
+- **Global Alias** ✅ NEW!
 
-**ПОЛНАЯ СИСТЕМА + ВСЕ ИНТЕРФЕЙСЫ ГОТОВЫ!** 🚀
+**ПОЛНАЯ СИСТЕМА + 4 ИНТЕРФЕЙСА ГОТОВЫ!** 🚀
 
-## 🏗️ Architecture (Final)
+## 🎯 Four Ways to Access Architect
+
+### 1️⃣ GLOBAL ALIAS (Terminal) - FASTEST! ⭐ NEW!
+
+```bash
+architect "Your question"
+```
+
+✅ From anywhere  
+✅ One command  
+✅ Like a system command  
+
+### 2️⃣ CLAUDE CODE (this chat)
 
 ```
-ТЫ (Миша)
+/architect Your question
+```
+
+✅ Direct in chat  
+✅ With auto-implementation  
+✅ Full workflow  
+
+### 3️⃣ LOCAL SCRIPT (in project directory)
+
+```bash
+./architect.sh "Your question"
+```
+
+✅ Beautiful output  
+✅ Auto-activates venv  
+
+### 4️⃣ TELEGRAM BOT (messenger)
+
+```bash
+./start_bot.sh
+```
+
+✅ From anywhere  
+✅ Voice messages  
+✅ History  
+
+## 🚀 Try Right Now
+
+Open NEW terminal and type:
+
+```bash
+architect "Какую первую задачу дать AIM Agency?"
+```
+
+Or in this chat:
+
+```
+/architect Какую первую задачу дать AIM Agency?
+```
   ↓ /architect [вопрос]
 ARCHITECT (стратегический слой)
   ↓ принимает решения через Claude API
