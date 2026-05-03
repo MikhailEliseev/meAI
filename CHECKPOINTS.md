@@ -333,7 +333,101 @@ Subagent → Magister → Teacher → Operator → YOU
 
 ---
 
-**Last updated:** 2026-05-03T08:45:00Z
+## Checkpoint #14: Architect CLI + Telegram Bot (2026-05-03T18:01)
+
+**Что сделано:**
+- ✅ Создан Architect (стратегический советник)
+- ✅ Создан CLI для общения с Architect
+- ✅ Создан Telegram Bot с голосовыми сообщениями
+- ✅ Интеграция с AssemblyAI для транскрипции
+- ✅ Автосохранение решений в Obsidian
+
+**Ключевые файлы:**
+- `src/meai/core/architect.py` - Architect implementation
+- `scripts/talk_to_architect.py` - CLI interface
+- `scripts/telegram_bot.py` - Telegram bot
+- `docs/TELEGRAM_BOT_SETUP.md` - Setup instructions
+- `QUICKSTART.md` - Quick start guide
+
+**Как работает Architect:**
+
+1. **Получает стратегический вопрос**
+   - Через CLI: `python scripts/talk_to_architect.py "вопрос"`
+   - Через Telegram: текст или голос
+
+2. **Анализирует через Claude**
+   - Генерирует промпт с контекстом
+   - Вызывает Claude через subprocess
+   - Парсит ответ
+
+3. **Возвращает решение**
+   - Рекомендуемое действие
+   - Подробное обоснование
+   - Уверенность (0-100%)
+   - Альтернативы (2-3)
+   - Риски (2-3)
+
+4. **Сохраняет в Obsidian**
+   - `obsidian/architect/decisions/YYYYMMDD-HHMM-decision.md`
+   - Полная история решений
+
+**Telegram Bot возможности:**
+
+1. **Текстовые сообщения**
+   - Просто напиши вопрос
+   - Получи стратегическое решение
+
+2. **Голосовые сообщения**
+   - Надиктуй вопрос
+   - AssemblyAI расшифрует
+   - Architect ответит
+
+3. **Команды**
+   - `/start` - инструкция
+   - `/help` - справка
+   - `/history` - последние 5 решений
+
+**Примеры использования:**
+
+```bash
+# CLI
+python scripts/talk_to_architect.py "Какую нишу выбрать первой?"
+
+# Telegram Bot
+1. Создай бота через @BotFather
+2. Установи токены (TELEGRAM_BOT_TOKEN, ASSEMBLYAI_API_KEY)
+3. Запусти: python scripts/telegram_bot.py
+4. Общайся в Telegram!
+```
+
+**ПОЛНАЯ СИСТЕМА:**
+
+```
+YOU (Human)
+  ↓ CLI / Telegram
+ARCHITECT (Strategic Decisions) ✅ NEW!
+  ↓ Monitor + Gatekeeper
+TEACHER AGENT (Distribution)
+  ↓ EventBus
+4 MAGISTERS (Adaptation)
+  ↓ Monitors + Distributors
+16 SUBAGENTS (Execution)
+  ↓
+ACTIONABLE PLANS
+```
+
+**Контекст для продолжения:**
+- Architect работает и доступен через CLI и Telegram
+- Все решения сохраняются в Obsidian
+- Голосовые сообщения транскрибируются через AssemblyAI
+- Следующий шаг: интегрировать Architect с Operator для автоматического выполнения решений
+
+**Следующий шаг:** Интегрировать Architect → Operator (стратегические решения → тактическое выполнение)
+
+---
+
+**Last updated:** 2026-05-03T18:01:00Z
+
 
 ## Checkpoint #5.1: Teacher Agent Testing (2026-05-03T08:59)
 
