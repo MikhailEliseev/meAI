@@ -19,9 +19,35 @@
 
 **meAI** — CEO-архитектор, который проектирует и создаёт **AIM** (AI-first medical marketing agency at iamaim.ru).
 
-**Two-Level System:**
-- **meAI** (здесь, `/Users/mikhaileliseev/Desktop/Dev/!meAI`) — архитектор агентства
-- **AIM Agency** (там, `/Users/mikhaileliseev/Desktop/Dev/AIM`) — само агентство с Опером и агентами
+**Architecture:**
+```
+!meAI/                          # Command Center (ты работаешь отсюда)
+├── src/meai/                   # Framework (базовые классы)
+│   ├── core/                   # Architect, Orchestrator, Decision Maker
+│   ├── agents/                 # Base: Operator, BaseMagister, BaseAgent
+│   ├── events/                 # Event Bus, Event Store
+│   ├── memory/                 # Obsidian integration
+│   └── storage/                # Database
+├── AIM/                        # 🎯 Agency (приложение)
+│   ├── src/aim/                # Конкретная реализация
+│   │   ├── magisters/          # SEO, Content, Ads Magisters
+│   │   └── subagents/          # Конкретные субагенты
+│   ├── obsidian/               # Vaults агентов (LLM Wiki)
+│   │   ├── operator/
+│   │   ├── seo-magister/
+│   │   ├── content-magister/
+│   │   └── ads-magister/
+│   └── data/                   # База агентства
+├── obsidian/architect/         # Твой vault
+├── scripts/                    # CLI для управления
+└── SESSION.md                  # Текущая работа
+```
+
+**Workflow:**
+- Ты работаешь из `/Users/mikhaileliseev/Desktop/Dev/!meAI` (командный пункт)
+- Используешь `/architect` для стратегических решений
+- Architect создаёт код в `AIM/` (агентство)
+- Framework (`src/meai/`) переиспользуется агентством (`AIM/`)
 
 **User Role:** Medical marketer building AI-first agency  
 **Stack:** Python 3.11+, FastAPI, SQLite, Obsidian  
@@ -155,14 +181,16 @@ class Agent(ABC):
    - `storage/database.py` — SQLAlchemy async (IMPLEMENTED ✅)
    - `agents/factory.py` — Agent creation (IMPLEMENTED)
 
-4. **Memory System** (`obsidian/`)
-   - `operator/` — Operator's vault (decisions, tasks, reports)
-   - `seo-agent/` — SEO agent's vault (analysis, keywords, reports)
-   - `content-agent/` — Content agent's vault (articles, plans)
-   - `ads-agent/` — Ads agent's vault (campaigns, metrics)
-   - `SYSTEM.md` — Registry of all agents
+4. **Memory System** (Obsidian vaults with LLM Wiki pattern)
+   - `obsidian/architect/` — Architect's strategic vault (в корне !meAI)
+   - `AIM/obsidian/operator/` — Operator's tactical vault
+   - `AIM/obsidian/seo-magister/` — SEO Magister's domain vault
+   - `AIM/obsidian/content-magister/` — Content Magister's domain vault
+   - `AIM/obsidian/ads-magister/` — Ads Magister's domain vault
 
-5. **Data Layer** (`data/`)
+5. **Data Layer**
+   - `data/` — meAI framework database (в корне !meAI)
+   - `AIM/data/` — AIM agency database
    - SQLite for structured data (tasks, metrics, logs, decisions)
    - Obsidian for unstructured knowledge and agent memory
 
@@ -269,6 +297,42 @@ vault/
 - AI-first approach
 - Domain: iamaim.ru
 - Target: Building agency infrastructure and processes
+
+### Project Structure
+
+**Framework vs Application:**
+
+```
+src/meai/           # Framework (переиспользуемый)
+├── core/           # Базовые компоненты (Architect, Orchestrator)
+├── agents/         # Базовые классы (Operator, BaseMagister, BaseAgent)
+├── events/         # Event Bus, Event Store
+├── memory/         # Obsidian integration
+└── storage/        # Database
+
+AIM/                # Application (конкретное агентство)
+├── src/aim/        # Конкретная реализация
+│   ├── magisters/  # SEO, Content, Ads Magisters
+│   └── subagents/  # Конкретные субагенты
+├── obsidian/       # Vaults агентов
+└── data/           # База агентства
+```
+
+**Импорты:**
+```python
+# В AIM/src/aim/magisters/seo_magister.py
+from meai.agents.magister_base import BaseMagister  # Framework
+from meai.events.event_bus import EventBus          # Framework
+
+class SEOMagister(BaseMagister):  # Конкретная реализация
+    ...
+```
+
+**Разработка:**
+- Работаешь из корня `/Users/mikhaileliseev/Desktop/Dev/!meAI`
+- Framework код в `src/meai/`
+- Agency код в `AIM/src/aim/`
+- Всё в одном репо, но логически разделено
 
 ## Workflow
 
