@@ -237,7 +237,7 @@ Continuous Improvement
 
 ---
 
-## Current State (2026-05-03T13:20)
+## Current State (2026-05-03T13:24)
 
 **Реализовано:**
 - ✅ Architect (стратегические решения)
@@ -254,19 +254,19 @@ Continuous Improvement
 - ✅ Teacher creates physical files in magisters' raw/
 - ✅ Magister Monitors (адаптация "на пальцах")
 - ✅ Full System Integration (Architect → Teacher → Magisters)
-- ✅ SEO Subagents (4 субагента: positions, content, links, technical) ← NEW!
+- ✅ SEO Subagents (4 субагента: positions, content, links, technical)
+- ✅ SubagentDistributor (Magisters → Subagents) ← NEW!
 
 **В разработке:**
-- ⏳ Magisters → Subagents распределение
-- ⏳ Subagent Monitors
+- ⏳ Subagent Monitors (обработка raw/ → wiki/)
 - ⏳ Monitor Level 2 (автоматическое создание wiki)
 - ⏳ Synthesis Agent (синтез инсайтов)
 
 **Следующие приоритеты:**
-1. Реализовать распределение знаний Magisters → Subagents
-2. Создать мониторы для субагентов
-3. Протестировать полный цикл: Architect → Teacher → Magisters → Subagents
-4. Реализовать Monitor Level 2 (автоматическое создание wiki через Claude CLI)
+1. Создать мониторы для субагентов (SubagentMonitor)
+2. Протестировать полный цикл: Architect → Teacher → Magisters → Subagents
+3. Реализовать Monitor Level 2 (автоматическое создание wiki через Claude CLI)
+4. Создать Synthesis Agent для actionable plans
 
 **Следующие приоритеты:**
 1. Реализовать Monitor Level 2 (автоматическое создание wiki через Claude CLI)
@@ -698,5 +698,110 @@ Subagents (wiki/)
 - Затем: создать мониторы для субагентов
 
 **Следующий шаг:** Реализовать распределение знаний от SEO Magister к субагентам
+
+---
+
+## Checkpoint #10: Magisters → Subagents Distribution (2026-05-03T13:23)
+
+**Что сделано:**
+- ✅ Создан SubagentDistributor для распределения знаний
+- ✅ Magisters распределяют wiki-документы субагентам
+- ✅ Автоматическое определение релевантности
+- ✅ Физические файлы создаются в raw/ субагентов
+- ✅ Тест успешно пройден: SEO Magister → 4 субагента
+
+**Ключевые файлы:**
+- `scripts/subagent_distributor.py` - дистрибьютор знаний
+- `obsidian/magisters/seo-magister/subagents/*/raw/20260503-1322-seo-medical-clinics-simple.md` - распределённые файлы
+
+**Как работает SubagentDistributor:**
+
+1. **Загрузка субагентов**
+   - Сканирует директорию subagents/
+   - Читает SCHEMA.md каждого субагента
+   - Загружает специализацию и метаданные
+
+2. **Определение релевантности**
+   - Проверяет поле `for_subagents` в frontmatter
+   - Анализирует категорию документа
+   - Анализирует теги
+   - Если не найдено - отправляет всем
+
+3. **Распределение знаний**
+   - Создаёт файл в raw/ каждого релевантного субагента
+   - Добавляет frontmatter с метаданными
+   - Копирует полное содержимое wiki-документа
+   - Логирует в wiki/log.md субагента
+
+**Маппинг категорий/тегов на субагентов:**
+```python
+mappings = {
+    'positions': ['positions', 'ranking', 'monitoring', 'serp'],
+    'content': ['content', 'copywriting', 'keywords', 'optimization'],
+    'links': ['links', 'backlinks', 'linkbuilding', 'outreach'],
+    'technical': ['technical', 'performance', 'crawl', 'schema']
+}
+```
+
+**Результаты тестирования:**
+
+**Test: SEO Magister → Subagents**
+- Source: `seo-medical-clinics-simple.md`
+- Relevance: Все 4 субагента (указано в `for_subagents`)
+- Result: ✅ 4 файла созданы
+
+**Распределено:**
+- ✅ Positions Agent - получил знание
+- ✅ Content Agent - получил знание
+- ✅ Links Agent - получил знание
+- ✅ Technical Agent - получил знание
+
+**Структура файла в raw/ субагента:**
+```markdown
+---
+title: "..."
+source: "magister-wiki"
+source_file: "original-name.md"
+magister: "seo-magister"
+received_at: "timestamp"
+status: raw
+tags: [...]
+---
+
+# Knowledge from SEO-MAGISTER
+
+**Source:** [[original-doc]]
+**Received:** timestamp
+**For:** Subagent Name
+
+---
+
+[Полное содержимое wiki-документа]
+```
+
+**Архитектура (обновлённая):**
+```
+Architect (raw/)
+    ↓ Monitor + Gatekeeper
+Architect (wiki/)
+    ↓ EventBus
+Teacher Agent
+    ↓ EventBus + Physical Files
+Magisters (raw/)
+    ↓ Magister Monitors
+Magisters (wiki/)
+    ↓ SubagentDistributor ✅ РАБОТАЕТ!
+Subagents (raw/) ✅ ПОЛУЧАЮТ ЗНАНИЯ!
+    ↓ [TODO: Subagent Monitors]
+Subagents (wiki/)
+```
+
+**Контекст для продолжения:**
+- Полный цикл Architect → Teacher → Magisters → Subagents работает
+- Субагенты получают знания в raw/ и готовы к обработке
+- Следующий шаг: создать мониторы для субагентов (обработка raw/ → wiki/)
+- Затем: полное end-to-end тестирование
+
+**Следующий шаг:** Создать мониторы для субагентов (SubagentMonitor)
 
 ---
