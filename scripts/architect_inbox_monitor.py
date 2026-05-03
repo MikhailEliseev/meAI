@@ -24,13 +24,14 @@ from gatekeeper_agent import GatekeeperAgent
 class ArchitectInboxMonitor:
     """Мониторинг и обработка raw inbox для Architect"""
 
-    def __init__(self, raw_dir: Path, wiki_dir: Path, decisions_dir: Path, use_gatekeeper: bool = True):
+    def __init__(self, raw_dir: Path, wiki_dir: Path, decisions_dir: Path, use_gatekeeper: bool = True, event_bus=None):
         self.raw_dir = raw_dir
         self.wiki_dir = wiki_dir
         self.decisions_dir = decisions_dir
         self.state_file = raw_dir.parent / ".inbox_state.yaml"
         self.processed_files: Dict[str, str] = {}
         self.use_gatekeeper = use_gatekeeper
+        self.event_bus = event_bus
 
         # Инициализируем Gatekeeper
         if self.use_gatekeeper:
@@ -93,6 +94,32 @@ meAI - CEO-архитектор для AIM Agency (AI-first medical marketing ag
 
         return new_files
 
+    async def notify_teacher_agent(self, wiki_path: Path) -> None:
+        """Уведомить Teacher Agent о новом wiki-документе"""
+
+        if not self.event_bus:
+            print(f"\n⚠️  EventBus не инициализирован, пропускаю уведомление")
+            return
+
+        try:
+            # Создаём событие для Teacher Agent
+            from src.meai.events.event_bus import Event
+
+            event = Event(
+                event_type="architect.wiki.new_document",
+                payload={
+                    "wiki_doc": str(wiki_path),
+                    "timestamp": datetime.now().isoformat()
+                }
+            )
+
+            # Публикуем через Event Bus
+            await self.event_bus.publish(event)
+            print(f"\n📤 Уведомление Teacher Agent о новом wiki: {wiki_path.name}")
+
+        except Exception as e:
+            print(f"\n⚠️  Ошибка уведомления Teacher Agent: {e}")
+
     def parse_frontmatter(self, file_path: Path) -> Dict[str, Any]:
         """Извлечь frontmatter из markdown файла"""
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -134,10 +161,11 @@ meAI - CEO-архитектор для AIM Agency (AI-first medical marketing ag
             if output:
                 # Извлекаем имя файла из [[wiki-file]]
                 wiki_name = output.strip('[]').strip()
-                wiki_path = self.wiki_dir / f"{wiki_name}.md"
 
-                if wiki_path.exists():
-                    return ("wiki", wiki_path)
+                # Ищем файл рекурсивно во всех подкаталогах wiki/
+                for wiki_path in self.wiki_dir.rglob(f"{wiki_name}.md"):
+                    if wiki_path.exists():
+                        return ("wiki", wiki_path)
 
         return ("raw", raw_file)
 
@@ -227,6 +255,12 @@ meAI - CEO-архитектор для AIM Agency (AI-first medical marketing ag
         # Проверяем, не обработан ли уже
         if self.is_processed(file_path):
             print(f"✅ Уже обработан: {file_path.name}")
+
+            # Если файл обработан, проверяем wiki и уведомляем Teacher
+            source_type, source_path = self.should_read_raw_or_wiki(file_path)
+            if source_type == "wiki":
+                await self.notify_teacher_agent(source_path)
+
             self.processed_files[file_path.name] = self.get_file_hash(file_path)
             return
 
@@ -265,6 +299,10 @@ meAI - CEO-архитектор для AIM Agency (AI-first medical marketing ag
         # TODO: Здесь должна быть автоматическая обработка через Claude API
         # Пока что Monitor только обнаруживает и классифицирует
         # Фактическая обработка (создание wiki) делается вручную через Claude Code
+
+        # НОВОЕ: Уведомляем Teacher Agent о новом файле (если wiki уже создан)
+        if source_type == "wiki":
+            await self.notify_teacher_agent(source_path)
 
         print(f"\n📋 Файл готов к обработке:")
         print(f"   Тип: {file_type}")

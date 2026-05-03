@@ -6,6 +6,9 @@ author: "Test Author"
 tags:
   - test
   - integration
+status: processed
+output: "[[integration-test-concept]]"
+processed_at: 2026-05-03T09:20:29Z
 ---
 
 # Integration Test

@@ -86,17 +86,56 @@ class KnowledgeDistributor:
         """Отправить знание магистру"""
 
         try:
-            # Создаём событие для магистра
+            # 1. Создаём физический файл в raw/ магистра
+            magister_raw = self.teacher_vault.vault_path.parent / "magisters" / magister / "raw"
+
+            # Читаем исходный wiki-документ
+            with open(wiki_doc, 'r', encoding='utf-8') as f:
+                wiki_content = f.read()
+
+            # Создаём файл в raw/ магистра
+            timestamp = datetime.now().strftime('%Y%m%d-%H%M')
+            raw_filename = f"{timestamp}-{wiki_doc.stem}.md"
+            raw_file = magister_raw / raw_filename
+
+            # Добавляем frontmatter для магистра
+            frontmatter = self._parse_frontmatter(wiki_doc)
+            magister_frontmatter = f"""---
+title: "{frontmatter.get('title', wiki_doc.stem)}"
+source: "architect-wiki"
+source_file: "{wiki_doc.name}"
+received_at: "{datetime.now().isoformat()}"
+status: raw
+tags: {frontmatter.get('tags', [])}
+---
+
+# Knowledge from Architect
+
+**Source:** [[{wiki_doc.stem}]]
+**Received:** {datetime.now().strftime('%Y-%m-%d %H:%M')}
+
+---
+
+{wiki_content}
+"""
+
+            with open(raw_file, 'w', encoding='utf-8') as f:
+                f.write(magister_frontmatter)
+
+            print(f"   📄 Создан файл: {raw_filename}")
+
+            # 2. Создаём событие для магистра
             event = Event(
                 event_type="knowledge_update",
                 payload={
                     "magister": magister,
                     "source": str(wiki_doc),
+                    "raw_file": str(raw_file),
                     "timestamp": datetime.now().isoformat()
                 }
             )
 
-            # Публикуем через Event Bus
+            # 3. Публикуем через Event Bus
             await self.event_bus.publish(event)
 
             print(f"   ✅ Отправлено {magister}")
@@ -349,19 +388,23 @@ class TeacherAgent:
         """Подписаться на события"""
 
         # Подписываемся на новые wiki-документы из Architect
-        await self.event_bus.subscribe(
+        self.event_bus.subscribe(
             "architect.wiki.new_document",
             self._handle_new_knowledge
         )
 
         # Подписываемся на feedback от магистров
-        await self.event_bus.subscribe(
+        self.event_bus.subscribe(
             "magister.feedback",
             self._handle_magister_feedback
         )
 
     async def _handle_new_knowledge(self, event: Event):
         """Обработать новое знание из Architect wiki"""
+
+        print(f"\n🔔 Teacher Agent: получено событие новое знание!")
+        print(f"   Event type: {event.event_type}")
+        print(f"   Payload: {event.payload}")
 
         wiki_doc = Path(event.payload["wiki_doc"])
 
