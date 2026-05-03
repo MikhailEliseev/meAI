@@ -102,20 +102,132 @@ class Report:
     created_at: datetime
 
 
+class MagisterCoordinator:
+    """Coordinates delegation to Magisters through Event Bus
+
+    This is the bridge between Operator and the learning system (Magisters → Subagents).
+    Instead of delegating directly to low-level agents, Operator delegates to Magisters,
+    who then coordinate their Subagents.
+    """
+
+    def __init__(self, event_bus: EventBus, operator_id: str):
+        """Initialize MagisterCoordinator
+
+        Args:
+            event_bus: Event Bus for messaging
+            operator_id: Operator's agent ID
+        """
+        self.event_bus = event_bus
+        self.operator_id = operator_id
+
+        # Map capabilities to Magisters
+        self.capability_to_magister = {
+            # SEO Magister capabilities
+            "analyze_keywords": "seo-magister-1",
+            "optimize_content": "seo-magister-1",
+            "analyze_competitors": "seo-magister-1",
+            "track_rankings": "seo-magister-1",
+            "audit_technical_seo": "seo-magister-1",
+
+            # Content Magister capabilities
+            "generate_content": "content-magister-1",
+            "edit_content": "content-magister-1",
+            "plan_content": "content-magister-1",
+            "analyze_performance": "content-magister-1",
+            "optimize_for_seo": "content-magister-1",
+
+            # Ads Magister capabilities
+            "create_campaign": "ads-magister-1",
+            "optimize_budget": "ads-magister-1",
+            "ab_test": "ads-magister-1",
+            "target_audience": "ads-magister-1",
+
+            # SMM Magister capabilities
+            "create_post": "smm-magister-1",
+            "schedule_posts": "smm-magister-1",
+            "engage_audience": "smm-magister-1",
+            "analyze_metrics": "smm-magister-1",
+            "manage_campaigns": "smm-magister-1",
+
+            # Analytics Magister capabilities
+            "analyze_data": "analytics-magister-1",
+            "create_report": "analytics-magister-1",
+            "track_metrics": "analytics-magister-1",
+            "predict_trends": "analytics-magister-1",
+
+            # Intelligence Magister capabilities
+            "research_market": "intelligence-magister-1",
+            "analyze_trends": "intelligence-magister-1",
+            "monitor_competitors": "intelligence-magister-1",
+            "identify_opportunities": "intelligence-magister-1",
+            "strategic_insights": "intelligence-magister-1",
+        }
+
+    async def delegate_to_magister(self, subtask: Subtask) -> None:
+        """Delegate subtask to appropriate Magister
+
+        Args:
+            subtask: Subtask to delegate
+
+        Steps:
+        1. Identify Magister from capability
+        2. Create magister_task message
+        3. Publish to Event Bus with high priority
+        4. Magister will receive and delegate to Subagents
+        """
+        # Get Magister for this capability
+        magister_id = self.capability_to_magister.get(
+            subtask.action,
+            "seo-magister-1"  # Default fallback
+        )
+
+        # Create message for Magister
+        message = Message(
+            from_agent=self.operator_id,
+            to_agent=magister_id,
+            message_type="magister_task",
+            priority=subtask.priority,
+            payload={
+                "subtask_id": subtask.subtask_id,
+                "parent_task_id": subtask.parent_task_id,
+                "operator_task_id": subtask.parent_task_id,  # For result tracking
+                "action": subtask.action,
+                "description": subtask.description,
+                "dependencies": subtask.dependencies,
+                "deadline": None,  # Can add deadline logic later
+            },
+            timestamp=datetime.now(timezone.utc).isoformat(),
+        )
+
+        # Publish to Event Bus
+        await self.event_bus.publish(message)
+
+    def get_magister_for_capability(self, capability: str) -> str:
+        """Get Magister ID for a capability
+
+        Args:
+            capability: Capability name
+
+        Returns:
+            Magister agent ID
+        """
+        return self.capability_to_magister.get(capability, "seo-magister-1")
+
+
 class Operator:
     """Autonomous Operational Director
 
     Responsibilities:
     - Receive tasks from user or Architect
     - Make tactical decisions (how to execute)
-    - Delegate subtasks to agents
+    - Delegate subtasks to Magisters (not directly to agents)
     - Monitor execution
-    - Collect results
+    - Collect results from Magisters
     - Aggregate reports
     - Report to user
     """
 
-    # Agent timeouts (configurable)
+    # Agent timeouts (configurable) - now for Magisters
     AGENT_TIMEOUTS = {
         "seo-magister-1": timedelta(minutes=30),
         "content-magister-1": timedelta(minutes=45),
@@ -154,6 +266,9 @@ class Operator:
         # Active tasks tracking
         self.active_tasks: dict[str, Task] = {}
         self.active_plans: dict[str, TacticalPlan] = {}
+
+        # Magister Coordinator (bridge to learning system)
+        self.magister_coordinator = MagisterCoordinator(self.event_bus, self.agent_id)
 
     async def initialize(self) -> None:
         """Initialize Operator components"""
@@ -704,17 +819,16 @@ class Operator:
             # In real implementation, would wait for phase completion
 
     async def delegate_to_agent(self, subtask: Subtask) -> None:
-        """Delegate subtask to agent
+        """Delegate subtask to Magister (not directly to agent)
 
         Args:
             subtask: Subtask to delegate
 
         Steps:
-        1. Create Message with subtask details
-        2. Set priority
-        3. Publish to Event Bus
-        4. Update subtask status
-        5. Write to vault
+        1. Update subtask status
+        2. Store in database
+        3. Delegate to Magister via MagisterCoordinator
+        4. Write to vault
         """
         # Update status
         subtask.status = TaskStatus.DELEGATED
@@ -722,23 +836,8 @@ class Operator:
         # Store subtask in database
         await self._store_subtask(subtask)
 
-        # Create message
-        message = Message(
-            from_agent=self.agent_id,
-            to_agent=subtask.agent_id,
-            message_type="task_assignment",
-            priority=subtask.priority,
-            payload={
-                "subtask_id": subtask.subtask_id,
-                "parent_task_id": subtask.parent_task_id,
-                "action": subtask.action,
-                "description": subtask.description,
-            },
-            timestamp=datetime.now(timezone.utc).isoformat(),
-        )
-
-        # Publish to Event Bus
-        await self.event_bus.publish(message)
+        # Delegate to Magister (not directly to agent!)
+        await self.magister_coordinator.delegate_to_magister(subtask)
 
         # Write to vault
         await self._write_delegation_to_vault(subtask)
