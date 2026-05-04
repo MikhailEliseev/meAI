@@ -1,0 +1,377 @@
+"""
+CI Orchestrator Agent - Universal Competitive Intelligence System
+
+Координирует 23 специализированных агента через 16 фаз для полной конкурентной разведки.
+Три уровня глубины: Quick (1-4), Deep (1-9), Full (1-16).
+"""
+
+from typing import Any, Dict, List, Optional
+from datetime import datetime
+import json
+import asyncio
+
+from meai.agents.base_agent import Agent, Task, TaskResult
+from meai.events.event_bus import EventBus
+from meai.memory.obsidian import ObsidianVault
+
+
+class CIOrchestrator(Agent):
+    """
+    CI Orchestrator - главный координатор конкурентной разведки.
+
+    Управляет 23 агентами через 16 фаз:
+    - Phases 1-4: Quick analysis (Scout, Auditor, Reputation)
+    - Phases 5-9: Deep analysis (7 parallel agents + FactChecker + Strategist)
+    - Phases 10-16: Full pipeline (TW agents + Offer Generator)
+    """
+
+    def __init__(self, agent_id: str, event_bus: EventBus):
+        super().__init__(agent_id, event_bus)
+        self.vault = ObsidianVault("AIM/obsidian/ci-orchestrator")
+        self.state_file = "AIM/data/ci-state.json"
+
+        # Tier definitions
+        self.tiers = {
+            "quick": {"phases": range(1, 5), "time": "15 min", "cost": "low"},
+            "deep": {"phases": range(1, 10), "time": "45 min", "cost": "medium"},
+            "full": {"phases": range(1, 17), "time": "90 min", "cost": "high"}
+        }
+
+        # Agent mapping to phases
+        self.phase_agents = {
+            1: "ci-scout",
+            2: "ci-auditor",
+            3: "ci-auditor",
+            4: "ci-reputation",
+            5: ["ci-finance", "ci-vacancies", "ci-tech", "ci-site-crawler",
+                "ci-content", "ci-pricing", "ci-ecosystem"],  # Parallel
+            6: "ci-factchecker",
+            7: "ci-strategist",
+            8: "ci-strategist",
+            9: "ci-prioritizer",
+            10: "ci-marketing-strategy",
+            11: "tw-competitor-scout",
+            12: "tw-creative-collector",
+            13: "tw-creative-analyzer",
+            14: "tw-pattern-finder",
+            15: "tw-traffic-analyzer",
+            16: "ci-offer-generator"
+        }
+
+    async def execute_task(self, task: Task) -> TaskResult:
+        """
+        Выполнить задачу конкурентной разведки.
+
+        Args:
+            task: Задача с payload:
+                - niche: ниша (обязательно)
+                - geo: город (обязательно)
+                - target_audience: целевая аудитория (опционально)
+                - depth: quick/deep/full (опционально, default: deep)
+
+        Returns:
+            TaskResult с результатами анализа
+        """
+        try:
+            # Логирование начала
+            await self._log_start(task)
+
+            # Определить tier
+            tier = self._detect_tier(task.payload)
+
+            # Проверить stale data
+            await self._check_stale_data()
+
+            # Выполнить фазы
+            results = await self._execute_phases(tier, task.payload)
+
+            # Логирование завершения
+            await self._log_completion(task, results)
+
+            return TaskResult(
+                task_id=task.id,
+                status="completed",
+                result=results
+            )
+
+        except Exception as e:
+            await self._log_error(task, str(e))
+            return TaskResult(
+                task_id=task.id,
+                status="failed",
+                result={"error": str(e)}
+            )
+
+    def _detect_tier(self, payload: Dict[str, Any]) -> str:
+        """
+        Определить tier анализа из payload.
+
+        Tier 1 (quick): "быстрый анализ", "посмотри", "кто конкуренты"
+        Tier 2 (deep): default для большинства запросов
+        Tier 3 (full): "полный", "всё", "коммерческое", "предложение"
+        """
+        depth = payload.get("depth", "").lower()
+        request = payload.get("request", "").lower()
+
+        # Explicit depth
+        if depth in ["quick", "deep", "full"]:
+            return depth
+
+        # Detect from request
+        quick_keywords = ["быстрый", "посмотри", "кто конкуренты", "обзор"]
+        full_keywords = ["полный", "всё", "коммерческое", "предложение", "ceo", "pitch"]
+
+        if any(kw in request for kw in quick_keywords):
+            return "quick"
+        elif any(kw in request for kw in full_keywords):
+            return "full"
+        else:
+            return "deep"  # default
+
+    async def _check_stale_data(self):
+        """
+        Проверить актуальность данных.
+
+        Если последний анализ > 30 дней → предупреждение
+        Если > 60 дней → рекомендация пересканировать фазы 1-5
+        Если > 90 дней → рекомендация полного пересканирования
+        """
+        try:
+            with open(self.state_file, 'r') as f:
+                state = json.load(f)
+
+            last_run = state.get("last_run")
+            if not last_run:
+                return
+
+            last_date = datetime.fromisoformat(last_run)
+            days_ago = (datetime.now() - last_date).days
+
+            if days_ago > 90:
+                await self.vault.log_operation(
+                    "stale_data_warning",
+                    f"⚠️ Данные устарели ({days_ago} дней). Рекомендуется полный пересканирование."
+                )
+            elif days_ago > 60:
+                await self.vault.log_operation(
+                    "stale_data_warning",
+                    f"⚠️ Данные устарели ({days_ago} дней). Рекомендуется пересканировать фазы 1-5."
+                )
+            elif days_ago > 30:
+                await self.vault.log_operation(
+                    "stale_data_warning",
+                    f"⚠️ Данные могут быть устаревшими ({days_ago} дней)."
+                )
+        except FileNotFoundError:
+            # Первый запуск
+            pass
+
+    async def _execute_phases(self, tier: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Выполнить фазы анализа для выбранного tier.
+
+        Args:
+            tier: quick/deep/full
+            payload: данные задачи
+
+        Returns:
+            Агрегированные результаты всех фаз
+        """
+        phases = self.tiers[tier]["phases"]
+        results = {
+            "tier": tier,
+            "phases_executed": [],
+            "phase_results": {}
+        }
+
+        for phase in phases:
+            phase_result = await self._execute_phase(phase, payload, results)
+            results["phases_executed"].append(phase)
+            results["phase_results"][f"phase_{phase}"] = phase_result
+
+        return results
+
+    async def _execute_phase(
+        self,
+        phase: int,
+        payload: Dict[str, Any],
+        previous_results: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Выполнить одну фазу анализа.
+
+        Args:
+            phase: номер фазы (1-16)
+            payload: данные задачи
+            previous_results: результаты предыдущих фаз
+
+        Returns:
+            Результат фазы
+        """
+        agents = self.phase_agents.get(phase)
+
+        if not agents:
+            return {"status": "skipped", "reason": "no agents for phase"}
+
+        # Parallel execution for phase 5
+        if isinstance(agents, list):
+            return await self._execute_parallel_agents(agents, payload, previous_results)
+        else:
+            return await self._execute_single_agent(agents, payload, previous_results)
+
+    async def _execute_parallel_agents(
+        self,
+        agents: List[str],
+        payload: Dict[str, Any],
+        previous_results: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Выполнить несколько агентов параллельно (фаза 5).
+
+        Args:
+            agents: список agent_id
+            payload: данные задачи
+            previous_results: результаты предыдущих фаз
+
+        Returns:
+            Агрегированные результаты всех агентов
+        """
+        tasks = []
+        for agent_id in agents:
+            task = Task(
+                id=f"{self.agent_id}_{agent_id}_{datetime.now().timestamp()}",
+                type=f"ci_{agent_id.replace('-', '_')}",
+                payload={
+                    **payload,
+                    "previous_results": previous_results
+                }
+            )
+            tasks.append(self._delegate_to_agent(agent_id, task))
+
+        # Выполнить параллельно
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Агрегировать результаты
+        aggregated = {
+            "agents_executed": agents,
+            "results": {}
+        }
+
+        for agent_id, result in zip(agents, results):
+            if isinstance(result, Exception):
+                aggregated["results"][agent_id] = {
+                    "status": "failed",
+                    "error": str(result)
+                }
+            else:
+                aggregated["results"][agent_id] = result
+
+        return aggregated
+
+    async def _execute_single_agent(
+        self,
+        agent_id: str,
+        payload: Dict[str, Any],
+        previous_results: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Выполнить одного агента.
+
+        Args:
+            agent_id: ID агента
+            payload: данные задачи
+            previous_results: результаты предыдущих фаз
+
+        Returns:
+            Результат агента
+        """
+        task = Task(
+            id=f"{self.agent_id}_{agent_id}_{datetime.now().timestamp()}",
+            type=f"ci_{agent_id.replace('-', '_')}",
+            payload={
+                **payload,
+                "previous_results": previous_results
+            }
+        )
+
+        return await self._delegate_to_agent(agent_id, task)
+
+    async def _delegate_to_agent(self, agent_id: str, task: Task) -> Dict[str, Any]:
+        """
+        Делегировать задачу агенту через Event Bus.
+
+        Args:
+            agent_id: ID агента
+            task: задача
+
+        Returns:
+            Результат агента
+        """
+        # Отправить событие через Event Bus
+        await self.event_bus.publish(
+            event_type=f"task.{agent_id}",
+            payload=task.to_dict(),
+            priority=1
+        )
+
+        # Логировать делегирование
+        await self.vault.log_operation(
+            "delegate",
+            f"Делегировал задачу {task.id} агенту {agent_id}"
+        )
+
+        # TODO: Ждать результат от агента через Event Bus
+        # Пока возвращаем заглушку
+        return {
+            "agent_id": agent_id,
+            "status": "delegated",
+            "task_id": task.id
+        }
+
+    async def _log_start(self, task: Task):
+        """Логировать начало выполнения задачи."""
+        await self.vault.log_operation(
+            "task_start",
+            f"Начало задачи {task.id}: {task.payload.get('niche')} в {task.payload.get('geo')}"
+        )
+
+    async def _log_completion(self, task: Task, results: Dict[str, Any]):
+        """Логировать завершение задачи."""
+        await self.vault.log_operation(
+            "task_complete",
+            f"Завершена задача {task.id}: {len(results['phases_executed'])} фаз выполнено"
+        )
+
+        # Обновить state file
+        state = {
+            "last_run": datetime.now().isoformat(),
+            "last_task_id": task.id,
+            "last_tier": results["tier"]
+        }
+
+        with open(self.state_file, 'w') as f:
+            json.dump(state, f, indent=2, ensure_ascii=False)
+
+    async def _log_error(self, task: Task, error: str):
+        """Логировать ошибку."""
+        await self.vault.log_operation(
+            "task_error",
+            f"Ошибка в задаче {task.id}: {error}"
+        )
+
+    def get_capabilities(self) -> List[str]:
+        """Возвращает список возможностей агента."""
+        return [
+            "competitive_intelligence",
+            "market_analysis",
+            "competitor_audit",
+            "reputation_analysis",
+            "financial_intelligence",
+            "hr_intelligence",
+            "tech_stack_analysis",
+            "content_strategy_analysis",
+            "pricing_intelligence",
+            "ad_intelligence",
+            "traffic_analysis",
+            "strategy_synthesis"
+        ]
