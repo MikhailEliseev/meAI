@@ -347,6 +347,72 @@ async def test_end_to_end_workflow():
     for i, rec in enumerate(seo_result.result.get('recommendations', [])[:3], 1):
         print(f"   {i}. {rec}")
 
+    # ==================== STEP 5.5: Generate HTML Report ====================
+    print("\n" + "=" * 80)
+    print("STEP 5.5: Generate HTML Report")
+    print("=" * 80)
+
+    from meai.reports.html_generator import HTMLReportGenerator
+
+    report_gen = HTMLReportGenerator(output_dir="./demo")
+
+    # Prepare data for report
+    client_data = {
+        "name": client.name,
+        "industry": client.industry,
+        "location": client.location,
+        "subscription_tier": client.subscription_tier.value,
+    }
+
+    project_data = {
+        "name": project.name,
+        "project_type": project.project_type.value,
+        "duration_months": project.duration_months,
+        "total_budget": project.total_budget,
+        "status": project.status.value,
+        "goals": project.goals,
+    }
+
+    results_data = {
+        "seo": {
+            "keywords_count": len(seo_result.result.get('keywords', [])),
+        },
+        "content": {
+            "word_count": content_result.result.get('word_count', 0),
+            "quality_score": content_result.result.get('quality_score', 0),
+            "seo_score": content_result.result.get('seo_score', 0),
+        },
+        "ads": {
+            "ad_groups_count": len(ads_result.result.get('ad_groups', [])),
+            "budget": ads_result.result.get('budget', {}).get('total_daily', 0),
+        },
+        "recommendations": [
+            {
+                "title": "Оптимизация ключевых слов",
+                "description": f"Найдено {len(seo_result.result.get('keywords', []))} перспективных ключевых слов. Рекомендуем начать с топ-10 по приоритету.",
+            },
+            {
+                "title": "Контент-стратегия",
+                "description": f"Создан качественный контент ({content_result.result.get('word_count', 0)} слов) с высоким SEO-скором. Рекомендуем публиковать 2-3 статьи в неделю.",
+            },
+            {
+                "title": "Рекламная кампания",
+                "description": f"Настроена кампания с {len(ads_result.result.get('ad_groups', []))} группами объявлений. Рекомендуем начать с тестового бюджета и масштабировать успешные группы.",
+            },
+        ],
+    }
+
+    html_path = report_gen.generate_client_report(
+        client_name=client.name,
+        client_data=client_data,
+        project_data=project_data,
+        results=results_data,
+    )
+
+    print(f"\n✅ HTML Report generated:")
+    print(f"   Path: {html_path}")
+    print(f"   Open in browser: file://{Path(html_path).absolute()}")
+
     # ==================== STEP 6: Cleanup ====================
     await operator.shutdown()
     await keyword_agent.shutdown()
