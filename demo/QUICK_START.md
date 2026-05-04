@@ -163,6 +163,79 @@ python scripts/test_end_to_end.py
 
 ---
 
+## 📸 Создание Screenshots для Email
+
+### Зачем нужны screenshots?
+- Отправить demo по email (без live презентации)
+- Вставить в презентацию PowerPoint/Keynote
+- Поделиться в соцсетях/мессенджерах
+
+### Как создать (2 минуты):
+
+1. **Открой HTML report в браузере:**
+   ```bash
+   open demo/стоматология-смайл/report.html
+   ```
+
+2. **Сделай 4 ключевых screenshot:**
+   
+   - **Screenshot 1: Header** - Информация о клиенте
+   - **Screenshot 2: Results** - Результаты работы (метрики)
+   - **Screenshot 3: Pricing** - Стоимость и ROI
+   - **Screenshot 4: Recommendations** - Рекомендации
+
+   Используй:
+   - Mac: Cmd+Shift+4 (выделить область)
+   - Windows: Win+Shift+S
+   - Linux: Shift+PrtScn
+
+3. **Сохрани в папку demo:**
+   ```
+   demo/стоматология-смайл/screenshot-1-header.png
+   demo/стоматология-смайл/screenshot-2-results.png
+   demo/стоматология-смайл/screenshot-3-pricing.png
+   demo/стоматология-смайл/screenshot-4-recommendations.png
+   ```
+
+### Email Template с Screenshots:
+
+```
+Тема: Demo AIM Agency для [Название клиники]
+
+Здравствуйте!
+
+Мы создали для вас демо-проект, чтобы показать возможности 
+нашей AI-системы для медицинского маркетинга.
+
+[Вставить Screenshot 1: Header]
+
+Что мы сделали за 2 секунды:
+
+[Вставить Screenshot 2: Results]
+
+✅ SEO: 20 ключевых слов
+✅ Content: 1600 слов (Quality 100/100)
+✅ Ads: 3 группы объявлений
+
+Стоимость и ROI:
+
+[Вставить Screenshot 3: Pricing]
+
+💰 Инвестиция: 150,000 ₽ за 3 месяца
+💰 Ожидаемая выручка: ~450,000 ₽
+💰 ROI: ~200%
+
+Полный отчёт во вложении (report.html).
+
+Готовы обсудить детали?
+
+С уважением,
+AIM Agency
+iamaim.ru
+```
+
+---
+
 ## 📊 Что показывать для разных ниш
 
 ### Стоматология

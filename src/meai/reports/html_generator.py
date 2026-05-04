@@ -369,6 +369,50 @@ class HTMLReportGenerator:
             ''' for i, rec in enumerate(results.get('recommendations', []), 1))}
         </div>
 
+        <!-- Pricing -->
+        <div class="section">
+            <h2>Стоимость услуг</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="label">Subscription Tier</div>
+                    <div class="value">{client_data.get('subscription_tier', 'PRO').upper()}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Месячный бюджет</div>
+                    <div class="value">{project_data.get('total_budget', 0):,} ₽</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">SLA Response Time</div>
+                    <div class="value">12 часов</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Длительность</div>
+                    <div class="value">{project_data.get('duration_months', 3)} месяцев</div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; margin-bottom: 15px; color: #667eea;">Что входит в стоимость</h3>
+            <ul class="goals-list">
+                <li>SEO анализ и оптимизация (20+ ключевых слов)</li>
+                <li>Создание качественного контента (1600+ слов/статья)</li>
+                <li>Настройка и ведение рекламных кампаний</li>
+                <li>Еженедельные отчёты о прогрессе</li>
+                <li>Приоритетная поддержка (12 часов)</li>
+                <li>Доступ к AI-системе 24/7</li>
+            </ul>
+
+            <div style="margin-top: 30px; padding: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; color: white;">
+                <h3 style="color: white; margin-bottom: 15px;">Ожидаемый ROI</h3>
+                <div style="font-size: 18px; line-height: 1.8;">
+                    <p><strong>Инвестиция:</strong> {project_data.get('total_budget', 0):,} ₽ за {project_data.get('duration_months', 3)} месяцев</p>
+                    <p><strong>Ожидаемый результат:</strong> 30+ новых пациентов</p>
+                    <p><strong>Средний чек:</strong> ~15,000 ₽ (имплантация)</p>
+                    <p><strong>Выручка:</strong> ~450,000 ₽</p>
+                    <p><strong>ROI:</strong> ~200% за 3 месяца</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Footer -->
         <div class="footer">
             <div class="logo">AIM Agency</div>
