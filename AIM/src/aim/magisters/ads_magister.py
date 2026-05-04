@@ -118,33 +118,47 @@ class AdsMagister(BaseMagister):
 
         # Collect metrics from all subagents
         total_campaigns = 0
+        total_ad_groups = 0
         total_budget = 0
         total_impressions = 0
         total_clicks = 0
         total_conversions = 0
-        campaign_types = {}
+        platforms = {}
+        specialties = {}
 
         for result in subagent_results:
-            # Campaigns
-            if "campaigns" in result:
-                total_campaigns += result.get("campaigns", 0)
+            # Count campaigns
+            if "campaign_name" in result:
+                total_campaigns += 1
 
-            # Budget
+            # Ad groups
+            if "ad_groups" in result:
+                total_ad_groups += len(result["ad_groups"])
+
+            # Budget (handle dict structure)
             if "budget" in result:
-                total_budget += result.get("budget", 0)
+                budget_data = result["budget"]
+                if isinstance(budget_data, dict):
+                    total_budget += budget_data.get("total_daily", 0)
+                else:
+                    total_budget += budget_data
 
-            # Performance metrics
-            if "impressions" in result:
-                total_impressions += result.get("impressions", 0)
-            if "clicks" in result:
-                total_clicks += result.get("clicks", 0)
-            if "conversions" in result:
-                total_conversions += result.get("conversions", 0)
+            # Performance predictions
+            if "predictions" in result:
+                predictions = result["predictions"]
+                total_impressions += predictions.get("estimated_impressions", 0)
+                total_clicks += predictions.get("estimated_clicks", 0)
+                total_conversions += predictions.get("estimated_conversions", 0)
 
-            # Campaign types
-            if "campaign_type" in result:
-                campaign_type = result["campaign_type"]
-                campaign_types[campaign_type] = campaign_types.get(campaign_type, 0) + 1
+            # Platform
+            if "platform" in result:
+                platform = result["platform"]
+                platforms[platform] = platforms.get(platform, 0) + 1
+
+            # Specialty
+            if "specialty" in result:
+                specialty = result["specialty"]
+                specialties[specialty] = specialties.get(specialty, 0) + 1
 
         # Calculate performance metrics
         ctr = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0
@@ -157,61 +171,61 @@ class AdsMagister(BaseMagister):
 
         if total_campaigns > 0:
             insights.append(
-                f"Analyzed {total_campaigns} campaign(s) with total budget ${total_budget:,.2f}"
+                f"Created {total_campaigns} campaign(s) with {total_ad_groups} ad groups"
+            )
+
+        if total_budget > 0:
+            insights.append(
+                f"Total daily budget: {total_budget:,} RUB"
             )
 
         if total_impressions > 0:
             insights.append(
-                f"Performance: {total_impressions:,} impressions, {total_clicks:,} clicks, {total_conversions} conversions"
+                f"Predicted performance: {total_impressions:,} impressions, {total_clicks:,} clicks, {total_conversions} conversions"
             )
 
         if ctr > 0:
             insights.append(
-                f"Click-through rate: {ctr:.2f}%"
+                f"Expected CTR: {ctr:.2f}%, Conversion Rate: {conversion_rate:.2f}%"
             )
 
-        if conversion_rate > 0:
-            insights.append(
-                f"Conversion rate: {conversion_rate:.2f}%"
-            )
+        if platforms:
+            platform_list = ", ".join(platforms.keys())
+            insights.append(f"Platforms: {platform_list}")
 
-        if campaign_types:
-            top_type = max(campaign_types.items(), key=lambda x: x[1])
-            insights.append(
-                f"Dominant campaign type: {top_type[0]} ({top_type[1]} campaigns)"
-            )
+        if specialties:
+            specialty_list = ", ".join(specialties.keys())
+            insights.append(f"Specialties: {specialty_list}")
 
         # Generate recommendations
         recommendations = []
 
-        if ctr < 2.0:
+        if ctr > 0 and ctr < 2.0:
             recommendations.append(
                 "CTR is low - improve ad copy and targeting"
             )
 
-        if conversion_rate < 5.0:
+        if conversion_rate > 0 and conversion_rate < 5.0:
             recommendations.append(
                 "Conversion rate is low - optimize landing pages and CTAs"
             )
 
         if cpa > 0:
             recommendations.append(
-                f"Cost per acquisition: ${cpa:.2f} - monitor and optimize"
+                f"Cost per acquisition: {cpa:.0f} RUB - monitor and optimize"
             )
 
         if total_budget > 0:
             recommendations.append(
-                f"Total spend: ${total_budget:,.2f} - ensure ROI is positive"
+                "Monitor campaign performance and adjust budgets based on ROI"
             )
 
         # Build summary
-        summary = f"Analyzed {total_campaigns} campaign(s) across {len(subagent_results)} subagent(s). "
+        summary = f"Created {total_campaigns} campaign(s) with {total_ad_groups} ad groups. "
         if total_budget > 0:
-            summary += f"Total budget: ${total_budget:,.2f}. "
-        if ctr > 0:
-            summary += f"CTR: {ctr:.2f}%. "
-        if conversion_rate > 0:
-            summary += f"Conversion rate: {conversion_rate:.2f}%."
+            summary += f"Total daily budget: {total_budget:,} RUB. "
+        if total_impressions > 0:
+            summary += f"Expected: {total_impressions:,} impressions, {total_clicks:,} clicks, {total_conversions} conversions."
 
         # Log results to Obsidian
         await self._log_operation(
@@ -225,6 +239,7 @@ class AdsMagister(BaseMagister):
             "recommendations": recommendations,
             "metrics": {
                 "total_campaigns": total_campaigns,
+                "total_ad_groups": total_ad_groups,
                 "total_budget": round(total_budget, 2),
                 "total_impressions": total_impressions,
                 "total_clicks": total_clicks,
@@ -233,7 +248,8 @@ class AdsMagister(BaseMagister):
                 "conversion_rate": round(conversion_rate, 2),
                 "cpc": round(cpc, 2),
                 "cpa": round(cpa, 2),
-                "campaign_types": campaign_types,
+                "platforms": platforms,
+                "specialties": specialties,
             },
         }
 
