@@ -60,31 +60,13 @@ class SEOMagister(BaseMagister):
             "seo-content-optimization-agent",
         ]
 
-    async def analyze_seo_task(self, task_description: str) -> dict:
-        """Analyze SEO task and determine strategy
-
-        SKELETON: Returns mock analysis
-
-        Args:
-            task_description: Description of the SEO task
-
-        Returns:
-            Analysis with strategy recommendations
-
-        TODO: Implement real SEO analysis logic
-        """
-        # Mock implementation
-        return {
-            "task_type": "unknown",
-            "complexity": "medium",
-            "estimated_time": "unknown",
-            "required_subagents": [],
-        }
-
-    async def aggregate_seo_results(self, subagent_results: list) -> dict:
+    async def aggregate_results(
+        self,
+        subagent_results: list[dict],
+    ) -> dict:
         """Aggregate results from SEO Subagents
 
-        SKELETON: Returns mock aggregation
+        SKELETON: Returns mock aggregation (required by BaseMagister)
 
         Args:
             subagent_results: Results from Subagents
@@ -100,3 +82,4 @@ class SEOMagister(BaseMagister):
             "insights": ["Mock insight 1", "Mock insight 2"],
             "recommendations": ["Mock recommendation 1"],
         }
+

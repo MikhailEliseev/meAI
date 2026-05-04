@@ -60,31 +60,13 @@ class AdsMagister(BaseMagister):
             "ads-budget-optimizer-agent",
         ]
 
-    async def analyze_ads_task(self, task_description: str) -> dict:
-        """Analyze advertising task and determine strategy
-
-        SKELETON: Returns mock analysis
-
-        Args:
-            task_description: Description of the ads task
-
-        Returns:
-            Analysis with strategy recommendations
-
-        TODO: Implement real ads analysis logic
-        """
-        # Mock implementation
-        return {
-            "task_type": "unknown",
-            "campaign_type": "search",
-            "estimated_budget": 0,
-            "required_subagents": [],
-        }
-
-    async def aggregate_ads_results(self, subagent_results: list) -> dict:
+    async def aggregate_results(
+        self,
+        subagent_results: list[dict],
+    ) -> dict:
         """Aggregate results from Ads Subagents
 
-        SKELETON: Returns mock aggregation
+        SKELETON: Returns mock aggregation (required by BaseMagister)
 
         Args:
             subagent_results: Results from Subagents
@@ -100,3 +82,4 @@ class AdsMagister(BaseMagister):
             "insights": ["Mock insight 1", "Mock insight 2"],
             "recommendations": ["Mock recommendation 1"],
         }
+

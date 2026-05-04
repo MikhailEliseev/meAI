@@ -60,31 +60,13 @@ class ContentMagister(BaseMagister):
             "content-editor-agent",
         ]
 
-    async def analyze_content_task(self, task_description: str) -> dict:
-        """Analyze content task and determine strategy
-
-        SKELETON: Returns mock analysis
-
-        Args:
-            task_description: Description of the content task
-
-        Returns:
-            Analysis with strategy recommendations
-
-        TODO: Implement real content analysis logic
-        """
-        # Mock implementation
-        return {
-            "task_type": "unknown",
-            "content_type": "article",
-            "estimated_words": 0,
-            "required_subagents": [],
-        }
-
-    async def aggregate_content_results(self, subagent_results: list) -> dict:
+    async def aggregate_results(
+        self,
+        subagent_results: list[dict],
+    ) -> dict:
         """Aggregate results from Content Subagents
 
-        SKELETON: Returns mock aggregation
+        SKELETON: Returns mock aggregation (required by BaseMagister)
 
         Args:
             subagent_results: Results from Subagents
@@ -100,3 +82,4 @@ class ContentMagister(BaseMagister):
             "insights": ["Mock insight 1", "Mock insight 2"],
             "recommendations": ["Mock recommendation 1"],
         }
+
