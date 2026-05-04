@@ -550,7 +550,7 @@ class CIFactcheckerAgent(Agent):
     async def _generate_report(
         self,
         facts: List[Dict[str, Any]],
-        validation_results: Dict[str, Any]],
+        validation_results: Dict[str, Any],
         contradictions: List[Dict[str, Any]],
         reliability_scores: Dict[str, float],
         confidence_scores: Dict[str, float]
