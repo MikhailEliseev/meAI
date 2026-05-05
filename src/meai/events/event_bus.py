@@ -4,11 +4,26 @@ import asyncio
 import json
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
+from enum import IntEnum
 from typing import Any, Callable, Awaitable
 from uuid import uuid4
 
 from sqlalchemy import text
 from meai.storage.database import Database
+
+
+class EventPriority(IntEnum):
+    """Event priority levels
+
+    P0 = Critical (system failures, security alerts)
+    P1 = High (important business events, reports)
+    P2 = Normal (regular operations, analytics)
+    P3 = Low (background tasks, cleanup)
+    """
+    P0 = 0  # Critical
+    P1 = 1  # High
+    P2 = 2  # Normal
+    P3 = 3  # Low
 
 
 @dataclass
@@ -246,3 +261,100 @@ class EventBus:
             await session.commit()
 
         return event.message_id
+
+
+# ============================================================================
+# Analytics Events Documentation
+# ============================================================================
+
+"""
+Analytics Events for Domain Analytics Architecture
+
+Domain Analytics subagents publish events to Analytics Magister for
+cross-domain analysis and strategic insights.
+
+Event Types:
+
+1. analytics.domain_metrics_ready
+   - Published by: Domain Analytics subagents (SEO/Content/Ads/AI Analytics)
+   - Consumed by: Analytics Magister
+   - Priority: P2 (Normal)
+   - Payload:
+     {
+       "domain": "seo",
+       "metrics": AggregatedMetrics.dict(),
+       "timestamp": "2026-05-05T10:00:00Z"
+     }
+   - Description: Domain Analytics subagent has aggregated metrics ready
+
+2. analytics.daily_report_ready
+   - Published by: Analytics Magister
+   - Consumed by: Operator, Magisters
+   - Priority: P1 (High)
+   - Payload:
+     {
+       "report_type": "daily",
+       "cross_domain_metrics": CrossDomainMetrics.dict(),
+       "strategic_insights": [StrategicInsight.dict()],
+       "timestamp": "2026-05-05T10:00:00Z"
+     }
+   - Description: Analytics Magister has generated daily report
+
+3. analytics.alert
+   - Published by: Analytics Magister
+   - Consumed by: Operator, affected Magisters
+   - Priority: P0 (Critical) or P1 (High)
+   - Payload:
+     {
+       "severity": "high",
+       "message": "SEO traffic dropped 25%",
+       "affected_domains": ["seo", "content"],
+       "metric": "organic_sessions",
+       "current_value": 11250.0,
+       "threshold_value": 15000.0,
+       "change_percent": -25.0,
+       "recommendation": "Investigate Google algorithm update",
+       "timestamp": "2026-05-05T14:30:00Z"
+     }
+   - Description: Critical metric change detected
+
+4. analytics.correlation_found
+   - Published by: Analytics Magister
+   - Consumed by: Operator, affected Magisters
+   - Priority: P2 (Normal)
+   - Payload:
+     {
+       "correlation": Correlation.dict(),
+       "strategic_insight": StrategicInsight.dict(),
+       "timestamp": "2026-05-05T10:30:00Z"
+     }
+   - Description: Cross-domain correlation discovered
+
+Usage Example:
+
+    from meai.events.event_bus import EventBus, Event, EventPriority
+    from aim.models.analytics_models import AggregatedMetrics
+
+    # Domain Analytics publishes metrics
+    await event_bus.publish(Event(
+        event_type="analytics.domain_metrics_ready",
+        payload={
+            "domain": "seo",
+            "metrics": aggregated_metrics.dict(),
+            "timestamp": datetime.now().isoformat()
+        },
+        priority=EventPriority.P2
+    ))
+
+    # Analytics Magister publishes alert
+    await event_bus.publish(Event(
+        event_type="analytics.alert",
+        payload={
+            "severity": "high",
+            "message": "SEO traffic dropped 25%",
+            "affected_domains": ["seo", "content"],
+            "timestamp": datetime.now().isoformat()
+        },
+        priority=EventPriority.P0
+    ))
+"""
