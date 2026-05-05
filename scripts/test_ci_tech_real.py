@@ -166,6 +166,96 @@ async def test_ci_tech_agent():
                     print(f"    - {opp}")
                 print()
 
+        # Financial Analysis
+        financial = data.get("financial_analysis", {})
+        if financial:
+            print("💰 ФИНАНСОВЫЙ АНАЛИЗ:")
+            print(f"  Уровень бюджета: {financial.get('budget_level', 'Unknown')}")
+            min_budget = financial.get('estimated_monthly_min', 0)
+            max_budget = financial.get('estimated_monthly_max', 0)
+            if min_budget or max_budget:
+                print(f"  Оценка бюджета: ${min_budget:,}-${max_budget:,}/месяц")
+            print(f"  Зрелость: {financial.get('maturity', 'Unknown')}")
+
+            signals = financial.get('signals', [])
+            if signals:
+                print(f"  Сигналы:")
+                for signal in signals:
+                    print(f"    - {signal.get('signal', 'Unknown')}")
+            print()
+
+        # Competitive Gaps
+        gaps = data.get("competitive_gaps", [])
+        if gaps:
+            print("🎯 КОНКУРЕНТНЫЕ ПРОБЕЛЫ:")
+            for gap in gaps[:5]:  # Top 5
+                priority = gap.get('priority', 'Unknown')
+                impact = gap.get('impact', 0)
+                effort = gap.get('effort', 0)
+                print(f"  [{priority}] {gap.get('gap', 'Unknown')}")
+                print(f"    Impact: {impact}/10, Effort: {effort}/10")
+                print(f"    Действие: {gap.get('action', 'Unknown')}")
+                print()
+
+        # Industry Benchmarks
+        benchmarks = data.get("industry_benchmarks", {})
+        if benchmarks:
+            print("📊 ОТРАСЛЕВЫЕ БЕНЧМАРКИ:")
+            print(f"  Индустрия: {benchmarks.get('industry', 'Unknown')}")
+
+            seo = benchmarks.get('seo', {})
+            if seo:
+                print(f"  SEO: {seo.get('position', 'Unknown')} ({seo.get('competitor_score', 0)} vs {seo.get('industry_avg', 0)} средний)")
+                print(f"       {seo.get('verdict', 'Unknown')}")
+
+            geo = benchmarks.get('geo', {})
+            if geo:
+                print(f"  GEO: {geo.get('position', 'Unknown')} ({geo.get('competitor_score', 0)} vs {geo.get('industry_avg', 0)} средний)")
+                print(f"       {geo.get('verdict', 'Unknown')}")
+
+            print(f"  Общий вердикт: {benchmarks.get('overall_verdict', 'Unknown')}")
+            print()
+
+        # Tech Debt
+        tech_debt = data.get("tech_debt", {})
+        if tech_debt:
+            print("⚠️ ТЕХНИЧЕСКИЙ ДОЛГ:")
+            print(f"  Уровень: {tech_debt.get('debt_level', 'Unknown')}")
+            print(f"  Балл долга: {tech_debt.get('total_debt_score', 0)}/100")
+
+            debt_items = tech_debt.get('debt_items', [])
+            if debt_items:
+                print(f"  Проблемы:")
+                for item in debt_items:
+                    print(f"    - {item.get('issue', 'Unknown')} (вес: {item.get('weight', 0)})")
+            print()
+
+        # Attack Roadmap
+        roadmap = data.get("attack_roadmap", {})
+        if roadmap:
+            print("🗺️ ПЛАН АТАКИ:")
+
+            week1 = roadmap.get('week_1', {})
+            if week1:
+                print(f"  Неделя 1: {week1.get('focus', 'Unknown')}")
+                for action in week1.get('actions', []):
+                    print(f"    - {action}")
+                print()
+
+            week2 = roadmap.get('week_2', {})
+            if week2:
+                print(f"  Неделя 2: {week2.get('focus', 'Unknown')}")
+                for action in week2.get('actions', []):
+                    print(f"    - {action}")
+                print()
+
+            month1 = roadmap.get('month_1', {})
+            if month1:
+                print(f"  Месяц 1: {month1.get('focus', 'Unknown')}")
+                for action in month1.get('actions', []):
+                    print(f"    - {action}")
+                print()
+
         # Results file
         print(f"📁 Результаты сохранены в: AIM/data/ci-tech/")
         print()

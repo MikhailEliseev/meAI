@@ -91,12 +91,26 @@ class CITechAgent(Agent):
             # Generate insights
             insights = await self._generate_tech_insights(tech_profiles, market_tech)
 
+            # Strategic analysis for first competitor (main target)
+            main_profile = tech_profiles[0] if tech_profiles else {}
+
+            financial_analysis = await self._estimate_competitor_budget(main_profile)
+            competitive_gaps = await self._identify_competitive_gaps(main_profile)
+            industry_benchmarks = await self._compare_to_industry(main_profile, industry="medical")
+            tech_debt = await self._analyze_tech_debt(main_profile)
+            attack_roadmap = await self._generate_attack_roadmap(competitive_gaps)
+
             results = {
                 "analysis_date": datetime.now().isoformat(),
                 "total_analyzed": len(competitors),
                 "tech_profiles": tech_profiles,
                 "market_tech": market_tech,
-                "insights": insights
+                "insights": insights,
+                "financial_analysis": financial_analysis,
+                "competitive_gaps": competitive_gaps,
+                "industry_benchmarks": industry_benchmarks,
+                "tech_debt": tech_debt,
+                "attack_roadmap": attack_roadmap
             }
 
             # Save results
@@ -503,7 +517,7 @@ class CITechAgent(Agent):
         profiles: List[Dict[str, Any]],
         market: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Generate actionable tech insights"""
+        """Generate actionable tech insights with financial analysis and gap analysis"""
         insights = []
 
         # CMS insights
@@ -534,9 +548,440 @@ class CITechAgent(Agent):
             top_3 = [tech[0] for tech in top_tech[:3]]
             insights.append(f"Популярные технологии: {', '.join(top_3)}")
 
+        # NEW: Financial analysis for each competitor
+        financial_analysis = []
+        for profile in profiles:
+            budget = await self._estimate_competitor_budget(profile)
+            financial_analysis.append({
+                "competitor": profile.get("name"),
+                "budget": budget
+            })
+
+        # NEW: Gap analysis for each competitor
+        gap_analysis = []
+        for profile in profiles:
+            gaps = await self._identify_competitive_gaps(profile)
+            gap_analysis.append({
+                "competitor": profile.get("name"),
+                "gaps": gaps
+            })
+
+        # NEW: Industry benchmarks comparison
+        industry_comparison = []
+        for profile in profiles:
+            comparison = await self._compare_to_industry(profile, industry="medical")
+            industry_comparison.append({
+                "competitor": profile.get("name"),
+                "comparison": comparison
+            })
+
+        # NEW: Tech debt analysis
+        tech_debt_analysis = []
+        for profile in profiles:
+            debt = await self._analyze_tech_debt(profile)
+            tech_debt_analysis.append({
+                "competitor": profile.get("name"),
+                "tech_debt": debt
+            })
+
+        # NEW: Attack roadmap
+        roadmap = await self._generate_attack_roadmap(gap_analysis)
+
         return {
             "key_findings": insights,
-            "opportunities": self._identify_opportunities(profiles, market)
+            "opportunities": self._identify_opportunities(profiles, market),
+            "financial_analysis": financial_analysis,
+            "gap_analysis": gap_analysis,
+            "industry_comparison": industry_comparison,
+            "tech_debt": tech_debt_analysis,
+            "attack_roadmap": roadmap
+        }
+
+    async def _estimate_competitor_budget(self, profile: Dict[str, Any]) -> Dict[str, Any]:
+        """Estimate competitor's monthly tech budget
+
+        Analyzes tech stack to estimate how much competitor spends on technology.
+        """
+        cms = profile.get("cms", "Unknown")
+        technologies = profile.get("technologies", [])
+        performance = profile.get("performance", {})
+
+        budget_signals = []
+        total_min = 0
+        total_max = 0
+
+        # CMS costs
+        cms_costs = {
+            "WordPress": {"min": 500, "max": 2000, "signal": "Низкий бюджет - популярное решение"},
+            "Custom": {"min": 5000, "max": 20000, "signal": "Высокий бюджет - custom разработка"},
+            "Tilda": {"min": 100, "max": 500, "signal": "Минимальный бюджет - конструктор"},
+            "1C-Bitrix": {"min": 2000, "max": 8000, "signal": "Средний бюджет - корпоративное решение"},
+            "Wix": {"min": 50, "max": 300, "signal": "Минимальный бюджет - конструктор"},
+            "Shopify": {"min": 1000, "max": 5000, "signal": "Средний бюджет - e-commerce платформа"}
+        }
+
+        if cms in cms_costs:
+            cost = cms_costs[cms]
+            budget_signals.append({
+                "category": "CMS",
+                "item": cms,
+                "min": cost["min"],
+                "max": cost["max"],
+                "signal": cost["signal"]
+            })
+            total_min += cost["min"]
+            total_max += cost["max"]
+
+        # Frontend framework costs (indicates developer salary)
+        if "React" in technologies or "Vue.js" in technologies or "Angular" in technologies:
+            budget_signals.append({
+                "category": "Frontend Development",
+                "item": "Modern framework",
+                "min": 3000,
+                "max": 10000,
+                "signal": "Есть frontend разработчик"
+            })
+            total_min += 3000
+            total_max += 10000
+
+        # Infrastructure costs
+        if performance.get("uses_cdn"):
+            budget_signals.append({
+                "category": "Infrastructure",
+                "item": "CDN",
+                "min": 500,
+                "max": 2000,
+                "signal": "Инвестируют в производительность"
+            })
+            total_min += 500
+            total_max += 2000
+
+        # Analytics costs (indicates marketing maturity)
+        has_analytics = "Google Analytics" in technologies or "Яндекс.Метрика" in technologies
+        if has_analytics:
+            budget_signals.append({
+                "category": "Marketing",
+                "item": "Analytics",
+                "min": 0,
+                "max": 500,
+                "signal": "Есть маркетолог или аналитик"
+            })
+            total_max += 500
+
+        # Determine budget level
+        if total_min > 5000:
+            budget_level = "high"
+            maturity = "Зрелая компания с хорошим финансированием"
+        elif total_min > 1000:
+            budget_level = "medium"
+            maturity = "Средняя компания, стандартный бюджет"
+        else:
+            budget_level = "low"
+            maturity = "Стартап или малый бизнес, минимальный бюджет"
+
+        return {
+            "estimated_monthly_min": total_min,
+            "estimated_monthly_max": total_max,
+            "budget_level": budget_level,
+            "maturity": maturity,
+            "signals": budget_signals,
+            "interpretation": f"Конкурент тратит ${total_min:,}-${total_max:,}/мес на технологии"
+        }
+
+    async def _identify_competitive_gaps(self, profile: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Identify competitive gaps = our opportunities
+
+        Finds what competitor is NOT doing, prioritized by Impact/Effort matrix.
+        """
+        gaps = []
+
+        seo = profile.get("seo_optimization", {})
+        geo = profile.get("geo_optimization", {})
+        performance = profile.get("performance", {})
+        technologies = profile.get("technologies", [])
+
+        # SEO gaps
+        if not seo.get("has_schema"):
+            gaps.append({
+                "gap": "No Schema.org markup",
+                "opportunity": "Захватить AI трафик (Google AI Overviews, ChatGPT)",
+                "action": "Добавить Schema.org разметку (Organization, LocalBusiness, Service)",
+                "impact": 9,  # 1-10
+                "effort": 2,  # 1-10
+                "priority": "CRITICAL",
+                "time_to_implement": "1 день",
+                "competitive_advantage_months": 12,
+                "why_critical": "Google AI Overviews используют Schema.org для ответов. Кто первый добавит - получит весь AI трафик."
+            })
+
+        if not seo.get("has_meta_description"):
+            gaps.append({
+                "gap": "No meta description",
+                "opportunity": "Лучшие сниппеты в поиске → выше CTR",
+                "action": "Написать уникальные meta descriptions для всех страниц",
+                "impact": 6,
+                "effort": 1,
+                "priority": "HIGH",
+                "time_to_implement": "2 часа",
+                "competitive_advantage_months": 3
+            })
+
+        # GEO gaps (AI optimization)
+        if not geo.get("has_faq_schema"):
+            gaps.append({
+                "gap": "No FAQ Schema",
+                "opportunity": "Появляться в AI ответах на вопросы пользователей",
+                "action": "Создать FAQ страницу с Schema.org разметкой",
+                "impact": 10,
+                "effort": 1,
+                "priority": "CRITICAL",
+                "time_to_implement": "2 часа",
+                "competitive_advantage_months": 12,
+                "why_critical": "ChatGPT, Perplexity, Google AI берут ответы из FAQ Schema. Это новый канал трафика!"
+            })
+
+        if not geo.get("has_local_business"):
+            gaps.append({
+                "gap": "No LocalBusiness Schema",
+                "opportunity": "Локальное SEO + карты Google",
+                "action": "Добавить LocalBusiness Schema с адресом, телефоном, часами работы",
+                "impact": 8,
+                "effort": 2,
+                "priority": "HIGH",
+                "time_to_implement": "3 часа",
+                "competitive_advantage_months": 6
+            })
+
+        # Performance gaps
+        if not performance.get("uses_cdn"):
+            gaps.append({
+                "gap": "No CDN",
+                "opportunity": "Быстрее загружаться → меньше bounce rate",
+                "action": "Подключить Cloudflare или другой CDN",
+                "impact": 7,
+                "effort": 3,
+                "priority": "MEDIUM",
+                "time_to_implement": "1 день",
+                "competitive_advantage_months": 6
+            })
+
+        if not performance.get("has_minified_css") or not performance.get("has_minified_js"):
+            gaps.append({
+                "gap": "No minification",
+                "opportunity": "Быстрее загружаться → лучше Core Web Vitals",
+                "action": "Настроить минификацию CSS/JS в build процессе",
+                "impact": 5,
+                "effort": 2,
+                "priority": "MEDIUM",
+                "time_to_implement": "4 часа",
+                "competitive_advantage_months": 3
+            })
+
+        # Analytics gaps
+        has_analytics = "Google Analytics" in technologies or "Яндекс.Метрика" in technologies
+        if not has_analytics:
+            gaps.append({
+                "gap": "No analytics",
+                "opportunity": "Data-driven решения vs слепые решения конкурента",
+                "action": "Установить Google Analytics и Яндекс.Метрику",
+                "impact": 9,
+                "effort": 1,
+                "priority": "CRITICAL",
+                "time_to_implement": "1 час",
+                "competitive_advantage_months": 999,  # Постоянное преимущество
+                "why_critical": "Конкурент работает вслепую - не знает откуда клиенты, что работает, что нет"
+            })
+
+        # Sort by priority score (impact / effort)
+        for gap in gaps:
+            gap["priority_score"] = gap["impact"] / gap["effort"]
+
+        gaps.sort(key=lambda x: x["priority_score"], reverse=True)
+
+        return gaps
+
+    async def _compare_to_industry(self, profile: Dict[str, Any], industry: str = "medical") -> Dict[str, Any]:
+        """Compare competitor to industry benchmarks
+
+        Shows if competitor is above or below average in their industry.
+        """
+        # Industry benchmarks (medical/dental clinics)
+        benchmarks = {
+            "medical": {
+                "avg_seo_score": 45,
+                "avg_geo_score": 15,
+                "schema_adoption": 10,  # Only 10% have Schema.org
+                "online_booking_adoption": 40,  # 40% have online booking
+                "analytics_adoption": 60,  # 60% have analytics
+                "cdn_adoption": 30  # 30% use CDN
+            }
+        }
+
+        bench = benchmarks.get(industry, benchmarks["medical"])
+
+        seo_score = profile.get("seo_optimization", {}).get("score", 0)
+        geo_score = profile.get("geo_optimization", {}).get("ai_ready_score", 0)
+
+        seo_diff = seo_score - bench["avg_seo_score"]
+        geo_diff = geo_score - bench["avg_geo_score"]
+
+        # Determine position
+        if seo_diff < -20:
+            seo_position = "Значительно ниже среднего"
+            seo_verdict = "Легко обойти"
+        elif seo_diff < 0:
+            seo_position = "Ниже среднего"
+            seo_verdict = "Можно обойти"
+        elif seo_diff < 20:
+            seo_position = "Выше среднего"
+            seo_verdict = "Нужны усилия"
+        else:
+            seo_position = "Значительно выше среднего"
+            seo_verdict = "Сильный конкурент"
+
+        if geo_diff < -10:
+            geo_position = "Значительно ниже среднего"
+            geo_verdict = "Огромная возможность в AI/GEO"
+        elif geo_diff < 0:
+            geo_position = "Ниже среднего"
+            geo_verdict = "Хорошая возможность в AI/GEO"
+        else:
+            geo_position = "Выше среднего"
+            geo_verdict = "Конкурент готов к AI"
+
+        return {
+            "industry": industry,
+            "seo": {
+                "competitor_score": seo_score,
+                "industry_avg": bench["avg_seo_score"],
+                "difference": seo_diff,
+                "position": seo_position,
+                "verdict": seo_verdict
+            },
+            "geo": {
+                "competitor_score": geo_score,
+                "industry_avg": bench["avg_geo_score"],
+                "difference": geo_diff,
+                "position": geo_position,
+                "verdict": geo_verdict
+            },
+            "benchmarks": bench,
+            "overall_verdict": f"{seo_verdict} по SEO, {geo_verdict}"
+        }
+
+    async def _analyze_tech_debt(self, profile: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze competitor's technical debt
+
+        Identifies problems that will slow down competitor in the future.
+        """
+        technologies = profile.get("technologies", [])
+        performance = profile.get("performance", {})
+
+        debt_items = []
+
+        # Old libraries
+        if "jQuery" in technologies:
+            debt_items.append({
+                "issue": "jQuery detected",
+                "problem": "Устаревшая библиотека (2006)",
+                "impact": "Сложно нанять разработчиков, медленная разработка",
+                "severity": "medium"
+            })
+
+        # No modern framework
+        has_modern_framework = any(fw in technologies for fw in ["React", "Vue.js", "Angular", "Next.js", "Nuxt.js"])
+        if not has_modern_framework and technologies:
+            debt_items.append({
+                "issue": "No modern frontend framework",
+                "problem": "Vanilla JS или старые подходы",
+                "impact": "Сложно масштабировать, медленная разработка новых фич",
+                "severity": "high"
+            })
+
+        # Performance debt
+        if not performance.get("has_minified_css"):
+            debt_items.append({
+                "issue": "CSS not minified",
+                "problem": "Нет build процесса",
+                "impact": "Медленная загрузка, плохой DX",
+                "severity": "low"
+            })
+
+        if not performance.get("uses_cdn"):
+            debt_items.append({
+                "issue": "No CDN",
+                "problem": "Все файлы с одного сервера",
+                "impact": "Медленно в регионах, высокая нагрузка на сервер",
+                "severity": "medium"
+            })
+
+        # Calculate total debt score
+        severity_scores = {"low": 1, "medium": 3, "high": 5}
+        total_debt_score = sum(severity_scores[item["severity"]] for item in debt_items)
+
+        if total_debt_score > 10:
+            debt_level = "high"
+            interpretation = "Высокий технический долг - конкурент будет медленно развиваться"
+        elif total_debt_score > 5:
+            debt_level = "medium"
+            interpretation = "Средний технический долг - есть проблемы"
+        else:
+            debt_level = "low"
+            interpretation = "Низкий технический долг - конкурент в хорошей форме"
+
+        return {
+            "debt_items": debt_items,
+            "total_debt_score": total_debt_score,
+            "debt_level": debt_level,
+            "interpretation": interpretation
+        }
+
+    async def _generate_attack_roadmap(self, gap_analysis: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Generate step-by-step roadmap to outcompete competitors
+
+        Prioritizes actions by Impact/Effort and creates timeline.
+        """
+        # gap_analysis is already a list of gaps
+        sorted_gaps = sorted(gap_analysis, key=lambda x: x.get("impact", 0) / max(x.get("effort", 1), 1), reverse=True)
+
+        # Build roadmap
+        week_1_actions = []
+        week_2_actions = []
+        month_1_actions = []
+
+        for gap in sorted_gaps:
+            time = gap.get("time_to_implement", "")
+            priority = gap.get("priority", "")
+
+            action = f"{gap.get('action', gap.get('opportunity', 'Unknown'))}"
+
+            # Distribute by time
+            if "час" in time or priority == "CRITICAL":
+                week_1_actions.append(action)
+            elif "день" in time or priority == "HIGH":
+                week_2_actions.append(action)
+            else:
+                month_1_actions.append(action)
+
+        return {
+            "week_1": {
+                "focus": "Quick Wins (критические возможности)",
+                "actions": week_1_actions[:3],  # Top 3
+                "expected_impact": "Захват AI трафика, базовая аналитика"
+            },
+            "week_2": {
+                "focus": "Техническая оптимизация",
+                "actions": week_2_actions[:3],  # Top 3
+                "expected_impact": "Производительность, SEO улучшения"
+            },
+            "month_1": {
+                "focus": "Долгосрочные преимущества",
+                "actions": month_1_actions[:3],  # Top 3
+                "expected_impact": "Устойчивое конкурентное преимущество"
+            },
+            "total_opportunities": len(sorted_gaps),
+            "critical_count": len([g for g in sorted_gaps if g.get("priority") == "CRITICAL"]),
+            "high_count": len([g for g in sorted_gaps if g.get("priority") == "HIGH"])
         }
 
     def _identify_opportunities(
