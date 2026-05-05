@@ -14,6 +14,8 @@ Quality Over Speed: 10-30 минут на конкурента (качество
 
 import asyncio
 import re
+import html
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
@@ -22,6 +24,7 @@ import xml.etree.ElementTree as ET
 
 import aiohttp
 import ssl
+from bs4 import BeautifulSoup
 
 from meai.agents.base_agent import Agent, Task, TaskResult
 from aim.core.agent_learning import AgentLearning
@@ -60,6 +63,9 @@ class CIDeepAnalyzer(Agent):
         # Initialize learning system
         self.learning = AgentLearning(agent_id=agent_id)
 
+        # Initialize logger
+        self.logger = logging.getLogger(f"CIDeepAnalyzer.{agent_id}")
+
     def get_capabilities(self) -> list[str]:
         return [
             "deep_competitor_analysis",
@@ -70,6 +76,29 @@ class CIDeepAnalyzer(Agent):
             "seo_analysis",
             "technical_analysis"
         ]
+
+    # Security Helper Methods
+
+    def _escape_html(self, text: str) -> str:
+        """Escape HTML to prevent XSS attacks"""
+        if not text:
+            return ""
+        return html.escape(str(text), quote=True)
+
+    def _safe_detector_call(self, detector_func, *args, **kwargs) -> Dict[str, Any]:
+        """Safely call a detector with error handling
+
+        Returns detector result or error dict if detector fails
+        """
+        try:
+            return detector_func(*args, **kwargs)
+        except Exception as e:
+            self.logger.error(f"Detector {detector_func.__name__} failed: {e}")
+            return {
+                "error": str(e),
+                "confidence": 0.0,
+                "detector": detector_func.__name__
+            }
 
     async def execute_task(self, task: Task) -> TaskResult:
         """Execute deep competitor analysis
@@ -541,7 +570,7 @@ class CIDeepAnalyzer(Agent):
         return analyzed
 
     async def _analyze_single_page(self, url: str, page_type: str) -> Dict[str, Any]:
-        """Analyze single page deeply"""
+        """Analyze single page deeply with error handling per detector"""
         html = await self._fetch_url(url)
 
         if not html:
@@ -551,21 +580,78 @@ class CIDeepAnalyzer(Agent):
                 "error": "Failed to fetch"
             }
 
-        # Analyze security (needs both url and html)
-        security = await self._analyze_security(url, html)
-
-        return {
+        result = {
             "url": url,
-            "type": page_type,
-            "seo": self._analyze_seo(html),
-            "content": self._analyze_content(html),
-            "technical": self._analyze_technical(html),
-            "schema": self._analyze_schema(html),
-            "security": security
+            "type": page_type
         }
 
+        # Existing detectors
+        result["seo"] = self._safe_detector_call(self._analyze_seo, html)
+        result["content"] = self._safe_detector_call(self._analyze_content, html)
+        result["technical"] = self._safe_detector_call(self._analyze_technical, html)
+        result["schema"] = self._safe_detector_call(self._analyze_schema, html)
+
+        # NEW: Business-oriented detectors (Sprint 1)
+        result["cms"] = self._safe_detector_call(self._detect_cms, html, {})
+        result["analytics"] = self._safe_detector_call(self._detect_analytics, html)
+        result["call_tracking"] = self._safe_detector_call(self._detect_call_tracking, html)
+        result["live_chat"] = self._safe_detector_call(self._detect_live_chat, html)
+        result["messengers"] = self._safe_detector_call(self._detect_messengers, html)
+        result["booking_systems"] = self._safe_detector_call(self._detect_booking_systems, html)
+        result["payment_systems"] = self._safe_detector_call(self._detect_payment_systems, html)
+        result["cdn"] = self._safe_detector_call(self._detect_cdn, html)
+        result["hosting"] = self._safe_detector_call(self._detect_hosting, html, {})
+        result["ab_testing"] = self._safe_detector_call(self._detect_ab_testing, html)
+
+        # Security analysis needs both url and html (async)
+        try:
+            result["security"] = await self._analyze_security(url, html)
+        except Exception as e:
+            self.logger.error(f"Security analysis failed for {url}: {e}")
+            result["security"] = {"error": str(e), "confidence": 0.0}
+
+        return result
+
     def _analyze_seo(self, html: str) -> Dict[str, Any]:
-        """SEO analysis of page"""
+        """SEO analysis using BeautifulSoup (not regex)"""
+        try:
+            soup = BeautifulSoup(html, 'lxml')
+
+            # Extract title
+            title_tag = soup.find('title')
+            title = title_tag.get_text().strip() if title_tag else ""
+
+            # Extract meta description
+            desc_tag = soup.find('meta', attrs={'name': 'description'})
+            description = desc_tag.get('content', '').strip() if desc_tag else ""
+
+            # Extract h1
+            h1_tag = soup.find('h1')
+            h1 = h1_tag.get_text().strip() if h1_tag else ""
+
+            # Count headings
+            h2_count = len(soup.find_all('h2'))
+            h3_count = len(soup.find_all('h3'))
+
+            return {
+                "title": title,
+                "title_length": len(title),
+                "has_title": bool(title),
+                "description": description,
+                "description_length": len(description),
+                "has_description": bool(description),
+                "h1": h1,
+                "has_h1": bool(h1),
+                "h2_count": h2_count,
+                "h3_count": h3_count
+            }
+        except Exception as e:
+            self.logger.error(f"SEO analysis failed: {e}")
+            # Fallback to basic regex if BeautifulSoup fails
+            return self._analyze_seo_regex_fallback(html)
+
+    def _analyze_seo_regex_fallback(self, html: str) -> Dict[str, Any]:
+        """Fallback SEO analysis using regex (if BeautifulSoup fails)"""
         # Extract title
         title_match = re.search(r'<title[^>]*>(.*?)</title>', html, re.IGNORECASE | re.DOTALL)
         title = title_match.group(1).strip() if title_match else ""
@@ -635,6 +721,350 @@ class CIDeepAnalyzer(Agent):
             "has_faq_schema": has_faq,
             "has_local_business": has_local_business
         }
+
+    # ========== NEW: Business-Oriented Detectors (Sprint 1) ==========
+
+    def _detect_cms(self, html: str, headers: dict) -> Dict[str, Any]:
+        """Detect CMS with confidence scoring"""
+        patterns = {
+            "WordPress": ["wp-content", "wp-includes", "wp-json"],
+            "Bitrix": ["bitrix/templates", "1C-Bitrix", "/bitrix/"],
+            "Tilda": ["tilda.cc", "tilda.ws", "tildacdn.com"],
+            "Wix": ["wix.com", "wixstatic.com"],
+            "Joomla": ["joomla", "/components/com_"],
+        }
+
+        detected = None
+        evidence = []
+        confidence = 0.0
+
+        # Check headers first
+        if 'X-Powered-By' in headers:
+            powered_by = headers['X-Powered-By'].lower()
+            if 'bitrix' in powered_by:
+                detected = "Bitrix"
+                evidence.append(f"X-Powered-By: {headers['X-Powered-By']}")
+                confidence = 1.0
+
+        # Check HTML patterns
+        if not detected:
+            for cms, patterns_list in patterns.items():
+                matches = [p for p in patterns_list if p in html]
+                if matches:
+                    detected = cms
+                    evidence = matches
+                    # Confidence based on number of matches
+                    confidence = min(1.0, len(matches) / len(patterns_list) * 1.5)
+                    break
+
+        # Default to Custom if no CMS detected
+        if not detected:
+            detected = "Custom"
+            confidence = 0.5
+
+        return {
+            "cms": detected,
+            "confidence": confidence,
+            "evidence": evidence[:3],  # Limit to 3 pieces of evidence
+            "business_context": self._get_cms_context(detected)
+        }
+
+    def _get_cms_context(self, cms: str) -> str:
+        """Get business context for CMS"""
+        contexts = {
+            "WordPress": "Гибкая CMS, большая экосистема плагинов",
+            "Bitrix": "Российская CMS, интеграция с 1С, дорогая в поддержке",
+            "Tilda": "Конструктор сайтов, быстрый запуск, ограниченные возможности",
+            "Wix": "Конструктор сайтов, простой, но медленный",
+            "Joomla": "Гибкая CMS, средняя сложность",
+            "Custom": "Самописная CMS, полный контроль, высокая стоимость разработки"
+        }
+        return contexts.get(cms, "Неизвестная CMS")
+
+    def _detect_analytics(self, html: str) -> Dict[str, Any]:
+        """Detect analytics and tracking tools"""
+        tools = {
+            "google_analytics": {
+                "patterns": [r"UA-\d+", r"G-[A-Z0-9]+", "gtag.js", "analytics.js"],
+                "name": "Google Analytics"
+            },
+            "yandex_metrika": {
+                "patterns": ["mc.yandex.ru", "metrika/tag.js", r"ym\(\d+"],
+                "name": "Яндекс.Метрика"
+            },
+            "google_tag_manager": {
+                "patterns": ["googletagmanager.com/gtm.js", r"GTM-[A-Z0-9]+"],
+                "name": "Google Tag Manager"
+            },
+            "facebook_pixel": {
+                "patterns": ["facebook.net/en_US/fbevents.js", r"fbq\("],
+                "name": "Facebook Pixel"
+            },
+            "vk_pixel": {
+                "patterns": ["vk.com/js/api/openapi.js", r"VK\.Retargeting"],
+                "name": "VK Pixel"
+            }
+        }
+
+        results = {}
+        for key, config in tools.items():
+            detected = False
+            confidence = 0.0
+            tool_id = None
+
+            for pattern in config["patterns"]:
+                if re.search(pattern, html, re.IGNORECASE):
+                    detected = True
+                    # Try to extract ID
+                    match = re.search(pattern, html, re.IGNORECASE)
+                    if match and match.groups():
+                        tool_id = match.group(0)
+                    confidence = min(1.0, confidence + 0.4)
+
+            results[key] = {
+                "detected": detected,
+                "confidence": round(confidence, 2),
+                "id": tool_id,
+                "name": config["name"]
+            }
+
+        # Business context
+        detected_count = sum(1 for r in results.values() if r["detected"])
+        if detected_count >= 3:
+            context = "Полный стек аналитики - data-driven подход"
+        elif detected_count >= 1:
+            context = "Базовая аналитика настроена"
+        else:
+            context = "Аналитика не обнаружена - работают вслепую"
+
+        return {
+            "analytics": results,
+            "business_context": context
+        }
+
+    def _detect_call_tracking(self, html: str) -> Dict[str, Any]:
+        """Detect call tracking systems"""
+        providers = {
+            "Calltouch": ["calltouch.ru", "ct-widget"],
+            "Callibri": ["callibri.ru", "clbr"],
+            "CoMagic": ["comagic.ru", "comagic-widget"],
+            "Ringostat": ["ringostat.com", "roistat"]
+        }
+
+        detected_provider = None
+        confidence = 0.0
+
+        for provider, patterns in providers.items():
+            matches = sum(1 for p in patterns if p in html.lower())
+            if matches > 0:
+                detected_provider = provider
+                confidence = min(1.0, matches / len(patterns) * 1.5)
+                break
+
+        context = "Call tracking включён - отслеживают источники звонков" if detected_provider else "Нет call tracking - теряют 30% атрибуции лидов"
+
+        return {
+            "provider": detected_provider,
+            "detected": bool(detected_provider),
+            "confidence": confidence,
+            "business_context": context
+        }
+
+    def _detect_live_chat(self, html: str) -> Dict[str, Any]:
+        """Detect live chat systems"""
+        chats = {
+            "Jivo": ["jivo", "jivosite"],
+            "Carrot": ["carrotquest", "carrot.top"],
+            "Bitrix24": ["bitrix24", "b24-web-form"],
+            "Intercom": ["intercom.io", "intercom-container"]
+        }
+
+        detected_chat = None
+        confidence = 0.0
+
+        for chat, patterns in chats.items():
+            matches = sum(1 for p in patterns if p in html.lower())
+            if matches > 0:
+                detected_chat = chat
+                confidence = min(1.0, matches / len(patterns) * 1.5)
+                break
+
+        context = f"Онлайн-чат {detected_chat} - быстрая связь с клиентами" if detected_chat else "Нет онлайн-чата - упускают горячих лидов"
+
+        return {
+            "provider": detected_chat,
+            "detected": bool(detected_chat),
+            "confidence": confidence,
+            "business_context": context
+        }
+
+    def _detect_messengers(self, html: str) -> Dict[str, Any]:
+        """Detect messenger integration buttons"""
+        messengers = {
+            "WhatsApp": ["wa.me", "whatsapp.com", "api.whatsapp"],
+            "Telegram": ["t.me", "telegram.me", "telegram.org"],
+            "Viber": ["viber://", "chats.viber.com"]
+        }
+
+        detected = {}
+        for messenger, patterns in messengers.items():
+            found = any(p in html.lower() for p in patterns)
+            if found:
+                detected[messenger] = True
+
+        context = f"Мессенджеры: {', '.join(detected.keys())}" if detected else "Нет мессенджеров - ограничивают каналы связи"
+
+        return {
+            "messengers": detected,
+            "count": len(detected),
+            "confidence": 1.0 if detected else 0.0,
+            "business_context": context
+        }
+
+    def _detect_booking_systems(self, html: str) -> Dict[str, Any]:
+        """Detect online booking systems"""
+        systems = {
+            "YCLIENTS": ["yclients.com", "n237778.yclients.com"],
+            "Dikidi": ["dikidi.ru", "dikidi.net"],
+            "Custom": ["booking", "запись", "онлайн-запись"]
+        }
+
+        detected_system = None
+        confidence = 0.0
+
+        for system, patterns in systems.items():
+            matches = sum(1 for p in patterns if p in html.lower())
+            if matches > 0:
+                detected_system = system
+                confidence = 0.8 if system == "Custom" else 1.0
+                break
+
+        context = f"Онлайн-запись {detected_system} - удобство для клиентов" if detected_system else "Нет онлайн-записи - клиенты уходят к конкурентам"
+
+        return {
+            "system": detected_system,
+            "detected": bool(detected_system),
+            "confidence": confidence,
+            "business_context": context
+        }
+
+    def _detect_payment_systems(self, html: str) -> Dict[str, Any]:
+        """Detect payment systems"""
+        systems = {
+            "Stripe": ["stripe.com", "js.stripe.com"],
+            "PayPal": ["paypal.com", "paypalobjects.com"],
+            "Yandex.Kassa": ["yookassa.ru", "kassa.yandex", "money.yandex"],
+            "Tinkoff": ["securepay.tinkoff.ru", "tinkoff.ru/api"]
+        }
+
+        detected = {}
+        for system, patterns in systems.items():
+            found = any(p in html.lower() for p in patterns)
+            if found:
+                detected[system] = True
+
+        context = f"Оплата: {', '.join(detected.keys())}" if detected else "Нет онлайн-оплаты - только офлайн"
+
+        return {
+            "systems": detected,
+            "count": len(detected),
+            "confidence": 1.0 if detected else 0.0,
+            "business_context": context
+        }
+
+    def _detect_cdn(self, html: str) -> Dict[str, Any]:
+        """Detect CDN usage"""
+        cdns = {
+            "Cloudflare": ["cloudflare.com", "cdnjs.cloudflare.com"],
+            "Akamai": ["akamai.net", "akamaihd.net"],
+            "CloudFront": ["cloudfront.net"],
+            "Fastly": ["fastly.net"]
+        }
+
+        detected_cdn = None
+        confidence = 0.0
+
+        for cdn, patterns in cdns.items():
+            if any(p in html.lower() for p in patterns):
+                detected_cdn = cdn
+                confidence = 1.0
+                break
+
+        context = f"CDN {detected_cdn} - быстрая загрузка контента" if detected_cdn else "Нет CDN - медленная загрузка для удалённых пользователей"
+
+        return {
+            "provider": detected_cdn,
+            "detected": bool(detected_cdn),
+            "confidence": confidence,
+            "business_context": context
+        }
+
+    def _detect_hosting(self, html: str, headers: dict = None) -> Dict[str, Any]:
+        """Detect hosting provider (basic detection via common patterns)"""
+        # Note: Accurate hosting detection requires DNS/IP lookup
+        # This is basic detection via common patterns
+
+        providers = {
+            "Beget": ["beget.com", "beget.ru"],
+            "Timeweb": ["timeweb.ru", "timeweb.com"],
+            "AWS": ["amazonaws.com", "aws.amazon.com"],
+            "Cloudflare": ["cloudflare"]  # From headers
+        }
+
+        detected_provider = None
+        confidence = 0.3  # Low confidence without DNS lookup
+
+        # Check HTML
+        for provider, patterns in providers.items():
+            if any(p in html.lower() for p in patterns):
+                detected_provider = provider
+                confidence = 0.6
+                break
+
+        # Check headers if available
+        if headers and 'Server' in headers:
+            server = headers['Server'].lower()
+            if 'cloudflare' in server:
+                detected_provider = "Cloudflare"
+                confidence = 0.9
+
+        context = f"Хостинг: {detected_provider}" if detected_provider else "Хостинг не определён (нужен DNS lookup)"
+
+        return {
+            "provider": detected_provider,
+            "detected": bool(detected_provider),
+            "confidence": confidence,
+            "business_context": context,
+            "note": "Для точного определения нужен DNS/IP lookup"
+        }
+
+    def _detect_ab_testing(self, html: str) -> Dict[str, Any]:
+        """Detect A/B testing tools"""
+        tools = {
+            "Google Optimize": ["optimize.google.com", "gtag('event', 'optimize"],
+            "VWO": ["vwo.com", "visualwebsiteoptimizer"],
+            "Optimizely": ["optimizely.com", "cdn.optimizely.com"]
+        }
+
+        detected_tool = None
+        confidence = 0.0
+
+        for tool, patterns in tools.items():
+            if any(p in html.lower() for p in patterns):
+                detected_tool = tool
+                confidence = 1.0
+                break
+
+        context = f"A/B тестирование {detected_tool} - оптимизируют конверсию" if detected_tool else "Нет A/B тестирования - не оптимизируют конверсию"
+
+        return {
+            "tool": detected_tool,
+            "detected": bool(detected_tool),
+            "confidence": confidence,
+            "business_context": context
+        }
+
+    # ========== End of Business-Oriented Detectors ==========
 
     async def _analyze_core_web_vitals(self, url: str) -> Dict[str, Any]:
         """
