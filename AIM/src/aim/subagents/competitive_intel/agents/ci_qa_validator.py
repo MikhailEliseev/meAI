@@ -16,6 +16,7 @@ from datetime import datetime
 from typing import Any, Dict, List
 
 from meai.agents.base_agent import Agent, Task, TaskResult
+from aim.core.agent_learning import AgentLearning
 
 
 class CIQAValidator(Agent):
@@ -41,6 +42,9 @@ class CIQAValidator(Agent):
 
     def __init__(self, agent_id: str, database_url: str, vault_path: str):
         super().__init__(agent_id, database_url, vault_path)
+
+        # Initialize learning system
+        self.learning = AgentLearning(agent_id=agent_id)
 
     def get_capabilities(self) -> list[str]:
         return [
@@ -123,6 +127,21 @@ class CIQAValidator(Agent):
             print(f"[QA Validator]   • Quality Score: {quality_report['quality_score']:.1f}/100")
             print(f"[QA Validator]   • Время: {duration:.1f}s")
 
+            # 🎓 LEARNING: Record success
+            await self.learning.record_success(
+                task=task,
+                result={
+                    "validation_status": validation_status,
+                    "quality_score": quality_report['quality_score']
+                },
+                metrics={
+                    "quality_score": quality_report['quality_score'],
+                    "completeness": completeness['coverage_percent'],
+                    "validity_rate": validity['valid_metrics'] / validity['total_metrics'] if validity['total_metrics'] > 0 else 0,
+                    "consistency_issues": len(consistency['issues'])
+                }
+            )
+
             return TaskResult(
                 subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
@@ -143,6 +162,15 @@ class CIQAValidator(Agent):
 
         except Exception as e:
             print(f"[QA Validator] ❌ Ошибка: {str(e)}")
+
+            # 🎓 LEARNING: Record failure
+            await self.learning.record_failure(
+                task=task,
+                error=e,
+                context={
+                    "has_analysis_result": bool(analysis_result) if 'analysis_result' in locals() else False
+                }
+            )
 
             return TaskResult(
                 subtask_id=task.subtask_id,

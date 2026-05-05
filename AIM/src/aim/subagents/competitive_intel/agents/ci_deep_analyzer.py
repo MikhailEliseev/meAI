@@ -150,6 +150,18 @@ class CIDeepAnalyzer(Agent):
             print(f"\n[CI Deep] ✅ Глубокий анализ завершён за {duration:.1f}s")
             print(f"[CI Deep] 📁 Результаты: {output_file}")
 
+            # 🎓 LEARNING: Record success
+            avg_quality = sum(p["deep_analysis"]["quality_score"] for p in deep_profiles) / len(deep_profiles)
+            await self.learning.record_success(
+                task=task,
+                result=results,
+                metrics={
+                    "competitors_analyzed": len(competitors),
+                    "avg_quality_score": avg_quality,
+                    "duration_seconds": duration
+                }
+            )
+
             return TaskResult(
                 subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
@@ -165,6 +177,16 @@ class CIDeepAnalyzer(Agent):
             print(f"[CI Deep] ✗ Error: {e}")
             import traceback
             traceback.print_exc()
+
+            # 🎓 LEARNING: Record failure
+            await self.learning.record_failure(
+                task=task,
+                error=e,
+                context={
+                    "competitors": len(competitors) if 'competitors' in locals() else 0,
+                    "stage": "unknown"
+                }
+            )
 
             return TaskResult(
                 subtask_id=task.subtask_id,
