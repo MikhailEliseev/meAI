@@ -102,13 +102,38 @@ Agent ^lgO4JNsE
 Prompt
 Engineering ^Qxia9C6c
 
+SEO
+Analytics ^SEOAnalytics
+
+Content
+Analytics ^ContentAnalytics
+
+Ads
+Analytics ^AdsAnalytics
+
+AI
+Analytics ^AIAnalytics
+
+Data Collector
+Agent ^DataCollector
+
+Data Processor
+Agent ^DataProcessor
+
+Performance
+Analyzer ^PerfAnalyzer
+
+Insights
+Generator ^InsightsGen
+
 AIM AGENCY ARCHITECTURE
 
-✅ 4 Magisters (координация)
-✅ 16 Subagents (исполнение)
+✅ 5 Magisters (координация)
+✅ 24 Subagents (исполнение)
 ✅ 15 CI Agents (разведка)
 ✅ Event Bus (коммуникация)
-✅ Obsidian (память) ^JcDWaBkC
+✅ Obsidian (память)
+✅ Two-Level Analytics ^JcDWaBkC
 
 %%
 ## Drawing
