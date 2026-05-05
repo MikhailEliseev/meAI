@@ -261,17 +261,23 @@ class CIDeepAnalyzer(Agent):
         """Smart crawling with priorities
 
         Strategy:
-        1. Start with sitemap URLs
-        2. BFS crawl with priorities (services > about > blog)
-        3. Limit to max_pages
+        1. Start with sitemap URLs if available
+        2. If no sitemap, start from homepage and extract links
+        3. BFS crawl with priorities (services > about > blog)
+        4. Limit to max_pages
         """
         visited: Set[str] = set()
         to_visit: List[tuple[int, str]] = []  # (priority, url)
 
-        # Add sitemap URLs with priorities
-        for url in sitemap_urls[:self.max_pages]:
-            priority = self._get_url_priority(url)
-            to_visit.append((priority, url))
+        # If we have sitemap URLs, use them
+        if sitemap_urls:
+            for url in sitemap_urls[:self.max_pages * 2]:  # Get more URLs than needed
+                priority = self._get_url_priority(url)
+                to_visit.append((priority, url))
+        else:
+            # No sitemap - start from homepage
+            print(f"[CI Deep]   ⚠️  No sitemap found, starting from homepage")
+            to_visit.append((10, base_url))
 
         # Sort by priority (higher first)
         to_visit.sort(reverse=True)
@@ -287,10 +293,50 @@ class CIDeepAnalyzer(Agent):
             visited.add(url)
             all_urls.append(url)
 
-            # TODO: Extract links from page and add to queue
-            # For now, just use sitemap URLs
+            # Extract links from page if we need more URLs
+            if len(all_urls) < self.max_pages and len(to_visit) < 10:
+                html = await self._fetch_url(url)
+                if html:
+                    links = self._extract_links(html, base_url)
+                    for link in links:
+                        if link not in visited and link not in [u for _, u in to_visit]:
+                            priority = self._get_url_priority(link)
+                            to_visit.append((priority, link))
+
+                    # Re-sort by priority
+                    to_visit.sort(reverse=True)
+
+                # Respectful delay after fetching
+                await asyncio.sleep(self.delay)
 
         return all_urls[:self.max_pages]
+
+    def _extract_links(self, html: str, base_url: str) -> List[str]:
+        """Extract links from HTML"""
+        links = []
+
+        # Find all <a href="..."> tags
+        href_pattern = r'<a[^>]*href=["\']([^"\']+)["\']'
+        matches = re.findall(href_pattern, html, re.IGNORECASE)
+
+        base_domain = urlparse(base_url).netloc
+
+        for href in matches:
+            # Convert relative URLs to absolute
+            absolute_url = urljoin(base_url, href)
+
+            # Only include links from same domain
+            link_domain = urlparse(absolute_url).netloc
+            if link_domain == base_domain:
+                # Remove fragments and query params for cleaner URLs
+                parsed = urlparse(absolute_url)
+                clean_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+
+                # Skip common non-content URLs
+                if not any(x in clean_url.lower() for x in ['.jpg', '.png', '.pdf', '.zip', 'javascript:', 'mailto:']):
+                    links.append(clean_url)
+
+        return list(set(links))  # Remove duplicates
 
     def _get_url_priority(self, url: str) -> int:
         """Get URL priority for crawling
