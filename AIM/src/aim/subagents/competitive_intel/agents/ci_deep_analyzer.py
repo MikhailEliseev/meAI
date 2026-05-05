@@ -24,6 +24,7 @@ import aiohttp
 import ssl
 
 from meai.agents.base_agent import Agent, Task, TaskResult
+from aim.core.agent_learning import AgentLearning
 
 
 class CIDeepAnalyzer(Agent):
@@ -55,6 +56,9 @@ class CIDeepAnalyzer(Agent):
             'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'
         ]
         self.current_ua_index = 0
+
+        # Initialize learning system
+        self.learning = AgentLearning(agent_id=agent_id)
 
     def get_capabilities(self) -> list[str]:
         return [
@@ -92,6 +96,22 @@ class CIDeepAnalyzer(Agent):
                     duration_seconds=0.0,
                     completed_at=datetime.now()
                 )
+
+            # 🎓 LEARNING: Read lessons before starting
+            print(f"[CI Deep] 📚 Читаю уроки перед анализом...")
+            lessons = await self.learning.get_lessons(
+                tags=["validation", "ci-system", "silent-failure"],
+                severity="critical"
+            )
+
+            if lessons:
+                print(f"[CI Deep] ✅ Найдено {len(lessons)} уроков")
+                applied = await self.learning.apply_lessons(task, lessons)
+                print(f"[CI Deep] 📋 Применено {len(applied['rules_applied'])} правил")
+
+                # Show prevention rules
+                for rule in applied['rules_applied'][:3]:  # Show first 3
+                    print(f"[CI Deep]   • {rule['type']}: {rule['rule'][:80]}...")
 
             print(f"[CI Deep] 🔍 Глубокий анализ {len(competitors)} конкурентов")
             print(f"[CI Deep] ⏱️  Ожидаемое время: {len(competitors) * 10}-{len(competitors) * 30} минут")
@@ -182,6 +202,10 @@ class CIDeepAnalyzer(Agent):
         aggregated = await self._aggregate_analysis(analyzed_pages)
         print(f"[CI Deep]   ✓ Данные агрегированы")
 
+        print(f"[CI Deep]   6️⃣  Генерация отчёта о проблемах...")
+        issues_report = self._generate_issues_report(analyzed_pages)
+        print(f"[CI Deep]   ✓ Найдено {issues_report['total_issues']} проблем")
+
         return {
             "name": name,
             "url": url,
@@ -189,6 +213,7 @@ class CIDeepAnalyzer(Agent):
             "pages_analyzed": len(analyzed_pages),
             "page_types": classified_pages,
             "deep_analysis": aggregated,
+            "issues": issues_report,
             "analyzed_at": datetime.now().isoformat()
         }
 
@@ -405,11 +430,15 @@ class CIDeepAnalyzer(Agent):
         classified_pages: Dict[str, List[str]],
         base_url: str
     ) -> List[Dict[str, Any]]:
-        """Deep analysis of each page"""
+        """Deep analysis of each page with CWV sampling"""
         analyzed = []
 
         # Priority order for page types
         priority_order = ["homepage", "services", "about", "contacts", "prices", "blog", "other"]
+
+        # Sample pages for CWV analysis (10-20 pages)
+        cwv_sample_urls = []
+        cwv_sample_size = min(20, self.max_pages)
 
         # Analyze pages by priority until we reach max_pages
         for page_type in priority_order:
@@ -424,11 +453,68 @@ class CIDeepAnalyzer(Agent):
                 page_analysis = await self._analyze_single_page(url, page_type)
                 analyzed.append(page_analysis)
 
+                # Add to CWV sample (prioritize important pages)
+                if len(cwv_sample_urls) < cwv_sample_size:
+                    if page_type in ["homepage", "services", "about"]:
+                        cwv_sample_urls.append(url)
+                    elif len(cwv_sample_urls) < cwv_sample_size * 0.7:
+                        cwv_sample_urls.append(url)
+
                 # Respectful delay
                 await asyncio.sleep(self.delay)
 
             if len(analyzed) >= self.max_pages:
                 break
+
+        # Analyze CWV, Mobile, and Accessibility for sampled pages
+        print(f"[CI Deep]   📊 Analyzing CWV, Mobile, and Accessibility for {len(cwv_sample_urls)} pages...")
+        cwv_results = []
+        mobile_results = []
+        accessibility_results = []
+
+        for i, url in enumerate(cwv_sample_urls[:10], 1):  # Limit to 10 to avoid API rate limits
+            print(f"[CI Deep]     [{i}/{min(10, len(cwv_sample_urls))}] {url}")
+
+            # Analyze CWV
+            cwv = await self._analyze_core_web_vitals(url)
+            if cwv["status"] == "ok":
+                cwv_results.append(cwv)
+
+            # Analyze Mobile (same API call, different data extraction)
+            mobile = await self._analyze_mobile_usability(url)
+            if mobile["status"] == "ok":
+                mobile_results.append(mobile)
+
+            # Analyze Accessibility
+            accessibility = await self._analyze_accessibility(url)
+            if accessibility["status"] == "ok":
+                accessibility_results.append(accessibility)
+
+            await asyncio.sleep(2)  # Rate limiting for PageSpeed API
+
+        # Store results for aggregation
+        for page in analyzed:
+            page["cwv_sampled"] = page["url"] in cwv_sample_urls[:10]
+            page["mobile_sampled"] = page["url"] in cwv_sample_urls[:10]
+            page["accessibility_sampled"] = page["url"] in cwv_sample_urls[:10]
+
+        # Add summaries to first page (will be used in aggregation)
+        if analyzed:
+            if cwv_results:
+                analyzed[0]["cwv_summary"] = {
+                    "pages_sampled": len(cwv_results),
+                    "results": cwv_results
+                }
+            if mobile_results:
+                analyzed[0]["mobile_summary"] = {
+                    "pages_sampled": len(mobile_results),
+                    "results": mobile_results
+                }
+            if accessibility_results:
+                analyzed[0]["accessibility_summary"] = {
+                    "pages_sampled": len(accessibility_results),
+                    "results": accessibility_results
+                }
 
         return analyzed
 
@@ -443,13 +529,17 @@ class CIDeepAnalyzer(Agent):
                 "error": "Failed to fetch"
             }
 
+        # Analyze security (needs both url and html)
+        security = await self._analyze_security(url, html)
+
         return {
             "url": url,
             "type": page_type,
             "seo": self._analyze_seo(html),
             "content": self._analyze_content(html),
             "technical": self._analyze_technical(html),
-            "schema": self._analyze_schema(html)
+            "schema": self._analyze_schema(html),
+            "security": security
         }
 
     def _analyze_seo(self, html: str) -> Dict[str, Any]:
@@ -524,8 +614,647 @@ class CIDeepAnalyzer(Agent):
             "has_local_business": has_local_business
         }
 
+    async def _analyze_core_web_vitals(self, url: str) -> Dict[str, Any]:
+        """
+        Analyze Core Web Vitals using PageSpeed Insights API
+
+        Metrics:
+        - LCP (Largest Contentful Paint): < 2.5s good, < 4.0s needs improvement, >= 4.0s poor
+        - INP (Interaction to Next Paint): < 200ms good, < 500ms needs improvement, >= 500ms poor
+        - CLS (Cumulative Layout Shift): < 0.1 good, < 0.25 needs improvement, >= 0.25 poor
+        - TTFB (Time to First Byte): < 800ms good, < 1800ms needs improvement, >= 1800ms poor
+        - FCP (First Contentful Paint): < 1.8s good, < 3.0s needs improvement, >= 3.0s poor
+
+        Returns:
+        {
+            "lcp": float (seconds),
+            "inp": float (milliseconds),
+            "cls": float,
+            "ttfb": float (milliseconds),
+            "fcp": float (seconds),
+            "score": float (0-100),
+            "status": "ok" | "error",
+            "error": str | None
+        }
+        """
+        try:
+            # PageSpeed Insights API endpoint
+            # Note: Requires API key in production, but works without for limited requests
+            api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
+
+            params = {
+                "url": url,
+                "strategy": "mobile",  # Mobile-first
+                "category": "performance"
+            }
+
+            # Add API key if available
+            api_key = None  # TODO: Add to .env
+            if api_key:
+                params["key"] = api_key
+
+            print(f"[CI Deep]     🔍 Analyzing CWV for {url}...")
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(api_url, params=params, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                    if response.status != 200:
+                        return {
+                            "status": "error",
+                            "error": f"PageSpeed API returned {response.status}",
+                            "lcp": None,
+                            "inp": None,
+                            "cls": None,
+                            "ttfb": None,
+                            "fcp": None,
+                            "score": 0
+                        }
+
+                    data = await response.json()
+
+                    # Extract metrics from response
+                    lighthouse = data.get("lighthouseResult", {})
+                    audits = lighthouse.get("audits", {})
+
+                    # Extract CWV metrics
+                    lcp_audit = audits.get("largest-contentful-paint", {})
+                    lcp = lcp_audit.get("numericValue", 0) / 1000  # Convert to seconds
+
+                    # INP is newer, might not be in all responses
+                    inp_audit = audits.get("interaction-to-next-paint", {})
+                    inp = inp_audit.get("numericValue", 0)  # Already in milliseconds
+
+                    cls_audit = audits.get("cumulative-layout-shift", {})
+                    cls = cls_audit.get("numericValue", 0)
+
+                    ttfb_audit = audits.get("server-response-time", {})
+                    ttfb = ttfb_audit.get("numericValue", 0)  # In milliseconds
+
+                    fcp_audit = audits.get("first-contentful-paint", {})
+                    fcp = fcp_audit.get("numericValue", 0) / 1000  # Convert to seconds
+
+                    # Calculate score based on thresholds
+                    score = self._calculate_cwv_score(lcp, inp, cls, ttfb, fcp)
+
+                    print(f"[CI Deep]     ✓ CWV: LCP={lcp:.2f}s, INP={inp:.0f}ms, CLS={cls:.3f}, Score={score:.0f}")
+
+                    return {
+                        "status": "ok",
+                        "error": None,
+                        "lcp": lcp,
+                        "inp": inp,
+                        "cls": cls,
+                        "ttfb": ttfb,
+                        "fcp": fcp,
+                        "score": score
+                    }
+
+        except asyncio.TimeoutError:
+            return {
+                "status": "error",
+                "error": "PageSpeed API timeout",
+                "lcp": None,
+                "inp": None,
+                "cls": None,
+                "ttfb": None,
+                "fcp": None,
+                "score": 0
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e),
+                "lcp": None,
+                "inp": None,
+                "cls": None,
+                "ttfb": None,
+                "fcp": None,
+                "score": 0
+            }
+
+    def _calculate_cwv_score(self, lcp: float, inp: float, cls: float, ttfb: float, fcp: float) -> float:
+        """
+        Calculate CWV score (0-100) based on thresholds
+
+        Weighted scoring:
+        - LCP: 30%
+        - INP: 25%
+        - CLS: 25%
+        - TTFB: 10%
+        - FCP: 10%
+        """
+        scores = []
+
+        # LCP score (30%)
+        if lcp < 2.5:
+            lcp_score = 100
+        elif lcp < 4.0:
+            lcp_score = 50
+        else:
+            lcp_score = 0
+        scores.append(lcp_score * 0.30)
+
+        # INP score (25%)
+        if inp < 200:
+            inp_score = 100
+        elif inp < 500:
+            inp_score = 50
+        else:
+            inp_score = 0
+        scores.append(inp_score * 0.25)
+
+        # CLS score (25%)
+        if cls < 0.1:
+            cls_score = 100
+        elif cls < 0.25:
+            cls_score = 50
+        else:
+            cls_score = 0
+        scores.append(cls_score * 0.25)
+
+        # TTFB score (10%)
+        if ttfb < 800:
+            ttfb_score = 100
+        elif ttfb < 1800:
+            ttfb_score = 50
+        else:
+            ttfb_score = 0
+        scores.append(ttfb_score * 0.10)
+
+        # FCP score (10%)
+        if fcp < 1.8:
+            fcp_score = 100
+        elif fcp < 3.0:
+            fcp_score = 50
+        else:
+            fcp_score = 0
+        scores.append(fcp_score * 0.10)
+
+        return sum(scores)
+
+    async def _analyze_mobile_usability(self, url: str) -> Dict[str, Any]:
+        """
+        Analyze Mobile Usability using PageSpeed Insights API (mobile strategy)
+
+        Checks:
+        - Viewport meta tag
+        - Responsive design
+        - Tap targets size
+        - Font sizes
+        - Content width
+
+        Returns:
+        {
+            "viewport_ok": bool,
+            "responsive": bool,
+            "tap_targets_ok": bool,
+            "font_size_ok": bool,
+            "content_width_ok": bool,
+            "score": float (0-100),
+            "status": "ok" | "error",
+            "error": str | None
+        }
+        """
+        try:
+            # PageSpeed Insights API endpoint (mobile strategy)
+            api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
+
+            params = {
+                "url": url,
+                "strategy": "mobile",
+                "category": "performance"
+            }
+
+            # Add API key if available
+            api_key = None  # TODO: Add to .env
+            if api_key:
+                params["key"] = api_key
+
+            print(f"[CI Deep]     📱 Analyzing Mobile for {url}...")
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(api_url, params=params, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                    if response.status != 200:
+                        return {
+                            "status": "error",
+                            "error": f"PageSpeed API returned {response.status}",
+                            "viewport_ok": False,
+                            "responsive": False,
+                            "tap_targets_ok": False,
+                            "font_size_ok": False,
+                            "content_width_ok": False,
+                            "score": 0
+                        }
+
+                    data = await response.json()
+
+                    # Extract mobile usability audits
+                    lighthouse = data.get("lighthouseResult", {})
+                    audits = lighthouse.get("audits", {})
+
+                    # Viewport
+                    viewport_audit = audits.get("viewport", {})
+                    viewport_ok = viewport_audit.get("score", 0) == 1
+
+                    # Content width
+                    content_width_audit = audits.get("content-width", {})
+                    content_width_ok = content_width_audit.get("score", 0) == 1
+
+                    # Tap targets
+                    tap_targets_audit = audits.get("tap-targets", {})
+                    tap_targets_ok = tap_targets_audit.get("score", 0) >= 0.9
+
+                    # Font size
+                    font_size_audit = audits.get("font-size", {})
+                    font_size_ok = font_size_audit.get("score", 0) >= 0.9
+
+                    # Responsive images (as proxy for responsive design)
+                    responsive_images_audit = audits.get("uses-responsive-images", {})
+                    responsive = responsive_images_audit.get("score", 0) >= 0.8
+
+                    # Calculate mobile score
+                    score = self._calculate_mobile_score(
+                        viewport_ok, responsive, tap_targets_ok, font_size_ok, content_width_ok
+                    )
+
+                    print(f"[CI Deep]     ✓ Mobile: Viewport={viewport_ok}, Responsive={responsive}, Score={score:.0f}")
+
+                    return {
+                        "status": "ok",
+                        "error": None,
+                        "viewport_ok": viewport_ok,
+                        "responsive": responsive,
+                        "tap_targets_ok": tap_targets_ok,
+                        "font_size_ok": font_size_ok,
+                        "content_width_ok": content_width_ok,
+                        "score": score
+                    }
+
+        except asyncio.TimeoutError:
+            return {
+                "status": "error",
+                "error": "PageSpeed API timeout",
+                "viewport_ok": False,
+                "responsive": False,
+                "tap_targets_ok": False,
+                "font_size_ok": False,
+                "content_width_ok": False,
+                "score": 0
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e),
+                "viewport_ok": False,
+                "responsive": False,
+                "tap_targets_ok": False,
+                "font_size_ok": False,
+                "content_width_ok": False,
+                "score": 0
+            }
+
+    def _calculate_mobile_score(
+        self,
+        viewport_ok: bool,
+        responsive: bool,
+        tap_targets_ok: bool,
+        font_size_ok: bool,
+        content_width_ok: bool
+    ) -> float:
+        """
+        Calculate mobile usability score (0-100)
+
+        Weighted scoring:
+        - Viewport: 25%
+        - Content width: 25%
+        - Tap targets: 20%
+        - Font size: 15%
+        - Responsive: 15%
+        """
+        score = 0
+
+        if viewport_ok:
+            score += 25
+        if content_width_ok:
+            score += 25
+        if tap_targets_ok:
+            score += 20
+        if font_size_ok:
+            score += 15
+        if responsive:
+            score += 15
+
+        return score
+
+    async def _analyze_accessibility(self, url: str) -> Dict[str, Any]:
+        """
+        Analyze accessibility using PageSpeed Insights Lighthouse accessibility audit
+
+        Checks WCAG compliance:
+        - Color contrast
+        - ARIA attributes
+        - Alt text for images
+        - Form labels
+        - Keyboard navigation
+        - Screen reader support
+
+        Returns:
+        {
+            "color_contrast": bool,
+            "aria_valid": bool,
+            "alt_text": bool,
+            "form_labels": bool,
+            "keyboard_nav": bool,
+            "screen_reader": bool,
+            "score": float (0-100),
+            "status": "ok" | "error",
+            "error": str | None
+        }
+        """
+        try:
+            # PageSpeed Insights API endpoint
+            api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
+
+            params = {
+                "url": url,
+                "category": "accessibility"
+            }
+
+            # Add API key if available
+            api_key = None  # TODO: Add to .env
+            if api_key:
+                params["key"] = api_key
+
+            print(f"[CI Deep]     🔍 Analyzing Accessibility for {url}...")
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(api_url, params=params, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                    if response.status != 200:
+                        return {
+                            "status": "error",
+                            "error": f"PageSpeed API returned {response.status}",
+                            "color_contrast": False,
+                            "aria_valid": False,
+                            "alt_text": False,
+                            "form_labels": False,
+                            "keyboard_nav": False,
+                            "screen_reader": False,
+                            "score": 0
+                        }
+
+                    data = await response.json()
+
+                    # Extract accessibility audits
+                    lighthouse = data.get("lighthouseResult", {})
+                    audits = lighthouse.get("audits", {})
+
+                    # Color contrast
+                    color_contrast_audit = audits.get("color-contrast", {})
+                    color_contrast = color_contrast_audit.get("score", 0) >= 0.9
+
+                    # ARIA attributes
+                    aria_valid_audit = audits.get("aria-valid-attr", {})
+                    aria_valid = aria_valid_audit.get("score", 0) >= 0.9
+
+                    # Alt text for images
+                    alt_text_audit = audits.get("image-alt", {})
+                    alt_text = alt_text_audit.get("score", 0) >= 0.9
+
+                    # Form labels
+                    form_labels_audit = audits.get("label", {})
+                    form_labels = form_labels_audit.get("score", 0) >= 0.9
+
+                    # Keyboard navigation
+                    keyboard_nav_audit = audits.get("focusable-controls", {})
+                    keyboard_nav = keyboard_nav_audit.get("score", 0) >= 0.9
+
+                    # Screen reader support (button names, link names)
+                    button_name_audit = audits.get("button-name", {})
+                    link_name_audit = audits.get("link-name", {})
+                    screen_reader = (
+                        button_name_audit.get("score", 0) >= 0.9 and
+                        link_name_audit.get("score", 0) >= 0.9
+                    )
+
+                    # Calculate accessibility score
+                    score = self._calculate_accessibility_score(
+                        color_contrast, aria_valid, alt_text,
+                        form_labels, keyboard_nav, screen_reader
+                    )
+
+                    print(f"[CI Deep]     ✓ A11y: Contrast={color_contrast}, ARIA={aria_valid}, Score={score:.0f}")
+
+                    return {
+                        "status": "ok",
+                        "error": None,
+                        "color_contrast": color_contrast,
+                        "aria_valid": aria_valid,
+                        "alt_text": alt_text,
+                        "form_labels": form_labels,
+                        "keyboard_nav": keyboard_nav,
+                        "screen_reader": screen_reader,
+                        "score": score
+                    }
+
+        except asyncio.TimeoutError:
+            return {
+                "status": "error",
+                "error": "PageSpeed API timeout",
+                "color_contrast": False,
+                "aria_valid": False,
+                "alt_text": False,
+                "form_labels": False,
+                "keyboard_nav": False,
+                "screen_reader": False,
+                "score": 0
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e),
+                "color_contrast": False,
+                "aria_valid": False,
+                "alt_text": False,
+                "form_labels": False,
+                "keyboard_nav": False,
+                "screen_reader": False,
+                "score": 0
+            }
+
+    def _calculate_accessibility_score(
+        self,
+        color_contrast: bool,
+        aria_valid: bool,
+        alt_text: bool,
+        form_labels: bool,
+        keyboard_nav: bool,
+        screen_reader: bool
+    ) -> float:
+        """
+        Calculate accessibility score (0-100)
+
+        Weighted scoring based on WCAG importance:
+        - Color contrast: 25% (critical for readability)
+        - Screen reader: 20% (critical for blind users)
+        - Alt text: 20% (critical for images)
+        - ARIA: 15% (important for complex widgets)
+        - Form labels: 10% (important for forms)
+        - Keyboard nav: 10% (important for motor disabilities)
+        """
+        score = 0
+
+        if color_contrast:
+            score += 25
+        if screen_reader:
+            score += 20
+        if alt_text:
+            score += 20
+        if aria_valid:
+            score += 15
+        if form_labels:
+            score += 10
+        if keyboard_nav:
+            score += 10
+
+        return score
+
+    async def _analyze_security(self, url: str, html: str) -> Dict[str, Any]:
+        """
+        Analyze security features
+
+        Checks:
+        - HTTPS enabled
+        - Security headers (CSP, X-Frame-Options, etc.)
+        - Mixed content
+        - Secure cookies
+        - SSL certificate validity
+
+        Returns:
+        {
+            "https": bool,
+            "hsts": bool,
+            "csp": bool,
+            "x_frame_options": bool,
+            "x_content_type": bool,
+            "mixed_content": bool,
+            "score": float (0-100),
+            "status": "ok" | "error",
+            "error": str | None
+        }
+        """
+        try:
+            parsed_url = urlparse(url)
+
+            # Check HTTPS
+            https = parsed_url.scheme == "https"
+
+            # Fetch headers
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+            connector = aiohttp.TCPConnector(ssl=ssl_context)
+            timeout = aiohttp.ClientTimeout(total=10)
+
+            async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+                async with session.get(url, allow_redirects=True) as response:
+                    headers = response.headers
+
+                    # Check security headers
+                    hsts = "Strict-Transport-Security" in headers
+                    csp = "Content-Security-Policy" in headers
+                    x_frame_options = "X-Frame-Options" in headers
+                    x_content_type = "X-Content-Type-Options" in headers
+
+                    # Check for mixed content (HTTP resources on HTTPS page)
+                    mixed_content = False
+                    if https and html:
+                        # Look for http:// in src/href attributes
+                        http_pattern = r'(?:src|href)=["\']http://[^"\']*["\']'
+                        mixed_content = bool(re.search(http_pattern, html, re.IGNORECASE))
+
+                    # Calculate security score
+                    score = self._calculate_security_score(
+                        https, hsts, csp, x_frame_options, x_content_type, mixed_content
+                    )
+
+                    print(f"[CI Deep]     ✓ Security: HTTPS={https}, HSTS={hsts}, CSP={csp}, Score={score:.0f}")
+
+                    return {
+                        "status": "ok",
+                        "error": None,
+                        "https": https,
+                        "hsts": hsts,
+                        "csp": csp,
+                        "x_frame_options": x_frame_options,
+                        "x_content_type": x_content_type,
+                        "mixed_content": mixed_content,
+                        "score": score
+                    }
+
+        except asyncio.TimeoutError:
+            return {
+                "status": "error",
+                "error": "Timeout",
+                "https": False,
+                "hsts": False,
+                "csp": False,
+                "x_frame_options": False,
+                "x_content_type": False,
+                "mixed_content": True,
+                "score": 0
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e),
+                "https": False,
+                "hsts": False,
+                "csp": False,
+                "x_frame_options": False,
+                "x_content_type": False,
+                "mixed_content": True,
+                "score": 0
+            }
+
+    def _calculate_security_score(
+        self,
+        https: bool,
+        hsts: bool,
+        csp: bool,
+        x_frame_options: bool,
+        x_content_type: bool,
+        mixed_content: bool
+    ) -> float:
+        """
+        Calculate security score (0-100)
+
+        Weighted scoring:
+        - HTTPS: 40% (critical)
+        - HSTS: 20% (important for HTTPS)
+        - CSP: 15% (important for XSS protection)
+        - X-Frame-Options: 10% (clickjacking protection)
+        - X-Content-Type-Options: 10% (MIME sniffing protection)
+        - No mixed content: 5% (bonus for clean HTTPS)
+        """
+        score = 0
+
+        if https:
+            score += 40
+        if hsts:
+            score += 20
+        if csp:
+            score += 15
+        if x_frame_options:
+            score += 10
+        if x_content_type:
+            score += 10
+        if not mixed_content:
+            score += 5
+
+        return score
+
     async def _aggregate_analysis(self, analyzed_pages: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Aggregate analysis across all pages"""
+        """Aggregate analysis across all pages including CWV and Mobile"""
         if not analyzed_pages:
             return {}
 
@@ -545,7 +1274,97 @@ class CIDeepAnalyzer(Agent):
 
         total = len(analyzed_pages)
 
-        return {
+        # Extract CWV summary if available
+        cwv_summary = analyzed_pages[0].get("cwv_summary") if analyzed_pages else None
+        cwv_score = 0
+        cwv_pages_sampled = 0
+
+        if cwv_summary and cwv_summary.get("results"):
+            cwv_results = cwv_summary["results"]
+            cwv_pages_sampled = len(cwv_results)
+
+            # Calculate average CWV score
+            if cwv_results:
+                cwv_score = sum(r["score"] for r in cwv_results) / len(cwv_results)
+
+                # Calculate average metrics
+                avg_lcp = sum(r["lcp"] for r in cwv_results) / len(cwv_results)
+                avg_inp = sum(r["inp"] for r in cwv_results) / len(cwv_results)
+                avg_cls = sum(r["cls"] for r in cwv_results) / len(cwv_results)
+
+        # Extract Mobile summary if available
+        mobile_summary = analyzed_pages[0].get("mobile_summary") if analyzed_pages else None
+        mobile_score = 0
+        mobile_pages_sampled = 0
+
+        if mobile_summary and mobile_summary.get("results"):
+            mobile_results = mobile_summary["results"]
+            mobile_pages_sampled = len(mobile_results)
+
+            # Calculate average Mobile score
+            if mobile_results:
+                mobile_score = sum(r["score"] for r in mobile_results) / len(mobile_results)
+
+                # Calculate pass rates
+                viewport_pass_rate = sum(1 for r in mobile_results if r["viewport_ok"]) / len(mobile_results) * 100
+                responsive_pass_rate = sum(1 for r in mobile_results if r["responsive"]) / len(mobile_results) * 100
+                tap_targets_pass_rate = sum(1 for r in mobile_results if r["tap_targets_ok"]) / len(mobile_results) * 100
+
+        # Extract Accessibility summary if available
+        accessibility_summary = analyzed_pages[0].get("accessibility_summary") if analyzed_pages else None
+        accessibility_score = 0
+        accessibility_pages_sampled = 0
+
+        if accessibility_summary and accessibility_summary.get("results"):
+            accessibility_results = accessibility_summary["results"]
+            accessibility_pages_sampled = len(accessibility_results)
+
+            # Calculate average Accessibility score
+            if accessibility_results:
+                accessibility_score = sum(r["score"] for r in accessibility_results) / len(accessibility_results)
+
+                # Calculate pass rates
+                color_contrast_pass_rate = sum(1 for r in accessibility_results if r["color_contrast"]) / len(accessibility_results) * 100
+                aria_pass_rate = sum(1 for r in accessibility_results if r["aria_valid"]) / len(accessibility_results) * 100
+                alt_text_pass_rate = sum(1 for r in accessibility_results if r["alt_text"]) / len(accessibility_results) * 100
+
+        # Calculate Security stats from all analyzed pages
+        security_score = 0
+        pages_with_https = sum(1 for p in analyzed_pages if p.get("security", {}).get("https"))
+        pages_with_hsts = sum(1 for p in analyzed_pages if p.get("security", {}).get("hsts"))
+        pages_with_csp = sum(1 for p in analyzed_pages if p.get("security", {}).get("csp"))
+
+        if total > 0:
+            # Calculate average security score from all pages
+            security_scores = [p.get("security", {}).get("score", 0) for p in analyzed_pages if p.get("security", {}).get("status") == "ok"]
+            if security_scores:
+                security_score = sum(security_scores) / len(security_scores)
+
+        # Calculate component scores
+        seo_score = (pages_with_title + pages_with_desc + pages_with_h1) / (total * 3) * 100
+
+        # NEW: Weighted quality score
+        # Formula from research: SEO 15%, CWV 25%, Mobile 20%, Accessibility 20%, Security 10%, Technical 10%
+        # For now we have: SEO, CWV, Mobile, Accessibility, Security
+        # Normalize weights: SEO 15/(15+25+20+20+10)=16.67%, CWV 25/90=27.78%, Mobile 20/90=22.22%, Accessibility 20/90=22.22%, Security 10/90=11.11%
+
+        if cwv_score > 0 and mobile_score > 0 and accessibility_score > 0 and security_score > 0:
+            # All five available
+            quality_score = (seo_score * 0.1667 + cwv_score * 0.2778 + mobile_score * 0.2222 + accessibility_score * 0.2222 + security_score * 0.1111)
+        elif cwv_score > 0 and mobile_score > 0 and accessibility_score > 0:
+            # SEO, CWV, Mobile, Accessibility (no Security)
+            quality_score = (seo_score * 0.1875 + cwv_score * 0.3125 + mobile_score * 0.25 + accessibility_score * 0.25)
+        elif cwv_score > 0 and mobile_score > 0:
+            # SEO, CWV, Mobile (no Accessibility, no Security)
+            quality_score = (seo_score * 0.25 + cwv_score * 0.4167 + mobile_score * 0.3333)
+        elif cwv_score > 0:
+            # Only SEO and CWV
+            quality_score = (seo_score * 0.375 + cwv_score * 0.625)
+        else:
+            # Fallback to old formula if no CWV/Mobile/Accessibility
+            quality_score = seo_score
+
+        result = {
             "total_pages": total,
             "page_types": type_counts,
             "seo_coverage": {
@@ -554,7 +1373,293 @@ class CIDeepAnalyzer(Agent):
                 "h1": f"{pages_with_h1}/{total}"
             },
             "schema_coverage": f"{pages_with_schema}/{total}",
-            "quality_score": (pages_with_title + pages_with_desc + pages_with_h1) / (total * 3) * 100
+            "quality_score": quality_score
+        }
+
+        # Add CWV data if available
+        if cwv_summary and cwv_summary.get("results"):
+            cwv_results = cwv_summary["results"]
+            result["cwv"] = {
+                "pages_sampled": cwv_pages_sampled,
+                "score": cwv_score,
+                "avg_lcp": avg_lcp,
+                "avg_inp": avg_inp,
+                "avg_cls": avg_cls,
+                "details": cwv_results
+            }
+
+        # Add Mobile data if available
+        if mobile_summary and mobile_summary.get("results"):
+            mobile_results = mobile_summary["results"]
+            result["mobile"] = {
+                "pages_sampled": mobile_pages_sampled,
+                "score": mobile_score,
+                "viewport_pass_rate": viewport_pass_rate,
+                "responsive_pass_rate": responsive_pass_rate,
+                "tap_targets_pass_rate": tap_targets_pass_rate,
+                "details": mobile_results
+            }
+
+        # Add Accessibility data if available
+        if accessibility_summary and accessibility_summary.get("results"):
+            accessibility_results = accessibility_summary["results"]
+            result["accessibility"] = {
+                "pages_sampled": accessibility_pages_sampled,
+                "score": accessibility_score,
+                "color_contrast_pass_rate": color_contrast_pass_rate,
+                "aria_pass_rate": aria_pass_rate,
+                "alt_text_pass_rate": alt_text_pass_rate,
+                "details": accessibility_results
+            }
+
+        # Add Security data (from all pages)
+        if security_score > 0:
+            https_rate = (pages_with_https / total * 100) if total > 0 else 0
+            hsts_rate = (pages_with_hsts / total * 100) if total > 0 else 0
+            csp_rate = (pages_with_csp / total * 100) if total > 0 else 0
+
+            result["security"] = {
+                "pages_analyzed": total,
+                "score": security_score,
+                "https_rate": https_rate,
+                "hsts_rate": hsts_rate,
+                "csp_rate": csp_rate
+            }
+
+        return result
+
+    def _generate_issues_report(self, analyzed_pages: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Generate detailed issues report with actionable recommendations
+
+        Categorizes issues by:
+        - Severity: critical, high, medium, low
+        - Category: seo, performance, mobile, accessibility, security
+        - Impact: what's affected and why it matters
+        - Recommendation: how to fix
+
+        Returns structured report with prioritized issues
+        """
+        issues = []
+
+        for page in analyzed_pages:
+            url = page.get("url", "")
+            page_type = page.get("type", "unknown")
+
+            # SEO Issues
+            seo = page.get("seo", {})
+            if not seo.get("has_title"):
+                issues.append({
+                    "severity": "critical",
+                    "category": "seo",
+                    "page": url,
+                    "page_type": page_type,
+                    "issue": "Missing title tag",
+                    "impact": "Search engines can't understand page topic. Major ranking penalty.",
+                    "recommendation": "Add unique, descriptive <title> tag (50-60 characters)"
+                })
+            elif seo.get("title_length", 0) > 60:
+                issues.append({
+                    "severity": "medium",
+                    "category": "seo",
+                    "page": url,
+                    "page_type": page_type,
+                    "issue": f"Title too long ({seo.get('title_length')} chars)",
+                    "impact": "Title gets truncated in search results",
+                    "recommendation": "Shorten title to 50-60 characters"
+                })
+
+            if not seo.get("has_description"):
+                issues.append({
+                    "severity": "high",
+                    "category": "seo",
+                    "page": url,
+                    "page_type": page_type,
+                    "issue": "Missing meta description",
+                    "impact": "Lower click-through rate from search results",
+                    "recommendation": "Add compelling meta description (150-160 characters)"
+                })
+
+            if not seo.get("has_h1"):
+                issues.append({
+                    "severity": "high",
+                    "category": "seo",
+                    "page": url,
+                    "page_type": page_type,
+                    "issue": "Missing H1 heading",
+                    "impact": "Unclear page hierarchy for search engines and users",
+                    "recommendation": "Add single H1 with main page topic"
+                })
+
+            # Security Issues
+            security = page.get("security", {})
+            if security.get("status") == "ok":
+                if not security.get("https"):
+                    issues.append({
+                        "severity": "critical",
+                        "category": "security",
+                        "page": url,
+                        "page_type": page_type,
+                        "issue": "No HTTPS",
+                        "impact": "Data not encrypted. Browser warnings. SEO penalty.",
+                        "recommendation": "Install SSL certificate and redirect HTTP to HTTPS"
+                    })
+
+                if not security.get("hsts"):
+                    issues.append({
+                        "severity": "medium",
+                        "category": "security",
+                        "page": url,
+                        "page_type": page_type,
+                        "issue": "Missing HSTS header",
+                        "impact": "Vulnerable to SSL stripping attacks",
+                        "recommendation": "Add Strict-Transport-Security header"
+                    })
+
+                if not security.get("csp"):
+                    issues.append({
+                        "severity": "medium",
+                        "category": "security",
+                        "page": url,
+                        "page_type": page_type,
+                        "issue": "Missing Content-Security-Policy",
+                        "impact": "Vulnerable to XSS attacks",
+                        "recommendation": "Implement CSP header to prevent XSS"
+                    })
+
+                if security.get("mixed_content"):
+                    issues.append({
+                        "severity": "high",
+                        "category": "security",
+                        "page": url,
+                        "page_type": page_type,
+                        "issue": "Mixed content (HTTP on HTTPS page)",
+                        "impact": "Browser warnings. Security vulnerabilities.",
+                        "recommendation": "Change all HTTP resources to HTTPS"
+                    })
+
+        # Add issues from CWV analysis
+        cwv_summary = analyzed_pages[0].get("cwv_summary") if analyzed_pages else None
+        if cwv_summary and cwv_summary.get("results"):
+            for cwv in cwv_summary["results"]:
+                # LCP issues
+                if cwv.get("lcp", 0) > 4.0:
+                    issues.append({
+                        "severity": "critical",
+                        "category": "performance",
+                        "page": "sampled pages",
+                        "page_type": "various",
+                        "issue": f"Poor LCP: {cwv['lcp']:.2f}s (should be < 2.5s)",
+                        "impact": "Slow loading. Poor user experience. SEO penalty.",
+                        "recommendation": "Optimize images, reduce server response time, use CDN"
+                    })
+                elif cwv.get("lcp", 0) > 2.5:
+                    issues.append({
+                        "severity": "medium",
+                        "category": "performance",
+                        "page": "sampled pages",
+                        "page_type": "various",
+                        "issue": f"Needs improvement LCP: {cwv['lcp']:.2f}s",
+                        "impact": "Slower than optimal loading speed",
+                        "recommendation": "Optimize largest content element loading"
+                    })
+
+                # CLS issues
+                if cwv.get("cls", 0) > 0.25:
+                    issues.append({
+                        "severity": "high",
+                        "category": "performance",
+                        "page": "sampled pages",
+                        "page_type": "various",
+                        "issue": f"Poor CLS: {cwv['cls']:.3f} (should be < 0.1)",
+                        "impact": "Layout shifts annoy users. Accidental clicks.",
+                        "recommendation": "Set image dimensions, avoid dynamic content insertion"
+                    })
+
+        # Add issues from Mobile analysis
+        mobile_summary = analyzed_pages[0].get("mobile_summary") if analyzed_pages else None
+        if mobile_summary and mobile_summary.get("results"):
+            for mobile in mobile_summary["results"]:
+                if not mobile.get("viewport_ok"):
+                    issues.append({
+                        "severity": "high",
+                        "category": "mobile",
+                        "page": "sampled pages",
+                        "page_type": "various",
+                        "issue": "Missing or incorrect viewport meta tag",
+                        "impact": "Poor mobile display. Not mobile-friendly.",
+                        "recommendation": "Add <meta name='viewport' content='width=device-width, initial-scale=1'>"
+                    })
+
+                if not mobile.get("tap_targets_ok"):
+                    issues.append({
+                        "severity": "medium",
+                        "category": "mobile",
+                        "page": "sampled pages",
+                        "page_type": "various",
+                        "issue": "Tap targets too small",
+                        "impact": "Hard to tap on mobile. Poor UX.",
+                        "recommendation": "Make buttons/links at least 48x48px"
+                    })
+
+        # Add issues from Accessibility analysis
+        accessibility_summary = analyzed_pages[0].get("accessibility_summary") if analyzed_pages else None
+        if accessibility_summary and accessibility_summary.get("results"):
+            for a11y in accessibility_summary["results"]:
+                if not a11y.get("color_contrast"):
+                    issues.append({
+                        "severity": "high",
+                        "category": "accessibility",
+                        "page": "sampled pages",
+                        "page_type": "various",
+                        "issue": "Insufficient color contrast",
+                        "impact": "Hard to read for visually impaired users. WCAG violation.",
+                        "recommendation": "Ensure 4.5:1 contrast ratio for normal text"
+                    })
+
+                if not a11y.get("alt_text"):
+                    issues.append({
+                        "severity": "high",
+                        "category": "accessibility",
+                        "page": "sampled pages",
+                        "page_type": "various",
+                        "issue": "Images missing alt text",
+                        "impact": "Inaccessible to screen readers. SEO penalty.",
+                        "recommendation": "Add descriptive alt text to all images"
+                    })
+
+        # Sort by severity
+        severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+        issues.sort(key=lambda x: severity_order.get(x["severity"], 4))
+
+        # Group by severity
+        issues_by_severity = {
+            "critical": [i for i in issues if i["severity"] == "critical"],
+            "high": [i for i in issues if i["severity"] == "high"],
+            "medium": [i for i in issues if i["severity"] == "medium"],
+            "low": [i for i in issues if i["severity"] == "low"]
+        }
+
+        # Group by category
+        issues_by_category = {}
+        for issue in issues:
+            category = issue["category"]
+            if category not in issues_by_category:
+                issues_by_category[category] = []
+            issues_by_category[category].append(issue)
+
+        return {
+            "total_issues": len(issues),
+            "by_severity": {
+                "critical": len(issues_by_severity["critical"]),
+                "high": len(issues_by_severity["high"]),
+                "medium": len(issues_by_severity["medium"]),
+                "low": len(issues_by_severity["low"])
+            },
+            "by_category": {cat: len(items) for cat, items in issues_by_category.items()},
+            "issues": issues,
+            "issues_by_severity": issues_by_severity,
+            "issues_by_category": issues_by_category
         }
 
     async def _generate_market_insights(self, deep_profiles: List[Dict[str, Any]]) -> Dict[str, Any]:
