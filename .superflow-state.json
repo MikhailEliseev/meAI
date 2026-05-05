@@ -1,0 +1,21 @@
+{
+  "context": {
+    "run_id": "7A60D837-18FF-45A5-B4CB-F82121BE57DA",
+    "onboarded": true,
+    "governance_mode": "critical",
+    "git_workflow_mode": "stacked_prs",
+    "note": "Spec reviewers running in background, proceeding with plan",
+    "phase1_complete": true,
+    "awaiting_user_approval": true,
+    "phase1_approved": true,
+    "charter_file": "docs/superflow/CHARTER.md",
+    "spec_version": "1.1",
+    "security_fixes_applied": true
+  },
+  "phase": 2,
+  "version": 1,
+  "phase_label": "Product Discovery",
+  "stage": "ready",
+  "stage_index": 0,
+  "last_updated": "2026-05-05T20:20:09.819792+00:00"
+}

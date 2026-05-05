@@ -43,6 +43,8 @@ Thumbs.db
 
 # Project specific
 data/
+!AIM/data/golden_dataset/
+AIM/data/golden_dataset/results/
 .obsidian/
 obsidian/operator/
 obsidian/seo-agent/
