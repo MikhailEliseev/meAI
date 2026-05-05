@@ -660,8 +660,13 @@ class CIDeepAnalyzer(Agent):
         }
         """
         try:
+            # Get API config and cache
+            from aim.core.api_config import get_api_config, get_api_cache
+
+            api_config = get_api_config()
+            api_cache = get_api_cache()
+
             # PageSpeed Insights API endpoint
-            # Note: Requires API key in production, but works without for limited requests
             api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
 
             params = {
@@ -671,27 +676,38 @@ class CIDeepAnalyzer(Agent):
             }
 
             # Add API key if available
-            api_key = None  # TODO: Add to .env
-            if api_key:
-                params["key"] = api_key
+            if api_config.has_pagespeed_api_key():
+                params["key"] = api_config.get_pagespeed_api_key()
 
-            print(f"[CI Deep]     🔍 Analyzing CWV for {url}...")
+            # Check cache first
+            cached_response = api_cache.get(api_url, params)
+            if cached_response:
+                print(f"[CI Deep]     💾 Using cached CWV data")
+                data = cached_response
+            else:
+                # Rate limiting
+                await api_config.rate_limiter.acquire()
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(api_url, params=params, timeout=aiohttp.ClientTimeout(total=30)) as response:
-                    if response.status != 200:
-                        return {
-                            "status": "error",
-                            "error": f"PageSpeed API returned {response.status}",
-                            "lcp": None,
-                            "inp": None,
-                            "cls": None,
-                            "ttfb": None,
-                            "fcp": None,
-                            "score": 0
-                        }
+                print(f"[CI Deep]     🔍 Analyzing CWV for {url}...")
 
-                    data = await response.json()
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(api_url, params=params, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                        if response.status != 200:
+                            return {
+                                "status": "error",
+                                "error": f"PageSpeed API returned {response.status}",
+                                "lcp": None,
+                                "inp": None,
+                                "cls": None,
+                                "ttfb": None,
+                                "fcp": None,
+                                "score": 0
+                            }
+
+                        data = await response.json()
+
+                        # Cache response
+                        api_cache.set(api_url, params, data)
 
                     # Extract metrics from response
                     lighthouse = data.get("lighthouseResult", {})
@@ -837,6 +853,12 @@ class CIDeepAnalyzer(Agent):
         }
         """
         try:
+            # Get API config and cache
+            from aim.core.api_config import get_api_config, get_api_cache
+
+            api_config = get_api_config()
+            api_cache = get_api_cache()
+
             # PageSpeed Insights API endpoint (mobile strategy)
             api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
 
@@ -847,27 +869,38 @@ class CIDeepAnalyzer(Agent):
             }
 
             # Add API key if available
-            api_key = None  # TODO: Add to .env
-            if api_key:
-                params["key"] = api_key
+            if api_config.has_pagespeed_api_key():
+                params["key"] = api_config.get_pagespeed_api_key()
 
-            print(f"[CI Deep]     📱 Analyzing Mobile for {url}...")
+            # Check cache first
+            cached_response = api_cache.get(api_url, params)
+            if cached_response:
+                print(f"[CI Deep]     💾 Using cached Mobile data")
+                data = cached_response
+            else:
+                # Rate limiting
+                await api_config.rate_limiter.acquire()
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(api_url, params=params, timeout=aiohttp.ClientTimeout(total=30)) as response:
-                    if response.status != 200:
-                        return {
-                            "status": "error",
-                            "error": f"PageSpeed API returned {response.status}",
-                            "viewport_ok": False,
-                            "responsive": False,
-                            "tap_targets_ok": False,
-                            "font_size_ok": False,
-                            "content_width_ok": False,
-                            "score": 0
-                        }
+                print(f"[CI Deep]     📱 Analyzing Mobile for {url}...")
 
-                    data = await response.json()
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(api_url, params=params, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                        if response.status != 200:
+                            return {
+                                "status": "error",
+                                "error": f"PageSpeed API returned {response.status}",
+                                "viewport_ok": False,
+                                "responsive": False,
+                                "tap_targets_ok": False,
+                                "font_size_ok": False,
+                                "content_width_ok": False,
+                                "score": 0
+                            }
+
+                        data = await response.json()
+
+                        # Cache response
+                        api_cache.set(api_url, params, data)
 
                     # Extract mobile usability audits
                     lighthouse = data.get("lighthouseResult", {})
@@ -993,6 +1026,12 @@ class CIDeepAnalyzer(Agent):
         }
         """
         try:
+            # Get API config and cache
+            from aim.core.api_config import get_api_config, get_api_cache
+
+            api_config = get_api_config()
+            api_cache = get_api_cache()
+
             # PageSpeed Insights API endpoint
             api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
 
@@ -1002,28 +1041,39 @@ class CIDeepAnalyzer(Agent):
             }
 
             # Add API key if available
-            api_key = None  # TODO: Add to .env
-            if api_key:
-                params["key"] = api_key
+            if api_config.has_pagespeed_api_key():
+                params["key"] = api_config.get_pagespeed_api_key()
 
-            print(f"[CI Deep]     🔍 Analyzing Accessibility for {url}...")
+            # Check cache first
+            cached_response = api_cache.get(api_url, params)
+            if cached_response:
+                print(f"[CI Deep]     💾 Using cached Accessibility data")
+                data = cached_response
+            else:
+                # Rate limiting
+                await api_config.rate_limiter.acquire()
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(api_url, params=params, timeout=aiohttp.ClientTimeout(total=30)) as response:
-                    if response.status != 200:
-                        return {
-                            "status": "error",
-                            "error": f"PageSpeed API returned {response.status}",
-                            "color_contrast": False,
-                            "aria_valid": False,
-                            "alt_text": False,
-                            "form_labels": False,
-                            "keyboard_nav": False,
-                            "screen_reader": False,
-                            "score": 0
-                        }
+                print(f"[CI Deep]     🔍 Analyzing Accessibility for {url}...")
 
-                    data = await response.json()
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(api_url, params=params, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                        if response.status != 200:
+                            return {
+                                "status": "error",
+                                "error": f"PageSpeed API returned {response.status}",
+                                "color_contrast": False,
+                                "aria_valid": False,
+                                "alt_text": False,
+                                "form_labels": False,
+                                "keyboard_nav": False,
+                                "screen_reader": False,
+                                "score": 0
+                            }
+
+                        data = await response.json()
+
+                        # Cache response
+                        api_cache.set(api_url, params, data)
 
                     # Extract accessibility audits
                     lighthouse = data.get("lighthouseResult", {})
