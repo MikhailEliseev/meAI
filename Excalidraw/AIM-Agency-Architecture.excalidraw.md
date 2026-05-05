@@ -96,9 +96,6 @@ Ads ^dQzagVWy
 Ads
 Analytics ^AdsAnalytics
 
-Analytics
-Agent ^zHdShmV6
-
 LLM
 Integration ^IlT4UVDv
 
@@ -129,7 +126,12 @@ Generator ^InsightsGen
 AIM AGENCY ARCHITECTURE
 
 ✅ 5 Magisters (координация)
-✅ 24 Subagents (исполнение)
+✅ 20 Subagents (исполнение)
+  • SEO: 4 + SEO Analytics
+  • Content: 4 + Content Analytics
+  • Ads: 3 + Ads Analytics
+  • AI: 4 + AI Analytics
+  • Analytics: 4 субагента
 ✅ 15 CI Agents (разведка)
 ✅ Event Bus (коммуникация)
 ✅ Obsidian (память)
