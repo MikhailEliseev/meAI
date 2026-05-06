@@ -25,9 +25,16 @@ class CIOrchestrator(Agent):
     - Phases 10-16: Full pipeline (TW agents + Offer Generator)
     """
 
-    def __init__(self, agent_id: str, event_bus: EventBus):
-        super().__init__(agent_id, event_bus)
-        self.vault = ObsidianVault("AIM/obsidian/ci-orchestrator")
+    def __init__(
+        self,
+        agent_id: str,
+        event_bus: EventBus,
+        database_url: str = "sqlite+aiosqlite:///./data/meai.db",
+        vault_path: str = "AIM/obsidian/ci-orchestrator"
+    ):
+        super().__init__(agent_id, database_url, vault_path)
+        self.event_bus = event_bus
+        self.vault = ObsidianVault(vault_path)
         self.state_file = "AIM/data/ci-state.json"
 
         # Tier definitions
@@ -56,6 +63,110 @@ class CIOrchestrator(Agent):
             14: "tw-pattern-finder",
             15: "tw-traffic-analyzer",
             16: "ci-offer-generator"
+        }
+
+    async def execute_ci_analysis(
+        self,
+        task_data: Dict[str, Any],
+        progress_callback: Optional[Any] = None
+    ) -> Dict[str, Any]:
+        """
+        Execute CI analysis for Intelligence Magister integration.
+
+        Args:
+            task_data: Task data dict with:
+                - task_id: Task identifier
+                - niche: Business niche
+                - geo: Geographic location
+                - target_audience: Target audience (optional)
+                - price_segment: Price segment (optional)
+                - tier: Analysis tier (quick/deep/full)
+                - competitors: List of competitor URLs
+                - deadline: Task deadline (optional)
+            progress_callback: Async callback for progress updates
+                               Called with (phase: int, status: str, message: str)
+
+        Returns:
+            Dict with CI analysis results:
+                - task_id: Task identifier
+                - tier: Analysis tier used
+                - phases_executed: List of executed phase numbers
+                - execution_time_seconds: Total execution time
+                - competitors_analyzed: Number of competitors analyzed
+                - findings: Analysis findings dict
+                - reports: Dict with report file paths
+                - errors: List of error messages
+        """
+        start_time = datetime.now()
+        tier = task_data.get("tier", "deep")
+        task_id = task_data.get("task_id", "unknown")
+
+        try:
+            # Get phases for tier
+            phases = list(self.tiers[tier]["phases"])
+
+            # Execute phases with progress updates
+            findings = {}
+            errors = []
+
+            for phase_num in phases:
+                if progress_callback:
+                    await progress_callback(
+                        phase_num,
+                        "in_progress",
+                        f"Executing phase {phase_num}"
+                    )
+
+                try:
+                    phase_result = await self._execute_phase_stub(phase_num, task_data)
+                    findings[f"phase_{phase_num}"] = phase_result
+                except Exception as e:
+                    errors.append(f"Phase {phase_num} failed: {str(e)}")
+
+            # Calculate execution time
+            execution_time = (datetime.now() - start_time).total_seconds()
+
+            # Return structured result
+            return {
+                "task_id": task_id,
+                "tier": tier,
+                "phases_executed": phases,
+                "execution_time_seconds": int(execution_time),
+                "competitors_analyzed": len(task_data.get("competitors", [])),
+                "findings": findings,
+                "reports": {},  # TODO: Generate reports
+                "errors": errors
+            }
+
+        except Exception as e:
+            return {
+                "task_id": task_id,
+                "tier": tier,
+                "phases_executed": [],
+                "execution_time_seconds": 0,
+                "competitors_analyzed": 0,
+                "findings": {},
+                "reports": {},
+                "errors": [f"CI analysis failed: {str(e)}"]
+            }
+
+    async def _execute_phase_stub(self, phase_num: int, task_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Stub for phase execution (to be implemented with real CI agents).
+
+        Args:
+            phase_num: Phase number to execute
+            task_data: Task data
+
+        Returns:
+            Phase results dict
+        """
+        # TODO: Implement real phase execution with CI agents
+        await asyncio.sleep(0.1)  # Simulate work
+        return {
+            "phase": phase_num,
+            "status": "completed",
+            "data": f"Phase {phase_num} results"
         }
 
     async def execute_task(self, task: Task) -> TaskResult:
