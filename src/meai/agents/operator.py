@@ -547,6 +547,19 @@ class Operator:
         if any(kw in action_lower or kw in desc_lower for kw in ci_keywords):
             capabilities.append("monitor_competitors")
 
+        # SEO capabilities
+        seo_keywords = [
+            "seo", "keyword", "keywords", "ключевые слова", "ключевое слово",
+            "optimize", "оптимизация", "оптимизировать",
+            "ranking", "позиции", "ранжирование",
+            "content optimization", "оптимизация контента",
+            "technical seo", "технический seo",
+            "search engine", "поисковая оптимизация"
+        ]
+
+        if any(kw in action_lower or kw in desc_lower for kw in seo_keywords):
+            capabilities.append("analyze_keywords")
+
         # General intelligence capabilities
         if any(kw in action_lower or kw in desc_lower for kw in ["market", "research", "intelligence", "trends", "insights"]):
             capabilities.extend(["research_market", "analyze_trends", "identify_opportunities"])
