@@ -560,6 +560,19 @@ class Operator:
         if any(kw in action_lower or kw in desc_lower for kw in seo_keywords):
             capabilities.append("analyze_keywords")
 
+        # Content capabilities
+        content_keywords = [
+            "content", "контент",
+            "article", "статья",
+            "write", "написать", "писать",
+            "generate", "генерировать", "создать",
+            "blog", "блог",
+            "copywriting", "копирайтинг"
+        ]
+
+        if any(kw in action_lower or kw in desc_lower for kw in content_keywords):
+            capabilities.append("generate_content")
+
         # General intelligence capabilities
         if any(kw in action_lower or kw in desc_lower for kw in ["market", "research", "intelligence", "trends", "insights"]):
             capabilities.extend(["research_market", "analyze_trends", "identify_opportunities"])
