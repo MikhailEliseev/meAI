@@ -182,6 +182,7 @@ class CIOrchestrator(Agent):
             # Execute phases with progress updates
             findings = {}
             errors = []
+            competitors_list = task_data.get("competitors", [])  # Initial URLs
 
             for phase_num in phases:
                 if progress_callback:
@@ -195,15 +196,38 @@ class CIOrchestrator(Agent):
                     # Get agent(s) for this phase
                     agent_names = self.phase_agents.get(phase_num)
 
+                    # Prepare phase-specific task data
+                    phase_task_data = task_data.copy()
+
+                    # Phase 1 uses initial URLs, Phase 2+ uses results from Phase 1
+                    if phase_num == 1:
+                        phase_task_data["competitors"] = competitors_list
+                    else:
+                        # Use top_for_analysis from Phase 1 if available
+                        if "phase_1" in findings and "result" in findings["phase_1"]:
+                            phase1_result = findings["phase_1"]["result"]
+                            if "top_for_analysis" in phase1_result:
+                                phase_task_data["competitors"] = phase1_result["top_for_analysis"]
+                            else:
+                                # Fallback: convert URLs to simple objects
+                                phase_task_data["competitors"] = [
+                                    {"name": url, "url": url} for url in competitors_list
+                                ]
+                        else:
+                            # Fallback: convert URLs to simple objects
+                            phase_task_data["competitors"] = [
+                                {"name": url, "url": url} for url in competitors_list
+                            ]
+
                     if isinstance(agent_names, list):
                         # Phase 5: Parallel execution
                         phase_result = await self._execute_parallel_phase(
-                            phase_num, agent_names, task_data
+                            phase_num, agent_names, phase_task_data
                         )
                     else:
                         # Single agent execution
                         phase_result = await self._execute_single_phase(
-                            phase_num, agent_names, task_data
+                            phase_num, agent_names, phase_task_data
                         )
 
                     findings[f"phase_{phase_num}"] = phase_result
