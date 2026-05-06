@@ -7,6 +7,7 @@ CI Orchestrator Agent - Universal Competitive Intelligence System
 
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
+from pathlib import Path
 import json
 import asyncio
 import logging
@@ -212,6 +213,9 @@ class CIOrchestrator(Agent):
             # Calculate execution time
             execution_time = (datetime.now() - start_time).total_seconds()
 
+            # Generate reports
+            reports = await self._generate_reports(task_id, findings, task_data)
+
             # Return structured result
             return {
                 "task_id": task_id,
@@ -220,7 +224,7 @@ class CIOrchestrator(Agent):
                 "execution_time_seconds": int(execution_time),
                 "competitors_analyzed": len(task_data.get("competitors", [])),
                 "findings": findings,
-                "reports": {},  # TODO: Generate reports
+                "reports": reports,
                 "errors": errors
             }
 
@@ -323,6 +327,131 @@ class CIOrchestrator(Agent):
             "results": agent_results,
             "errors": errors
         }
+
+    async def _generate_reports(
+        self,
+        task_id: str,
+        findings: Dict[str, Any],
+        task_data: Dict[str, Any]
+    ) -> Dict[str, str]:
+        """Generate simple HTML/JSON reports from CI findings"""
+        logger.info(f"Starting report generation for task {task_id}")
+
+        try:
+            # Generate reports directory
+            reports_dir = Path("AIM/reports") / task_id
+            reports_dir.mkdir(parents=True, exist_ok=True)
+
+            # Generate simple HTML report
+            html_path = reports_dir / "report.html"
+            html_content = self._generate_simple_html(task_id, findings, task_data)
+            html_path.write_text(html_content, encoding='utf-8')
+            logger.info(f"HTML report generated: {html_path}")
+
+            # Generate JSON report
+            json_path = reports_dir / "report.json"
+            json_content = {
+                "task_id": task_id,
+                "niche": task_data.get("niche", ""),
+                "geo": task_data.get("geo", ""),
+                "tier": task_data.get("tier", ""),
+                "analysis_date": datetime.now(timezone.utc).isoformat(),
+                "competitors": task_data.get("competitors", []),
+                "findings": findings
+            }
+            json_path.write_text(json.dumps(json_content, indent=2, ensure_ascii=False), encoding='utf-8')
+            logger.info(f"JSON report generated: {json_path}")
+
+            result = {
+                "html_path": str(html_path),
+                "json_path": str(json_path)
+            }
+            logger.info(f"Report generation complete: {result}")
+            return result
+
+        except Exception as e:
+            logger.error(f"Report generation failed: {e}", exc_info=True)
+            return {}
+
+    def _generate_simple_html(
+        self,
+        task_id: str,
+        findings: Dict[str, Any],
+        task_data: Dict[str, Any]
+    ) -> str:
+        """Generate simple HTML report"""
+        niche = task_data.get("niche", "Unknown")
+        geo = task_data.get("geo", "Unknown")
+        tier = task_data.get("tier", "unknown")
+        competitors = task_data.get("competitors", [])
+
+        html = f"""<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CI Analysis Report - {task_id}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }}
+        .container {{ max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+        h1 {{ color: #333; border-bottom: 3px solid #4CAF50; padding-bottom: 10px; }}
+        h2 {{ color: #555; margin-top: 30px; }}
+        .meta {{ background: #f9f9f9; padding: 15px; border-radius: 4px; margin: 20px 0; }}
+        .meta p {{ margin: 5px 0; }}
+        .phase {{ background: #fff; border-left: 4px solid #2196F3; padding: 15px; margin: 15px 0; }}
+        .phase h3 {{ margin-top: 0; color: #2196F3; }}
+        .success {{ color: #4CAF50; }}
+        .failed {{ color: #f44336; }}
+        pre {{ background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Competitive Intelligence Analysis</h1>
+
+        <div class="meta">
+            <p><strong>Task ID:</strong> {task_id}</p>
+            <p><strong>Niche:</strong> {niche}</p>
+            <p><strong>Geo:</strong> {geo}</p>
+            <p><strong>Tier:</strong> {tier.upper()}</p>
+            <p><strong>Competitors:</strong> {len(competitors)}</p>
+            <p><strong>Date:</strong> {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
+        </div>
+
+        <h2>📊 Analysis Results</h2>
+"""
+
+        # Add findings for each phase
+        for phase_key, phase_data in findings.items():
+            phase_num = phase_key.replace("phase_", "")
+            agent_name = phase_data.get("agent", "unknown")
+            status = phase_data.get("status", "unknown")
+            status_class = "success" if status == "success" else "failed"
+
+            html += f"""
+        <div class="phase">
+            <h3>Phase {phase_num}: {agent_name}</h3>
+            <p><strong>Status:</strong> <span class="{status_class}">{status}</span></p>
+"""
+
+            # Add result summary if available
+            if "result" in phase_data and isinstance(phase_data["result"], dict):
+                result = phase_data["result"]
+                if "total_found" in result:
+                    html += f"<p><strong>Total Found:</strong> {result['total_found']}</p>"
+                if "top_selected" in result:
+                    html += f"<p><strong>Top Selected:</strong> {result['top_selected']}</p>"
+
+            html += "        </div>\n"
+
+        html += """
+        <h2>📄 Full Data</h2>
+        <p>Complete analysis data is available in the JSON report.</p>
+    </div>
+</body>
+</html>
+"""
+        return html
 
     async def _execute_phase_stub(self, phase_num: int, task_data: Dict[str, Any]) -> Dict[str, Any]:
         """
