@@ -571,7 +571,8 @@ class CIDeepAnalyzer(Agent):
 
     async def _analyze_single_page(self, url: str, page_type: str) -> Dict[str, Any]:
         """Analyze single page deeply with error handling per detector"""
-        html = await self._fetch_url(url)
+        # Fetch URL with headers (Sprint 4: Fix Issue 1)
+        html, headers = await self._fetch_url_with_headers(url)
 
         if not html:
             return {
@@ -592,7 +593,8 @@ class CIDeepAnalyzer(Agent):
         result["schema"] = self._safe_detector_call(self._analyze_schema, html)
 
         # NEW: Business-oriented detectors (Sprint 1)
-        result["cms"] = self._safe_detector_call(self._detect_cms, html, {})
+        # Pass real headers to CMS and Hosting detectors (Sprint 4: Fix Issue 1)
+        result["cms"] = self._safe_detector_call(self._detect_cms, html, headers)
         result["analytics"] = self._safe_detector_call(self._detect_analytics, html)
         result["call_tracking"] = self._safe_detector_call(self._detect_call_tracking, html)
         result["live_chat"] = self._safe_detector_call(self._detect_live_chat, html)
@@ -600,8 +602,17 @@ class CIDeepAnalyzer(Agent):
         result["booking_systems"] = self._safe_detector_call(self._detect_booking_systems, html)
         result["payment_systems"] = self._safe_detector_call(self._detect_payment_systems, html)
         result["cdn"] = self._safe_detector_call(self._detect_cdn, html)
-        result["hosting"] = self._safe_detector_call(self._detect_hosting, html, {})
+        result["hosting"] = self._safe_detector_call(self._detect_hosting, html, headers)
         result["ab_testing"] = self._safe_detector_call(self._detect_ab_testing, html)
+
+        # NEW: Marketing intelligence detectors (Sprint 2)
+        result["retargeting"] = self._safe_detector_call(self._detect_retargeting, html)
+        result["email_marketing"] = self._safe_detector_call(self._detect_email_marketing, html)
+        result["crm"] = self._safe_detector_call(self._detect_crm, html)
+        result["quiz_lead_magnets"] = self._safe_detector_call(self._detect_quiz_lead_magnets, html)
+        result["social_proof"] = self._safe_detector_call(self._detect_social_proof, html)
+        result["geo_targeting"] = self._safe_detector_call(self._detect_geo_targeting, html)
+        result["promo_mechanics"] = self._safe_detector_call(self._detect_promo_mechanics, html)
 
         # Security analysis needs both url and html (async)
         try:
@@ -746,10 +757,11 @@ class CIDeepAnalyzer(Agent):
                 evidence.append(f"X-Powered-By: {headers['X-Powered-By']}")
                 confidence = 1.0
 
-        # Check HTML patterns
+        # Check HTML patterns (Sprint 4: Fix Issue 2 - case-insensitive)
         if not detected:
+            html_lower = html.lower()
             for cms, patterns_list in patterns.items():
-                matches = [p for p in patterns_list if p in html]
+                matches = [p for p in patterns_list if p.lower() in html_lower]
                 if matches:
                     detected = cms
                     evidence = matches
@@ -1060,6 +1072,173 @@ class CIDeepAnalyzer(Agent):
         return {
             "tool": detected_tool,
             "detected": bool(detected_tool),
+            "confidence": confidence,
+            "business_context": context
+        }
+
+    # ========== NEW: Marketing Intelligence Detectors (Sprint 2) ==========
+
+    def _detect_retargeting(self, html: str) -> Dict[str, Any]:
+        """Detect retargeting pixels"""
+        pixels = {
+            "Facebook": ["facebook.net/en_US/fbevents.js", r"fbq\("],
+            "VK": ["vk.com/js/api/openapi.js", r"VK\.Retargeting"],
+            "myTarget": ["top-fwz1.mail.ru", "mytarget"],
+            "Google Ads": ["googleadservices.com", "google_conversion"]
+        }
+
+        detected = {}
+        for pixel, patterns in pixels.items():
+            if any(re.search(p, html, re.IGNORECASE) for p in patterns):
+                detected[pixel] = True
+
+        context = f"Ретаргетинг: {', '.join(detected.keys())}" if detected else "Нет ретаргетинга - теряют 70% посетителей"
+
+        return {
+            "pixels": detected,
+            "count": len(detected),
+            "confidence": 1.0 if detected else 0.0,
+            "business_context": context
+        }
+
+    def _detect_email_marketing(self, html: str) -> Dict[str, Any]:
+        """Detect email marketing platforms"""
+        platforms = {
+            "Mailchimp": ["mailchimp.com", "mc.us"],
+            "SendPulse": ["sendpulse.com"],
+            "Unisender": ["unisender.com"],
+            "GetResponse": ["getresponse.com"]
+        }
+
+        detected_platform = None
+        confidence = 0.0
+
+        for platform, patterns in platforms.items():
+            if any(p in html.lower() for p in patterns):
+                detected_platform = platform
+                confidence = 1.0
+                break
+
+        context = f"Email-маркетинг {detected_platform} - автоматизация коммуникаций" if detected_platform else "Нет email-маркетинга - упускают повторные продажи"
+
+        return {
+            "platform": detected_platform,
+            "detected": bool(detected_platform),
+            "confidence": confidence,
+            "business_context": context
+        }
+
+    def _detect_crm(self, html: str) -> Dict[str, Any]:
+        """Detect CRM integration"""
+        crms = {
+            "AmoCRM": ["amocrm.ru", "amocrm.com"],
+            "Bitrix24": ["bitrix24.ru", "b24-web-form"],
+            "Salesforce": ["salesforce.com", "force.com"],
+            "HubSpot": ["hubspot.com", "hs-scripts"]
+        }
+
+        detected_crm = None
+        confidence = 0.0
+
+        for crm, patterns in crms.items():
+            if any(p in html.lower() for p in patterns):
+                detected_crm = crm
+                confidence = 1.0
+                break
+
+        context = f"CRM {detected_crm} - системный учёт лидов" if detected_crm else "Нет CRM - теряют лиды и не контролируют воронку"
+
+        return {
+            "crm": detected_crm,
+            "detected": bool(detected_crm),
+            "confidence": confidence,
+            "business_context": context
+        }
+
+    def _detect_quiz_lead_magnets(self, html: str) -> Dict[str, Any]:
+        """Detect quiz and lead magnet systems"""
+        patterns = [
+            "quiz", "квиз", "тест",
+            "calculator", "калькулятор",
+            "lead magnet", "лид-магнит",
+            "interactive", "интерактив"
+        ]
+
+        detected = any(p in html.lower() for p in patterns)
+        confidence = 0.7 if detected else 0.0  # Lower confidence (pattern-based)
+
+        context = "Квизы/лид-магниты - повышают конверсию в 2-3 раза" if detected else "Нет квизов - упускают тёплых лидов"
+
+        return {
+            "detected": detected,
+            "confidence": confidence,
+            "business_context": context
+        }
+
+    def _detect_social_proof(self, html: str) -> Dict[str, Any]:
+        """Detect social proof elements"""
+        patterns = {
+            "reviews": ["отзыв", "review", "testimonial"],
+            "ratings": ["rating", "рейтинг", "★", "⭐"],
+            "counters": ["клиент", "client", "пациент", "patient"],
+            "certificates": ["сертификат", "certificate", "award"]
+        }
+
+        detected = {}
+        for element, element_patterns in patterns.items():
+            if any(p in html.lower() for p in element_patterns):
+                detected[element] = True
+
+        confidence = min(1.0, len(detected) * 0.3)  # 0.3 per element
+        context = f"Social proof: {', '.join(detected.keys())}" if detected else "Нет social proof - низкое доверие"
+
+        return {
+            "elements": detected,
+            "count": len(detected),
+            "confidence": confidence,
+            "business_context": context
+        }
+
+    def _detect_geo_targeting(self, html: str) -> Dict[str, Any]:
+        """Detect geo-targeting"""
+        patterns = [
+            "geolocation", "геолокация",
+            "ip-detect", "определение города",
+            "ваш город", "your city",
+            "выберите город", "select city"
+        ]
+
+        detected = any(p in html.lower() for p in patterns)
+        confidence = 0.8 if detected else 0.0
+
+        context = "Гео-таргетинг - персонализация по городам" if detected else "Нет гео-таргетинга - одинаковый контент для всех"
+
+        return {
+            "detected": detected,
+            "confidence": confidence,
+            "business_context": context
+        }
+
+    def _detect_promo_mechanics(self, html: str) -> Dict[str, Any]:
+        """Detect promotional mechanics"""
+        mechanics = {
+            "discount": ["скидка", "discount", "%", "акция", "sale"],
+            "timer": ["timer", "таймер", "countdown", "осталось"],
+            "popup": ["popup", "modal", "всплывающ"],
+            "urgency": ["срочно", "urgent", "ограничен", "limited"]
+        }
+
+        detected = {}
+        for mechanic, mechanic_patterns in mechanics.items():
+            if any(p in html.lower() for p in mechanic_patterns):
+                detected[mechanic] = True
+
+        confidence = min(1.0, len(detected) * 0.3)
+        context = f"Промо-механики: {', '.join(detected.keys())}" if detected else "Нет промо-механик - упускают импульсивные покупки"
+
+        return {
+            "mechanics": detected,
+            "count": len(detected),
             "confidence": confidence,
             "business_context": context
         }
@@ -2197,3 +2376,36 @@ class CIDeepAnalyzer(Agent):
         except Exception as e:
             print(f"[CI Deep]   ⚠️  Fetch error {url}: {e}")
             return ""
+
+    async def _fetch_url_with_headers(self, url: str) -> tuple[str, dict]:
+        """Fetch URL and return both HTML and headers
+
+        Returns:
+            tuple: (html, headers) where headers is a dict
+        """
+        try:
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+            # Rotate User-Agent
+            user_agent = self.user_agents[self.current_ua_index]
+            self.current_ua_index = (self.current_ua_index + 1) % len(self.user_agents)
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    url,
+                    ssl=ssl_context,
+                    timeout=aiohttp.ClientTimeout(total=30),
+                    headers={'User-Agent': user_agent}
+                ) as response:
+                    if response.status == 200:
+                        html = await response.text()
+                        # Convert headers to dict
+                        headers_dict = dict(response.headers)
+                        return html, headers_dict
+                    return "", {}
+
+        except Exception as e:
+            print(f"[CI Deep]   ⚠️  Fetch error {url}: {e}")
+            return "", {}
