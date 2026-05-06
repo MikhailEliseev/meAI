@@ -1,21 +1,31 @@
 {
   "context": {
-    "run_id": "7A60D837-18FF-45A5-B4CB-F82121BE57DA",
+    "run_id": "NEW-RUN-2026-05-06",
     "onboarded": true,
     "governance_mode": "critical",
     "git_workflow_mode": "stacked_prs",
-    "note": "Spec reviewers running in background, proceeding with plan",
     "phase1_complete": true,
-    "awaiting_user_approval": true,
     "phase1_approved": true,
-    "charter_file": "docs/superflow/CHARTER.md",
+    "charter_file": "docs/superflow-intelligence-integration/CHARTER.md",
+    "spec_file": "docs/superflow-intelligence-integration/SPEC.md",
+    "plan_file": "docs/superflow-intelligence-integration/PLAN.md",
+    "awaiting_user_approval": true,
     "spec_version": "1.1",
-    "security_fixes_applied": true
+    "revisions_applied": true,
+    "execution_start": "2026-05-06T15:43:08Z",
+    "sprint1_complete": true,
+    "sprint1_commit": "078fa3d",
+    "sprint2_complete": true,
+    "sprint2_commit": "1066e55",
+    "sprint3_complete": true,
+    "sprint3_commit": "f36f52b",
+    "all_sprints_complete": true,
+    "execution_end": "2026-05-06T16:17:57Z"
   },
   "phase": 2,
   "version": 1,
-  "phase_label": "Product Discovery",
-  "stage": "ready",
-  "stage_index": 0,
-  "last_updated": "2026-05-05T20:20:09.819792+00:00"
+  "phase_label": "Execution",
+  "stage": "complete",
+  "stage_index": 3,
+  "last_updated": "2026-05-06T15:38:41Z"
 }
