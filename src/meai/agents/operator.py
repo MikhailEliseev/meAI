@@ -573,6 +573,19 @@ class Operator:
         if any(kw in action_lower or kw in desc_lower for kw in content_keywords):
             capabilities.append("generate_content")
 
+        # Ads capabilities
+        ads_keywords = [
+            "ads", "реклама",
+            "campaign", "кампания",
+            "advertising", "рекламная",
+            "ppc", "контекстная реклама",
+            "yandex direct", "яндекс директ",
+            "google ads", "гугл реклама"
+        ]
+
+        if any(kw in action_lower or kw in desc_lower for kw in ads_keywords):
+            capabilities.append("create_campaign")
+
         # General intelligence capabilities
         if any(kw in action_lower or kw in desc_lower for kw in ["market", "research", "intelligence", "trends", "insights"]):
             capabilities.extend(["research_market", "analyze_trends", "identify_opportunities"])
