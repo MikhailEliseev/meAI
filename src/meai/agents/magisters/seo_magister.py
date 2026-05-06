@@ -1,11 +1,17 @@
-"""SEO Magister - SEO specialist agent"""
+"""SEO Magister - SEO optimization specialist agent"""
 
+import asyncio
+import json
+import logging
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from meai.agents.magisters.base_magister import BaseMagister
 from meai.agents.base_agent import Task, TaskResult
-from meai.events.event_bus import EventBus
+from meai.events.event_bus import EventBus, Message
+
+logger = logging.getLogger(__name__)
 
 
 class SEOMagister(BaseMagister):
@@ -15,10 +21,10 @@ class SEOMagister(BaseMagister):
 
     Capabilities:
     - analyze_keywords: Keyword research and analysis
-    - optimize_content: On-page SEO optimization
-    - analyze_competitors: Competitor SEO analysis
-    - track_rankings: Position tracking and monitoring
+    - optimize_content: Content SEO optimization
     - audit_technical_seo: Technical SEO audit
+    - analyze_competitors: Competitor SEO analysis
+    - track_rankings: Position tracking
     """
 
     def __init__(
@@ -27,6 +33,7 @@ class SEOMagister(BaseMagister):
         event_bus: EventBus = None,
         vault_path: Path = None,
         database_url: str = "sqlite+aiosqlite:///./data/meai.db",
+        orchestrators: dict[str, Any] = None,
     ):
         """Initialize SEO Magister
 
@@ -35,6 +42,8 @@ class SEOMagister(BaseMagister):
             event_bus: Event bus for communication
             vault_path: Path to Obsidian vault
             database_url: Database URL
+            orchestrators: Dict of orchestrator name -> orchestrator instance
+                          e.g., {"ci": SEOOrchestrator(...)}
         """
         if vault_path is None:
             vault_path = Path("./obsidian/seo-magister")
@@ -48,6 +57,9 @@ class SEOMagister(BaseMagister):
             database_url=database_url,
         )
 
+        self.orchestrators = orchestrators or {}
+        self.current_task_id = None
+
     def get_capabilities(self) -> list[str]:
         """Get SEO Magister capabilities"""
         base_capabilities = super().get_capabilities()
@@ -55,9 +67,9 @@ class SEOMagister(BaseMagister):
         seo_capabilities = [
             "analyze_keywords",
             "optimize_content",
+            "audit_technical_seo",
             "analyze_competitors",
             "track_rankings",
-            "audit_technical_seo",
         ]
 
         return base_capabilities + seo_capabilities
@@ -65,168 +77,303 @@ class SEOMagister(BaseMagister):
     async def execute_task(self, task: Task) -> TaskResult:
         """Execute SEO-specific task
 
+        Routes to appropriate handler based on action:
+        - analyze_keywords → _handle_keyword_analysis()
+        - optimize_content → _handle_content_optimization()
+        - audit_technical_seo → _handle_technical_audit()
+        """
+        self.current_task_id = task.task_id
+        action = task.data.get("action", "")
+
+        logger.info(f"SEO Magister executing task: {task.task_id}, action: {action}")
+
+        try:
+            if action == "analyze_keywords":
+                return await self._handle_keyword_analysis(task)
+            elif action == "optimize_content":
+                return await self._handle_content_optimization(task)
+            elif action == "audit_technical_seo":
+                return await self._handle_technical_audit(task)
+            else:
+                return await self._handle_generic_seo(task)
+        except Exception as e:
+            logger.error(f"Task execution failed: {e}", exc_info=True)
+            return self._create_error_result(task, e)
+        finally:
+            self.current_task_id = None
+
+    async def _handle_keyword_analysis(self, task: Task) -> TaskResult:
+        """Handle competitor analysis via SEO system"""
+        logger.info(f"Handling competitor analysis for task {task.task_id}")
+
+        try:
+            # 1. Get orchestrator via dependency injection
+            orchestrator = self.orchestrators.get("ci")
+            if not orchestrator:
+                raise ValueError("CI orchestrator not registered")
+
+            # 2. Create CI task from Intelligence task
+            ci_task_data = {
+                "task_id": task.task_id,
+                "niche": task.data.get("niche", ""),
+                "geo": task.data.get("geo", ""),
+                "target_audience": task.data.get("target_audience", ""),
+                "price_segment": task.data.get("price_segment", "mid"),
+                "tier": task.data.get("depth", "deep"),
+                "competitors": task.data.get("competitors", []),
+                "deadline": task.deadline,
+            }
+
+            # 3. Set timeout based on tier
+            tier = ci_task_data["tier"]
+            timeout_seconds = {
+                "quick": 900,   # 15 min
+                "deep": 2700,   # 45 min
+                "full": 5400    # 90 min
+            }.get(tier, 2700)
+
+            # 4. Execute with timeout and progress updates
+            await self._publish_progress(0, "started", f"Starting {tier} CI analysis")
+
+            ci_result = await asyncio.wait_for(
+                orchestrator.execute_ci_analysis(
+                    ci_task_data,
+                    progress_callback=self._publish_progress
+                ),
+                timeout=timeout_seconds
+            )
+
+            # 5. Validate result
+            validated_result = self._validate_seo_result(ci_result)
+
+            # 6. Store in vault
+            await self._store_seo_result(validated_result)
+
+            await self._publish_progress(100, "completed", "CI analysis complete")
+
+            # 7. Return result
+            return TaskResult(
+                subtask_id=task.task_id,
+                agent_id=self.agent_id,
+                action=task.data.get("action", "analyze_keywords"),
+                status="success",
+                result=validated_result,
+                error=None,
+                duration_seconds=(datetime.now(timezone.utc) - datetime.now(timezone.utc)).total_seconds(),
+                completed_at=datetime.now(timezone.utc)
+            )
+
+        except asyncio.TimeoutError:
+            logger.error(f"CI analysis timed out after {timeout_seconds}s")
+            return self._create_timeout_result(task, timeout_seconds)
+        except Exception as e:
+            logger.error(f"Competitor analysis failed: {e}", exc_info=True)
+            return self._create_error_result(task, e)
+
+    async def _publish_progress(self, phase: int, status: str, message: str) -> None:
+        """Publish progress update via Event Bus
+
         Args:
-            task: Task to execute
+            phase: Phase number (0-100 for percentage, or phase number)
+            status: Status string (started, in_progress, completed, failed)
+            message: Human-readable progress message
+        """
+        if not self.event_bus or not self.current_task_id:
+            return
+
+        try:
+            await self.event_bus.publish(Message(
+                from_agent=self.agent_id,
+                to_agent="operator-1",
+                message_type="task_progress",
+                priority=2,  # P2 = Normal
+                payload={
+                    "task_id": self.current_task_id,
+                    "agent_id": self.agent_id,
+                    "phase": phase,
+                    "status": status,
+                    "message": message
+                },
+                timestamp=datetime.now(timezone.utc).isoformat()
+            ))
+            logger.debug(f"Progress published: phase={phase}, status={status}")
+        except Exception as e:
+            logger.warning(f"Failed to publish progress: {e}")
+
+    def _validate_seo_result(self, result: dict[str, Any]) -> dict[str, Any]:
+        """Validate CI result structure
+
+        Args:
+            result: CI result dictionary
 
         Returns:
-            Task result
+            Validated result
+
+        Raises:
+            ValueError: If validation fails
         """
-        capability = task.metadata.get("capability")
+        logger.debug("Validating CI result")
 
-        # SEO-specific capabilities
-        if capability == "analyze_keywords":
-            return await self._handle_analyze_keywords(task)
-        elif capability == "optimize_content":
-            return await self._handle_optimize_content(task)
-        elif capability == "analyze_competitors":
-            return await self._handle_analyze_competitors(task)
-        elif capability == "track_rankings":
-            return await self._handle_track_rankings(task)
-        elif capability == "audit_technical_seo":
-            return await self._handle_audit_technical_seo(task)
-        else:
-            # Fallback to base capabilities
-            return await super().execute_task(task)
+        try:
+            # Validate required fields
+            if not result.get("task_id"):
+                raise ValueError("Missing task_id in CI result")
 
-    async def _handle_analyze_keywords(self, task: Task) -> TaskResult:
-        """Handle keyword analysis task
+            if not result.get("findings"):
+                raise ValueError("Missing findings in CI result")
+
+            competitors_analyzed = result.get("competitors_analyzed", 0)
+            if competitors_analyzed < 1:
+                raise ValueError("No competitors analyzed")
+
+            # Validate reports exist if specified
+            reports = result.get("reports", {})
+            if reports:
+                for report_type, path in reports.items():
+                    if path and not Path(path).exists():
+                        logger.warning(f"Report file not found: {path}")
+
+            logger.info(f"CI result validated: {competitors_analyzed} competitors analyzed")
+            return result
+
+        except (ValueError, KeyError) as e:
+            logger.error(f"CI result validation failed: {e}")
+            raise ValueError(f"Invalid CI result: {e}")
+
+    async def _store_seo_result(self, result: dict[str, Any]) -> None:
+        """Store CI result in Obsidian vault
 
         Args:
-            task: Task with keywords to analyze
-
-        Returns:
-            Task result with keyword analysis
+            result: Validated CI result
         """
-        keywords = task.metadata.get("keywords", [])
+        try:
+            # Create markdown file in vault
+            task_id = result.get("task_id", "unknown")
+            result_file = self.vault_path / "wiki" / "sources" / f"ci-{task_id}.md"
 
-        # Search for keyword knowledge
-        results = []
-        for keyword in keywords:
-            knowledge = await self.search_knowledge(
-                query=f"keyword research {keyword}",
+            # Format findings for markdown
+            findings = result.get("findings", {})
+            findings_json = json.dumps(findings, indent=2, ensure_ascii=False)
+
+            # Create content
+            content = f"""---
+type: ci-analysis
+task_id: {task_id}
+tier: {result.get('tier', 'unknown')}
+date: {datetime.now(timezone.utc).isoformat()}
+status: processed
+competitors_analyzed: {result.get('competitors_analyzed', 0)}
+execution_time: {result.get('execution_time_seconds', 0)}s
+---
+
+# CI Analysis: {task_id}
+
+## Summary
+- **Tier:** {result.get('tier', 'unknown')}
+- **Phases:** {result.get('phases_executed', [])}
+- **Competitors:** {result.get('competitors_analyzed', 0)}
+- **Time:** {result.get('execution_time_seconds', 0)}s
+
+## Findings
+
+```json
+{findings_json}
+```
+
+## Reports
+- **PDF:** {result.get('reports', {}).get('pdf_path', 'N/A')}
+- **HTML:** {result.get('reports', {}).get('html_path', 'N/A')}
+
+## Errors
+{result.get('errors', [])}
+"""
+
+            # Write to vault
+            result_file.parent.mkdir(parents=True, exist_ok=True)
+            result_file.write_text(content, encoding='utf-8')
+
+            logger.info(f"CI result stored in vault: {result_file}")
+
+        except Exception as e:
+            logger.error(f"Failed to store CI result: {e}", exc_info=True)
+            # Don't raise - storage failure shouldn't fail the task
+
+    async def _handle_content_optimization(self, task: Task) -> TaskResult:
+        """Handle market research task
+
+        TODO: Implement market research logic
+        For now, uses generic knowledge search
+        """
+        logger.info(f"Handling market research for task {task.task_id}")
+        return await self._handle_generic_seo(task)
+
+    async def _handle_technical_audit(self, task: Task) -> TaskResult:
+        """Handle trend analysis task
+
+        TODO: Implement trend analysis logic
+        For now, uses generic knowledge search
+        """
+        logger.info(f"Handling trend analysis for task {task.task_id}")
+        return await self._handle_generic_seo(task)
+
+    async def _handle_generic_seo(self, task: Task) -> TaskResult:
+        """Handle generic intelligence task via knowledge search
+
+        Falls back to hybrid search when no specific handler exists
+        """
+        logger.info(f"Handling generic intelligence for task {task.task_id}")
+
+        try:
+            # Use hybrid search from BaseMagister
+            query = task.description
+            results = await self.search_knowledge(
+                query=query,
                 search_local=True,
                 search_teacher=True,
+                search_researcher=False,  # Don't trigger researcher for generic tasks
             )
-            results.append({
-                "keyword": keyword,
-                "knowledge": knowledge,
-            })
 
+            return TaskResult(
+                subtask_id=task.task_id,
+                agent_id=self.agent_id,
+                action=task.data.get("action", "generic"),
+                status="success",
+                result={
+                    "query": query,
+                    "results": results,
+                    "source": "knowledge_search"
+                },
+                error=None,
+                duration_seconds=0.0,
+                completed_at=datetime.now(timezone.utc)
+            )
+
+        except Exception as e:
+            logger.error(f"Generic intelligence task failed: {e}", exc_info=True)
+            return self._create_error_result(task, e)
+
+    def _create_timeout_result(self, task: Task, timeout_seconds: int) -> TaskResult:
+        """Create timeout error result"""
         return TaskResult(
-            task_id=task.task_id,
-            status="completed",
-            result={
-                "keywords_analyzed": len(keywords),
-                "results": results,
-            },
+            subtask_id=task.task_id,
+            agent_id=self.agent_id,
+            action=task.data.get("action", "unknown"),
+            status="failed",
+            result={},
+            error=f"Task timed out after {timeout_seconds} seconds",
+            duration_seconds=float(timeout_seconds),
+            completed_at=datetime.now(timezone.utc)
         )
 
-    async def _handle_optimize_content(self, task: Task) -> TaskResult:
-        """Handle content optimization task
-
-        Args:
-            task: Task with content to optimize
-
-        Returns:
-            Task result with optimization suggestions
-        """
-        content = task.metadata.get("content", "")
-        target_keywords = task.metadata.get("target_keywords", [])
-
-        # Search for optimization knowledge
-        optimization_knowledge = await self.search_knowledge(
-            query="on-page SEO optimization best practices",
-            search_local=True,
-            search_teacher=True,
-        )
-
+    def _create_error_result(self, task: Task, error: Exception) -> TaskResult:
+        """Create error result"""
         return TaskResult(
-            task_id=task.task_id,
-            status="completed",
-            result={
-                "content_length": len(content),
-                "target_keywords": target_keywords,
-                "optimization_knowledge": optimization_knowledge,
-            },
-        )
-
-    async def _handle_analyze_competitors(self, task: Task) -> TaskResult:
-        """Handle competitor analysis task
-
-        Args:
-            task: Task with competitors to analyze
-
-        Returns:
-            Task result with competitor analysis
-        """
-        competitors = task.metadata.get("competitors", [])
-
-        # Search for competitor analysis knowledge
-        analysis_knowledge = await self.search_knowledge(
-            query="competitor SEO analysis techniques",
-            search_local=True,
-            search_teacher=True,
-        )
-
-        return TaskResult(
-            task_id=task.task_id,
-            status="completed",
-            result={
-                "competitors_analyzed": len(competitors),
-                "analysis_knowledge": analysis_knowledge,
-            },
-        )
-
-    async def _handle_track_rankings(self, task: Task) -> TaskResult:
-        """Handle ranking tracking task
-
-        Args:
-            task: Task with keywords to track
-
-        Returns:
-            Task result with tracking setup
-        """
-        keywords = task.metadata.get("keywords", [])
-
-        # Search for ranking tracking knowledge
-        tracking_knowledge = await self.search_knowledge(
-            query="SEO ranking tracking tools and methods",
-            search_local=True,
-            search_teacher=True,
-        )
-
-        return TaskResult(
-            task_id=task.task_id,
-            status="completed",
-            result={
-                "keywords_tracked": len(keywords),
-                "tracking_knowledge": tracking_knowledge,
-            },
-        )
-
-    async def _handle_audit_technical_seo(self, task: Task) -> TaskResult:
-        """Handle technical SEO audit task
-
-        Args:
-            task: Task with site to audit
-
-        Returns:
-            Task result with audit findings
-        """
-        site_url = task.metadata.get("site_url", "")
-
-        # Search for technical SEO audit knowledge
-        audit_knowledge = await self.search_knowledge(
-            query="technical SEO audit checklist",
-            search_local=True,
-            search_teacher=True,
-        )
-
-        return TaskResult(
-            task_id=task.task_id,
-            status="completed",
-            result={
-                "site_url": site_url,
-                "audit_knowledge": audit_knowledge,
-            },
+            subtask_id=task.task_id,
+            agent_id=self.agent_id,
+            action=task.data.get("action", "unknown"),
+            status="failed",
+            result={},
+            error=f"{type(error).__name__}: {str(error)}",
+            duration_seconds=0.0,
+            completed_at=datetime.now(timezone.utc)
         )
