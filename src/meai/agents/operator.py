@@ -511,32 +511,45 @@ class Operator:
         capabilities = []
 
         # Simple keyword matching (can be enhanced with LLM)
-        goal_lower = task.goal.lower()
+        action_lower = task.action.lower()
         desc_lower = task.description.lower()
 
         # SEO capabilities
-        if any(kw in goal_lower or kw in desc_lower for kw in ["seo", "keyword", "ranking", "competitor", "search"]):
+        if any(kw in action_lower or kw in desc_lower for kw in ["seo", "keyword", "ranking", "competitor", "search"]):
             capabilities.extend(["analyze_keywords", "optimize_content", "analyze_competitors"])
 
         # Content capabilities
-        if any(kw in goal_lower or kw in desc_lower for kw in ["content", "article", "blog", "write", "post"]):
+        if any(kw in action_lower or kw in desc_lower for kw in ["content", "article", "blog", "write", "post"]):
             capabilities.extend(["generate_content", "edit_content", "optimize_for_seo"])
 
         # Ads capabilities
-        if any(kw in goal_lower or kw in desc_lower for kw in ["ads", "campaign", "advertising", "ppc", "budget"]):
+        if any(kw in action_lower or kw in desc_lower for kw in ["ads", "campaign", "advertising", "ppc", "budget"]):
             capabilities.extend(["create_campaign", "optimize_budget", "ab_test"])
 
         # SMM capabilities
-        if any(kw in goal_lower or kw in desc_lower for kw in ["social", "smm", "facebook", "instagram", "linkedin"]):
+        if any(kw in action_lower or kw in desc_lower for kw in ["social", "smm", "facebook", "instagram", "linkedin"]):
             capabilities.extend(["create_post", "schedule_posts", "engage_audience"])
 
         # Analytics capabilities
-        if any(kw in goal_lower or kw in desc_lower for kw in ["analytics", "data", "metrics", "report", "analyze"]):
+        if any(kw in action_lower or kw in desc_lower for kw in ["analytics", "data", "metrics", "report", "analyze"]):
             capabilities.extend(["analyze_data", "create_report", "track_metrics"])
 
-        # Intelligence capabilities
-        if any(kw in goal_lower or kw in desc_lower for kw in ["market", "research", "intelligence", "trends", "insights"]):
-            capabilities.extend(["research_market", "analyze_trends", "monitor_competitors"])
+        # Intelligence capabilities (enhanced CI detection)
+        ci_keywords = [
+            "competitor", "конкурент",
+            "competitive intelligence", "конкурентная разведка",
+            "market analysis", "анализ рынка",
+            "benchmark", "бенчмарк",
+            "competitor analysis", "анализ конкурентов",
+            "market research", "исследование рынка"
+        ]
+
+        if any(kw in action_lower or kw in desc_lower for kw in ci_keywords):
+            capabilities.append("monitor_competitors")
+
+        # General intelligence capabilities
+        if any(kw in action_lower or kw in desc_lower for kw in ["market", "research", "intelligence", "trends", "insights"]):
+            capabilities.extend(["research_market", "analyze_trends", "identify_opportunities"])
 
         return list(set(capabilities))  # Remove duplicates
 
