@@ -586,6 +586,18 @@ class Operator:
         if any(kw in action_lower or kw in desc_lower for kw in ads_keywords):
             capabilities.append("create_campaign")
 
+        # Analytics capabilities
+        analytics_keywords = [
+            "analytics", "аналитика",
+            "metrics", "метрики",
+            "kpi", "кпи",
+            "dashboard", "дашборд",
+            "report", "отчет", "отчёт"
+        ]
+
+        if any(kw in action_lower or kw in desc_lower for kw in analytics_keywords):
+            capabilities.append("track_metrics")
+
         # General intelligence capabilities
         if any(kw in action_lower or kw in desc_lower for kw in ["market", "research", "intelligence", "trends", "insights"]):
             capabilities.extend(["research_market", "analyze_trends", "identify_opportunities"])
