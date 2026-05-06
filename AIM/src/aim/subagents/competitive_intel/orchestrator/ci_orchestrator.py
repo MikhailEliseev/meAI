@@ -213,6 +213,9 @@ class CIOrchestrator(Agent):
             # Calculate execution time
             execution_time = (datetime.now() - start_time).total_seconds()
 
+            # Validate results quality
+            quality_score = self._calculate_quality_score(findings, phases)
+
             # Generate reports
             reports = await self._generate_reports(task_id, findings, task_data)
 
@@ -225,6 +228,7 @@ class CIOrchestrator(Agent):
                 "competitors_analyzed": len(task_data.get("competitors", [])),
                 "findings": findings,
                 "reports": reports,
+                "quality_score": quality_score,
                 "errors": errors
             }
 
@@ -326,6 +330,49 @@ class CIOrchestrator(Agent):
             "agents": agent_names,
             "results": agent_results,
             "errors": errors
+        }
+
+    def _calculate_quality_score(
+        self,
+        findings: Dict[str, Any],
+        phases_executed: List[int]
+    ) -> Dict[str, Any]:
+        """Calculate quality score for CI analysis results"""
+
+        # Count successful phases
+        successful_phases = 0
+        failed_phases = 0
+
+        for phase_key, phase_data in findings.items():
+            status = phase_data.get("status", "unknown")
+            if status == "success":
+                successful_phases += 1
+            elif status == "failed" or status == "stub":
+                failed_phases += 1
+
+        total_phases = len(phases_executed)
+
+        # Calculate completeness (0-100)
+        completeness = int((successful_phases / total_phases * 100)) if total_phases > 0 else 0
+
+        # Calculate confidence level
+        if completeness >= 90:
+            confidence = "high"
+        elif completeness >= 70:
+            confidence = "medium"
+        else:
+            confidence = "low"
+
+        # Overall quality score (0-100)
+        quality_score = completeness
+
+        return {
+            "score": quality_score,
+            "confidence": confidence,
+            "completeness": completeness,
+            "successful_phases": successful_phases,
+            "failed_phases": failed_phases,
+            "total_phases": total_phases
         }
 
     async def _generate_reports(
