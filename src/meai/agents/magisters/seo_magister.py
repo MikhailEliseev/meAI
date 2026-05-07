@@ -95,6 +95,8 @@ class SEOMagister(BaseMagister):
         - analyze_keywords → _handle_keyword_analysis()
         - optimize_content → _handle_content_optimization()
         - audit_technical_seo → _handle_technical_audit()
+        - analyze_competitors → _handle_competitor_analysis()
+        - track_rankings → _handle_ranking_tracking()
         """
         self.current_task_id = task.task_id
         action = task.action
@@ -108,6 +110,10 @@ class SEOMagister(BaseMagister):
                 return await self._handle_content_optimization(task)
             elif action == "audit_technical_seo":
                 return await self._handle_technical_audit(task)
+            elif action == "analyze_competitors":
+                return await self._handle_competitor_analysis(task)
+            elif action == "track_rankings":
+                return await self._handle_ranking_tracking(task)
             else:
                 return await self._handle_generic_seo(task)
         except Exception as e:
@@ -161,7 +167,7 @@ class SEOMagister(BaseMagister):
             return TaskResult(
                 subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
-                action=task.data.get("action", "analyze_keywords"),
+                action=task.action,
                 status="success",
                 result=validated_result,
                 error=None,
@@ -312,7 +318,7 @@ class SEOMagister(BaseMagister):
             return TaskResult(
                 subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
-                action=task.data.get("action", "optimize_content"),
+                action=task.action,
                 status="success",
                 result=validated_result,
                 error=None,
@@ -355,7 +361,7 @@ class SEOMagister(BaseMagister):
             return TaskResult(
                 subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
-                action=task.data.get("action", "audit_technical_seo"),
+                action=task.action,
                 status="success",
                 result=validated_result,
                 error=None,
@@ -365,6 +371,93 @@ class SEOMagister(BaseMagister):
 
         except Exception as e:
             logger.error(f"Technical audit failed: {e}", exc_info=True)
+            return self._create_error_result(task, e)
+
+    async def _handle_competitor_analysis(self, task: Task) -> TaskResult:
+        """Handle competitor SEO analysis via SEO orchestrator"""
+        logger.info(f"Handling competitor analysis for task {task.task_id}")
+
+        try:
+            orchestrator = self.orchestrators.get("seo")
+            if not orchestrator:
+                raise ValueError("SEO orchestrator not registered")
+
+            seo_task_data = {
+                "task_id": task.task_id,
+                "analysis_type": "competitor",
+                "target": task.data.get("target", ""),
+                "competitors": task.data.get("competitors", []),
+                "niche": task.data.get("niche", ""),
+                "geo": task.data.get("geo", ""),
+            }
+
+            await self._publish_progress(0, "started", "Starting competitor analysis")
+
+            seo_result = await asyncio.wait_for(
+                orchestrator.execute_seo_analysis(seo_task_data, progress_callback=self._publish_progress),
+                timeout=300
+            )
+
+            validated_result = self._validate_seo_result(seo_result)
+            await self._store_seo_result(validated_result)
+            await self._publish_progress(100, "completed", "Competitor analysis complete")
+
+            return TaskResult(
+                subtask_id=task.subtask_id,
+                agent_id=self.agent_id,
+                action=task.action,
+                status="success",
+                result=validated_result,
+                error=None,
+                duration_seconds=seo_result.get("execution_time_seconds", 0),
+                completed_at=datetime.now(timezone.utc)
+            )
+
+        except Exception as e:
+            logger.error(f"Competitor analysis failed: {e}", exc_info=True)
+            return self._create_error_result(task, e)
+
+    async def _handle_ranking_tracking(self, task: Task) -> TaskResult:
+        """Handle ranking tracking via SEO orchestrator"""
+        logger.info(f"Handling ranking tracking for task {task.task_id}")
+
+        try:
+            orchestrator = self.orchestrators.get("seo")
+            if not orchestrator:
+                raise ValueError("SEO orchestrator not registered")
+
+            seo_task_data = {
+                "task_id": task.task_id,
+                "analysis_type": "rankings",
+                "target": task.data.get("target", ""),
+                "keywords": task.data.get("keywords", []),
+                "geo": task.data.get("geo", ""),
+            }
+
+            await self._publish_progress(0, "started", "Starting ranking tracking")
+
+            seo_result = await asyncio.wait_for(
+                orchestrator.execute_seo_analysis(seo_task_data, progress_callback=self._publish_progress),
+                timeout=300
+            )
+
+            validated_result = self._validate_seo_result(seo_result)
+            await self._store_seo_result(validated_result)
+            await self._publish_progress(100, "completed", "Ranking tracking complete")
+
+            return TaskResult(
+                subtask_id=task.subtask_id,
+                agent_id=self.agent_id,
+                action=task.action,
+                status="success",
+                result=validated_result,
+                error=None,
+                duration_seconds=seo_result.get("execution_time_seconds", 0),
+                completed_at=datetime.now(timezone.utc)
+            )
+
+        except Exception as e:
+            logger.error(f"Ranking tracking failed: {e}", exc_info=True)
             return self._create_error_result(task, e)
 
     async def _handle_generic_seo(self, task: Task) -> TaskResult:
@@ -387,7 +480,7 @@ class SEOMagister(BaseMagister):
             return TaskResult(
                 subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
-                action=task.data.get("action", "generic"),
+                action=task.action,
                 status="success",
                 result={
                     "query": query,
@@ -408,7 +501,7 @@ class SEOMagister(BaseMagister):
         return TaskResult(
             subtask_id=task.subtask_id,
             agent_id=self.agent_id,
-            action=task.data.get("action", "unknown"),
+            action=task.action,
             status="failed",
             result={},
             error=f"Task timed out after {timeout_seconds} seconds",
@@ -421,7 +514,7 @@ class SEOMagister(BaseMagister):
         return TaskResult(
             subtask_id=task.subtask_id,
             agent_id=self.agent_id,
-            action=task.data.get("action", "unknown"),
+            action=task.action,
             status="failed",
             result={},
             error=f"{type(error).__name__}: {str(error)}",
