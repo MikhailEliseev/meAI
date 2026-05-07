@@ -139,23 +139,19 @@ class AdsMagister(BaseMagister):
             # 2. Create ads task data
             ads_task_data = {
                 "task_id": task.task_id,
+                "target": task.data.get("target", ""),
+                "campaign_name": task.data.get("campaign_name", ""),
                 "niche": task.data.get("niche", ""),
                 "geo": task.data.get("geo", ""),
-                "target_audience": task.data.get("target_audience", ""),
-                "price_segment": task.data.get("price_segment", "mid"),
-                "tier": task.data.get("depth", "deep"),
-                "competitors": task.data.get("competitors", []),            }
+                "budget": task.data.get("budget", 10000),
+                "campaign_type": task.data.get("campaign_type", "ppc"),
+            }
 
-            # 3. Set timeout based on tier
-            tier = ads_task_data["tier"]
-            timeout_seconds = {
-                "quick": 900,   # 15 min
-                "deep": 2700,   # 45 min
-                "full": 5400    # 90 min
-            }.get(tier, 2700)
+            # 3. Set timeout
+            timeout_seconds = 300  # 5 minutes
 
             # 4. Execute with timeout and progress updates
-            await self._publish_progress(0, "started", f"Starting {tier} CI analysis")
+            await self._publish_progress(0, "started", "Starting campaign creation")
 
             ads_result = await asyncio.wait_for(
                 orchestrator.execute_campaign_creation(

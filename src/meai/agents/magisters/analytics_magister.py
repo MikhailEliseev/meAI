@@ -136,13 +136,8 @@ class AnalyticsMagister(BaseMagister):
                 "tier": task.data.get("depth", "deep"),
                 "competitors": task.data.get("competitors", []),            }
 
-            # 3. Set timeout based on tier
-            tier = analytics_task_data["tier"]
-            timeout_seconds = {
-                "quick": 900,   # 15 min
-                "deep": 2700,   # 45 min
-                "full": 5400    # 90 min
-            }.get(tier, 2700)
+            # 3. Set timeout
+            timeout_seconds = 300  # 5 minutes
 
             # 4. Execute with timeout and progress updates
             await self._publish_progress(0, "started", f"Starting {tier} metrics tracking")
