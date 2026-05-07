@@ -511,27 +511,27 @@ class Operator:
         capabilities = []
 
         # Simple keyword matching (can be enhanced with LLM)
-        action_lower = task.action.lower()
+        goal_lower = task.goal.lower()
         desc_lower = task.description.lower()
 
         # SEO capabilities
-        if any(kw in action_lower or kw in desc_lower for kw in ["seo", "keyword", "ranking", "competitor", "search"]):
+        if any(kw in goal_lower or kw in desc_lower for kw in ["seo", "keyword", "ranking", "competitor", "search"]):
             capabilities.extend(["analyze_keywords", "optimize_content", "analyze_competitors"])
 
         # Content capabilities
-        if any(kw in action_lower or kw in desc_lower for kw in ["content", "article", "blog", "write", "post"]):
+        if any(kw in goal_lower or kw in desc_lower for kw in ["content", "article", "blog", "write", "post"]):
             capabilities.extend(["generate_content", "edit_content", "optimize_for_seo"])
 
         # Ads capabilities
-        if any(kw in action_lower or kw in desc_lower for kw in ["ads", "campaign", "advertising", "ppc", "budget"]):
+        if any(kw in goal_lower or kw in desc_lower for kw in ["ads", "campaign", "advertising", "ppc", "budget"]):
             capabilities.extend(["create_campaign", "optimize_budget", "ab_test"])
 
         # SMM capabilities
-        if any(kw in action_lower or kw in desc_lower for kw in ["social", "smm", "facebook", "instagram", "linkedin"]):
+        if any(kw in goal_lower or kw in desc_lower for kw in ["social", "smm", "facebook", "instagram", "linkedin"]):
             capabilities.extend(["create_post", "schedule_posts", "engage_audience"])
 
         # Analytics capabilities
-        if any(kw in action_lower or kw in desc_lower for kw in ["analytics", "data", "metrics", "report", "analyze"]):
+        if any(kw in goal_lower or kw in desc_lower for kw in ["analytics", "data", "metrics", "report", "analyze"]):
             capabilities.extend(["analyze_data", "create_report", "track_metrics"])
 
         # Intelligence capabilities (enhanced CI detection)
@@ -544,7 +544,7 @@ class Operator:
             "market research", "исследование рынка"
         ]
 
-        if any(kw in action_lower or kw in desc_lower for kw in ci_keywords):
+        if any(kw in goal_lower or kw in desc_lower for kw in ci_keywords):
             capabilities.append("monitor_competitors")
 
         # SEO capabilities
@@ -557,7 +557,7 @@ class Operator:
             "search engine", "поисковая оптимизация"
         ]
 
-        if any(kw in action_lower or kw in desc_lower for kw in seo_keywords):
+        if any(kw in goal_lower or kw in desc_lower for kw in seo_keywords):
             capabilities.append("analyze_keywords")
 
         # Content capabilities
@@ -570,7 +570,7 @@ class Operator:
             "copywriting", "копирайтинг"
         ]
 
-        if any(kw in action_lower or kw in desc_lower for kw in content_keywords):
+        if any(kw in goal_lower or kw in desc_lower for kw in content_keywords):
             capabilities.append("generate_content")
 
         # Ads capabilities
@@ -583,7 +583,7 @@ class Operator:
             "google ads", "гугл реклама"
         ]
 
-        if any(kw in action_lower or kw in desc_lower for kw in ads_keywords):
+        if any(kw in goal_lower or kw in desc_lower for kw in ads_keywords):
             capabilities.append("create_campaign")
 
         # Analytics capabilities
@@ -595,11 +595,11 @@ class Operator:
             "report", "отчет", "отчёт"
         ]
 
-        if any(kw in action_lower or kw in desc_lower for kw in analytics_keywords):
+        if any(kw in goal_lower or kw in desc_lower for kw in analytics_keywords):
             capabilities.append("track_metrics")
 
         # General intelligence capabilities
-        if any(kw in action_lower or kw in desc_lower for kw in ["market", "research", "intelligence", "trends", "insights"]):
+        if any(kw in goal_lower or kw in desc_lower for kw in ["market", "research", "intelligence", "trends", "insights"]):
             capabilities.extend(["research_market", "analyze_trends", "identify_opportunities"])
 
         return list(set(capabilities))  # Remove duplicates
@@ -1198,17 +1198,21 @@ P{subtask.priority}
 
         Steps:
         1. Collect all subtask results
-        2. Aggregate into report
-        3. Store in database
-        4. Write to vault
-        5. Update task status
-        6. Report to user
+        2. Phase 6: Quality validation
+        3. Phase 7: Generate comprehensive report
+        4. Store in database
+        5. Write to vault
+        6. Update task status
+        7. Report to user
         """
         # Collect results
         results = await self._collect_subtask_results(task_id)
 
-        # Aggregate report
-        report = await self._aggregate_report(task_id, results)
+        # Phase 6: Quality validation
+        validation_result = await self._validate_quality(task_id, results)
+
+        # Phase 7: Generate comprehensive report (includes validation)
+        report = await self._generate_comprehensive_report(task_id, results, validation_result)
 
         # Store report
         await self._store_report(report)
@@ -1224,6 +1228,129 @@ P{subtask.priority}
 
         # Report to user
         await self.report_to_user(report)
+
+    async def _validate_quality(
+        self,
+        task_id: str,
+        results: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Phase 6: Validate quality of subtask results
+
+        Args:
+            task_id: Task ID
+            results: List of subtask results
+
+        Returns:
+            Validation result with quality metrics and issues
+
+        Quality checks:
+        1. Completeness - all required fields present
+        2. Consistency - results align with task goal
+        3. Accuracy - no obvious errors or contradictions
+        4. Magister coverage - all Magisters reported
+        """
+        validation = {
+            "passed": True,
+            "quality_score": 0.0,
+            "checks": {
+                "completeness": {"passed": True, "issues": []},
+                "consistency": {"passed": True, "issues": []},
+                "accuracy": {"passed": True, "issues": []},
+                "magister_coverage": {"passed": True, "issues": []},
+            },
+            "warnings": [],
+            "errors": [],
+        }
+
+        if not results:
+            validation["passed"] = False
+            validation["errors"].append("No results to validate")
+            return validation
+
+        # Check 1: Completeness
+        for result in results:
+            if not result.get("result"):
+                validation["checks"]["completeness"]["passed"] = False
+                validation["checks"]["completeness"]["issues"].append(
+                    f"Subtask {result['subtask_id']} has no result"
+                )
+
+            # Check required fields in result
+            result_data = result.get("result", {})
+            if not result_data.get("status"):
+                validation["checks"]["completeness"]["issues"].append(
+                    f"Subtask {result['subtask_id']} missing status field"
+                )
+
+        # Check 2: Consistency - verify results align with task goal
+        task = self.active_tasks.get(task_id)
+        if task:
+            # Check if all subtasks relate to task goal
+            for result in results:
+                action = result.get("action", "")
+                if not action:
+                    validation["checks"]["consistency"]["passed"] = False
+                    validation["checks"]["consistency"]["issues"].append(
+                        f"Subtask {result['subtask_id']} has no action defined"
+                    )
+
+        # Check 3: Accuracy - look for errors in results
+        for result in results:
+            result_data = result.get("result", {})
+            if result_data.get("error"):
+                validation["checks"]["accuracy"]["passed"] = False
+                validation["checks"]["accuracy"]["issues"].append(
+                    f"Subtask {result['subtask_id']}: {result_data['error']}"
+                )
+            if result_data.get("errors"):
+                validation["checks"]["accuracy"]["passed"] = False
+                for error in result_data["errors"]:
+                    validation["checks"]["accuracy"]["issues"].append(
+                        f"Subtask {result['subtask_id']}: {error}"
+                    )
+
+        # Check 4: Magister coverage - verify all expected Magisters reported
+        magisters_used = set()
+        for result in results:
+            agent_id = result.get("agent_id", "")
+            if "magister" in agent_id:
+                magisters_used.add(agent_id)
+
+        # Get expected Magisters from plan
+        plan = self.active_plans.get(task_id)
+        if plan:
+            expected_magisters = set()
+            for subtask in plan.subtasks:
+                if "magister" in subtask.agent_id:
+                    expected_magisters.add(subtask.agent_id)
+
+            missing_magisters = expected_magisters - magisters_used
+            if missing_magisters:
+                validation["checks"]["magister_coverage"]["passed"] = False
+                validation["checks"]["magister_coverage"]["issues"].append(
+                    f"Missing results from Magisters: {', '.join(missing_magisters)}"
+                )
+
+        # Calculate quality score (0.0 - 1.0)
+        checks_passed = sum(
+            1 for check in validation["checks"].values() if check["passed"]
+        )
+        total_checks = len(validation["checks"])
+        validation["quality_score"] = checks_passed / total_checks if total_checks > 0 else 0.0
+
+        # Overall pass/fail
+        validation["passed"] = all(
+            check["passed"] for check in validation["checks"].values()
+        )
+
+        # Collect warnings and errors
+        for check_name, check_data in validation["checks"].items():
+            if not check_data["passed"]:
+                validation["errors"].extend(check_data["issues"])
+            elif check_data["issues"]:
+                validation["warnings"].extend(check_data["issues"])
+
+        return validation
 
     async def _collect_subtask_results(self, task_id: str) -> list[dict[str, Any]]:
         """Collect all subtask results for a task
@@ -1302,6 +1429,162 @@ P{subtask.priority}
             f"Review {result['action']} results from {result['agent_id']}"
             for result in results
         ]
+
+        return Report(
+            report_id=f"report-{uuid4().hex[:8]}",
+            task_id=task_id,
+            summary=summary,
+            insights=insights,
+            metrics=metrics,
+            issues=issues,
+            recommendations=recommendations,
+            created_at=datetime.now(timezone.utc),
+        )
+
+    async def _generate_comprehensive_report(
+        self,
+        task_id: str,
+        results: list[dict[str, Any]],
+        validation_result: dict[str, Any],
+    ) -> Report:
+        """Phase 7: Generate comprehensive report with Magister-level insights
+
+        Args:
+            task_id: Task ID
+            results: List of subtask results
+            validation_result: Quality validation result from Phase 6
+
+        Returns:
+            Comprehensive report with:
+            - Executive summary
+            - Magister-level insights (grouped by domain)
+            - Quality metrics
+            - Cross-domain synthesis
+            - Actionable recommendations
+        """
+        task = self.active_tasks.get(task_id)
+        if not task:
+            raise ValueError(f"Task {task_id} not found")
+
+        # Group results by Magister
+        magister_results = {}
+        for result in results:
+            agent_id = result.get("agent_id", "unknown")
+            if agent_id not in magister_results:
+                magister_results[agent_id] = []
+            magister_results[agent_id].append(result)
+
+        # Generate executive summary
+        total_subtasks = len(results)
+        successful_subtasks = sum(
+            1 for r in results
+            if r.get("result", {}).get("status") == "success"
+        )
+        quality_score = validation_result.get("quality_score", 0.0)
+
+        summary = (
+            f"Task '{task.goal}' completed with {successful_subtasks}/{total_subtasks} "
+            f"successful subtasks (Quality Score: {quality_score:.1%})"
+        )
+
+        # Extract Magister-level insights (grouped by domain)
+        insights = []
+
+        # Add quality validation summary
+        if not validation_result.get("passed"):
+            insights.append(
+                f"⚠️ Quality validation failed: {len(validation_result.get('errors', []))} issues found"
+            )
+        else:
+            insights.append(
+                f"✅ Quality validation passed (Score: {quality_score:.1%})"
+            )
+
+        # Group insights by Magister
+        for magister_id, magister_subtasks in magister_results.items():
+            magister_name = magister_id.replace("-", " ").title()
+            magister_insights = []
+
+            for result in magister_subtasks:
+                result_data = result.get("result", {})
+                if "insights" in result_data:
+                    magister_insights.extend(result_data["insights"])
+                if "summary" in result_data:
+                    magister_insights.append(result_data["summary"])
+
+            if magister_insights:
+                insights.append(f"**{magister_name}:**")
+                insights.extend(f"  - {insight}" for insight in magister_insights[:3])
+
+        # Collect comprehensive metrics
+        metrics = await self.collect_metrics(task_id)
+
+        # Add validation metrics
+        metrics["quality_validation"] = {
+            "passed": validation_result.get("passed"),
+            "score": validation_result.get("quality_score"),
+            "checks": {
+                name: check.get("passed")
+                for name, check in validation_result.get("checks", {}).items()
+            },
+        }
+
+        # Add Magister coverage metrics
+        metrics["magister_coverage"] = {
+            "total_magisters": len(magister_results),
+            "magisters": list(magister_results.keys()),
+            "subtasks_per_magister": {
+                magister_id: len(subtasks)
+                for magister_id, subtasks in magister_results.items()
+            },
+        }
+
+        # Identify issues (from validation + results)
+        issues = validation_result.get("errors", []).copy()
+        for result in results:
+            result_data = result.get("result", {})
+            if result_data.get("error"):
+                issues.append(f"{result['action']}: {result_data['error']}")
+            if "errors" in result_data:
+                issues.extend(result_data["errors"])
+
+        # Generate actionable recommendations
+        recommendations = []
+
+        # Quality-based recommendations
+        if not validation_result.get("passed"):
+            recommendations.append(
+                "🔍 Review quality validation issues before proceeding"
+            )
+
+        # Magister-specific recommendations
+        for magister_id, magister_subtasks in magister_results.items():
+            magister_name = magister_id.replace("-", " ").title()
+            failed_subtasks = [
+                s for s in magister_subtasks
+                if s.get("result", {}).get("status") != "success"
+            ]
+
+            if failed_subtasks:
+                recommendations.append(
+                    f"⚠️ {magister_name}: {len(failed_subtasks)} subtasks failed - review and retry"
+                )
+            else:
+                recommendations.append(
+                    f"✅ {magister_name}: All subtasks completed successfully"
+                )
+
+        # Cross-domain synthesis recommendations
+        if len(magister_results) > 1:
+            recommendations.append(
+                "🔗 Consider cross-domain synthesis: combine insights from multiple Magisters"
+            )
+
+        # Add general recommendations
+        if quality_score < 0.8:
+            recommendations.append(
+                "📊 Quality score below 80% - consider re-running failed subtasks"
+            )
 
         return Report(
             report_id=f"report-{uuid4().hex[:8]}",
