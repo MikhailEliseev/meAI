@@ -57,7 +57,21 @@ class IntelligenceMagister(BaseMagister):
             database_url=database_url,
         )
 
-        self.orchestrators = orchestrators or {}
+        # Initialize orchestrators
+        if orchestrators is None:
+            # Auto-create CI orchestrator if not provided
+            from AIM.src.aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+
+            self.orchestrators = {
+                "ci": CIOrchestrator(
+                    agent_id=f"{agent_id}-ci-orchestrator",
+                    event_bus=event_bus,
+                    database_url=database_url,
+                )
+            }
+        else:
+            self.orchestrators = orchestrators
+
         self.current_task_id = None
 
     def get_capabilities(self) -> list[str]:
@@ -81,9 +95,10 @@ class IntelligenceMagister(BaseMagister):
         - monitor_competitors → _handle_competitor_analysis()
         - research_market → _handle_market_research()
         - analyze_trends → _handle_trend_analysis()
+        - identify_opportunities → _handle_opportunity_identification()
         """
         self.current_task_id = task.task_id
-        action = task.data.get("action", "")
+        action = task.action
 
         logger.info(f"Intelligence Magister executing task: {task.task_id}, action: {action}")
 
@@ -94,6 +109,8 @@ class IntelligenceMagister(BaseMagister):
                 return await self._handle_market_research(task)
             elif action == "analyze_trends":
                 return await self._handle_trend_analysis(task)
+            elif action == "identify_opportunities":
+                return await self._handle_opportunity_identification(task)
             else:
                 return await self._handle_generic_intelligence(task)
         except Exception as e:
@@ -120,7 +137,8 @@ class IntelligenceMagister(BaseMagister):
                 "target_audience": task.data.get("target_audience", ""),
                 "price_segment": task.data.get("price_segment", "mid"),
                 "tier": task.data.get("depth", "deep"),
-                "competitors": task.data.get("competitors", []),            }
+                "competitors": task.data.get("competitors", []),
+            }
 
             # 3. Set timeout based on tier
             tier = ci_task_data["tier"]
@@ -153,7 +171,7 @@ class IntelligenceMagister(BaseMagister):
             return TaskResult(
                 subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
-                action=task.data.get("action", "monitor_competitors"),
+                action=task.action,
                 status="success",
                 result=validated_result,
                 error=None,
@@ -297,22 +315,187 @@ execution_time: {result.get('execution_time_seconds', 0)}s
             # Don't raise - storage failure shouldn't fail the task
 
     async def _handle_market_research(self, task: Task) -> TaskResult:
-        """Handle market research task
-
-        TODO: Implement market research logic
-        For now, uses generic knowledge search
-        """
+        """Handle market research via CI orchestrator"""
         logger.info(f"Handling market research for task {task.task_id}")
-        return await self._handle_generic_intelligence(task)
+
+        try:
+            # 1. Get orchestrator via dependency injection
+            orchestrator = self.orchestrators.get("ci")
+            if not orchestrator:
+                raise ValueError("CI orchestrator not registered")
+
+            # 2. Create CI task data for market research
+            ci_task_data = {
+                "task_id": task.task_id,
+                "analysis_type": "market_research",
+                "niche": task.data.get("niche", ""),
+                "geo": task.data.get("geo", ""),
+                "target_audience": task.data.get("target_audience", ""),
+                "tier": task.data.get("depth", "deep"),
+            }
+
+            # 3. Set timeout
+            timeout_seconds = 300  # 5 minutes
+
+            # 4. Execute with timeout and progress updates
+            await self._publish_progress(0, "started", "Starting market research")
+
+            ci_result = await asyncio.wait_for(
+                orchestrator.execute_ci_analysis(
+                    ci_task_data,
+                    progress_callback=self._publish_progress
+                ),
+                timeout=timeout_seconds
+            )
+
+            # 5. Use result directly
+            validated_result = ci_result
+
+            # 6. Store in vault
+            await self._store_ci_result(validated_result)
+
+            await self._publish_progress(100, "completed", "Market research complete")
+
+            # 7. Return success
+            return TaskResult(
+                subtask_id=task.subtask_id,
+                agent_id=self.agent_id,
+                action=task.action,
+                status="success",
+                result=validated_result,
+                error=None,
+                duration_seconds=0.0,
+                completed_at=datetime.now(timezone.utc)
+            )
+
+        except asyncio.TimeoutError:
+            logger.error(f"Market research timed out after {timeout_seconds}s")
+            return self._create_timeout_result(task, timeout_seconds)
+        except Exception as e:
+            logger.error(f"Market research failed: {e}", exc_info=True)
+            return self._create_error_result(task, e)
 
     async def _handle_trend_analysis(self, task: Task) -> TaskResult:
-        """Handle trend analysis task
-
-        TODO: Implement trend analysis logic
-        For now, uses generic knowledge search
-        """
+        """Handle trend analysis via CI orchestrator"""
         logger.info(f"Handling trend analysis for task {task.task_id}")
-        return await self._handle_generic_intelligence(task)
+
+        try:
+            # 1. Get orchestrator via dependency injection
+            orchestrator = self.orchestrators.get("ci")
+            if not orchestrator:
+                raise ValueError("CI orchestrator not registered")
+
+            # 2. Create CI task data for trend analysis
+            ci_task_data = {
+                "task_id": task.task_id,
+                "analysis_type": "trend_analysis",
+                "niche": task.data.get("niche", ""),
+                "geo": task.data.get("geo", ""),
+                "period": task.data.get("period", "30d"),
+                "tier": task.data.get("depth", "deep"),
+            }
+
+            # 3. Set timeout
+            timeout_seconds = 300  # 5 minutes
+
+            # 4. Execute with timeout and progress updates
+            await self._publish_progress(0, "started", "Starting trend analysis")
+
+            ci_result = await asyncio.wait_for(
+                orchestrator.execute_ci_analysis(
+                    ci_task_data,
+                    progress_callback=self._publish_progress
+                ),
+                timeout=timeout_seconds
+            )
+
+            # 5. Use result directly
+            validated_result = ci_result
+
+            # 6. Store in vault
+            await self._store_ci_result(validated_result)
+
+            await self._publish_progress(100, "completed", "Trend analysis complete")
+
+            # 7. Return success
+            return TaskResult(
+                subtask_id=task.subtask_id,
+                agent_id=self.agent_id,
+                action=task.action,
+                status="success",
+                result=validated_result,
+                error=None,
+                duration_seconds=0.0,
+                completed_at=datetime.now(timezone.utc)
+            )
+
+        except asyncio.TimeoutError:
+            logger.error(f"Trend analysis timed out after {timeout_seconds}s")
+            return self._create_timeout_result(task, timeout_seconds)
+        except Exception as e:
+            logger.error(f"Trend analysis failed: {e}", exc_info=True)
+            return self._create_error_result(task, e)
+
+    async def _handle_opportunity_identification(self, task: Task) -> TaskResult:
+        """Handle opportunity identification via CI orchestrator"""
+        logger.info(f"Handling opportunity identification for task {task.task_id}")
+
+        try:
+            # 1. Get orchestrator via dependency injection
+            orchestrator = self.orchestrators.get("ci")
+            if not orchestrator:
+                raise ValueError("CI orchestrator not registered")
+
+            # 2. Create CI task data for opportunity identification
+            ci_task_data = {
+                "task_id": task.task_id,
+                "analysis_type": "opportunity_identification",
+                "niche": task.data.get("niche", ""),
+                "geo": task.data.get("geo", ""),
+                "target_audience": task.data.get("target_audience", ""),
+                "tier": task.data.get("depth", "deep"),
+            }
+
+            # 3. Set timeout
+            timeout_seconds = 300  # 5 minutes
+
+            # 4. Execute with timeout and progress updates
+            await self._publish_progress(0, "started", "Starting opportunity identification")
+
+            ci_result = await asyncio.wait_for(
+                orchestrator.execute_ci_analysis(
+                    ci_task_data,
+                    progress_callback=self._publish_progress
+                ),
+                timeout=timeout_seconds
+            )
+
+            # 5. Use result directly
+            validated_result = ci_result
+
+            # 6. Store in vault
+            await self._store_ci_result(validated_result)
+
+            await self._publish_progress(100, "completed", "Opportunity identification complete")
+
+            # 7. Return success
+            return TaskResult(
+                subtask_id=task.subtask_id,
+                agent_id=self.agent_id,
+                action=task.action,
+                status="success",
+                result=validated_result,
+                error=None,
+                duration_seconds=0.0,
+                completed_at=datetime.now(timezone.utc)
+            )
+
+        except asyncio.TimeoutError:
+            logger.error(f"Opportunity identification timed out after {timeout_seconds}s")
+            return self._create_timeout_result(task, timeout_seconds)
+        except Exception as e:
+            logger.error(f"Opportunity identification failed: {e}", exc_info=True)
+            return self._create_error_result(task, e)
 
     async def _handle_generic_intelligence(self, task: Task) -> TaskResult:
         """Handle generic intelligence task via knowledge search
@@ -334,7 +517,7 @@ execution_time: {result.get('execution_time_seconds', 0)}s
             return TaskResult(
                 subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
-                action=task.data.get("action", "generic"),
+                action=task.action,
                 status="success",
                 result={
                     "query": query,
@@ -355,7 +538,7 @@ execution_time: {result.get('execution_time_seconds', 0)}s
         return TaskResult(
             subtask_id=task.subtask_id,
             agent_id=self.agent_id,
-            action=task.data.get("action", "unknown"),
+            action=task.action,
             status="failed",
             result={},
             error=f"Task timed out after {timeout_seconds} seconds",
@@ -368,7 +551,7 @@ execution_time: {result.get('execution_time_seconds', 0)}s
         return TaskResult(
             subtask_id=task.subtask_id,
             agent_id=self.agent_id,
-            action=task.data.get("action", "unknown"),
+            action=task.action,
             status="failed",
             result={},
             error=f"{type(error).__name__}: {str(error)}",
