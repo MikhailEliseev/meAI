@@ -15,11 +15,12 @@ from meai.events.event_bus import EventBus
 
 # Import KeywordResearchAgent
 import sys
-aim_path = Path(__file__).parent.parent.parent.parent
-if str(aim_path) not in sys.path:
-    sys.path.insert(0, str(aim_path))
+from pathlib import Path
+aim_root = Path(__file__).parent.parent.parent.parent.parent
+if str(aim_root) not in sys.path:
+    sys.path.insert(0, str(aim_root))
 
-from aim.subagents.keyword_research_agent import KeywordResearchAgent
+from AIM.src.aim.subagents.keyword_research_agent import KeywordResearchAgent
 
 logger = logging.getLogger(__name__)
 

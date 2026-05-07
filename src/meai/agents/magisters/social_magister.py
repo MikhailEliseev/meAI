@@ -57,7 +57,21 @@ class SocialMagister(BaseMagister):
             database_url=database_url,
         )
 
-        self.orchestrators = orchestrators or {}
+        # Initialize orchestrators
+        if orchestrators is None:
+            # Auto-create Social orchestrator if not provided
+            from AIM.src.aim.subagents.social.orchestrator.social_orchestrator import SocialOrchestrator
+
+            self.orchestrators = {
+                "social": SocialOrchestrator(
+                    agent_id=f"{agent_id}-social-orchestrator",
+                    event_bus=event_bus,
+                    database_url=database_url,
+                )
+            }
+        else:
+            self.orchestrators = orchestrators
+
         self.current_task_id = None
 
     def get_capabilities(self) -> list[str]:
@@ -108,9 +122,9 @@ class SocialMagister(BaseMagister):
 
         try:
             # 1. Get orchestrator via dependency injection
-            orchestrator = self.orchestrators.get("ci")
+            orchestrator = self.orchestrators.get("social")
             if not orchestrator:
-                raise ValueError("CI orchestrator not registered")
+                raise ValueError("Social orchestrator not registered")
 
             # 2. Create CI task from Intelligence task
             ci_task_data = {

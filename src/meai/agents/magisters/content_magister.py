@@ -57,7 +57,21 @@ class ContentMagister(BaseMagister):
             database_url=database_url,
         )
 
-        self.orchestrators = orchestrators or {}
+        # Initialize orchestrators
+        if orchestrators is None:
+            # Auto-create Content orchestrator if not provided
+            from AIM.src.aim.subagents.content.orchestrator.content_orchestrator import ContentOrchestrator
+
+            self.orchestrators = {
+                "content": ContentOrchestrator(
+                    agent_id=f"{agent_id}-content-orchestrator",
+                    event_bus=event_bus,
+                    database_url=database_url,
+                )
+            }
+        else:
+            self.orchestrators = orchestrators
+
         self.current_task_id = None
 
     def get_capabilities(self) -> list[str]:
@@ -103,53 +117,45 @@ class ContentMagister(BaseMagister):
             self.current_task_id = None
 
     async def _handle_content_generation(self, task: Task) -> TaskResult:
-        """Handle competitor analysis via Content system"""
-        logger.info(f"Handling competitor analysis for task {task.task_id}")
+        """Handle content generation via Content orchestrator"""
+        logger.info(f"Handling content generation for task {task.task_id}")
 
         try:
             # 1. Get orchestrator via dependency injection
-            orchestrator = self.orchestrators.get("ci")
+            orchestrator = self.orchestrators.get("content")
             if not orchestrator:
-                raise ValueError("CI orchestrator not registered")
+                raise ValueError("Content orchestrator not registered")
 
-            # 2. Create CI task from Intelligence task
-            ci_task_data = {
+            # 2. Create Content task data
+            content_task_data = {
                 "task_id": task.task_id,
+                "content_type": "keyword",
+                "target": task.data.get("target", ""),
                 "niche": task.data.get("niche", ""),
                 "geo": task.data.get("geo", ""),
-                "target_audience": task.data.get("target_audience", ""),
-                "price_segment": task.data.get("price_segment", "mid"),
-                "tier": task.data.get("depth", "deep"),
-                "competitors": task.data.get("competitors", []),
-                "deadline": task.deadline,
             }
 
-            # 3. Set timeout based on tier
-            tier = ci_task_data["tier"]
-            timeout_seconds = {
-                "quick": 900,   # 15 min
-                "deep": 2700,   # 45 min
-                "full": 5400    # 90 min
-            }.get(tier, 2700)
+            # 3. Set timeout
+            timeout_seconds = 300  # 5 min
 
             # 4. Execute with timeout and progress updates
-            await self._publish_progress(0, "started", f"Starting {tier} CI analysis")
+            await self._publish_progress(0, "started", "Starting content generation")
 
-            ci_result = await asyncio.wait_for(
-                orchestrator.execute_ci_analysis(
-                    ci_task_data,
+            content_result = await asyncio.wait_for(
+                orchestrator.execute_content_generation(
+                    content_task_data,
                     progress_callback=self._publish_progress
                 ),
                 timeout=timeout_seconds
             )
 
             # 5. Validate result
-            validated_result = self._validate_content_result(ci_result)
+            validated_result = self._validate_content_result(content_result)
 
             # 6. Store in vault
             await self._store_content_result(validated_result)
 
-            await self._publish_progress(100, "completed", "CI analysis complete")
+            await self._publish_progress(100, "completed", "Content generation complete")
 
             # 7. Return result
             return TaskResult(
@@ -159,15 +165,15 @@ class ContentMagister(BaseMagister):
                 status="success",
                 result=validated_result,
                 error=None,
-                duration_seconds=(datetime.now(timezone.utc) - datetime.now(timezone.utc)).total_seconds(),
+                duration_seconds=content_result.get("execution_time_seconds", 0),
                 completed_at=datetime.now(timezone.utc)
             )
 
         except asyncio.TimeoutError:
-            logger.error(f"CI analysis timed out after {timeout_seconds}s")
+            logger.error(f"Content generation timed out after {timeout_seconds}s")
             return self._create_timeout_result(task, timeout_seconds)
         except Exception as e:
-            logger.error(f"Competitor analysis failed: {e}", exc_info=True)
+            logger.error(f"Content generation failed: {e}", exc_info=True)
             return self._create_error_result(task, e)
 
     async def _publish_progress(self, phase: int, status: str, message: str) -> None:
@@ -201,10 +207,10 @@ class ContentMagister(BaseMagister):
             logger.warning(f"Failed to publish progress: {e}")
 
     def _validate_content_result(self, result: dict[str, Any]) -> dict[str, Any]:
-        """Validate CI result structure
+        """Validate Content result structure
 
         Args:
-            result: CI result dictionary
+            result: Content result dictionary
 
         Returns:
             Validated result
@@ -212,21 +218,27 @@ class ContentMagister(BaseMagister):
         Raises:
             ValueError: If validation fails
         """
-        logger.debug("Validating CI result")
+        logger.debug("Validating Content result")
 
         try:
             # Validate required fields
             if not result.get("task_id"):
-                raise ValueError("Missing task_id in CI result")
+                raise ValueError("Missing task_id in Content result")
 
-            if not result.get("findings"):
-                raise ValueError("Missing findings in CI result")
+            # Check for errors
+            if result.get("errors"):
+                raise ValueError(f"Content generation had errors: {result['errors']}")
 
-            competitors_analyzed = result.get("competitors_analyzed", 0)
-            if competitors_analyzed < 1:
-                raise ValueError("No competitors analyzed")
+            # Validate results exist
+            if not result.get("results"):
+                raise ValueError("Missing results in Content result")
 
-            # Validate reports exist if specified
+            logger.info(f"Content result validated: {result.get('content_type', 'unknown')} generation")
+            return result
+
+        except (ValueError, KeyError) as e:
+            logger.error(f"Content result validation failed: {e}")
+            raise ValueError(f"Invalid Content result: {e}")
             reports = result.get("reports", {})
             if reports:
                 for report_type, path in reports.items():
@@ -241,80 +253,131 @@ class ContentMagister(BaseMagister):
             raise ValueError(f"Invalid CI result: {e}")
 
     async def _store_content_result(self, result: dict[str, Any]) -> None:
-        """Store CI result in Obsidian vault
+        """Store Content result in Obsidian vault
 
         Args:
-            result: Validated CI result
+            result: Validated Content result
         """
         try:
-            # Create markdown file in vault
             task_id = result.get("task_id", "unknown")
-            result_file = self.vault_path / "wiki" / "sources" / f"ci-{task_id}.md"
+            content_type = result.get("content_type", "unknown")
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
-            # Format findings for markdown
-            findings = result.get("findings", {})
-            findings_json = json.dumps(findings, indent=2, ensure_ascii=False)
+            filename = f"{timestamp}-content-{content_type}-{task_id}.md"
+            filepath = Path(self.vault_path) / "results" / filename
+            filepath.parent.mkdir(parents=True, exist_ok=True)
 
-            # Create content
-            content = f"""---
-type: ci-analysis
-task_id: {task_id}
-tier: {result.get('tier', 'unknown')}
-date: {datetime.now(timezone.utc).isoformat()}
-status: processed
-competitors_analyzed: {result.get('competitors_analyzed', 0)}
-execution_time: {result.get('execution_time_seconds', 0)}s
----
+            # Create markdown content
+            content = f"""# Content Generation Result
 
-# CI Analysis: {task_id}
+**Task ID:** {task_id}
+**Content Type:** {content_type}
+**Timestamp:** {timestamp}
 
-## Summary
-- **Tier:** {result.get('tier', 'unknown')}
-- **Phases:** {result.get('phases_executed', [])}
-- **Competitors:** {result.get('competitors_analyzed', 0)}
-- **Time:** {result.get('execution_time_seconds', 0)}s
-
-## Findings
+## Results
 
 ```json
-{findings_json}
+{result}
 ```
 
-## Reports
-- **PDF:** {result.get('reports', {}).get('pdf_path', 'N/A')}
-- **HTML:** {result.get('reports', {}).get('html_path', 'N/A')}
+## Summary
 
-## Errors
-{result.get('errors', [])}
+- Execution Time: {result.get('execution_time_seconds', 0)}s
+- Status: {'Success' if not result.get('errors') else 'Failed'}
 """
 
-            # Write to vault
-            result_file.parent.mkdir(parents=True, exist_ok=True)
-            result_file.write_text(content, encoding='utf-8')
-
-            logger.info(f"CI result stored in vault: {result_file}")
+            filepath.write_text(content)
+            logger.info(f"Content result stored: {filepath}")
 
         except Exception as e:
-            logger.error(f"Failed to store CI result: {e}", exc_info=True)
+            logger.error(f"Failed to store Content result: {e}", exc_info=True)
             # Don't raise - storage failure shouldn't fail the task
 
     async def _handle_content_optimization(self, task: Task) -> TaskResult:
-        """Handle market research task
+        """Handle content optimization via Content orchestrator"""
+        logger.info(f"Handling content optimization for task {task.task_id}")
 
-        TODO: Implement market research logic
-        For now, uses generic knowledge search
-        """
-        logger.info(f"Handling market research for task {task.task_id}")
-        return await self._handle_generic_content(task)
+        try:
+            orchestrator = self.orchestrators.get("content")
+            if not orchestrator:
+                raise ValueError("Content orchestrator not registered")
+
+            content_task_data = {
+                "task_id": task.task_id,
+                "content_type": "content",
+                "target": task.data.get("target", ""),
+                "niche": task.data.get("niche", ""),
+                "geo": task.data.get("geo", ""),
+            }
+
+            await self._publish_progress(0, "started", "Starting content optimization")
+
+            content_result = await asyncio.wait_for(
+                orchestrator.execute_content_generation(content_task_data, progress_callback=self._publish_progress),
+                timeout=300
+            )
+
+            validated_result = self._validate_content_result(content_result)
+            await self._store_content_result(validated_result)
+            await self._publish_progress(100, "completed", "Content optimization complete")
+
+            return TaskResult(
+                subtask_id=task.task_id,
+                agent_id=self.agent_id,
+                action=task.data.get("action", "optimize_content"),
+                status="success",
+                result=validated_result,
+                error=None,
+                duration_seconds=content_result.get("execution_time_seconds", 0),
+                completed_at=datetime.now(timezone.utc)
+            )
+
+        except Exception as e:
+            logger.error(f"Content optimization failed: {e}", exc_info=True)
+            return self._create_error_result(task, e)
 
     async def _handle_readability_analysis(self, task: Task) -> TaskResult:
-        """Handle trend analysis task
+        """Handle readability analysis via Content orchestrator"""
+        logger.info(f"Handling readability analysis for task {task.task_id}")
 
-        TODO: Implement trend analysis logic
-        For now, uses generic knowledge search
-        """
-        logger.info(f"Handling trend analysis for task {task.task_id}")
-        return await self._handle_generic_content(task)
+        try:
+            orchestrator = self.orchestrators.get("content")
+            if not orchestrator:
+                raise ValueError("Content orchestrator not registered")
+
+            content_task_data = {
+                "task_id": task.task_id,
+                "content_type": "technical",
+                "target": task.data.get("target", ""),
+                "niche": task.data.get("niche", ""),
+                "geo": task.data.get("geo", ""),
+            }
+
+            await self._publish_progress(0, "started", "Starting readability analysis")
+
+            content_result = await asyncio.wait_for(
+                orchestrator.execute_content_generation(content_task_data, progress_callback=self._publish_progress),
+                timeout=300
+            )
+
+            validated_result = self._validate_content_result(content_result)
+            await self._store_content_result(validated_result)
+            await self._publish_progress(100, "completed", "Readability analysis complete")
+
+            return TaskResult(
+                subtask_id=task.task_id,
+                agent_id=self.agent_id,
+                action=task.data.get("action", "analyze_readability"),
+                status="success",
+                result=validated_result,
+                error=None,
+                duration_seconds=content_result.get("execution_time_seconds", 0),
+                completed_at=datetime.now(timezone.utc)
+            )
+
+        except Exception as e:
+            logger.error(f"Readability analysis failed: {e}", exc_info=True)
+            return self._create_error_result(task, e)
 
     async def _handle_generic_content(self, task: Task) -> TaskResult:
         """Handle generic intelligence task via knowledge search
