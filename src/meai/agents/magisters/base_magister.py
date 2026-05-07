@@ -752,6 +752,10 @@ cached_at: {datetime.now(timezone.utc).isoformat()}
         from meai.events.event_bus import Message
 
         # Create result message
+        # Convert TaskResult status to Operator status format
+        operator_status = "completed" if result.status == "success" else "failed"
+
+
         message = Message(
             from_agent=self.agent_id,
             to_agent="operator",
@@ -760,7 +764,7 @@ cached_at: {datetime.now(timezone.utc).isoformat()}
             payload={
                 "subtask_id": result.subtask_id,
                 "parent_task_id": parent_task_id,
-                "status": result.status,
+                "status": operator_status,  # Use converted status
                 "result": result.result,
                 "completed_at": datetime.now(timezone.utc).isoformat(),
             },
