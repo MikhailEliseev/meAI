@@ -106,7 +106,7 @@ class AnalyticsMagister(BaseMagister):
                 return await self._handle_metrics_tracking(task)
             elif action == "analyze_data":
                 return await self._handle_data_analysis(task)
-            elif action == "generate_reports":
+            elif action == "create_report" or action == "generate_reports":  # Support both
                 return await self._handle_report_generation(task)
             else:
                 return await self._handle_generic_analytics(task)

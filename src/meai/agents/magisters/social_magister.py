@@ -102,11 +102,11 @@ class SocialMagister(BaseMagister):
         logger.info(f"Social Magister executing task: {task.task_id}, action: {action}")
 
         try:
-            if action == "publish_post":
+            if action == "publish_post" or action == "create_post":  # Support both
                 return await self._handle_post_publishing(task)
-            elif action == "schedule_content":
+            elif action == "schedule_content" or action == "schedule_posts":  # Support both
                 return await self._handle_content_scheduling(task)
-            elif action == "analyze_engagement":
+            elif action == "analyze_engagement" or action == "engage_audience":  # Support both
                 return await self._handle_engagement_analysis(task)
             else:
                 return await self._handle_generic_social(task)

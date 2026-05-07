@@ -33,24 +33,24 @@ class AnalyticsAgent(Agent):
 
     async def execute_task(self, task: Task) -> TaskResult:
         """Execute analytics task"""
-        
+
         action = task.action
-        payload = task.payload
-        
+        data = task.data  # Use task.data instead of task.payload
+
         start_time = datetime.now(timezone.utc)
-        
+
         try:
             if action == "track_metrics":
-                result = await self._track_metrics(payload)
+                result = await self._track_metrics(data)
             elif action == "generate_report":
-                result = await self._generate_report(payload)
+                result = await self._generate_report(data)
             elif action == "analyze_data":
-                result = await self._analyze_data(payload)
+                result = await self._analyze_data(data)
             else:
                 result = {"error": f"Unknown action: {action}"}
-            
+
             duration = (datetime.now(timezone.utc) - start_time).total_seconds()
-            
+
             return TaskResult(
                 subtask_id=task.subtask_id,
                 agent_id=self.agent_id,

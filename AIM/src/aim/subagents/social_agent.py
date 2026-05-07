@@ -33,24 +33,24 @@ class SocialAgent(Agent):
 
     async def execute_task(self, task: Task) -> TaskResult:
         """Execute social media task"""
-        
+
         action = task.action
-        payload = task.payload
-        
+        data = task.data  # Use task.data instead of task.payload
+
         start_time = datetime.now(timezone.utc)
-        
+
         try:
             if action == "publish_post":
-                result = await self._publish_post(payload)
+                result = await self._publish_post(data)
             elif action == "schedule_content":
-                result = await self._schedule_content(payload)
+                result = await self._schedule_content(data)
             elif action == "analyze_engagement":
-                result = await self._analyze_engagement(payload)
+                result = await self._analyze_engagement(data)
             else:
                 result = {"error": f"Unknown action: {action}"}
-            
+
             duration = (datetime.now(timezone.utc) - start_time).total_seconds()
-            
+
             return TaskResult(
                 subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
