@@ -127,7 +127,7 @@ class AnalyticsMagister(BaseMagister):
                 raise ValueError("Analytics orchestrator not registered")
 
             # 2. Create CI task from Intelligence task
-            ci_task_data = {
+            analytics_task_data = {
                 "task_id": task.task_id,
                 "niche": task.data.get("niche", ""),
                 "geo": task.data.get("geo", ""),
@@ -139,7 +139,7 @@ class AnalyticsMagister(BaseMagister):
             }
 
             # 3. Set timeout based on tier
-            tier = ci_task_data["tier"]
+            tier = analytics_task_data["tier"]
             timeout_seconds = {
                 "quick": 900,   # 15 min
                 "deep": 2700,   # 45 min
@@ -149,16 +149,16 @@ class AnalyticsMagister(BaseMagister):
             # 4. Execute with timeout and progress updates
             await self._publish_progress(0, "started", f"Starting {tier} CI analysis")
 
-            ci_result = await asyncio.wait_for(
-                orchestrator.execute_ci_analysis(
-                    ci_task_data,
+            analytics_result = await asyncio.wait_for(
+                orchestrator.execute_metrics_tracking(
+                    analytics_task_data,
                     progress_callback=self._publish_progress
                 ),
                 timeout=timeout_seconds
             )
 
             # 5. Validate result
-            validated_result = self._validate_analytics_result(ci_result)
+            validated_result = self._validate_analytics_result(analytics_result)
 
             # 6. Store in vault
             await self._store_analytics_result(validated_result)

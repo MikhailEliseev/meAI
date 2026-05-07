@@ -137,7 +137,7 @@ class AdsMagister(BaseMagister):
                 raise ValueError("Ads orchestrator not registered")
 
             # 2. Create CI task from Intelligence task
-            ci_task_data = {
+            ads_task_data = {
                 "task_id": task.task_id,
                 "niche": task.data.get("niche", ""),
                 "geo": task.data.get("geo", ""),
@@ -149,7 +149,7 @@ class AdsMagister(BaseMagister):
             }
 
             # 3. Set timeout based on tier
-            tier = ci_task_data["tier"]
+            tier = ads_task_data["tier"]
             timeout_seconds = {
                 "quick": 900,   # 15 min
                 "deep": 2700,   # 45 min
@@ -159,16 +159,16 @@ class AdsMagister(BaseMagister):
             # 4. Execute with timeout and progress updates
             await self._publish_progress(0, "started", f"Starting {tier} CI analysis")
 
-            ci_result = await asyncio.wait_for(
-                orchestrator.execute_ci_analysis(
-                    ci_task_data,
+            ads_result = await asyncio.wait_for(
+                orchestrator.execute_campaign_creation(
+                    ads_task_data,
                     progress_callback=self._publish_progress
                 ),
                 timeout=timeout_seconds
             )
 
             # 5. Validate result
-            validated_result = self._validate_ads_result(ci_result)
+            validated_result = self._validate_ads_result(ads_result)
 
             # 6. Store in vault
             await self._store_ads_result(validated_result)
