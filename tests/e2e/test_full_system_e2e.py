@@ -277,10 +277,14 @@ async def test_full_system_e2e():
     # ========================================================================
     print("\n📋 Step 6: Operator collecting results...")
 
-    await operator.poll_and_collect_results()
+    # Poll multiple times to ensure all messages are processed
+    max_polls = 10
+    for i in range(max_polls):
+        await operator.poll_and_collect_results()
+        await asyncio.sleep(0.2)  # Small delay between polls
 
-    # Wait for async processing
-    await asyncio.sleep(0.5)
+    # Final poll to catch any stragglers
+    await operator.poll_and_collect_results()
 
     print("✅ Results collected")
 

@@ -93,10 +93,11 @@ class ContentWriterAgent(Agent):
         start_time = datetime.now(timezone.utc)
 
         try:
-            # Extract content parameters from task description
-            content_type = self._extract_content_type(task.description)
-            topic = self._extract_topic(task.description)
-            specialty = self._detect_specialty(topic)
+            # Extract content parameters from task.data (not description)
+            content_type = task.data.get("content_type", "article")
+            topic = task.data.get("topic", "medical services")
+            niche = task.data.get("niche", "")
+            specialty = self._detect_specialty(topic + " " + niche)
 
             # Get template for content type
             template = self.content_templates.get(content_type, self.content_templates["blog_post"])

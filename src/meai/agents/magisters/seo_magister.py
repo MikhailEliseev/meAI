@@ -159,7 +159,7 @@ class SEOMagister(BaseMagister):
 
             # 7. Return result
             return TaskResult(
-                subtask_id=task.task_id,
+                subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
                 action=task.data.get("action", "analyze_keywords"),
                 status="success",
@@ -310,7 +310,7 @@ class SEOMagister(BaseMagister):
             await self._publish_progress(100, "completed", "Content optimization complete")
 
             return TaskResult(
-                subtask_id=task.task_id,
+                subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
                 action=task.data.get("action", "optimize_content"),
                 status="success",
@@ -353,7 +353,7 @@ class SEOMagister(BaseMagister):
             await self._publish_progress(100, "completed", "Technical audit complete")
 
             return TaskResult(
-                subtask_id=task.task_id,
+                subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
                 action=task.data.get("action", "audit_technical_seo"),
                 status="success",
@@ -385,7 +385,7 @@ class SEOMagister(BaseMagister):
             )
 
             return TaskResult(
-                subtask_id=task.task_id,
+                subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
                 action=task.data.get("action", "generic"),
                 status="success",
@@ -406,7 +406,7 @@ class SEOMagister(BaseMagister):
     def _create_timeout_result(self, task: Task, timeout_seconds: int) -> TaskResult:
         """Create timeout error result"""
         return TaskResult(
-            subtask_id=task.task_id,
+            subtask_id=task.subtask_id,
             agent_id=self.agent_id,
             action=task.data.get("action", "unknown"),
             status="failed",
@@ -419,7 +419,7 @@ class SEOMagister(BaseMagister):
     def _create_error_result(self, task: Task, error: Exception) -> TaskResult:
         """Create error result"""
         return TaskResult(
-            subtask_id=task.task_id,
+            subtask_id=task.subtask_id,
             agent_id=self.agent_id,
             action=task.data.get("action", "unknown"),
             status="failed",
