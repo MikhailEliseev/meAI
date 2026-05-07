@@ -41,7 +41,12 @@ class SocialOrchestrator(Agent):
         database_url: str = "sqlite+aiosqlite:///./data/meai.db",
         vault_path: str = "AIM/obsidian/social-orchestrator"
     ):
-        super().__init__(agent_id, database_url, vault_path)
+        super().__init__(
+            agent_id=agent_id,
+            agent_type="social_orchestrator",
+            database_url=database_url,
+            vault_path=vault_path
+        )
         self.event_bus = event_bus
 
     def get_capabilities(self) -> list[str]:
@@ -108,6 +113,7 @@ class SocialOrchestrator(Agent):
                 "task_id": task_id,
                 "post_type": post_type,
                 "results": results,
+                "status": results.get("status", "completed"),  # Add status to top level
                 "execution_time_seconds": int(execution_time),
                 "errors": []
             }
@@ -255,10 +261,10 @@ class SocialOrchestrator(Agent):
         # Convert Task to task_data dict
         task_data = {
             "task_id": task.task_id,
-            "post_type": task.payload.get("post_type", "keyword"),
-            "target": task.payload.get("target", ""),
-            "niche": task.payload.get("niche", ""),
-            "geo": task.payload.get("geo", "")
+            "post_type": task.data.get("post_type", "keyword"),
+            "target": task.data.get("target", ""),
+            "niche": task.data.get("niche", ""),
+            "geo": task.data.get("geo", "")
         }
 
         # Execute analysis

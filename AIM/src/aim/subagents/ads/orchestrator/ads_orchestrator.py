@@ -41,7 +41,12 @@ class AdsOrchestrator(Agent):
         database_url: str = "sqlite+aiosqlite:///./data/meai.db",
         vault_path: str = "AIM/obsidian/ads-orchestrator"
     ):
-        super().__init__(agent_id, database_url, vault_path)
+        super().__init__(
+            agent_id=agent_id,
+            agent_type="ads_orchestrator",
+            database_url=database_url,
+            vault_path=vault_path
+        )
         self.event_bus = event_bus
 
     def get_capabilities(self) -> list[str]:
@@ -108,6 +113,7 @@ class AdsOrchestrator(Agent):
                 "task_id": task_id,
                 "campaign_type": campaign_type,
                 "results": results,
+                "status": results.get("status", "completed"),  # Add status to top level
                 "execution_time_seconds": int(execution_time),
                 "errors": []
             }
@@ -264,10 +270,10 @@ class AdsOrchestrator(Agent):
         # Convert Task to task_data dict
         task_data = {
             "task_id": task.task_id,
-            "campaign_type": task.payload.get("campaign_type", "keyword"),
-            "target": task.payload.get("target", ""),
-            "niche": task.payload.get("niche", ""),
-            "geo": task.payload.get("geo", "")
+            "campaign_type": task.data.get("campaign_type", "keyword"),
+            "target": task.data.get("target", ""),
+            "niche": task.data.get("niche", ""),
+            "geo": task.data.get("geo", "")
         }
 
         # Execute analysis

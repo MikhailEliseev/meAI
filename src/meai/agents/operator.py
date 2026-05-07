@@ -72,6 +72,7 @@ class Subtask:
     result: dict[str, Any] | None
     created_at: datetime
     completed_at: datetime | None
+    data: dict[str, Any] | None = None  # Additional task data for agents
 
 
 @dataclass
@@ -142,12 +143,12 @@ class MagisterCoordinator:
             "ab_test": "ads-magister-1",
             "target_audience": "ads-magister-1",
 
-            # SMM Magister capabilities
-            "create_post": "smm-magister-1",
-            "schedule_posts": "smm-magister-1",
-            "engage_audience": "smm-magister-1",
-            "analyze_metrics": "smm-magister-1",
-            "manage_campaigns": "smm-magister-1",
+            # Social Magister capabilities (formerly SMM)
+            "create_post": "social-magister-1",
+            "schedule_posts": "social-magister-1",
+            "engage_audience": "social-magister-1",
+            "analyze_metrics": "social-magister-1",
+            "manage_campaigns": "social-magister-1",
 
             # Analytics Magister capabilities
             "analyze_data": "analytics-magister-1",
@@ -195,6 +196,7 @@ class MagisterCoordinator:
                 "description": subtask.description,
                 "dependencies": subtask.dependencies,
                 "deadline": None,  # Can add deadline logic later
+                "data": subtask.data if hasattr(subtask, 'data') else {},  # Pass task data
             },
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
@@ -336,6 +338,7 @@ class Operator:
                     priority INTEGER NOT NULL,
                     status TEXT NOT NULL,
                     result TEXT,
+                    data TEXT,
                     created_at TIMESTAMP NOT NULL,
                     completed_at TIMESTAMP,
                     FOREIGN KEY (parent_task_id) REFERENCES operator_tasks(task_id)
@@ -711,6 +714,13 @@ class Operator:
                 result=None,
                 created_at=now,
                 completed_at=None,
+                data={
+                    "target": task.resources.get("target", ""),
+                    "niche": task.resources.get("niche", "medical"),
+                    "geo": task.resources.get("geo", ""),
+                    "budget": task.resources.get("budget", 0),
+                    "campaign_name": task.goal,
+                },
             )
 
             subtasks.append(subtask)
@@ -937,9 +947,9 @@ class Operator:
                 text("""
                 INSERT OR REPLACE INTO operator_subtasks
                 (subtask_id, parent_task_id, agent_id, action, description,
-                 dependencies, priority, status, result, created_at, completed_at)
+                 dependencies, priority, status, result, data, created_at, completed_at)
                 VALUES (:subtask_id, :parent_task_id, :agent_id, :action, :description,
-                        :dependencies, :priority, :status, :result, :created_at, :completed_at)
+                        :dependencies, :priority, :status, :result, :data, :created_at, :completed_at)
                 """),
                 {
                     "subtask_id": subtask.subtask_id,
@@ -951,6 +961,7 @@ class Operator:
                     "priority": subtask.priority,
                     "status": subtask.status.value,
                     "result": json.dumps(subtask.result) if subtask.result else None,
+                    "data": json.dumps(subtask.data) if subtask.data else None,
                     "created_at": subtask.created_at,
                     "completed_at": subtask.completed_at,
                 },
@@ -1876,6 +1887,7 @@ completed: {user_report['completed_at']}
             result={"retry_count": retry_count},
             created_at=subtask["created_at"],
             completed_at=None,
+            data=subtask.get("data", {}),
         )
 
         # Update in database with retry count
