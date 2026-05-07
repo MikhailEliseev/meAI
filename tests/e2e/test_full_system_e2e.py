@@ -80,55 +80,100 @@ async def test_full_system_e2e():
     magisters.append(("Intelligence", intelligence))
     print("  ✅ Intelligence Magister")
 
-    # SEO Magister
+    # SEO Magister (with orchestrator)
+    from AIM.src.aim.subagents.seo.orchestrator.seo_orchestrator import SEOOrchestrator
+    seo_orchestrator = SEOOrchestrator(
+        agent_id="seo-magister-1-seo-orchestrator",
+        event_bus=operator.event_bus,
+        database_url="sqlite+aiosqlite:///:memory:",
+    )
+    await seo_orchestrator.initialize()
+
     seo = SEOMagister(
         agent_id="seo-magister-1",
         event_bus=operator.event_bus,
         database_url="sqlite+aiosqlite:///:memory:",
+        orchestrators={"seo": seo_orchestrator},
     )
     await seo.initialize()
     magisters.append(("SEO", seo))
-    print("  ✅ SEO Magister")
+    print("  ✅ SEO Magister (with orchestrator)")
 
-    # Content Magister
+    # Content Magister (with orchestrator)
+    from AIM.src.aim.subagents.content.orchestrator.content_orchestrator import ContentOrchestrator
+    content_orchestrator = ContentOrchestrator(
+        agent_id="content-magister-1-content-orchestrator",
+        event_bus=operator.event_bus,
+        database_url="sqlite+aiosqlite:///:memory:",
+    )
+    await content_orchestrator.initialize()
+
     content = ContentMagister(
         agent_id="content-magister-1",
         event_bus=operator.event_bus,
         database_url="sqlite+aiosqlite:///:memory:",
+        orchestrators={"content": content_orchestrator},
     )
     await content.initialize()
     magisters.append(("Content", content))
-    print("  ✅ Content Magister")
+    print("  ✅ Content Magister (with orchestrator)")
 
-    # Ads Magister
+    # Ads Magister (with orchestrator)
+    from AIM.src.aim.subagents.ads.orchestrator.ads_orchestrator import AdsOrchestrator
+    ads_orchestrator = AdsOrchestrator(
+        agent_id="ads-magister-1-ads-orchestrator",
+        event_bus=operator.event_bus,
+        database_url="sqlite+aiosqlite:///:memory:",
+    )
+    await ads_orchestrator.initialize()
+
     ads = AdsMagister(
         agent_id="ads-magister-1",
         event_bus=operator.event_bus,
         database_url="sqlite+aiosqlite:///:memory:",
+        orchestrators={"ads": ads_orchestrator},
     )
     await ads.initialize()
     magisters.append(("Ads", ads))
-    print("  ✅ Ads Magister")
+    print("  ✅ Ads Magister (with orchestrator)")
 
-    # Analytics Magister
+    # Analytics Magister (with orchestrator)
+    from AIM.src.aim.subagents.analytics.orchestrator.analytics_orchestrator import AnalyticsOrchestrator
+    analytics_orchestrator = AnalyticsOrchestrator(
+        agent_id="analytics-magister-1-analytics-orchestrator",
+        event_bus=operator.event_bus,
+        database_url="sqlite+aiosqlite:///:memory:",
+    )
+    await analytics_orchestrator.initialize()
+
     analytics = AnalyticsMagister(
         agent_id="analytics-magister-1",
         event_bus=operator.event_bus,
         database_url="sqlite+aiosqlite:///:memory:",
+        orchestrators={"analytics": analytics_orchestrator},
     )
     await analytics.initialize()
     magisters.append(("Analytics", analytics))
-    print("  ✅ Analytics Magister")
+    print("  ✅ Analytics Magister (with orchestrator)")
 
-    # Social Magister
+    # Social Magister (with orchestrator)
+    from AIM.src.aim.subagents.social.orchestrator.social_orchestrator import SocialOrchestrator
+    social_orchestrator = SocialOrchestrator(
+        agent_id="social-magister-1-social-orchestrator",
+        event_bus=operator.event_bus,
+        database_url="sqlite+aiosqlite:///:memory:",
+    )
+    await social_orchestrator.initialize()
+
     social = SocialMagister(
         agent_id="social-magister-1",
         event_bus=operator.event_bus,
         database_url="sqlite+aiosqlite:///:memory:",
+        orchestrators={"social": social_orchestrator},
     )
     await social.initialize()
     magisters.append(("Social", social))
-    print("  ✅ Social Magister")
+    print("  ✅ Social Magister (with orchestrator)")
 
     print(f"\n✅ All 6 Magisters initialized")
 
@@ -351,6 +396,9 @@ async def test_full_system_e2e():
     await operator.shutdown()
     for name, magister in magisters:
         await magister.shutdown()
+        # Shutdown orchestrators
+        for orchestrator in magister.orchestrators.values():
+            await orchestrator.shutdown()
 
     print("✅ Cleanup complete")
 

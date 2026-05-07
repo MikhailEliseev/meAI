@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from sqlalchemy import text
 
-from meai.agents.base_agent import Agent, Task, TaskResult, Feedback
+from meai.agents.base_agent import Agent, Task, TaskResult, Feedback, TaskStatus, TaskStatus
 from meai.events.event_bus import EventBus, Event
 from meai.storage.database import Database
 
@@ -688,7 +688,7 @@ cached_at: {datetime.now(timezone.utc).isoformat()}
         )
 
         for message in messages:
-            if message.message_type == "task_assignment":
+            if message.message_type == "magister_task":  # Changed from "task_assignment"
                 try:
                     await self._handle_task_assignment(message)
                     await self.event_bus.mark_processed(message.message_id)
@@ -718,11 +718,15 @@ cached_at: {datetime.now(timezone.utc).isoformat()}
         # Create Task
         task = Task(
             task_id=payload["subtask_id"],
+            subtask_id=payload["subtask_id"],
+            parent_task_id=payload["parent_task_id"],
+            action=payload["action"],
             description=payload["description"],
-            metadata={
-                "action": payload["action"],
-                "parent_task_id": payload["parent_task_id"],
-            },
+            priority=payload.get("priority", 2),
+            status=TaskStatus.RECEIVED,
+            created_at=datetime.now(timezone.utc),
+            received_at=datetime.now(timezone.utc),
+            data=payload.get("data", {}),  # Pass data from payload
         )
 
         # Execute task
@@ -754,7 +758,7 @@ cached_at: {datetime.now(timezone.utc).isoformat()}
             message_type="task_result",
             priority=1,
             payload={
-                "subtask_id": result.task_id,
+                "subtask_id": result.subtask_id,
                 "parent_task_id": parent_task_id,
                 "status": result.status,
                 "result": result.result,

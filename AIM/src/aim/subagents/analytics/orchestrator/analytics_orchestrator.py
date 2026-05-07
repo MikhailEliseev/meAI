@@ -41,7 +41,12 @@ class AnalyticsOrchestrator(Agent):
         database_url: str = "sqlite+aiosqlite:///./data/meai.db",
         vault_path: str = "AIM/obsidian/analytics-orchestrator"
     ):
-        super().__init__(agent_id, database_url, vault_path)
+        super().__init__(
+            agent_id=agent_id,
+            agent_type="analytics_orchestrator",
+            database_url=database_url,
+            vault_path=vault_path
+        )
         self.event_bus = event_bus
 
     def get_capabilities(self) -> list[str]:
@@ -108,6 +113,7 @@ class AnalyticsOrchestrator(Agent):
                 "task_id": task_id,
                 "metrics_type": metrics_type,
                 "results": results,
+                "status": results.get("status", "completed"),  # Add status to top level
                 "execution_time_seconds": int(execution_time),
                 "errors": []
             }
@@ -256,10 +262,10 @@ class AnalyticsOrchestrator(Agent):
         # Convert Task to task_data dict
         task_data = {
             "task_id": task.task_id,
-            "metrics_type": task.payload.get("metrics_type", "keyword"),
-            "target": task.payload.get("target", ""),
-            "niche": task.payload.get("niche", ""),
-            "geo": task.payload.get("geo", "")
+            "metrics_type": task.data.get("metrics_type", "keyword"),
+            "target": task.data.get("target", ""),
+            "niche": task.data.get("niche", ""),
+            "geo": task.data.get("geo", "")
         }
 
         # Execute analysis

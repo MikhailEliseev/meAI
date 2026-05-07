@@ -41,7 +41,12 @@ class ContentOrchestrator(Agent):
         database_url: str = "sqlite+aiosqlite:///./data/meai.db",
         vault_path: str = "AIM/obsidian/content-orchestrator"
     ):
-        super().__init__(agent_id, database_url, vault_path)
+        super().__init__(
+            agent_id=agent_id,
+            agent_type="content_orchestrator",
+            database_url=database_url,
+            vault_path=vault_path
+        )
         self.event_bus = event_bus
 
     def get_capabilities(self) -> list[str]:
@@ -108,6 +113,7 @@ class ContentOrchestrator(Agent):
                 "task_id": task_id,
                 "content_type": content_type,
                 "results": results,
+                "status": results.get("status", "completed"),  # Add status to top level
                 "execution_time_seconds": int(execution_time),
                 "errors": []
             }
@@ -146,22 +152,27 @@ class ContentOrchestrator(Agent):
         # Create ContentWriterAgent
         content_agent = ContentWriterAgent(
             agent_id=f"content-writer-{task_data.get('task_id', 'unknown')}",
-            event_bus=self.event_bus
+            database_url=self.db.database_url if hasattr(self.db, 'database_url') else "sqlite+aiosqlite:///:memory:",
         )
 
         # Prepare task for agent
         agent_task = Task(
             task_id=task_data.get("task_id", "unknown"),
             subtask_id=f"content-{task_data.get('task_id', 'unknown')}",
+            parent_task_id=task_data.get("task_id", "unknown"),
             action="write_content",
-            payload={
+            description="Content generation task",
+            priority=1,
+            status=TaskStatus.RECEIVED,
+            created_at=datetime.now(timezone.utc),
+            received_at=datetime.now(timezone.utc),
+            data={
                 "topic": topic,
                 "content_type": content_type,
                 "niche": niche,
                 "tone": task_data.get("tone", "professional"),
                 "length": task_data.get("length", "medium")
             },
-            priority=1
         )
 
         # Progress update
@@ -265,10 +276,10 @@ class ContentOrchestrator(Agent):
         # Convert Task to task_data dict
         task_data = {
             "task_id": task.task_id,
-            "content_type": task.payload.get("content_type", "keyword"),
-            "target": task.payload.get("target", ""),
-            "niche": task.payload.get("niche", ""),
-            "geo": task.payload.get("geo", "")
+            "content_type": task.data.get("content_type", "keyword"),
+            "target": task.data.get("target", ""),
+            "niche": task.data.get("niche", ""),
+            "geo": task.data.get("geo", "")
         }
 
         # Execute analysis

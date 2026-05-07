@@ -42,7 +42,12 @@ class SEOOrchestrator(Agent):
         database_url: str = "sqlite+aiosqlite:///./data/meai.db",
         vault_path: str = "AIM/obsidian/seo-orchestrator"
     ):
-        super().__init__(agent_id, database_url, vault_path)
+        super().__init__(
+            agent_id=agent_id,
+            agent_type="seo_orchestrator",
+            database_url=database_url,
+            vault_path=vault_path
+        )
         self.event_bus = event_bus
 
     def get_capabilities(self) -> list[str]:
@@ -109,6 +114,7 @@ class SEOOrchestrator(Agent):
                 "task_id": task_id,
                 "analysis_type": analysis_type,
                 "results": results,
+                "status": results.get("status", "completed"),  # Add status to top level
                 "execution_time_seconds": int(execution_time),
                 "errors": []
             }
@@ -147,21 +153,26 @@ class SEOOrchestrator(Agent):
         # Create KeywordResearchAgent
         keyword_agent = KeywordResearchAgent(
             agent_id=f"keyword-research-{task_data.get('task_id', 'unknown')}",
-            event_bus=self.event_bus
+            database_url=self.db.database_url if hasattr(self.db, 'database_url') else "sqlite+aiosqlite:///:memory:",
         )
 
         # Prepare task for agent
         agent_task = Task(
             task_id=task_data.get("task_id", "unknown"),
             subtask_id=f"keyword-{task_data.get('task_id', 'unknown')}",
+            parent_task_id=task_data.get("task_id", "unknown"),
             action="research_keywords",
-            payload={
+            description="Keyword research task",
+            priority=1,
+            status=TaskStatus.RECEIVED,
+            created_at=datetime.now(timezone.utc),
+            received_at=datetime.now(timezone.utc),
+            data={
                 "seed_keyword": target or niche,
                 "niche": niche,
                 "geo": geo,
                 "depth": "standard"  # Can be "quick" or "deep"
             },
-            priority=1
         )
 
         # Progress update
