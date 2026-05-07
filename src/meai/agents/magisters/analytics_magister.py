@@ -117,8 +117,8 @@ class AnalyticsMagister(BaseMagister):
             self.current_task_id = None
 
     async def _handle_metrics_tracking(self, task: Task) -> TaskResult:
-        """Handle competitor analysis via Content system"""
-        logger.info(f"Handling competitor analysis for task {task.task_id}")
+        """Handle metrics tracking via Content system"""
+        logger.info(f"Handling metrics tracking for task {task.task_id}")
 
         try:
             # 1. Get orchestrator via dependency injection
@@ -126,7 +126,7 @@ class AnalyticsMagister(BaseMagister):
             if not orchestrator:
                 raise ValueError("Analytics orchestrator not registered")
 
-            # 2. Create CI task from Intelligence task
+            # 2. Create metrics task from Intelligence task
             analytics_task_data = {
                 "task_id": task.task_id,
                 "niche": task.data.get("niche", ""),
@@ -145,7 +145,7 @@ class AnalyticsMagister(BaseMagister):
             }.get(tier, 2700)
 
             # 4. Execute with timeout and progress updates
-            await self._publish_progress(0, "started", f"Starting {tier} CI analysis")
+            await self._publish_progress(0, "started", f"Starting {tier} metrics tracking")
 
             analytics_result = await asyncio.wait_for(
                 orchestrator.execute_metrics_tracking(
@@ -161,7 +161,7 @@ class AnalyticsMagister(BaseMagister):
             # 6. Store in vault
             await self._store_analytics_result(validated_result)
 
-            await self._publish_progress(100, "completed", "CI analysis complete")
+            await self._publish_progress(100, "completed", "metrics tracking complete")
 
             # 7. Return result
             return TaskResult(
@@ -176,7 +176,7 @@ class AnalyticsMagister(BaseMagister):
             )
 
         except asyncio.TimeoutError:
-            logger.error(f"CI analysis timed out after {timeout_seconds}s")
+            logger.error(f"metrics tracking timed out after {timeout_seconds}s")
             return self._create_timeout_result(task, timeout_seconds)
         except Exception as e:
             logger.error(f"Competitor analysis failed: {e}", exc_info=True)
@@ -213,10 +213,10 @@ class AnalyticsMagister(BaseMagister):
             logger.warning(f"Failed to publish progress: {e}")
 
     def _validate_analytics_result(self, result: dict[str, Any]) -> dict[str, Any]:
-        """Validate CI result structure
+        """Validate metrics result structure
 
         Args:
-            result: CI result dictionary
+            result: metrics result dictionary
 
         Returns:
             Validated result
@@ -224,15 +224,15 @@ class AnalyticsMagister(BaseMagister):
         Raises:
             ValueError: If validation fails
         """
-        logger.debug("Validating CI result")
+        logger.debug("Validating metrics result")
 
         try:
             # Validate required fields
             if not result.get("task_id"):
-                raise ValueError("Missing task_id in CI result")
+                raise ValueError("Missing task_id in metrics result")
 
             if not result.get("findings"):
-                raise ValueError("Missing findings in CI result")
+                raise ValueError("Missing findings in metrics result")
 
             competitors_analyzed = result.get("competitors_analyzed", 0)
             if competitors_analyzed < 1:
@@ -245,18 +245,18 @@ class AnalyticsMagister(BaseMagister):
                     if path and not Path(path).exists():
                         logger.warning(f"Report file not found: {path}")
 
-            logger.info(f"CI result validated: {competitors_analyzed} competitors analyzed")
+            logger.info(f"metrics result validated: {competitors_analyzed} competitors analyzed")
             return result
 
         except (ValueError, KeyError) as e:
-            logger.error(f"CI result validation failed: {e}")
-            raise ValueError(f"Invalid CI result: {e}")
+            logger.error(f"metrics result validation failed: {e}")
+            raise ValueError(f"Invalid metrics result: {e}")
 
     async def _store_analytics_result(self, result: dict[str, Any]) -> None:
-        """Store CI result in Obsidian vault
+        """Store metrics result in Obsidian vault
 
         Args:
-            result: Validated CI result
+            result: Validated metrics result
         """
         try:
             # Create markdown file in vault
@@ -304,10 +304,10 @@ execution_time: {result.get('execution_time_seconds', 0)}s
             result_file.parent.mkdir(parents=True, exist_ok=True)
             result_file.write_text(content, encoding='utf-8')
 
-            logger.info(f"CI result stored in vault: {result_file}")
+            logger.info(f"metrics result stored in vault: {result_file}")
 
         except Exception as e:
-            logger.error(f"Failed to store CI result: {e}", exc_info=True)
+            logger.error(f"Failed to store metrics result: {e}", exc_info=True)
             # Don't raise - storage failure shouldn't fail the task
 
     async def _handle_data_analysis(self, task: Task) -> TaskResult:

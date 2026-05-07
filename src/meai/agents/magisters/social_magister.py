@@ -117,8 +117,8 @@ class SocialMagister(BaseMagister):
             self.current_task_id = None
 
     async def _handle_post_publishing(self, task: Task) -> TaskResult:
-        """Handle competitor analysis via Content system"""
-        logger.info(f"Handling competitor analysis for task {task.task_id}")
+        """Handle post tracking via Content system"""
+        logger.info(f"Handling post tracking for task {task.task_id}")
 
         try:
             # 1. Get orchestrator via dependency injection
@@ -126,7 +126,7 @@ class SocialMagister(BaseMagister):
             if not orchestrator:
                 raise ValueError("Social orchestrator not registered")
 
-            # 2. Create CI task from Intelligence task
+            # 2. Create post task from Intelligence task
             social_task_data = {
                 "task_id": task.task_id,
                 "niche": task.data.get("niche", ""),
@@ -145,7 +145,7 @@ class SocialMagister(BaseMagister):
             }.get(tier, 2700)
 
             # 4. Execute with timeout and progress updates
-            await self._publish_progress(0, "started", f"Starting {tier} CI analysis")
+            await self._publish_progress(0, "started", f"Starting {tier} post tracking")
 
             social_result = await asyncio.wait_for(
                 orchestrator.execute_post_publishing(
@@ -161,7 +161,7 @@ class SocialMagister(BaseMagister):
             # 6. Store in vault
             await self._store_social_result(validated_result)
 
-            await self._publish_progress(100, "completed", "CI analysis complete")
+            await self._publish_progress(100, "completed", "post tracking complete")
 
             # 7. Return result
             return TaskResult(
@@ -176,7 +176,7 @@ class SocialMagister(BaseMagister):
             )
 
         except asyncio.TimeoutError:
-            logger.error(f"CI analysis timed out after {timeout_seconds}s")
+            logger.error(f"post tracking timed out after {timeout_seconds}s")
             return self._create_timeout_result(task, timeout_seconds)
         except Exception as e:
             logger.error(f"Competitor analysis failed: {e}", exc_info=True)
@@ -213,10 +213,10 @@ class SocialMagister(BaseMagister):
             logger.warning(f"Failed to publish progress: {e}")
 
     def _validate_social_result(self, result: dict[str, Any]) -> dict[str, Any]:
-        """Validate CI result structure
+        """Validate post result structure
 
         Args:
-            result: CI result dictionary
+            result: post result dictionary
 
         Returns:
             Validated result
@@ -224,15 +224,15 @@ class SocialMagister(BaseMagister):
         Raises:
             ValueError: If validation fails
         """
-        logger.debug("Validating CI result")
+        logger.debug("Validating post result")
 
         try:
             # Validate required fields
             if not result.get("task_id"):
-                raise ValueError("Missing task_id in CI result")
+                raise ValueError("Missing task_id in post result")
 
             if not result.get("findings"):
-                raise ValueError("Missing findings in CI result")
+                raise ValueError("Missing findings in post result")
 
             competitors_analyzed = result.get("competitors_analyzed", 0)
             if competitors_analyzed < 1:
@@ -245,18 +245,18 @@ class SocialMagister(BaseMagister):
                     if path and not Path(path).exists():
                         logger.warning(f"Report file not found: {path}")
 
-            logger.info(f"CI result validated: {competitors_analyzed} competitors analyzed")
+            logger.info(f"post result validated: {competitors_analyzed} competitors analyzed")
             return result
 
         except (ValueError, KeyError) as e:
-            logger.error(f"CI result validation failed: {e}")
-            raise ValueError(f"Invalid CI result: {e}")
+            logger.error(f"post result validation failed: {e}")
+            raise ValueError(f"Invalid post result: {e}")
 
     async def _store_social_result(self, result: dict[str, Any]) -> None:
-        """Store CI result in Obsidian vault
+        """Store post result in Obsidian vault
 
         Args:
-            result: Validated CI result
+            result: Validated post result
         """
         try:
             # Create markdown file in vault
@@ -304,10 +304,10 @@ execution_time: {result.get('execution_time_seconds', 0)}s
             result_file.parent.mkdir(parents=True, exist_ok=True)
             result_file.write_text(content, encoding='utf-8')
 
-            logger.info(f"CI result stored in vault: {result_file}")
+            logger.info(f"post result stored in vault: {result_file}")
 
         except Exception as e:
-            logger.error(f"Failed to store CI result: {e}", exc_info=True)
+            logger.error(f"Failed to store post result: {e}", exc_info=True)
             # Don't raise - storage failure shouldn't fail the task
 
     async def _handle_content_scheduling(self, task: Task) -> TaskResult:
