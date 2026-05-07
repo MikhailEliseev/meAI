@@ -86,7 +86,7 @@ class SocialMagister(BaseMagister):
             "track_mentions",
         ]
 
-        return base_capabilities + seo_capabilities
+        return base_capabilities + social_capabilities
 
     async def execute_task(self, task: Task) -> TaskResult:
         """Execute SEO-specific task
@@ -97,7 +97,7 @@ class SocialMagister(BaseMagister):
         - analyze_engagement → _handle_engagement_analysis()
         """
         self.current_task_id = task.task_id
-        action = task.data.get("action", "")
+        action = task.action
 
         logger.info(f"Social Magister executing task: {task.task_id}, action: {action}")
 

@@ -97,7 +97,7 @@ class SEOMagister(BaseMagister):
         - audit_technical_seo → _handle_technical_audit()
         """
         self.current_task_id = task.task_id
-        action = task.data.get("action", "")
+        action = task.action
 
         logger.info(f"SEO Magister executing task: {task.task_id}, action: {action}")
 

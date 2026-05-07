@@ -86,7 +86,7 @@ class AnalyticsMagister(BaseMagister):
             "monitor_kpis",
         ]
 
-        return base_capabilities + seo_capabilities
+        return base_capabilities + analytics_capabilities
 
     async def execute_task(self, task: Task) -> TaskResult:
         """Execute SEO-specific task
@@ -97,7 +97,7 @@ class AnalyticsMagister(BaseMagister):
         - generate_reports → _handle_report_generation()
         """
         self.current_task_id = task.task_id
-        action = task.data.get("action", "")
+        action = task.action
 
         logger.info(f"Analytics Magister executing task: {task.task_id}, action: {action}")
 
