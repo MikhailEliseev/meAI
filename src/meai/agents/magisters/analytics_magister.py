@@ -57,7 +57,21 @@ class AnalyticsMagister(BaseMagister):
             database_url=database_url,
         )
 
-        self.orchestrators = orchestrators or {}
+        # Initialize orchestrators
+        if orchestrators is None:
+            # Auto-create Analytics orchestrator if not provided
+            from AIM.src.aim.subagents.analytics.orchestrator.analytics_orchestrator import AnalyticsOrchestrator
+
+            self.orchestrators = {
+                "analytics": AnalyticsOrchestrator(
+                    agent_id=f"{agent_id}-analytics-orchestrator",
+                    event_bus=event_bus,
+                    database_url=database_url,
+                )
+            }
+        else:
+            self.orchestrators = orchestrators
+
         self.current_task_id = None
 
     def get_capabilities(self) -> list[str]:
@@ -108,9 +122,9 @@ class AnalyticsMagister(BaseMagister):
 
         try:
             # 1. Get orchestrator via dependency injection
-            orchestrator = self.orchestrators.get("ci")
+            orchestrator = self.orchestrators.get("analytics")
             if not orchestrator:
-                raise ValueError("CI orchestrator not registered")
+                raise ValueError("Analytics orchestrator not registered")
 
             # 2. Create CI task from Intelligence task
             ci_task_data = {

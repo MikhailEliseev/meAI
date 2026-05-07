@@ -19,7 +19,7 @@ aim_path = Path(__file__).parent.parent.parent.parent
 if str(aim_path) not in sys.path:
     sys.path.insert(0, str(aim_path))
 
-from aim.subagents.content_writer_agent import ContentWriterAgent
+from AIM.src.aim.subagents.content_writer_agent import ContentWriterAgent
 
 logger = logging.getLogger(__name__)
 

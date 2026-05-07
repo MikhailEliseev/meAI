@@ -57,7 +57,21 @@ class AdsMagister(BaseMagister):
             database_url=database_url,
         )
 
-        self.orchestrators = orchestrators or {}
+        # Initialize orchestrators
+        if orchestrators is None:
+            # Auto-create Ads orchestrator if not provided
+            from AIM.src.aim.subagents.ads.orchestrator.ads_orchestrator import AdsOrchestrator
+
+            self.orchestrators = {
+                "ads": AdsOrchestrator(
+                    agent_id=f"{agent_id}-ads-orchestrator",
+                    event_bus=event_bus,
+                    database_url=database_url,
+                )
+            }
+        else:
+            self.orchestrators = orchestrators
+
         self.current_task_id = None
 
     def get_capabilities(self) -> list[str]:
@@ -108,9 +122,9 @@ class AdsMagister(BaseMagister):
 
         try:
             # 1. Get orchestrator via dependency injection
-            orchestrator = self.orchestrators.get("ci")
+            orchestrator = self.orchestrators.get("ads")
             if not orchestrator:
-                raise ValueError("CI orchestrator not registered")
+                raise ValueError("Ads orchestrator not registered")
 
             # 2. Create CI task from Intelligence task
             ci_task_data = {
