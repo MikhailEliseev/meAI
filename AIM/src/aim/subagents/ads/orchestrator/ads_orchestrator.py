@@ -1,16 +1,25 @@
 """
 Ads Orchestrator - Coordinates Campaign creation tasks
 
-Minimal implementation for SEO Magister integration.
+Real implementation with AdsCampaignCreatorAgent integration.
 """
 
 from typing import Any, Dict, List, Optional, Callable
 from datetime import datetime, timezone
 import asyncio
 import logging
+from pathlib import Path
 
 from meai.agents.base_agent import Agent, Task, TaskResult, TaskStatus
 from meai.events.event_bus import EventBus
+
+# Import AdsCampaignCreatorAgent
+import sys
+aim_path = Path(__file__).parent.parent.parent.parent
+if str(aim_path) not in sys.path:
+    sys.path.insert(0, str(aim_path))
+
+from aim.subagents.ads_campaign_creator_agent import AdsCampaignCreatorAgent
 
 logger = logging.getLogger(__name__)
 
@@ -118,28 +127,68 @@ class AdsOrchestrator(Agent):
         task_data: Dict[str, Any],
         progress_callback: Optional[Callable] = None
     ) -> Dict[str, Any]:
-        """Execute keyword analysis using KeywordResearchAgent"""
+        """Execute campaign creation using AdsCampaignCreatorAgent"""
 
-        # For now, return stub results
-        # TODO: Integrate KeywordResearchAgent
-
-        target = task_data.get("target", "")
+        campaign_name = task_data.get("target", "") or task_data.get("campaign_name", "")
+        campaign_type = task_data.get("campaign_type", "ppc")
         niche = task_data.get("niche", "")
-        geo = task_data.get("geo", "")
 
-        # Simulate analysis
-        await asyncio.sleep(0.1)
+        if not campaign_name:
+            return {
+                "status": "error",
+                "error": "'campaign_name' or 'target' is required"
+            }
 
-        return {
-            "target": target,
-            "niche": niche,
-            "geo": geo,
-            "keywords": [
-                {"keyword": f"{niche} {geo}", "volume": 1000, "difficulty": 50},
-                {"keyword": f"{niche}", "volume": 5000, "difficulty": 70},
-            ],
-            "status": "completed"
-        }
+        # Progress update
+        if progress_callback:
+            await progress_callback(1, "in_progress", "Initializing campaign creation")
+
+        # Create AdsCampaignCreatorAgent
+        ads_agent = AdsCampaignCreatorAgent(
+            agent_id=f"ads-campaign-{task_data.get('task_id', 'unknown')}",
+            event_bus=self.event_bus
+        )
+
+        # Prepare task for agent
+        agent_task = Task(
+            task_id=task_data.get("task_id", "unknown"),
+            subtask_id=f"campaign-{task_data.get('task_id', 'unknown')}",
+            action="create_campaign",
+            payload={
+                "campaign_name": campaign_name,
+                "campaign_type": campaign_type,
+                "niche": niche,
+                "budget": task_data.get("budget", 10000),
+                "geo": task_data.get("geo", "")
+            },
+            priority=1
+        )
+
+        # Progress update
+        if progress_callback:
+            await progress_callback(2, "in_progress", "Creating campaign")
+
+        # Execute campaign creation
+        result = await ads_agent.execute_task(agent_task)
+
+        # Progress update
+        if progress_callback:
+            await progress_callback(3, "completed", "Campaign creation complete")
+
+        # Return results
+        if result.status == "success":
+            return {
+                "campaign_name": campaign_name,
+                "campaign_type": campaign_type,
+                "campaign_id": result.result.get("campaign_id", ""),
+                "ads_count": result.result.get("ads_count", 0),
+                "status": "completed"
+            }
+        else:
+            return {
+                "status": "error",
+                "error": result.error or "Campaign creation failed"
+            }
 
     async def _execute_content_optimization(
         self,
