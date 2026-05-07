@@ -1375,7 +1375,7 @@ P{subtask.priority}
         async with self.db.session() as session:
             result = await session.execute(
                 text("""
-                SELECT subtask_id, agent_id, action, description, result, completed_at
+                SELECT subtask_id, agent_id, action, description, result, completed_at, data
                 FROM operator_subtasks
                 WHERE parent_task_id = :task_id
                 ORDER BY completed_at ASC
@@ -1393,6 +1393,7 @@ P{subtask.priority}
                 "description": row[3],
                 "result": json.loads(row[4]) if row[4] else {},
                 "completed_at": row[5],
+                "data": json.loads(row[6]) if row[6] else {},
             })
 
         return results

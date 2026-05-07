@@ -127,8 +127,8 @@ class AdsMagister(BaseMagister):
             self.current_task_id = None
 
     async def _handle_campaign_creation(self, task: Task) -> TaskResult:
-        """Handle competitor analysis via Content system"""
-        logger.info(f"Handling competitor analysis for task {task.task_id}")
+        """Handle campaign creation via Ads orchestrator"""
+        logger.info(f"Handling campaign creation for task {task.task_id}")
 
         try:
             # 1. Get orchestrator via dependency injection
@@ -136,7 +136,7 @@ class AdsMagister(BaseMagister):
             if not orchestrator:
                 raise ValueError("Ads orchestrator not registered")
 
-            # 2. Create CI task from Intelligence task
+            # 2. Create ads task data
             ads_task_data = {
                 "task_id": task.task_id,
                 "niche": task.data.get("niche", ""),
@@ -186,10 +186,10 @@ class AdsMagister(BaseMagister):
             )
 
         except asyncio.TimeoutError:
-            logger.error(f"CI analysis timed out after {timeout_seconds}s")
+            logger.error(f"Campaign creation timed out after {timeout_seconds}s")
             return self._create_timeout_result(task, timeout_seconds)
         except Exception as e:
-            logger.error(f"Competitor analysis failed: {e}", exc_info=True)
+            logger.error(f"Campaign creation failed: {e}", exc_info=True)
             return self._create_error_result(task, e)
 
     async def _publish_progress(self, phase: int, status: str, message: str) -> None:
