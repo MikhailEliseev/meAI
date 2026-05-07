@@ -145,6 +145,7 @@ class AnalyticsOrchestrator(Agent):
         # Create AnalyticsAgent
         analytics_agent = AnalyticsAgent(
             agent_id=f"analytics-{task_data.get('task_id', 'unknown')}",
+            event_bus=self.event_bus,
             database_url=self.db.database_url if hasattr(self.db, 'database_url') else "sqlite+aiosqlite:///:memory:",
         )
 
@@ -152,12 +153,17 @@ class AnalyticsOrchestrator(Agent):
         agent_task = Task(
             task_id=task_data.get("task_id", "unknown"),
             subtask_id=f"metrics-{task_data.get('task_id', 'unknown')}",
+            parent_task_id=task_data.get("task_id", "unknown"),
             action="track_metrics",
+            description="Track metrics",
+            priority=1,
+            status=TaskStatus.RECEIVED,
+            created_at=datetime.now(timezone.utc),
+            received_at=datetime.now(timezone.utc),
             data={
                 "metrics_type": metrics_type,
                 "source": source
             },
-            priority=1
         )
 
         # Progress update
