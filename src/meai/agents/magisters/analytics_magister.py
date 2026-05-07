@@ -167,7 +167,7 @@ class AnalyticsMagister(BaseMagister):
             return TaskResult(
                 subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
-                action=task.data.get("action", "track_metrics"),
+                action=task.action,
                 status="success",
                 result=validated_result,
                 error=None,
@@ -350,7 +350,7 @@ execution_time: {result.get('execution_time_seconds', 0)}s
             result = TaskResult(
                 subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
-                action=task.data.get("action", "generic"),
+                action=task.action,
                 status="success",
                 result={
                     "query": query,
@@ -373,7 +373,7 @@ execution_time: {result.get('execution_time_seconds', 0)}s
         return TaskResult(
             subtask_id=task.subtask_id,
             agent_id=self.agent_id,
-            action=task.data.get("action", "unknown"),
+            action=task.action,
             status="failed",
             result={},
             error=f"Task timed out after {timeout_seconds} seconds",
@@ -386,7 +386,7 @@ execution_time: {result.get('execution_time_seconds', 0)}s
         return TaskResult(
             subtask_id=task.subtask_id,
             agent_id=self.agent_id,
-            action=task.data.get("action", "unknown"),
+            action=task.action,
             status="failed",
             result={},
             error=f"{type(error).__name__}: {str(error)}",
