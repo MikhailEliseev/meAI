@@ -158,12 +158,17 @@ class SocialOrchestrator(Agent):
         agent_task = Task(
             task_id=task_data.get("task_id", "unknown"),
             subtask_id=f"post-{task_data.get('task_id', 'unknown')}",
+            parent_task_id=task_data.get("task_id", "unknown"),
             action="publish_post",
+            description="Publish post to social media",
+            priority=1,
+            status=TaskStatus.RECEIVED,
+            created_at=datetime.now(timezone.utc),
+            received_at=datetime.now(timezone.utc),
             data={
                 "content": content,
                 "platform": platform
-            },
-            priority=1
+            }
         )
 
         # Progress update
@@ -254,6 +259,114 @@ class SocialOrchestrator(Agent):
             "top_post": "Medical tips for healthy teeth",
             "status": "completed"
         }
+
+    async def execute_content_scheduling(
+        self,
+        task_data: Dict[str, Any],
+        progress_callback: Optional[Callable] = None
+    ) -> Dict[str, Any]:
+        """Execute content scheduling
+
+        Args:
+            task_data: Task data dict with:
+                - task_id: Task identifier
+                - content: Content to schedule
+                - platforms: List of platforms
+                - schedule: Schedule dict
+            progress_callback: Async callback for progress updates
+
+        Returns:
+            Dict with scheduling results
+        """
+        start_time = datetime.now()
+        task_id = task_data.get("task_id", "unknown")
+
+        try:
+            # Progress update: starting
+            if progress_callback:
+                await progress_callback(1, "in_progress", "Starting content scheduling")
+
+            # Execute scheduling
+            results = await self._execute_content_optimization(task_data, progress_callback)
+
+            # Progress update: completed
+            if progress_callback:
+                await progress_callback(2, "completed", "Scheduling complete")
+
+            # Calculate execution time
+            execution_time = (datetime.now() - start_time).total_seconds()
+
+            # Return structured result
+            return {
+                "task_id": task_id,
+                "results": results,
+                "status": results.get("status", "completed"),
+                "execution_time_seconds": int(execution_time),
+                "errors": []
+            }
+
+        except Exception as e:
+            logger.error(f"Content scheduling failed: {e}", exc_info=True)
+            return {
+                "task_id": task_id,
+                "results": {},
+                "execution_time_seconds": 0,
+                "errors": [f"Content scheduling failed: {str(e)}"]
+            }
+
+    async def execute_engagement_analysis(
+        self,
+        task_data: Dict[str, Any],
+        progress_callback: Optional[Callable] = None
+    ) -> Dict[str, Any]:
+        """Execute engagement analysis
+
+        Args:
+            task_data: Task data dict with:
+                - task_id: Task identifier
+                - platforms: List of platforms
+                - metrics: List of metrics to analyze
+                - period: Analysis period
+            progress_callback: Async callback for progress updates
+
+        Returns:
+            Dict with engagement analysis results
+        """
+        start_time = datetime.now()
+        task_id = task_data.get("task_id", "unknown")
+
+        try:
+            # Progress update: starting
+            if progress_callback:
+                await progress_callback(1, "in_progress", "Starting engagement analysis")
+
+            # Execute analysis
+            results = await self._execute_readability_analysis(task_data, progress_callback)
+
+            # Progress update: completed
+            if progress_callback:
+                await progress_callback(2, "completed", "Analysis complete")
+
+            # Calculate execution time
+            execution_time = (datetime.now() - start_time).total_seconds()
+
+            # Return structured result
+            return {
+                "task_id": task_id,
+                "results": results,
+                "status": results.get("status", "completed"),
+                "execution_time_seconds": int(execution_time),
+                "errors": []
+            }
+
+        except Exception as e:
+            logger.error(f"Engagement analysis failed: {e}", exc_info=True)
+            return {
+                "task_id": task_id,
+                "results": {},
+                "execution_time_seconds": 0,
+                "errors": [f"Engagement analysis failed: {str(e)}"]
+            }
 
     async def execute_task(self, task: Task) -> TaskResult:
         """Execute task (required by Agent base class)"""

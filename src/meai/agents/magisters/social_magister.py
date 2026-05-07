@@ -78,7 +78,7 @@ class SocialMagister(BaseMagister):
         """Get Social Magister capabilities"""
         base_capabilities = super().get_capabilities()
 
-        seo_capabilities = [
+        social_capabilities = [
             "publish_post",
             "schedule_content",
             "analyze_engagement",
@@ -134,12 +134,14 @@ class SocialMagister(BaseMagister):
                 "manage_community": task.data.get("manage_community", ""),
                 "price_segment": task.data.get("price_segment", "mid"),
                 "tier": task.data.get("depth", "deep"),
-                "competitors": task.data.get("competitors", []),            }
+                "competitors": task.data.get("competitors", []),
+            }
 
             # 3. Set timeout
             timeout_seconds = 300  # 5 minutes
 
             # 4. Execute with timeout and progress updates
+            tier = social_task_data.get("tier", "deep")
             await self._publish_progress(0, "started", f"Starting {tier} post tracking")
 
             social_result = await asyncio.wait_for(
@@ -162,7 +164,7 @@ class SocialMagister(BaseMagister):
             return TaskResult(
                 subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
-                action=task.data.get("action", "publish_post"),
+                action=task.action,
                 status="success",
                 result=validated_result,
                 error=None,
@@ -306,22 +308,124 @@ execution_time: {result.get('execution_time_seconds', 0)}s
             # Don't raise - storage failure shouldn't fail the task
 
     async def _handle_content_scheduling(self, task: Task) -> TaskResult:
-        """Handle market research task
+        """Handle content scheduling via Social orchestrator"""
+        logger.info(f"Handling content scheduling for task {task.task_id}")
 
-        TODO: Implement market research logic
-        For now, uses generic knowledge search
-        """
-        logger.info(f"Handling market research for task {task.task_id}")
-        return await self._handle_generic_social(task)
+        try:
+            # 1. Get orchestrator via dependency injection
+            orchestrator = self.orchestrators.get("social")
+            if not orchestrator:
+                raise ValueError("Social orchestrator not registered")
+
+            # 2. Create social task data
+            social_task_data = {
+                "task_id": task.task_id,
+                "action": "schedule_posts",
+                "content": task.data.get("content", ""),
+                "platforms": task.data.get("platforms", []),
+                "schedule": task.data.get("schedule", {}),
+            }
+
+            # 3. Set timeout
+            timeout_seconds = 300  # 5 minutes
+
+            # 4. Execute with timeout and progress updates
+            await self._publish_progress(0, "started", "Starting content scheduling")
+
+            social_result = await asyncio.wait_for(
+                orchestrator.execute_content_scheduling(
+                    social_task_data,
+                    progress_callback=self._publish_progress
+                ),
+                timeout=timeout_seconds
+            )
+
+            # 5. Use result directly
+            validated_result = social_result
+
+            # 6. Store in vault
+            await self._store_social_result(validated_result)
+
+            await self._publish_progress(100, "completed", "Content scheduling complete")
+
+            # 7. Return success
+            return TaskResult(
+                subtask_id=task.subtask_id,
+                agent_id=self.agent_id,
+                action=task.action,
+                status="success",
+                result=validated_result,
+                error=None,
+                duration_seconds=0.0,
+                completed_at=datetime.now(timezone.utc)
+            )
+
+        except asyncio.TimeoutError:
+            logger.error(f"Content scheduling timed out after {timeout_seconds}s")
+            return self._create_timeout_result(task, timeout_seconds)
+        except Exception as e:
+            logger.error(f"Content scheduling failed: {e}", exc_info=True)
+            return self._create_error_result(task, e)
 
     async def _handle_engagement_analysis(self, task: Task) -> TaskResult:
-        """Handle trend analysis task
+        """Handle engagement analysis via Social orchestrator"""
+        logger.info(f"Handling engagement analysis for task {task.task_id}")
 
-        TODO: Implement trend analysis logic
-        For now, uses generic knowledge search
-        """
-        logger.info(f"Handling trend analysis for task {task.task_id}")
-        return await self._handle_generic_social(task)
+        try:
+            # 1. Get orchestrator via dependency injection
+            orchestrator = self.orchestrators.get("social")
+            if not orchestrator:
+                raise ValueError("Social orchestrator not registered")
+
+            # 2. Create social task data
+            social_task_data = {
+                "task_id": task.task_id,
+                "action": "engage_audience",
+                "platforms": task.data.get("platforms", []),
+                "metrics": task.data.get("metrics", []),
+                "period": task.data.get("period", "30d"),
+            }
+
+            # 3. Set timeout
+            timeout_seconds = 300  # 5 minutes
+
+            # 4. Execute with timeout and progress updates
+            await self._publish_progress(0, "started", "Starting engagement analysis")
+
+            social_result = await asyncio.wait_for(
+                orchestrator.execute_engagement_analysis(
+                    social_task_data,
+                    progress_callback=self._publish_progress
+                ),
+                timeout=timeout_seconds
+            )
+
+            # 5. Use result directly
+            validated_result = social_result
+
+            # 6. Store in vault
+            await self._store_social_result(validated_result)
+
+            await self._publish_progress(100, "completed", "Engagement analysis complete")
+
+            # 7. Return success
+            return TaskResult(
+                subtask_id=task.subtask_id,
+                agent_id=self.agent_id,
+                action=task.action,
+                status="success",
+                result=validated_result,
+                error=None,
+                duration_seconds=0.0,
+                completed_at=datetime.now(timezone.utc)
+            )
+
+        except asyncio.TimeoutError:
+            logger.error(f"Engagement analysis timed out after {timeout_seconds}s")
+            return self._create_timeout_result(task, timeout_seconds)
+        except Exception as e:
+            logger.error(f"Engagement analysis failed: {e}", exc_info=True)
+            return self._create_error_result(task, e)
 
     async def _handle_generic_social(self, task: Task) -> TaskResult:
         """Handle generic intelligence task via knowledge search
@@ -343,7 +447,7 @@ execution_time: {result.get('execution_time_seconds', 0)}s
             return TaskResult(
                 subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
-                action=task.data.get("action", "generic"),
+                action=task.action,
                 status="success",
                 result={
                     "query": query,
@@ -364,7 +468,7 @@ execution_time: {result.get('execution_time_seconds', 0)}s
         return TaskResult(
             subtask_id=task.subtask_id,
             agent_id=self.agent_id,
-            action=task.data.get("action", "unknown"),
+            action=task.action,
             status="failed",
             result={},
             error=f"Task timed out after {timeout_seconds} seconds",
@@ -377,7 +481,7 @@ execution_time: {result.get('execution_time_seconds', 0)}s
         return TaskResult(
             subtask_id=task.subtask_id,
             agent_id=self.agent_id,
-            action=task.data.get("action", "unknown"),
+            action=task.action,
             status="failed",
             result={},
             error=f"{type(error).__name__}: {str(error)}",
