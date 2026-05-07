@@ -120,10 +120,14 @@ class AnalyticsMagister(BaseMagister):
         """Handle metrics tracking via Content system"""
         logger.info(f"Handling metrics tracking for task {task.task_id}")
 
+        print(f"🔍 DEBUG Analytics: _handle_metrics_tracking called")
+        print(f"🔍 DEBUG Analytics: task.data = {task.data}")
+
         try:
             # 1. Get orchestrator via dependency injection
             orchestrator = self.orchestrators.get("analytics")
             if not orchestrator:
+                print(f"🔍 DEBUG Analytics: No orchestrator found!")
                 raise ValueError("Analytics orchestrator not registered")
 
             # 2. Create metrics task from Intelligence task
@@ -134,13 +138,17 @@ class AnalyticsMagister(BaseMagister):
                 "segment_users": task.data.get("segment_users", ""),
                 "price_segment": task.data.get("price_segment", "mid"),
                 "tier": task.data.get("depth", "deep"),
-                "competitors": task.data.get("competitors", []),            }
+                "competitors": task.data.get("competitors", []),
+            }
 
             # 3. Set timeout
             timeout_seconds = 300  # 5 minutes
 
             # 4. Execute with timeout and progress updates
+            tier = analytics_task_data.get("tier", "deep")
             await self._publish_progress(0, "started", f"Starting {tier} metrics tracking")
+
+            print(f"🔍 DEBUG Analytics: Calling orchestrator.execute_metrics_tracking")
 
             analytics_result = await asyncio.wait_for(
                 orchestrator.execute_metrics_tracking(
@@ -149,6 +157,8 @@ class AnalyticsMagister(BaseMagister):
                 ),
                 timeout=timeout_seconds
             )
+
+            print(f"🔍 DEBUG Analytics: Got result: {analytics_result}")
 
             # 5. Use result directly (validation removed)
             validated_result = analytics_result
@@ -311,6 +321,7 @@ execution_time: {result.get('execution_time_seconds', 0)}s
         TODO: Implement market research logic
         For now, uses generic knowledge search
         """
+        print(f"🔍 DEBUG Analytics: _handle_data_analysis called")
         logger.info(f"Handling market research for task {task.task_id}")
         return await self._handle_generic_analytics(task)
 
@@ -320,6 +331,7 @@ execution_time: {result.get('execution_time_seconds', 0)}s
         TODO: Implement trend analysis logic
         For now, uses generic knowledge search
         """
+        print(f"🔍 DEBUG Analytics: _handle_report_generation called")
         logger.info(f"Handling trend analysis for task {task.task_id}")
         return await self._handle_generic_analytics(task)
 
@@ -328,11 +340,14 @@ execution_time: {result.get('execution_time_seconds', 0)}s
 
         Falls back to hybrid search when no specific handler exists
         """
+        print(f"🔍 DEBUG Analytics: _handle_generic_analytics called")
         logger.info(f"Handling generic intelligence for task {task.task_id}")
 
         try:
             # Use hybrid search from BaseMagister
             query = task.description
+            print(f"🔍 DEBUG Analytics: Searching knowledge with query: {query}")
+
             results = await self.search_knowledge(
                 query=query,
                 search_local=True,
@@ -340,7 +355,9 @@ execution_time: {result.get('execution_time_seconds', 0)}s
                 search_researcher=False,  # Don't trigger researcher for generic tasks
             )
 
-            return TaskResult(
+            print(f"🔍 DEBUG Analytics: Got search results: {len(results) if results else 0} items")
+
+            result = TaskResult(
                 subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
                 action=task.data.get("action", "generic"),
@@ -355,7 +372,11 @@ execution_time: {result.get('execution_time_seconds', 0)}s
                 completed_at=datetime.now(timezone.utc)
             )
 
+            print(f"🔍 DEBUG Analytics: Returning result with status={result.status}")
+            return result
+
         except Exception as e:
+            print(f"🔍 DEBUG Analytics: Exception in _handle_generic_analytics: {e}")
             logger.error(f"Generic intelligence task failed: {e}", exc_info=True)
             return self._create_error_result(task, e)
 
