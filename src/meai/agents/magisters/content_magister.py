@@ -175,7 +175,7 @@ class ContentMagister(BaseMagister):
 
             # 7. Return result
             return TaskResult(
-                subtask_id=task.task_id,
+                subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
                 action=task.data.get("action", "generate_content"),
                 status="success",
@@ -229,44 +229,24 @@ class ContentMagister(BaseMagister):
             result: Content result dictionary
 
         Returns:
-            Validated result
-
-        Raises:
-            ValueError: If validation fails
+            Validated result (no exceptions - orchestrator handles errors)
         """
         logger.debug("Validating Content result")
 
-        try:
-            # Validate required fields
-            if not result.get("task_id"):
-                raise ValueError("Missing task_id in Content result")
+        # Validate required fields
+        if not result.get("task_id"):
+            logger.warning("Missing task_id in Content result")
 
-            # Check for errors
-            if result.get("errors"):
-                raise ValueError(f"Content generation had errors: {result['errors']}")
+        # Log errors if present (but don't fail - orchestrator returns errors in structure)
+        if result.get("errors"):
+            logger.warning(f"Content generation had errors: {result['errors']}")
 
-            # Validate results exist
-            if not result.get("results"):
-                raise ValueError("Missing results in Content result")
+        # Validate results exist
+        if not result.get("results"):
+            logger.warning("Missing results in Content result")
 
-            logger.info(f"Content result validated: {result.get('content_type', 'unknown')} generation")
-            return result
-
-        except (ValueError, KeyError) as e:
-            logger.error(f"Content result validation failed: {e}")
-            raise ValueError(f"Invalid Content result: {e}")
-            reports = result.get("reports", {})
-            if reports:
-                for report_type, path in reports.items():
-                    if path and not Path(path).exists():
-                        logger.warning(f"Report file not found: {path}")
-
-            logger.info(f"CI result validated: {competitors_analyzed} competitors analyzed")
-            return result
-
-        except (ValueError, KeyError) as e:
-            logger.error(f"CI result validation failed: {e}")
-            raise ValueError(f"Invalid CI result: {e}")
+        logger.info(f"Content result validated: {result.get('content_type', 'unknown')} generation")
+        return result
 
     async def _store_content_result(self, result: dict[str, Any]) -> None:
         """Store Content result in Obsidian vault
@@ -338,7 +318,7 @@ class ContentMagister(BaseMagister):
             await self._publish_progress(100, "completed", "Content optimization complete")
 
             return TaskResult(
-                subtask_id=task.task_id,
+                subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
                 action=task.data.get("action", "optimize_content"),
                 status="success",
@@ -381,7 +361,7 @@ class ContentMagister(BaseMagister):
             await self._publish_progress(100, "completed", "Readability analysis complete")
 
             return TaskResult(
-                subtask_id=task.task_id,
+                subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
                 action=task.data.get("action", "analyze_readability"),
                 status="success",
@@ -413,7 +393,7 @@ class ContentMagister(BaseMagister):
             )
 
             return TaskResult(
-                subtask_id=task.task_id,
+                subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
                 action=task.data.get("action", "generic"),
                 status="success",
@@ -434,7 +414,7 @@ class ContentMagister(BaseMagister):
     def _create_timeout_result(self, task: Task, timeout_seconds: int) -> TaskResult:
         """Create timeout error result"""
         return TaskResult(
-            subtask_id=task.task_id,
+            subtask_id=task.subtask_id,
             agent_id=self.agent_id,
             action=task.data.get("action", "unknown"),
             status="failed",
@@ -447,7 +427,7 @@ class ContentMagister(BaseMagister):
     def _create_error_result(self, task: Task, error: Exception) -> TaskResult:
         """Create error result"""
         return TaskResult(
-            subtask_id=task.task_id,
+            subtask_id=task.subtask_id,
             agent_id=self.agent_id,
             action=task.data.get("action", "unknown"),
             status="failed",

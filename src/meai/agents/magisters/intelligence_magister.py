@@ -151,7 +151,7 @@ class IntelligenceMagister(BaseMagister):
 
             # 7. Return result
             return TaskResult(
-                subtask_id=task.task_id,
+                subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
                 action=task.data.get("action", "monitor_competitors"),
                 status="success",
@@ -332,7 +332,7 @@ execution_time: {result.get('execution_time_seconds', 0)}s
             )
 
             return TaskResult(
-                subtask_id=task.task_id,
+                subtask_id=task.subtask_id,
                 agent_id=self.agent_id,
                 action=task.data.get("action", "generic"),
                 status="success",
@@ -353,7 +353,7 @@ execution_time: {result.get('execution_time_seconds', 0)}s
     def _create_timeout_result(self, task: Task, timeout_seconds: int) -> TaskResult:
         """Create timeout error result"""
         return TaskResult(
-            subtask_id=task.task_id,
+            subtask_id=task.subtask_id,
             agent_id=self.agent_id,
             action=task.data.get("action", "unknown"),
             status="failed",
@@ -366,7 +366,7 @@ execution_time: {result.get('execution_time_seconds', 0)}s
     def _create_error_result(self, task: Task, error: Exception) -> TaskResult:
         """Create error result"""
         return TaskResult(
-            subtask_id=task.task_id,
+            subtask_id=task.subtask_id,
             agent_id=self.agent_id,
             action=task.data.get("action", "unknown"),
             status="failed",
