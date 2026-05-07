@@ -78,15 +78,19 @@ class ContentMagister(BaseMagister):
         """Get Content Magister capabilities"""
         base_capabilities = super().get_capabilities()
 
-        seo_capabilities = [
+        content_capabilities = [
             "generate_content",
+            "edit_content",
+            "plan_content",
+            "analyze_performance",
+            "optimize_for_seo",
             "optimize_content",
             "analyze_readability",
             "generate_ideas",
             "check_quality",
         ]
 
-        return base_capabilities + seo_capabilities
+        return base_capabilities + content_capabilities
 
     async def execute_task(self, task: Task) -> TaskResult:
         """Execute SEO-specific task
@@ -97,17 +101,29 @@ class ContentMagister(BaseMagister):
         - analyze_readability → _handle_readability_analysis()
         """
         self.current_task_id = task.task_id
-        action = task.data.get("action", "")
+        action = task.action
 
         logger.info(f"Content Magister executing task: {task.task_id}, action: {action}")
 
         try:
             if action == "generate_content":
                 return await self._handle_content_generation(task)
+            elif action == "edit_content":
+                return await self._handle_content_generation(task)  # Same as generate
             elif action == "optimize_content":
                 return await self._handle_content_optimization(task)
+            elif action == "optimize_for_seo":
+                return await self._handle_content_optimization(task)  # Same as optimize
             elif action == "analyze_readability":
                 return await self._handle_readability_analysis(task)
+            elif action == "analyze_performance":
+                return await self._handle_readability_analysis(task)  # Same as analyze
+            elif action == "plan_content":
+                return await self._handle_content_generation(task)  # Same as generate
+            elif action == "generate_ideas":
+                return await self._handle_content_generation(task)  # Same as generate
+            elif action == "check_quality":
+                return await self._handle_readability_analysis(task)  # Same as analyze
             else:
                 return await self._handle_generic_content(task)
         except Exception as e:

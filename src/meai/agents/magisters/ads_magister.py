@@ -78,15 +78,17 @@ class AdsMagister(BaseMagister):
         """Get Ads Magister capabilities"""
         base_capabilities = super().get_capabilities()
 
-        seo_capabilities = [
+        ads_capabilities = [
             "create_campaign",
+            "optimize_budget",
+            "ab_test",
+            "target_audience",
             "optimize_ads",
             "analyze_performance",
-            "target_audience",
             "track_conversions",
         ]
 
-        return base_capabilities + seo_capabilities
+        return base_capabilities + ads_capabilities
 
     async def execute_task(self, task: Task) -> TaskResult:
         """Execute SEO-specific task
@@ -97,17 +99,25 @@ class AdsMagister(BaseMagister):
         - analyze_performance → _handle_performance_analysis()
         """
         self.current_task_id = task.task_id
-        action = task.data.get("action", "")
+        action = task.action
 
         logger.info(f"Ads Magister executing task: {task.task_id}, action: {action}")
 
         try:
             if action == "create_campaign":
                 return await self._handle_campaign_creation(task)
+            elif action == "optimize_budget":
+                return await self._handle_campaign_creation(task)  # Same handler
+            elif action == "ab_test":
+                return await self._handle_campaign_creation(task)  # Same handler
+            elif action == "target_audience":
+                return await self._handle_campaign_creation(task)  # Same handler
             elif action == "optimize_ads":
                 return await self._handle_ads_optimization(task)
             elif action == "analyze_performance":
                 return await self._handle_performance_analysis(task)
+            elif action == "track_conversions":
+                return await self._handle_performance_analysis(task)  # Same handler
             else:
                 return await self._handle_generic_ads(task)
         except Exception as e:
