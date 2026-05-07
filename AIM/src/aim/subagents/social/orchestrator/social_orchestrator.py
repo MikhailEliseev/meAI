@@ -151,7 +151,7 @@ class SocialOrchestrator(Agent):
         # Create SocialAgent
         social_agent = SocialAgent(
             agent_id=f"social-{task_data.get('task_id', 'unknown')}",
-            event_bus=self.event_bus
+            database_url=self.db.database_url if hasattr(self.db, 'database_url') else "sqlite+aiosqlite:///:memory:",
         )
 
         # Prepare task for agent
@@ -159,7 +159,7 @@ class SocialOrchestrator(Agent):
             task_id=task_data.get("task_id", "unknown"),
             subtask_id=f"post-{task_data.get('task_id', 'unknown')}",
             action="publish_post",
-            payload={
+            data={
                 "content": content,
                 "platform": platform
             },
