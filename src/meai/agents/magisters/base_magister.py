@@ -602,10 +602,10 @@ cached_at: {datetime.now(timezone.utc).isoformat()}
         # Create query event
         event = Event(
             event_type="magister.query",
-            source_agent_id=self.agent_id,
-            target_agent_id=self.teacher_id,
-            priority=2,
             payload={
+                "source_agent_id": self.agent_id,
+                "target_agent_id": self.teacher_id,
+                "priority": 2,
                 "query": query,
                 "collection": f"{self.domain}_knowledge",
                 "magister_id": self.agent_id,
@@ -627,10 +627,10 @@ cached_at: {datetime.now(timezone.utc).isoformat()}
         # Create research request event
         event = Event(
             event_type="research.requested",
-            source_agent_id=self.agent_id,
-            target_agent_id="researcher",
-            priority=2,
             payload={
+                "source_agent_id": self.agent_id,
+                "target_agent_id": "researcher",
+                "priority": 2,
                 "topic": topic,
                 "collection": f"{self.domain}_knowledge",
                 "requesting_magister": self.agent_id,
