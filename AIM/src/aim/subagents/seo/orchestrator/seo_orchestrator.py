@@ -1,16 +1,25 @@
 """
 SEO Orchestrator - Coordinates SEO analysis tasks
 
-Minimal implementation for SEO Magister integration.
+Real implementation with KeywordResearchAgent integration.
 """
 
 from typing import Any, Dict, List, Optional, Callable
 from datetime import datetime, timezone
 import asyncio
 import logging
+from pathlib import Path
 
 from meai.agents.base_agent import Agent, Task, TaskResult, TaskStatus
 from meai.events.event_bus import EventBus
+
+# Import KeywordResearchAgent
+import sys
+aim_path = Path(__file__).parent.parent.parent.parent
+if str(aim_path) not in sys.path:
+    sys.path.insert(0, str(aim_path))
+
+from aim.subagents.keyword_research_agent import KeywordResearchAgent
 
 logger = logging.getLogger(__name__)
 
@@ -120,26 +129,66 @@ class SEOOrchestrator(Agent):
     ) -> Dict[str, Any]:
         """Execute keyword analysis using KeywordResearchAgent"""
 
-        # For now, return stub results
-        # TODO: Integrate KeywordResearchAgent
-
         target = task_data.get("target", "")
         niche = task_data.get("niche", "")
         geo = task_data.get("geo", "")
 
-        # Simulate analysis
-        await asyncio.sleep(0.1)
+        if not target and not niche:
+            return {
+                "status": "error",
+                "error": "Either 'target' or 'niche' is required"
+            }
 
-        return {
-            "target": target,
-            "niche": niche,
-            "geo": geo,
-            "keywords": [
-                {"keyword": f"{niche} {geo}", "volume": 1000, "difficulty": 50},
-                {"keyword": f"{niche}", "volume": 5000, "difficulty": 70},
-            ],
-            "status": "completed"
-        }
+        # Progress update
+        if progress_callback:
+            await progress_callback(1, "in_progress", "Initializing keyword research")
+
+        # Create KeywordResearchAgent
+        keyword_agent = KeywordResearchAgent(
+            agent_id=f"keyword-research-{task_data.get('task_id', 'unknown')}",
+            event_bus=self.event_bus
+        )
+
+        # Prepare task for agent
+        agent_task = Task(
+            task_id=task_data.get("task_id", "unknown"),
+            subtask_id=f"keyword-{task_data.get('task_id', 'unknown')}",
+            action="research_keywords",
+            payload={
+                "seed_keyword": target or niche,
+                "niche": niche,
+                "geo": geo,
+                "depth": "standard"  # Can be "quick" or "deep"
+            },
+            priority=1
+        )
+
+        # Progress update
+        if progress_callback:
+            await progress_callback(2, "in_progress", "Researching keywords")
+
+        # Execute keyword research
+        result = await keyword_agent.execute_task(agent_task)
+
+        # Progress update
+        if progress_callback:
+            await progress_callback(3, "completed", "Keyword research complete")
+
+        # Return results
+        if result.status == "success":
+            return {
+                "target": target,
+                "niche": niche,
+                "geo": geo,
+                "keywords": result.result.get("keywords", []),
+                "total_keywords": len(result.result.get("keywords", [])),
+                "status": "completed"
+            }
+        else:
+            return {
+                "status": "error",
+                "error": result.error or "Keyword research failed"
+            }
 
     async def _execute_content_optimization(
         self,
