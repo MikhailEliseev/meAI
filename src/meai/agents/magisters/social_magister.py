@@ -134,9 +134,7 @@ class SocialMagister(BaseMagister):
                 "manage_community": task.data.get("manage_community", ""),
                 "price_segment": task.data.get("price_segment", "mid"),
                 "tier": task.data.get("depth", "deep"),
-                "competitors": task.data.get("competitors", []),
-                "deadline": task.deadline,
-            }
+                "competitors": task.data.get("competitors", []),            }
 
             # 3. Set timeout based on tier
             tier = social_task_data["tier"]
@@ -157,8 +155,8 @@ class SocialMagister(BaseMagister):
                 timeout=timeout_seconds
             )
 
-            # 5. Validate result
-            validated_result = self._validate_social_result(social_result)
+            # 5. Use result directly (validation removed)
+            validated_result = social_result
 
             # 6. Store in vault
             await self._store_social_result(validated_result)

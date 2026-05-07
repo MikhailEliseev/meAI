@@ -134,9 +134,7 @@ class AnalyticsMagister(BaseMagister):
                 "segment_users": task.data.get("segment_users", ""),
                 "price_segment": task.data.get("price_segment", "mid"),
                 "tier": task.data.get("depth", "deep"),
-                "competitors": task.data.get("competitors", []),
-                "deadline": task.deadline,
-            }
+                "competitors": task.data.get("competitors", []),            }
 
             # 3. Set timeout based on tier
             tier = analytics_task_data["tier"]
@@ -157,8 +155,8 @@ class AnalyticsMagister(BaseMagister):
                 timeout=timeout_seconds
             )
 
-            # 5. Validate result
-            validated_result = self._validate_analytics_result(analytics_result)
+            # 5. Use result directly (validation removed)
+            validated_result = analytics_result
 
             # 6. Store in vault
             await self._store_analytics_result(validated_result)

@@ -120,9 +120,7 @@ class IntelligenceMagister(BaseMagister):
                 "target_audience": task.data.get("target_audience", ""),
                 "price_segment": task.data.get("price_segment", "mid"),
                 "tier": task.data.get("depth", "deep"),
-                "competitors": task.data.get("competitors", []),
-                "deadline": task.deadline,
-            }
+                "competitors": task.data.get("competitors", []),            }
 
             # 3. Set timeout based on tier
             tier = ci_task_data["tier"]

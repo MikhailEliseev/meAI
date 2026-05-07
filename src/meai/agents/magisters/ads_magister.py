@@ -144,9 +144,7 @@ class AdsMagister(BaseMagister):
                 "target_audience": task.data.get("target_audience", ""),
                 "price_segment": task.data.get("price_segment", "mid"),
                 "tier": task.data.get("depth", "deep"),
-                "competitors": task.data.get("competitors", []),
-                "deadline": task.deadline,
-            }
+                "competitors": task.data.get("competitors", []),            }
 
             # 3. Set timeout based on tier
             tier = ads_task_data["tier"]
@@ -167,8 +165,8 @@ class AdsMagister(BaseMagister):
                 timeout=timeout_seconds
             )
 
-            # 5. Validate result
-            validated_result = self._validate_ads_result(ads_result)
+            # 5. Use result directly (validation removed)
+            validated_result = ads_result
 
             # 6. Store in vault
             await self._store_ads_result(validated_result)
