@@ -1,16 +1,25 @@
 """
 Content Orchestrator - Coordinates Content generation tasks
 
-Minimal implementation for SEO Magister integration.
+Real implementation with ContentWriterAgent integration.
 """
 
 from typing import Any, Dict, List, Optional, Callable
 from datetime import datetime, timezone
 import asyncio
 import logging
+from pathlib import Path
 
 from meai.agents.base_agent import Agent, Task, TaskResult, TaskStatus
 from meai.events.event_bus import EventBus
+
+# Import ContentWriterAgent
+import sys
+aim_path = Path(__file__).parent.parent.parent.parent
+if str(aim_path) not in sys.path:
+    sys.path.insert(0, str(aim_path))
+
+from aim.subagents.content_writer_agent import ContentWriterAgent
 
 logger = logging.getLogger(__name__)
 
@@ -118,28 +127,68 @@ class ContentOrchestrator(Agent):
         task_data: Dict[str, Any],
         progress_callback: Optional[Callable] = None
     ) -> Dict[str, Any]:
-        """Execute keyword analysis using KeywordResearchAgent"""
+        """Execute content generation using ContentWriterAgent"""
 
-        # For now, return stub results
-        # TODO: Integrate KeywordResearchAgent
-
-        target = task_data.get("target", "")
+        topic = task_data.get("target", "") or task_data.get("topic", "")
+        content_type = task_data.get("content_type", "article")
         niche = task_data.get("niche", "")
-        geo = task_data.get("geo", "")
 
-        # Simulate analysis
-        await asyncio.sleep(0.1)
+        if not topic:
+            return {
+                "status": "error",
+                "error": "'topic' or 'target' is required"
+            }
 
-        return {
-            "target": target,
-            "niche": niche,
-            "geo": geo,
-            "keywords": [
-                {"keyword": f"{niche} {geo}", "volume": 1000, "difficulty": 50},
-                {"keyword": f"{niche}", "volume": 5000, "difficulty": 70},
-            ],
-            "status": "completed"
-        }
+        # Progress update
+        if progress_callback:
+            await progress_callback(1, "in_progress", "Initializing content generation")
+
+        # Create ContentWriterAgent
+        content_agent = ContentWriterAgent(
+            agent_id=f"content-writer-{task_data.get('task_id', 'unknown')}",
+            event_bus=self.event_bus
+        )
+
+        # Prepare task for agent
+        agent_task = Task(
+            task_id=task_data.get("task_id", "unknown"),
+            subtask_id=f"content-{task_data.get('task_id', 'unknown')}",
+            action="write_content",
+            payload={
+                "topic": topic,
+                "content_type": content_type,
+                "niche": niche,
+                "tone": task_data.get("tone", "professional"),
+                "length": task_data.get("length", "medium")
+            },
+            priority=1
+        )
+
+        # Progress update
+        if progress_callback:
+            await progress_callback(2, "in_progress", "Generating content")
+
+        # Execute content generation
+        result = await content_agent.execute_task(agent_task)
+
+        # Progress update
+        if progress_callback:
+            await progress_callback(3, "completed", "Content generation complete")
+
+        # Return results
+        if result.status == "success":
+            return {
+                "topic": topic,
+                "content_type": content_type,
+                "content": result.result.get("content", ""),
+                "word_count": result.result.get("word_count", 0),
+                "status": "completed"
+            }
+        else:
+            return {
+                "status": "error",
+                "error": result.error or "Content generation failed"
+            }
 
     async def _execute_content_optimization(
         self,
