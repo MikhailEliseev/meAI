@@ -152,7 +152,7 @@ class AdsOrchestrator(Agent):
         # Create AdsCampaignCreatorAgent
         ads_agent = AdsCampaignCreatorAgent(
             agent_id=f"ads-campaign-{task_data.get('task_id', 'unknown')}",
-            event_bus=self.event_bus
+            database_url=self.db.database_url if hasattr(self.db, 'database_url') else "sqlite+aiosqlite:///:memory:",
         )
 
         # Prepare task for agent
@@ -160,7 +160,7 @@ class AdsOrchestrator(Agent):
             task_id=task_data.get("task_id", "unknown"),
             subtask_id=f"campaign-{task_data.get('task_id', 'unknown')}",
             action="create_campaign",
-            payload={
+            data={
                 "campaign_name": campaign_name,
                 "campaign_type": campaign_type,
                 "niche": niche,
