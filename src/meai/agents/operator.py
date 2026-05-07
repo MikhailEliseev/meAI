@@ -715,7 +715,7 @@ class Operator:
                 created_at=now,
                 completed_at=None,
                 data={
-                    "target": task.resources.get("target", ""),
+                    "target": task.resources.get("target") or task.goal,  # Use goal as fallback
                     "niche": task.resources.get("niche", "medical"),
                     "geo": task.resources.get("geo", ""),
                     "budget": task.resources.get("budget", 0),
