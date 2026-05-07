@@ -1,16 +1,25 @@
 """
-Analytics Orchestrator - Coordinates Campaign creation tasks
+Analytics Orchestrator - Coordinates Metrics tracking tasks
 
-Minimal implementation for SEO Magister integration.
+Real implementation with AnalyticsAgent integration.
 """
 
 from typing import Any, Dict, List, Optional, Callable
 from datetime import datetime, timezone
 import asyncio
 import logging
+from pathlib import Path
 
 from meai.agents.base_agent import Agent, Task, TaskResult, TaskStatus
 from meai.events.event_bus import EventBus
+
+# Import AnalyticsAgent
+import sys
+aim_path = Path(__file__).parent.parent.parent.parent
+if str(aim_path) not in sys.path:
+    sys.path.insert(0, str(aim_path))
+
+from aim.subagents.analytics_agent import AnalyticsAgent
 
 logger = logging.getLogger(__name__)
 
@@ -118,28 +127,57 @@ class AnalyticsOrchestrator(Agent):
         task_data: Dict[str, Any],
         progress_callback: Optional[Callable] = None
     ) -> Dict[str, Any]:
-        """Execute keyword analysis using KeywordResearchAgent"""
+        """Execute metrics tracking using AnalyticsAgent"""
 
-        # For now, return stub results
-        # TODO: Integrate KeywordResearchAgent
+        metrics_type = task_data.get("metrics_type", "kpi")
+        source = task_data.get("source", "") or task_data.get("target", "")
 
-        target = task_data.get("target", "")
-        niche = task_data.get("niche", "")
-        geo = task_data.get("geo", "")
+        # Progress update
+        if progress_callback:
+            await progress_callback(1, "in_progress", "Initializing metrics tracking")
 
-        # Simulate analysis
-        await asyncio.sleep(0.1)
+        # Create AnalyticsAgent
+        analytics_agent = AnalyticsAgent(
+            agent_id=f"analytics-{task_data.get('task_id', 'unknown')}",
+            event_bus=self.event_bus
+        )
 
-        return {
-            "target": target,
-            "niche": niche,
-            "geo": geo,
-            "keywords": [
-                {"keyword": f"{niche} {geo}", "volume": 1000, "difficulty": 50},
-                {"keyword": f"{niche}", "volume": 5000, "difficulty": 70},
-            ],
-            "status": "completed"
-        }
+        # Prepare task for agent
+        agent_task = Task(
+            task_id=task_data.get("task_id", "unknown"),
+            subtask_id=f"metrics-{task_data.get('task_id', 'unknown')}",
+            action="track_metrics",
+            payload={
+                "metrics_type": metrics_type,
+                "source": source
+            },
+            priority=1
+        )
+
+        # Progress update
+        if progress_callback:
+            await progress_callback(2, "in_progress", "Tracking metrics")
+
+        # Execute metrics tracking
+        result = await analytics_agent.execute_task(agent_task)
+
+        # Progress update
+        if progress_callback:
+            await progress_callback(3, "completed", "Metrics tracking complete")
+
+        # Return results
+        if result.status == "success":
+            return {
+                "metrics_type": metrics_type,
+                "source": source,
+                "metrics": result.result.get("metrics", {}),
+                "status": "completed"
+            }
+        else:
+            return {
+                "status": "error",
+                "error": result.error or "Metrics tracking failed"
+            }
 
     async def _execute_content_optimization(
         self,
