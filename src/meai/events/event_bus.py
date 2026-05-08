@@ -109,8 +109,8 @@ class EventBus:
             await session.execute(
                 text("""
                 CREATE TABLE IF NOT EXISTS event_bus_events (
-                    event_id TEXT PRIMARY KEY,
-                    event_type TEXT NOT NULL,
+                    id TEXT PRIMARY KEY,
+                    type TEXT NOT NULL,
                     source TEXT NOT NULL,
                     target TEXT NOT NULL,
                     priority INTEGER NOT NULL,
@@ -118,7 +118,7 @@ class EventBus:
                     correlation_id TEXT,
                     reply_to TEXT,
                     metadata TEXT NOT NULL,
-                    payload TEXT NOT NULL,
+                    data TEXT NOT NULL,
                     status TEXT NOT NULL DEFAULT 'pending',
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
@@ -142,8 +142,8 @@ class EventBus:
 
             await session.execute(
                 text("""
-                CREATE INDEX IF NOT EXISTS idx_events_target_status
-                ON event_bus_events(target, status)
+                CREATE INDEX IF NOT EXISTS idx_status_priority
+                ON event_bus_events(status, priority)
                 """)
             )
 
@@ -168,10 +168,10 @@ class EventBus:
         async with self.db.session() as session:
             result = await session.execute(
                 text("""
-                SELECT event_id, event_type, source, target, priority, timestamp,
-                       correlation_id, reply_to, metadata, payload, status
+                SELECT id, type, source, target, priority, timestamp,
+                       correlation_id, reply_to, metadata, data, status
                 FROM event_bus_events
-                WHERE event_id = :event_id
+                WHERE id = :event_id
                 """),
                 {"event_id": event_id},
             )
@@ -181,8 +181,8 @@ class EventBus:
                 raise ValueError(f"Event not found: {event_id}")
 
             return {
-                "event_id": row[0],
-                "event_type": row[1],
+                "id": row[0],
+                "type": row[1],
                 "source": row[2],
                 "target": row[3],
                 "priority": row[4],
@@ -190,7 +190,7 @@ class EventBus:
                 "correlation_id": row[6],
                 "reply_to": row[7],
                 "metadata": json.loads(row[8]),
-                "payload": json.loads(row[9]),
+                "data": json.loads(row[9]),
                 "status": row[10],
             }
 
@@ -322,14 +322,14 @@ class EventBus:
                 await session.execute(
                     text("""
                     INSERT INTO event_bus_events
-                    (event_id, event_type, source, target, priority, timestamp,
-                     correlation_id, reply_to, metadata, payload, status)
-                    VALUES (:event_id, :event_type, :source, :target, :priority, :timestamp,
-                            :correlation_id, :reply_to, :metadata, :payload, :status)
+                    (id, type, source, target, priority, timestamp,
+                     correlation_id, reply_to, metadata, data, status)
+                    VALUES (:id, :type, :source, :target, :priority, :timestamp,
+                            :correlation_id, :reply_to, :metadata, :data, :status)
                     """),
                     {
-                        "event_id": str(event.id),
-                        "event_type": event.type,
+                        "id": str(event.id),
+                        "type": event.type,
                         "source": event.source,
                         "target": target_str,
                         "priority": event.priority,
@@ -337,7 +337,7 @@ class EventBus:
                         "correlation_id": event.correlation_id,
                         "reply_to": event.reply_to,
                         "metadata": json.dumps(event.metadata),
-                        "payload": event.model_dump_json(),
+                        "data": event.model_dump_json(),
                         "status": "pending",
                     },
                 )
