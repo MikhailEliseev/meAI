@@ -51,3 +51,12 @@ obsidian/seo-agent/
 obsidian/content-agent/
 obsidian/ads-agent/
 .claude/worktrees/
+
+# Embedded repos in AIM/Old/
+AIM/Old/
+
+# Test vaults (generated during tests)
+test_vault/
+test_vault_*/
+e2e_test_vault/
+scenario_vault/
