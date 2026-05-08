@@ -5,7 +5,7 @@ resource management, agent monitoring, data versioning, and reminders.
 """
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import Field
 
@@ -26,7 +26,7 @@ class SystemHealthCheckEvent(BaseEvent):
     priority: int = Field(default=3, ge=0, le=3, frozen=True)
 
     component: str
-    status: str
+    status: Literal["healthy", "degraded", "unhealthy"]
     metrics: dict[str, Any]
     checked_at: datetime
 
@@ -49,7 +49,7 @@ class SystemPerformanceDegradedEvent(BaseEvent):
     metric_name: str
     current_value: float
     threshold_value: float
-    severity: str
+    severity: Literal["warning", "critical"]
 
 
 class SystemResourceLowEvent(BaseEvent):
@@ -65,9 +65,9 @@ class SystemResourceLowEvent(BaseEvent):
     type: str = Field(default="system.resource_low", frozen=True)
     priority: int = Field(default=1, ge=0, le=3, frozen=True)
 
-    resource_type: str
-    current_usage: float
-    threshold: float
+    resource_type: Literal["memory", "disk", "cpu", "connections"]
+    current_usage: float = Field(..., ge=0.0, le=1.0, description="Current resource usage (0.0-1.0)")
+    threshold: float = Field(..., ge=0.0, le=1.0, description="Threshold for alert (0.0-1.0)")
     component: str
 
 

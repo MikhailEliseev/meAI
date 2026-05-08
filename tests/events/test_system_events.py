@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta
 
 import pytest
+from pydantic import ValidationError
 
 from meai.events.system_events import (
     AgentUnresponsiveEvent,
@@ -359,3 +360,100 @@ class TestReminderEvent:
         )
 
         assert event.context == {}
+
+
+class TestSystemHealthCheckEventValidation:
+    """Tests for SystemHealthCheckEvent validation."""
+
+    def test_invalid_status(self):
+        """Test that invalid status values are rejected."""
+        with pytest.raises(ValidationError):
+            SystemHealthCheckEvent(
+                source="test",
+                target="test",
+                component="test",
+                status="invalid",  # Should fail
+                metrics={},
+                checked_at=datetime.now(),
+            )
+
+
+class TestSystemPerformanceDegradedEventValidation:
+    """Tests for SystemPerformanceDegradedEvent validation."""
+
+    def test_invalid_severity(self):
+        """Test that invalid severity values are rejected."""
+        with pytest.raises(ValidationError):
+            SystemPerformanceDegradedEvent(
+                source="test",
+                target="test",
+                component="test",
+                metric_name="test_metric",
+                current_value=100.0,
+                threshold_value=50.0,
+                severity="invalid",  # Should fail
+            )
+
+
+class TestSystemResourceLowEventValidation:
+    """Tests for SystemResourceLowEvent validation."""
+
+    def test_invalid_resource_type(self):
+        """Test that invalid resource_type values are rejected."""
+        with pytest.raises(ValidationError):
+            SystemResourceLowEvent(
+                source="test",
+                target="test",
+                resource_type="invalid",  # Should fail
+                current_usage=0.9,
+                threshold=0.8,
+                component="test",
+            )
+
+    def test_current_usage_below_range(self):
+        """Test that current_usage below 0.0 is rejected."""
+        with pytest.raises(ValidationError):
+            SystemResourceLowEvent(
+                source="test",
+                target="test",
+                resource_type="memory",
+                current_usage=-0.1,  # Should fail
+                threshold=0.8,
+                component="test",
+            )
+
+    def test_current_usage_above_range(self):
+        """Test that current_usage above 1.0 is rejected."""
+        with pytest.raises(ValidationError):
+            SystemResourceLowEvent(
+                source="test",
+                target="test",
+                resource_type="memory",
+                current_usage=1.1,  # Should fail
+                threshold=0.8,
+                component="test",
+            )
+
+    def test_threshold_below_range(self):
+        """Test that threshold below 0.0 is rejected."""
+        with pytest.raises(ValidationError):
+            SystemResourceLowEvent(
+                source="test",
+                target="test",
+                resource_type="memory",
+                current_usage=0.9,
+                threshold=-0.1,  # Should fail
+                component="test",
+            )
+
+    def test_threshold_above_range(self):
+        """Test that threshold above 1.0 is rejected."""
+        with pytest.raises(ValidationError):
+            SystemResourceLowEvent(
+                source="test",
+                target="test",
+                resource_type="memory",
+                current_usage=0.9,
+                threshold=1.1,  # Should fail
+                component="test",
+            )
