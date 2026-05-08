@@ -1,0 +1,3368 @@
+{
+  "task_id": "test-1",
+  "niche": "dental implants",
+  "geo": "Moscow",
+  "tier": "quick",
+  "analysis_date": "2026-05-06T18:18:02.871324+00:00",
+  "competitors": [
+    "https://example1.com",
+    "https://example2.com"
+  ],
+  "findings": {
+    "phase_1": {
+      "phase": 1,
+      "agent": "ci-scout",
+      "status": "success",
+      "result": {
+        "niche": "dental implants",
+        "geo": "Moscow",
+        "target_audience": "",
+        "price_segment": "mid",
+        "analysis_date": "2026-05-06T21:18:02.861688",
+        "total_found": 5,
+        "top_selected": 5,
+        "competitors": [
+          {
+            "name": "Центр Студия",
+            "url": "https://tsentr-studiya.ru",
+            "address": "ул. Примерная, 33",
+            "geo": "Moscow",
+            "niche": "dental implants",
+            "description": "Центр Студия - dental implants в Moscow",
+            "positioning": "mid",
+            "cluster": "direct",
+            "channels": {
+              "website": true,
+              "vk": "vk.com/tsentr-studiya",
+              "telegram": "t.me/tsentr-studiya",
+              "yandex_maps_rating": "4.2 (306 отзывов)",
+              "2gis_rating": "4.1 (183 отзывов)",
+              "online_booking": true
+            },
+            "price_segment": "mid",
+            "estimated_size": "large",
+            "ad_presence": "high",
+            "differentiators": [
+              "Специализация на dental implants",
+              "Работает в Moscow"
+            ],
+            "notes": "Интересен для анализа как mid игрок"
+          },
+          {
+            "name": "Здоровье Лаб",
+            "url": "https://zdorove-lab.ru",
+            "address": "ул. Примерная, 32",
+            "geo": "Moscow",
+            "niche": "dental implants",
+            "description": "Здоровье Лаб - dental implants в Moscow",
+            "positioning": "mid",
+            "cluster": "direct",
+            "channels": {
+              "website": true,
+              "vk": "vk.com/zdorove-lab",
+              "telegram": "t.me/zdorove-lab",
+              "yandex_maps_rating": "4.3 (251 отзывов)",
+              "2gis_rating": "4.2 (150 отзывов)",
+              "online_booking": true
+            },
+            "price_segment": "mid",
+            "estimated_size": "small",
+            "ad_presence": "high",
+            "differentiators": [
+              "Специализация на dental implants",
+              "Работает в Moscow"
+            ],
+            "notes": "Интересен для анализа как mid игрок"
+          },
+          {
+            "name": "Лайф Клиника",
+            "url": "https://layf-klinika.ru",
+            "address": "ул. Примерная, 62",
+            "geo": "Moscow",
+            "niche": "dental implants",
+            "description": "Лайф Клиника - dental implants в Moscow",
+            "positioning": "mid",
+            "cluster": "direct",
+            "channels": {
+              "website": true,
+              "vk": "vk.com/layf-klinika",
+              "telegram": "t.me/layf-klinika",
+              "yandex_maps_rating": "4.3 (477 отзывов)",
+              "2gis_rating": "4.2 (286 отзывов)",
+              "online_booking": false
+            },
+            "price_segment": "mid",
+            "estimated_size": "medium",
+            "ad_presence": "medium",
+            "differentiators": [
+              "Специализация на dental implants",
+              "Работает в Moscow"
+            ],
+            "notes": "Интересен для анализа как mid игрок"
+          },
+          {
+            "name": "Медицина Клуб",
+            "url": "https://meditsina-klub.ru",
+            "address": "ул. Примерная, 2",
+            "geo": "Moscow",
+            "niche": "dental implants",
+            "description": "Медицина Клуб - dental implants в Moscow",
+            "positioning": "mid",
+            "cluster": "direct",
+            "channels": {
+              "website": true,
+              "vk": "vk.com/meditsina-klub",
+              "telegram": "t.me/meditsina-klub",
+              "yandex_maps_rating": "4.8 (82 отзывов)",
+              "2gis_rating": "4.7 (49 отзывов)",
+              "online_booking": false
+            },
+            "price_segment": "mid",
+            "estimated_size": "small",
+            "ad_presence": "high",
+            "differentiators": [
+              "Специализация на dental implants",
+              "Работает в Moscow"
+            ],
+            "notes": "Интересен для анализа как mid игрок"
+          },
+          {
+            "name": "Клиника Центр",
+            "url": "https://klinika-tsentr.ru",
+            "address": "ул. Примерная, 26",
+            "geo": "Moscow",
+            "niche": "dental implants",
+            "description": "Клиника Центр - dental implants в Moscow",
+            "positioning": "mid",
+            "cluster": "direct",
+            "channels": {
+              "website": true,
+              "vk": "vk.com/klinika-tsentr",
+              "telegram": "t.me/klinika-tsentr",
+              "yandex_maps_rating": "4.8 (346 отзывов)",
+              "2gis_rating": "4.7 (207 отзывов)",
+              "online_booking": true
+            },
+            "price_segment": "mid",
+            "estimated_size": "large",
+            "ad_presence": "high",
+            "differentiators": [
+              "Специализация на dental implants",
+              "Работает в Moscow"
+            ],
+            "notes": "Интересен для анализа как mid игрок"
+          }
+        ],
+        "top_for_analysis": [
+          {
+            "name": "Центр Студия",
+            "cluster": "direct",
+            "reason": "Прямой конкурент (тот же ценовой сегмент)"
+          },
+          {
+            "name": "Здоровье Лаб",
+            "cluster": "direct",
+            "reason": "Прямой конкурент (тот же ценовой сегмент)"
+          },
+          {
+            "name": "Лайф Клиника",
+            "cluster": "direct",
+            "reason": "Прямой конкурент (тот же ценовой сегмент)"
+          },
+          {
+            "name": "Медицина Клуб",
+            "cluster": "direct",
+            "reason": "Прямой конкурент (тот же ценовой сегмент)"
+          },
+          {
+            "name": "Клиника Центр",
+            "cluster": "direct",
+            "reason": "Прямой конкурент (тот же ценовой сегмент)"
+          }
+        ],
+        "clusters": {
+          "direct": [
+            "Центр Студия",
+            "Здоровье Лаб",
+            "Лайф Клиника",
+            "Медицина Клуб",
+            "Клиника Центр"
+          ],
+          "indirect": [],
+          "leader": [],
+          "niche": [],
+          "emerging": []
+        },
+        "insights": {
+          "total_players": 5,
+          "fragmentation": "низкая",
+          "dominant_positioning": "direct",
+          "digitalization_level": "высокий",
+          "key_gaps": [
+            "Недостаточно онлайн-записи",
+            "Слабое присутствие в Telegram"
+          ]
+        }
+      }
+    },
+    "phase_2": {
+      "phase": 2,
+      "agent": "ci-auditor",
+      "status": "success",
+      "result": {
+        "audit_type": "deep",
+        "audit_date": "2026-05-06T21:18:02.863715",
+        "total_audited": 5,
+        "audits": [
+          {
+            "name": "Центр Студия",
+            "url": "",
+            "audit_type": "deep",
+            "dimensions": {
+              "technical": {
+                "page_speed": {
+                  "name": "Скорость загрузки (Desktop/Mobile)",
+                  "score": 62,
+                  "status": "medium",
+                  "details": "Desktop: 62ms, Mobile: 262ms"
+                },
+                "core_web_vitals": {
+                  "name": "LCP, FID, CLS",
+                  "score": 61,
+                  "status": "medium",
+                  "details": "LCP: 6.1s, FID: 61ms, CLS: 0.6"
+                },
+                "mobile_friendly": {
+                  "name": "Мобильная адаптация",
+                  "score": 70,
+                  "status": "medium",
+                  "details": "Требуется улучшение"
+                },
+                "https": {
+                  "name": "HTTPS и безопасность",
+                  "score": 87,
+                  "status": "good",
+                  "details": "HTTPS включён"
+                },
+                "structured_data": {
+                  "name": "Schema.org разметка",
+                  "score": 88,
+                  "status": "good",
+                  "details": "8 типов разметки"
+                },
+                "sitemap": {
+                  "name": "XML Sitemap",
+                  "score": 84,
+                  "status": "good",
+                  "details": "XML Sitemap найден"
+                },
+                "robots_txt": {
+                  "name": "robots.txt",
+                  "score": 83,
+                  "status": "good",
+                  "details": "robots.txt корректен"
+                }
+              },
+              "content": {
+                "structure": {
+                  "name": "Структура сайта (глубина, навигация)",
+                  "score": 68,
+                  "status": "medium",
+                  "details": "Глубина: 3 уровней"
+                },
+                "quality": {
+                  "name": "Качество контента (уникальность, полезность)",
+                  "score": 71,
+                  "status": "medium",
+                  "details": "Уникальность: 71%"
+                },
+                "keywords": {
+                  "name": "Ключевые слова (плотность, релевантность)",
+                  "score": 73,
+                  "status": "medium",
+                  "details": "Плотность: 7%"
+                },
+                "headings": {
+                  "name": "Заголовки (H1-H6 структура)",
+                  "score": 81,
+                  "status": "good",
+                  "details": "H1-H6 структура: 81%"
+                },
+                "images": {
+                  "name": "Изображения (alt, размер, оптимизация)",
+                  "score": 77,
+                  "status": "medium",
+                  "details": "Alt теги: 77%"
+                },
+                "internal_links": {
+                  "name": "Внутренняя перелинковка",
+                  "score": 72,
+                  "status": "medium",
+                  "details": "72 внутренних ссылок"
+                },
+                "blog": {
+                  "name": "Блог/статьи (частота, качество)",
+                  "score": 74,
+                  "status": "medium",
+                  "details": "7 статей в месяц"
+                }
+              },
+              "ux_ui": {
+                "usability": {
+                  "name": "Юзабилити (простота навигации)",
+                  "score": 95,
+                  "status": "good",
+                  "details": "Простота навигации: 95%"
+                },
+                "conversion": {
+                  "name": "Конверсионные элементы (формы, CTA)",
+                  "score": 74,
+                  "status": "medium",
+                  "details": "7 CTA элементов"
+                },
+                "design": {
+                  "name": "Дизайн (современность, брендинг)",
+                  "score": 95,
+                  "status": "good",
+                  "details": "Современный дизайн"
+                },
+                "trust_signals": {
+                  "name": "Сигналы доверия (отзывы, сертификаты)",
+                  "score": 68,
+                  "status": "medium",
+                  "details": "6 сигналов доверия"
+                },
+                "contact_forms": {
+                  "name": "Формы связи (доступность, простота)",
+                  "score": 83,
+                  "status": "good",
+                  "details": "4 форм связи"
+                },
+                "online_booking": {
+                  "name": "Онлайн-запись",
+                  "score": 71,
+                  "status": "medium",
+                  "details": "Онлайн-запись есть"
+                },
+                "chat": {
+                  "name": "Онлайн-чат",
+                  "score": 90,
+                  "status": "good",
+                  "details": "Онлайн-чат есть"
+                }
+              }
+            },
+            "dimension_scores": {
+              "technical": 76.42857142857143,
+              "content": 73.71428571428571,
+              "ux_ui": 82.28571428571429
+            },
+            "total_score": 61.8,
+            "grade": "C"
+          },
+          {
+            "name": "Здоровье Лаб",
+            "url": "",
+            "audit_type": "deep",
+            "dimensions": {
+              "technical": {
+                "page_speed": {
+                  "name": "Скорость загрузки (Desktop/Mobile)",
+                  "score": 82,
+                  "status": "good",
+                  "details": "Desktop: 82ms, Mobile: 282ms"
+                },
+                "core_web_vitals": {
+                  "name": "LCP, FID, CLS",
+                  "score": 73,
+                  "status": "medium",
+                  "details": "LCP: 7.3s, FID: 73ms, CLS: 0.7"
+                },
+                "mobile_friendly": {
+                  "name": "Мобильная адаптация",
+                  "score": 65,
+                  "status": "medium",
+                  "details": "Требуется улучшение"
+                },
+                "https": {
+                  "name": "HTTPS и безопасность",
+                  "score": 82,
+                  "status": "good",
+                  "details": "HTTPS включён"
+                },
+                "structured_data": {
+                  "name": "Schema.org разметка",
+                  "score": 84,
+                  "status": "good",
+                  "details": "8 типов разметки"
+                },
+                "sitemap": {
+                  "name": "XML Sitemap",
+                  "score": 90,
+                  "status": "good",
+                  "details": "XML Sitemap найден"
+                },
+                "robots_txt": {
+                  "name": "robots.txt",
+                  "score": 66,
+                  "status": "medium",
+                  "details": "robots.txt требует правок"
+                }
+              },
+              "content": {
+                "structure": {
+                  "name": "Структура сайта (глубина, навигация)",
+                  "score": 87,
+                  "status": "good",
+                  "details": "Глубина: 4 уровней"
+                },
+                "quality": {
+                  "name": "Качество контента (уникальность, полезность)",
+                  "score": 65,
+                  "status": "medium",
+                  "details": "Уникальность: 65%"
+                },
+                "keywords": {
+                  "name": "Ключевые слова (плотность, релевантность)",
+                  "score": 86,
+                  "status": "good",
+                  "details": "Плотность: 8%"
+                },
+                "headings": {
+                  "name": "Заголовки (H1-H6 структура)",
+                  "score": 82,
+                  "status": "good",
+                  "details": "H1-H6 структура: 82%"
+                },
+                "images": {
+                  "name": "Изображения (alt, размер, оптимизация)",
+                  "score": 65,
+                  "status": "medium",
+                  "details": "Alt теги: 65%"
+                },
+                "internal_links": {
+                  "name": "Внутренняя перелинковка",
+                  "score": 94,
+                  "status": "good",
+                  "details": "94 внутренних ссылок"
+                },
+                "blog": {
+                  "name": "Блог/статьи (частота, качество)",
+                  "score": 70,
+                  "status": "medium",
+                  "details": "7 статей в месяц"
+                }
+              },
+              "ux_ui": {
+                "usability": {
+                  "name": "Юзабилити (простота навигации)",
+                  "score": 67,
+                  "status": "medium",
+                  "details": "Простота навигации: 67%"
+                },
+                "conversion": {
+                  "name": "Конверсионные элементы (формы, CTA)",
+                  "score": 78,
+                  "status": "medium",
+                  "details": "7 CTA элементов"
+                },
+                "design": {
+                  "name": "Дизайн (современность, брендинг)",
+                  "score": 93,
+                  "status": "good",
+                  "details": "Современный дизайн"
+                },
+                "trust_signals": {
+                  "name": "Сигналы доверия (отзывы, сертификаты)",
+                  "score": 95,
+                  "status": "good",
+                  "details": "9 сигналов доверия"
+                },
+                "contact_forms": {
+                  "name": "Формы связи (доступность, простота)",
+                  "score": 93,
+                  "status": "good",
+                  "details": "4 форм связи"
+                },
+                "online_booking": {
+                  "name": "Онлайн-запись",
+                  "score": 84,
+                  "status": "good",
+                  "details": "Онлайн-запись есть"
+                },
+                "chat": {
+                  "name": "Онлайн-чат",
+                  "score": 93,
+                  "status": "good",
+                  "details": "Онлайн-чат есть"
+                }
+              }
+            },
+            "dimension_scores": {
+              "technical": 77.42857142857143,
+              "content": 78.42857142857143,
+              "ux_ui": 86.14285714285714
+            },
+            "total_score": 64.4,
+            "grade": "C"
+          },
+          {
+            "name": "Лайф Клиника",
+            "url": "",
+            "audit_type": "deep",
+            "dimensions": {
+              "technical": {
+                "page_speed": {
+                  "name": "Скорость загрузки (Desktop/Mobile)",
+                  "score": 79,
+                  "status": "medium",
+                  "details": "Desktop: 79ms, Mobile: 279ms"
+                },
+                "core_web_vitals": {
+                  "name": "LCP, FID, CLS",
+                  "score": 79,
+                  "status": "medium",
+                  "details": "LCP: 7.9s, FID: 79ms, CLS: 0.7"
+                },
+                "mobile_friendly": {
+                  "name": "Мобильная адаптация",
+                  "score": 81,
+                  "status": "good",
+                  "details": "Адаптивный дизайн"
+                },
+                "https": {
+                  "name": "HTTPS и безопасность",
+                  "score": 73,
+                  "status": "medium",
+                  "details": "Смешанный контент"
+                },
+                "structured_data": {
+                  "name": "Schema.org разметка",
+                  "score": 67,
+                  "status": "medium",
+                  "details": "Разметка отсутствует"
+                },
+                "sitemap": {
+                  "name": "XML Sitemap",
+                  "score": 73,
+                  "status": "medium",
+                  "details": "XML Sitemap найден"
+                },
+                "robots_txt": {
+                  "name": "robots.txt",
+                  "score": 73,
+                  "status": "medium",
+                  "details": "robots.txt корректен"
+                }
+              },
+              "content": {
+                "structure": {
+                  "name": "Структура сайта (глубина, навигация)",
+                  "score": 83,
+                  "status": "good",
+                  "details": "Глубина: 4 уровней"
+                },
+                "quality": {
+                  "name": "Качество контента (уникальность, полезность)",
+                  "score": 67,
+                  "status": "medium",
+                  "details": "Уникальность: 67%"
+                },
+                "keywords": {
+                  "name": "Ключевые слова (плотность, релевантность)",
+                  "score": 88,
+                  "status": "good",
+                  "details": "Плотность: 8%"
+                },
+                "headings": {
+                  "name": "Заголовки (H1-H6 структура)",
+                  "score": 89,
+                  "status": "good",
+                  "details": "H1-H6 структура: 89%"
+                },
+                "images": {
+                  "name": "Изображения (alt, размер, оптимизация)",
+                  "score": 73,
+                  "status": "medium",
+                  "details": "Alt теги: 73%"
+                },
+                "internal_links": {
+                  "name": "Внутренняя перелинковка",
+                  "score": 66,
+                  "status": "medium",
+                  "details": "66 внутренних ссылок"
+                },
+                "blog": {
+                  "name": "Блог/статьи (частота, качество)",
+                  "score": 75,
+                  "status": "medium",
+                  "details": "7 статей в месяц"
+                }
+              },
+              "ux_ui": {
+                "usability": {
+                  "name": "Юзабилити (простота навигации)",
+                  "score": 90,
+                  "status": "good",
+                  "details": "Простота навигации: 90%"
+                },
+                "conversion": {
+                  "name": "Конверсионные элементы (формы, CTA)",
+                  "score": 60,
+                  "status": "medium",
+                  "details": "6 CTA элементов"
+                },
+                "design": {
+                  "name": "Дизайн (современность, брендинг)",
+                  "score": 72,
+                  "status": "medium",
+                  "details": "Современный дизайн"
+                },
+                "trust_signals": {
+                  "name": "Сигналы доверия (отзывы, сертификаты)",
+                  "score": 88,
+                  "status": "good",
+                  "details": "8 сигналов доверия"
+                },
+                "contact_forms": {
+                  "name": "Формы связи (доступность, простота)",
+                  "score": 92,
+                  "status": "good",
+                  "details": "4 форм связи"
+                },
+                "online_booking": {
+                  "name": "Онлайн-запись",
+                  "score": 89,
+                  "status": "good",
+                  "details": "Онлайн-запись есть"
+                },
+                "chat": {
+                  "name": "Онлайн-чат",
+                  "score": 84,
+                  "status": "good",
+                  "details": "Онлайн-чат есть"
+                }
+              }
+            },
+            "dimension_scores": {
+              "technical": 75.0,
+              "content": 77.28571428571429,
+              "ux_ui": 82.14285714285714
+            },
+            "total_score": 62.5,
+            "grade": "C"
+          },
+          {
+            "name": "Медицина Клуб",
+            "url": "",
+            "audit_type": "deep",
+            "dimensions": {
+              "technical": {
+                "page_speed": {
+                  "name": "Скорость загрузки (Desktop/Mobile)",
+                  "score": 65,
+                  "status": "medium",
+                  "details": "Desktop: 65ms, Mobile: 265ms"
+                },
+                "core_web_vitals": {
+                  "name": "LCP, FID, CLS",
+                  "score": 86,
+                  "status": "good",
+                  "details": "LCP: 8.6s, FID: 86ms, CLS: 0.8"
+                },
+                "mobile_friendly": {
+                  "name": "Мобильная адаптация",
+                  "score": 92,
+                  "status": "good",
+                  "details": "Адаптивный дизайн"
+                },
+                "https": {
+                  "name": "HTTPS и безопасность",
+                  "score": 81,
+                  "status": "good",
+                  "details": "HTTPS включён"
+                },
+                "structured_data": {
+                  "name": "Schema.org разметка",
+                  "score": 60,
+                  "status": "medium",
+                  "details": "Разметка отсутствует"
+                },
+                "sitemap": {
+                  "name": "XML Sitemap",
+                  "score": 61,
+                  "status": "medium",
+                  "details": "Sitemap не найден"
+                },
+                "robots_txt": {
+                  "name": "robots.txt",
+                  "score": 63,
+                  "status": "medium",
+                  "details": "robots.txt требует правок"
+                }
+              },
+              "content": {
+                "structure": {
+                  "name": "Структура сайта (глубина, навигация)",
+                  "score": 66,
+                  "status": "medium",
+                  "details": "Глубина: 3 уровней"
+                },
+                "quality": {
+                  "name": "Качество контента (уникальность, полезность)",
+                  "score": 83,
+                  "status": "good",
+                  "details": "Уникальность: 83%"
+                },
+                "keywords": {
+                  "name": "Ключевые слова (плотность, релевантность)",
+                  "score": 78,
+                  "status": "medium",
+                  "details": "Плотность: 7%"
+                },
+                "headings": {
+                  "name": "Заголовки (H1-H6 структура)",
+                  "score": 80,
+                  "status": "good",
+                  "details": "H1-H6 структура: 80%"
+                },
+                "images": {
+                  "name": "Изображения (alt, размер, оптимизация)",
+                  "score": 89,
+                  "status": "good",
+                  "details": "Alt теги: 89%"
+                },
+                "internal_links": {
+                  "name": "Внутренняя перелинковка",
+                  "score": 95,
+                  "status": "good",
+                  "details": "95 внутренних ссылок"
+                },
+                "blog": {
+                  "name": "Блог/статьи (частота, качество)",
+                  "score": 88,
+                  "status": "good",
+                  "details": "8 статей в месяц"
+                }
+              },
+              "ux_ui": {
+                "usability": {
+                  "name": "Юзабилити (простота навигации)",
+                  "score": 67,
+                  "status": "medium",
+                  "details": "Простота навигации: 67%"
+                },
+                "conversion": {
+                  "name": "Конверсионные элементы (формы, CTA)",
+                  "score": 82,
+                  "status": "good",
+                  "details": "8 CTA элементов"
+                },
+                "design": {
+                  "name": "Дизайн (современность, брендинг)",
+                  "score": 65,
+                  "status": "medium",
+                  "details": "Устаревший дизайн"
+                },
+                "trust_signals": {
+                  "name": "Сигналы доверия (отзывы, сертификаты)",
+                  "score": 81,
+                  "status": "good",
+                  "details": "8 сигналов доверия"
+                },
+                "contact_forms": {
+                  "name": "Формы связи (доступность, простота)",
+                  "score": 89,
+                  "status": "good",
+                  "details": "4 форм связи"
+                },
+                "online_booking": {
+                  "name": "Онлайн-запись",
+                  "score": 75,
+                  "status": "medium",
+                  "details": "Онлайн-запись есть"
+                },
+                "chat": {
+                  "name": "Онлайн-чат",
+                  "score": 80,
+                  "status": "good",
+                  "details": "Онлайн-чат есть"
+                }
+              }
+            },
+            "dimension_scores": {
+              "technical": 72.57142857142857,
+              "content": 82.71428571428571,
+              "ux_ui": 77.0
+            },
+            "total_score": 62.2,
+            "grade": "C"
+          },
+          {
+            "name": "Клиника Центр",
+            "url": "",
+            "audit_type": "deep",
+            "dimensions": {
+              "technical": {
+                "page_speed": {
+                  "name": "Скорость загрузки (Desktop/Mobile)",
+                  "score": 77,
+                  "status": "medium",
+                  "details": "Desktop: 77ms, Mobile: 277ms"
+                },
+                "core_web_vitals": {
+                  "name": "LCP, FID, CLS",
+                  "score": 72,
+                  "status": "medium",
+                  "details": "LCP: 7.2s, FID: 72ms, CLS: 0.7"
+                },
+                "mobile_friendly": {
+                  "name": "Мобильная адаптация",
+                  "score": 88,
+                  "status": "good",
+                  "details": "Адаптивный дизайн"
+                },
+                "https": {
+                  "name": "HTTPS и безопасность",
+                  "score": 92,
+                  "status": "good",
+                  "details": "HTTPS включён"
+                },
+                "structured_data": {
+                  "name": "Schema.org разметка",
+                  "score": 77,
+                  "status": "medium",
+                  "details": "7 типов разметки"
+                },
+                "sitemap": {
+                  "name": "XML Sitemap",
+                  "score": 78,
+                  "status": "medium",
+                  "details": "XML Sitemap найден"
+                },
+                "robots_txt": {
+                  "name": "robots.txt",
+                  "score": 72,
+                  "status": "medium",
+                  "details": "robots.txt корректен"
+                }
+              },
+              "content": {
+                "structure": {
+                  "name": "Структура сайта (глубина, навигация)",
+                  "score": 89,
+                  "status": "good",
+                  "details": "Глубина: 4 уровней"
+                },
+                "quality": {
+                  "name": "Качество контента (уникальность, полезность)",
+                  "score": 65,
+                  "status": "medium",
+                  "details": "Уникальность: 65%"
+                },
+                "keywords": {
+                  "name": "Ключевые слова (плотность, релевантность)",
+                  "score": 81,
+                  "status": "good",
+                  "details": "Плотность: 8%"
+                },
+                "headings": {
+                  "name": "Заголовки (H1-H6 структура)",
+                  "score": 60,
+                  "status": "medium",
+                  "details": "H1-H6 структура: 60%"
+                },
+                "images": {
+                  "name": "Изображения (alt, размер, оптимизация)",
+                  "score": 86,
+                  "status": "good",
+                  "details": "Alt теги: 86%"
+                },
+                "internal_links": {
+                  "name": "Внутренняя перелинковка",
+                  "score": 86,
+                  "status": "good",
+                  "details": "86 внутренних ссылок"
+                },
+                "blog": {
+                  "name": "Блог/статьи (частота, качество)",
+                  "score": 77,
+                  "status": "medium",
+                  "details": "7 статей в месяц"
+                }
+              },
+              "ux_ui": {
+                "usability": {
+                  "name": "Юзабилити (простота навигации)",
+                  "score": 84,
+                  "status": "good",
+                  "details": "Простота навигации: 84%"
+                },
+                "conversion": {
+                  "name": "Конверсионные элементы (формы, CTA)",
+                  "score": 62,
+                  "status": "medium",
+                  "details": "6 CTA элементов"
+                },
+                "design": {
+                  "name": "Дизайн (современность, брендинг)",
+                  "score": 67,
+                  "status": "medium",
+                  "details": "Устаревший дизайн"
+                },
+                "trust_signals": {
+                  "name": "Сигналы доверия (отзывы, сертификаты)",
+                  "score": 94,
+                  "status": "good",
+                  "details": "9 сигналов доверия"
+                },
+                "contact_forms": {
+                  "name": "Формы связи (доступность, простота)",
+                  "score": 67,
+                  "status": "medium",
+                  "details": "3 форм связи"
+                },
+                "online_booking": {
+                  "name": "Онлайн-запись",
+                  "score": 68,
+                  "status": "medium",
+                  "details": "Онлайн-запись отсутствует"
+                },
+                "chat": {
+                  "name": "Онлайн-чат",
+                  "score": 88,
+                  "status": "good",
+                  "details": "Онлайн-чат есть"
+                }
+              }
+            },
+            "dimension_scores": {
+              "technical": 79.42857142857143,
+              "content": 77.71428571428571,
+              "ux_ui": 75.71428571428571
+            },
+            "total_score": 62.1,
+            "grade": "C"
+          }
+        ],
+        "insights": {
+          "market_average": 62.6,
+          "dimension_averages": {
+            "technical": 76.2,
+            "content": 78.0,
+            "ux_ui": 80.7,
+            "marketing": 0
+          },
+          "best_competitor": {
+            "name": "Здоровье Лаб",
+            "score": 64.4,
+            "grade": "C"
+          },
+          "worst_competitor": {
+            "name": "Центр Студия",
+            "score": 61.8,
+            "grade": "C"
+          },
+          "strongest_dimension": "ux_ui",
+          "weakest_dimension": "marketing"
+        },
+        "gaps": []
+      }
+    },
+    "phase_3": {
+      "phase": 3,
+      "agent": "ci-auditor",
+      "status": "success",
+      "result": {
+        "audit_type": "deep",
+        "audit_date": "2026-05-06T21:18:02.865430",
+        "total_audited": 5,
+        "audits": [
+          {
+            "name": "Центр Студия",
+            "url": "",
+            "audit_type": "deep",
+            "dimensions": {
+              "technical": {
+                "page_speed": {
+                  "name": "Скорость загрузки (Desktop/Mobile)",
+                  "score": 67,
+                  "status": "medium",
+                  "details": "Desktop: 67ms, Mobile: 267ms"
+                },
+                "core_web_vitals": {
+                  "name": "LCP, FID, CLS",
+                  "score": 82,
+                  "status": "good",
+                  "details": "LCP: 8.2s, FID: 82ms, CLS: 0.8"
+                },
+                "mobile_friendly": {
+                  "name": "Мобильная адаптация",
+                  "score": 94,
+                  "status": "good",
+                  "details": "Адаптивный дизайн"
+                },
+                "https": {
+                  "name": "HTTPS и безопасность",
+                  "score": 83,
+                  "status": "good",
+                  "details": "HTTPS включён"
+                },
+                "structured_data": {
+                  "name": "Schema.org разметка",
+                  "score": 82,
+                  "status": "good",
+                  "details": "8 типов разметки"
+                },
+                "sitemap": {
+                  "name": "XML Sitemap",
+                  "score": 80,
+                  "status": "good",
+                  "details": "XML Sitemap найден"
+                },
+                "robots_txt": {
+                  "name": "robots.txt",
+                  "score": 70,
+                  "status": "medium",
+                  "details": "robots.txt требует правок"
+                }
+              },
+              "content": {
+                "structure": {
+                  "name": "Структура сайта (глубина, навигация)",
+                  "score": 79,
+                  "status": "medium",
+                  "details": "Глубина: 3 уровней"
+                },
+                "quality": {
+                  "name": "Качество контента (уникальность, полезность)",
+                  "score": 65,
+                  "status": "medium",
+                  "details": "Уникальность: 65%"
+                },
+                "keywords": {
+                  "name": "Ключевые слова (плотность, релевантность)",
+                  "score": 72,
+                  "status": "medium",
+                  "details": "Плотность: 7%"
+                },
+                "headings": {
+                  "name": "Заголовки (H1-H6 структура)",
+                  "score": 66,
+                  "status": "medium",
+                  "details": "H1-H6 структура: 66%"
+                },
+                "images": {
+                  "name": "Изображения (alt, размер, оптимизация)",
+                  "score": 65,
+                  "status": "medium",
+                  "details": "Alt теги: 65%"
+                },
+                "internal_links": {
+                  "name": "Внутренняя перелинковка",
+                  "score": 89,
+                  "status": "good",
+                  "details": "89 внутренних ссылок"
+                },
+                "blog": {
+                  "name": "Блог/статьи (частота, качество)",
+                  "score": 92,
+                  "status": "good",
+                  "details": "9 статей в месяц"
+                }
+              },
+              "ux_ui": {
+                "usability": {
+                  "name": "Юзабилити (простота навигации)",
+                  "score": 76,
+                  "status": "medium",
+                  "details": "Простота навигации: 76%"
+                },
+                "conversion": {
+                  "name": "Конверсионные элементы (формы, CTA)",
+                  "score": 90,
+                  "status": "good",
+                  "details": "9 CTA элементов"
+                },
+                "design": {
+                  "name": "Дизайн (современность, брендинг)",
+                  "score": 91,
+                  "status": "good",
+                  "details": "Современный дизайн"
+                },
+                "trust_signals": {
+                  "name": "Сигналы доверия (отзывы, сертификаты)",
+                  "score": 88,
+                  "status": "good",
+                  "details": "8 сигналов доверия"
+                },
+                "contact_forms": {
+                  "name": "Формы связи (доступность, простота)",
+                  "score": 86,
+                  "status": "good",
+                  "details": "4 форм связи"
+                },
+                "online_booking": {
+                  "name": "Онлайн-запись",
+                  "score": 84,
+                  "status": "good",
+                  "details": "Онлайн-запись есть"
+                },
+                "chat": {
+                  "name": "Онлайн-чат",
+                  "score": 71,
+                  "status": "medium",
+                  "details": "Онлайн-чат есть"
+                }
+              }
+            },
+            "dimension_scores": {
+              "technical": 79.71428571428571,
+              "content": 75.42857142857143,
+              "ux_ui": 83.71428571428571
+            },
+            "total_score": 63.5,
+            "grade": "C"
+          },
+          {
+            "name": "Здоровье Лаб",
+            "url": "",
+            "audit_type": "deep",
+            "dimensions": {
+              "technical": {
+                "page_speed": {
+                  "name": "Скорость загрузки (Desktop/Mobile)",
+                  "score": 63,
+                  "status": "medium",
+                  "details": "Desktop: 63ms, Mobile: 263ms"
+                },
+                "core_web_vitals": {
+                  "name": "LCP, FID, CLS",
+                  "score": 75,
+                  "status": "medium",
+                  "details": "LCP: 7.5s, FID: 75ms, CLS: 0.7"
+                },
+                "mobile_friendly": {
+                  "name": "Мобильная адаптация",
+                  "score": 64,
+                  "status": "medium",
+                  "details": "Требуется улучшение"
+                },
+                "https": {
+                  "name": "HTTPS и безопасность",
+                  "score": 72,
+                  "status": "medium",
+                  "details": "Смешанный контент"
+                },
+                "structured_data": {
+                  "name": "Schema.org разметка",
+                  "score": 66,
+                  "status": "medium",
+                  "details": "Разметка отсутствует"
+                },
+                "sitemap": {
+                  "name": "XML Sitemap",
+                  "score": 89,
+                  "status": "good",
+                  "details": "XML Sitemap найден"
+                },
+                "robots_txt": {
+                  "name": "robots.txt",
+                  "score": 90,
+                  "status": "good",
+                  "details": "robots.txt корректен"
+                }
+              },
+              "content": {
+                "structure": {
+                  "name": "Структура сайта (глубина, навигация)",
+                  "score": 80,
+                  "status": "good",
+                  "details": "Глубина: 4 уровней"
+                },
+                "quality": {
+                  "name": "Качество контента (уникальность, полезность)",
+                  "score": 73,
+                  "status": "medium",
+                  "details": "Уникальность: 73%"
+                },
+                "keywords": {
+                  "name": "Ключевые слова (плотность, релевантность)",
+                  "score": 83,
+                  "status": "good",
+                  "details": "Плотность: 8%"
+                },
+                "headings": {
+                  "name": "Заголовки (H1-H6 структура)",
+                  "score": 75,
+                  "status": "medium",
+                  "details": "H1-H6 структура: 75%"
+                },
+                "images": {
+                  "name": "Изображения (alt, размер, оптимизация)",
+                  "score": 69,
+                  "status": "medium",
+                  "details": "Alt теги: 69%"
+                },
+                "internal_links": {
+                  "name": "Внутренняя перелинковка",
+                  "score": 89,
+                  "status": "good",
+                  "details": "89 внутренних ссылок"
+                },
+                "blog": {
+                  "name": "Блог/статьи (частота, качество)",
+                  "score": 84,
+                  "status": "good",
+                  "details": "8 статей в месяц"
+                }
+              },
+              "ux_ui": {
+                "usability": {
+                  "name": "Юзабилити (простота навигации)",
+                  "score": 94,
+                  "status": "good",
+                  "details": "Простота навигации: 94%"
+                },
+                "conversion": {
+                  "name": "Конверсионные элементы (формы, CTA)",
+                  "score": 89,
+                  "status": "good",
+                  "details": "8 CTA элементов"
+                },
+                "design": {
+                  "name": "Дизайн (современность, брендинг)",
+                  "score": 95,
+                  "status": "good",
+                  "details": "Современный дизайн"
+                },
+                "trust_signals": {
+                  "name": "Сигналы доверия (отзывы, сертификаты)",
+                  "score": 94,
+                  "status": "good",
+                  "details": "9 сигналов доверия"
+                },
+                "contact_forms": {
+                  "name": "Формы связи (доступность, простота)",
+                  "score": 86,
+                  "status": "good",
+                  "details": "4 форм связи"
+                },
+                "online_booking": {
+                  "name": "Онлайн-запись",
+                  "score": 94,
+                  "status": "good",
+                  "details": "Онлайн-запись есть"
+                },
+                "chat": {
+                  "name": "Онлайн-чат",
+                  "score": 69,
+                  "status": "medium",
+                  "details": "Чат отсутствует"
+                }
+              }
+            },
+            "dimension_scores": {
+              "technical": 74.14285714285714,
+              "content": 79.0,
+              "ux_ui": 88.71428571428571
+            },
+            "total_score": 64.4,
+            "grade": "C"
+          },
+          {
+            "name": "Лайф Клиника",
+            "url": "",
+            "audit_type": "deep",
+            "dimensions": {
+              "technical": {
+                "page_speed": {
+                  "name": "Скорость загрузки (Desktop/Mobile)",
+                  "score": 79,
+                  "status": "medium",
+                  "details": "Desktop: 79ms, Mobile: 279ms"
+                },
+                "core_web_vitals": {
+                  "name": "LCP, FID, CLS",
+                  "score": 65,
+                  "status": "medium",
+                  "details": "LCP: 6.5s, FID: 65ms, CLS: 0.6"
+                },
+                "mobile_friendly": {
+                  "name": "Мобильная адаптация",
+                  "score": 81,
+                  "status": "good",
+                  "details": "Адаптивный дизайн"
+                },
+                "https": {
+                  "name": "HTTPS и безопасность",
+                  "score": 62,
+                  "status": "medium",
+                  "details": "Смешанный контент"
+                },
+                "structured_data": {
+                  "name": "Schema.org разметка",
+                  "score": 72,
+                  "status": "medium",
+                  "details": "7 типов разметки"
+                },
+                "sitemap": {
+                  "name": "XML Sitemap",
+                  "score": 66,
+                  "status": "medium",
+                  "details": "Sitemap не найден"
+                },
+                "robots_txt": {
+                  "name": "robots.txt",
+                  "score": 62,
+                  "status": "medium",
+                  "details": "robots.txt требует правок"
+                }
+              },
+              "content": {
+                "structure": {
+                  "name": "Структура сайта (глубина, навигация)",
+                  "score": 92,
+                  "status": "good",
+                  "details": "Глубина: 4 уровней"
+                },
+                "quality": {
+                  "name": "Качество контента (уникальность, полезность)",
+                  "score": 68,
+                  "status": "medium",
+                  "details": "Уникальность: 68%"
+                },
+                "keywords": {
+                  "name": "Ключевые слова (плотность, релевантность)",
+                  "score": 68,
+                  "status": "medium",
+                  "details": "Плотность: 6%"
+                },
+                "headings": {
+                  "name": "Заголовки (H1-H6 структура)",
+                  "score": 94,
+                  "status": "good",
+                  "details": "H1-H6 структура: 94%"
+                },
+                "images": {
+                  "name": "Изображения (alt, размер, оптимизация)",
+                  "score": 75,
+                  "status": "medium",
+                  "details": "Alt теги: 75%"
+                },
+                "internal_links": {
+                  "name": "Внутренняя перелинковка",
+                  "score": 62,
+                  "status": "medium",
+                  "details": "62 внутренних ссылок"
+                },
+                "blog": {
+                  "name": "Блог/статьи (частота, качество)",
+                  "score": 68,
+                  "status": "medium",
+                  "details": "6 статей в месяц"
+                }
+              },
+              "ux_ui": {
+                "usability": {
+                  "name": "Юзабилити (простота навигации)",
+                  "score": 83,
+                  "status": "good",
+                  "details": "Простота навигации: 83%"
+                },
+                "conversion": {
+                  "name": "Конверсионные элементы (формы, CTA)",
+                  "score": 62,
+                  "status": "medium",
+                  "details": "6 CTA элементов"
+                },
+                "design": {
+                  "name": "Дизайн (современность, брендинг)",
+                  "score": 91,
+                  "status": "good",
+                  "details": "Современный дизайн"
+                },
+                "trust_signals": {
+                  "name": "Сигналы доверия (отзывы, сертификаты)",
+                  "score": 66,
+                  "status": "medium",
+                  "details": "6 сигналов доверия"
+                },
+                "contact_forms": {
+                  "name": "Формы связи (доступность, простота)",
+                  "score": 77,
+                  "status": "medium",
+                  "details": "3 форм связи"
+                },
+                "online_booking": {
+                  "name": "Онлайн-запись",
+                  "score": 63,
+                  "status": "medium",
+                  "details": "Онлайн-запись отсутствует"
+                },
+                "chat": {
+                  "name": "Онлайн-чат",
+                  "score": 68,
+                  "status": "medium",
+                  "details": "Чат отсутствует"
+                }
+              }
+            },
+            "dimension_scores": {
+              "technical": 69.57142857142857,
+              "content": 75.28571428571429,
+              "ux_ui": 72.85714285714286
+            },
+            "total_score": 58.2,
+            "grade": "C"
+          },
+          {
+            "name": "Медицина Клуб",
+            "url": "",
+            "audit_type": "deep",
+            "dimensions": {
+              "technical": {
+                "page_speed": {
+                  "name": "Скорость загрузки (Desktop/Mobile)",
+                  "score": 65,
+                  "status": "medium",
+                  "details": "Desktop: 65ms, Mobile: 265ms"
+                },
+                "core_web_vitals": {
+                  "name": "LCP, FID, CLS",
+                  "score": 66,
+                  "status": "medium",
+                  "details": "LCP: 6.6s, FID: 66ms, CLS: 0.6"
+                },
+                "mobile_friendly": {
+                  "name": "Мобильная адаптация",
+                  "score": 77,
+                  "status": "medium",
+                  "details": "Адаптивный дизайн"
+                },
+                "https": {
+                  "name": "HTTPS и безопасность",
+                  "score": 89,
+                  "status": "good",
+                  "details": "HTTPS включён"
+                },
+                "structured_data": {
+                  "name": "Schema.org разметка",
+                  "score": 64,
+                  "status": "medium",
+                  "details": "Разметка отсутствует"
+                },
+                "sitemap": {
+                  "name": "XML Sitemap",
+                  "score": 75,
+                  "status": "medium",
+                  "details": "XML Sitemap найден"
+                },
+                "robots_txt": {
+                  "name": "robots.txt",
+                  "score": 86,
+                  "status": "good",
+                  "details": "robots.txt корректен"
+                }
+              },
+              "content": {
+                "structure": {
+                  "name": "Структура сайта (глубина, навигация)",
+                  "score": 93,
+                  "status": "good",
+                  "details": "Глубина: 4 уровней"
+                },
+                "quality": {
+                  "name": "Качество контента (уникальность, полезность)",
+                  "score": 65,
+                  "status": "medium",
+                  "details": "Уникальность: 65%"
+                },
+                "keywords": {
+                  "name": "Ключевые слова (плотность, релевантность)",
+                  "score": 70,
+                  "status": "medium",
+                  "details": "Плотность: 7%"
+                },
+                "headings": {
+                  "name": "Заголовки (H1-H6 структура)",
+                  "score": 85,
+                  "status": "good",
+                  "details": "H1-H6 структура: 85%"
+                },
+                "images": {
+                  "name": "Изображения (alt, размер, оптимизация)",
+                  "score": 68,
+                  "status": "medium",
+                  "details": "Alt теги: 68%"
+                },
+                "internal_links": {
+                  "name": "Внутренняя перелинковка",
+                  "score": 85,
+                  "status": "good",
+                  "details": "85 внутренних ссылок"
+                },
+                "blog": {
+                  "name": "Блог/статьи (частота, качество)",
+                  "score": 67,
+                  "status": "medium",
+                  "details": "6 статей в месяц"
+                }
+              },
+              "ux_ui": {
+                "usability": {
+                  "name": "Юзабилити (простота навигации)",
+                  "score": 81,
+                  "status": "good",
+                  "details": "Простота навигации: 81%"
+                },
+                "conversion": {
+                  "name": "Конверсионные элементы (формы, CTA)",
+                  "score": 88,
+                  "status": "good",
+                  "details": "8 CTA элементов"
+                },
+                "design": {
+                  "name": "Дизайн (современность, брендинг)",
+                  "score": 62,
+                  "status": "medium",
+                  "details": "Устаревший дизайн"
+                },
+                "trust_signals": {
+                  "name": "Сигналы доверия (отзывы, сертификаты)",
+                  "score": 92,
+                  "status": "good",
+                  "details": "9 сигналов доверия"
+                },
+                "contact_forms": {
+                  "name": "Формы связи (доступность, простота)",
+                  "score": 82,
+                  "status": "good",
+                  "details": "4 форм связи"
+                },
+                "online_booking": {
+                  "name": "Онлайн-запись",
+                  "score": 84,
+                  "status": "good",
+                  "details": "Онлайн-запись есть"
+                },
+                "chat": {
+                  "name": "Онлайн-чат",
+                  "score": 82,
+                  "status": "good",
+                  "details": "Онлайн-чат есть"
+                }
+              }
+            },
+            "dimension_scores": {
+              "technical": 74.57142857142857,
+              "content": 76.14285714285714,
+              "ux_ui": 81.57142857142857
+            },
+            "total_score": 61.9,
+            "grade": "C"
+          },
+          {
+            "name": "Клиника Центр",
+            "url": "",
+            "audit_type": "deep",
+            "dimensions": {
+              "technical": {
+                "page_speed": {
+                  "name": "Скорость загрузки (Desktop/Mobile)",
+                  "score": 68,
+                  "status": "medium",
+                  "details": "Desktop: 68ms, Mobile: 268ms"
+                },
+                "core_web_vitals": {
+                  "name": "LCP, FID, CLS",
+                  "score": 70,
+                  "status": "medium",
+                  "details": "LCP: 7.0s, FID: 70ms, CLS: 0.7"
+                },
+                "mobile_friendly": {
+                  "name": "Мобильная адаптация",
+                  "score": 89,
+                  "status": "good",
+                  "details": "Адаптивный дизайн"
+                },
+                "https": {
+                  "name": "HTTPS и безопасность",
+                  "score": 75,
+                  "status": "medium",
+                  "details": "Смешанный контент"
+                },
+                "structured_data": {
+                  "name": "Schema.org разметка",
+                  "score": 93,
+                  "status": "good",
+                  "details": "9 типов разметки"
+                },
+                "sitemap": {
+                  "name": "XML Sitemap",
+                  "score": 86,
+                  "status": "good",
+                  "details": "XML Sitemap найден"
+                },
+                "robots_txt": {
+                  "name": "robots.txt",
+                  "score": 77,
+                  "status": "medium",
+                  "details": "robots.txt корректен"
+                }
+              },
+              "content": {
+                "structure": {
+                  "name": "Структура сайта (глубина, навигация)",
+                  "score": 91,
+                  "status": "good",
+                  "details": "Глубина: 4 уровней"
+                },
+                "quality": {
+                  "name": "Качество контента (уникальность, полезность)",
+                  "score": 68,
+                  "status": "medium",
+                  "details": "Уникальность: 68%"
+                },
+                "keywords": {
+                  "name": "Ключевые слова (плотность, релевантность)",
+                  "score": 64,
+                  "status": "medium",
+                  "details": "Плотность: 6%"
+                },
+                "headings": {
+                  "name": "Заголовки (H1-H6 структура)",
+                  "score": 85,
+                  "status": "good",
+                  "details": "H1-H6 структура: 85%"
+                },
+                "images": {
+                  "name": "Изображения (alt, размер, оптимизация)",
+                  "score": 92,
+                  "status": "good",
+                  "details": "Alt теги: 92%"
+                },
+                "internal_links": {
+                  "name": "Внутренняя перелинковка",
+                  "score": 65,
+                  "status": "medium",
+                  "details": "65 внутренних ссылок"
+                },
+                "blog": {
+                  "name": "Блог/статьи (частота, качество)",
+                  "score": 76,
+                  "status": "medium",
+                  "details": "7 статей в месяц"
+                }
+              },
+              "ux_ui": {
+                "usability": {
+                  "name": "Юзабилити (простота навигации)",
+                  "score": 61,
+                  "status": "medium",
+                  "details": "Простота навигации: 61%"
+                },
+                "conversion": {
+                  "name": "Конверсионные элементы (формы, CTA)",
+                  "score": 81,
+                  "status": "good",
+                  "details": "8 CTA элементов"
+                },
+                "design": {
+                  "name": "Дизайн (современность, брендинг)",
+                  "score": 81,
+                  "status": "good",
+                  "details": "Современный дизайн"
+                },
+                "trust_signals": {
+                  "name": "Сигналы доверия (отзывы, сертификаты)",
+                  "score": 70,
+                  "status": "medium",
+                  "details": "7 сигналов доверия"
+                },
+                "contact_forms": {
+                  "name": "Формы связи (доступность, простота)",
+                  "score": 82,
+                  "status": "good",
+                  "details": "4 форм связи"
+                },
+                "online_booking": {
+                  "name": "Онлайн-запись",
+                  "score": 87,
+                  "status": "good",
+                  "details": "Онлайн-запись есть"
+                },
+                "chat": {
+                  "name": "Онлайн-чат",
+                  "score": 93,
+                  "status": "good",
+                  "details": "Онлайн-чат есть"
+                }
+              }
+            },
+            "dimension_scores": {
+              "technical": 79.71428571428571,
+              "content": 77.28571428571429,
+              "ux_ui": 79.28571428571429
+            },
+            "total_score": 62.9,
+            "grade": "C"
+          }
+        ],
+        "insights": {
+          "market_average": 62.2,
+          "dimension_averages": {
+            "technical": 75.5,
+            "content": 76.6,
+            "ux_ui": 81.2,
+            "marketing": 0
+          },
+          "best_competitor": {
+            "name": "Здоровье Лаб",
+            "score": 64.4,
+            "grade": "C"
+          },
+          "worst_competitor": {
+            "name": "Лайф Клиника",
+            "score": 58.2,
+            "grade": "C"
+          },
+          "strongest_dimension": "ux_ui",
+          "weakest_dimension": "marketing"
+        },
+        "gaps": []
+      }
+    },
+    "phase_4": {
+      "phase": 4,
+      "agent": "ci-reputation",
+      "status": "success",
+      "result": {
+        "analysis_date": "2026-05-06T21:18:02.868119",
+        "total_analyzed": 5,
+        "sources_used": [
+          "yandex_maps",
+          "2gis",
+          "prodoctorov",
+          "zoon",
+          "napopravku"
+        ],
+        "reviews_data": [
+          {
+            "name": "Центр Студия",
+            "sources": {
+              "yandex_maps": {
+                "source": "yandex_maps",
+                "source_name": "Яндекс.Карты",
+                "count": 86,
+                "avg_rating": 4.3,
+                "sentiment_distribution": {
+                  "positive": 85,
+                  "negative": 7,
+                  "neutral": 8
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 4.3,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.3,
+                    "sentiment": "neutral",
+                    "text": "Средний уровень обслуживания",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.2,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.4,
+                    "sentiment": "neutral",
+                    "text": "Нормально, но есть куда расти",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.9,
+                    "sentiment": "neutral",
+                    "text": "Обычная клиника, ничего особенного",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "2gis": {
+                "source": "2gis",
+                "source_name": "2GIS",
+                "count": 159,
+                "avg_rating": 4.0,
+                "sentiment_distribution": {
+                  "positive": 64,
+                  "negative": 9,
+                  "neutral": 27
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 3.8,
+                    "sentiment": "neutral",
+                    "text": "Нормально, но есть куда расти",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.5,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.7,
+                    "sentiment": "neutral",
+                    "text": "Нормально, но есть куда расти",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 2.5,
+                    "sentiment": "negative",
+                    "text": "Обещали одно, сделали другое",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "prodoctorov": {
+                "source": "prodoctorov",
+                "source_name": "ПроДокторов",
+                "count": 116,
+                "avg_rating": 3.9,
+                "sentiment_distribution": {
+                  "positive": 71,
+                  "negative": 16,
+                  "neutral": 13
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 4.8,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.7,
+                    "sentiment": "neutral",
+                    "text": "Приемлемо, но не более",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.1,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.0,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.7,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "zoon": {
+                "source": "zoon",
+                "source_name": "Zoon",
+                "count": 98,
+                "avg_rating": 4.8,
+                "sentiment_distribution": {
+                  "positive": 66,
+                  "negative": 19,
+                  "neutral": 15
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 4.7,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.7,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "napopravku": {
+                "source": "napopravku",
+                "source_name": "НаПоправку",
+                "count": 192,
+                "avg_rating": 4.5,
+                "sentiment_distribution": {
+                  "positive": 70,
+                  "negative": 19,
+                  "neutral": 11
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 4.7,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.8,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.2,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.9,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  }
+                ]
+              }
+            },
+            "total_reviews": 651,
+            "avg_rating": 4.29
+          },
+          {
+            "name": "Здоровье Лаб",
+            "sources": {
+              "yandex_maps": {
+                "source": "yandex_maps",
+                "source_name": "Яндекс.Карты",
+                "count": 143,
+                "avg_rating": 4.8,
+                "sentiment_distribution": {
+                  "positive": 81,
+                  "negative": 20,
+                  "neutral": -1
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 4.7,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.3,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "2gis": {
+                "source": "2gis",
+                "source_name": "2GIS",
+                "count": 144,
+                "avg_rating": 3.8,
+                "sentiment_distribution": {
+                  "positive": 84,
+                  "negative": 18,
+                  "neutral": -2
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 3.2,
+                    "sentiment": "neutral",
+                    "text": "Обычная клиника, ничего особенного",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.2,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.3,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.3,
+                    "sentiment": "neutral",
+                    "text": "Нормально, но есть куда расти",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.6,
+                    "sentiment": "neutral",
+                    "text": "Нормально, но есть куда расти",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "prodoctorov": {
+                "source": "prodoctorov",
+                "source_name": "ПроДокторов",
+                "count": 193,
+                "avg_rating": 4.5,
+                "sentiment_distribution": {
+                  "positive": 78,
+                  "negative": 20,
+                  "neutral": 2
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 3.3,
+                    "sentiment": "neutral",
+                    "text": "Приемлемо, но не более",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.7,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.3,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.6,
+                    "sentiment": "neutral",
+                    "text": "Приемлемо, но не более",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.3,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "zoon": {
+                "source": "zoon",
+                "source_name": "Zoon",
+                "count": 120,
+                "avg_rating": 3.9,
+                "sentiment_distribution": {
+                  "positive": 74,
+                  "negative": 17,
+                  "neutral": 9
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 3.8,
+                    "sentiment": "neutral",
+                    "text": "Приемлемо, но не более",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.4,
+                    "sentiment": "neutral",
+                    "text": "Нормально, но есть куда расти",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.1,
+                    "sentiment": "neutral",
+                    "text": "Приемлемо, но не более",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.7,
+                    "sentiment": "neutral",
+                    "text": "Приемлемо, но не более",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.1,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "napopravku": {
+                "source": "napopravku",
+                "source_name": "НаПоправку",
+                "count": 25,
+                "avg_rating": 4.0,
+                "sentiment_distribution": {
+                  "positive": 68,
+                  "negative": 12,
+                  "neutral": 20
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 4.0,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.9,
+                    "sentiment": "neutral",
+                    "text": "Обычная клиника, ничего особенного",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.8,
+                    "sentiment": "neutral",
+                    "text": "Нормально, но есть куда расти",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.3,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.9,
+                    "sentiment": "neutral",
+                    "text": "Нормально, но есть куда расти",
+                    "date": "2026-04-15"
+                  }
+                ]
+              }
+            },
+            "total_reviews": 625,
+            "avg_rating": 4.27
+          },
+          {
+            "name": "Лайф Клиника",
+            "sources": {
+              "yandex_maps": {
+                "source": "yandex_maps",
+                "source_name": "Яндекс.Карты",
+                "count": 128,
+                "avg_rating": 4.4,
+                "sentiment_distribution": {
+                  "positive": 85,
+                  "negative": 7,
+                  "neutral": 8
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 3.4,
+                    "sentiment": "neutral",
+                    "text": "Приемлемо, но не более",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.9,
+                    "sentiment": "neutral",
+                    "text": "Средний уровень обслуживания",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.3,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.5,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "2gis": {
+                "source": "2gis",
+                "source_name": "2GIS",
+                "count": 145,
+                "avg_rating": 3.9,
+                "sentiment_distribution": {
+                  "positive": 83,
+                  "negative": 19,
+                  "neutral": -2
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 4.2,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.8,
+                    "sentiment": "neutral",
+                    "text": "Приемлемо, но не более",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 2.5,
+                    "sentiment": "negative",
+                    "text": "Долго ждали приёма, не понравилось",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.4,
+                    "sentiment": "neutral",
+                    "text": "Обычная клиника, ничего особенного",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "prodoctorov": {
+                "source": "prodoctorov",
+                "source_name": "ПроДокторов",
+                "count": 51,
+                "avg_rating": 4.6,
+                "sentiment_distribution": {
+                  "positive": 84,
+                  "negative": 6,
+                  "neutral": 10
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 4.5,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.5,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.8,
+                    "sentiment": "neutral",
+                    "text": "Нормально, но есть куда расти",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.9,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "zoon": {
+                "source": "zoon",
+                "source_name": "Zoon",
+                "count": 61,
+                "avg_rating": 4.1,
+                "sentiment_distribution": {
+                  "positive": 85,
+                  "negative": 12,
+                  "neutral": 3
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 4.2,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.6,
+                    "sentiment": "neutral",
+                    "text": "Нормально, но есть куда расти",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.3,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.9,
+                    "sentiment": "neutral",
+                    "text": "Приемлемо, но не более",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.5,
+                    "sentiment": "neutral",
+                    "text": "Обычная клиника, ничего особенного",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "napopravku": {
+                "source": "napopravku",
+                "source_name": "НаПоправку",
+                "count": 152,
+                "avg_rating": 4.4,
+                "sentiment_distribution": {
+                  "positive": 82,
+                  "negative": 16,
+                  "neutral": 2
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.3,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.3,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.2,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.3,
+                    "sentiment": "neutral",
+                    "text": "Приемлемо, но не более",
+                    "date": "2026-04-15"
+                  }
+                ]
+              }
+            },
+            "total_reviews": 537,
+            "avg_rating": 4.25
+          },
+          {
+            "name": "Медицина Клуб",
+            "sources": {
+              "yandex_maps": {
+                "source": "yandex_maps",
+                "source_name": "Яндекс.Карты",
+                "count": 108,
+                "avg_rating": 4.3,
+                "sentiment_distribution": {
+                  "positive": 65,
+                  "negative": 16,
+                  "neutral": 19
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 3.1,
+                    "sentiment": "neutral",
+                    "text": "Приемлемо, но не более",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.9,
+                    "sentiment": "neutral",
+                    "text": "Обычная клиника, ничего особенного",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.2,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.4,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.5,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "2gis": {
+                "source": "2gis",
+                "source_name": "2GIS",
+                "count": 44,
+                "avg_rating": 4.3,
+                "sentiment_distribution": {
+                  "positive": 68,
+                  "negative": 9,
+                  "neutral": 23
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 4.4,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.7,
+                    "sentiment": "neutral",
+                    "text": "Нормально, но есть куда расти",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.7,
+                    "sentiment": "neutral",
+                    "text": "Средний уровень обслуживания",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.3,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "prodoctorov": {
+                "source": "prodoctorov",
+                "source_name": "ПроДокторов",
+                "count": 183,
+                "avg_rating": 4.9,
+                "sentiment_distribution": {
+                  "positive": 77,
+                  "negative": 20,
+                  "neutral": 3
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 4.7,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.7,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.7,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.8,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.1,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "zoon": {
+                "source": "zoon",
+                "source_name": "Zoon",
+                "count": 200,
+                "avg_rating": 3.9,
+                "sentiment_distribution": {
+                  "positive": 78,
+                  "negative": 5,
+                  "neutral": 17
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 3.6,
+                    "sentiment": "neutral",
+                    "text": "Нормально, но есть куда расти",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.0,
+                    "sentiment": "neutral",
+                    "text": "Обычная клиника, ничего особенного",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 2.5,
+                    "sentiment": "negative",
+                    "text": "Завышенные цены, результат не оправдал ожиданий",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.8,
+                    "sentiment": "neutral",
+                    "text": "Нормально, но есть куда расти",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.7,
+                    "sentiment": "neutral",
+                    "text": "Нормально, но есть куда расти",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "napopravku": {
+                "source": "napopravku",
+                "source_name": "НаПоправку",
+                "count": 87,
+                "avg_rating": 4.2,
+                "sentiment_distribution": {
+                  "positive": 70,
+                  "negative": 19,
+                  "neutral": 11
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 3.9,
+                    "sentiment": "neutral",
+                    "text": "Приемлемо, но не более",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.5,
+                    "sentiment": "neutral",
+                    "text": "Обычная клиника, ничего особенного",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.0,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.3,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  }
+                ]
+              }
+            },
+            "total_reviews": 622,
+            "avg_rating": 4.33
+          },
+          {
+            "name": "Клиника Центр",
+            "sources": {
+              "yandex_maps": {
+                "source": "yandex_maps",
+                "source_name": "Яндекс.Карты",
+                "count": 179,
+                "avg_rating": 4.8,
+                "sentiment_distribution": {
+                  "positive": 73,
+                  "negative": 8,
+                  "neutral": 19
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.6,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.6,
+                    "sentiment": "positive",
+                    "text": "Быстро записали, качественно обслужили",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "2gis": {
+                "source": "2gis",
+                "source_name": "2GIS",
+                "count": 197,
+                "avg_rating": 4.0,
+                "sentiment_distribution": {
+                  "positive": 72,
+                  "negative": 11,
+                  "neutral": 17
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 3.6,
+                    "sentiment": "neutral",
+                    "text": "Обычная клиника, ничего особенного",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.8,
+                    "sentiment": "neutral",
+                    "text": "Средний уровень обслуживания",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.2,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.0,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.8,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "prodoctorov": {
+                "source": "prodoctorov",
+                "source_name": "ПроДокторов",
+                "count": 167,
+                "avg_rating": 4.2,
+                "sentiment_distribution": {
+                  "positive": 74,
+                  "negative": 13,
+                  "neutral": 13
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 3.7,
+                    "sentiment": "neutral",
+                    "text": "Обычная клиника, ничего особенного",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.1,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Современное оборудование, вежливый персонал",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.0,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.7,
+                    "sentiment": "neutral",
+                    "text": "Средний уровень обслуживания",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "zoon": {
+                "source": "zoon",
+                "source_name": "Zoon",
+                "count": 81,
+                "avg_rating": 4.8,
+                "sentiment_distribution": {
+                  "positive": 85,
+                  "negative": 10,
+                  "neutral": 5
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 3.8,
+                    "sentiment": "neutral",
+                    "text": "Средний уровень обслуживания",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.7,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.7,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 3.8,
+                    "sentiment": "neutral",
+                    "text": "Приемлемо, но не более",
+                    "date": "2026-04-15"
+                  }
+                ]
+              },
+              "napopravku": {
+                "source": "napopravku",
+                "source_name": "НаПоправку",
+                "count": 24,
+                "avg_rating": 4.7,
+                "sentiment_distribution": {
+                  "positive": 68,
+                  "negative": 8,
+                  "neutral": 24
+                },
+                "recent_reviews": [
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.9,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 5.0,
+                    "sentiment": "positive",
+                    "text": "Отличная клиника, профессиональные врачи",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.5,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  },
+                  {
+                    "rating": 4.5,
+                    "sentiment": "positive",
+                    "text": "Очень довольна результатом, рекомендую",
+                    "date": "2026-04-15"
+                  }
+                ]
+              }
+            },
+            "total_reviews": 648,
+            "avg_rating": 4.4
+          }
+        ],
+        "sentiment_data": [
+          {
+            "name": "Центр Студия",
+            "total_reviews": 651,
+            "sentiment": {
+              "positive": 70.1,
+              "negative": 14.4,
+              "neutral": 15.5
+            },
+            "sentiment_score": 0.56
+          },
+          {
+            "name": "Здоровье Лаб",
+            "total_reviews": 625,
+            "sentiment": {
+              "positive": 78.9,
+              "negative": 18.6,
+              "neutral": 2.5
+            },
+            "sentiment_score": 0.6
+          },
+          {
+            "name": "Лайф Клиника",
+            "total_reviews": 537,
+            "sentiment": {
+              "positive": 83.5,
+              "negative": 13.3,
+              "neutral": 3.2
+            },
+            "sentiment_score": 0.7
+          },
+          {
+            "name": "Медицина Клуб",
+            "total_reviews": 622,
+            "sentiment": {
+              "positive": 73.6,
+              "negative": 13.6,
+              "neutral": 12.8
+            },
+            "sentiment_score": 0.6
+          },
+          {
+            "name": "Клиника Центр",
+            "total_reviews": 648,
+            "sentiment": {
+              "positive": 74.3,
+              "negative": 10.5,
+              "neutral": 15.3
+            },
+            "sentiment_score": 0.64
+          }
+        ],
+        "topic_data": [
+          {
+            "name": "Центр Студия",
+            "topics": {
+              "service": {
+                "name": "Качество обслуживания",
+                "mentions": 24,
+                "sentiment": {
+                  "positive": 62,
+                  "negative": 16,
+                  "neutral": 22
+                }
+              },
+              "doctors": {
+                "name": "Врачи и персонал",
+                "mentions": 56,
+                "sentiment": {
+                  "positive": 76,
+                  "negative": 15,
+                  "neutral": 9
+                }
+              },
+              "price": {
+                "name": "Цены",
+                "mentions": 79,
+                "sentiment": {
+                  "positive": 60,
+                  "negative": 24,
+                  "neutral": 16
+                }
+              },
+              "equipment": {
+                "name": "Оборудование",
+                "mentions": 21,
+                "sentiment": {
+                  "positive": 64,
+                  "negative": 14,
+                  "neutral": 22
+                }
+              },
+              "cleanliness": {
+                "name": "Чистота",
+                "mentions": 74,
+                "sentiment": {
+                  "positive": 64,
+                  "negative": 16,
+                  "neutral": 20
+                }
+              },
+              "waiting_time": {
+                "name": "Время ожидания",
+                "mentions": 95,
+                "sentiment": {
+                  "positive": 51,
+                  "negative": 8,
+                  "neutral": 41
+                }
+              },
+              "results": {
+                "name": "Результаты лечения",
+                "mentions": 80,
+                "sentiment": {
+                  "positive": 67,
+                  "negative": 22,
+                  "neutral": 11
+                }
+              },
+              "communication": {
+                "name": "Коммуникация",
+                "mentions": 85,
+                "sentiment": {
+                  "positive": 67,
+                  "negative": 13,
+                  "neutral": 20
+                }
+              }
+            }
+          },
+          {
+            "name": "Здоровье Лаб",
+            "topics": {
+              "service": {
+                "name": "Качество обслуживания",
+                "mentions": 89,
+                "sentiment": {
+                  "positive": 54,
+                  "negative": 15,
+                  "neutral": 31
+                }
+              },
+              "doctors": {
+                "name": "Врачи и персонал",
+                "mentions": 11,
+                "sentiment": {
+                  "positive": 85,
+                  "negative": 28,
+                  "neutral": -13
+                }
+              },
+              "price": {
+                "name": "Цены",
+                "mentions": 53,
+                "sentiment": {
+                  "positive": 90,
+                  "negative": 25,
+                  "neutral": -15
+                }
+              },
+              "equipment": {
+                "name": "Оборудование",
+                "mentions": 14,
+                "sentiment": {
+                  "positive": 87,
+                  "negative": 12,
+                  "neutral": 1
+                }
+              },
+              "cleanliness": {
+                "name": "Чистота",
+                "mentions": 83,
+                "sentiment": {
+                  "positive": 65,
+                  "negative": 21,
+                  "neutral": 14
+                }
+              },
+              "waiting_time": {
+                "name": "Время ожидания",
+                "mentions": 46,
+                "sentiment": {
+                  "positive": 65,
+                  "negative": 6,
+                  "neutral": 29
+                }
+              },
+              "results": {
+                "name": "Результаты лечения",
+                "mentions": 10,
+                "sentiment": {
+                  "positive": 63,
+                  "negative": 13,
+                  "neutral": 24
+                }
+              },
+              "communication": {
+                "name": "Коммуникация",
+                "mentions": 64,
+                "sentiment": {
+                  "positive": 84,
+                  "negative": 22,
+                  "neutral": -6
+                }
+              }
+            }
+          },
+          {
+            "name": "Лайф Клиника",
+            "topics": {
+              "service": {
+                "name": "Качество обслуживания",
+                "mentions": 31,
+                "sentiment": {
+                  "positive": 53,
+                  "negative": 8,
+                  "neutral": 39
+                }
+              },
+              "doctors": {
+                "name": "Врачи и персонал",
+                "mentions": 98,
+                "sentiment": {
+                  "positive": 60,
+                  "negative": 22,
+                  "neutral": 18
+                }
+              },
+              "price": {
+                "name": "Цены",
+                "mentions": 87,
+                "sentiment": {
+                  "positive": 63,
+                  "negative": 14,
+                  "neutral": 23
+                }
+              },
+              "equipment": {
+                "name": "Оборудование",
+                "mentions": 58,
+                "sentiment": {
+                  "positive": 54,
+                  "negative": 19,
+                  "neutral": 27
+                }
+              },
+              "cleanliness": {
+                "name": "Чистота",
+                "mentions": 23,
+                "sentiment": {
+                  "positive": 73,
+                  "negative": 24,
+                  "neutral": 3
+                }
+              },
+              "waiting_time": {
+                "name": "Время ожидания",
+                "mentions": 13,
+                "sentiment": {
+                  "positive": 52,
+                  "negative": 23,
+                  "neutral": 25
+                }
+              },
+              "results": {
+                "name": "Результаты лечения",
+                "mentions": 47,
+                "sentiment": {
+                  "positive": 51,
+                  "negative": 23,
+                  "neutral": 26
+                }
+              },
+              "communication": {
+                "name": "Коммуникация",
+                "mentions": 35,
+                "sentiment": {
+                  "positive": 61,
+                  "negative": 16,
+                  "neutral": 23
+                }
+              }
+            }
+          },
+          {
+            "name": "Медицина Клуб",
+            "topics": {
+              "service": {
+                "name": "Качество обслуживания",
+                "mentions": 90,
+                "sentiment": {
+                  "positive": 90,
+                  "negative": 28,
+                  "neutral": -18
+                }
+              },
+              "doctors": {
+                "name": "Врачи и персонал",
+                "mentions": 62,
+                "sentiment": {
+                  "positive": 64,
+                  "negative": 7,
+                  "neutral": 29
+                }
+              },
+              "price": {
+                "name": "Цены",
+                "mentions": 58,
+                "sentiment": {
+                  "positive": 83,
+                  "negative": 8,
+                  "neutral": 9
+                }
+              },
+              "equipment": {
+                "name": "Оборудование",
+                "mentions": 22,
+                "sentiment": {
+                  "positive": 67,
+                  "negative": 12,
+                  "neutral": 21
+                }
+              },
+              "cleanliness": {
+                "name": "Чистота",
+                "mentions": 10,
+                "sentiment": {
+                  "positive": 87,
+                  "negative": 15,
+                  "neutral": -2
+                }
+              },
+              "waiting_time": {
+                "name": "Время ожидания",
+                "mentions": 19,
+                "sentiment": {
+                  "positive": 66,
+                  "negative": 28,
+                  "neutral": 6
+                }
+              },
+              "results": {
+                "name": "Результаты лечения",
+                "mentions": 49,
+                "sentiment": {
+                  "positive": 75,
+                  "negative": 18,
+                  "neutral": 7
+                }
+              },
+              "communication": {
+                "name": "Коммуникация",
+                "mentions": 69,
+                "sentiment": {
+                  "positive": 82,
+                  "negative": 23,
+                  "neutral": -5
+                }
+              }
+            }
+          },
+          {
+            "name": "Клиника Центр",
+            "topics": {
+              "service": {
+                "name": "Качество обслуживания",
+                "mentions": 54,
+                "sentiment": {
+                  "positive": 70,
+                  "negative": 15,
+                  "neutral": 15
+                }
+              },
+              "doctors": {
+                "name": "Врачи и персонал",
+                "mentions": 73,
+                "sentiment": {
+                  "positive": 80,
+                  "negative": 8,
+                  "neutral": 12
+                }
+              },
+              "price": {
+                "name": "Цены",
+                "mentions": 97,
+                "sentiment": {
+                  "positive": 60,
+                  "negative": 6,
+                  "neutral": 34
+                }
+              },
+              "equipment": {
+                "name": "Оборудование",
+                "mentions": 76,
+                "sentiment": {
+                  "positive": 60,
+                  "negative": 26,
+                  "neutral": 14
+                }
+              },
+              "cleanliness": {
+                "name": "Чистота",
+                "mentions": 24,
+                "sentiment": {
+                  "positive": 50,
+                  "negative": 18,
+                  "neutral": 32
+                }
+              },
+              "waiting_time": {
+                "name": "Время ожидания",
+                "mentions": 83,
+                "sentiment": {
+                  "positive": 69,
+                  "negative": 13,
+                  "neutral": 18
+                }
+              },
+              "results": {
+                "name": "Результаты лечения",
+                "mentions": 80,
+                "sentiment": {
+                  "positive": 65,
+                  "negative": 14,
+                  "neutral": 21
+                }
+              },
+              "communication": {
+                "name": "Коммуникация",
+                "mentions": 70,
+                "sentiment": {
+                  "positive": 78,
+                  "negative": 16,
+                  "neutral": 6
+                }
+              }
+            }
+          }
+        ],
+        "reputation_scores": [
+          {
+            "name": "Центр Студия",
+            "reputation_score": 81.9,
+            "grade": "B",
+            "avg_rating": 4.29,
+            "total_reviews": 651,
+            "sentiment_score": 0.56
+          },
+          {
+            "name": "Здоровье Лаб",
+            "reputation_score": 82.7,
+            "grade": "B",
+            "avg_rating": 4.27,
+            "total_reviews": 625,
+            "sentiment_score": 0.6
+          },
+          {
+            "name": "Лайф Клиника",
+            "reputation_score": 85.0,
+            "grade": "A",
+            "avg_rating": 4.25,
+            "total_reviews": 537,
+            "sentiment_score": 0.7
+          },
+          {
+            "name": "Медицина Клуб",
+            "reputation_score": 83.3,
+            "grade": "B",
+            "avg_rating": 4.33,
+            "total_reviews": 622,
+            "sentiment_score": 0.6
+          },
+          {
+            "name": "Клиника Центр",
+            "reputation_score": 85.0,
+            "grade": "A",
+            "avg_rating": 4.4,
+            "total_reviews": 648,
+            "sentiment_score": 0.64
+          }
+        ],
+        "risks_opportunities": {
+          "risks": [],
+          "opportunities": []
+        },
+        "insights": {
+          "market_avg_reputation": 83.6,
+          "market_avg_sentiment": {
+            "positive": 76.1,
+            "negative": 14.1
+          },
+          "best_reputation": {
+            "name": "Лайф Клиника",
+            "score": 85.0,
+            "grade": "A"
+          },
+          "worst_reputation": {
+            "name": "Центр Студия",
+            "score": 81.9,
+            "grade": "B"
+          },
+          "reputation_spread": 3.1
+        }
+      }
+    }
+  }
+}
