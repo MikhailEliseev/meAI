@@ -232,3 +232,156 @@ async def test_get_events_by_target():
     assert events[1].target == "brand-magister"
 
     await bus.close()
+
+
+@pytest.mark.asyncio
+async def test_get_events_by_correlation_id():
+    """Test filtering events by correlation_id"""
+    bus = EventBus()
+    await bus.initialize()
+
+    # Publish events with different correlation IDs
+    event1 = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        correlation_id="corr-abc",
+        data=ProjectCreatedData(
+            project_id="proj-007",
+            client_name="Client A",
+            client_domain="clienta.com",
+            client_contact="contact@clienta.com",
+            industry="Healthcare",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+    event2 = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        correlation_id="corr-abc",  # Same correlation ID
+        data=ProjectCreatedData(
+            project_id="proj-008",
+            client_name="Client B",
+            client_domain="clientb.com",
+            client_contact="contact@clientb.com",
+            industry="Medical Marketing",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+    event3 = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        correlation_id="corr-xyz",  # Different correlation ID
+        data=ProjectCreatedData(
+            project_id="proj-009",
+            client_name="Client C",
+            client_domain="clientc.com",
+            client_contact="contact@clientc.com",
+            industry="Healthcare",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+
+    await bus.publish(event1)
+    await bus.publish(event2)
+    await bus.publish(event3)
+
+    # Get events with correlation_id "corr-abc"
+    events = await bus.get_events(correlation_id="corr-abc", limit=10)
+
+    assert len(events) == 2
+    assert events[0].correlation_id == "corr-abc"
+    assert events[1].correlation_id == "corr-abc"
+
+    await bus.close()
+
+
+@pytest.mark.asyncio
+async def test_get_events_by_type():
+    """Test filtering events by event_type"""
+    bus = EventBus()
+    await bus.initialize()
+
+    # Publish project.created events
+    event1 = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        data=ProjectCreatedData(
+            project_id="proj-010",
+            client_name="Client D",
+            client_domain="clientd.com",
+            client_contact="contact@clientd.com",
+            industry="Healthcare",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+    event2 = ProjectCreatedEvent(
+        source="operator",
+        target="content-magister",
+        data=ProjectCreatedData(
+            project_id="proj-011",
+            client_name="Client E",
+            client_domain="cliente.com",
+            client_contact="contact@cliente.com",
+            industry="Medical Marketing",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+
+    await bus.publish(event1)
+    await bus.publish(event2)
+
+    # Get events by type
+    events = await bus.get_events(event_type="project.created", limit=10)
+
+    assert len(events) == 2
+    assert events[0].type == "project.created"
+    assert events[1].type == "project.created"
+
+    await bus.close()
+
+
+@pytest.mark.asyncio
+async def test_get_events_limit():
+    """Test limit parameter for get_events"""
+    bus = EventBus()
+    await bus.initialize()
+
+    # Publish 5 events
+    for i in range(5):
+        event = ProjectCreatedEvent(
+            source="operator",
+            target="brand-magister",
+            data=ProjectCreatedData(
+                project_id=f"proj-{100+i}",
+                client_name=f"Client {i}",
+                client_domain=f"client{i}.com",
+                client_contact=f"contact@client{i}.com",
+                industry="Healthcare",
+                initial_status=ProjectStatus.LEAD,
+                source="Website Form",
+                created_at=datetime.now(UTC)
+            )
+        )
+        await bus.publish(event)
+
+    # Get only 3 events
+    events = await bus.get_events(target="brand-magister", limit=3)
+
+    assert len(events) == 3
+
+    # Get all events
+    all_events = await bus.get_events(target="brand-magister", limit=10)
+
+    assert len(all_events) == 5
+
+    await bus.close()
