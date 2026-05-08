@@ -10,6 +10,7 @@ from sqlalchemy import text
 
 from meai.agents.base_agent import Agent, Task, TaskResult, Feedback, TaskStatus, TaskStatus
 from meai.events.event_bus import EventBus, Event
+from meai.events.event_store import EventStore
 from meai.storage.database import Database
 
 
@@ -32,6 +33,7 @@ class BaseMagister(Agent):
         magister_type: str,
         domain: str,
         event_bus: EventBus,
+        event_store: EventStore,
         vault_path: Path,
         database_url: str = "sqlite+aiosqlite:///./data/meai.db",
     ):
@@ -42,6 +44,7 @@ class BaseMagister(Agent):
             magister_type: Type of magister (seo, content, ads, etc.)
             domain: Knowledge domain (seo, content, ads, etc.)
             event_bus: Event bus for communication
+            event_store: Event store for audit logging
             vault_path: Path to Obsidian vault
             database_url: Database URL for agent state
         """
@@ -58,6 +61,7 @@ class BaseMagister(Agent):
 
         # Replace Agent's event_bus with shared one
         self.event_bus = event_bus
+        self.event_store = event_store
 
         # Cache settings
         self.cache_ttl_hours = 24  # Cache for 24 hours
@@ -74,6 +78,10 @@ class BaseMagister(Agent):
         # Initialize shared event_bus (already set in __init__)
         if not self.event_bus._initialized:
             await self.event_bus.initialize()
+
+        # Connect EventStore to EventBus for automatic audit logging
+        if self.event_store and not self.event_bus._event_store:
+            self.event_bus.set_event_store(self.event_store)
 
         # Create base Agent tables
         await self._create_tables()
