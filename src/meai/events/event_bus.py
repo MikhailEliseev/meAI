@@ -321,6 +321,7 @@ class EventBus:
         where_clause = " AND ".join(where_conditions)
 
         async with self.db.session() as session:
+            # Safe to use f-string here: where_clause is built from hardcoded SQL fragments only
             result = await session.execute(
                 text(f"""
                 SELECT id, type, source, target, priority, timestamp,
@@ -373,8 +374,11 @@ class EventBus:
                         event = BaseEvent.model_validate(full_data)
 
                     events.append(event)
-                except (AttributeError, ImportError):
-                    # Fallback to BaseEvent if import fails
+                except (AttributeError, ImportError) as e:
+                    # Log fallback for debugging
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.debug(f"Could not load event class {class_name}, using BaseEvent: {e}")
                     event = BaseEvent.model_validate(full_data)
                     events.append(event)
 
