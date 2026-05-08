@@ -10,7 +10,7 @@ This module provides append-only event storage with:
 
 import json
 from datetime import datetime
-from typing import Any
+from typing import Any, AsyncIterator
 from uuid import UUID
 
 from sqlalchemy import text
@@ -267,6 +267,72 @@ class EventStore:
                 events.append(self._reconstruct_event(event_data))
 
             return events
+
+    async def replay(
+        self,
+        from_time: datetime,
+        to_time: datetime | None = None,
+        batch_size: int = 100
+    ) -> AsyncIterator[BaseEvent]:
+        """Replay events from timestamp.
+
+        Async iterator for memory-efficient event replay.
+        Yields events in chronological order for debugging and system recovery.
+
+        Args:
+            from_time: Start time for replay
+            to_time: End time for replay (None = all events)
+            batch_size: Number of events to fetch per batch (default: 100)
+
+        Yields:
+            Events in chronological order
+
+        Raises:
+            RuntimeError: If store not initialized
+        """
+        if not self._initialized:
+            raise RuntimeError("EventStore not initialized. Call initialize() first.")
+
+        offset = 0
+
+        while True:
+            # Build WHERE clause
+            conditions = ["timestamp >= :from_time"]
+            params: dict[str, Any] = {
+                "from_time": from_time.isoformat(),
+                "limit": batch_size,
+                "offset": offset
+            }
+
+            if to_time:
+                conditions.append("timestamp <= :to_time")
+                params["to_time"] = to_time.isoformat()
+
+            where_clause = " AND ".join(conditions)
+
+            # Safe to use f-string: where_clause built from hardcoded SQL fragments only
+            query = f"""
+                SELECT data
+                FROM event_store
+                WHERE {where_clause}
+                ORDER BY timestamp ASC
+                LIMIT :limit OFFSET :offset
+            """
+
+            # Fetch batch
+            async with self.db.session() as session:
+                result = await session.execute(text(query), params)
+                rows = result.fetchall()
+
+                if not rows:
+                    break
+
+                for row in rows:
+                    event_data = json.loads(row[0])
+                    event = self._reconstruct_event(event_data)
+                    yield event
+
+            offset += batch_size
 
     def _reconstruct_event(self, event_data: dict[str, Any]) -> BaseEvent:
         """Reconstruct event instance from JSON data.
