@@ -35,6 +35,7 @@ from meai.events.error_events import (
     RollbackInitiatedEvent,
 )
 from meai.events.event_bus import Event, EventBus, EventPriority
+from meai.events.event_store import EventStore
 from meai.events.magister_events import (
     MagisterDataRequestEvent,
     MagisterDataResponseEvent,
@@ -94,6 +95,8 @@ __all__ = [
     "EventBus",
     "Event",
     "EventPriority",
+    # Event Store
+    "EventStore",
     # Project Events
     "ProjectCreatedEvent",
     "InfrastructureSetupStartedEvent",
