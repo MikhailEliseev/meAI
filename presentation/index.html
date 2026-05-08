@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>meAI - AI-First Medical Marketing Agency</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563EB;
+            --secondary: #3B82F6;
+            --cta: #F97316;
+            --bg-dark: #0A0E1A;
+            --bg-card: #111827;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --glow: rgba(37, 99, 235, 0.3);
+            --success: #10B981;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, var(--glow) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--cta));
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 3s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .hero p {
+            font-size: clamp(1.125rem, 3vw, 1.5rem);
+            color: var(--text-secondary);
+            margin-bottom: 48px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 16px 48px;
+            background: var(--cta);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1.125rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(249, 115, 22, 0.5);
+        }
+
+        .cta-button:focus {
+            outline: 2px solid var(--cta);
+            outline-offset: 4px;
+        }
+
+        /* Section */
+        .section {
+            padding: 120px 0;
+            position: relative;
+        }
+
+        .section-title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            margin-bottom: 64px;
+            text-align: center;
+            position: relative;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--cta));
+            border-radius: 2px;
+        }
+
+        /* Architecture Cards */
+        .arch-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+
+        .arch-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-radius: 16px;
+            padding: 32px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .arch-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .arch-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: 0 8px 32px rgba(37, 99, 235, 0.2);
+        }
+
+        .arch-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .arch-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+            color: var(--primary);
+        }
+
+        .arch-card p {
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-top: 16px;
+        }
+
+        .status-done {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .status-progress {
+            background: rgba(249, 115, 22, 0.2);
+            color: var(--cta);
+        }
+
+        /* Features Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 32px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 40px;
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+        }
+
+        .feature-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            font-size: 2rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 32px;
+            margin-top: 64px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 32px;
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid rgba(37, 99, 235, 0.1);
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--cta));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+            margin-top: 64px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, var(--primary), var(--cta));
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 48px;
+            padding-left: 32px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -48px;
+            top: 8px;
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 50%;
+            border: 3px solid var(--bg-dark);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+        }
+
+        .timeline-item h3 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        .timeline-item p {
+            color: var(--text-secondary);
+        }
+
+        /* Tech Stack */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 24px;
+            margin-top: 48px;
+        }
+
+        .tech-item {
+            background: var(--bg-card);
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .tech-item:hover {
+            border-color: var(--primary);
+            transform: scale(1.05);
+        }
+
+        .tech-item strong {
+            display: block;
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-size: 1.125rem;
+        }
+
+        .tech-item span {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 64px 0;
+            text-align: center;
+            border-top: 1px solid rgba(37, 99, 235, 0.1);
+        }
+
+        .footer p {
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: var(--cta);
+        }
+
+        /* Scroll Indicator */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translate(-50%, 0); }
+            50% { transform: translate(-50%, 10px); }
+        }
+
+        .scroll-indicator svg {
+            width: 32px;
+            height: 32px;
+            stroke: var(--text-secondary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .section {
+                padding: 80px 0;
+            }
+
+            .arch-grid,
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .timeline {
+                padding-left: 24px;
+            }
+
+            .timeline-item {
+                padding-left: 24px;
+            }
+
+            .timeline-item::before {
+                left: -36px;
+            }
+        }
+
+        /* Loading Animation */
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        .loading {
+            background: linear-gradient(90deg, var(--bg-card) 0%, rgba(37, 99, 235, 0.1) 50%, var(--bg-card) 100%);
+            background-size: 1000px 100%;
+            animation: shimmer 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>meAI</h1>
+                <p>AI-First Medical Marketing Agency<br>CEO-архитектор, который строит будущее медицинского маркетинга</p>
+                <a href="#architecture" class="cta-button">Узнать больше</a>
+            </div>
+        </div>
+        <div class="scroll-indicator">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+            </svg>
+        </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section id="architecture" class="section">
+        <div class="container">
+            <h2 class="section-title">Архитектура: 3 слоя интеллекта</h2>
+            <div class="arch-grid">
+                <div class="arch-card">
+                    <h3>ARCHITECT</h3>
+                    <p>Стратегический слой. Принимает стратегические решения, анализирует контекст, генерирует альтернативы.</p>
+                    <span class="status-badge status-done">✅ Реализовано</span>
+                </div>
+                <div class="arch-card">
+                    <h3>OPERATOR</h3>
+                    <p>Тактический слой. Управляет операциями, делегирует задачи, собирает результаты.</p>
+                    <span class="status-badge status-done">✅ Реализовано</span>
+                </div>
+                <div class="arch-card">
+                    <h3>TEACHER</h3>
+                    <p>Слой знаний. Управляет знаниями, обучает магистров, обрабатывает feedback.</p>
+                    <span class="status-badge status-done">✅ Реализовано</span>
+                </div>
+                <div class="arch-card">
+                    <h3>MAGISTERS</h3>
+                    <p>Слой исполнения. 6 специализированных магистров: SEO, Content, Ads, Analytics, SMM, Intelligence.</p>
+                    <span class="status-badge status-progress">⏳ В процессе</span>
+                </div>
+                <div class="arch-card">
+                    <h3>SUBAGENTS</h3>
+                    <p>Узкие специалисты. 20+ субагентов для глубокого анализа и выполнения задач.</p>
+                    <span class="status-badge status-progress">⏳ В процессе</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">Ключевые инновации</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🎓</div>
+                    <h3>Hierarchical Learning</h3>
+                    <p>Teacher Agent распределяет знания магистрам, обрабатывает feedback, улучшает стратегию обучения.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Gatekeeper</h3>
+                    <p>7 проверок качества: size, language, structure, source reliability, fact-checking, relevance, duplicates.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📚</div>
+                    <h3>LLM Wiki Pattern</h3>
+                    <p>Паттерн Andrej Karpathy: raw sources → wiki (8 категорий) → decisions. 3 операции: Ingest, Query, Lint.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Hybrid Search</h3>
+                    <p>3-layer поиск: Local Cache (1-5ms) → Teacher/Qdrant (50-200ms) → Researcher (2-10s).</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Experience Learning</h3>
+                    <p>Система обучения на опыте: ExperienceTracker, QualityUpdater, DeprecationManager, LearningAnalytics.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Competitive Intelligence</h3>
+                    <p>20+ субагентов для глубокого анализа конкурентов: технологии, контент, финансы, репутация, стратегии.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">Производительность</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">1-5ms</div>
+                    <div class="stat-label">Local Cache</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">50-200ms</div>
+                    <div class="stat-label">Teacher Query</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">2-10s</div>
+                    <div class="stat-label">Researcher</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">20+</div>
+                    <div class="stat-label">Субагентов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">6</div>
+                    <div class="stat-label">Magisters</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Слоя поиска</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Timeline Section -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">Roadmap</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h3>Phase 1-3: Infrastructure ✅</h3>
+                    <p>Qdrant, Teacher Agent, Researcher, LLM Wiki Pattern, Base Magister, Hybrid Search, Experience Learning</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>Phase 4: Operator Integration ⏳</h3>
+                    <p>Connect Magisters to Operator, Task delegation workflow, Result aggregation, Production testing</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>Phase 5: Production 📋</h3>
+                    <p>FastAPI server, Docker deployment, CI/CD pipeline, Documentation</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>Phase 6: Monitoring 📋</h3>
+                    <p>Metrics & observability, Error tracking, Performance optimization, User analytics</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tech Stack Section -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">Tech Stack</h2>
+            <div class="tech-grid">
+                <div class="tech-item">
+                    <strong>Python</strong>
+                    <span>3.11+</span>
+                </div>
+                <div class="tech-item">
+                    <strong>Qdrant</strong>
+                    <span>Vector DB</span>
+                </div>
+                <div class="tech-item">
+                    <strong>bge-m3</strong>
+                    <span>Embeddings</span>
+                </div>
+                <div class="tech-item">
+                    <strong>SQLite</strong>
+                    <span>Database</span>
+                </div>
+                <div class="tech-item">
+                    <strong>Obsidian</strong>
+                    <span>Memory</span>
+                </div>
+                <div class="tech-item">
+                    <strong>FastAPI</strong>
+                    <span>API Server</span>
+                </div>
+                <div class="tech-item">
+                    <strong>Claude</strong>
+                    <span>LLM</span>
+                </div>
+                <div class="tech-item">
+                    <strong>pytest</strong>
+                    <span>Testing</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p><strong>meAI</strong> - AI-First Medical Marketing Agency</p>
+            <p>Domain: <a href="https://iamaim.ru" target="_blank">iamaim.ru</a></p>
+            <p>Built with ❤️ by Claude Opus 4.6</p>
+            <p style="margin-top: 32px; font-size: 0.875rem;">Last updated: 2026-05-06</p>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Intersection Observer for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe all cards
+        document.querySelectorAll('.arch-card, .feature-card, .stat-card, .timeline-item, .tech-item').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(el);
+        });
+
+        // Parallax effect for hero
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const hero = document.querySelector('.hero-content');
+            if (hero && scrolled < window.innerHeight) {
+                hero.style.transform = `translateY(${scrolled * 0.5}px)`;
+                hero.style.opacity = 1 - (scrolled / window.innerHeight);
+            }
+        });
+
+        // Hide scroll indicator on scroll
+        window.addEventListener('scroll', () => {
+            const indicator = document.querySelector('.scroll-indicator');
+            if (indicator) {
+                indicator.style.opacity = Math.max(0, 1 - (window.pageYOffset / 300));
+            }
+        });
+    </script>
+</body>
+</html>

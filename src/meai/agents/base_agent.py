@@ -40,6 +40,12 @@ class Task:
     status: TaskStatus
     created_at: datetime
     received_at: datetime
+    data: dict[str, Any] = None  # Additional task data
+
+    def __post_init__(self):
+        """Initialize data dict if not provided"""
+        if self.data is None:
+            self.data = {}
 
 
 @dataclass

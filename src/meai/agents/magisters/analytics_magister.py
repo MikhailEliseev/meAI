@@ -311,22 +311,124 @@ execution_time: {result.get('execution_time_seconds', 0)}s
             # Don't raise - storage failure shouldn't fail the task
 
     async def _handle_data_analysis(self, task: Task) -> TaskResult:
-        """Handle market research task
+        """Handle data analysis via Analytics orchestrator"""
+        logger.info(f"Handling data analysis for task {task.task_id}")
 
-        TODO: Implement market research logic
-        For now, uses generic knowledge search
-        """
-        logger.info(f"Handling market research for task {task.task_id}")
-        return await self._handle_generic_analytics(task)
+        try:
+            # 1. Get orchestrator via dependency injection
+            orchestrator = self.orchestrators.get("analytics")
+            if not orchestrator:
+                raise ValueError("Analytics orchestrator not registered")
+
+            # 2. Create analytics task data
+            analytics_task_data = {
+                "task_id": task.task_id,
+                "metrics_type": "content",  # Use content optimization for data analysis
+                "target": task.data.get("target", ""),
+                "niche": task.data.get("niche", ""),
+                "geo": task.data.get("geo", ""),
+            }
+
+            # 3. Set timeout
+            timeout_seconds = 300  # 5 minutes
+
+            # 4. Execute with timeout and progress updates
+            await self._publish_progress(0, "started", "Starting data analysis")
+
+            analytics_result = await asyncio.wait_for(
+                orchestrator.execute_metrics_tracking(
+                    analytics_task_data,
+                    progress_callback=self._publish_progress
+                ),
+                timeout=timeout_seconds
+            )
+
+            # 5. Use result directly
+            validated_result = analytics_result
+
+            # 6. Store in vault
+            await self._store_analytics_result(validated_result)
+
+            await self._publish_progress(100, "completed", "Data analysis complete")
+
+            # 7. Return success
+            return TaskResult(
+                subtask_id=task.subtask_id,
+                agent_id=self.agent_id,
+                action=task.action,
+                status="success",
+                result=validated_result,
+                error=None,
+                duration_seconds=0.0,
+                completed_at=datetime.now(timezone.utc)
+            )
+
+        except asyncio.TimeoutError:
+            logger.error(f"Data analysis timed out after {timeout_seconds}s")
+            return self._create_timeout_result(task, timeout_seconds)
+        except Exception as e:
+            logger.error(f"Data analysis failed: {e}", exc_info=True)
+            return self._create_error_result(task, e)
 
     async def _handle_report_generation(self, task: Task) -> TaskResult:
-        """Handle trend analysis task
+        """Handle report generation via Analytics orchestrator"""
+        logger.info(f"Handling report generation for task {task.task_id}")
 
-        TODO: Implement trend analysis logic
-        For now, uses generic knowledge search
-        """
-        logger.info(f"Handling trend analysis for task {task.task_id}")
-        return await self._handle_generic_analytics(task)
+        try:
+            # 1. Get orchestrator via dependency injection
+            orchestrator = self.orchestrators.get("analytics")
+            if not orchestrator:
+                raise ValueError("Analytics orchestrator not registered")
+
+            # 2. Create analytics task data
+            analytics_task_data = {
+                "task_id": task.task_id,
+                "metrics_type": "technical",  # Use technical analysis for report generation
+                "target": task.data.get("target", ""),
+                "niche": task.data.get("niche", ""),
+                "geo": task.data.get("geo", ""),
+            }
+
+            # 3. Set timeout
+            timeout_seconds = 300  # 5 minutes
+
+            # 4. Execute with timeout and progress updates
+            await self._publish_progress(0, "started", "Starting report generation")
+
+            analytics_result = await asyncio.wait_for(
+                orchestrator.execute_metrics_tracking(
+                    analytics_task_data,
+                    progress_callback=self._publish_progress
+                ),
+                timeout=timeout_seconds
+            )
+
+            # 5. Use result directly
+            validated_result = analytics_result
+
+            # 6. Store in vault
+            await self._store_analytics_result(validated_result)
+
+            await self._publish_progress(100, "completed", "Report generation complete")
+
+            # 7. Return success
+            return TaskResult(
+                subtask_id=task.subtask_id,
+                agent_id=self.agent_id,
+                action=task.action,
+                status="success",
+                result=validated_result,
+                error=None,
+                duration_seconds=0.0,
+                completed_at=datetime.now(timezone.utc)
+            )
+
+        except asyncio.TimeoutError:
+            logger.error(f"Report generation timed out after {timeout_seconds}s")
+            return self._create_timeout_result(task, timeout_seconds)
+        except Exception as e:
+            logger.error(f"Report generation failed: {e}", exc_info=True)
+            return self._create_error_result(task, e)
 
     async def _handle_generic_analytics(self, task: Task) -> TaskResult:
         """Handle generic intelligence task via knowledge search

@@ -8,9 +8,14 @@ from enum import IntEnum
 from typing import Any, Callable, Awaitable
 from uuid import uuid4
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy import text
 from meai.storage.database import Database
 from meai.events.base import BaseEvent
+
+if TYPE_CHECKING:
+    from meai.events.event_store import EventStore
 
 
 class EventPriority(IntEnum):
@@ -74,6 +79,7 @@ class EventBus:
         self.db = Database(database_url)
         self._initialized = False
         self._subscribers: dict[str, list[Callable[[Event], Awaitable[None]]]] = {}
+        self._event_store: "EventStore | None" = None
 
     async def initialize(self) -> None:
         """Initialize Event Bus"""
@@ -84,6 +90,14 @@ class EventBus:
     async def close(self) -> None:
         """Close Event Bus"""
         await self.db.disconnect()
+
+    def set_event_store(self, event_store: "EventStore") -> None:
+        """Set Event Store for automatic event persistence
+
+        Args:
+            event_store: EventStore instance
+        """
+        self._event_store = event_store
 
     async def _create_tables(self) -> None:
         """Create Event Bus tables"""
@@ -479,6 +493,10 @@ class EventBus:
                     },
                 )
                 await session.commit()
+
+            # Append to Event Store if configured
+            if self._event_store:
+                await self._event_store.append(event)
 
             # Notify subscribers for event.type
             if event.type in self._subscribers:
