@@ -239,44 +239,76 @@ class EventBus:
             return messages
 
     async def mark_processed(self, message_id: str) -> None:
-        """Mark message as processed
+        """Mark message or event as processed
+
+        Supports both new event_bus_events table and legacy event_bus_messages table.
+        Tries new table first, falls back to legacy if not found.
 
         Args:
-            message_id: Message ID
+            message_id: Message ID or Event ID
         """
         if not self._initialized:
             raise RuntimeError("EventBus not initialized. Call initialize() first.")
 
         async with self.db.session() as session:
-            await session.execute(
+            # Try event_bus_events table first (new BaseEvent system)
+            result = await session.execute(
                 text("""
-                UPDATE event_bus_messages
+                UPDATE event_bus_events
                 SET status = 'processed'
-                WHERE message_id = :message_id
+                WHERE id = :message_id
                 """),
                 {"message_id": message_id},
             )
+
+            # If no rows updated, try legacy event_bus_messages table
+            if result.rowcount == 0:
+                await session.execute(
+                    text("""
+                    UPDATE event_bus_messages
+                    SET status = 'processed'
+                    WHERE message_id = :message_id
+                    """),
+                    {"message_id": message_id},
+                )
+
             await session.commit()
 
     async def mark_failed(self, message_id: str, error: str) -> None:
-        """Mark message as failed
+        """Mark message or event as failed
+
+        Supports both new event_bus_events table and legacy event_bus_messages table.
+        Tries new table first, falls back to legacy if not found.
 
         Args:
-            message_id: Message ID
+            message_id: Message ID or Event ID
             error: Error message
         """
         if not self._initialized:
             raise RuntimeError("EventBus not initialized. Call initialize() first.")
 
         async with self.db.session() as session:
-            await session.execute(
+            # Try event_bus_events table first (new BaseEvent system)
+            result = await session.execute(
                 text("""
-                UPDATE event_bus_messages
+                UPDATE event_bus_events
                 SET status = 'failed'
-                WHERE message_id = :message_id
+                WHERE id = :message_id
                 """),
                 {"message_id": message_id},
             )
+
+            # If no rows updated, try legacy event_bus_messages table
+            if result.rowcount == 0:
+                await session.execute(
+                    text("""
+                    UPDATE event_bus_messages
+                    SET status = 'failed'
+                    WHERE message_id = :message_id
+                    """),
+                    {"message_id": message_id},
+                )
+
             await session.commit()
 
     async def get_events(

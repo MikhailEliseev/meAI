@@ -385,3 +385,79 @@ async def test_get_events_limit():
     assert len(all_events) == 5
 
     await bus.close()
+
+
+@pytest.mark.asyncio
+async def test_mark_event_processed():
+    """Test marking event as processed"""
+    bus = EventBus()
+    await bus.initialize()
+
+    event = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        data=ProjectCreatedData(
+            project_id="proj-200",
+            client_name="Test Client",
+            client_domain="testclient.com",
+            client_contact="contact@testclient.com",
+            industry="Healthcare",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+
+    event_id = await bus.publish(event)
+
+    # Mark as processed
+    await bus.mark_processed(event_id)
+
+    # Verify status changed
+    stored = await bus._get_event_by_id(event_id)
+    assert stored["status"] == "processed"
+
+    # Should not appear in pending queue
+    pending = await bus.get_events(target="brand-magister", status="pending")
+    assert len(pending) == 0
+
+    await bus.close()
+
+
+@pytest.mark.asyncio
+async def test_mark_event_failed():
+    """Test marking event as failed"""
+    bus = EventBus()
+    await bus.initialize()
+
+    event = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        data=ProjectCreatedData(
+            project_id="proj-201",
+            client_name="Test Client",
+            client_domain="testclient.com",
+            client_contact="contact@testclient.com",
+            industry="Healthcare",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+
+    event_id = await bus.publish(event)
+
+    # Mark as failed
+    error_msg = "Processing failed due to network error"
+    await bus.mark_failed(event_id, error_msg)
+
+    # Verify status changed
+    stored = await bus._get_event_by_id(event_id)
+    assert stored["status"] == "failed"
+
+    # Should not appear in pending queue
+    pending = await bus.get_events(target="brand-magister", status="pending")
+    assert len(pending) == 0
+
+    await bus.close()
+
