@@ -131,3 +131,38 @@ async def test_publish_base_event():
     assert stored["priority"] == 1  # P1 for project events
 
     await bus.close()
+
+
+@pytest.mark.asyncio
+async def test_base_event_notifies_subscribers():
+    """Test BaseEvent publishing notifies subscribers"""
+    bus = EventBus()
+    await bus.initialize()
+    received = []
+
+    async def handler(event):
+        received.append(event)
+
+    bus.subscribe("project.created", handler)
+
+    event = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        data=ProjectCreatedData(
+            project_id="proj-003",
+            client_name="Test Client",
+            client_domain="testclient.com",
+            client_contact="contact@testclient.com",
+            industry="Medical Marketing",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+    await bus.publish(event)
+    await asyncio.sleep(0.1)
+
+    assert len(received) == 1
+    assert received[0].type == "project.created"
+
+    await bus.close()
