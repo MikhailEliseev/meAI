@@ -96,3 +96,38 @@ async def test_store_event_with_correlation():
     assert stored["correlation_id"] == "corr-123"
 
     await bus.close()
+
+
+@pytest.mark.asyncio
+async def test_publish_base_event():
+    """Test publishing BaseEvent instance"""
+    bus = EventBus()
+    await bus.initialize()
+
+    event = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        data=ProjectCreatedData(
+            project_id="proj-002",
+            client_name="Test Client",
+            client_domain="testclient.com",
+            client_contact="contact@testclient.com",
+            industry="Medical Marketing",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+
+    event_id = await bus.publish(event)
+
+    assert event_id == str(event.id)
+
+    # Verify stored correctly
+    stored = await bus._get_event_by_id(event_id)
+    assert stored["type"] == "project.created"
+    assert stored["source"] == "operator"
+    assert stored["target"] == "brand-magister"
+    assert stored["priority"] == 1  # P1 for project events
+
+    await bus.close()
