@@ -2,6 +2,9 @@
 import pytest
 import asyncio
 from meai.events.event_bus import EventBus, Event
+from meai.events.project_events import ProjectCreatedEvent, ProjectCreatedData
+from meai.events.base import ProjectStatus
+from datetime import datetime, UTC
 
 
 @pytest.mark.asyncio
@@ -62,3 +65,34 @@ async def test_event_bus_multiple_subscribers():
 
     assert len(received_1) == 1
     assert len(received_2) == 1
+
+
+@pytest.mark.asyncio
+async def test_store_event_with_correlation():
+    """Test storing event with correlation_id"""
+    bus = EventBus()
+    await bus.initialize()
+
+    event = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        correlation_id="corr-123",
+        data=ProjectCreatedData(
+            project_id="proj-001",
+            client_name="Test Client",
+            client_domain="testclient.com",
+            client_contact="contact@testclient.com",
+            industry="Healthcare",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+
+    event_id = await bus.publish(event)
+
+    # Verify stored with correlation_id
+    stored = await bus._get_event_by_id(str(event.id))
+    assert stored["correlation_id"] == "corr-123"
+
+    await bus.close()

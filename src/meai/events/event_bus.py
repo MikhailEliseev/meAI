@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from sqlalchemy import text
 from meai.storage.database import Database
+from meai.events.base import BaseEvent
 
 
 class EventPriority(IntEnum):
@@ -87,6 +88,7 @@ class EventBus:
     async def _create_tables(self) -> None:
         """Create Event Bus tables"""
         async with self.db.session() as session:
+            # Legacy table for Message objects (backward compatibility)
             await session.execute(
                 text("""
                 CREATE TABLE IF NOT EXISTS event_bus_messages (
@@ -102,7 +104,95 @@ class EventBus:
                 )
                 """)
             )
+
+            # New table for BaseEvent objects
+            await session.execute(
+                text("""
+                CREATE TABLE IF NOT EXISTS event_bus_events (
+                    event_id TEXT PRIMARY KEY,
+                    event_type TEXT NOT NULL,
+                    source TEXT NOT NULL,
+                    target TEXT NOT NULL,
+                    priority INTEGER NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    correlation_id TEXT,
+                    reply_to TEXT,
+                    metadata TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """)
+            )
+
+            # Indexes for efficient querying
+            await session.execute(
+                text("""
+                CREATE INDEX IF NOT EXISTS idx_events_correlation
+                ON event_bus_events(correlation_id)
+                """)
+            )
+
+            await session.execute(
+                text("""
+                CREATE INDEX IF NOT EXISTS idx_events_reply_to
+                ON event_bus_events(reply_to)
+                """)
+            )
+
+            await session.execute(
+                text("""
+                CREATE INDEX IF NOT EXISTS idx_events_target_status
+                ON event_bus_events(target, status)
+                """)
+            )
+
             await session.commit()
+
+    async def _get_event_by_id(self, event_id: str) -> dict[str, Any]:
+        """Get event by ID from event_bus_events table
+
+        Args:
+            event_id: Event ID to retrieve
+
+        Returns:
+            Dictionary with event data
+
+        Raises:
+            RuntimeError: If EventBus not initialized
+            ValueError: If event not found
+        """
+        if not self._initialized:
+            raise RuntimeError("EventBus not initialized. Call initialize() first.")
+
+        async with self.db.session() as session:
+            result = await session.execute(
+                text("""
+                SELECT event_id, event_type, source, target, priority, timestamp,
+                       correlation_id, reply_to, metadata, payload, status
+                FROM event_bus_events
+                WHERE event_id = :event_id
+                """),
+                {"event_id": event_id},
+            )
+
+            row = result.fetchone()
+            if not row:
+                raise ValueError(f"Event not found: {event_id}")
+
+            return {
+                "event_id": row[0],
+                "event_type": row[1],
+                "source": row[2],
+                "target": row[3],
+                "priority": row[4],
+                "timestamp": row[5],
+                "correlation_id": row[6],
+                "reply_to": row[7],
+                "metadata": json.loads(row[8]),
+                "payload": json.loads(row[9]),
+                "status": row[10],
+            }
 
     async def get_messages(
         self, agent_id: str, status: str = "pending", limit: int = 100
@@ -210,16 +300,52 @@ class EventBus:
         if event_type in self._subscribers:
             self._subscribers[event_type].remove(handler)
 
-    async def publish(self, event: Event | Message) -> str:
+    async def publish(self, event: Event | Message | BaseEvent) -> str:
         """Publish event or message
 
         Args:
-            event: Event or Message to publish
+            event: Event, Message, or BaseEvent to publish
 
         Returns:
             Event/Message ID
         """
-        # Handle Event (pub/sub pattern)
+        # Handle BaseEvent (Pydantic models)
+        if isinstance(event, BaseEvent):
+            if not self._initialized:
+                raise RuntimeError("EventBus not initialized. Call initialize() first.")
+
+            # Store event in event_bus_events table
+            async with self.db.session() as session:
+                # Convert target to JSON if it's a list
+                target_str = json.dumps(event.target) if isinstance(event.target, list) else event.target
+
+                await session.execute(
+                    text("""
+                    INSERT INTO event_bus_events
+                    (event_id, event_type, source, target, priority, timestamp,
+                     correlation_id, reply_to, metadata, payload, status)
+                    VALUES (:event_id, :event_type, :source, :target, :priority, :timestamp,
+                            :correlation_id, :reply_to, :metadata, :payload, :status)
+                    """),
+                    {
+                        "event_id": str(event.id),
+                        "event_type": event.type,
+                        "source": event.source,
+                        "target": target_str,
+                        "priority": event.priority,
+                        "timestamp": event.timestamp.isoformat(),
+                        "correlation_id": event.correlation_id,
+                        "reply_to": event.reply_to,
+                        "metadata": json.dumps(event.metadata),
+                        "payload": event.model_dump_json(),
+                        "status": "pending",
+                    },
+                )
+                await session.commit()
+
+            return str(event.id)
+
+        # Handle Event (pub/sub pattern - legacy dataclass)
         if isinstance(event, Event):
             # Notify subscribers
             if event.event_type in self._subscribers:
