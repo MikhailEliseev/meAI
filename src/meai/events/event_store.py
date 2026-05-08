@@ -9,6 +9,7 @@ This module provides append-only event storage with:
 """
 
 import json
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -200,6 +201,63 @@ class EventStore:
                 """),
                 {"correlation_id": correlation_id}
             )
+            rows = result.fetchall()
+
+            # Reconstruct events from JSON
+            events = []
+            for row in rows:
+                event_data = json.loads(row[0])
+                events.append(self._reconstruct_event(event_data))
+
+            return events
+
+    async def get_by_time_range(
+        self,
+        from_time: datetime | None = None,
+        to_time: datetime | None = None,
+        limit: int = 1000
+    ) -> list[BaseEvent]:
+        """Get events within time range.
+
+        Args:
+            from_time: Start time (inclusive)
+            to_time: End time (inclusive)
+            limit: Maximum number of events
+
+        Returns:
+            List of events in chronological order
+
+        Raises:
+            RuntimeError: If store not initialized
+        """
+        if not self._initialized:
+            raise RuntimeError("EventStore not initialized. Call initialize() first.")
+
+        # Build WHERE clause dynamically
+        conditions = []
+        params: dict[str, Any] = {"limit": limit}
+
+        if from_time:
+            conditions.append("timestamp >= :from_time")
+            params["from_time"] = from_time.isoformat()
+
+        if to_time:
+            conditions.append("timestamp <= :to_time")
+            params["to_time"] = to_time.isoformat()
+
+        where_clause = " AND ".join(conditions) if conditions else "1=1"
+
+        # Safe to use f-string: where_clause built from hardcoded SQL fragments only
+        query = f"""
+            SELECT data
+            FROM event_store
+            WHERE {where_clause}
+            ORDER BY timestamp ASC
+            LIMIT :limit
+        """
+
+        async with self.db.session() as session:
+            result = await session.execute(text(query), params)
             rows = result.fetchall()
 
             # Reconstruct events from JSON
