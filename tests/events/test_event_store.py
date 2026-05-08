@@ -239,3 +239,236 @@ async def test_get_by_correlation_empty():
     assert chain == []
 
     await store.close()
+
+
+@pytest.mark.asyncio
+async def test_get_by_time_range():
+    """Test retrieving events by time range."""
+    # Arrange
+    import asyncio
+    from meai.events.task_events import TaskCreatedEvent, TaskCreatedData
+
+    store = EventStore()
+    await store.initialize()
+
+    now = datetime.now(UTC)
+
+    # Create events with different timestamps
+    event1 = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        data=ProjectCreatedData(
+            project_id="project-001",
+            client_name="Client 1",
+            client_domain="client1.com",
+            client_contact="contact@client1.com",
+            industry="Healthcare",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+    await store.append(event1)
+
+    # Wait a bit
+    await asyncio.sleep(0.1)
+
+    event2 = TaskCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        data=TaskCreatedData(
+            project_id="project-001",
+            task_id="task-001",
+            magister="brand-magister",
+            capability="brand_analysis",
+            parameters={"depth": "full"}
+        )
+    )
+    await store.append(event2)
+
+    # Get events from start time
+    events = await store.get_by_time_range(from_time=now)
+
+    # Assert
+    assert len(events) == 2
+    assert events[0].id == event1.id
+    assert events[1].id == event2.id
+
+    await store.close()
+
+
+@pytest.mark.asyncio
+async def test_get_by_time_range_with_to_time():
+    """Test retrieving events with both from_time and to_time."""
+    # Arrange
+    import asyncio
+    from meai.events.task_events import TaskCreatedEvent, TaskCreatedData
+
+    store = EventStore()
+    await store.initialize()
+
+    # Create first event
+    event1 = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        data=ProjectCreatedData(
+            project_id="project-001",
+            client_name="Client 1",
+            client_domain="client1.com",
+            client_contact="contact@client1.com",
+            industry="Healthcare",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+    await store.append(event1)
+
+    # Wait and capture middle time
+    await asyncio.sleep(0.1)
+    middle_time = datetime.now(UTC)
+    await asyncio.sleep(0.1)
+
+    # Create second event
+    event2 = TaskCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        data=TaskCreatedData(
+            project_id="project-001",
+            task_id="task-001",
+            magister="brand-magister",
+            capability="brand_analysis",
+            parameters={"depth": "full"}
+        )
+    )
+    await store.append(event2)
+
+    # Get events before middle_time (should only get event1)
+    events = await store.get_by_time_range(to_time=middle_time)
+
+    # Assert
+    assert len(events) == 1
+    assert events[0].id == event1.id
+
+    await store.close()
+
+
+@pytest.mark.asyncio
+async def test_get_by_time_range_no_bounds():
+    """Test retrieving events with no time bounds (all events)."""
+    # Arrange
+    store = EventStore()
+    await store.initialize()
+
+    # Create multiple events
+    event1 = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        data=ProjectCreatedData(
+            project_id="project-001",
+            client_name="Client 1",
+            client_domain="client1.com",
+            client_contact="contact@client1.com",
+            industry="Healthcare",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+    await store.append(event1)
+
+    event2 = ProjectCreatedEvent(
+        source="operator",
+        target="content-magister",
+        data=ProjectCreatedData(
+            project_id="project-002",
+            client_name="Client 2",
+            client_domain="client2.com",
+            client_contact="contact@client2.com",
+            industry="Finance",
+            initial_status=ProjectStatus.PRE_SALE,
+            source="Referral",
+            created_at=datetime.now(UTC)
+        )
+    )
+    await store.append(event2)
+
+    # Get all events (no time bounds)
+    events = await store.get_by_time_range()
+
+    # Assert
+    assert len(events) == 2
+    assert events[0].id == event1.id
+    assert events[1].id == event2.id
+
+    await store.close()
+
+
+@pytest.mark.asyncio
+async def test_get_by_time_range_with_limit():
+    """Test retrieving events with limit."""
+    # Arrange
+    store = EventStore()
+    await store.initialize()
+
+    # Create 3 events
+    for i in range(3):
+        event = ProjectCreatedEvent(
+            source="operator",
+            target="brand-magister",
+            data=ProjectCreatedData(
+                project_id=f"project-{i:03d}",
+                client_name=f"Client {i}",
+                client_domain=f"client{i}.com",
+                client_contact=f"contact@client{i}.com",
+                industry="Healthcare",
+                initial_status=ProjectStatus.LEAD,
+                source="Website Form",
+                created_at=datetime.now(UTC)
+            )
+        )
+        await store.append(event)
+
+    # Get events with limit=2
+    events = await store.get_by_time_range(limit=2)
+
+    # Assert
+    assert len(events) == 2
+
+    await store.close()
+
+
+@pytest.mark.asyncio
+async def test_get_by_time_range_empty():
+    """Test retrieving events with time range that has no events."""
+    # Arrange
+    from datetime import timedelta
+
+    store = EventStore()
+    await store.initialize()
+
+    # Create event
+    event = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        data=ProjectCreatedData(
+            project_id="project-001",
+            client_name="Client 1",
+            client_domain="client1.com",
+            client_contact="contact@client1.com",
+            industry="Healthcare",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+    await store.append(event)
+
+    # Query for events in the future
+    future_time = datetime.now(UTC) + timedelta(days=1)
+    events = await store.get_by_time_range(from_time=future_time)
+
+    # Assert
+    assert events == []
+
+    await store.close()
