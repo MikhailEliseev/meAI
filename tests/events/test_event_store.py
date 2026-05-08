@@ -150,3 +150,92 @@ async def test_multiple_events_stored_independently():
     assert retrieved2.data.client_name == "Client 2"
 
     await store.close()
+
+
+@pytest.mark.asyncio
+async def test_get_by_correlation():
+    """Test retrieving events by correlation_id."""
+    # Arrange
+    store = EventStore()
+    await store.initialize()
+
+    # Import TaskCreatedEvent
+    from meai.events.task_events import TaskCreatedEvent, TaskCreatedData
+
+    # Create correlation chain
+    event1 = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        correlation_id="corr-123",
+        data=ProjectCreatedData(
+            project_id="project-001",
+            client_name="Client 1",
+            client_domain="client1.com",
+            client_contact="contact@client1.com",
+            industry="Healthcare",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+
+    event2 = TaskCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        correlation_id="corr-123",  # Same correlation
+        data=TaskCreatedData(
+            project_id="project-001",
+            task_id="task-001",
+            magister="brand-magister",
+            capability="brand_analysis",
+            parameters={"depth": "full"}
+        )
+    )
+
+    event3 = ProjectCreatedEvent(
+        source="operator",
+        target="content-magister",
+        correlation_id="corr-456",  # Different correlation
+        data=ProjectCreatedData(
+            project_id="project-002",
+            client_name="Client 2",
+            client_domain="client2.com",
+            client_contact="contact@client2.com",
+            industry="Finance",
+            initial_status=ProjectStatus.PRE_SALE,
+            source="Referral",
+            created_at=datetime.now(UTC)
+        )
+    )
+
+    # Act
+    await store.append(event1)
+    await store.append(event2)
+    await store.append(event3)
+
+    # Get correlation chain
+    chain = await store.get_by_correlation("corr-123")
+
+    # Assert
+    assert len(chain) == 2
+    assert all(e.correlation_id == "corr-123" for e in chain)
+    assert chain[0].type == "project.created"
+    assert chain[1].type == "task.created"
+
+    await store.close()
+
+
+@pytest.mark.asyncio
+async def test_get_by_correlation_empty():
+    """Test retrieving events by non-existent correlation_id returns empty list."""
+    # Arrange
+    store = EventStore()
+    await store.initialize()
+
+    # Act
+    chain = await store.get_by_correlation("nonexistent-correlation")
+
+    # Assert
+    assert chain == []
+
+    await store.close()

@@ -175,6 +175,41 @@ class EventStore:
             event_data = json.loads(row[0])
             return self._reconstruct_event(event_data)
 
+    async def get_by_correlation(self, correlation_id: str) -> list[BaseEvent]:
+        """Get all events in correlation chain.
+
+        Args:
+            correlation_id: Correlation ID
+
+        Returns:
+            List of events in chronological order
+
+        Raises:
+            RuntimeError: If store not initialized
+        """
+        if not self._initialized:
+            raise RuntimeError("EventStore not initialized. Call initialize() first.")
+
+        async with self.db.session() as session:
+            result = await session.execute(
+                text("""
+                    SELECT data
+                    FROM event_store
+                    WHERE correlation_id = :correlation_id
+                    ORDER BY timestamp ASC
+                """),
+                {"correlation_id": correlation_id}
+            )
+            rows = result.fetchall()
+
+            # Reconstruct events from JSON
+            events = []
+            for row in rows:
+                event_data = json.loads(row[0])
+                events.append(self._reconstruct_event(event_data))
+
+            return events
+
     def _reconstruct_event(self, event_data: dict[str, Any]) -> BaseEvent:
         """Reconstruct event instance from JSON data.
 
