@@ -9,7 +9,8 @@ from typing import Any, Callable
 
 from meai.agents.magisters.base_magister import BaseMagister
 from meai.agents.base_agent import Task, TaskResult
-from meai.events.event_bus import EventBus, Message
+from meai.events import EventBus, EventStore
+from meai.events.event_bus import Message
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ class AnalyticsMagister(BaseMagister):
         self,
         agent_id: str = "analytics-magister-1",
         event_bus: EventBus = None,
+        event_store: EventStore = None,
         vault_path: Path = None,
         database_url: str = "sqlite+aiosqlite:///./data/meai.db",
         orchestrators: dict[str, Any] = None,
@@ -40,6 +42,7 @@ class AnalyticsMagister(BaseMagister):
         Args:
             agent_id: Unique agent identifier
             event_bus: Event bus for communication
+            event_store: Event store for audit logging
             vault_path: Path to Obsidian vault
             database_url: Database URL
             orchestrators: Dict of orchestrator name -> orchestrator instance
@@ -53,6 +56,7 @@ class AnalyticsMagister(BaseMagister):
             magister_type="analytics",
             domain="analytics",
             event_bus=event_bus,
+            event_store=event_store,
             vault_path=vault_path,
             database_url=database_url,
         )
