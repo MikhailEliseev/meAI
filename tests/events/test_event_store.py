@@ -472,3 +472,55 @@ async def test_get_by_time_range_empty():
     assert events == []
 
     await store.close()
+
+
+@pytest.mark.asyncio
+async def test_replay_events():
+    """Test replaying events from timestamp."""
+    # Arrange
+    from meai.events.task_events import TaskCreatedEvent, TaskCreatedData
+
+    store = EventStore()
+    await store.initialize()
+
+    # Create events
+    event1 = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        data=ProjectCreatedData(
+            project_id="project-001",
+            client_name="Client 1",
+            client_domain="client1.com",
+            client_contact="contact@client1.com",
+            industry="Healthcare",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+    event2 = TaskCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        data=TaskCreatedData(
+            project_id="project-001",
+            task_id="task-001",
+            magister="brand-magister",
+            capability="brand_analysis",
+            parameters={"depth": "full"}
+        )
+    )
+
+    await store.append(event1)
+    await store.append(event2)
+
+    # Act - Replay all events
+    replayed = []
+    async for event in store.replay(from_time=datetime.min):
+        replayed.append(event)
+
+    # Assert
+    assert len(replayed) == 2
+    assert replayed[0].id == event1.id
+    assert replayed[1].id == event2.id
+
+    await store.close()
