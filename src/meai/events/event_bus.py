@@ -343,6 +343,11 @@ class EventBus:
                 )
                 await session.commit()
 
+            # Notify subscribers for event.type
+            if event.type in self._subscribers:
+                tasks = [handler(event) for handler in self._subscribers[event.type]]
+                await asyncio.gather(*tasks, return_exceptions=True)
+
             return str(event.id)
 
         # Handle Event (pub/sub pattern - legacy dataclass)
