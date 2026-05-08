@@ -492,11 +492,14 @@ class EventBus:
                         "status": "pending",
                     },
                 )
-                await session.commit()
 
-            # Append to Event Store if configured
-            if self._event_store:
-                await self._event_store.append(event)
+                # Append to Event Store BEFORE commit (ensures complete audit trail)
+                # If Event Store append fails, transaction rolls back and event is not queued
+                if self._event_store:
+                    await self._event_store.append(event)
+
+                # Commit transaction (rolls back if Event Store append failed)
+                await session.commit()
 
             # Notify subscribers for event.type
             if event.type in self._subscribers:
