@@ -166,3 +166,69 @@ async def test_base_event_notifies_subscribers():
     assert received[0].type == "project.created"
 
     await bus.close()
+
+
+@pytest.mark.asyncio
+async def test_get_events_by_target():
+    """Test retrieving events by target agent"""
+    bus = EventBus()
+    await bus.initialize()
+
+    # Publish 3 events
+    event1 = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        data=ProjectCreatedData(
+            project_id="proj-004",
+            client_name="Client 1",
+            client_domain="client1.com",
+            client_contact="contact@client1.com",
+            industry="Healthcare",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+    event2 = ProjectCreatedEvent(
+        source="operator",
+        target="brand-magister",
+        data=ProjectCreatedData(
+            project_id="proj-005",
+            client_name="Client 2",
+            client_domain="client2.com",
+            client_contact="contact@client2.com",
+            industry="Medical Marketing",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+    event3 = ProjectCreatedEvent(
+        source="operator",
+        target="content-magister",  # Different target
+        data=ProjectCreatedData(
+            project_id="proj-006",
+            client_name="Client 3",
+            client_domain="client3.com",
+            client_contact="contact@client3.com",
+            industry="Healthcare",
+            initial_status=ProjectStatus.LEAD,
+            source="Website Form",
+            created_at=datetime.now(UTC)
+        )
+    )
+
+    await bus.publish(event1)
+    await bus.publish(event2)
+    await bus.publish(event3)
+
+    # Get events for brand-magister
+    events = await bus.get_events(target="brand-magister", limit=10)
+
+    assert len(events) == 2
+    assert events[0].type == "project.created"
+    assert events[1].type == "project.created"
+    assert events[0].target == "brand-magister"
+    assert events[1].target == "brand-magister"
+
+    await bus.close()
