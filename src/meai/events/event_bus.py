@@ -279,6 +279,107 @@ class EventBus:
             )
             await session.commit()
 
+    async def get_events(
+        self,
+        target: str | None = None,
+        event_type: str | None = None,
+        correlation_id: str | None = None,
+        status: str = "pending",
+        limit: int = 100,
+    ) -> list[BaseEvent]:
+        """Get events from queue with filtering
+
+        Args:
+            target: Filter by target agent
+            event_type: Filter by event type
+            correlation_id: Filter by correlation ID
+            status: Event status (pending, processed, failed)
+            limit: Maximum number of events
+
+        Returns:
+            List of BaseEvent instances
+        """
+        if not self._initialized:
+            raise RuntimeError("EventBus not initialized. Call initialize() first.")
+
+        # Build dynamic WHERE clause
+        where_conditions = ["status = :status"]
+        params = {"status": status, "limit": limit}
+
+        if target:
+            where_conditions.append("target = :target")
+            params["target"] = target
+
+        if event_type:
+            where_conditions.append("type = :event_type")
+            params["event_type"] = event_type
+
+        if correlation_id:
+            where_conditions.append("correlation_id = :correlation_id")
+            params["correlation_id"] = correlation_id
+
+        where_clause = " AND ".join(where_conditions)
+
+        async with self.db.session() as session:
+            result = await session.execute(
+                text(f"""
+                SELECT id, type, source, target, priority, timestamp,
+                       correlation_id, reply_to, metadata, data, status
+                FROM event_bus_events
+                WHERE {where_clause}
+                ORDER BY priority ASC, created_at ASC
+                LIMIT :limit
+                """),
+                params,
+            )
+
+            events = []
+            for row in result.fetchall():
+                event_data = {
+                    "id": row[0],
+                    "type": row[1],
+                    "source": row[2],
+                    "target": row[3],
+                    "priority": row[4],
+                    "timestamp": row[5],
+                    "correlation_id": row[6],
+                    "reply_to": row[7],
+                    "metadata": json.loads(row[8]),
+                }
+
+                # Parse the full event data JSON
+                full_data = json.loads(row[9])
+
+                # Dynamically import event class based on type
+                event_type_str = row[1]  # e.g., "project.created"
+
+                # Convert type to class name: "project.created" -> "ProjectCreatedEvent"
+                class_name = "".join(
+                    word.capitalize() for word in event_type_str.split(".")
+                ) + "Event"
+
+                try:
+                    # Import from meai.events module
+                    from meai import events as events_module
+
+                    # Try to get specific event class
+                    event_class = getattr(events_module, class_name, None)
+
+                    if event_class and issubclass(event_class, BaseEvent):
+                        # Reconstruct event using Pydantic validation
+                        event = event_class.model_validate(full_data)
+                    else:
+                        # Fallback to BaseEvent if specific class not found
+                        event = BaseEvent.model_validate(full_data)
+
+                    events.append(event)
+                except (AttributeError, ImportError):
+                    # Fallback to BaseEvent if import fails
+                    event = BaseEvent.model_validate(full_data)
+                    events.append(event)
+
+            return events
+
     def subscribe(self, event_type: str, handler: Callable[[Event], Awaitable[None]]) -> None:
         """Subscribe to events of a specific type
 
