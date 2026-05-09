@@ -54,9 +54,9 @@
       },
       {
         "sprint": 4,
-        "url": "pending",
+        "url": "https://github.com/MikhailEliseev/meAI/pull/8",
         "branch": "feat/seo-vertical-slice/sprint-4-operator-coordination",
-        "status": "ready"
+        "status": "open"
       }
     ]
   },

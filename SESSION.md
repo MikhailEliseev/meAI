@@ -104,7 +104,7 @@
 **Status:** Complete
 **Branch:** `feat/seo-vertical-slice/sprint-4-operator-coordination`
 **Base:** `feat/seo-vertical-slice/sprint-3-links-agent`
-**PR:** (to be created)
+**PR:** https://github.com/MikhailEliseev/meAI/pull/8
 
 **Deliverables:**
 - ✅ SEO Magister implementation (650 lines)
@@ -163,7 +163,7 @@
 - PR #5: https://github.com/MikhailEliseev/meAI/pull/5 (Sprint 1, open)
 - PR #6: https://github.com/MikhailEliseev/meAI/pull/6 (Sprint 2, open)
 - PR #7: https://github.com/MikhailEliseev/meAI/pull/7 (Sprint 3, open)
-- PR #8: (Sprint 4, to be created)
+- PR #8: https://github.com/MikhailEliseev/meAI/pull/8 (Sprint 4, open)
 
 ---
 
