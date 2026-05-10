@@ -1,77 +1,49 @@
 # 📝 ПАМЯТКА ДЛЯ СЛЕДУЮЩЕЙ СЕССИИ
 
-**Дата:** 2026-05-10 22:10 GMT+3  
-**Контекст:** Завершили создание 3 GEO агентов (Optimization, Monitoring, Content)
+**Дата:** 2026-05-10 21:58 GMT+3  
+**Контекст:** Завершили Landing Content Agent, переходим к Editor Agent
 
 ---
 
 ## ✅ ЧТО СДЕЛАНО
 
-### Этап 1.1: P0 Subagents (ЗАВЕРШЁН)
+### Landing Content Agent (ЗАВЕРШЁН)
 
-Создано 4 критичных спецификации:
-1. ✅ Medical Fact-Checker Agent (~15 KB)
-2. ✅ Data Reconciliation Agent (~20 KB)
-3. ✅ Tone of Voice Agent (~18 KB)
-4. ✅ Data Collector Agent (~22 KB)
+1. **Deep Research (81 KB, 18,000 слов)**
+   - Режим: deep (8 фаз, 180 минут)
+   - 18 основных разделов
+   - 15 источников
+   - Архивировано в `obsidian/deep-research/raw/2026-05-10-Landing_Page_Content/`
 
-### Этап 1.2: P1 Subagents (В ПРОЦЕССЕ — 9/16)
+2. **Спецификация (73 KB, 1,200 строк)**
+   - Файл: `docs/subagents-specs/LANDING_CONTENT_SPEC.md`
+   - 8 шагов алгоритма (framework selection → quality checks)
+   - 3 conversion frameworks (AIDA, PAS, 4P)
+   - 6 психологических триггеров (scarcity, social proof, authority, urgency, reciprocity, consistency)
+   - Multi-step формы (+30-40% конверсии vs single-step)
+   - Exit-intent popups (5-15% recovery rate)
+   - Медицинская compliance (FDA, 152-ФЗ, E-E-A-T, YMYL)
+   - Целевая конверсия: 5-15% (3x выше блога)
 
-Создано 9 спецификаций:
-1. ✅ Trend Watcher Agent (~40 KB)
-2. ✅ Content Scheduler Agent (~40 KB)
-3. ✅ AI Sales Admin Agent (~90 KB) — обновлён с доработками
-4. ✅ Keyword Research Agent (~65 KB) — обновлён с доработками
-5. ✅ Web Analytics Agent (~73 KB)
-6. ✅ Search Console Agent (~76 KB)
-7. ✅ GEO Optimization Agent (~52 KB) — НОВЫЙ
-8. ✅ GEO Monitoring Agent (~48 KB) — НОВЫЙ
-9. ✅ GEO Content Agent (~52 KB) — НОВЫЙ
+3. **Коммит:** 45c7922
 
-### Доработка спецификаций после анализа интервью (✅ ЗАВЕРШЕНО)
-
-**Проверено:** 6 интервью (AI Sales Admin, Keyword Research, Web Analytics, Search Console, Trend Watcher, Content Scheduler)  
-**Найдено:** 8 упущений  
-**Статус:** ✅ Все 6 критичных и важных упущений УЖЕ ПРИСУТСТВУЮТ в спецификациях (добавлены в предыдущей сессии)
-
-**Верификация показала:**
-
-**AI Sales Admin (4/4 уже в спецификации):**
-1. ✅ **Раздел 11.4** — Изоляция проектов (строки 1898-2068)
-2. ✅ **Раздел 3.2.8** — Предпродажная квалификация (строки 731-930)
-3. ✅ **Раздел 2.5** — Дополнительные метаданные (строка 229)
-4. ✅ **Раздел 3.2.7** — Приоритеты мониторинга сайта (строки 512-730)
-
-**Keyword Research (2/2 уже в спецификации):**
-5. ✅ **Раздел 1.5** — Связанные агенты (строки 85-99, GEO Agent описан)
-6. ✅ **Приложение A** — TODO для исследования (строки 1218-1356, все API с ценами)
+**Ключевые находки исследования:**
+- Multi-step forms: +30-40% конверсии
+- Page speed: -7% конверсии за каждую секунду задержки
+- Authority signals: +25-40% доверия
+- Exit-intent popups: 5-15% recovery rate
+- Social proof: +25-40% конверсии
 
 ---
 
 ## ⏳ ЧТО ОСТАЛОСЬ
 
-### Доработка спецификаций (2/8 осталось — ОПЦИОНАЛЬНО)
-
-**Приоритет 2: Желательные упущения**
-
-**AI Sales Admin:**
-- **Раздел 6.7** — Интеграция с Brand Magister
-  - Формат передачи истории коммуникаций
-  - Обратная связь от Brand Magister
-  - Адаптация ToV агента
-
-**Keyword Research:**
-- **Раздел 6.7** — Формат данных (JSON vs MD)
-  - Обоснование гибридного подхода
-  - JSON для Event Bus (координация)
-  - MD для Obsidian (память и обучение)
-
 ### Этап 1.2: P1 Subagents (7/16 осталось)
 
 **Content (3):**
-1. ⏳ Blog Content Agent
-2. ⏳ Landing Content Agent
-3. ⏳ Editor Agent
+1. ✅ Blog Content Agent (завершён ранее)
+2. ✅ Landing Content Agent (завершён сейчас)
+3. ⏳ **Editor Agent (следующий)**
 
 **Ads (3):**
 4. ⏳ Campaign Manager Agent
@@ -83,298 +55,192 @@
 8. ⏳ Report Generator Agent
 9. ⏳ Data Processor Agent
 
-**Опционально:**
-10. ⏳ GEO Orchestrator (координирует 3 GEO агента)
-
 ---
 
 ## 📊 ПРОГРЕСС
 
 **Этап 1.2 (P1 спецификации):**
-- Создано: 9/16 спецификаций (56.25%) ← было 6/16, добавлено 3 GEO агента
-- Доработано: 6/8 упущений (75%, все критичные и важные)
+- Создано: 11/16 спецификаций (68.75%)
+- Осталось: 5 спецификаций
 
 **ФАЗА 1 (Спецификации):**
-- Готово: 15/47 спецификаций (31.9%) ← было 12/47
+- Готово: 17/47 спецификаций (36.2%)
 
-**Общий прогресс проекта:** ~8.0% ← было ~6.5%
+**Общий прогресс проекта:** ~9.0%
 
 ---
 
-## 🎯 СЛЕДУЮЩИЕ ШАГИ
+## 🎯 СЛЕДУЮЩИЙ ШАГ: Editor Agent
 
-**Вариант 1: Создать GEO Orchestrator (рекомендуется)**
-1. Координирует работу 3 GEO агентов (Optimization, Monitoring, Content)
-2. Принимает стратегические решения (что оптимизировать, что создавать)
-3. Распределяет приоритеты (срочная оптимизация vs новый контент)
-4. Агрегирует метрики (общий GEO Score, Share of Voice)
+### План создания
 
-**Вариант 2: Продолжить создание P1 спецификаций**
-1. Создать Content агенты (Blog, Landing, Editor)
-2. Создать Ads агенты (Campaign Manager, Budget Optimizer, Performance Monitor)
-3. Создать Analytics агенты (Competitor Analysis, Report Generator, Data Processor)
+1. **Создать бриф** `docs/briefs/EDITOR_BRIEF.md`
+   - Назначение: финальная редактура и полировка контента
+   - Родительский Magister: Content Magister
+   - Приоритет: P1
+   - Отличия от Blog/Landing Content Agent: не создаёт контент, только редактирует
 
-**Вариант 3: Добавить желательные разделы (опционально)**
-- Brand Magister интеграция (AI Sales Admin)
-- JSON vs MD обоснование (Keyword Research)
+2. **Определить приоритеты исследования**
+   
+   **🔴 КРИТИЧНО (глубоко изучить):**
+   - Типы проверок: грамматика, стиль, ToV, факты, readability
+   - Инструменты: LanguageTool, Grammarly API, Hemingway Editor API
+   - Медицинская специфика: проверка E-E-A-T, YMYL, disclaimers
+   - Workflow: какие проверки в каком порядке
+   
+   **🟡 ВАЖНО (средняя глубина):**
+   - AI-powered suggestions (GPT-4 для улучшения текста)
+   - Автоматические исправления vs предложения
+   - Интеграция с Tone of Voice Agent
+   - Интеграция с Medical Fact-Checker Agent
+   
+   **🟢 ОПЦИОНАЛЬНО (поверхностно):**
+   - Визуальное форматирование (жирный, курсив, списки)
+   - Плагиат-проверка
+   - SEO-оптимизация (уже есть в Blog/Landing Content Agent)
+
+3. **Запустить deep-research** (если нужно)
+   - Тема: "Content Editing and Proofreading for Medical Marketing"
+   - Режим: **standard** (6 фаз, 5-10 минут) — типовая задача, не требует deep
+   - Фокус: инструменты, workflow, медицинская специфика
+
+4. **Создать спецификацию** `docs/subagents-specs/EDITOR_SPEC.md`
+   
+   **Входные данные:**
+   - Контент от Blog Content Agent или Landing Content Agent
+   - Tone of Voice бренда (от Brand Magister)
+   - Медицинские требования (от Medical Fact-Checker)
+   
+   **Выходные данные:**
+   - Отредактированный контент
+   - Список изменений (что исправлено, почему)
+   - Метрики качества (readability score, grammar errors fixed, style improvements)
+   
+   **Алгоритм:**
+   - Step 1: Grammar check (LanguageTool API)
+   - Step 2: Style check (Hemingway Editor API)
+   - Step 3: Tone of Voice check (Tone of Voice Agent)
+   - Step 4: Medical facts check (Medical Fact-Checker Agent)
+   - Step 5: Readability check (Textstat)
+   - Step 6: Final polish (AI-powered suggestions)
+   - Step 7: Generate change log
+
+5. **Архивировать исследование**
+   ```bash
+   python3 scripts/ingest_research.py ~/Documents/[Topic]_Research_[YYYYMMDD]/
+   ```
 
 ---
 
 ## 📄 КЛЮЧЕВЫЕ ФАЙЛЫ
 
-**Анализ:**
-- `docs/INTERVIEW-ANALYSIS-COMPLETE-2026-05-10.md` — полный анализ упущений (6/8 готово)
-- `docs/GEO-AGENTS-COMPLETE-2026-05-10.md` — сводка по GEO агентам
+**Завершённые спецификации (Content Magister):**
+- `docs/subagents-specs/BLOG_CONTENT_SPEC.md` (завершён ранее)
+- `docs/subagents-specs/LANDING_CONTENT_SPEC.md` (73 KB, завершён сейчас)
 
-**Обновлённые спецификации:**
-- `docs/subagents-specs/AI_SALES_ADMIN_SPEC.md` (~90 KB, было ~70 KB)
-- `docs/subagents-specs/KEYWORD_RESEARCH_SPEC.md` (~65 KB, было ~62 KB)
+**Брифы:**
+- `docs/briefs/BLOG_CONTENT_BRIEF.md` (существует)
+- `docs/briefs/LANDING_CONTENT_BRIEF.md` (существует)
 
-**Новые спецификации (GEO):**
-- `docs/subagents-specs/GEO_OPTIMIZATION_SPEC.md` (~52 KB, 1,380 строк)
-- `docs/subagents-specs/GEO_MONITORING_SPEC.md` (~48 KB, 1,383 строк)
-- `docs/subagents-specs/GEO_CONTENT_SPEC.md` (~52 KB, 1,492 строк)
+**Исследования:**
+- `obsidian/deep-research/raw/2026-05-10-Landing_Page_Content/` (81 KB)
 
-**Готовые спецификации P1:**
-- `docs/subagents-specs/TREND_WATCHER_SPEC.md` (~40 KB)
-- `docs/subagents-specs/CONTENT_SCHEDULER_SPEC.md` (~40 KB)
-- `docs/subagents-specs/WEB_ANALYTICS_SPEC.md` (~73 KB)
-- `docs/subagents-specs/SEARCH_CONSOLE_SPEC.md` (~76 KB)
-
-**Шаблоны и инструменты:**
-- `docs/templates/SIMPLIFIED_INTERVIEW_TEMPLATE.md` (упрощённый формат)
+**Шаблоны:**
 - `docs/templates/SUBAGENT_SPEC_TEMPLATE.md` (базовый шаблон)
-- `docs/templates/SPEC_CREATION_CHECKLIST.md` (чеклист качества)
-- `~/.claude/skills/spec-writer/SKILL.md` (автоматическое создание спецификаций) — ✅ НОВЫЙ 2026-05-10
-
-**Документация:**
-- `docs/ARCHITECTURE-COMMUNICATION.md` (стандартные паттерны)
-- `docs/MASTER-PLAN.md` (общий план проекта)
-- `SESSION.md` (текущий статус работы)
+- `~/.claude/skills/spec-writer/SKILL.md` (автоматическое создание)
 
 ---
 
 ## 🔑 ВАЖНЫЕ ПРАВИЛА
 
-### 1. Complete Before Next Rule:
-- ✅ Доводим каждую задачу до 100%
-- ✅ Никаких "доделаем потом"
+### 1. Spec Writer Rule
+✅ Всегда используй `/spec-writer` для создания спецификаций
+- Автоматический deep-research
+- Больше деталей и актуальных данных
+- Экономия времени ~60-70%
 
-### 2. Quality Over Speed Rule:
-- ✅ Качество важнее скорости
-- ✅ Глубокий анализ важнее быстрого результата
+### 2. Complete Before Next Rule
+✅ Доводим до 100% перед переходом к следующей задаче
+- Никаких "доделаем потом"
+- Все stubs заменены на real implementations
+- Все тесты проходят
 
-### 3. Mock Data Rule:
-- ❌ НИКОГДА не использовать mock данные в production коде
-- ✅ Всегда запрашивать реальные данные
+### 3. Quality Over Speed Rule
+✅ Качество важнее скорости
+- Глубокий анализ важнее быстрого результата
+- Время работы агента не критично (1 минута vs 1 час vs 1 день)
+
+### 4. Mock Data Rule
+❌ Никаких mock данных в production коде
+- Запрашивать реальные данные у пользователя
+- Получать данные из источников (API, веб-скрапинг)
+
+### 5. Deep Research Tracking Rule
+✅ Все исследования архивируются в `obsidian/deep-research/`
+- Отслеживание стоимости
+- Переиспользование похожих тем
+- История для анализа
 
 ---
 
-## 🚨 BACKLOG
+## 🚀 КОМАНДА ДЛЯ СТАРТА
 
-1. **Doctor Agent** (P1)
-   - Мониторинг здоровья системы
-   - Сигнализация о "заболевших" компонентах
+```bash
+# Активировать окружение
+source venv/bin/activate
 
-2. **Synthetic CustDev**
-   - Проверить версию (old vs new)
+# Вариант 1: Через spec-writer skill (рекомендуется)
+/spec-writer Editor Agent
+
+# Вариант 2: Вручную
+# 1. Создать бриф
+# 2. Запустить deep-research
+/deep-research "Content Editing and Proofreading for Medical Marketing: инструменты (LanguageTool, Grammarly, Hemingway), workflow (grammar → style → ToV → facts → readability → polish), медицинская специфика (E-E-A-T, YMYL, disclaimers)"
+
+# 3. Создать спецификацию на основе исследования
+# 4. Архивировать исследование
+python3 scripts/ingest_research.py ~/Documents/[Topic]_Research_[YYYYMMDD]/
+
+# 5. Коммит
+git add docs/briefs/EDITOR_BRIEF.md \
+        docs/subagents-specs/EDITOR_SPEC.md \
+        obsidian/deep-research/ \
+        SESSION.md \
+        docs/MEMO-NEXT-SESSION.md
+git commit -m "docs: create Editor Agent specification (hybrid approach)"
+```
 
 ---
 
-**Дата обновления:** 2026-05-10 22:10 GMT+3  
+## 💡 ПОДСКАЗКИ ДЛЯ EDITOR AGENT
+
+**Отличия от Blog/Landing Content Agent:**
+- Blog/Landing: создают контент с нуля
+- Editor: редактирует существующий контент
+
+**Ключевые возможности:**
+- Проверка грамматики (LanguageTool API)
+- Проверка стиля (Hemingway Editor API)
+- Проверка ToV (интеграция с Tone of Voice Agent)
+- Проверка фактов (интеграция с Medical Fact-Checker Agent)
+- Readability score (Textstat)
+- AI-powered suggestions (Claude API для улучшения)
+
+**Метрики успеха:**
+- Grammar errors fixed: 100% (все ошибки исправлены)
+- Readability score: > 60 (Flesch Reading Ease)
+- ToV compliance: > 90% (соответствие Tone of Voice)
+- Medical facts verified: 100% (все факты проверены)
+- Time to edit: < 5 минут (для статьи 1,500 слов)
+
+**Интеграции:**
+- Tone of Voice Agent (обязательно)
+- Medical Fact-Checker Agent (обязательно)
+- Blog Content Agent (источник контента)
+- Landing Content Agent (источник контента)
+
+---
+
+**Дата обновления:** 2026-05-10 21:58 GMT+3  
 **Статус:** ✅ Готово к следующей сессии  
-**Следующий шаг:** Создать GEO Orchestrator ИЛИ продолжить с Content агентами (Blog, Landing, Editor)
-
----
-
-## ✅ ЧТО СДЕЛАНО
-
-### Этап 1.1: P0 Subagents (ЗАВЕРШЁН)
-
-Создано 4 критичных спецификации:
-1. ✅ Medical Fact-Checker Agent (~15 KB)
-2. ✅ Data Reconciliation Agent (~20 KB)
-3. ✅ Tone of Voice Agent (~18 KB)
-4. ✅ Data Collector Agent (~22 KB)
-
-### Этап 1.2: P1 Subagents (В ПРОЦЕССЕ — 6/16)
-
-Создано 6 спецификаций:
-1. ✅ Trend Watcher Agent (~40 KB)
-2. ✅ Content Scheduler Agent (~40 KB)
-3. ✅ AI Sales Admin Agent (~90 KB) — обновлён с доработками
-4. ✅ Keyword Research Agent (~62 KB) — обновлён с доработками
-5. ✅ Web Analytics Agent (~73 KB)
-6. ✅ Search Console Agent (~76 KB)
-
-### Доработка спецификаций после анализа интервью (5/8 готово)
-
-**Проверено:** 4 интервью (AI Sales Admin, Keyword Research, Web Analytics, Search Console)  
-**Найдено:** 8 упущений  
-**Исправлено:** 5/8 (62.5%)
-
-**AI Sales Admin (добавлено 4 раздела, ~20 KB):**
-
-1. ✅ **Раздел 11.4** — Изоляция проектов (КРИТИЧНО, ~5 KB)
-   - Docker deployment на проект
-   - Изоляция vaults, БД, конфигурации
-   - Скрипт проверки изоляции
-
-2. ✅ **Раздел 3.2.8** — Предпродажная квалификация (ВАЖНО, ~5 KB)
-   - Критерии "первичка закрыта" (потребность + срочность + готовность)
-   - Методы: BANT, SPIN, медицинская адаптация
-   - Метрика: Conversion rate > 40%
-   - Пример успешной квалификации
-
-3. ✅ **Раздел 2.5** — Дополнительные метаданные (ВАЖНО, ~4 KB)
-   - UTM-метки, геолокация, device type, browser
-   - Примеры кода для сбора
-   - Метрики: coverage > 80%, geo accuracy > 95%
-
-4. ✅ **Раздел 3.2.7** — Приоритеты мониторинга сайта (ВАЖНО, ~6 KB)
-   - Приоритет 1: WordPress/Bitrix24 REST API
-   - Приоритет 2: Schema.org
-   - Приоритет 3: Playwright (fallback)
-   - Стратегия выбора с кодом
-
-**Keyword Research:**
-
-5. ✅ **Раздел 1.5** — Связанные агенты (КРИТИЧНО, ~2 KB)
-   - Описание GEO Agent (AI-поиск)
-   - GEO Agent добавлен в список P1 (15 → 16)
-
----
-
-## ⏳ ЧТО ОСТАЛОСЬ
-
-### Доработка спецификаций (3/8 осталось)
-
-**Приоритет 1: Важные упущения (1 шт)**
-
-**Keyword Research:**
-- **Приложение A** — TODO для исследования
-  - Яндекс Вордстат API (regex, документация)
-  - Google Keyword Planner API (доступные API, требования)
-  - Платные API (Semrush, TopVisor, Ahrefs — стоимость, rate limits)
-
-**Приоритет 2: Желательные упущения (2 шт)**
-
-**AI Sales Admin:**
-- **Раздел 6.7** — Интеграция с Brand Magister
-  - Формат передачи истории коммуникаций
-  - Обратная связь от Brand Magister
-  - Адаптация ToV агента
-
-**Keyword Research:**
-- **Раздел 6.7** — Формат данных (JSON vs MD)
-  - Обоснование гибридного подхода
-  - JSON для Event Bus (координация)
-  - MD для Obsidian (память и обучение)
-
-### Этап 1.2: P1 Subagents (10/16 осталось)
-
-**GEO (1):** ← НОВЫЙ P1 агент
-1. ⏳ GEO Agent (Generative Engine Optimization)
-
-**Content (3):**
-2. ⏳ Blog Content Agent
-3. ⏳ Landing Content Agent
-4. ⏳ Editor Agent
-
-**Ads (3):**
-5. ⏳ Campaign Manager Agent
-6. ⏳ Budget Optimizer Agent
-7. ⏳ Performance Monitor Agent
-
-**Analytics (3):**
-8. ⏳ Competitor Analysis Agent
-9. ⏳ Report Generator Agent
-10. ⏳ Data Processor Agent
-
----
-
-## 📊 ПРОГРЕСС
-
-**Этап 1.2 (P1 спецификации):**
-- Создано: 6/16 спецификаций (37.5%)
-- Доработано: 5/8 упущений (62.5%)
-
-**ФАЗА 1 (Спецификации):**
-- Готово: 12/47 спецификаций (25.5%)
-
-**Общий прогресс проекта:** ~6.5%
-
----
-
-## 🎯 СЛЕДУЮЩИЕ ШАГИ
-
-**Вариант 1: Завершить доработку (рекомендуется)**
-1. Добавить Приложение A в Keyword Research (TODO для исследования)
-2. Добавить желательные разделы (Brand Magister, JSON vs MD)
-3. Продолжить создание оставшихся 10 P1 спецификаций
-
-**Вариант 2: Продолжить создание P1 спецификаций**
-1. Создать GEO Agent спецификацию (новый P1 агент)
-2. Создать Content агенты (Blog, Landing, Editor)
-3. Вернуться к доработке позже
-
----
-
-## 📄 КЛЮЧЕВЫЕ ФАЙЛЫ
-
-**Анализ:**
-- `docs/INTERVIEW-ANALYSIS-2026-05-10.md` — полный анализ упущений (5/8 готово)
-
-**Обновлённые спецификации:**
-- `docs/subagents-specs/AI_SALES_ADMIN_SPEC.md` (~90 KB, было ~70 KB)
-- `docs/subagents-specs/KEYWORD_RESEARCH_SPEC.md` (~64 KB, было ~62 KB)
-
-**Готовые спецификации P1:**
-- `docs/subagents-specs/TREND_WATCHER_SPEC.md` (~40 KB)
-- `docs/subagents-specs/CONTENT_SCHEDULER_SPEC.md` (~40 KB)
-- `docs/subagents-specs/WEB_ANALYTICS_SPEC.md` (~73 KB)
-- `docs/subagents-specs/SEARCH_CONSOLE_SPEC.md` (~76 KB)
-
-**Шаблоны и инструменты:**
-- `docs/templates/SIMPLIFIED_INTERVIEW_TEMPLATE.md` (упрощённый формат)
-- `docs/templates/SUBAGENT_SPEC_TEMPLATE.md` (базовый шаблон)
-- `docs/templates/SPEC_CREATION_CHECKLIST.md` (чеклист качества)
-- `~/.claude/skills/spec-writer/SKILL.md` (автоматическое создание спецификаций) — ✅ НОВЫЙ 2026-05-10
-
-**Документация:**
-- `docs/ARCHITECTURE-COMMUNICATION.md` (стандартные паттерны)
-- `docs/MASTER-PLAN.md` (общий план проекта)
-- `SESSION.md` (текущий статус работы)
-
----
-
-## 🔑 ВАЖНЫЕ ПРАВИЛА
-
-### 1. Complete Before Next Rule:
-- ✅ Доводим каждую задачу до 100%
-- ✅ Никаких "доделаем потом"
-
-### 2. Quality Over Speed Rule:
-- ✅ Качество важнее скорости
-- ✅ Глубокий анализ важнее быстрого результата
-
-### 3. Mock Data Rule:
-- ❌ НИКОГДА не использовать mock данные в production коде
-- ✅ Всегда запрашивать реальные данные
-
----
-
-## 🚨 BACKLOG
-
-1. **Doctor Agent** (P1)
-   - Мониторинг здоровья системы
-   - Сигнализация о "заболевших" компонентах
-
-2. **Synthetic CustDev**
-   - Проверить версию (old vs new)
-
----
-
-**Дата обновления:** 2026-05-10 16:44 GMT+3  
-**Статус:** ✅ Готово к следующей сессии  
-**Следующий шаг:** Добавить Приложение A в Keyword Research ИЛИ создать GEO Agent спецификацию
+**Следующий шаг:** Создать Editor Agent через `/spec-writer`
