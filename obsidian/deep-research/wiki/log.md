@@ -42,3 +42,21 @@
 **Режим:** deep
 
 ---
+
+## [2026-05-10 23:14] ingest | Campaign_Management_Medical_Ads
+
+**Операция:** Ingest research results
+**Файлов скопировано:** 7
+**Размер отчёта:** 112 KB
+**Режим:** standard
+
+---
+
+## [2026-05-11 00:06] ingest | Campaign_Management_Medical_Ads
+
+**Операция:** Ingest research results
+**Файлов скопировано:** 7
+**Размер отчёта:** 112 KB
+**Режим:** standard
+
+---
