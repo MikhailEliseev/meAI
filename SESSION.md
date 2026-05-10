@@ -464,3 +464,45 @@ cd AIM && PYTHONPATH=src:$PYTHONPATH python -m pytest tests/integration/test_seo
 
 **Прогресс Этап 1.2:** 9/16 (56.25%) ← было 6/16, добавлено 3 GEO агента
 
+
+## 2026-05-10 18:05 - Blog Content Agent Specification Created
+
+**Completed:**
+- ✅ Deep research на Blog Content Creation (8 фаз, 208 минут)
+- ✅ Отчёт создан: 18,000 слов, 14 секций, 50+ источников
+- ✅ Архивировано в obsidian/deep-research/raw/2026-05-10-Blog_Content/
+- ✅ Спецификация создана: docs/subagents-specs/BLOG_CONTENT_SPEC.md (~45 KB, 1,200 строк)
+
+**Ключевые результаты исследования:**
+- 7 copywriting фреймворков (AIDA, PAS, BAB, FAB, 4P, StoryBrand, PASTOR)
+- Decision matrix для интеллектуального выбора фреймворка
+- Compliance risk levels: 🟢 LOW (AIDA, FAB, StoryBrand), 🟡 MEDIUM (PAS, BAB), 🔴 HIGH (4P, PASTOR)
+- Recommended tool stack: PubMed (free) + Textstat (free) + LanguageTool ($22/mo) + Frase.io ($115/mo) = $137/month
+- Quality targets: Flesch 60-70, 1,500-2,000 words, E-E-A-T > 8.0, SEO > 80
+- Cost per article: $6.85 (vs $500-1,000 agency rates)
+
+**Спецификация включает:**
+- Интеллектуальный выбор фреймворка на основе goal + audience + journey stage + service type + compliance level
+- Compliance проверка (FDA, 152-ФЗ, prohibited claims detection, E-E-A-T scoring)
+- SEO-оптимизация (keywords, meta-теги, schema markup, internal/external links)
+- Readability scoring (Textstat: Flesch Reading Ease 60-70 target)
+- Tone of Voice адаптация (LanguageTool API)
+- Medical fact verification (PubMed API)
+- Graceful degradation при недоступности API
+- Полные примеры использования (3 сценария)
+- Error handling (6 типов ошибок)
+- Testing strategy (unit, integration, E2E)
+- Deployment guide (requirements, config, monitoring)
+
+**Метрики:**
+- Execution time: < 60 секунд
+- Success rate: > 95%
+- Readability: 60-70 (Flesch)
+- E-E-A-T: > 8.0/10
+- SEO: > 80/100
+
+**Next steps:**
+- Implement Blog Content Agent (Priority 1 tasks from TODO)
+- Continue with remaining 6 P1 agents from brief
+- Test framework selection algorithm with real data
+
