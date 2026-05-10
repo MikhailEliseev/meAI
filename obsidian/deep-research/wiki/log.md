@@ -33,3 +33,12 @@
 **Режим:** deep
 
 ---
+
+## [2026-05-10 21:57] ingest | Landing_Page_Content
+
+**Операция:** Ingest research results
+**Файлов скопировано:** 4
+**Размер отчёта:** 81 KB
+**Режим:** deep
+
+---
