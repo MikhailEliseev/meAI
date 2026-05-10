@@ -506,3 +506,71 @@ cd AIM && PYTHONPATH=src:$PYTHONPATH python -m pytest tests/integration/test_seo
 - Continue with remaining 6 P1 agents from brief
 - Test framework selection algorithm with real data
 
+---
+
+## 2026-05-10 21:15 - Briefs Enhanced with Missing Details
+
+**Completed:**
+- ✅ Проанализированы брифы Blog Content и Landing Content на упущения
+- ✅ Blog Content Brief обновлён (добавлено 3 пункта)
+- ✅ Landing Content Brief обновлён (добавлено 5 пунктов)
+
+**Blog Content Brief - добавлено:**
+1. 🟡 **Контент-календарь и частота публикаций** (раздел 7)
+   - Оптимальная частота: 2-3 раза в неделю
+   - Сезонность тем (грипп зимой, аллергия весной)
+   - Планирование на месяц/квартал
+
+2. 🟡 **Внутренняя перелинковка** (раздел 8)
+   - Стратегия внутренних ссылок между статьями
+   - Anchor texts для SEO
+   - Связь блог ↔ лендинги услуг
+   - Глубина: 3-5 внутренних ссылок на статью
+
+3. 🟢 **Мультимедиа контент** (раздел 12)
+   - Инфографика для медицинских концепций
+   - Видео (объяснение процедур, интервью)
+   - Интерактивные элементы (калькуляторы, чек-листы)
+
+**Landing Content Brief - добавлено:**
+1. 🔴 **Формы захвата лидов** (раздел 5, критично)
+   - Обязательные поля: имя, телефон
+   - Multi-step forms vs single-step (+30-40% конверсии)
+   - Интеграция с CRM (AmoCRM, Bitrix24)
+   - Валидация в реальном времени
+   - Защита от спама (reCAPTCHA)
+
+2. 🟡 **Exit-intent popups** (раздел 10)
+   - Когда показывать (mouse movement к верхней границе)
+   - Что предлагать (скидка 10-20%, консультация, чек-лист)
+   - Compliance (1 раз в сессию, не обманывать)
+   - Метрика: Exit-intent conversion > 5%
+
+3. 🟡 **Retargeting pixels и аналитика** (раздел 11)
+   - Яндекс Метрика цели (просмотр, скролл 50%, клик, форма)
+   - Google Analytics события
+   - Facebook/VK пиксели для ретаргетинга
+   - Сегментация аудитории
+
+4. 🟡 **Speed optimization** (раздел 12)
+   - Время загрузки < 3 секунды (каждая секунда = -7% конверсии)
+   - Lazy loading, минификация, CDN
+   - Critical CSS, WebP формат
+
+5. 🟢 **Chatbot integration** (раздел 15, опционально)
+   - Онлайн-консультант (человек vs бот)
+   - Квалификация лида через чат (BANT)
+   - Платформы: Jivo, Carrot quest, Bitrix24
+   - Метрика: Chat-to-lead conversion > 15%
+
+**Итого добавлено:**
+- Blog Content: 3 пункта (2 важных, 1 желательный)
+- Landing Content: 5 пунктов (1 критичный, 3 важных, 1 желательный)
+
+**Статус брифов:** ✅ Готовы к deep-research (все упущения добавлены)
+
+**Next steps:**
+- Запустить spec-writer для Landing Content Agent
+- Запустить spec-writer для Editor Agent
+- Продолжить с Ads и Analytics агентами
+
