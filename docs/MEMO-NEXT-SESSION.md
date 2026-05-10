@@ -145,9 +145,11 @@
 - `docs/subagents-specs/WEB_ANALYTICS_SPEC.md` (~73 KB)
 - `docs/subagents-specs/SEARCH_CONSOLE_SPEC.md` (~76 KB)
 
-**Шаблоны:**
+**Шаблоны и инструменты:**
 - `docs/templates/SIMPLIFIED_INTERVIEW_TEMPLATE.md` (упрощённый формат)
 - `docs/templates/SUBAGENT_SPEC_TEMPLATE.md` (базовый шаблон)
+- `docs/templates/SPEC_CREATION_CHECKLIST.md` (чеклист качества)
+- `~/.claude/skills/spec-writer/SKILL.md` (автоматическое создание спецификаций) — ✅ НОВЫЙ 2026-05-10
 
 **Документация:**
 - `docs/ARCHITECTURE-COMMUNICATION.md` (стандартные паттерны)
@@ -337,9 +339,11 @@
 - `docs/subagents-specs/WEB_ANALYTICS_SPEC.md` (~73 KB)
 - `docs/subagents-specs/SEARCH_CONSOLE_SPEC.md` (~76 KB)
 
-**Шаблоны:**
+**Шаблоны и инструменты:**
 - `docs/templates/SIMPLIFIED_INTERVIEW_TEMPLATE.md` (упрощённый формат)
 - `docs/templates/SUBAGENT_SPEC_TEMPLATE.md` (базовый шаблон)
+- `docs/templates/SPEC_CREATION_CHECKLIST.md` (чеклист качества)
+- `~/.claude/skills/spec-writer/SKILL.md` (автоматическое создание спецификаций) — ✅ НОВЫЙ 2026-05-10
 
 **Документация:**
 - `docs/ARCHITECTURE-COMMUNICATION.md` (стандартные паттерны)
