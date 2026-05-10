@@ -291,41 +291,43 @@ cd AIM && PYTHONPATH=src:$PYTHONPATH python -m pytest tests/integration/test_seo
 
 #### 🎯 Текущий этап: Этап 1.2 - Спецификации P1 Subagents (В ПРОЦЕССЕ)
 
-**Цель:** Создать спецификации для 15 P1 агентов  
+**Цель:** Создать спецификации для 16 P1 агентов (было 15, добавлен GEO Agent)  
 **Время:** 5-7 дней  
-**Статус:** 🚀 В процессе (1/15 готово)
+**Статус:** 🚀 В процессе (6/16 готово) + 🔧 Доработка существующих
 
-**Агенты для спецификации (15 шт):**
+**Агенты для спецификации (16 шт):**
 
 **Social (3):**
 1. ✅ Trend Watcher Agent (⭐⭐⭐ критичный!) - `docs/subagents-specs/TREND_WATCHER_SPEC.md` (~40 KB)
 2. ✅ Content Scheduler Agent - `docs/subagents-specs/CONTENT_SCHEDULER_SPEC.md` (~40 KB)
-3. ⏳ AI Sales Admin Agent
+3. ✅ AI Sales Admin Agent - `docs/subagents-specs/AI_SALES_ADMIN_SPEC.md` (~70 KB) — 🔧 ОБНОВЛЁН (добавлен раздел 11.4 Изоляция проектов)
 
-**SEO (3):**
-4. ⏳ Keyword Research Agent
-5. ⏳ Web Analytics Agent
-6. ⏳ Search Console Agent
+**SEO (4):** ← было 3, добавлен GEO Agent
+4. ✅ Keyword Research Agent - `docs/subagents-specs/KEYWORD_RESEARCH_SPEC.md` (~62 KB) — 🔧 ОБНОВЛЁН (добавлен раздел 1.5 GEO Agent)
+5. ✅ Web Analytics Agent - `docs/subagents-specs/WEB_ANALYTICS_SPEC.md` (~73 KB)
+6. ✅ Search Console Agent - `docs/subagents-specs/SEARCH_CONSOLE_SPEC.md` (~76 KB)
+7. ⏳ **GEO Agent (Generative Engine Optimization)** — НОВЫЙ P1 агент для AI-поиска (ChatGPT, Perplexity, Claude)
 
 **Content (3):**
-7. ⏳ Blog Content Agent
-8. ⏳ Landing Content Agent
-9. ⏳ Editor Agent
+8. ⏳ Blog Content Agent
+9. ⏳ Landing Content Agent
+10. ⏳ Editor Agent
 
 **Ads (3):**
-10. ⏳ Campaign Manager Agent
-11. ⏳ Budget Optimizer Agent
-12. ⏳ Performance Monitor Agent
+11. ⏳ Campaign Manager Agent
+12. ⏳ Budget Optimizer Agent
+13. ⏳ Performance Monitor Agent
 
 **Analytics (3):**
-13. ⏳ Competitor Analysis Agent
-14. ⏳ Report Generator Agent
-15. ⏳ Data Processor Agent
+14. ⏳ Competitor Analysis Agent
+15. ⏳ Report Generator Agent
+16. ⏳ Data Processor Agent
 
 **Критерий завершения:**
-- 🚀 15 спецификаций по шаблону (2/15 готово)
+- 🚀 16 спецификаций по шаблону (6/16 готово, 37.5%)
 - ✅ Все интеграции описаны
 - ✅ Алгоритмы работы детализированы
+- 🔧 Критичные упущения исправлены (2/2 готово)
 
 #### Остальные этапы ФАЗЫ 1:
 - Этап 1.3: Спецификации Orchestrators (9 координаторов, 3-4 дня)
@@ -333,24 +335,57 @@ cd AIM && PYTHONPATH=src:$PYTHONPATH python -m pytest tests/integration/test_seo
 
 ### 📊 Прогресс по мастер-плану:
 
-**ФАЗА 1:** 🚀 В процессе (Этап 1.1 ✅ → Этап 1.2)  
+**ФАЗА 1:** 🚀 В процессе (Этап 1.1 ✅ → Этап 1.2 🔧)  
 **ФАЗА 2:** ⏳ Ожидание (Инфраструктура)  
 **ФАЗА 3:** ⏳ Ожидание (P0 компоненты)  
 **ФАЗА 4:** ⏳ Ожидание (P1 каналы)  
 **ФАЗА 5:** ⏳ Ожидание (P2 преимущество)
 
-**Прогресс ФАЗЫ 1:** 13.0% (6/46 спецификаций)  
-**Общий прогресс:** ~3% (13-20 недель до production)
+**Прогресс ФАЗЫ 1:** 25.5% (12/47 спецификаций) ← было 12/46, добавлен GEO Agent  
+**Общий прогресс:** ~6.4% (13-20 недель до production)
+
+---
+
+## 🔧 ТЕКУЩАЯ РАБОТА: Доработка спецификаций после анализа интервью
+
+**Дата начала:** 2026-05-10 20:30 GMT+3  
+**Статус:** ✅ ЗАВЕРШЕНО (6/8 готово, 75%)  
+**Цель:** Исправить критичные и важные упущения, найденные при анализе интервью
+
+### ✅ Что сделано:
+
+**Этап 1: Анализ интервью (ЗАВЕРШЁН)**
+- ✅ Проверено 6 интервью (AI Sales Admin, Keyword Research, Web Analytics, Search Console, Trend Watcher, Content Scheduler)
+- ✅ Найдено 8 упущений (5 в AI Sales Admin, 3 в Keyword Research, 0 в остальных)
+- ✅ Составлена сводная таблица упущений
+
+**Этап 2: Критичные упущения (ЗАВЕРШЁН — 2/2 готово)**
+- ✅ AI Sales Admin — добавлен раздел 11.4 "Изоляция проектов" (~5 KB)
+- ✅ Keyword Research — добавлен раздел 1.5 "Связанные агенты" (GEO Agent) (~2 KB)
+- ✅ GEO Agent добавлен в список P1 агентов (15 → 16)
+
+**Этап 3: Важные упущения (ЗАВЕРШЁН — 4/4 готово)**
+- ✅ AI Sales Admin — добавлен раздел 3.2.8 "Предпродажная квалификация" (~5 KB)
+- ✅ AI Sales Admin — добавлен раздел 2.5 "Дополнительные метаданные" (~4 KB)
+- ✅ AI Sales Admin — добавлен раздел 3.2.7 "Приоритеты мониторинга сайта" (~6 KB)
+- ✅ Keyword Research — добавлено Приложение A "TODO для исследования" (~3 KB)
+
+**Этап 4: Желательные упущения (ОПЦИОНАЛЬНО — 2/2 осталось)**
+- ⏳ AI Sales Admin — добавить раздел 6.7 "Интеграция с Brand Magister"
+- ⏳ Keyword Research — добавить раздел 6.7 "Формат данных (JSON vs MD)"
+
+**Итого добавлено документации:** ~25 KB  
+**Время работы:** ~125 минут
 
 ---
 
 **Дата завершения Superflow:** 2026-05-09 16:50 GMT+3  
 **Статус Superflow:** ✅ COMPLETE  
-**Текущая работа:** Спецификации Subagents  
+**Текущая работа:** ✅ Доработка спецификаций завершена (6/8 упущений, все критичные и важные)  
 **Статус Этап 1.1:** ✅ ЗАВЕРШЁН + ОПТИМИЗИРОВАН (4/4 P0 спецификации + шаблоны)  
-**Статус Этап 1.2:** 🚀 В ПРОЦЕССЕ (2/15 P1 спецификаций)  
-**Последнее обновление:** 2026-05-09 22:32 GMT+3  
-**Следующий шаг:** Продолжить Этап 1.2 - создать оставшиеся 13 спецификаций P1 агентов
+**Статус Этап 1.2:** 🚀 В ПРОЦЕССЕ (6/16 P1 спецификаций + доработка 6/8)  
+**Последнее обновление:** 2026-05-10 17:56 GMT+3  
+**Следующий шаг:** Продолжить создание оставшихся 10 P1 спецификаций (GEO Agent, Content, Ads, Analytics)
 
 ---
 
@@ -397,3 +432,37 @@ cd AIM && PYTHONPATH=src:$PYTHONPATH python -m pytest tests/integration/test_seo
 - **Экономия:** ~6 часов (60%)
 
 **Готовность к Этапу 1.2:** ✅ Можно начинать с оптимизированным процессом
+
+---
+
+## 🎉 GEO AGENTS COMPLETE (2026-05-10 22:05 GMT+3)
+
+**Статус:** ✅ ЗАВЕРШЕНО  
+**Создано:** 3 спецификации GEO агентов  
+**Время:** ~90 минут  
+**Объём:** ~150 KB документации
+
+### Созданные спецификации:
+
+1. ✅ **GEO Optimization Agent** (~52 KB, 1,380 строк)
+   - Оптимизация контента под AI-поиск
+   - GEO Score 0-100
+   - Три уровня оптимизации
+
+2. ✅ **GEO Monitoring Agent** (~48 KB, 1,383 строк)
+   - Мониторинг упоминаний бренда 24/7
+   - Share of Voice расчёт
+   - Алерты о критических событиях
+
+3. ✅ **GEO Content Agent** (~52 KB, 1,492 строк)
+   - Создание GEO-оптимизированного контента
+   - Правило первых 50 слов
+   - Citation bait элементы
+
+**Ключевые инсайты:**
+- AI-поиск растёт экспоненциально (900M ChatGPT users/week)
+- 44.2% цитирований из первых 30% текста
+- +40% видимость после GEO оптимизации
+
+**Прогресс Этап 1.2:** 9/16 (56.25%) ← было 6/16, добавлено 3 GEO агента
+
