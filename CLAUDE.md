@@ -424,8 +424,37 @@ vault/
 - `obsidian/operator/` - Operator's tactical vault
 - `obsidian/seo-agent/` - SEO agent's execution vault
 - `obsidian/content-agent/` - Content agent's execution vault
+- `obsidian/deep-research/` - Deep research tracking vault
 
 Это НЕ рекомендация - это ЗАКОН для всех Obsidian пространств в системе.
+
+### Deep Research Tracking Rule
+
+**КРИТИЧЕСКИ ВАЖНО:** Все deep-research исследования ОБЯЗАНЫ архивироваться в `obsidian/deep-research/` vault.
+
+**Правило:** После каждого deep-research:
+1. **Запустить Ingest** — `python scripts/ingest_research.py ~/Documents/[Topic]_Research_[YYYYMMDD]/`
+2. **Vault автоматически сохранит:**
+   - Исходный отчёт в `raw/`
+   - Метаданные (токены, стоимость, время) в `manifest.json`
+   - Обновит статистику в `wiki/statistics/usage.md`
+   - Добавит запись в `wiki/log.md`
+
+**Почему это важно:**
+- Отслеживание реальной стоимости исследований
+- Выявление возможностей переиспользования (похожие темы)
+- Оптимизация стратегии на основе данных
+- История всех исследований для будущего анализа
+
+**Примеры:**
+- ✅ После создания Blog Content Agent → ingest исследование
+- ✅ Перед новым исследованием → проверить `wiki/topics/` на похожие темы
+- ✅ Раз в неделю → проверить `wiki/statistics/usage.md` для анализа трендов
+
+**Применение:**
+- Создаёшь спецификацию через spec-writer → автоматически запускается deep-research → после завершения запусти ingest
+- Перед новым исследованием → проверь vault на похожие темы для переиспользования
+- Если стоимость растёт → проверь `decisions/cost-optimization.md` для стратегии
 
 ### AIM Agency Context
 - Medical marketing focus
