@@ -6,249 +6,220 @@
 
 ## Назначение
 
-Campaign Manager Agent — автоматизированный менеджер рекламных кампаний для медицинского маркетинга. Создаёт, запускает и управляет кампаниями в Яндекс.Директ и Google Ads, обеспечивая соответствие медицинским требованиям и оптимальное распределение бюджета.
+Автоматизированное создание и управление рекламными кампаниями с фокусом на **оптимальную структуру кампаний** для максимального Quality Score и эффективности. Агент создаёт кампании на основе данных от других агентов (Keyword Research Agent, Landing Content Agent) и обеспечивает полное прохождение модерации с автоматической валидацией compliance.
 
-**Основная задача:** Превратить маркетинговую стратегию в работающие рекламные кампании через автоматизированное создание, настройку и запуск.
+**Ключевой принцип:** Quality over Speed — качество структуры кампании важнее скорости создания.
 
 ## Контекст и специфика
 
-**Медицинская специфика:**
-- Compliance: 152-ФЗ (РФ), Google Ads Healthcare policy, Яндекс ограничения
-- Запрещённые claims (гарантии результата, "лучший", "100% эффективность")
-- Обязательные disclaimers (лицензия, противопоказания)
-- Ограничения на таргетинг (нельзя по диагнозам, можно по симптомам)
+### Основная задача
+Создание **оптимальной структуры кампаний** (Campaign → AdGroup → Ad → Keyword) с учётом:
+- Quality Score 7-10 (цель)
+- Правильная группировка ключевых слов (по intent, по услуге)
+- Оптимальное количество ключевых слов на группу (10-15)
+- Релевантность объявлений ключевым словам
+- Compliance с медицинским законодательством
 
-**Платформы:**
-- Яндекс.Директ (основная для РФ)
-- Google Ads (дополнительная)
-- Двойная модерация (автоматическая + ручная)
+### Платформы (приоритеты)
+1. **Яндекс.Директ** (основная платформа, P0)
+   - API v5
+   - Все типы кампаний
+   - Полная поддержка
 
-**Типы кампаний:**
-- Поиск (текстовые объявления)
-- РСЯ/КМС (баннеры, адаптивные объявления)
-- Ретаргетинг (аудитории сайта)
-- Lookalike (похожие аудитории)
+2. **VK Ads** (полная поддержка, P1)
+   - VK Ads API
+   - Все типы кампаний
+   - Таргетинг по интересам и поведению
+
+3. **myTarget** (базовая поддержка, P2)
+   - myTarget API
+   - Основные типы кампаний
+
+4. **Telegram Ads** (базовая поддержка, P2)
+   - Telegram Ads API
+   - Каналы и боты
+
+5. **Дзен** (базовая поддержка, P2)
+   - Дзен API
+   - Нативная реклама
+
+### Типы кампаний
+- **Search** (поисковая реклама)
+- **Display/РСЯ** (медийная реклама)
+- **Retargeting** (ретаргетинг)
+
+### Стратегии назначения ставок
+- **Manual CPC** (ручное управление)
+- **Target CPA** (целевая цена конверсии)
+- **Maximize Conversions** (максимум конверсий)
+- **Target ROAS** (целевой ROAS)
+
+### Compliance (медицинская специфика)
+- **152-ФЗ РФ** (реклама медицинских услуг)
+- **Google Healthcare policy** (если используется Google Ads)
+- **Автоматическая валидация + коррекция**:
+  - Проверка запрещённых формулировок (гарантии, превосходство, "лучший")
+  - Добавление обязательных disclaimers (лицензия, противопоказания)
+  - Исправление нарушений перед отправкой на модерацию
+
+### Модерация
+- **Полный цикл с ожиданием** (1-3 дня)
+- **Мониторинг каждые 15 минут**
+- **Автоматическая обработка отклонений**:
+  - Анализ причины отклонения
+  - Исправление нарушений
+  - Повторная отправка на модерацию
 
 ## Интеграции
 
-**Входные данные:**
-- `campaign_brief` (dict) — бриф кампании от Ads Magister
-  - `goal` (str) — цель (leads, traffic, brand_awareness)
-  - `budget` (float) — бюджет в рублях
-  - `duration` (int) — длительность в днях
-  - `target_audience` (dict) — ЦА (geo, age, interests)
-  - `services` (list) — услуги для продвижения
-- `landing_pages` (list) — URL лендингов
-- `brand_guidelines` (dict) — бренд-гайды
-- `compliance_rules` (dict) — правила compliance
+### Входные данные
+**От других агентов:**
+- **Keyword Research Agent** → список ключевых слов с метриками (частотность, конкуренция, CPC)
+- **Landing Content Agent** → URL посадочных страниц, заголовки, описания, УТП
 
-**Выходные данные:**
-- `campaign_id` (str) — ID созданной кампании
-- `campaign_structure` (dict) — структура кампании
-  - `ad_groups` (list) — группы объявлений
-  - `ads` (list) — объявления
-  - `keywords` (list) — ключевые слова
-  - `targeting` (dict) — настройки таргетинга
-- `moderation_status` (str) — статус модерации
-- `launch_status` (str) — статус запуска
-- `warnings` (list) — предупреждения (если есть)
+**Структура входных данных:**
+```json
+{
+  "keywords": [
+    {
+      "keyword": "лечение зубов москва",
+      "frequency": 1500,
+      "competition": "medium",
+      "cpc": 120,
+      "intent": "transactional"
+    }
+  ],
+  "landing_pages": [
+    {
+      "url": "https://example.com/services/teeth-treatment",
+      "title": "Лечение зубов в Москве",
+      "description": "Профессиональное лечение зубов...",
+      "usp": "Без боли, гарантия 2 года"
+    }
+  ]
+}
+```
 
-**Связанные агенты:**
-- **Keyword Research Agent** — источник ключевых слов
-- **Landing Content Agent** — источник лендингов
-- **Budget Optimizer Agent** — оптимизация бюджета
-- **Performance Monitor Agent** — мониторинг результатов
-- **Medical Fact-Checker Agent** — проверка медицинских claims
+### Выходные данные
+**Результат создания кампании:**
+```json
+{
+  "campaign_id": "12345",
+  "platform": "yandex_direct",
+  "status": "moderation_pending",
+  "structure": {
+    "ad_groups": 5,
+    "ads": 15,
+    "keywords": 75
+  },
+  "quality_score": 8.5,
+  "compliance_status": "validated",
+  "moderation_status": "pending"
+}
+```
 
-**Внешние API:**
-- **Яндекс.Директ API v5** — создание и управление кампаниями
-- **Google Ads API** — создание и управление кампаниями
-- **Яндекс.Метрика API** — настройка целей
-- **Google Analytics API** — настройка целей
+### Связанные агенты
+- **Keyword Research Agent** (входные данные)
+- **Landing Content Agent** (входные данные)
+- **Budget Optimizer Agent** (выходные данные для оптимизации бюджета)
+- **Performance Monitor Agent** (выходные данные для мониторинга)
+
+### Внешние API
+- **Яндекс.Директ API v5** (основной)
+- **VK Ads API** (полная поддержка)
+- **myTarget API** (базовая поддержка)
+- **Telegram Ads API** (базовая поддержка)
+- **Дзен API** (базовая поддержка)
+- **Яндекс.Метрика API** (для целей конверсии)
+- **Google Analytics API** (опционально)
 
 ## Приоритеты исследования
 
 ### 🔴 КРИТИЧНО (обязательно глубоко изучить)
 
-1. **Яндекс.Директ API v5**
-   - Структура кампаний (Campaign → AdGroup → Ad → Keyword)
-   - Типы кампаний (TEXT_CAMPAIGN, MOBILE_APP_CAMPAIGN, DYNAMIC_TEXT_CAMPAIGN)
-   - Стратегии назначения ставок (HIGHEST_POSITION, WB_MAXIMUM_CLICKS, etc.)
-   - Ограничения API (rate limits, batch operations)
-   - Модерация (статусы, причины отклонения)
+1. **API интеграции всех платформ**
+   - Яндекс.Директ API v5: структура кампаний, типы кампаний, стратегии ставок, ограничения API (rate limits, batch operations), модерация (статусы, причины отклонения)
+   - VK Ads API: структура кампаний, типы объявлений, таргетинг, модерация
+   - myTarget API: структура кампаний, форматы объявлений, таргетинг
+   - Telegram Ads API: структура кампаний, форматы объявлений, таргетинг
+   - Дзен API: структура кампаний, нативная реклама, модерация
 
-2. **Google Ads API**
-   - Структура кампаний (Campaign → AdGroup → Ad → Keyword)
-   - Healthcare policy (restricted content, certification requirements)
-   - Responsive Search Ads (RSA) — до 15 заголовков, 4 описания
-   - Smart Bidding стратегии (Target CPA, Maximize Conversions)
-   - Модерация и policy violations
+2. **Compliance automation**
+   - 152-ФЗ РФ: запрещённые формулировки, обязательные disclaimers
+   - Google Healthcare policy: certification requirements, restricted content
+   - Автоматическая валидация: паттерны нарушений, правила коррекции
+   - Автоматическая коррекция: замена формулировок, добавление disclaimers
 
-3. **Медицинская compliance для рекламы**
-   - 152-ФЗ РФ (реклама медицинских услуг)
-   - Запрещённые формулировки (гарантии, превосходство, "лучший")
-   - Обязательные disclaimers (лицензия, противопоказания)
-   - Google Ads Healthcare policy (certification, restricted content)
-   - Яндекс ограничения (медицина, здоровье)
+3. **Оптимальная структура кампаний**
+   - Группировка ключевых слов: по intent (informational, transactional), по услуге, по geo
+   - Количество ключевых слов на группу: оптимальное (10-15), влияние на Quality Score
+   - Релевантность объявлений: соответствие ключевым словам, динамические вставки
+   - Quality Score факторы: CTR, релевантность, качество посадочной страницы
+   - Типы соответствия: broad, phrase, exact — когда использовать
 
-4. **Структура рекламных кампаний**
-   - Иерархия (Campaign → AdGroup → Ad → Keyword)
-   - Группировка ключевых слов (по intent, по услуге, по geo)
-   - Типы соответствия (broad, phrase, exact)
-   - Negative keywords (минус-слова)
-   - Ad extensions (расширения объявлений)
+4. **Модерация workflow**
+   - Статусы модерации: pending, approved, rejected
+   - Причины отклонения: compliance violations, policy violations, technical issues
+   - Мониторинг: частота проверки (каждые 15 минут), timeout (1-3 дня)
+   - Автоматическая обработка отклонений: анализ причины, исправление, повторная отправка
 
 ### 🟡 ВАЖНО (изучить, но не так глубоко)
 
 1. **Стратегии назначения ставок**
-   - Manual CPC (ручное управление)
-   - Automated bidding (автоматические стратегии)
-   - Target CPA (целевая цена конверсии)
-   - Maximize Conversions (максимум конверсий)
-   - ROAS (return on ad spend)
+   - Manual CPC: когда использовать, как оптимизировать
+   - Target CPA: требования (15+ конверсий), настройка
+   - Maximize Conversions: когда использовать, ограничения
+   - Target ROAS: требования, настройка
 
 2. **Таргетинг и аудитории**
-   - Geo-таргетинг (города, регионы)
-   - Демография (возраст, пол)
-   - Интересы и поведение
-   - Ретаргетинг (аудитории сайта)
-   - Lookalike (похожие аудитории)
+   - Geo-таргетинг: города, регионы, радиус
+   - Демография: возраст, пол
+   - Интересы и поведение: категории, сегменты
+   - Ретаргетинг: аудитории сайта, lookalike
 
 3. **Копирайтинг объявлений**
-   - Формулы (AIDA, PAS, 4U)
-   - Заголовки (до 30 символов Яндекс, 30 chars Google)
-   - Описания (до 81 символа Яндекс, 90 chars Google)
-   - Call-to-action (CTA)
-   - Уникальное торговое предложение (УТП)
-
-4. **Конверсионные цели**
-   - Яндекс.Метрика цели (JavaScript, Composite)
-   - Google Analytics цели (Destination, Event, Duration)
-   - Атрибуция (last click, first click, linear)
-   - Ценность конверсии
+   - Формулы: AIDA, PAS, 4U
+   - Заголовки: длина (30 символов Яндекс, 30 chars Google), динамические вставки
+   - Описания: длина (81 символ Яндекс, 90 chars Google), УТП
+   - Call-to-action: эффективные CTA для медицины
 
 ### 🟢 ОПЦИОНАЛЬНО (можно пропустить или поверхностно)
 
-1. Динамические объявления (DSA)
-2. Shopping кампании (для e-commerce)
-3. Video кампании (YouTube)
-4. App campaigns (мобильные приложения)
+1. **Расширения объявлений**
+   - Sitelinks: дополнительные ссылки
+   - Callouts: преимущества
+   - Structured snippets: характеристики
 
-## Метрики успеха
-
-**Качество:**
-- Campaign creation success rate: > 95%
-- Moderation pass rate: > 90%
-- Compliance violations: 0
-- Ad relevance score: > 7/10
-
-**Производительность:**
-- Time to create campaign: < 5 минут
-- Time to launch: < 10 минут (после модерации)
-- API uptime: > 99%
-- Error rate: < 1%
-
-**Стоимость:**
-- Яндекс.Директ API: бесплатно (в рамках лимитов)
-- Google Ads API: бесплатно (в рамках лимитов)
-- Total cost per campaign: < 100 рублей (только API calls)
+2. **A/B тестирование**
+   - Тестирование заголовков
+   - Тестирование описаний
+   - Тестирование посадочных страниц
 
 ## Дополнительные материалы
 
-**Интервью:** Нет (создано через бриф)  
+**Интервью:** Проведено 2026-05-10  
 **Связанные спецификации:**
-- `KEYWORD_RESEARCH_SPEC.md` — источник ключевых слов
-- `LANDING_CONTENT_SPEC.md` — источник лендингов
-- `BUDGET_OPTIMIZER_SPEC.md` (TODO) — оптимизация бюджета
-- `PERFORMANCE_MONITOR_SPEC.md` (TODO) — мониторинг результатов
+- Keyword Research Agent (TODO)
+- Landing Content Agent (TODO)
+- Budget Optimizer Agent (TODO)
+- Performance Monitor Agent (TODO)
 
 **TODO из других агентов:**
-- Keyword Research Agent: "Campaign Manager должен использовать кластеры ключевых слов"
-- Landing Content Agent: "Campaign Manager должен проверять соответствие объявления и лендинга"
+- Keyword Research Agent должен предоставлять метрики (частотность, конкуренция, CPC, intent)
+- Landing Content Agent должен предоставлять URL, заголовки, описания, УТП
 
-## Workflow (детальный)
+## Метрики успеха
 
-```
-1. Получить campaign_brief от Ads Magister
-2. Validate brief (budget, duration, target_audience)
-   ↓
-3. Get keywords from Keyword Research Agent
-   ↓
-4. Group keywords by intent/service (ad groups)
-   ↓
-5. Generate ad copy for each ad group
-   ↓
-6. Check compliance (Medical Fact-Checker Agent)
-   ↓
-7. Create campaign structure (Яндекс.Директ API)
-   ↓
-8. Set up conversion goals (Яндекс.Метрика API)
-   ↓
-9. Submit for moderation
-   ↓
-10. Wait for moderation approval
-   ↓
-11. Launch campaign
-   ↓
-12. Send campaign_id + structure to Ads Magister
-```
+**Качество структуры:**
+- Quality Score: 7-10 (цель)
+- Релевантность объявлений: >90%
+- Оптимальная группировка: 10-15 ключевых слов на группу
 
-**Параллелизация:**
-- Шаги 3-4 можно выполнять параллельно (keywords + grouping)
-- Шаги 7-8 можно выполнять параллельно (campaign creation + goals setup)
+**Модерация:**
+- Moderation pass rate: >90%
+- Compliance violations: 0
+- Time to approval: <3 дня
 
-## Примеры использования
-
-**Пример 1: Создание поисковой кампании**
-```python
-result = await campaign_manager_agent.execute({
-    "campaign_brief": {
-        "goal": "leads",
-        "budget": 50000,  # 50,000 рублей
-        "duration": 30,  # 30 дней
-        "target_audience": {
-            "geo": ["Москва", "Санкт-Петербург"],
-            "age": "25-54",
-            "interests": ["здоровье", "медицина"]
-        },
-        "services": ["кардиология консультация", "ЭКГ"]
-    },
-    "landing_pages": ["https://example.com/cardiology"],
-    "brand_guidelines": {...},
-    "compliance_rules": {...}
-})
-
-# result.campaign_id: "12345678"
-# result.campaign_structure: {"ad_groups": [...], "ads": [...], "keywords": [...]}
-# result.moderation_status: "pending"
-# result.launch_status: "scheduled"
-```
-
-**Пример 2: Создание ретаргетинговой кампании**
-```python
-result = await campaign_manager_agent.execute({
-    "campaign_brief": {
-        "goal": "conversions",
-        "budget": 30000,
-        "duration": 14,
-        "target_audience": {
-            "retargeting": "site_visitors_30_days",
-            "geo": ["Россия"]
-        },
-        "services": ["кардиология консультация"]
-    },
-    "landing_pages": ["https://example.com/cardiology-promo"],
-    "brand_guidelines": {...},
-    "compliance_rules": {...}
-})
-
-# result.campaign_id: "87654321"
-# result.campaign_structure: {"ad_groups": [...], "ads": [...], "targeting": {...}}
-# result.moderation_status: "approved"
-# result.launch_status: "active"
-```
-
----
-
-**Автор:** Mikhail Eliseev (via meAI Architect)  
-**Статус:** ✅ Готов для deep-research
+**Эффективность:**
+- Campaign creation time: <30 минут (качество важнее скорости)
+- Cost per campaign: <500 рублей (с учётом всех платформ)

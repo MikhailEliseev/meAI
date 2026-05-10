@@ -3,47 +3,92 @@
 **Дата:** 2026-05-10  
 **Magister:** Ads Magister  
 **Приоритет:** P1  
-**Статус:** Ready
+**Статус:** Ready for Implementation
 
 ---
 
 ## 🎯 РОЛЬ И НАЗНАЧЕНИЕ
 
 ### Основная роль:
-Campaign Manager Agent — автоматизированный менеджер рекламных кампаний для медицинского маркетинга. Создаёт, запускает и управляет кампаниями в Яндекс.Директ и Google Ads, обеспечивая соответствие медицинским требованиям (152-ФЗ, Google Healthcare policy) и оптимальное распределение бюджета.
+Campaign Manager Agent — автоматизированный менеджер рекламных кампаний для медицинского маркетинга с фокусом на **оптимальную структуру кампаний** для максимального Quality Score. Создаёт кампании на 5 платформах (Яндекс.Директ, VK Ads, myTarget, Telegram Ads, Дзен) с автоматической compliance validation и полным циклом модерации.
+
+**Ключевой принцип:** Quality over Speed — качество структуры кампании важнее скорости создания.
 
 ### Что делает:
-- ✅ Создаёт рекламные кампании через API (Яндекс.Директ v5, Google Ads)
-- ✅ Валидирует compliance (152-ФЗ, Google Healthcare policy) перед запуском
-- ✅ Группирует ключевые слова в ad groups (10-15 keywords per group)
-- ✅ Генерирует compliant ad copy с обязательными disclaimers
-- ✅ Настраивает bidding strategies (Manual CPC, Target CPA, Maximize Conversions)
-- ✅ Мониторит moderation status и обрабатывает rejections
-- ✅ Связывает conversion goals (Яндекс.Метрика, Google Analytics)
+- ✅ Создаёт оптимальную структуру кампаний (Campaign → AdGroup → Ad → Keyword)
+- ✅ Группирует ключевые слова по intent и услуге (10-15 keywords per ad group)
+- ✅ Обеспечивает Quality Score 7-10 через релевантность объявлений
+- ✅ Автоматически валидирует и корректирует compliance (152-ФЗ РФ)
+- ✅ Мониторит модерацию (каждые 15 минут, timeout 1-3 дня)
+- ✅ Обрабатывает отклонения модерации (анализ → исправление → повторная отправка)
+- ✅ Поддерживает 5 платформ с приоритетами (P0: Яндекс.Директ, P1: VK Ads, P2: остальные)
 
 ### Что НЕ делает:
 - ❌ Keyword research (делает Keyword Research Agent)
 - ❌ Landing page creation (делает Landing Content Agent)
 - ❌ Budget optimization (делает Budget Optimizer Agent)
 - ❌ Performance monitoring (делает Performance Monitor Agent)
-- ❌ Medical fact-checking (делает Medical Fact-Checker Agent)
 
 ### Место в иерархии:
 ```
 Ads Magister
     ↓
-Ads Orchestrator
-    ↓
 Campaign Manager Agent ← вы здесь
+    ↓
+[Keyword Research Agent, Landing Content Agent] → входные данные
+[Budget Optimizer Agent, Performance Monitor Agent] → выходные данные
 ```
+
+### Уникальная ценность:
+- **Оптимальная структура:** 10-15 keywords per ad group для Quality Score 7-10
+- **Compliance automation:** Автоматическая валидация + коррекция 152-ФЗ
+- **Полный цикл модерации:** Мониторинг каждые 15 минут + автообработка отклонений
+- **Multi-platform:** 5 платформ с единым интерфейсом
 
 ---
 
 ## 📥 ВХОДНЫЕ ДАННЫЕ
 
-### Получает от Orchestrator:
+### Получает от других агентов:
 
-**Формат события:**
+**От Keyword Research Agent:**
+```json
+{
+  "keywords": [
+    {
+      "keyword": "лечение зубов москва",
+      "frequency": 1500,
+      "competition": "medium",
+      "cpc": 120,
+      "intent": "transactional"
+    },
+    {
+      "keyword": "стоматология цены",
+      "frequency": 800,
+      "competition": "high",
+      "cpc": 150,
+      "intent": "commercial"
+    }
+  ]
+}
+```
+
+**От Landing Content Agent:**
+```json
+{
+  "landing_pages": [
+    {
+      "url": "https://example.com/services/teeth-treatment",
+      "title": "Лечение зубов в Москве",
+      "description": "Профессиональное лечение зубов без боли",
+      "usp": "Гарантия 2 года, современное оборудование",
+      "license": "Лицензия №ЛО-77-01-012345"
+    }
+  ]
+}
+```
+
+**Формат события (Event Bus):**
 ```json
 {
   "event_type": "subagent.task.assigned",
@@ -55,51 +100,43 @@ Campaign Manager Agent ← вы здесь
       "goal": "leads",
       "budget": 50000,
       "duration": 30,
+      "platforms": ["yandex_direct", "vk_ads"],
       "target_audience": {
         "geo": ["Москва", "Санкт-Петербург"],
         "age": "25-54",
         "interests": ["здоровье", "медицина"]
       },
-      "services": ["кардиология консультация", "ЭКГ"]
+      "services": ["лечение зубов", "имплантация"]
     },
-    "keywords": [
-      {"keyword": "кардиолог консультация", "intent": "informational", "volume": 1200},
-      {"keyword": "кардиолог запись", "intent": "transactional", "volume": 800}
-    ],
-    "landing_pages": ["https://example.com/cardiology"],
-    "brand_guidelines": {
-      "tone": "professional",
-      "disclaimers": ["Лицензия №ЛО-77-01-012345", "Имеются противопоказания"]
-    },
+    "keywords": [...],
+    "landing_pages": [...],
     "compliance_rules": {
-      "prohibited_terms": ["гарантируем", "лучший", "100%"],
-      "mandatory_disclaimers": true
+      "prohibited_terms": ["гарантируем", "лучший", "100%", "излечение"],
+      "mandatory_disclaimers": ["Имеются противопоказания", "Лицензия №..."]
     }
   }
 }
 ```
 
 **Обязательные параметры:**
-- `campaign_brief` (object) - Бриф кампании от Ads Magister
-  - `goal` (string) - Цель: "leads", "traffic", "brand_awareness"
-  - `budget` (float) - Бюджет в рублях
-  - `duration` (int) - Длительность в днях
-  - `target_audience` (object) - Целевая аудитория (geo, age, interests)
-  - `services` (array) - Услуги для продвижения
-- `keywords` (array) - Ключевые слова от Keyword Research Agent
-- `landing_pages` (array) - URL лендингов от Landing Content Agent
+- `campaign_brief.goal` (string) - Цель: "leads", "traffic", "brand_awareness"
+- `campaign_brief.budget` (float) - Бюджет в рублях (≥1,000 RUB/day)
+- `campaign_brief.duration` (int) - Длительность в днях (≥30 для learning period)
+- `campaign_brief.platforms` (array) - Платформы: ["yandex_direct", "vk_ads", "mytarget", "telegram_ads", "dzen"]
+- `keywords` (array) - Ключевые слова с метриками (50-200 recommended)
+- `landing_pages` (array) - URL посадочных страниц
 
 **Опциональные параметры:**
-- `brand_guidelines` (object) - Бренд-гайды (tone, disclaimers)
-- `compliance_rules` (object) - Правила compliance (prohibited_terms, mandatory_disclaimers)
+- `compliance_rules` (object) - Правила compliance (по умолчанию: 152-ФЗ РФ)
+- `bidding_strategy` (string) - Стратегия ставок (по умолчанию: "manual_cpc")
 
 ---
 
 ## 📤 ВЫХОДНЫЕ ДАННЫЕ
 
-### Отправляет Orchestrator:
+### Отправляет через Event Bus:
 
-**Формат события:**
+**Формат события (успех):**
 ```json
 {
   "event_type": "subagent.task.completed",
@@ -109,48 +146,65 @@ Campaign Manager Agent ← вы здесь
   "payload": {
     "status": "success",
     "result": {
-      "campaign_id": "12345678",
+      "campaign_id": "12345",
       "platform": "yandex_direct",
-      "campaign_structure": {
-        "ad_groups": [
-          {
-            "id": "111",
-            "name": "Cardiology Consultation - Informational",
-            "keywords": ["кардиолог консультация", "кардиолог прием"],
-            "ads": [{"id": "222", "headline": "Кардиолог в Москве", "description": "..."}]
-          }
-        ]
+      "status": "moderation_pending",
+      "structure": {
+        "ad_groups": 5,
+        "ads": 15,
+        "keywords": 75
       },
+      "quality_score": 8.5,
+      "compliance_status": "validated",
       "moderation_status": "pending",
-      "launch_status": "scheduled",
-      "warnings": []
+      "campaign_url": "https://direct.yandex.ru/campaigns/12345"
     },
     "metrics": {
-      "execution_time_ms": 4500,
-      "ad_groups_created": 3,
-      "ads_created": 6,
-      "keywords_added": 45,
-      "compliance_score": 95
-    },
-    "errors": []
+      "execution_time_ms": 25000,
+      "ad_groups_created": 5,
+      "ads_created": 15,
+      "keywords_added": 75,
+      "compliance_score": 95,
+      "quality_score_avg": 8.5
+    }
+  }
+}
+```
+
+**Формат события (ошибка):**
+```json
+{
+  "event_type": "subagent.task.failed",
+  "correlation_id": "uuid",
+  "task_id": "uuid",
+  "subagent_id": "campaign-manager",
+  "payload": {
+    "status": "failure",
+    "error": {
+      "code": "COMPLIANCE_VIOLATION",
+      "message": "Ad copy contains prohibited term: 'гарантируем'",
+      "details": {
+        "violations": [
+          {
+            "type": "prohibited_term",
+            "term": "гарантируем",
+            "location": "ad_group_1.ad_2.headline"
+          }
+        ]
+      }
+    }
   }
 }
 ```
 
 **Структура результата:**
 - `campaign_id` (string) - ID созданной кампании
-- `platform` (string) - Платформа: "yandex_direct" или "google_ads"
-- `campaign_structure` (object) - Структура кампании (ad_groups, ads, keywords)
+- `platform` (string) - Платформа
+- `status` (string) - Статус: "moderation_pending", "active", "paused"
+- `structure` (object) - Структура кампании (ad_groups, ads, keywords count)
+- `quality_score` (float) - Средний Quality Score (target: 7-10)
+- `compliance_status` (string) - Статус compliance: "validated", "violations_found"
 - `moderation_status` (string) - Статус модерации: "pending", "approved", "rejected"
-- `launch_status` (string) - Статус запуска: "scheduled", "active", "paused"
-- `warnings` (array) - Предупреждения (если есть)
-
-**Метрики:**
-- `execution_time_ms` - Время выполнения (target: <300,000 ms = 5 min)
-- `ad_groups_created` - Количество созданных ad groups
-- `ads_created` - Количество созданных объявлений
-- `keywords_added` - Количество добавленных ключевых слов
-- `compliance_score` - Оценка compliance (0-100, target: ≥90)
 
 ---
 
@@ -159,10 +213,10 @@ Campaign Manager Agent ← вы здесь
 ### Шаг 1: Валидация входных данных (30 сек)
 
 **Действия:**
-1. Проверить наличие обязательных параметров (campaign_brief, keywords, landing_pages)
+1. Проверить наличие обязательных параметров
 2. Валидировать budget (≥1,000 RUB/day)
 3. Валидировать duration (≥30 days для learning period)
-4. Валидировать keywords (50-200 keywords recommended)
+4. Валидировать keywords (50-200 recommended)
 5. Проверить доступность landing pages (HTTP 200)
 
 **Критерии успеха:**
@@ -170,777 +224,735 @@ Campaign Manager Agent ← вы здесь
 - Budget ≥1,000 RUB/day
 - Duration ≥30 days
 - Keywords: 50-200 штук
-- Landing pages доступны (HTTP 200)
+- Landing pages доступны
 
 **Обработка ошибок:**
 - Если validation failed → вернуть `status: "failure"` с описанием ошибок
-- Если warnings (например, budget <1,000 RUB/day) → продолжить с warnings
+- Если warnings → продолжить с warnings в результате
 
 
-### Шаг 2: Compliance validation (60 сек)
+### Шаг 2: Группировка ключевых слов (2 мин)
 
 **Действия:**
-1. Сканировать ad copy на prohibited terms (гарантируем, лучший, 100%, излечение)
-2. Проверить наличие mandatory disclaimers (противопоказания, лицензия)
-3. Валидировать landing pages:
+1. Группировать keywords по intent:
+   - **Informational** (как, что такое, симптомы) → отдельная ad group
+   - **Commercial** (цены, стоимость, отзывы) → отдельная ad group
+   - **Transactional** (запись, консультация, купить) → отдельная ad group
+2. Группировать по услуге (если несколько услуг)
+3. Оптимизировать размер групп: 10-15 keywords per ad group
+4. Назначить match types:
+   - Broad match для discovery (20% keywords)
+   - Phrase match для основного трафика (60% keywords)
+   - Exact match для high-intent (20% keywords)
+
+**Критерии успеха:**
+- Ad groups: 3-10 групп
+- Keywords per ad group: 10-15 (оптимально для Quality Score)
+- Match types распределены: 20% broad, 60% phrase, 20% exact
+
+**Обработка ошибок:**
+- Если keywords <50 → warning "Недостаточно ключевых слов для оптимальной структуры"
+- Если ad groups >10 → warning "Слишком много групп, рекомендуется объединить"
+
+**Пример группировки:**
+```python
+# Ad Group 1: Informational
+keywords = [
+    "кардиолог что лечит",
+    "симптомы сердечной недостаточности",
+    "как проверить сердце"
+]
+
+# Ad Group 2: Commercial
+keywords = [
+    "кардиолог цены москва",
+    "стоимость консультации кардиолога",
+    "кардиолог отзывы"
+]
+
+# Ad Group 3: Transactional
+keywords = [
+    "кардиолог запись онлайн",
+    "записаться к кардиологу москва",
+    "консультация кардиолога"
+]
+```
+
+### Шаг 3: Compliance validation и auto-correction (2 мин)
+
+**Действия:**
+1. Сканировать ad copy на prohibited terms (152-ФЗ РФ):
+   - "гарантируем", "гарантия результата"
+   - "лучший", "самый эффективный"
+   - "100%", "полностью излечим"
+   - "без противопоказаний"
+2. Проверить наличие mandatory disclaimers:
+   - "Имеются противопоказания. Необходима консультация специалиста."
+   - "Лицензия №ЛО-77-01-012345"
+3. **Auto-correction** (если violations found):
+   - Заменить prohibited terms на compliant alternatives
+   - Добавить mandatory disclaimers в description
+4. Валидировать landing pages:
    - Medical license visible (regex: `Лицензия №?[А-Я]{2}-\d{2}-\d{2}-\d{6}`)
    - Contraindications disclaimer present
    - Fast load time (<3 seconds)
-   - Mobile-responsive
-4. Рассчитать compliance score (0-100)
+5. Рассчитать compliance score (0-100)
 
 **Критерии успеха:**
 - Compliance score ≥90
-- No prohibited terms in ad copy
+- No prohibited terms in ad copy (после auto-correction)
 - All mandatory disclaimers present
 - Landing pages compliant
 
 **Обработка ошибок:**
-- Если compliance score <90 → блокировать submission, вернуть violations
-- Если compliance score 90-100 → продолжить с warnings (если есть)
+- Если compliance score <90 после auto-correction → блокировать submission, вернуть violations
+- Если landing page не compliant → warning, но продолжить (ответственность Landing Content Agent)
 
-**Код:**
+**Пример auto-correction:**
 ```python
-def validate_compliance(ad_copy, landing_url):
-    score = 100
-    violations = []
-    
-    # Check prohibited terms
-    prohibited = ["гарантируем", "лучший", "100%", "излечение"]
-    for term in prohibited:
-        if term in ad_copy.lower():
-            score -= 20
-            violations.append(f"Prohibited term: {term}")
-    
-    # Check disclaimer
-    if "противопоказания" not in ad_copy.lower():
-        score -= 10
-        violations.append("Missing contraindications disclaimer")
-    
-    # Check landing page
-    html = fetch_page(landing_url)
-    if not re.search(r"Лицензия №?[А-Я]{2}-\d{2}-\d{2}-\d{6}", html):
-        score -= 30
-        violations.append("Medical license not visible")
-    
-    return {"score": max(0, score), "violations": violations}
+# Before
+headline = "Лучший кардиолог в Москве. Гарантируем результат!"
+
+# After auto-correction
+headline = "Опытный кардиолог в Москве. Современные методы лечения"
+description = "Профессиональная консультация кардиолога. Имеются противопоказания. Необходима консультация специалиста. Лицензия №ЛО-77-01-012345"
 ```
 
-### Шаг 3: Группировка ключевых слов (30 сек)
+### Шаг 4: Генерация ad copy (3 мин)
 
 **Действия:**
-1. Группировать keywords по intent (informational, transactional, emergency)
-2. Создать ad groups (10-15 keywords per group, range: 5-20)
-3. Назначить match types (phrase match по умолчанию)
-4. Добавить negative keywords (free, cheap, DIY, home remedy)
-
-**Критерии успеха:**
-- Ad groups: 10-15 keywords each (optimal)
-- All keywords assigned to ad groups
-- Negative keywords added
-
-**Обработка ошибок:**
-- Если ad group >20 keywords → split into multiple groups
-- Если ad group <5 keywords → merge with similar group
-
-**Код:**
-```python
-def group_keywords(keywords):
-    # Group by intent
-    groups = {
-        "informational": [],
-        "transactional": [],
-        "emergency": []
-    }
-    
-    for kw in keywords:
-        groups[kw["intent"]].append(kw)
-    
-    # Create ad groups (10-15 keywords each)
-    ad_groups = []
-    for intent, kws in groups.items():
-        # Split into chunks of 10-15
-        for i in range(0, len(kws), 12):
-            chunk = kws[i:i+12]
-            ad_groups.append({
-                "name": f"{service} - {intent.capitalize()}",
-                "keywords": chunk,
-                "negative_keywords": ["free", "cheap", "DIY", "home remedy"]
-            })
-    
-    return ad_groups
-```
-
-### Шаг 4: Генерация ad copy (60 сек)
-
-**Действия:**
-1. Для каждого ad group сгенерировать 2-3 объявления
-2. Использовать compliant copywriting formulas (AIDA, PAS adapted)
-3. Соблюдать character limits:
-   - Яндекс: 30 chars headline, 81 chars description
-   - Google: 30 chars headline (×3), 90 chars description (×2)
-4. Добавить mandatory disclaimers
-5. Добавить ad extensions (sitelinks, callouts, structured snippets)
+1. Для каждой ad group создать 2-3 объявления (A/B testing)
+2. Генерировать headlines:
+   - Включить keyword из группы (для релевантности)
+   - Длина: 30 символов (Яндекс.Директ), 30 chars (Google Ads)
+   - Использовать dynamic keyword insertion: `{KeyWord}`
+3. Генерировать descriptions:
+   - Включить УТП из landing page
+   - Добавить mandatory disclaimers
+   - Длина: 81 символ (Яндекс.Директ), 90 chars (Google Ads)
+4. Добавить call-to-action:
+   - "Записаться онлайн", "Получить консультацию", "Узнать цены"
 
 **Критерии успеха:**
 - 2-3 ads per ad group
-- All ads compliant (no prohibited terms)
-- Character limits respected
-- Disclaimers present
+- Headlines содержат keywords
+- Descriptions содержат УТП + disclaimers
+- CTA присутствует
 
 **Обработка ошибок:**
-- Если ad copy exceeds character limit → truncate or rephrase
-- Если prohibited term detected → remove and regenerate
+- Если headline >30 символов → обрезать и добавить "..."
+- Если description >81 символ → обрезать disclaimers до минимума
 
 **Пример ad copy:**
+```json
+{
+  "ad_group": "Cardiology Consultation - Transactional",
+  "ads": [
+    {
+      "headline": "Кардиолог в Москве - Запись",
+      "description": "Консультация опытного кардиолога. Современное оборудование. Имеются противопоказания. Лицензия №ЛО-77-01-012345",
+      "cta": "Записаться онлайн",
+      "url": "https://example.com/cardiology"
+    },
+    {
+      "headline": "{KeyWord} - Консультация",
+      "description": "Профессиональная диагностика сердца. Без очередей. Имеются противопоказания. Лицензия №ЛО-77-01-012345",
+      "cta": "Получить консультацию",
+      "url": "https://example.com/cardiology"
+    }
+  ]
+}
 ```
-Headline: "Кардиолог в Москве" (19 chars)
-Description: "Консультация опытных кардиологов. ЭКГ, нагрузочные тесты. Лицензия ЛО-77-01-012345. Имеются противопоказания." (81 chars)
 
-Sitelinks:
-- "Записаться онлайн" → /booking
-- "Наши врачи" → /doctors
-- "Цены" → /pricing
-
-Callouts:
-- "Лицензированный медцентр"
-- "Опыт 20+ лет"
-- "Принимаем страховки"
-```
-
-### Шаг 5: Создание кампании через API (90 сек)
+### Шаг 5: Создание кампании через API (5 мин)
 
 **Действия:**
-1. Authenticate (Яндекс.Директ OAuth или Google Ads service account)
-2. Create campaign (TEXT_CAMPAIGN для Яндекс, Search для Google)
-3. Set bidding strategy (Manual CPC для новых кампаний)
-4. Set budget and schedule
-5. Link Метрика/Analytics counter
-6. Create ad groups (batch operation, max 10 per batch)
-7. Create ads (batch operation)
-8. Add keywords (batch operation)
-9. Add ad extensions
+1. Выбрать платформу из `campaign_brief.platforms`
+2. Получить credentials из storage (OAuth2 tokens)
+3. Создать campaign через API:
+   - **Яндекс.Директ API v5:** `campaigns.add` (max 5 concurrent requests, batch max 10 campaigns)
+   - **VK Ads API:** `ads.createCampaigns`
+   - **myTarget API:** `campaigns.create` (rate limit: 1-200 req/hour)
+   - **Telegram Ads API:** `createCampaign`
+   - **Дзен API:** `campaigns.create`
+4. Создать ad groups через API
+5. Создать ads через API
+6. Добавить keywords через API
+7. Настроить bidding strategy:
+   - **Manual CPC** (по умолчанию для новых кампаний)
+   - **Target CPA** (если ≥15 conversions за последние 30 дней)
+   - **Maximize Conversions** (если budget позволяет)
+8. Связать conversion goals (Яндекс.Метрика, Google Analytics)
 
 **Критерии успеха:**
-- Campaign created (campaign_id returned)
-- All ad groups created
-- All ads created
-- All keywords added
-- API error rate <1%
+- Campaign created (HTTP 200, campaign_id returned)
+- Ad groups created (HTTP 200)
+- Ads created (HTTP 200)
+- Keywords added (HTTP 200)
+- Bidding strategy set
+- Conversion goals linked
 
 **Обработка ошибок:**
-- HTTP 429 (rate limit) → exponential backoff (1s, 2s, 4s, 8s)
-- HTTP 500 (server error) → retry up to 3 times
-- HTTP 400 (client error) → log and return failure
+- Если API error → retry 3 times с exponential backoff (1s, 2s, 4s)
+- Если rate limit → wait и retry
+- Если authentication error → вернуть `status: "failure"` с описанием
 
-**Код (Яндекс.Директ):**
+**Пример API call (Яндекс.Директ):**
 ```python
-async def create_campaign_yandex(campaign_data):
-    # Step 1: Create campaign
-    campaign = {
-        "Name": campaign_data["name"],
-        "StartDate": campaign_data["start_date"],
-        "Type": "TEXT_CAMPAIGN",
-        "TextCampaign": {
-            "BiddingStrategy": {
-                "Search": {"BiddingStrategyType": "HIGHEST_POSITION"},
-                "Network": {"BiddingStrategyType": "SERVING_OFF"}
-            },
-            "Settings": [
-                {"Option": "ADD_METRICA_TAG", "Value": "YES"},
-                {"Option": "METRICA_COUNTER_ID", "Value": str(metrika_id)}
-            ]
-        }
-    }
-    
-    response = await api.call("campaigns", "add", {"Campaigns": [campaign]})
-    campaign_id = response["AddResults"][0]["Id"]
-    
-    # Step 2: Create ad groups (batch)
-    ad_groups = [
-        {
-            "Name": group["name"],
-            "CampaignId": campaign_id,
-            "RegionIds": [213],  # Moscow
-            "NegativeKeywords": group["negative_keywords"]
-        }
-        for group in campaign_data["ad_groups"]
-    ]
-    
-    response = await api.call("adgroups", "add", {"AdGroups": ad_groups})
-    ad_group_ids = [r["Id"] for r in response["AddResults"]]
-    
-    # Step 3: Create ads (batch)
-    ads = []
-    for i, group in enumerate(campaign_data["ad_groups"]):
-        for ad in group["ads"]:
-            ads.append({
-                "AdGroupId": ad_group_ids[i],
-                "TextAd": {
-                    "Title": ad["headline"],
-                    "Text": ad["description"],
-                    "Href": campaign_data["landing_url"],
-                    "Mobile": "NO"
+import requests
+
+headers = {
+    "Authorization": f"Bearer {access_token}",
+    "Accept-Language": "ru",
+    "Content-Type": "application/json; charset=utf-8",
+    "Client-Login": client_login  # для агентских аккаунтов
+}
+
+body = {
+    "method": "add",
+    "params": {
+        "Campaigns": [
+            {
+                "Name": "Cardiology - Moscow",
+                "StartDate": "2026-05-11",
+                "Type": "TEXT_CAMPAIGN",
+                "TextCampaign": {
+                    "BiddingStrategy": {
+                        "Search": {
+                            "BiddingStrategyType": "HIGHEST_POSITION"
+                        },
+                        "Network": {
+                            "BiddingStrategyType": "SERVING_OFF"
+                        }
+                    },
+                    "Settings": [
+                        {
+                            "Option": "ADD_METRICA_TAG",
+                            "Value": "YES"
+                        }
+                    ]
                 }
-            })
-    
-    response = await api.call("ads", "add", {"Ads": ads})
-    
-    # Step 4: Add keywords (batch)
-    keywords = []
-    for i, group in enumerate(campaign_data["ad_groups"]):
-        for kw in group["keywords"]:
-            keywords.append({
-                "AdGroupId": ad_group_ids[i],
-                "Keyword": kw["keyword"],
-                "Bid": 50000000,  # 50 RUB in micros
-                "StrategyPriority": "NORMAL"
-            })
-    
-    response = await api.call("keywords", "add", {"Keywords": keywords})
-    
-    return campaign_id
+            }
+        ]
+    }
+}
+
+response = requests.post(
+    "https://api.direct.yandex.com/json/v5/campaigns",
+    json=body,
+    headers=headers,
+    timeout=30
+)
 ```
 
 ### Шаг 6: Мониторинг модерации (до 3 дней)
 
 **Действия:**
-1. Poll moderation status каждые 15 минут (во время business hours)
-2. Отслеживать статус: DRAFT → MODERATION → ACCEPTED/REJECTED
-3. Если REJECTED → получить rejection reasons
-4. Если REJECTED → попытаться auto-fix (remove prohibited terms, add disclaimers)
-5. Если auto-fix невозможен → alert human operator
+1. Запустить мониторинг moderation status (каждые 15 минут)
+2. Проверять статус через API:
+   - **Яндекс.Директ:** `campaigns.get` → `State`, `Status`
+   - **VK Ads:** `ads.getCampaigns` → `status`
+   - **myTarget:** `campaigns.get` → `status`
+3. Обрабатывать статусы:
+   - **pending** → продолжить мониторинг
+   - **approved** → вернуть `status: "success"`, `moderation_status: "approved"`
+   - **rejected** → перейти к Шагу 7 (обработка отклонений)
+4. Timeout: 3 дня (72 часа)
+   - Если moderation pending >3 дней → вернуть warning, но считать успехом
 
 **Критерии успеха:**
-- Moderation status = ACCEPTED
-- Moderation pass rate >90%
-- Average approval time <3 days
+- Moderation approved в течение 3 дней
+- Или timeout 3 дня (считается успехом с warning)
 
 **Обработка ошибок:**
-- Если REJECTED и auto-fix failed → вернуть `status: "partial_success"` с rejection reasons
-- Если moderation timeout (>5 days) → alert human operator
+- Если moderation rejected → перейти к Шагу 7
 
-**Код:**
+**Пример мониторинга:**
 ```python
-async def monitor_moderation(campaign_id):
-    max_attempts = 288  # 3 days × 24 hours × 4 checks/hour
-    attempt = 0
+import asyncio
+
+async def monitor_moderation(campaign_id: str, platform: str, timeout_hours: int = 72):
+    start_time = time.time()
+    check_interval = 15 * 60  # 15 минут
     
-    while attempt < max_attempts:
-        status = await api.call("campaigns", "get", {
-            "SelectionCriteria": {"Ids": [campaign_id]},
-            "FieldNames": ["Id", "Status", "State"]
-        })
+    while True:
+        status = await check_moderation_status(campaign_id, platform)
         
-        campaign_status = status["Campaigns"][0]["Status"]
+        if status == "approved":
+            return {"status": "approved", "time_elapsed": time.time() - start_time}
         
-        if campaign_status == "ACCEPTED":
-            return {"status": "approved", "attempts": attempt}
-        elif campaign_status == "REJECTED":
-            reasons = await get_rejection_reasons(campaign_id)
-            # Try auto-fix
-            if can_auto_fix(reasons):
-                await fix_and_resubmit(campaign_id, reasons)
-            else:
-                return {"status": "rejected", "reasons": reasons}
+        if status == "rejected":
+            return {"status": "rejected", "time_elapsed": time.time() - start_time}
         
-        # Wait 15 minutes
-        await asyncio.sleep(900)
-        attempt += 1
-    
-    return {"status": "timeout", "attempts": attempt}
+        if time.time() - start_time > timeout_hours * 3600:
+            return {"status": "timeout", "time_elapsed": time.time() - start_time}
+        
+        await asyncio.sleep(check_interval)
 ```
 
-### Шаг 7: Запуск кампании (10 сек)
+### Шаг 7: Обработка отклонений модерации (30 мин)
 
 **Действия:**
-1. После moderation approval → set campaign status to ACTIVE
-2. Verify campaign is running (impressions >0 within 1 hour)
-3. Monitor first 24 hours (CTR, CPC, conversions)
+1. Получить rejection reasons через API
+2. Анализировать причины:
+   - **Compliance violations** (152-ФЗ) → исправить ad copy
+   - **Policy violations** (платформа) → исправить согласно policy
+   - **Technical issues** (broken links, etc.) → исправить технические проблемы
+3. Исправить нарушения:
+   - Обновить ad copy через API
+   - Обновить landing page URL (если нужно)
+   - Обновить keywords (если нужно)
+4. Повторно отправить на модерацию
+5. Вернуться к Шагу 6 (мониторинг)
 
 **Критерии успеха:**
-- Campaign status = ACTIVE
-- Impressions >0 within 1 hour
-- No critical errors
+- Rejection reasons проанализированы
+- Нарушения исправлены
+- Кампания повторно отправлена на модерацию
 
 **Обработка ошибок:**
-- Если impressions = 0 after 1 hour → increase bids by 20-30%
-- Если CTR <1% after 24 hours → review ad copy
+- Если rejection reasons неясны → вернуть `status: "failure"` с описанием
+- Если исправление невозможно → вернуть `status: "failure"` с рекомендациями
+
+**Пример обработки rejection:**
+```python
+rejection_reasons = [
+    {
+        "type": "PROHIBITED_CONTENT",
+        "message": "Ad contains prohibited medical claim",
+        "location": "ad_group_1.ad_2.description"
+    }
+]
+
+# Исправление
+for reason in rejection_reasons:
+    if reason["type"] == "PROHIBITED_CONTENT":
+        # Удалить prohibited content
+        ad_copy = remove_prohibited_terms(ad_copy)
+        # Добавить disclaimers
+        ad_copy = add_mandatory_disclaimers(ad_copy)
+        # Обновить через API
+        await update_ad(ad_id, ad_copy)
+```
+
+---
+
+## 🔗 ИНТЕГРАЦИИ
+
+### Внешние API
+
+**1. Яндекс.Директ API v5 (P0 - основная платформа)**
+- **Endpoint:** `https://api.direct.yandex.com/json/v5/`
+- **Authentication:** OAuth2 (Authorization Code Grant)
+- **Rate limits:** Max 5 concurrent requests, batch max 10 campaigns
+- **Methods:**
+  - `campaigns.add` - Создание кампании
+  - `adgroups.add` - Создание групп объявлений
+  - `ads.add` - Создание объявлений
+  - `keywords.add` - Добавление ключевых слов
+  - `campaigns.get` - Получение статуса модерации
+- **Pricing:** Бесплатно (платформа берёт комиссию с рекламного бюджета)
+- **Documentation:** https://yandex.ru/dev/direct/doc/dg/concepts/about.html
+
+**2. VK Ads API (P1 - полная поддержка)**
+- **Endpoint:** `https://ads.vk.com/api/v2/`
+- **Authentication:** OAuth2 (Client Credentials Grant)
+- **Rate limits:** 3 requests/second
+- **Methods:**
+  - `ads.createCampaigns` - Создание кампании
+  - `ads.createAds` - Создание объявлений
+  - `ads.getCampaigns` - Получение статуса
+- **Pricing:** Бесплатно
+- **Documentation:** https://dev.vk.com/ru/api/ads
+
+**3. myTarget API (P2 - базовая поддержка)**
+- **Endpoint:** `https://target.my.com/api/v2/`
+- **Authentication:** OAuth2
+- **Rate limits:** 1-200 requests/hour (зависит от метода)
+- **Methods:**
+  - `campaigns.create` - Создание кампании
+  - `banners.create` - Создание баннеров
+- **Pricing:** Бесплатно
+- **Documentation:** https://target.my.com/doc/api/
+
+**4. Telegram Ads API (P2 - базовая поддержка)**
+- **Endpoint:** `https://ads.telegram.org/api/`
+- **Authentication:** API Token
+- **Rate limits:** 100 requests/minute
+- **Methods:**
+  - `createCampaign` - Создание кампании
+  - `createAd` - Создание объявления
+- **Pricing:** Бесплатно
+- **Documentation:** https://core.telegram.org/ads
+
+**5. Дзен API (P2 - базовая поддержка)**
+- **Endpoint:** `https://dzen.ru/api/v1/`
+- **Authentication:** OAuth2
+- **Rate limits:** 10 requests/second
+- **Methods:**
+  - `campaigns.create` - Создание кампании
+  - `ads.create` - Создание объявления
+- **Pricing:** Бесплатно
+- **Documentation:** https://yandex.ru/dev/zen/doc/
+
+### Связанные агенты
+
+**Входные данные от:**
+- **Keyword Research Agent** → keywords с метриками (frequency, competition, cpc, intent)
+- **Landing Content Agent** → landing pages с URL, title, description, УТП, license
+
+**Выходные данные для:**
+- **Budget Optimizer Agent** → campaign_id, platform, structure для оптимизации бюджета
+- **Performance Monitor Agent** → campaign_id, platform для мониторинга метрик
 
 ---
 
 ## 📊 МЕТРИКИ УСПЕХА
 
-### Качество (Quality Metrics)
+### Качество структуры:
+- **Quality Score:** 7-10 (target: ≥8.0)
+  - Expected CTR: 40% веса
+  - Ad Relevance: 30% веса
+  - Landing Page Experience: 30% веса
+- **Релевантность объявлений:** >90% (keywords в headlines)
+- **Оптимальная группировка:** 10-15 keywords per ad group
 
-**Campaign Creation Success Rate:**
-- **Target:** >95%
-- **Calculation:** (Successful creations / Total attempts) × 100
-- **Measurement:** Track per platform (Яндекс, Google)
-- **Alert:** If <90%
+### Модерация:
+- **Moderation pass rate:** >90% (target: ≥95%)
+- **Compliance violations:** 0 (после auto-correction)
+- **Time to approval:** <3 дня (72 часа)
+- **Rejection rate:** <10% (target: ≤5%)
 
-**Moderation Pass Rate:**
-- **Target:** >90%
-- **Calculation:** (Approved campaigns / Total submitted) × 100
-- **Measurement:** Track per platform and rejection reason
-- **Alert:** If <85%
+### Эффективность:
+- **Campaign creation time:** <30 минут (качество важнее скорости)
+- **Cost per campaign:** <500 рублей (с учётом всех платформ)
+- **API success rate:** >95% (retry на ошибках)
 
-**Compliance Violations:**
-- **Target:** 0
-- **Measurement:** Account warnings, suspensions, policy violations
-- **Alert:** Immediate on any violation
-
-**Ad Relevance Score:**
-- **Target:** >7/10 (Google Quality Score)
-- **Measurement:** Track per ad group
-- **Alert:** If <5/10
-
-### Производительность (Performance Metrics)
-
-**Time to Create Campaign:**
-- **Target:** <5 minutes
-- **Measurement:** Time from task received to campaign_id returned
-- **Breakdown:**
-  - Validation: 30s
-  - Compliance: 60s
-  - Grouping: 30s
-  - Ad copy: 60s
-  - API calls: 90s
-  - Total: ~4.5 minutes
-- **Alert:** If >10 minutes
-
-**Time to Launch:**
-- **Target:** <10 minutes (after moderation)
-- **Measurement:** Time from moderation approval to campaign active
-- **Alert:** If >30 minutes
-
-**API Uptime:**
-- **Target:** >99%
-- **Measurement:** (Successful API calls / Total API calls) × 100
-- **Alert:** If <98%
-
-**API Error Rate:**
-- **Target:** <1%
-- **Measurement:** (API errors / Total API calls) × 100
-- **Breakdown:** Track by error type (429, 500, 400)
-- **Alert:** If >2%
-
-### Стоимость (Cost Metrics)
-
-**API Cost per Campaign:**
-- **Target:** <100 RUB
-- **Actual:** ~0 RUB (Яндекс and Google APIs free within limits)
-- **Measurement:** Track API usage against limits
-
-**Infrastructure Cost:**
-- **Target:** <500 RUB/month per 100 campaigns
-- **Actual:** ~50-100 RUB/month (server, database)
+### Бенчмарки (из исследования):
+- **Baseline rejection rate:** 15-22% (без pre-flight auditing)
+- **Optimized rejection rate:** 4-6% (с pre-flight auditing)
+- **Quality Score improvement:** +2-3 points (с оптимальной структурой)
 
 ---
 
-## 🔗 КОММУНИКАЦИЯ С ДРУГИМИ АГЕНТАМИ
-
-### Получает данные от:
-
-**1. Keyword Research Agent:**
-- **Что получает:** Список ключевых слов с intent и volume
-- **Формат:** `[{"keyword": "...", "intent": "...", "volume": 1200}]`
-- **Когда:** Перед созданием кампании
-- **Обработка:** Группирует keywords в ad groups (10-15 per group)
-
-**2. Landing Content Agent:**
-- **Что получает:** URL лендингов
-- **Формат:** `["https://example.com/cardiology"]`
-- **Когда:** Перед созданием кампании
-- **Обработка:** Валидирует landing pages (license, disclaimer, load time)
-
-**3. Medical Fact-Checker Agent:**
-- **Что получает:** Validation результаты для ad copy
-- **Формат:** `{"compliant": true, "violations": []}`
-- **Когда:** После генерации ad copy, перед submission
-- **Обработка:** Блокирует submission если violations detected
-
-### Отправляет данные:
-
-**1. Budget Optimizer Agent:**
-- **Что отправляет:** Campaign structure и initial bids
-- **Формат:** `{"campaign_id": "...", "ad_groups": [...], "initial_bids": {...}}`
-- **Когда:** После создания кампании
-- **Цель:** Для оптимизации бюджета и bids
-
-**2. Performance Monitor Agent:**
-- **Что отправляет:** Campaign ID для мониторинга
-- **Формат:** `{"campaign_id": "...", "platform": "yandex_direct"}`
-- **Когда:** После запуска кампании
-- **Цель:** Для отслеживания performance (CTR, CPA, ROAS)
-
-**3. Ads Orchestrator:**
-- **Что отправляет:** Campaign creation result
-- **Формат:** См. секцию "Выходные данные"
-- **Когда:** После завершения задачи (success/failure)
-
----
-
-## ⚠️ ОБРАБОТКА ОШИБОК
+## 🔧 ОБРАБОТКА ОШИБОК
 
 ### Типы ошибок:
 
-**1. Validation Errors (Client-side):**
-- **Причины:** Missing parameters, invalid budget, invalid duration
-- **Обработка:** Return `status: "failure"` с описанием ошибок
-- **Retry:** No (требуется исправление входных данных)
-- **Alert:** Log warning, не требует human intervention
+**1. Validation errors (Шаг 1)**
+- **Причина:** Некорректные входные данные
+- **Обработка:** Вернуть `status: "failure"` с описанием ошибок
+- **Retry:** Нет (требуется исправление входных данных)
 
-**2. Compliance Errors:**
-- **Причины:** Prohibited terms, missing disclaimers, landing page issues
-- **Обработка:** Block submission, return violations
-- **Retry:** After auto-fix (remove prohibited terms, add disclaimers)
-- **Alert:** If auto-fix failed → alert human operator
+**2. Compliance violations (Шаг 3)**
+- **Причина:** Prohibited terms в ad copy
+- **Обработка:** Auto-correction → если не помогло, вернуть `status: "failure"`
+- **Retry:** Нет (требуется ручное исправление)
 
-**3. API Errors:**
+**3. API errors (Шаг 5)**
+- **Причина:** API недоступен, rate limit, authentication error
+- **Обработка:** Retry 3 times с exponential backoff (1s, 2s, 4s)
+- **Retry:** Да (3 попытки)
 
-**HTTP 429 (Rate Limit):**
-- **Причина:** Exceeding 5 concurrent requests (Яндекс)
-- **Обработка:** Exponential backoff (1s, 2s, 4s, 8s)
-- **Retry:** Yes, up to 5 attempts
-- **Alert:** If >5 rate limit errors in 1 hour
+**4. Moderation rejection (Шаг 7)**
+- **Причина:** Policy violations, compliance violations
+- **Обработка:** Анализ причин → исправление → повторная отправка
+- **Retry:** Да (до 3 раз)
 
-**HTTP 500 (Server Error):**
-- **Причина:** Platform server issues
-- **Обработка:** Retry up to 3 times with 5-second delay
-- **Retry:** Yes, up to 3 attempts
-- **Alert:** If all retries failed
-
-**HTTP 400 (Client Error):**
-- **Причина:** Invalid request (malformed data, missing fields)
-- **Обработка:** Log error details, return failure
-- **Retry:** No (требуется исправление request)
-- **Alert:** Immediate (indicates bug in code)
-
-**4. Moderation Errors:**
-- **Причины:** Prohibited claims, missing license, landing page issues
-- **Обработка:** Try auto-fix (remove terms, add disclaimers), resubmit
-- **Retry:** Yes, up to 2 attempts
-- **Alert:** If auto-fix failed or 2nd rejection → alert human operator
-
-### Retry Strategy:
+### Retry стратегия:
 
 ```python
-async def api_call_with_retry(method, params, max_retries=3):
+import asyncio
+from typing import Callable, Any
+
+async def retry_with_backoff(
+    func: Callable,
+    max_retries: int = 3,
+    initial_delay: float = 1.0,
+    backoff_factor: float = 2.0
+) -> Any:
+    """Retry function with exponential backoff."""
+    delay = initial_delay
+    
     for attempt in range(max_retries):
         try:
-            return await api.call(method, params)
-        except HTTP429Error:
-            # Exponential backoff
-            await asyncio.sleep(2 ** attempt)
-        except HTTP500Error:
-            # Fixed delay
-            await asyncio.sleep(5)
-        except HTTP400Error:
-            # No retry for client errors
-            raise
-    
-    raise MaxRetriesExceededError(f"Failed after {max_retries} attempts")
+            return await func()
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+            
+            await asyncio.sleep(delay)
+            delay *= backoff_factor
+```
+
+### Logging:
+
+```python
+import logging
+
+logger = logging.getLogger("campaign_manager")
+
+# Логировать все ошибки
+logger.error(f"API error: {error_message}", extra={
+    "campaign_id": campaign_id,
+    "platform": platform,
+    "attempt": attempt,
+    "error_code": error_code
+})
+
+# Логировать compliance violations
+logger.warning(f"Compliance violation: {violation}", extra={
+    "ad_group": ad_group_id,
+    "ad": ad_id,
+    "violation_type": violation_type
+})
 ```
 
 ---
 
 ## 🧪 ТЕСТИРОВАНИЕ
 
-### Unit Tests:
+### Unit тесты:
 
-**1. Validation Logic:**
-```python
-def test_validate_campaign_brief():
-    # Valid brief
-    brief = {"goal": "leads", "budget": 50000, "duration": 30}
-    assert validate_brief(brief) == {"valid": True, "errors": []}
-    
-    # Invalid budget
-    brief = {"goal": "leads", "budget": 500, "duration": 30}
-    result = validate_brief(brief)
-    assert result["valid"] == False
-    assert "budget" in result["errors"][0]
-```
-
-**2. Compliance Validation:**
-```python
-def test_compliance_validation():
-    # Compliant ad copy
-    ad_copy = "Кардиолог в Москве. Консультация опытных врачей. Лицензия ЛО-77-01-012345. Имеются противопоказания."
-    result = validate_compliance(ad_copy, "https://example.com")
-    assert result["score"] >= 90
-    
-    # Non-compliant (prohibited term)
-    ad_copy = "Лучший кардиолог в Москве. Гарантируем излечение."
-    result = validate_compliance(ad_copy, "https://example.com")
-    assert result["score"] < 90
-    assert len(result["violations"]) > 0
-```
-
-**3. Keyword Grouping:**
+**1. Тест группировки ключевых слов:**
 ```python
 def test_keyword_grouping():
     keywords = [
-        {"keyword": "кардиолог консультация", "intent": "informational"},
+        {"keyword": "кардиолог что лечит", "intent": "informational"},
+        {"keyword": "кардиолог цены", "intent": "commercial"},
         {"keyword": "кардиолог запись", "intent": "transactional"}
     ]
-    groups = group_keywords(keywords)
     
-    # Check ad group size (10-15 keywords)
-    for group in groups:
-        assert 5 <= len(group["keywords"]) <= 20
+    groups = group_keywords_by_intent(keywords)
+    
+    assert len(groups) == 3
+    assert groups["informational"][0]["keyword"] == "кардиолог что лечит"
+    assert len(groups["transactional"]) == 1
 ```
 
-### Integration Tests:
-
-**1. End-to-End Campaign Creation:**
+**2. Тест compliance validation:**
 ```python
-async def test_create_campaign_e2e():
-    # Prepare test data
-    campaign_data = {
-        "campaign_brief": {...},
-        "keywords": [...],
-        "landing_pages": [...]
+def test_compliance_validation():
+    ad_copy = "Лучший кардиолог в Москве. Гарантируем результат!"
+    
+    violations = validate_compliance(ad_copy)
+    
+    assert len(violations) == 2
+    assert violations[0]["term"] == "Лучший"
+    assert violations[1]["term"] == "Гарантируем"
+```
+
+**3. Тест auto-correction:**
+```python
+def test_auto_correction():
+    ad_copy = "Лучший кардиолог. Гарантируем результат!"
+    
+    corrected = auto_correct_compliance(ad_copy)
+    
+    assert "Лучший" not in corrected
+    assert "Гарантируем" not in corrected
+    assert "Имеются противопоказания" in corrected
+```
+
+### Integration тесты:
+
+**1. Тест создания кампании (Яндекс.Директ):**
+```python
+async def test_create_campaign_yandex():
+    campaign_brief = {
+        "goal": "leads",
+        "budget": 50000,
+        "duration": 30,
+        "platforms": ["yandex_direct"]
     }
     
-    # Execute
-    result = await campaign_manager.execute(campaign_data)
+    result = await campaign_manager.create_campaign(campaign_brief)
     
-    # Verify
     assert result["status"] == "success"
     assert result["campaign_id"] is not None
-    assert result["metrics"]["compliance_score"] >= 90
-    
-    # Cleanup
-    await delete_test_campaign(result["campaign_id"])
+    assert result["quality_score"] >= 7.0
 ```
 
-**2. API Integration:**
+**2. Тест модерации:**
 ```python
-async def test_yandex_api_integration():
-    # Test authentication
-    assert await yandex_api.authenticate() == True
+async def test_moderation_monitoring():
+    campaign_id = "12345"
     
-    # Test campaign creation
-    campaign = {"Name": "Test Campaign", ...}
-    response = await yandex_api.call("campaigns", "add", {"Campaigns": [campaign]})
-    assert "AddResults" in response
-    assert response["AddResults"][0]["Id"] is not None
+    status = await campaign_manager.monitor_moderation(campaign_id, timeout_hours=0.1)
+    
+    assert status["status"] in ["approved", "rejected", "timeout"]
 ```
 
-### Manual Testing Checklist:
+### E2E тесты:
 
-✅ **Pre-Launch:**
-- [ ] Create test campaign with valid data
-- [ ] Verify compliance validation (test prohibited terms)
-- [ ] Verify landing page validation (test missing license)
-- [ ] Verify keyword grouping (check ad group sizes)
-- [ ] Verify ad copy generation (check character limits)
-
-✅ **Launch:**
-- [ ] Submit campaign to platform
-- [ ] Monitor moderation status
-- [ ] Verify campaign approved
-- [ ] Verify campaign active (impressions >0)
-
-✅ **Post-Launch:**
-- [ ] Monitor first 24 hours (CTR, CPC)
-- [ ] Verify conversion tracking working
-- [ ] Check for policy violations
-
----
-
-## 📦 ЗАВИСИМОСТИ
-
-### Внешние API:
-
-**1. Яндекс.Директ API v5:**
-- **URL:** https://api.direct.yandex.com/json/v5/
-- **Authentication:** OAuth 2.0 (access token)
-- **Rate Limits:** 5 concurrent requests, points-based daily limit
-- **Cost:** Free (within limits)
-- **Documentation:** https://yandex.ru/dev/direct/doc/
-
-**2. Google Ads API:**
-- **URL:** https://googleads.googleapis.com/
-- **Authentication:** Service account (OAuth 2.0)
-- **Rate Limits:** 15,000 operations/day (standard access)
-- **Cost:** Free (within limits)
-- **Documentation:** https://developers.google.com/google-ads/api/docs/
-
-**3. Яндекс.Метрика API:**
-- **URL:** https://api-metrika.yandex.net/
-- **Purpose:** Conversion goal setup
-- **Authentication:** OAuth 2.0
-- **Cost:** Free
-
-**4. Google Analytics API:**
-- **URL:** https://analyticsreporting.googleapis.com/
-- **Purpose:** Conversion goal setup
-- **Authentication:** Service account
-- **Cost:** Free
-
-### Python Libraries:
-
+**Сценарий: Создание кампании от начала до конца**
 ```python
-# requirements.txt
-aiohttp==3.9.1          # Async HTTP client
-pydantic==2.5.0         # Data validation
-sqlalchemy==2.0.23      # Database ORM
-asyncio==3.4.3          # Async operations
-python-dotenv==1.0.0    # Environment variables
+async def test_e2e_campaign_creation():
+    # 1. Подготовить входные данные
+    keywords = load_keywords_from_keyword_research_agent()
+    landing_pages = load_landing_pages_from_landing_content_agent()
+    
+    # 2. Создать кампанию
+    result = await campaign_manager.execute_task({
+        "campaign_brief": {...},
+        "keywords": keywords,
+        "landing_pages": landing_pages
+    })
+    
+    # 3. Проверить результат
+    assert result["status"] == "success"
+    assert result["quality_score"] >= 7.0
+    assert result["compliance_score"] >= 90
+    assert result["moderation_status"] in ["pending", "approved"]
 ```
-
-### Internal Dependencies:
-
-- **Event Bus:** Для получения задач и отправки результатов
-- **Database:** Для хранения campaign metadata
-- **Obsidian Vault:** Для логирования операций
 
 ---
 
 ## 🚀 DEPLOYMENT
 
-### Environment Variables:
-
-```bash
-# Яндекс.Директ
-YANDEX_DIRECT_ACCESS_TOKEN=your_token_here
-YANDEX_DIRECT_CLIENT_LOGIN=your_login_here
-
-# Google Ads
-GOOGLE_ADS_DEVELOPER_TOKEN=your_token_here
-GOOGLE_ADS_CLIENT_ID=your_client_id_here
-GOOGLE_ADS_CLIENT_SECRET=your_secret_here
-GOOGLE_ADS_REFRESH_TOKEN=your_refresh_token_here
-
-# Метрика / Analytics
-YANDEX_METRIKA_ACCESS_TOKEN=your_token_here
-GOOGLE_ANALYTICS_SERVICE_ACCOUNT=path/to/service_account.json
-
-# Database
-DATABASE_URL=sqlite+aiosqlite:///./data/campaigns.db
-
-# Event Bus
-EVENT_BUS_URL=redis://localhost:6379
-```
-
-### Docker Deployment:
+### Docker контейнер:
 
 ```dockerfile
 FROM python:3.11-slim
 
 WORKDIR /app
 
+# Установить зависимости
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Скопировать код
 COPY src/ ./src/
-COPY .env .
+COPY config/ ./config/
 
-CMD ["python", "-m", "src.aim.subagents.campaign_manager"]
+# Переменные окружения
+ENV PYTHONUNBUFFERED=1
+ENV LOG_LEVEL=INFO
+
+# Запустить агента
+CMD ["python", "-m", "src.campaign_manager"]
 ```
 
-### Health Checks:
+### Environment variables:
+
+```bash
+# API credentials
+YANDEX_DIRECT_CLIENT_ID=xxx
+YANDEX_DIRECT_CLIENT_SECRET=xxx
+YANDEX_DIRECT_ACCESS_TOKEN=xxx
+VK_ADS_ACCESS_TOKEN=xxx
+MYTARGET_ACCESS_TOKEN=xxx
+TELEGRAM_ADS_TOKEN=xxx
+DZEN_ACCESS_TOKEN=xxx
+
+# Configuration
+CAMPAIGN_MANAGER_TIMEOUT=1800  # 30 минут
+MODERATION_CHECK_INTERVAL=900  # 15 минут
+MODERATION_TIMEOUT=259200      # 3 дня
+COMPLIANCE_SCORE_THRESHOLD=90
+QUALITY_SCORE_TARGET=8.0
+
+# Logging
+LOG_LEVEL=INFO
+LOG_FORMAT=json
+```
+
+### Health check:
 
 ```python
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/health")
 async def health_check():
-    checks = {
-        "yandex_api": await yandex_api.ping(),
-        "google_api": await google_api.ping(),
-        "database": await db.ping(),
-        "event_bus": await event_bus.ping()
+    return {
+        "status": "healthy",
+        "version": "1.0.0",
+        "uptime": get_uptime(),
+        "api_status": {
+            "yandex_direct": await check_yandex_direct_api(),
+            "vk_ads": await check_vk_ads_api()
+        }
     }
-    
-    all_healthy = all(checks.values())
-    return {"healthy": all_healthy, "checks": checks}
 ```
 
 ---
 
 ## 📝 CHANGELOG
 
-### v1.0.0 (2026-05-10)
-- ✅ Initial specification created
-- ✅ Based on deep-research findings (Campaign_Management_Medical_Ads_Research_20260510)
-- ✅ Яндекс.Директ API v5 integration specified
-- ✅ Google Ads API integration specified
-- ✅ Compliance validation (152-ФЗ, Google Healthcare policy)
-- ✅ Campaign structure (10-15 keywords per ad group)
-- ✅ Bidding strategies (Manual CPC, Target CPA, Maximize Conversions)
-- ✅ Moderation monitoring
-- ✅ Error handling and retry logic
+### Version 1.0.0 (2026-05-10)
+- ✅ Создание кампаний на 5 платформах (Яндекс.Директ, VK Ads, myTarget, Telegram Ads, Дзен)
+- ✅ Оптимальная группировка ключевых слов (10-15 per ad group)
+- ✅ Compliance validation + auto-correction (152-ФЗ РФ)
+- ✅ Мониторинг модерации (каждые 15 минут, timeout 3 дня)
+- ✅ Обработка отклонений модерации (анализ → исправление → повторная отправка)
+- ✅ Quality Score optimization (target: 7-10)
 
 ---
 
-## 📚 TODO
+## 📋 TODO
 
-### P0 (Critical):
-- [ ] Implement Яндекс.Директ API integration
-- [ ] Implement Google Ads API integration
-- [ ] Implement compliance validation engine
-- [ ] Implement keyword grouping logic
-- [ ] Implement ad copy generation
+### Высокий приоритет:
+- [ ] Добавить поддержку Google Ads (требуется Healthcare certification)
+- [ ] Реализовать A/B testing объявлений (автоматическое переключение на winner)
+- [ ] Добавить dynamic keyword insertion для всех платформ
+- [ ] Реализовать автоматическое обновление ставок на основе Quality Score
 
-### P1 (High):
-- [ ] Implement moderation monitoring
-- [ ] Implement error handling and retry logic
-- [ ] Add unit tests (validation, compliance, grouping)
-- [ ] Add integration tests (API, end-to-end)
+### Средний приоритет:
+- [ ] Добавить поддержку расширений объявлений (sitelinks, callouts)
+- [ ] Реализовать multi-language support (английский, немецкий)
+- [ ] Добавить интеграцию с CRM для lead tracking
+- [ ] Реализовать автоматическое создание negative keywords
 
-### P2 (Medium):
-- [ ] Implement batch operations optimization
-- [ ] Add performance monitoring
-- [ ] Add automated bid adjustments
-- [ ] Implement A/B testing for ad copy
-
-### P3 (Low):
-- [ ] Add support for Dynamic Search Ads (DSA)
-- [ ] Add support for Shopping campaigns
-- [ ] Add support for Video campaigns
+### Низкий приоритет:
+- [ ] Добавить поддержку видео объявлений (YouTube, VK Video)
+- [ ] Реализовать автоматическое создание landing pages (интеграция с Landing Content Agent)
+- [ ] Добавить ML-модель для предсказания Quality Score
 
 ---
 
-## 📖 ПРИЛОЖЕНИЕ A: ИССЛЕДОВАНИЕ
+## 📚 ПРИЛОЖЕНИЕ A: ИССЛЕДОВАНИЕ
 
-**Источник:** Campaign Management for Medical Marketing Ads Research (2026-05-10)
+### Источник:
+Multi-Platform Campaign Management Research (2026-05-10)
 
-**Ключевые находки:**
+### Ключевые находки:
 
-1. **Яндекс.Директ API v5:**
-   - Max 5 concurrent requests [c002]
-   - Batch operations: max 10 campaigns [c007]
-   - Points-based rate limiting
-   - Manual moderation for medical ads (1-3 days)
+**1. Оптимальная структура кампаний:**
+- 10-15 keywords per ad group оптимально для Quality Score
+- Quality Score components: Expected CTR (40%), Ad Relevance (30%), Landing Page Experience (30%)
+- Match types: 20% broad, 60% phrase, 20% exact
 
-2. **Google Ads API:**
-   - Healthcare certification mandatory [c005]
-   - Smart Bidding requires 15+ conversions/month [c001]
-   - Moderation: 1-3 days initial, 24-48 hours re-review [c010]
-   - 7-day warning before suspension [c005]
+**2. Compliance automation:**
+- 152-ФЗ РФ: запрещены гарантии, превосходство, "лучший", "100%"
+- Mandatory disclaimers: "Имеются противопоказания", "Лицензия №..."
+- Pre-flight auditing снижает rejection rate с 15-22% до 4-6%
 
-3. **Medical Compliance:**
-   - 152-ФЗ: No guarantees, no superlatives, mandatory disclaimers [c003]
-   - Google Healthcare: Certification, restricted content, 7-day warning
-   - Prohibited: "гарантируем", "лучший", "100%", "cure", "best"
-   - Mandatory: License number, contraindications disclaimer
+**3. Модерация:**
+- Яндекс.Директ: 80% автоматическая модерация (5-30 мин), 20% ручная (24-48 часов)
+- VK Ads: аналогично Яндекс.Директ
+- myTarget: 1-3 дня на модерацию
+- Мониторинг каждые 15 минут оптимален
 
-4. **Campaign Structure:**
-   - Optimal ad group size: 10-15 keywords [c004]
-   - Match type mirroring within ad groups [c009]
-   - Negative keywords critical [c008] (free, cheap, DIY)
+**4. API rate limits:**
+- Яндекс.Директ: max 5 concurrent requests, batch max 10 campaigns
+- VK Ads: 3 requests/second
+- myTarget: 1-200 requests/hour (зависит от метода)
+- Telegram Ads: 100 requests/minute
+- Дзен: 10 requests/second
 
-5. **Bidding Strategies:**
-   - Manual CPC: Start here (2-4 weeks)
-   - Target CPA: Stable costs [c001], 15+ conversions/month
-   - Maximize Conversions: Volume focus [c006]
+**5. Bidding strategies:**
+- Manual CPC: для новых кампаний (первые 30 дней)
+- Target CPA: требуется ≥15 conversions за последние 30 дней
+- Maximize Conversions: требуется достаточный budget
+- Target ROAS: требуется ≥50 conversions
 
-**Полный отчёт:** `~/Documents/Campaign_Management_Medical_Ads_Research_20260510/`
+### Gaps в исследовании:
+- Яндекс.Директ exact rate limits (указано "max 5 concurrent", но нет деталей)
+- Telegram Ads API documentation (ограниченный доступ)
+- Дзен API access (требуется партнёрский статус)
 
 ---
 
-**Автор:** Mikhail Eliseev (via meAI Architect)  
-**Дата создания:** 2026-05-10  
-**Статус:** ✅ Ready for implementation
-
+**Конец спецификации**
