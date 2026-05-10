@@ -1,0 +1,33 @@
+{
+  "query": "Campaign Management for Medical Marketing Ads",
+  "mode": "standard",
+  "phases": 6,
+  "start_time": "2026-05-10T19:33:48.061Z",
+  "current_date": "2026-05-10",
+  "assumptions": [
+    "Medical marketing context (152-ФЗ, Google Healthcare policy required)",
+    "Focus on Яндекс.Директ (primary for Russia) + Google Ads (secondary)",
+    "Automation over manual management",
+    "Compliance is non-negotiable (zero violations acceptable)",
+    "Target audience: technical (developers building campaign automation)"
+  ],
+  "critical_aspects": [
+    "Яндекс.Директ API v5 (structure, limits, moderation)",
+    "Google Ads API (Healthcare policy, RSA, Smart Bidding)",
+    "Medical advertising compliance (152-ФЗ, Google Healthcare, disclaimers)",
+    "Campaign structure (hierarchy, grouping, match types, extensions)"
+  ],
+  "important_aspects": [
+    "Bidding strategies (Manual CPC, Target CPA, Maximize Conversions)",
+    "Targeting (geo, demographics, retargeting, lookalike)",
+    "Ad copywriting (formulas, character limits, CTA)",
+    "Conversion goals (Яндекс.Метрика, Google Analytics)"
+  ],
+  "success_metrics": {
+    "campaign_creation_success": ">95%",
+    "moderation_pass_rate": ">90%",
+    "compliance_violations": "0",
+    "time_to_create": "<5 min",
+    "cost_per_campaign": "<100 RUB"
+  }
+}
