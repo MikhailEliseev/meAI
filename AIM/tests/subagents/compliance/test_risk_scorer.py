@@ -6,8 +6,8 @@ Tests likelihood calculation, severity calculation, risk scoring, and action det
 
 import pytest
 
-from aim.subagents.compliance.risk_scorer import RiskScorer
-from aim.subagents.schemas.compliance import (
+from AIM.src.aim.subagents.compliance.risk_scorer import RiskScorer
+from AIM.src.aim.subagents.schemas.compliance import (
     RiskLevel,
     ComplianceAction,
     PatternMatch,

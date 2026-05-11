@@ -4,7 +4,7 @@ AIM Models Package
 Data models for AIM Agency.
 """
 
-from aim.models.analytics_models import (
+from AIM.src.aim.models.analytics_models import (
     DomainMetrics,
     AggregatedMetrics,
     Correlation,

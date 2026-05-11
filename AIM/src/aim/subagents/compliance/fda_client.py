@@ -17,7 +17,7 @@ import structlog
 from aiocache import Cache
 from aiocache.serializers import JsonSerializer
 
-from aim.subagents.schemas.compliance import FDAEnforcementRecord
+from AIM.src.aim.subagents.schemas.compliance import FDAEnforcementRecord
 
 logger = structlog.get_logger()
 
@@ -99,7 +99,8 @@ class FDAClient:
         cached = await self.cache.get(cache_key)
         if cached is not None:
             self.logger.info("cache_hit", keyword=keyword)
-            return cached
+            # Deserialize from dict to FDAEnforcementRecord
+            return [FDAEnforcementRecord(**item) for item in cached]
 
         # Rate limiting
         await self._rate_limit()
@@ -167,8 +168,8 @@ class FDAClient:
                 duration=duration,
             )
 
-            # Cache results
-            await self.cache.set(cache_key, records)
+            # Cache results (serialize to dict for JSON)
+            await self.cache.set(cache_key, [r.model_dump() for r in records])
 
             return records
 

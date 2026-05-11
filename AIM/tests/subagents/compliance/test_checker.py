@@ -6,18 +6,19 @@ Tests all three stages: pattern matching, FDA lookup, and risk scoring.
 """
 
 import pytest
+import pytest_asyncio
 import asyncio
 from unittest.mock import patch, MagicMock
 
-from aim.subagents.compliance.checker import ComplianceChecker
-from aim.subagents.schemas.compliance import (
+from AIM.src.aim.subagents.compliance.checker import ComplianceChecker
+from AIM.src.aim.subagents.schemas.compliance import (
     RiskLevel,
     ComplianceAction,
     FDAEnforcementRecord,
 )
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def compliance_checker():
     """Create compliance checker instance with test database"""
     checker = ComplianceChecker(
@@ -26,7 +27,7 @@ async def compliance_checker():
     )
 
     # Create tables
-    from aim.storage.models import Base
+    from AIM.src.aim.storage.models import Base
     async with checker.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -37,6 +38,7 @@ async def compliance_checker():
 class TestComplianceCheckerInitialization:
     """Test compliance checker initialization"""
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_checker_initializes_components(self, compliance_checker):
         """Test that all components are initialized"""
@@ -50,6 +52,7 @@ class TestCriticalRiskBlocking:
     """Test that CRITICAL risk keywords are blocked"""
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_cure_cancer_blocked(self, compliance_checker):
         """Test that 'cure cancer' is blocked"""
         # Mock FDA client to avoid real API calls
@@ -61,6 +64,7 @@ class TestCriticalRiskBlocking:
             assert result.risk_score >= 20
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_fda_approved_supplement_blocked(self, compliance_checker):
         """Test that 'FDA approved supplement' is blocked"""
         with patch.object(compliance_checker.fda_client, 'search_enforcement', return_value=[]):
@@ -69,6 +73,7 @@ class TestCriticalRiskBlocking:
             assert result.risk_level == RiskLevel.CRITICAL
             assert result.action == ComplianceAction.BLOCKED
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_covid_cure_blocked(self, compliance_checker):
         """Test that COVID cure claims are blocked"""
@@ -82,6 +87,7 @@ class TestCriticalRiskBlocking:
 class TestHighRiskReduction:
     """Test that HIGH risk keywords have priority reduced"""
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_high_risk_reduces_priority(self, compliance_checker):
         """Test that HIGH risk keywords are reduced"""
@@ -98,6 +104,7 @@ class TestMediumLowRiskPassing:
     """Test that MEDIUM/LOW risk keywords pass with documentation"""
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_safe_keyword_passes(self, compliance_checker):
         """Test that safe keywords pass"""
         with patch.object(compliance_checker.fda_client, 'search_enforcement', return_value=[]):
@@ -106,6 +113,7 @@ class TestMediumLowRiskPassing:
             assert result.action == ComplianceAction.PASSED
             assert result.risk_level in [RiskLevel.LOW, RiskLevel.MEDIUM]
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_low_risk_passes(self, compliance_checker):
         """Test that LOW risk keywords pass"""
@@ -120,6 +128,7 @@ class TestPatternMatching:
     """Test Stage 1: Pattern matching"""
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_pattern_matching_finds_violations(self, compliance_checker):
         """Test that pattern matching finds violations"""
         with patch.object(compliance_checker.fda_client, 'search_enforcement', return_value=[]):
@@ -129,6 +138,7 @@ class TestPatternMatching:
             assert result.pattern_severity is not None
             assert result.pattern_severity >= 4
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_multiple_patterns_detected(self, compliance_checker):
         """Test that multiple patterns are detected"""
@@ -142,6 +152,7 @@ class TestPatternMatching:
 class TestFDAEnforcementLookup:
     """Test Stage 2: FDA enforcement lookup"""
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_fda_enforcement_found(self, compliance_checker):
         """Test that FDA enforcement is detected"""
@@ -163,6 +174,7 @@ class TestFDAEnforcementLookup:
             assert len(result.fda_enforcement_records) == 1
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_fda_enforcement_not_found(self, compliance_checker):
         """Test when no FDA enforcement is found"""
         with patch.object(compliance_checker.fda_client, 'search_enforcement', return_value=[]):
@@ -172,6 +184,7 @@ class TestFDAEnforcementLookup:
             assert result.fda_enforcement_count == 0
             assert len(result.fda_enforcement_records) == 0
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_fda_graceful_degradation(self, compliance_checker):
         """Test graceful degradation when FDA API fails"""
@@ -190,6 +203,7 @@ class TestRiskScoring:
     """Test Stage 3: Risk scoring"""
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_risk_scoring_calculates_correctly(self, compliance_checker):
         """Test that risk scoring works correctly"""
         with patch.object(compliance_checker.fda_client, 'search_enforcement', return_value=[]):
@@ -201,6 +215,7 @@ class TestRiskScoring:
             assert result.severity_score <= 5
             assert result.risk_score == result.likelihood_score * result.severity_score
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_rationale_generated(self, compliance_checker):
         """Test that rationale is generated"""
@@ -218,6 +233,7 @@ class TestAuditTrail:
     """Test audit trail creation"""
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_audit_trail_created(self, compliance_checker):
         """Test that audit trail is created in database"""
         with patch.object(compliance_checker.fda_client, 'search_enforcement', return_value=[]):
@@ -232,6 +248,7 @@ class TestAuditTrail:
             assert audit_record.task_id == "test-task-123"
             assert audit_record.agent_id == "test-agent"
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_audit_trail_contains_all_data(self, compliance_checker):
         """Test that audit trail contains all compliance data"""
@@ -248,6 +265,7 @@ class TestAuditTrail:
             assert audit_record.severity_score is not None
             assert audit_record.risk_score is not None
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_audit_history_filtering(self, compliance_checker):
         """Test audit history filtering"""
@@ -270,6 +288,7 @@ class TestAuditTrail:
 class TestEndToEndScenarios:
     """Test complete end-to-end scenarios"""
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_critical_scenario_cure_cancer_with_fda(self, compliance_checker):
         """Test CRITICAL scenario: cure cancer with FDA enforcement"""
@@ -303,6 +322,7 @@ class TestEndToEndScenarios:
             assert len(history) == 1
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_safe_scenario_dental_implants(self, compliance_checker):
         """Test safe scenario: dental implants"""
         with patch.object(compliance_checker.fda_client, 'search_enforcement', return_value=[]):
@@ -323,6 +343,7 @@ class TestEndToEndScenarios:
 class TestPerformance:
     """Test performance requirements"""
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_check_completes_quickly(self, compliance_checker):
         """Test that compliance check completes in reasonable time"""

@@ -4,7 +4,7 @@ AIM Storage Package
 Database models and storage utilities for AIM Agency.
 """
 
-from aim.storage.models import Base, AuditTrail, UserFeedbackRecord
+from AIM.src.aim.storage.models import Base, AuditTrail, UserFeedbackRecord
 
 __all__ = [
     "Base",

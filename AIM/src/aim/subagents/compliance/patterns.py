@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 import yaml
 
-from aim.subagents.schemas.compliance import PatternMatch
+from AIM.src.aim.subagents.schemas.compliance import PatternMatch
 
 
 class ProhibitedPatternLibrary:
@@ -44,7 +44,8 @@ class ProhibitedPatternLibrary:
         """
         if patterns_file is None:
             # Default to config/compliance_patterns.yaml relative to AIM root
-            aim_root = Path(__file__).parent.parent.parent.parent
+            # Path: AIM/src/aim/subagents/compliance/patterns.py -> AIM/config/
+            aim_root = Path(__file__).parent.parent.parent.parent.parent
             patterns_file = str(aim_root / "config" / "compliance_patterns.yaml")
 
         self.patterns_file = patterns_file

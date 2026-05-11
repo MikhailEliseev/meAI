@@ -7,7 +7,7 @@ Determines actions based on risk level (block, reduce, pass).
 
 from typing import List, Optional
 
-from aim.subagents.schemas.compliance import (
+from AIM.src.aim.subagents.schemas.compliance import (
     RiskLevel,
     ComplianceAction,
     PatternMatch,

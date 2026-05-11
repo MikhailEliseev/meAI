@@ -84,49 +84,49 @@ class CIOrchestrator(Agent):
         # Import and create agent
         try:
             if agent_name == "ci-scout":
-                from aim.subagents.competitive_intel.agents.ci_scout import CIScoutAgent
+                from AIM.src.aim.subagents.competitive_intel.agents.ci_scout import CIScoutAgent
                 agent = CIScoutAgent(agent_id=f"{self.agent_id}-scout", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-auditor":
-                from aim.subagents.competitive_intel.agents.ci_auditor import CIAuditorAgent
+                from AIM.src.aim.subagents.competitive_intel.agents.ci_auditor import CIAuditorAgent
                 agent = CIAuditorAgent(agent_id=f"{self.agent_id}-auditor", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-reputation":
-                from aim.subagents.competitive_intel.agents.ci_reputation import CIReputationAgent
+                from AIM.src.aim.subagents.competitive_intel.agents.ci_reputation import CIReputationAgent
                 agent = CIReputationAgent(agent_id=f"{self.agent_id}-reputation", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-finance":
-                from aim.subagents.competitive_intel.agents.ci_finance import CIFinanceAgent
+                from AIM.src.aim.subagents.competitive_intel.agents.ci_finance import CIFinanceAgent
                 agent = CIFinanceAgent(agent_id=f"{self.agent_id}-finance", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-vacancies":
-                from aim.subagents.competitive_intel.agents.ci_vacancies import CIVacanciesAgent
+                from AIM.src.aim.subagents.competitive_intel.agents.ci_vacancies import CIVacanciesAgent
                 agent = CIVacanciesAgent(agent_id=f"{self.agent_id}-vacancies", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-tech":
-                from aim.subagents.competitive_intel.agents.ci_tech_real import CITechAgent
+                from AIM.src.aim.subagents.competitive_intel.agents.ci_tech_real import CITechAgent
                 agent = CITechAgent(agent_id=f"{self.agent_id}-tech", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-site-crawler":
-                from aim.subagents.competitive_intel.agents.ci_site_crawler import CISiteCrawlerAgent
+                from AIM.src.aim.subagents.competitive_intel.agents.ci_site_crawler import CISiteCrawlerAgent
                 agent = CISiteCrawlerAgent(agent_id=f"{self.agent_id}-crawler", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-content":
-                from aim.subagents.competitive_intel.agents.ci_content import CIContentAgent
+                from AIM.src.aim.subagents.competitive_intel.agents.ci_content import CIContentAgent
                 agent = CIContentAgent(agent_id=f"{self.agent_id}-content", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-pricing":
-                from aim.subagents.competitive_intel.agents.ci_pricing import CIPricingAgent
+                from AIM.src.aim.subagents.competitive_intel.agents.ci_pricing import CIPricingAgent
                 agent = CIPricingAgent(agent_id=f"{self.agent_id}-pricing", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-ecosystem":
-                from aim.subagents.competitive_intel.agents.ci_ecosystem import CIEcosystemAgent
+                from AIM.src.aim.subagents.competitive_intel.agents.ci_ecosystem import CIEcosystemAgent
                 agent = CIEcosystemAgent(agent_id=f"{self.agent_id}-ecosystem", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-factchecker":
-                from aim.subagents.competitive_intel.agents.ci_factchecker import CIFactcheckerAgent
+                from AIM.src.aim.subagents.competitive_intel.agents.ci_factchecker import CIFactcheckerAgent
                 agent = CIFactcheckerAgent(agent_id=f"{self.agent_id}-factchecker", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-strategist":
-                from aim.subagents.competitive_intel.agents.ci_strategist import CIStrategistAgent
+                from AIM.src.aim.subagents.competitive_intel.agents.ci_strategist import CIStrategistAgent
                 agent = CIStrategistAgent(agent_id=f"{self.agent_id}-strategist", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-prioritizer":
-                from aim.subagents.competitive_intel.agents.ci_prioritizer import CIPrioritizerAgent
+                from AIM.src.aim.subagents.competitive_intel.agents.ci_prioritizer import CIPrioritizerAgent
                 agent = CIPrioritizerAgent(agent_id=f"{self.agent_id}-prioritizer", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-marketing-strategy":
-                from aim.subagents.competitive_intel.agents.ci_marketing_strategy import CIMarketingStrategyAgent
+                from AIM.src.aim.subagents.competitive_intel.agents.ci_marketing_strategy import CIMarketingStrategyAgent
                 agent = CIMarketingStrategyAgent(agent_id=f"{self.agent_id}-marketing", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-offer-generator":
-                from aim.subagents.competitive_intel.agents.ci_offer_generator import CIOfferGeneratorAgent
+                from AIM.src.aim.subagents.competitive_intel.agents.ci_offer_generator import CIOfferGeneratorAgent
                 agent = CIOfferGeneratorAgent(agent_id=f"{self.agent_id}-offer", database_url=db_url, vault_path=vault)
             else:
                 # TW agents not implemented yet - return None

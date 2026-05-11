@@ -5,14 +5,15 @@ Tests openFDA integration, caching, rate limiting, and graceful degradation.
 """
 
 import pytest
+import pytest_asyncio
 import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
 
-from aim.subagents.compliance.fda_client import FDAClient
-from aim.subagents.schemas.compliance import FDAEnforcementRecord
+from AIM.src.aim.subagents.compliance.fda_client import FDAClient
+from AIM.src.aim.subagents.schemas.compliance import FDAEnforcementRecord
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def fda_client():
     """Create FDA client instance"""
     client = FDAClient(cache_ttl=60, rate_limit_per_minute=240)
@@ -24,6 +25,7 @@ class TestFDAClientInitialization:
     """Test FDA client initialization"""
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_client_initialization(self):
         """Test that client initializes correctly"""
         client = FDAClient()
@@ -32,6 +34,7 @@ class TestFDAClientInitialization:
         assert client.rate_limit_per_minute == 240
         await client.close()
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_custom_settings(self):
         """Test custom cache and rate limit settings"""
@@ -44,6 +47,7 @@ class TestFDAClientInitialization:
 class TestFDAEnforcementSearch:
     """Test FDA enforcement search functionality"""
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_search_returns_list(self, fda_client):
         """Test that search returns a list"""
@@ -72,6 +76,7 @@ class TestFDAEnforcementSearch:
             assert isinstance(results[0], FDAEnforcementRecord)
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_search_no_results_returns_empty_list(self, fda_client):
         """Test that no results returns empty list"""
         mock_response = MagicMock()
@@ -82,6 +87,7 @@ class TestFDAEnforcementSearch:
 
             assert results == []
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_search_parses_enforcement_records(self, fda_client):
         """Test that enforcement records are parsed correctly"""
@@ -113,6 +119,7 @@ class TestFDACaching:
     """Test FDA client caching"""
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_cache_hit_avoids_api_call(self, fda_client):
         """Test that cached results avoid API calls"""
         mock_response = MagicMock()
@@ -128,6 +135,7 @@ class TestFDACaching:
             await fda_client.search_enforcement("test keyword")
             assert mock_get.call_count == 1  # Still 1, no new call
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_different_keywords_not_cached_together(self, fda_client):
         """Test that different keywords have separate cache entries"""
@@ -145,6 +153,7 @@ class TestFDACaching:
 class TestFDARateLimiting:
     """Test FDA client rate limiting"""
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_rate_limiting_delays_requests(self, fda_client):
         """Test that rate limiting adds delays between requests"""
@@ -171,6 +180,7 @@ class TestFDAGracefulDegradation:
     """Test graceful degradation on errors"""
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_timeout_returns_none(self, fda_client):
         """Test that timeout returns None for graceful degradation"""
         import httpx
@@ -180,6 +190,7 @@ class TestFDAGracefulDegradation:
 
             assert result is None
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_http_error_returns_none(self, fda_client):
         """Test that HTTP errors return None"""
@@ -195,6 +206,7 @@ class TestFDAGracefulDegradation:
             assert result is None
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_unexpected_error_returns_none(self, fda_client):
         """Test that unexpected errors return None"""
         with patch.object(fda_client.client, 'get', side_effect=Exception("Unexpected error")):
@@ -206,6 +218,7 @@ class TestFDAGracefulDegradation:
 class TestFDAQueryConstruction:
     """Test FDA API query construction"""
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_search_query_format(self, fda_client):
         """Test that search query is formatted correctly"""
@@ -228,6 +241,7 @@ class TestFDAQueryConstruction:
 class TestFDAClientCleanup:
     """Test client cleanup"""
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_client_closes_properly(self):
         """Test that client closes HTTP connection"""
