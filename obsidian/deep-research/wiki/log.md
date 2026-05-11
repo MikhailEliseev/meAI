@@ -78,3 +78,23 @@
 **Режим:** unknown
 
 ---
+
+## [2026-05-11 12:44] ingest | Keyword Research Medical Marketing
+
+**Topic:** Keyword Research для медицинского маркетинга  
+**Mode:** standard (6 phases, ~45 minutes)  
+**Sources:** 13 (3 Exa successful, 7 rate limited, 17 WebSearch empty)  
+**Sub-agents:** 3 (Clustering, Legal, API Documentation)  
+**Output:** 8,500 words, comprehensive report  
+**Cost:** ~$1.50  
+**Status:** ✅ Complete
+
+**Key findings:**
+- Medical keywords: low frequency (10-1,000/month), high conversion (2-5%)
+- 6 APIs compared: Yandex.Wordstat, Google Keyword Planner, Ahrefs, Semrush, SE Ranking, TopVisor
+- 3 clustering algorithms: SERP-based (Jaccard), Semantic (BERT), Intent-based
+- 5 quality metrics: KEI, Keyword Difficulty, Search Intent, CPC, Seasonality
+- Russian legal compliance: FZ-38 Article 24, FZ-323, prohibited terms, penalties
+
+**Archived:** `raw/2026-05-11-Keyword_Research/`  
+**Used by:** Keyword Research Agent specification (SEO Magister)
