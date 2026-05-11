@@ -1,0 +1,344 @@
+{
+  "apis": [
+    {
+      "api_name": "PageSpeed Insights API",
+      "version": "v5",
+      "base_url": "https://www.googleapis.com/pagespeedonline/v5",
+      "endpoints": [
+        {
+          "name": "runPagespeed",
+          "method": "GET",
+          "path": "/runPagespeed",
+          "purpose": "Analyze page performance and get Core Web Vitals",
+          "parameters": {
+            "required": ["url", "key"],
+            "optional": ["strategy", "category", "locale", "utm_campaign", "utm_source"]
+          },
+          "categories": ["performance", "accessibility", "best-practices", "seo"],
+          "metrics": ["FCP", "LCP", "CLS", "INP", "TBT", "Speed Index"]
+        }
+      ],
+      "rate_limits": {
+        "daily_quota": "25,000 requests/day (free tier)",
+        "per_second": "~240 requests/minute (~4 req/sec recommended)",
+        "notes": "Resets at midnight Pacific Time"
+      },
+      "pricing": {
+        "free_tier": "25,000 queries/day",
+        "cost_per_request": "Free",
+        "quota_cost": "1 unit per strategy (mobile/desktop), 2 units if both"
+      },
+      "authentication": {
+        "method": "API Key",
+        "header": "key parameter in URL",
+        "setup": "Google Cloud Console - 2 minutes"
+      },
+      "data_freshness": "Real-time lab data + 28-day trailing field data from Chrome UX Report",
+      "best_for": "Performance metrics, Core Web Vitals, technical SEO audit, page speed optimization",
+      "code_example": {
+        "curl": "curl 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=https://example.com&key=YOUR_KEY&strategy=mobile&category=performance'",
+        "response_paths": {
+          "performance_score": "lighthouseResult.categories.performance.score",
+          "lcp": "lighthouseResult.audits['largest-contentful-paint'].numericValue",
+          "cls": "lighthouseResult.audits['cumulative-layout-shift'].numericValue",
+          "field_data": "loadingExperience.metrics"
+        }
+      },
+      "limitations": [
+        "Single URL per request",
+        "No crawling capability",
+        "Field data only available for high-traffic URLs",
+        "CrUX data being discontinued in PSI API (use CrUX API directly)"
+      ]
+    },
+    {
+      "api_name": "Google Search Console API",
+      "version": "v3",
+      "base_url": "https://www.googleapis.com/webmasters/v3",
+      "endpoints": [
+        {
+          "name": "Search Analytics Query",
+          "method": "POST",
+          "path": "/sites/{siteUrl}/searchAnalytics/query",
+          "purpose": "Query search traffic data with filters",
+          "parameters": {
+            "required": ["startDate", "endDate"],
+            "optional": ["dimensions", "filters", "aggregationType", "rowLimit"]
+          },
+          "dimensions": ["country", "device", "page", "query", "searchAppearance"]
+        },
+        {
+          "name": "URL Inspection",
+          "method": "POST",
+          "path": "/urlInspection/index:inspect",
+          "base_url": "https://searchconsole.googleapis.com/v1",
+          "purpose": "Check page indexing status in Google"
+        },
+        {
+          "name": "Sitemaps",
+          "method": "GET/PUT/DELETE",
+          "path": "/sites/{siteUrl}/sitemaps",
+          "purpose": "Manage sitemaps"
+        },
+        {
+          "name": "Sites",
+          "method": "GET/PUT/DELETE",
+          "path": "/sites",
+          "purpose": "Manage Search Console properties"
+        }
+      ],
+      "rate_limits": {
+        "search_analytics": {
+          "per_site": "1,200 QPM",
+          "per_user": "1,200 QPM",
+          "per_project": "30,000,000 QPD and 40,000 QPM"
+        },
+        "url_inspection": {
+          "per_site": "2,000 QPD and 600 QPM",
+          "per_project": "10,000,000 QPD and 15,000 QPM"
+        },
+        "other_resources": {
+          "per_user": "20 QPS and 200 QPM",
+          "per_project": "100,000,000 QPD"
+        },
+        "notes": "Queries grouped by page AND query are most expensive. Reduce date ranges to lower load."
+      },
+      "pricing": {
+        "free_tier": "Completely free",
+        "cost_per_request": "$0"
+      },
+      "authentication": {
+        "method": "OAuth 2.0",
+        "scopes": ["https://www.googleapis.com/auth/webmasters.readonly"],
+        "setup": "Google Cloud Console + OAuth consent screen"
+      },
+      "data_freshness": "2-3 days delay for search analytics data",
+      "best_for": "Search performance tracking, keyword rankings, click/impression data, indexing status, competitor SERP analysis",
+      "code_example": {
+        "curl": "curl -X POST 'https://www.googleapis.com/webmasters/v3/sites/https%3A%2F%2Fexample.com%2F/searchAnalytics/query' -H 'Authorization: Bearer ACCESS_TOKEN' -d '{\"startDate\":\"2026-04-01\",\"endDate\":\"2026-05-01\",\"dimensions\":[\"country\",\"device\"]}'",
+        "response_fields": ["clicks", "impressions", "ctr", "position"]
+      },
+      "limitations": [
+        "Requires site ownership verification",
+        "16-month data retention",
+        "1,000 rows per query (use pagination)",
+        "Expensive queries (page+query grouping) consume more quota"
+      ]
+    },
+    {
+      "api_name": "Ahrefs API",
+      "version": "v3",
+      "base_url": "https://api.ahrefs.com/v3",
+      "endpoints": [
+        {
+          "name": "Batch Analysis",
+          "method": "POST",
+          "path": "/batch-analysis/batch-analysis",
+          "purpose": "Get metrics for up to 100 targets per request",
+          "fields": ["domain_rating", "ahrefs_rank", "org_keywords", "org_traffic", "backlinks", "refdomains"]
+        },
+        {
+          "name": "Domain Rating",
+          "method": "GET",
+          "path": "/site-explorer/domain-rating",
+          "purpose": "Domain authority metric"
+        },
+        {
+          "name": "Backlinks Stats",
+          "method": "GET",
+          "path": "/site-explorer/backlinks-stats",
+          "purpose": "Backlink statistics overview"
+        },
+        {
+          "name": "All Backlinks",
+          "method": "GET",
+          "path": "/site-explorer/all-backlinks",
+          "purpose": "Complete backlink data"
+        },
+        {
+          "name": "Referring Domains",
+          "method": "GET",
+          "path": "/site-explorer/refdomains",
+          "purpose": "List of referring domains"
+        },
+        {
+          "name": "Organic Keywords",
+          "method": "GET",
+          "path": "/site-explorer/organic-keywords",
+          "purpose": "Organic keyword rankings"
+        },
+        {
+          "name": "Organic Competitors",
+          "method": "GET",
+          "path": "/site-explorer/organic-competitors",
+          "purpose": "Competitor analysis"
+        },
+        {
+          "name": "Top Pages",
+          "method": "GET",
+          "path": "/site-explorer/top-pages",
+          "purpose": "Top-performing pages by traffic"
+        },
+        {
+          "name": "Anchors",
+          "method": "GET",
+          "path": "/site-explorer/anchors",
+          "purpose": "Anchor text analysis"
+        }
+      ],
+      "rate_limits": {
+        "requests_per_minute": "60 RPM (default)",
+        "dynamic_throttling": "Based on system load",
+        "error_code": "HTTP 429 when exceeded"
+      },
+      "pricing": {
+        "model": "API units (minimum 50 units per request)",
+        "included_plans": "Lite, Standard, Advanced, Agency (paid plans)",
+        "free_tier": "Free test queries on all plans",
+        "pay_as_you_go": "Available on supported plans",
+        "annual_discount": "Prepay for discounted units",
+        "notes": "Cost varies by rows returned and fields requested. Units are non-refundable."
+      },
+      "authentication": {
+        "method": "Bearer Token",
+        "header": "Authorization: Bearer $AHREFS_API_KEY",
+        "setup": "Account settings (workspace owners/admins only)"
+      },
+      "data_freshness": "Updated continuously, backlink index refreshed every 15-30 minutes",
+      "best_for": "Backlink analysis, domain authority, competitor research, keyword rankings, link building opportunities",
+      "code_example": {
+        "curl": "curl -X POST 'https://api.ahrefs.com/v3/batch-analysis/batch-analysis' -H 'Authorization: Bearer $AHREFS_API_KEY' -H 'Content-Type: application/json' -d '{\"select\":[\"url\",\"domain_rating\",\"org_traffic\",\"backlinks\"],\"targets\":[{\"url\":\"https://example.com\",\"mode\":\"domain\",\"protocol\":\"both\"}]}'",
+        "response_fields": ["domain_rating", "backlinks", "refdomains", "org_keywords", "org_traffic"]
+      },
+      "limitations": [
+        "Requires paid subscription for API access",
+        "Minimum 50 units per request",
+        "Units consumed are non-refundable",
+        "Rate limits vary by system load"
+      ]
+    },
+    {
+      "api_name": "SEMrush API",
+      "version": "v3",
+      "base_url": "https://api.semrush.com/analytics/v1",
+      "endpoints": [
+        {
+          "name": "Domain Overview",
+          "type": "domain_overview",
+          "method": "GET",
+          "purpose": "Get domain metrics across all databases",
+          "cost": "Varies by database"
+        },
+        {
+          "name": "Domain Organic Keywords",
+          "type": "domain_organic",
+          "method": "GET",
+          "purpose": "Retrieve organic keyword rankings"
+        },
+        {
+          "name": "Domain vs Domain",
+          "type": "domain_domains",
+          "method": "GET",
+          "purpose": "Compare two domains"
+        },
+        {
+          "name": "Backlinks Overview",
+          "type": "backlinks_overview",
+          "method": "GET",
+          "cost": "40 API units per request",
+          "purpose": "Summary of backlinks, referring domains, IPs"
+        },
+        {
+          "name": "Backlinks",
+          "type": "backlinks",
+          "method": "GET",
+          "cost": "40 API units per line",
+          "purpose": "List individual backlinks",
+          "parameters": ["display_limit", "display_offset", "display_sort", "display_filter"]
+        },
+        {
+          "name": "Referring Domains",
+          "type": "backlinks_refdomains",
+          "method": "GET",
+          "cost": "40 API units per line",
+          "purpose": "Domains pointing to target"
+        },
+        {
+          "name": "Anchors",
+          "type": "backlinks_anchors",
+          "method": "GET",
+          "cost": "40 API units per line",
+          "purpose": "Anchor texts used in backlinks"
+        },
+        {
+          "name": "Backlinks Competitors",
+          "type": "backlinks_competitors",
+          "method": "GET",
+          "cost": "40 API units per line",
+          "purpose": "Domains with similar backlink profiles"
+        },
+        {
+          "name": "Keyword Overview",
+          "type": "phrase_all",
+          "method": "GET",
+          "purpose": "Metrics for keywords (single or batch)"
+        },
+        {
+          "name": "Related Keywords",
+          "type": "phrase_related",
+          "method": "GET",
+          "purpose": "Keyword suggestions"
+        },
+        {
+          "name": "Keyword Difficulty",
+          "type": "phrase_kdi",
+          "method": "GET",
+          "purpose": "Ranking difficulty scores"
+        }
+      ],
+      "rate_limits": {
+        "standard_api": "General restrictions apply (not publicly specified)",
+        "trends_api": "Separate usage restrictions",
+        "notes": "Unit consumption varies by endpoint and data volume"
+      },
+      "pricing": {
+        "model": "API units (40 units per line for backlinks)",
+        "included_plans": "Pro, Guru, Business (subscription required)",
+        "separate_apis": "Trends API requires separate subscription",
+        "notes": "Check Subscription Info > API Units for balance"
+      },
+      "authentication": {
+        "method": "API Key",
+        "parameter": "key=YOUR_API_KEY",
+        "alternative": "OAuth 2.0 (Projects API)",
+        "setup": "Subscription Info > API Units section"
+      },
+      "data_freshness": "Updated monthly for most databases, daily for some metrics",
+      "best_for": "Keyword research, competitor keyword gap analysis, backlink profile analysis, domain comparison, SERP analysis",
+      "code_example": {
+        "curl": "curl 'https://api.semrush.com/analytics/v1/?key=YOUR_API_KEY&type=backlinks&target=example.com&target_type=root_domain&export_columns=page_ascore,source_url,target_url,anchor&display_limit=100'",
+        "response_fields": ["ascore", "backlinks_num", "domains_num", "follows_num", "anchor", "source_url"]
+      },
+      "limitations": [
+        "Requires SEMrush subscription",
+        "API units consumed per request/line",
+        "Display limit max 1,000,000 rows",
+        "Separate subscription for Trends API (traffic data)"
+      ]
+    }
+  ],
+  "comparison_matrix": {
+    "best_for_backlinks": "Ahrefs (most comprehensive backlink index)",
+    "best_for_keywords": "SEMrush (largest keyword database)",
+    "best_for_performance": "PageSpeed Insights (official Google metrics)",
+    "best_for_search_data": "Google Search Console (real user search data)",
+    "most_affordable": "PageSpeed Insights + Google Search Console (both free)",
+    "most_expensive": "Ahrefs + SEMrush (both require paid subscriptions + API units)"
+  },
+  "implementation_recommendations": {
+    "starter_stack": ["PageSpeed Insights API", "Google Search Console API"],
+    "professional_stack": ["All 4 APIs for comprehensive analysis"],
+    "cost_optimization": "Use free APIs (PSI + GSC) for basic metrics, paid APIs (Ahrefs + SEMrush) for deep competitor research",
+    "rate_limit_strategy": "Implement exponential backoff, queue management, and caching for all APIs"
+  }
+}
