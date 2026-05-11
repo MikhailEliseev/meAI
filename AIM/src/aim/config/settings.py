@@ -1,0 +1,168 @@
+"""Settings for API Clients
+
+Environment variable configuration with validation for API keys and defaults.
+"""
+
+from typing import Optional
+
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class APISettings(BaseSettings):
+    """API client settings from environment variables
+
+    Attributes:
+        semrush_api_key: SEMrush API key (required)
+        ahrefs_api_key: Ahrefs API key (optional, fallback)
+        max_cost_usd: Maximum API cost per request in USD
+        min_keywords: Minimum keywords to return
+        min_volume: Minimum search volume filter
+        cache_ttl: Cache TTL in seconds
+        rate_limit_capacity: Rate limiter bucket capacity
+        rate_limit_refill: Rate limiter refill rate (requests/sec)
+    """
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    # API Keys
+    semrush_api_key: str = Field(
+        ...,
+        description="SEMrush API key (required)",
+        min_length=10,
+    )
+    ahrefs_api_key: Optional[str] = Field(
+        None,
+        description="Ahrefs API key (optional fallback)",
+        min_length=10,
+    )
+
+    # Budget and limits
+    max_cost_usd: float = Field(
+        default=5.0,
+        description="Maximum API cost per request in USD",
+        ge=0.1,
+        le=100.0,
+    )
+    min_keywords: int = Field(
+        default=100,
+        description="Minimum keywords to return",
+        ge=1,
+        le=1000,
+    )
+    min_volume: int = Field(
+        default=10,
+        description="Minimum search volume filter",
+        ge=0,
+    )
+
+    # Caching and rate limiting
+    cache_ttl: int = Field(
+        default=3600,
+        description="Cache TTL in seconds (1 hour default)",
+        ge=60,
+        le=86400,
+    )
+    rate_limit_capacity: int = Field(
+        default=10,
+        description="Rate limiter bucket capacity",
+        ge=1,
+        le=100,
+    )
+    rate_limit_refill: float = Field(
+        default=1.0,
+        description="Rate limiter refill rate (requests/sec)",
+        ge=0.1,
+        le=10.0,
+    )
+
+    @field_validator("semrush_api_key")
+    @classmethod
+    def validate_semrush_key(cls, v: str) -> str:
+        """Validate SEMrush API key format"""
+        if not v or v.strip() == "":
+            raise ValueError("SEMrush API key cannot be empty")
+        if v.startswith("your_") or v == "REPLACE_ME":
+            raise ValueError(
+                "SEMrush API key not configured. "
+                "Set SEMRUSH_API_KEY environment variable."
+            )
+        return v.strip()
+
+    @field_validator("ahrefs_api_key")
+    @classmethod
+    def validate_ahrefs_key(cls, v: Optional[str]) -> Optional[str]:
+        """Validate Ahrefs API key format"""
+        if v is None:
+            return None
+        if v.strip() == "":
+            return None
+        if v.startswith("your_") or v == "REPLACE_ME":
+            return None
+        return v.strip()
+
+    def has_fallback(self) -> bool:
+        """Check if Ahrefs fallback is configured
+
+        Returns:
+            True if Ahrefs API key is available
+        """
+        return self.ahrefs_api_key is not None
+
+    def validate_on_startup(self) -> None:
+        """Validate settings on application startup
+
+        Raises:
+            ValueError: If configuration is invalid
+        """
+        # Check primary API key
+        if not self.semrush_api_key:
+            raise ValueError(
+                "SEMrush API key is required. "
+                "Set SEMRUSH_API_KEY environment variable."
+            )
+
+        # Warn if no fallback
+        if not self.has_fallback():
+            import warnings
+            warnings.warn(
+                "Ahrefs API key not configured. "
+                "No fallback available if SEMrush fails. "
+                "Set AHREFS_API_KEY environment variable for redundancy.",
+                UserWarning,
+            )
+
+        # Validate budget vs keywords
+        min_cost_per_keyword = 0.01
+        estimated_cost = self.min_keywords * min_cost_per_keyword
+        if estimated_cost > self.max_cost_usd:
+            raise ValueError(
+                f"Budget ${self.max_cost_usd} insufficient for "
+                f"{self.min_keywords} keywords (estimated ${estimated_cost:.2f}). "
+                f"Increase MAX_COST_USD or reduce MIN_KEYWORDS."
+            )
+
+
+# Global settings instance
+_settings: Optional[APISettings] = None
+
+
+def get_api_settings() -> APISettings:
+    """Get API settings singleton
+
+    Returns:
+        APISettings instance
+
+    Raises:
+        ValueError: If settings validation fails
+    """
+    global _settings
+    if _settings is None:
+        _settings = APISettings()
+        _settings.validate_on_startup()
+    return _settings
