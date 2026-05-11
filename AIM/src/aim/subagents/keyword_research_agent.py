@@ -454,6 +454,15 @@ class KeywordResearchAgent(Agent):
             if keywords else 0.0
         )
 
+        # Calculate tier distribution (for validation)
+        total = len(keywords) if keywords else 1
+        tier_distribution = {
+            "P0": round(p0_count / total, 3),
+            "P1": round(p1_count / total, 3),
+            "P2": round(p2_count / total, 3),
+            "P3": round(p3_count / total, 3),
+        }
+
         return KeywordResearchReport(
             seed_keyword=seed_keyword,
             requested_at=requested_at,
@@ -470,6 +479,7 @@ class KeywordResearchAgent(Agent):
             total_cost_usd=self.total_cost_usd,
             api_calls=self.api_calls,
             average_priority_score=avg_score,
+            tier_distribution=tier_distribution,
             analysis_duration_seconds=(datetime.now(timezone.utc) - requested_at).total_seconds(),
         )
 

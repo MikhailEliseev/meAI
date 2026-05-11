@@ -35,10 +35,9 @@ class KeywordPriority(BaseModel):
     - Intent: Commercial intent multiplier (1.0-1.4)
     - Position: Current ranking bonus (0.5-1.0)
     - Difficulty: SEO difficulty (0-100)
-    - Competition: Paid competition (0-1)
 
     Adjustments:
-    - Medical intent boost: +40% for transactional, +30% for informational
+    - Medical intent boost: +20% for transactional, +15% for informational
     - SERP penalty: -20% to -50% based on AI Overview/Featured Snippet presence
     - Compliance penalty: -50% for HIGH risk, -100% (blocked) for CRITICAL risk
     """
@@ -53,10 +52,9 @@ class KeywordPriority(BaseModel):
     intent_score: float = Field(..., ge=1.0, le=1.4, description="Intent multiplier")
     position_score: float = Field(..., ge=0.5, le=1.0, description="Position bonus")
     difficulty_score: float = Field(..., ge=0, le=100, description="Difficulty penalty")
-    competition_score: float = Field(..., ge=0, le=1, description="Competition penalty")
 
     # Adjustments applied
-    medical_boost: float = Field(default=0.0, ge=0, le=0.4, description="Medical intent boost")
+    medical_boost: float = Field(default=0.0, ge=0, le=0.2, description="Medical intent boost")
     serp_penalty: float = Field(default=0.0, ge=0, le=0.5, description="SERP feature penalty")
     compliance_penalty: float = Field(default=0.0, ge=0, le=1.0, description="Compliance penalty")
 

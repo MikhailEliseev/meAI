@@ -77,14 +77,12 @@ class PriorityCalculator:
         intent_score = self._get_intent_multiplier(keyword_data.intent)
         position_score = self._get_position_bonus(current_position)
         difficulty_score = keyword_data.difficulty
-        # Use difficulty as competition proxy (both measure ranking difficulty)
-        # Normalize difficulty (0-100) to competition range (0-1)
-        competition_score = difficulty_score / 100.0
 
         # Step 2: Calculate base score
-        # Formula: (Volume × Intent × Position) / (Difficulty × Competition)
+        # Formula: (Volume × Intent × Position) / Difficulty
+        # Note: Competition removed to avoid double-counting difficulty
         numerator = volume_score * intent_score * position_score
-        denominator = max(difficulty_score, 1) * max(competition_score, 0.01)
+        denominator = max(difficulty_score, 1)
         base_score = (numerator / denominator) * 100
 
         # Clamp to 0-100
@@ -131,7 +129,6 @@ class PriorityCalculator:
             intent_score=intent_score,
             position_score=position_score,
             difficulty_score=difficulty_score,
-            competition_score=competition_score,
             medical_boost=medical_boost,
             serp_penalty=serp_penalty,
             compliance_penalty=compliance_penalty,

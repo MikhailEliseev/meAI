@@ -98,6 +98,12 @@ class KeywordResearchReport(BaseModel):
     average_priority_score: float = Field(..., ge=0, le=100, description="Average priority score")
     confidence: float = Field(default=1.0, ge=0, le=1, description="Overall confidence")
 
+    # Tier distribution (for validation)
+    tier_distribution: dict[str, float] = Field(
+        default_factory=dict,
+        description="Percentage of keywords in each tier (P0-P3)"
+    )
+
     # Feedback (if available)
     feedback_summary: Optional[FeedbackSummary] = Field(
         None, description="User feedback summary"

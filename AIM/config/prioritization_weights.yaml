@@ -1,15 +1,15 @@
 # Prioritization Weights Configuration
 #
 # Used by PriorityCalculator to compute keyword priority scores.
-# Formula: (Volume × Intent × Position) / (Difficulty × Competition)
+# Formula: (Volume × Intent × Position) / Difficulty
 #
 # Adjustments:
-# - Medical intent boost: +40% transactional, +30% informational
+# - Medical intent boost: +20% transactional, +15% informational
 # - SERP penalty: -20% to -50% based on AI Overview/Featured Snippet
 # - Compliance penalty: -50% HIGH risk, -100% CRITICAL risk
 
-version: "1.0.0"
-updated_at: "2026-05-11T22:17:00Z"
+version: "1.0.1"
+updated_at: "2026-05-12T02:19:00Z"
 
 # Base formula weights
 formula:
@@ -17,7 +17,6 @@ formula:
   intent_weight: 1.0        # Commercial intent importance
   position_weight: 1.0      # Current ranking importance
   difficulty_weight: 1.0    # SEO difficulty penalty
-  competition_weight: 1.0   # Paid competition penalty
 
 # Intent multipliers (applied to intent_score)
 intent:
@@ -27,10 +26,11 @@ intent:
   navigational: 1.0         # Brand/product names
 
 # Medical intent boost (added to base score)
+# Reduced from +40%/+30% to +20%/+15% based on product review
 medical_boost:
-  transactional: 0.4        # +40% for "dental implants cost"
-  commercial: 0.35          # +35% for "best dentist"
-  informational: 0.3        # +30% for "how dental implants work"
+  transactional: 0.2        # +20% for "dental implants cost"
+  commercial: 0.175         # +17.5% for "best dentist"
+  informational: 0.15       # +15% for "how dental implants work"
   navigational: 0.0         # No boost for brand searches
 
 # Position bonus (multiplier based on current ranking)
@@ -77,14 +77,6 @@ difficulty:
   threshold_easy: 30        # Easy keywords (0-30)
   threshold_medium: 60      # Medium keywords (31-60)
   threshold_hard: 100       # Hard keywords (61-100)
-
-# Competition normalization
-competition:
-  min_competition: 0.0      # Minimum competition
-  max_competition: 1.0      # Maximum competition
-  threshold_low: 0.3        # Low competition (0-0.3)
-  threshold_medium: 0.6     # Medium competition (0.31-0.6)
-  threshold_high: 1.0       # High competition (0.61-1.0)
 
 # Adaptive learning settings
 learning:
