@@ -83,7 +83,7 @@ class SEMrushClient(APIClientBase):
 
         while len(keywords) < max_keywords:
             # Budget guard
-            if total_cost + self.COST_PER_REQUEST > max_cost_usd:
+            if total_cost + self.COST_PER_REQUEST >= max_cost_usd:
                 self.logger.warning(
                     "budget_limit_reached",
                     total_cost=total_cost,

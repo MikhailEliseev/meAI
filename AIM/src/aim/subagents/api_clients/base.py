@@ -117,11 +117,10 @@ class APIClientBase(ABC):
         self.base_url = base_url
         self.cache_ttl = cache_ttl
 
-        # HTTP client
+        # HTTP client (no default auth header - subclasses handle auth)
         self.client = httpx.AsyncClient(
             base_url=base_url,
             timeout=30.0,
-            headers={"Authorization": f"Bearer {api_key}"},
         )
 
         # Rate limiter
@@ -153,6 +152,7 @@ class APIClientBase(ABC):
         endpoint: str,
         params: Optional[dict[str, Any]] = None,
         json: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, str]] = None,
     ) -> dict[str, Any]:
         """Make HTTP request with resilience patterns
 
@@ -161,6 +161,7 @@ class APIClientBase(ABC):
             endpoint: API endpoint
             params: Query parameters
             json: JSON body
+            headers: Additional headers
 
         Returns:
             Response JSON
@@ -190,13 +191,17 @@ class APIClientBase(ABC):
                 start_time = time.time()
 
                 try:
-                    # Circuit breaker call
-                    response = await self.circuit_breaker.call(
-                        self.client.request,
+                    # Manual circuit breaker check
+                    if self.circuit_breaker.current_state == "open":
+                        raise Exception("Circuit breaker is open")
+
+                    # Make async request
+                    response = await self.client.request(
                         method=method,
                         url=endpoint,
                         params=params,
                         json=json,
+                        headers=headers,
                     )
                     response.raise_for_status()
 
