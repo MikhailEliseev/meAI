@@ -9,8 +9,9 @@ Rate limit: 240 requests per minute (4 req/sec)
 Cache: 24 hours (enforcement data changes slowly)
 """
 
+import asyncio
 import time
-from typing import Any, Optional, List
+from typing import Optional, List
 
 import httpx
 import structlog
@@ -112,7 +113,7 @@ class FDAClient:
             # Search in product_description and reason_for_recall fields
             search_query = f'product_description:"{keyword}" OR reason_for_recall:"{keyword}"'
 
-            params = {
+            params: dict[str, str | int] = {
                 "search": search_query,
                 "limit": limit,
             }
@@ -132,9 +133,9 @@ class FDAClient:
                     keyword=keyword,
                     duration=duration,
                 )
-                result = []
+                result: list[dict] = []
                 await self.cache.set(cache_key, result)
-                return result
+                return []
 
             response.raise_for_status()
 
@@ -208,7 +209,3 @@ class FDAClient:
     def __repr__(self) -> str:
         """String representation"""
         return f"<FDAClient(cache_ttl={self.cache_ttl}s, rate_limit={self.rate_limit_per_minute}/min)>"
-
-
-# Import asyncio for sleep
-import asyncio

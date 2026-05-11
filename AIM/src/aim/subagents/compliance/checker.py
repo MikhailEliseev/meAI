@@ -21,7 +21,6 @@ from AIM.src.aim.subagents.compliance.fda_client import FDAClient
 from AIM.src.aim.subagents.compliance.risk_scorer import RiskScorer
 from AIM.src.aim.subagents.schemas.compliance import (
     ComplianceCheckResult,
-    AuditTrailEntry,
 )
 from AIM.src.aim.storage.models import AuditTrail
 

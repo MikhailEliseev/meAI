@@ -6,7 +6,6 @@ Tests pattern matching accuracy, performance, and coverage.
 
 import pytest
 import time
-from pathlib import Path
 
 from AIM.src.aim.subagents.compliance.patterns import ProhibitedPatternLibrary
 
@@ -152,7 +151,7 @@ class TestPatternPerformance:
 
         for keyword in keywords:
             start = time.perf_counter()
-            matches = pattern_library.check_keyword(keyword)
+            pattern_library.check_keyword(keyword)
             duration_ms = (time.perf_counter() - start) * 1000
 
             assert duration_ms < 10, f"Pattern matching took {duration_ms:.2f}ms (>10ms) for: {keyword}"

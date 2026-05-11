@@ -7,8 +7,7 @@ Tests all three stages: pattern matching, FDA lookup, and risk scoring.
 
 import pytest
 import pytest_asyncio
-import asyncio
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from AIM.src.aim.subagents.compliance.checker import ComplianceChecker
 from AIM.src.aim.subagents.schemas.compliance import (
@@ -237,7 +236,7 @@ class TestAuditTrail:
     async def test_audit_trail_created(self, compliance_checker):
         """Test that audit trail is created in database"""
         with patch.object(compliance_checker.fda_client, 'search_enforcement', return_value=[]):
-            result = await compliance_checker.check_keyword("cure diabetes", task_id="test-task-123")
+            await compliance_checker.check_keyword("cure diabetes", task_id="test-task-123")
 
             # Check that audit trail was created
             history = await compliance_checker.get_audit_history(keyword="cure diabetes")
@@ -253,7 +252,7 @@ class TestAuditTrail:
     async def test_audit_trail_contains_all_data(self, compliance_checker):
         """Test that audit trail contains all compliance data"""
         with patch.object(compliance_checker.fda_client, 'search_enforcement', return_value=[]):
-            result = await compliance_checker.check_keyword("cure cancer")
+            await compliance_checker.check_keyword("cure cancer")
 
             history = await compliance_checker.get_audit_history(keyword="cure cancer")
             audit_record = history[0]
@@ -351,7 +350,7 @@ class TestPerformance:
 
         with patch.object(compliance_checker.fda_client, 'search_enforcement', return_value=[]):
             start = time.time()
-            result = await compliance_checker.check_keyword("test keyword")
+            await compliance_checker.check_keyword("test keyword")
             duration = time.time() - start
 
             # Should complete in under 1 second (with mocked FDA)

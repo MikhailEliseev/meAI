@@ -6,7 +6,6 @@ Tests openFDA integration, caching, rate limiting, and graceful degradation.
 
 import pytest
 import pytest_asyncio
-import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
 
 from AIM.src.aim.subagents.compliance.fda_client import FDAClient

@@ -5,7 +5,7 @@ Calculates compliance risk scores using Likelihood × Severity methodology.
 Determines actions based on risk level (block, reduce, pass).
 """
 
-from typing import List, Optional
+from typing import List
 
 from AIM.src.aim.subagents.schemas.compliance import (
     RiskLevel,
