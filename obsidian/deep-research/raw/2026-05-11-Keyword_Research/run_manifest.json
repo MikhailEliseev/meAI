@@ -1,0 +1,39 @@
+{
+  "research_id": "keyword_research_medical_marketing_20260511",
+  "topic": "Keyword Research для медицинского маркетинга",
+  "mode": "standard",
+  "date": "2026-05-11",
+  "query": "Keyword Research для медицинского маркетинга: методы подбора ключевых слов, API и инструменты (Яндекс.Вордстат, Google Keyword Planner, Ahrefs, Semrush, SE Ranking), алгоритмы кластеризации (semantic, SERP-based, intent-based), метрики оценки качества (KEI, Keyword Difficulty, Search Intent, CPC, сезонность), законодательство РФ о медицинской рекламе (ФЗ-38 статья 24, ФЗ-323, запрещённые формулировки, требования к лицензиям, штрафы)",
+  "phases_completed": [
+    "SCOPE",
+    "PLAN",
+    "RETRIEVE",
+    "TRIANGULATE",
+    "SYNTHESIZE"
+  ],
+  "sources_collected": 13,
+  "word_count": 8500,
+  "search_queries": {
+    "exa_successful": 3,
+    "exa_rate_limited": 7,
+    "websearch_attempted": 17,
+    "websearch_empty": 17
+  },
+  "sub_agents_used": 3,
+  "output_files": [
+    "scope.md",
+    "plan.md",
+    "research_report.md",
+    "run_manifest.json"
+  ],
+  "estimated_cost_usd": 1.50,
+  "time_spent_minutes": 45,
+  "reused_by": [],
+  "tags": [
+    "keyword-research",
+    "medical-marketing",
+    "seo",
+    "russian-market",
+    "legal-compliance"
+  ]
+}
