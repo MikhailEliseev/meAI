@@ -1,152 +1,151 @@
 # Session Log
 
 **Дата:** 2026-05-11  
-**Время:** 14:36 GMT+3
+**Время:** 15:49 GMT+3
 
 ## Текущая работа
 
-### ✅ ЗАВЕРШЕНО: A/B Testing Agent Specification
+### ✅ ЗАВЕРШЕНО: Keyword Research Agent Specification
 
 **Что сделано:**
 
 1. **Brief создан**
-   - Файл: `docs/briefs/AB_TESTING_BRIEF.md`
-   - Размер: ~200 строк
-   - Содержание: Назначение, типы тестов, интеграции, приоритеты исследования
+   - Файл: `docs/briefs/KEYWORD_RESEARCH_BRIEF.md`
+   - Размер: ~227 строк
+   - Содержание: Назначение, медицинская специфика, интеграции, приоритеты исследования
 
 2. **Deep Research проведено**
    - Режим: standard (6 фаз)
-   - Источники: 3 успешных запроса Exa (5 hit rate limit)
-   - Темы: Statistical significance, sample size, test duration, Russian medical law
-   - Отчёт: `~/Documents/AB_Testing_Research_20260511/research_summary.md` (1,061 строк, 42 KB, 18 источников)
+   - Источники: 3 успешных запроса Exa (7 hit rate limit), 3 субагента
+   - Темы: Methods, APIs, Clustering, Metrics, Russian legal compliance
+   - Отчёт: `~/Documents/Keyword_Research_Medical_Marketing_Research_20260511/research_report.md` (~8,500 слов, 13 источников)
 
 3. **Исследование заархивировано**
-   - Vault: `obsidian/deep-research/raw/2026-05-11-AB_Testing/`
+   - Vault: `obsidian/deep-research/raw/2026-05-11-Keyword_Research/`
    - Manifest: создан с метаданными
    - Log: обновлён в `wiki/log.md`
 
-4. **Спецификация создана**
-   - Файл: `docs/subagents-specs/AB_TESTING_AGENT_SPEC.md`
-   - Версия: 1.0.0
-   - Размер: 1,742 строк, 64 KB
+4. **Спецификация обновлена**
+   - Файл: `docs/subagents-specs/KEYWORD_RESEARCH_SPEC.md`
+   - Версия: 1.0.0 (Draft → Ready for Implementation)
+   - Размер: 2,008 строк, 78 KB
    - Статус: ✅ Ready for Implementation
+   - Приоритет: P0 (Critical)
 
 **Ключевые улучшения спецификации:**
 
-**Статистическая строгость:**
-- Two-proportion z-test для сравнения конверсий
-- Sample size calculation ПЕРЕД тестом (формулы с примерами)
-- Confidence intervals (95%, 99%)
-- Statistical power analysis (80%, 90%, 95%)
-- Multiple testing correction (Bonferroni)
-- Peeking problem: false positive rate 5% → 20-30%
-
 **Медицинская специфика:**
-- Baseline conversion: 2-5% (vs 5-10% e-commerce) → требует 2-4x больше sample
-- Compliance check: ФЗ-38, ФЗ-323 (запрещённые формулировки, обязательные disclaimers)
-- Сезонные паттерны (грипп зимой +40%, аллергии весной +25%)
-- Минимальная длительность: 14 дней (capture weekly cycles)
+- Низкая частотность (10-1,000/месяц), высокая конверсия (2-5%)
+- Long-tail keywords критичны (70% запросов, 2.5x конверсия)
+- Региональность обязательна (18% локальных поисков → продажа в течение дня)
+- Три уровня терминологии (бытовые, профессиональные, МКБ-10)
 
-**Интеграции:**
-- Google Ads API (создание/обновление объявлений, метрики)
-- Яндекс.Директ API (управление кампаниями, статистика)
-- Яндекс.Метрика API (конверсии, поведение, Веб-визор)
-- Яндекс.Вариокуб (через веб-интерфейс, нет публичного API)
+**Методы подбора:**
+- Seed keyword expansion (через Яндекс.Вордстат, Google Keyword Planner)
+- Long-tail research (question-based, problem-solution, location-specific)
+- Medical terminology mapping (бытовые ↔ профессиональные ↔ МКБ-10)
+- Local modifiers (город, район, метро, улица, ориентир)
 
-**Алгоритм работы:**
-- Шаг 1: Валидация + compliance check
-- Шаг 2: Расчёт sample size и длительности
-- Шаг 3: Запуск теста (создание вариантов, настройка трекинга)
-- Шаг 4: Мониторинг БЕЗ peeking (только технические проблемы)
-- Шаг 5: Финализация и статистический анализ (z-test, CI, power)
-- Шаг 6: Формирование результата и рекомендаций
-- Шаг 7: Отправка результата и сохранение
-- Шаг 8: Автоматическое применение победителя (gradual rollout)
+**Инструменты и API (6 сравнены):**
+- Яндекс.Вордстат API (бесплатно, 5 concurrent, point-based)
+- Google Keyword Planner API (бесплатно, OAuth 2.0, строгие limits)
+- Ahrefs API (Enterprise, 60 req/min, backlink анализ)
+- Semrush API ($119-449/мес, 188+ регионов, конкурентный анализ)
+- SE Ranking API ($318/мес standalone, cost-effective)
+- TopVisor API (от 500₽/мес, лучший для РФ)
 
-**Метрики успеха:**
-- False positive rate: ≤ 5% (α = 0.05)
-- Statistical power: ≥ 80%
-- Compliance rate: 100%
-- Success rate: > 95%
-- Средний lift от победителей: > 15%
-- ROI от A/B тестирования: > 300%
+**Алгоритмы кластеризации (3 с примерами кода):**
+- SERP-based (Jaccard similarity, самый точный, дорогой)
+- Semantic (BERT embeddings, быстрый, масштабируемый)
+- Intent-based (informational/commercial/transactional, простой)
 
-**Примеры использования:**
-- Пример 1: Успешный тест с победителем (p=0.023, lift=+16.7%)
-- Пример 2: Тест без победителя (p=0.435, no significant difference)
-- Пример 3: Ошибка compliance (гарантии результата, отсутствие disclaimers)
-- Пример 4: Ошибка недостаточного трафика (85 дней vs 28 max)
+**Метрики качества (5 с формулами):**
+- KEI = (Search Volume)² / Competition
+- Keyword Difficulty (0-100, целевой <40 для медицины)
+- Search Intent (informational 60-70%, commercial 20-30%, transactional 10-20%)
+- CPC (индикатор коммерческости, >500₽ = высокая ценность)
+- Seasonality (грипп зимой +300%, аллергия весной +400%)
 
-**Обработка ошибок:**
-- INVALID_INPUT (валидация)
-- COMPLIANCE_VIOLATION (законодательство)
-- INSUFFICIENT_TRAFFIC (недостаточно трафика)
-- EXTERNAL_API_ERROR (retry с exponential backoff)
-- GUARDRAIL_VIOLATION (остановка теста)
-- TIMEOUT (partial_success)
-- INTERNAL_ERROR (логирование)
+**Законодательство РФ:**
+- ФЗ-38 статья 24: запрещены гарантии ("100% излечение"), превосходные степени без доказательств
+- Обязательное предупреждение: "Имеются противопоказания..." (≥5% площади)
+- Штрафы: 200,000-500,000₽ для юрлиц, 10,000-20,000₽ для должностных лиц
+- Кейсы 2024-2026: "Stomatologiya №1" (300,000₽), "Stomatologiya Rostov" (100,000-500,000₽)
 
-**Тестирование:**
-- Unit tests: > 80% coverage (валидация, sample size, z-test, compliance)
-- Integration tests: Event Bus, Event Store, Obsidian
-- E2E tests: полный цикл, no winner, compliance violation, guardrail violation
+**Практические рекомендации:**
+- Workflow для медицинской клиники (7-12 часов на 1,000-2,000 ключевых слов)
+- Выбор инструментов по бюджету (0₽ → 50,000₽+/месяц)
+- Интеграция с контент-стратегией (keyword cluster → content type mapping)
+- Compliance checklist (7 пунктов проверки перед публикацией)
+
+**Appendix A:**
+- Полный отчёт исследования включён в спецификацию
+- 8,500 слов, 13 источников
+- Все методы, API, алгоритмы, метрики, законодательство
 
 ## Следующие шаги
 
-### Ads Magister Progress (5/5 agents completed - 100%)
+### SEO Magister Progress (1/5 agents completed - 20%)
 
-1. ✅ **Campaign Manager Agent** — DONE (2026-05-10)
-2. ✅ **Budget Optimizer Agent** — DONE (2026-05-11)
-3. ✅ **Performance Monitor Agent** — DONE (2026-05-11)
-4. ✅ **Analytics Agent** — DONE (2026-05-11, rewritten with research)
-5. ✅ **A/B Testing Agent** — DONE (2026-05-11, created with spec-writer)
-
-**🎉 Ads Magister ЗАВЕРШЁН!**
+1. ✅ **Keyword Research Agent** — DONE (2026-05-11)
+2. ⏳ **Competitor Analysis Agent** — TODO (P1)
+3. ⏳ **Technical SEO Agent** — TODO (P1)
+4. ⏳ **Content Optimization Agent** — TODO (P1)
+5. ⏳ **Link Building Agent** — TODO (P2)
 
 ### Immediate Next Steps
 
-1. **Создать коммит**
-   ```bash
-   git add docs/briefs/AB_TESTING_BRIEF.md \
-           docs/subagents-specs/AB_TESTING_AGENT_SPEC.md \
-           obsidian/deep-research/ \
-           SESSION.md \
-           docs/MEMO-NEXT-SESSION.md
-   git commit -m "docs: create A/B Testing Agent specification (spec-writer)"
-   ```
+**Рекомендация:** Продолжить SEO Magister → Competitor Analysis Agent (P1)
 
-2. **Выбрать следующий Magister для работы**
-   - SEO Magister (5 субагентов)
-   - Content Magister (5 субагентов)
-   - Analytics Magister (5 субагентов)
+**Почему:**
+- Логическая последовательность: Keywords → Competitors → Technical → Content → Links
+- Competitor Analysis даёт gap analysis для keyword research
+- Критичен для конкурентной стратегии
+
+**План:**
+1. Создать brief для Competitor Analysis Agent (интервью)
+2. Запустить deep-research (standard mode)
+3. Создать спецификацию на основе исследования
+4. Заархивировать исследование
+5. Коммит
 
 ## Статистика сессии
 
 **Спецификация:**
-- Время создания: ~2 часа (brief + deep research + specification)
-- Размер: 1,742 строк, 64 KB
+- Время создания: ~2 часа (brief + deep research + spec update)
+- Размер: 2,008 строк, 78 KB
 - Версия: 1.0.0
-- Полнота: Все секции заполнены (13 секций)
+- Полнота: Все секции заполнены + Appendix A с полным исследованием
 
 **Исследование:**
 - Режим: standard (6 phases)
-- Источники: 3 успешных Exa queries (5 hit rate limit)
-- Качество: 18 high-quality sources
+- Источники: 13 high-quality sources (3 Exa successful, 3 sub-agents)
+- Качество: Comprehensive coverage всех критичных аспектов
 - Стоимость: ~$1.50
 
 **Brief:**
-- Размер: ~200 строк
-- Время создания: ~15 минут (интервью)
+- Размер: ~227 строк
+- Время создания: ~10 минут (на основе существующей Draft спецификации)
 
 ## Заметки
 
-- Spec-writer skill работает отлично (Brief → Research → Spec → Archive)
-- Large File Write Rule применён (Write + Bash append)
-- Exa rate limit hit на 5 запросах (продолжили с 3 успешными)
-- Яндекс.Вариокуб не имеет публичного API (интеграция через веб-интерфейс)
-- Все критичные аспекты из брифа покрыты
-- Ads Magister полностью завершён (5/5 агентов)
+- Spec-writer skill работает отлично (Brief → Research → Spec Update → Archive)
+- Large File Write Rule применён (Write + Bash append для Appendix A)
+- Exa rate limit hit на 7 запросах (продолжили с 3 успешными + 3 субагента)
+- Все критичные аспекты из брифа покрыты исследованием
+- Существующая Draft спецификация улучшена до Ready for Implementation
+- SEO Magister: 1/5 агентов завершён (20%)
+
+## Общий прогресс проекта
+
+**Magisters:**
+- ✅ Ads Magister: 5/5 (100%) — COMPLETE
+- ⏳ SEO Magister: 1/5 (20%) — IN PROGRESS
+- ⏳ Content Magister: 0/5 (0%) — TODO
+- ⏳ Analytics Magister: 0/5 (0%) — TODO
+
+**Всего:** 6/20 агентов (30%)
 
 ---
 
-**Последнее обновление:** 2026-05-11 14:36 GMT+3
+**Последнее обновление:** 2026-05-11 15:49 GMT+3
