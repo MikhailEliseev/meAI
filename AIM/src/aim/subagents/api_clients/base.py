@@ -187,69 +187,69 @@ class APIClientBase(ABC):
             reraise=True,
         ):
             with attempt:
-                # Circuit breaker
-                with self.circuit_breaker:
-                    start_time = time.time()
+                start_time = time.time()
 
-                    try:
-                        response = await self.client.request(
-                            method=method,
-                            url=endpoint,
-                            params=params,
-                            json=json,
-                        )
-                        response.raise_for_status()
+                try:
+                    # Circuit breaker call
+                    response = await self.circuit_breaker.call(
+                        self.client.request,
+                        method=method,
+                        url=endpoint,
+                        params=params,
+                        json=json,
+                    )
+                    response.raise_for_status()
 
-                        duration = time.time() - start_time
+                    duration = time.time() - start_time
 
-                        # Metrics
-                        api_calls_total.labels(
-                            client=self.__class__.__name__,
-                            endpoint=endpoint,
-                            status="success",
-                        ).inc()
+                    # Metrics
+                    api_calls_total.labels(
+                        client=self.__class__.__name__,
+                        endpoint=endpoint,
+                        status="success",
+                    ).inc()
 
-                        api_latency.labels(
-                            client=self.__class__.__name__,
-                            endpoint=endpoint,
-                        ).observe(duration)
+                    api_latency.labels(
+                        client=self.__class__.__name__,
+                        endpoint=endpoint,
+                    ).observe(duration)
 
-                        # Logging
-                        self.logger.info(
-                            "api_request_success",
-                            endpoint=endpoint,
-                            duration=duration,
-                            attempt=attempt.retry_state.attempt_number,
-                        )
+                    # Logging
+                    self.logger.info(
+                        "api_request_success",
+                        endpoint=endpoint,
+                        duration=duration,
+                        attempt=attempt.retry_state.attempt_number,
+                    )
 
-                        result = response.json()
+                    result = response.json()
 
-                        # Cache GET responses
-                        if method == "GET" and params:
-                            await self.cache.set(cache_key, result)
+                    # Cache GET responses
+                    if method == "GET" and params:
+                        await self.cache.set(cache_key, result)
 
-                        return result
+                    return result
 
-                    except httpx.HTTPError as e:
-                        duration = time.time() - start_time
+                except httpx.HTTPError as e:
+                    duration = time.time() - start_time
 
-                        # Metrics
-                        api_calls_total.labels(
-                            client=self.__class__.__name__,
-                            endpoint=endpoint,
-                            status="error",
-                        ).inc()
+                    # Metrics
+                    api_calls_total.labels(
+                        client=self.__class__.__name__,
+                        endpoint=endpoint,
+                        status="error",
+                    ).inc()
 
-                        # Logging
-                        self.logger.error(
-                            "api_request_error",
-                            endpoint=endpoint,
-                            error=str(e),
-                            duration=duration,
-                            attempt=attempt.retry_state.attempt_number,
-                        )
+                    # Logging
+                    self.logger.error(
+                        "api_request_error",
+                        endpoint=endpoint,
+                        error=str(e),
+                        duration=duration,
+                        attempt=attempt.retry_state.attempt_number,
+                    )
 
-                        raise
+                    raise
 
     async def close(self) -> None:
         """Close HTTP client"""

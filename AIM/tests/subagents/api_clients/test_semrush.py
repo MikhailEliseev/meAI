@@ -133,9 +133,22 @@ async def test_intent_detection(semrush_client):
 @pytest.mark.asyncio
 async def test_pagination_support(semrush_client):
     """Test pagination fetches multiple pages"""
-    with patch.object(semrush_client, "_make_request") as mock_request:
-        # Return full pages to trigger pagination
-        mock_request.return_value = SEMRUSH_MOCK_RESPONSE
+    with patch.object(semrush_client, "_fetch_keyword_page") as mock_fetch:
+        # Create full page of 100 keywords to trigger pagination
+        full_page = []
+        for i in range(100):
+            full_page.append({
+                "keyword": f"dental implants {i}",
+                "volume": 1000 + i,
+                "difficulty": 50,
+                "cpc": 10.0,
+                "intent": "commercial",
+                "trend": "",
+                "competition": 0.5,
+            })
+
+        # Return full page twice
+        mock_fetch.side_effect = [full_page, full_page[:50]]
 
         keywords = await semrush_client.expand_keywords(
             seed_keyword="dental implants",
@@ -145,7 +158,8 @@ async def test_pagination_support(semrush_client):
         )
 
         # Should have made multiple requests for pagination
-        assert mock_request.call_count >= 2
+        assert mock_fetch.call_count == 2
+        assert len(keywords) == 150
 
 
 @pytest.mark.asyncio
