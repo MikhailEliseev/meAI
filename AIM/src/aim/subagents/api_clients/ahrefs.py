@@ -69,7 +69,7 @@ class AhrefsClient(APIClientBase):
             ValueError: If zero volume found and no alternatives
             RuntimeError: If budget exceeded
         """
-        keywords = []
+        keywords: list[dict[str, Any]] = []
         total_cost = 0.0
         offset = 0
 
@@ -192,7 +192,7 @@ class AhrefsClient(APIClientBase):
         Returns:
             List of keyword data dictionaries
         """
-        params = {
+        params: dict[str, Any] = {
             "select": "keyword,volume,keyword_difficulty,cpc,clicks,parent_topic",
             "from": "keywords_explorer",
             "where": f"keyword LIKE '%{quote(seed_keyword)}%'",
@@ -202,7 +202,7 @@ class AhrefsClient(APIClientBase):
         }
 
         if min_volume > 0:
-            params["where"] += f" AND volume >= {min_volume}"
+            params["where"] = str(params["where"]) + f" AND volume >= {min_volume}"
 
         response = await self._make_request(
             method="GET",

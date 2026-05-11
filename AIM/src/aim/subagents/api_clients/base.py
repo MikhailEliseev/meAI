@@ -256,6 +256,10 @@ class APIClientBase(ABC):
 
                     raise
 
+        # This line should never be reached due to reraise=True in AsyncRetrying
+        # but mypy requires explicit return for all code paths
+        raise RuntimeError("Unexpected: retry loop exhausted without raising")
+
     async def close(self) -> None:
         """Close HTTP client"""
         await self.client.aclose()

@@ -69,7 +69,7 @@ class SEMrushClient(APIClientBase):
             ValueError: If zero volume found and no alternatives
             RuntimeError: If budget exceeded
         """
-        keywords = []
+        keywords: list[dict[str, Any]] = []
         total_cost = 0.0
         offset = 0
 
