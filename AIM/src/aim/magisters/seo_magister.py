@@ -11,9 +11,9 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Any
 
-from aim.subagents.seo.technical_agent import TechnicalSEOAgent
-from aim.subagents.seo.content_agent import ContentSEOAgent
-from aim.subagents.seo.links_agent import LinksSEOAgent
+from AIM.src.aim.subagents.seo.technical_agent import TechnicalSEOAgent
+from AIM.src.aim.subagents.seo.content_agent import ContentSEOAgent
+from AIM.src.aim.subagents.seo.links_agent import LinksSEOAgent
 
 
 class SEOMagister:
