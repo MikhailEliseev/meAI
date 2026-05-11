@@ -637,7 +637,199 @@ Use `/model <name>` command:
 - Obsidian vault is the persistent memory
 - Skills are invoked directly through Claude Code
 
+## Sprint 1: Keyword Research Agent - Core Infrastructure ✅
+
+**Completed:** 2026-05-11
+
+**Summary:**
+- Built production-ready API clients layer for keyword research
+- Implemented resilience patterns (circuit breaker, retry, rate limiting, caching)
+- Created data validation with Pydantic schemas
+- Added comprehensive test coverage (27 tests passing)
+- Budget control and cost tracking
+
+**Components Added:**
+
+### 1. API Clients Layer (`AIM/src/aim/subagents/api_clients/`)
+
+**Base Client** (`base.py`):
+- Circuit breaker (fail_max=5, reset_timeout=60s)
+- Retry with exponential backoff (1s → 30s max)
+- Token bucket rate limiting
+- 1-hour response caching
+- Prometheus metrics
+- Structured logging
+
+**SEMrush Client** (`semrush.py`):
+- Keyword Magic Tool API integration
+- Pagination (100 keywords per page)
+- Budget guard ($0.01 per request)
+- Zero-volume handling with suggestions
+- Intent detection
+- Min volume filtering
+
+**Ahrefs Client** (`ahrefs.py`):
+- Fallback provider
+- Keywords Explorer API
+- Difficulty normalization
+- Parent topic detection
+
+### 2. Data Validation (`AIM/src/aim/subagents/schemas/`)
+
+**API Response Schemas** (`api_responses.py`):
+- `SEMrushKeywordData` - SEMrush response validation
+- `AhrefsKeywordData` - Ahrefs response with normalization
+- `KeywordDataUnified` - Cross-source unified format
+- Field validators (volume, CPC, difficulty)
+- Intent type validation
+
+### 3. Configuration (`AIM/src/aim/config/`)
+
+**Settings** (`settings.py`):
+- Environment variable management
+- API key validation
+- Cost control parameters
+- Rate limiting configuration
+- Cache TTL settings
+
+### 4. Testing (`AIM/tests/`)
+
+**Test Coverage:**
+- `test_base.py` - Base client resilience patterns (9 tests)
+- `test_semrush.py` - SEMrush client functionality (9 tests)
+- `test_ahrefs.py` - Ahrefs client functionality (9 tests)
+- `keyword_data.py` - Mock data fixtures
+
+**All 27 tests passing ✅**
+
+### 5. Dependencies Added
+
+```
+httpx>=0.27.0,<0.28.0           # HTTP client
+pybreaker>=1.0.0,<2.0.0         # Circuit breaker
+tenacity>=8.2.0,<9.0.0          # Retry logic
+aiolimiter>=1.1.0,<2.0.0        # Rate limiting
+aiocache[redis]>=0.12.0,<0.13.0 # Caching
+prometheus-client>=0.20.0       # Metrics
+structlog>=24.1.0               # Logging
+```
+
+### Environment Variables
+
+Add to `.env`:
+```bash
+# Keyword Research API Keys
+SEMRUSH_API_KEY=your_semrush_key_here
+AHREFS_API_KEY=your_ahrefs_key_here  # Optional fallback
+
+# Budget and Limits
+MAX_COST_USD=5.0                     # Max cost per request
+MIN_KEYWORDS=100                     # Min keywords to return
+MIN_VOLUME=10                        # Min search volume filter
+
+# Caching and Rate Limiting
+CACHE_TTL=3600                       # Cache TTL in seconds
+RATE_LIMIT_CAPACITY=10               # Rate limiter capacity
+RATE_LIMIT_REFILL=1.0                # Requests per second
+```
+
+### Cost Analysis
+
+**Per Analysis:**
+- SEMrush: $0.01 per API call
+- Typical analysis: 1-5 calls = $0.01-$0.05
+- Budget guard prevents overruns
+- Cache reduces repeat costs
+
+**Example:**
+- 100 keywords, min volume 10: ~$0.04
+- 500 keywords, min volume 50: ~$0.20
+- Max budget $5.00 = up to 500 API calls
+
+### Usage Example
+
+```python
+from AIM.src.aim.config.settings import get_api_settings
+from AIM.src.aim.subagents.api_clients.semrush import SEMrushClient
+
+# Load settings
+settings = get_api_settings()
+
+# Create client
+client = SEMrushClient(
+    api_key=settings.semrush_api_key,
+    rate_limit_capacity=settings.rate_limit_capacity,
+    rate_limit_refill=settings.rate_limit_refill,
+)
+
+# Expand keywords
+keywords = await client.expand_keywords(
+    seed_keyword="dental implants",
+    max_keywords=100,
+    min_volume=10,
+    max_cost_usd=5.0,
+)
+
+# Close client
+await client.close()
+```
+
+### Testing Commands
+
+```bash
+# Run all tests
+pytest AIM/tests/subagents/api_clients/ -v
+
+# Run specific test file
+pytest AIM/tests/subagents/api_clients/test_semrush.py -v
+
+# Run with coverage
+pytest AIM/tests/subagents/api_clients/ --cov=AIM/src/aim/subagents/api_clients
+
+# Run single test
+pytest AIM/tests/subagents/api_clients/test_base.py::test_circuit_breaker_opens_after_failures -v
+```
+
+### Files Changed (15 files, 2,040+ lines)
+
+**New Files:**
+- `AIM/src/aim/subagents/api_clients/__init__.py`
+- `AIM/src/aim/subagents/api_clients/base.py` (350 lines)
+- `AIM/src/aim/subagents/api_clients/semrush.py` (280 lines)
+- `AIM/src/aim/subagents/api_clients/ahrefs.py` (250 lines)
+- `AIM/src/aim/subagents/schemas/__init__.py`
+- `AIM/src/aim/subagents/schemas/api_responses.py` (200 lines)
+- `AIM/tests/fixtures/__init__.py`
+- `AIM/tests/fixtures/keyword_data.py` (150 lines)
+- `AIM/tests/subagents/api_clients/__init__.py`
+- `AIM/tests/subagents/api_clients/test_base.py` (280 lines)
+- `AIM/tests/subagents/api_clients/test_semrush.py` (250 lines)
+- `AIM/tests/subagents/api_clients/test_ahrefs.py` (250 lines)
+
+**Modified Files:**
+- `AIM/src/aim/config/settings.py` (added APISettings)
+- `AIM/.env.example` (added API keys)
+- `requirements.txt` (added 7 dependencies)
+
+### Next Steps
+
+**Sprint 2: Keyword Research Agent - Analysis Layer**
+- Implement keyword analyzer
+- Add clustering and grouping
+- Intent classification
+- Priority scoring
+- Competitive analysis
+
+---
+
 ## Current Status
+
+**Sprint 1 - COMPLETED ✅** (2026-05-11)
+- API clients layer with resilience patterns
+- Data validation and schemas
+- Configuration management
+- 27 tests passing
+- Budget control implemented
 
 **Phase 3 (Part 1) - COMPLETED ✅**
 - Operator implemented with full autonomy
@@ -653,4 +845,4 @@ Use `/model <name>` command:
 - Next: Add result collection and reporting
 - Next: End-to-end test
 
-<!-- updated-by-superflow:2026-05-02 -->
+<!-- updated-by-sprint-1:2026-05-11 -->
