@@ -6,7 +6,9 @@ openFDA enforcement lookup, and risk scoring.
 """
 
 from aim.subagents.compliance.patterns import ProhibitedPatternLibrary
+from aim.subagents.compliance.fda_client import FDAClient
 
 __all__ = [
     "ProhibitedPatternLibrary",
+    "FDAClient",
 ]
