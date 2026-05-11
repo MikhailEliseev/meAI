@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 import yaml
 
-from AIM.src.aim.subagents.schemas.compliance import PatternMatch
+from src.aim.subagents.schemas.compliance import PatternMatch
 
 
 class ProhibitedPatternLibrary:

@@ -4,13 +4,14 @@ Models for keyword analysis results and research reports.
 """
 
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from AIM.src.aim.subagents.schemas.api_responses import KeywordDataUnified
-from AIM.src.aim.subagents.schemas.compliance import ComplianceResult
-from AIM.src.aim.subagents.schemas.prioritization import (
+from src.aim.subagents.schemas.api_responses import KeywordDataUnified
+from src.aim.subagents.schemas.compliance import ComplianceCheckResult
+from src.aim.subagents.schemas.prioritization import (
     FeedbackSummary,
     KeywordPriority,
     PriorityTier,
@@ -27,7 +28,7 @@ class KeywordAnalysisResult(BaseModel):
     keyword_data: KeywordDataUnified = Field(..., description="Unified keyword data from API")
 
     # Analysis results
-    compliance: ComplianceResult = Field(..., description="Compliance check result")
+    compliance: ComplianceCheckResult = Field(..., description="Compliance check result")
     priority: KeywordPriority = Field(..., description="Priority calculation result")
 
     # Metadata
@@ -105,6 +106,3 @@ class KeywordResearchReport(BaseModel):
     # Metadata
     analysis_duration_seconds: float = Field(..., ge=0, description="Total analysis duration")
     agent_version: str = Field(default="1.0.0", description="Agent version")
-
-
-from enum import Enum  # noqa: E402 - import after usage for proper ordering

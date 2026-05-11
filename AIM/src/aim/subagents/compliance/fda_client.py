@@ -18,7 +18,7 @@ import structlog
 from aiocache import Cache
 from aiocache.serializers import JsonSerializer
 
-from AIM.src.aim.subagents.schemas.compliance import FDAEnforcementRecord
+from src.aim.subagents.schemas.compliance import FDAEnforcementRecord
 
 logger = structlog.get_logger()
 

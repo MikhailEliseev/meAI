@@ -14,16 +14,16 @@ import structlog
 from meai.agents.base_agent import Agent, Task, TaskResult
 from meai.events.event_bus import EventBus
 
-from AIM.src.aim.config.settings import get_api_settings
-from AIM.src.aim.subagents.api_clients.ahrefs import AhrefsClient
-from AIM.src.aim.subagents.api_clients.semrush import SEMrushClient
-from AIM.src.aim.subagents.compliance.checker import ComplianceChecker
-from AIM.src.aim.subagents.prioritization.calculator import PriorityCalculator
-from AIM.src.aim.subagents.prioritization.serp_tracker import SERPTracker
-from AIM.src.aim.subagents.schemas.api_responses import KeywordDataUnified
-from AIM.src.aim.subagents.schemas.compliance import ComplianceResult, RiskLevel
-from AIM.src.aim.subagents.schemas.prioritization import PriorityTier, UserFeedback
-from AIM.src.aim.subagents.schemas.results import (
+from src.aim.config.settings import get_api_settings
+from src.aim.subagents.api_clients.ahrefs import AhrefsClient
+from src.aim.subagents.api_clients.semrush import SEMrushClient
+from src.aim.subagents.compliance.checker import ComplianceChecker
+from src.aim.subagents.prioritization.calculator import PriorityCalculator
+from src.aim.subagents.prioritization.serp_tracker import SERPTracker
+from src.aim.subagents.schemas.api_responses import KeywordDataUnified
+from src.aim.subagents.schemas.compliance import ComplianceAction, ComplianceCheckResult, RiskLevel
+from src.aim.subagents.schemas.prioritization import PriorityTier, UserFeedback
+from src.aim.subagents.schemas.results import (
     KeywordAnalysisResult,
     KeywordResearchReport,
     Recommendation,
@@ -54,6 +54,7 @@ class KeywordResearchAgent(Agent):
         database_url: str = "sqlite+aiosqlite:///./AIM/data/aim.db",
         vault_path: str = "./AIM/obsidian/seo-magister",
         event_bus: Optional[EventBus] = None,
+        skip_api_validation: bool = False,
     ):
         """Initialize Keyword Research Agent
 
@@ -62,6 +63,7 @@ class KeywordResearchAgent(Agent):
             database_url: Database connection URL
             vault_path: Path to SEO Magister's vault
             event_bus: Event bus for async messaging
+            skip_api_validation: Skip API key validation (for tests)
         """
         super().__init__(
             agent_id=agent_id,
@@ -70,11 +72,12 @@ class KeywordResearchAgent(Agent):
             vault_path=vault_path,
         )
 
+        self.database_url = database_url
         self.event_bus = event_bus
         self.logger = logger.bind(agent_id=agent_id)
 
         # Load settings
-        self.settings = get_api_settings()
+        self.settings = get_api_settings(skip_validation=skip_api_validation)
 
         # Initialize API clients
         self.semrush_client: Optional[SEMrushClient] = None
@@ -133,10 +136,10 @@ class KeywordResearchAgent(Agent):
             await self._initialize_clients()
 
             # Extract parameters
-            seed_keyword = task.metadata.get("seed_keyword", "")
-            max_keywords = task.metadata.get("max_keywords", 100)
-            min_volume = task.metadata.get("min_volume", 10)
-            max_cost_usd = task.metadata.get("max_cost_usd", 5.0)
+            seed_keyword = task.data.get("seed_keyword", "")
+            max_keywords = task.data.get("max_keywords", 100)
+            min_volume = task.data.get("min_volume", 10)
+            max_cost_usd = task.data.get("max_cost_usd", 5.0)
 
             if not seed_keyword:
                 raise ValueError("seed_keyword is required in task metadata")
@@ -160,13 +163,23 @@ class KeywordResearchAgent(Agent):
             # Step 2: Analyze each keyword (compliance + prioritization)
             analyzed_keywords = []
             for kw_data in keywords:
+                # Check budget before analyzing
+                if self.total_cost_usd >= max_cost_usd:
+                    self.logger.warning(
+                        "budget_limit_reached",
+                        total_cost=self.total_cost_usd,
+                        max_cost=max_cost_usd,
+                        keywords_analyzed=len(analyzed_keywords),
+                    )
+                    break
+
                 analysis = await self._analyze_keyword(kw_data)
                 analyzed_keywords.append(analysis)
 
             # Step 3: Filter blocked keywords
             passed_keywords = [
                 kw for kw in analyzed_keywords
-                if kw.compliance.action != "BLOCKED"
+                if kw.compliance.action != ComplianceAction.BLOCKED
             ]
 
             # Step 4: Sort by priority
@@ -182,7 +195,7 @@ class KeywordResearchAgent(Agent):
                 keywords=passed_keywords,
                 blocked_keywords=[
                     kw for kw in analyzed_keywords
-                    if kw.compliance.action == "BLOCKED"
+                    if kw.compliance.action == ComplianceAction.BLOCKED
                 ],
                 recommendations=recommendations,
             )

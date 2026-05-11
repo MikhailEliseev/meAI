@@ -18,9 +18,9 @@ from typing import Optional
 import structlog
 import yaml
 
-from AIM.src.aim.subagents.schemas.api_responses import KeywordDataUnified
-from AIM.src.aim.subagents.schemas.compliance import ComplianceResult, RiskLevel
-from AIM.src.aim.subagents.schemas.prioritization import (
+from src.aim.subagents.schemas.api_responses import KeywordDataUnified
+from src.aim.subagents.schemas.compliance import ComplianceCheckResult, RiskLevel
+from src.aim.subagents.schemas.prioritization import (
     KeywordPriority,
     PriorityTier,
 )
@@ -41,7 +41,7 @@ class PriorityCalculator:
             config_path: Path to prioritization_weights.yaml (default: AIM/config/)
         """
         if config_path is None:
-            config_path = Path(__file__).parent.parent.parent.parent / "config" / "prioritization_weights.yaml"
+            config_path = Path(__file__).parent.parent.parent.parent.parent / "config" / "prioritization_weights.yaml"
 
         self.config_path = config_path
         self.config = self._load_config()
@@ -55,7 +55,7 @@ class PriorityCalculator:
     def calculate_priority(
         self,
         keyword_data: KeywordDataUnified,
-        compliance_result: ComplianceResult,
+        compliance_result: ComplianceCheckResult,
         current_position: Optional[int] = None,
         serp_features: Optional[list[str]] = None,
     ) -> KeywordPriority:
@@ -77,12 +77,14 @@ class PriorityCalculator:
         intent_score = self._get_intent_multiplier(keyword_data.intent)
         position_score = self._get_position_bonus(current_position)
         difficulty_score = keyword_data.difficulty
-        competition_score = keyword_data.competition
+        # Use difficulty as competition proxy (both measure ranking difficulty)
+        # Normalize difficulty (0-100) to competition range (0-1)
+        competition_score = difficulty_score / 100.0
 
         # Step 2: Calculate base score
         # Formula: (Volume × Intent × Position) / (Difficulty × Competition)
         numerator = volume_score * intent_score * position_score
-        denominator = max(difficulty_score, 1) * max(competition_score, 0.1)
+        denominator = max(difficulty_score, 1) * max(competition_score, 0.01)
         base_score = (numerator / denominator) * 100
 
         # Clamp to 0-100
@@ -273,7 +275,7 @@ class PriorityCalculator:
     def _calculate_confidence(
         self,
         keyword_data: KeywordDataUnified,
-        compliance_result: ComplianceResult,
+        compliance_result: ComplianceCheckResult,
     ) -> float:
         """Calculate confidence in priority calculation
 

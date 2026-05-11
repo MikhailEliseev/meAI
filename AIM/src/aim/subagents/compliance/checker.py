@@ -16,13 +16,13 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
-from AIM.src.aim.subagents.compliance.patterns import ProhibitedPatternLibrary
-from AIM.src.aim.subagents.compliance.fda_client import FDAClient
-from AIM.src.aim.subagents.compliance.risk_scorer import RiskScorer
-from AIM.src.aim.subagents.schemas.compliance import (
+from src.aim.subagents.compliance.patterns import ProhibitedPatternLibrary
+from src.aim.subagents.compliance.fda_client import FDAClient
+from src.aim.subagents.compliance.risk_scorer import RiskScorer
+from src.aim.subagents.schemas.compliance import (
     ComplianceCheckResult,
 )
-from AIM.src.aim.storage.models import AuditTrail
+from src.aim.storage.models import AuditTrail
 
 
 class ComplianceChecker:
