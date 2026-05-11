@@ -5,6 +5,7 @@ Includes difficulty normalization and same budget/filtering as SEMrush.
 """
 
 from typing import Any, Optional
+from urllib.parse import quote
 
 from ..schemas.api_responses import AhrefsKeywordData, KeywordDataUnified
 from .base import APIClientBase
@@ -82,7 +83,7 @@ class AhrefsClient(APIClientBase):
 
         while len(keywords) < max_keywords:
             # Budget guard
-            if total_cost + self.COST_PER_REQUEST > max_cost_usd:
+            if total_cost + self.COST_PER_REQUEST >= max_cost_usd:
                 self.logger.warning(
                     "budget_limit_reached",
                     total_cost=total_cost,
@@ -194,7 +195,7 @@ class AhrefsClient(APIClientBase):
         params = {
             "select": "keyword,volume,keyword_difficulty,cpc,clicks,parent_topic",
             "from": "keywords_explorer",
-            "where": f"keyword LIKE '%{seed_keyword}%'",
+            "where": f"keyword LIKE '%{quote(seed_keyword)}%'",
             "country": "us",
             "limit": limit,
             "offset": offset,
@@ -335,7 +336,7 @@ class AhrefsClient(APIClientBase):
             params = {
                 "select": "keyword,volume",
                 "from": "keywords_explorer",
-                "where": f"keyword LIKE '%{seed_keyword}%'",
+                "where": f"keyword LIKE '%{quote(seed_keyword)}%'",
                 "country": "us",
                 "limit": 5,
             }
