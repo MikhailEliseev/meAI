@@ -60,3 +60,4 @@ test_vault/
 test_vault_*/
 e2e_test_vault/
 scenario_vault/
+.worktrees/

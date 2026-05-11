@@ -1,71 +1,41 @@
 {
+  "phase": 2,
+  "stage": "setup",
   "context": {
-    "run_id": "vertical-slice-seo-2026-05-09",
-    "onboarded": true,
+    "run_id": "7AD77690-2B7F-4555-81AE-656913E6A089",
+    "feature": "keyword-research-agent-implementation",
+    "started_at": "2026-05-11T19:13:11.220Z",
     "governance_mode": "standard",
-    "git_workflow_mode": "stacked_prs",
-    "spec_version": "1.1",
-    "plan_version": "1.1",
-    "charter_file": "docs/superflow-vertical-slice/AUTONOMY-CHARTER.md"
+    "git_workflow_mode": "parallel_wave_prs",
+    "board_memo_approved": true,
+    "approved_at": "2026-05-11T19:24:26.686Z",
+    "brief_file": "docs/superflow/specs/2026-05-11-keyword-research-agent-brief.md",
+    "product_approved": true,
+    "product_approved_at": "2026-05-11T19:39:34.523Z",
+    "design_file": "docs/superflow/specs/2026-05-11-keyword-research-agent-design-v2.md",
+    "spec_revision_complete": true,
+    "spec_revised_at": "2026-05-11T19:49:00.000Z",
+    "plan_file": "docs/superflow/plans/2026-05-11-keyword-research-agent.md",
+    "plan_approved": true,
+    "plan_approved_at": "2026-05-11T20:16:06.909Z",
+    "execution_started_at": "2026-05-11T20:16:06.909Z",
+    "current_sprint": 1,
+    "current_wave": 1
   },
-  "phase": 3,
-  "version": 1,
-  "phase_label": "Merge",
-  "stage": "post-merge",
-  "stage_index": 2,
-  "progress": {
-    "completed_sprints": 4,
-    "total_sprints": 4,
-    "percentage": 100,
-    "merged_prs": 4
-  },
-  "artifacts": {
-    "board_memo": "docs/superflow-vertical-slice/brainstorm/BOARD-MEMO.md",
-    "spec": "docs/superflow-vertical-slice/spec/SPEC.md",
-    "plan": "docs/superflow-vertical-slice/plan/PLAN.md",
-    "charter": "docs/superflow-vertical-slice/AUTONOMY-CHARTER.md",
-    "checkpoints": [
-      "docs/superflow-vertical-slice/CHECKPOINT-1.md",
-      "docs/superflow-vertical-slice/CHECKPOINT-2.md",
-      "docs/superflow-vertical-slice/CHECKPOINT-3.md",
-      "docs/superflow-vertical-slice/CHECKPOINT-4.md",
-      "docs/superflow-vertical-slice/CHECKPOINT-5.md",
-      "docs/superflow-vertical-slice/CHECKPOINT-6.md",
-      "docs/superflow-vertical-slice/CHECKPOINT-7.md",
-      "docs/superflow-vertical-slice/CHECKPOINT-8.md"
+  "last_updated": "2026-05-11T20:17:26.255971+00:00",
+  "heartbeat": {
+    "updated_at": "2026-05-11T20:17:26.255971+00:00",
+    "current_sprint": 1,
+    "sprint_goal": "Core Infrastructure - API layer with primary/fallback, resilience patterns, cost control",
+    "merge_method": "rebase",
+    "active_worktree": ".worktrees/sprint-1",
+    "active_branch": "feat/keyword-research-sprint-1",
+    "must_reread": [
+      "/Users/mikhaileliseev/.claude/skills/superflow/superflow-enforcement.md",
+      "references/phase2/overview.md"
     ],
-    "prs": [
-      {
-        "sprint": 1,
-        "url": "https://github.com/MikhailEliseev/meAI/pull/5",
-        "branch": "feat/seo-vertical-slice/sprint-1-technical-agent",
-        "status": "merged"
-      },
-      {
-        "sprint": 2,
-        "url": "https://github.com/MikhailEliseev/meAI/pull/9",
-        "branch": "feat/seo-vertical-slice/sprint-2-content-agent",
-        "status": "merged"
-      },
-      {
-        "sprint": 3,
-        "url": "https://github.com/MikhailEliseev/meAI/pull/10",
-        "branch": "feat/seo-vertical-slice/sprint-3-links-agent",
-        "status": "merged"
-      },
-      {
-        "sprint": 4,
-        "url": "https://github.com/MikhailEliseev/meAI/pull/11",
-        "branch": "feat/seo-vertical-slice/sprint-4-operator-coordination",
-        "status": "merged"
-      }
-    ]
+    "last_review_verdict": null,
+    "phase2_step": "setup"
   },
-  "next_steps": [
-    "Run verification tests",
-    "Create Phase 3 completion report",
-    "Archive sprint branches",
-    "Celebrate! \ud83c\udf89"
-  ],
-  "last_updated": "2026-05-09T13:48:56.151Z"
+  "sprint": 1
 }
