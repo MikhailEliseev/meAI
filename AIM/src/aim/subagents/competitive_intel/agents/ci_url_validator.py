@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 import aiohttp
 
 from meai.agents.base_agent import Agent, Task, TaskResult
-from aim.core.agent_learning import AgentLearning
+from AIM.src.aim.core.agent_learning import AgentLearning
 
 
 class CIURLValidator(Agent):
