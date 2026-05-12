@@ -1,148 +1,180 @@
-# MEMO: Next Session Start Point
+# Memo for Next Session
 
 **Date:** 2026-05-12  
-**Status:** Sprint 3 Complete, Ready for PR
+**Time:** 05:04 UTC  
+**Status:** Sprint 3 completed ✅, Sprint 4 started 🚧
 
 ---
 
-## What We Just Finished
+## What Just Happened
 
-**Sprint 3: Prioritization + Testing** ✅ COMPLETED
+### Sprint 3: Prioritization + Testing ✅ COMPLETED
 
-- Implemented priority calculator with multi-factor formula
-- Created SERP tracker for position monitoring
-- Integrated prioritization into Keyword Research Agent
-- Fixed all 7 integration tests (100% passing)
-- Committed to `feat/keyword-research-sprint-3` branch
+**Merged to main:** PR #14 (https://github.com/MikhailEliseev/meAI/pull/14)
 
-**Key Fixes:**
-- Schema: Used difficulty as competition proxy
-- Budget: Added cost check in analysis loop
-- Compliance: Fixed enum comparisons (string → ComplianceAction.BLOCKED)
-- Tests: Fixed PatternMatch objects, AsyncMock usage
+**What was built:**
+1. **Priority Calculator** - Formula: (Volume × Intent × Position) / Difficulty
+2. **SERP Tracker** - Dynamic penalties from real CTR data
+3. **Compliance System** - Pattern matching + FDA API + Risk scoring
+4. **Database Models** - Audit trail + User feedback
+5. **Integration Tests** - 7 tests covering full workflow
+
+**Quality gates passed:**
+- ✅ All 7 integration tests passing
+- ✅ Product review: 4 critical issues fixed
+- ✅ Technical review: 4 critical issues fixed
+- ✅ Pydantic v2 migration complete
+- ✅ Deprecated datetime.utcnow() replaced
+
+**Review fixes applied:**
+- Competition score double-counting → removed
+- Medical boost → reduced from +40% to +20%
+- Tier distribution tracking → added
+- Documentation → updated to match implementation
+- datetime.utcnow() → datetime.now(timezone.utc)
+- Pydantic v2 → 4 models migrated to ConfigDict
 
 ---
 
-## What to Do Next
+## What's Next: Sprint 4
 
-### Immediate (Next Session Start)
+### Goal: Replace 474-line stub with production code
 
-1. **Create PR for Sprint 3**
+**Current state:**
+- `AIM/src/aim/subagents/keyword_research_agent.py` is a stub with TODOs
+- All components ready: API clients, Compliance, Prioritization
+- Need to integrate everything into production agent
+
+**Implementation plan:**
+
+1. **Create feature branch**
    ```bash
-   gh pr create --title "feat: Keyword Research Agent Sprint 3 - Prioritization + Testing" \
-     --body "$(cat <<'EOF'
-   ## Summary
-   Implements priority calculation and completes integration testing for Keyword Research Agent.
-   
-   ## Changes
-   - Priority calculator with multi-factor formula
-   - SERP tracker for position monitoring
-   - Full agent integration (API → Compliance → Prioritization)
-   - 7 integration tests (all passing)
-   
-   ## Testing
-   - 7/7 integration tests passing ✅
-   - Budget control verified
-   - Compliance blocking verified
-   - Primary/fallback pattern verified
-   
-   ## Files Changed
-   - 8 new files
-   - 3 modified files
-   - ~1,200 lines added
-   
-   ## Next Steps
-   - Sprint 4: Agent Production Implementation
-   EOF
-   )"
+   git checkout -b feat/keyword-research-sprint-4
    ```
 
-2. **Review Process**
-   - Product review (product-manager agent)
-   - Technical review (code-reviewer agent)
-   - Fix any issues found
-   - Merge to main
+2. **Read current stub**
+   ```bash
+   Read AIM/src/aim/subagents/keyword_research_agent.py
+   ```
 
-3. **Start Sprint 4: Agent Production Implementation**
-   - Replace 474-line stub with production code
-   - Integrate all layers (API + Compliance + Prioritization)
-   - Add Obsidian vault integration
-   - Create end-to-end workflow test
+3. **Design production architecture**
+   - How to integrate API clients layer
+   - How to integrate compliance checker
+   - How to integrate priority calculator
+   - How to handle errors and fallbacks
+   - How to track costs
 
----
+4. **Implement core integration**
+   - Replace stub with production code
+   - Add `_expand_keywords_with_fallback()` method
+   - Add `_analyze_keyword()` method (compliance + priority)
+   - Add cost tracking
 
-## Current Branch State
+5. **Implement workflow**
+   - Keyword expansion (SEMrush → Ahrefs fallback)
+   - Compliance filtering (block CRITICAL, reduce HIGH)
+   - Priority sorting (highest first)
+   - Recommendation generation
+   - Report creation
+   - Obsidian save
 
-**Branch:** `feat/keyword-research-sprint-3`  
-**Commits:** 3 commits  
-**Status:** Ready for PR  
-**Tests:** 7/7 passing ✅
+6. **Add tests**
+   - End-to-end workflow test
+   - Error handling test
+   - Budget guard test
+   - Fallback pattern test
 
-**Last commit:**
-```
-fe6c3f2 - fix: complete Sprint 3 integration tests (7/7 passing)
-```
+7. **Update documentation**
+   - Agent usage examples
+   - API costs breakdown
+   - Configuration guide
 
----
-
-## Sprint 4 Preview
-
-**Goal:** Production-ready Keyword Research Agent
-
-**Components to Implement:**
-1. Replace stub in `keyword_research_agent.py` (474 lines → production code)
-2. Integrate API layer (SEMrush + Ahrefs)
-3. Integrate compliance layer (FDA patterns + risk scoring)
-4. Integrate prioritization layer (calculator + SERP tracker)
-5. Add Obsidian vault integration (`_save_to_vault()`)
-6. Add feedback collection (`collect_feedback()`)
-7. Create end-to-end test with real workflow
-
-**Estimated Effort:** 4-6 hours
-
----
-
-## Quick Context Recovery
-
-**Project:** meAI - AI-first medical marketing agency  
-**Current Feature:** Keyword Research Agent (SEO Magister subagent)  
-**Architecture:** Three-layer (API → Compliance → Prioritization)
-
-**Completed Sprints:**
-- Sprint 1: API clients (SEMrush + Ahrefs) ✅ MERGED
-- Sprint 2: Compliance (FDA patterns + risk scoring) ✅ MERGED
-- Sprint 3: Prioritization + Testing ✅ READY FOR PR
-
-**Next Sprint:**
-- Sprint 4: Production Implementation
+8. **Create PR**
+   ```bash
+   git add -A
+   git commit -m "feat: implement Keyword Research Agent production code"
+   git push origin feat/keyword-research-sprint-4
+   gh pr create --title "Sprint 4: Keyword Research Agent Production Implementation"
+   ```
 
 ---
 
-## Files to Check First
+## Key Files to Work With
 
-1. `SESSION.md` - Full session history
-2. `AIM/src/aim/subagents/keyword_research_agent.py` - Agent stub (474 lines)
-3. `AIM/tests/subagents/test_keyword_research_agent.py` - Integration tests (7 tests)
-4. `CLAUDE.md` - Sprint 3 section for details
+**Agent stub (to replace):**
+- `AIM/src/aim/subagents/keyword_research_agent.py` (474 lines)
+
+**Components to integrate:**
+- `AIM/src/aim/subagents/api_clients/semrush.py` (SEMrush client)
+- `AIM/src/aim/subagents/api_clients/ahrefs.py` (Ahrefs client)
+- `AIM/src/aim/subagents/compliance/checker.py` (Compliance checker)
+- `AIM/src/aim/subagents/prioritization/calculator.py` (Priority calculator)
+
+**Schemas:**
+- `AIM/src/aim/subagents/schemas/api_responses.py` (KeywordDataUnified)
+- `AIM/src/aim/subagents/schemas/compliance.py` (ComplianceCheckResult)
+- `AIM/src/aim/subagents/schemas/prioritization.py` (KeywordPriority)
+- `AIM/src/aim/subagents/schemas/results.py` (KeywordResearchReport)
+
+**Tests:**
+- `AIM/tests/subagents/test_keyword_research_agent.py` (7 integration tests)
 
 ---
 
-## Commands to Run
+## Commands to Start
 
 ```bash
-# Check current branch
-git branch --show-current
+# 1. Create feature branch
+git checkout -b feat/keyword-research-sprint-4
 
-# Check test status
-source venv/bin/activate && python -m pytest AIM/tests/subagents/test_keyword_research_agent.py -v
+# 2. Read current stub
+cat AIM/src/aim/subagents/keyword_research_agent.py | head -50
 
-# Create PR (when ready)
-gh pr create --title "feat: Keyword Research Agent Sprint 3 - Prioritization + Testing" --body "..."
+# 3. Check what needs to be integrated
+ls -la AIM/src/aim/subagents/api_clients/
+ls -la AIM/src/aim/subagents/compliance/
+ls -la AIM/src/aim/subagents/prioritization/
 
-# Switch to main after merge
-git checkout main && git pull origin main
+# 4. Run existing tests to understand expected behavior
+cd AIM && source ../venv/bin/activate && PYTHONPATH=../src:./src python -m pytest tests/subagents/test_keyword_research_agent.py -v
 ```
 
 ---
 
-**Remember:** Complete Before Next Rule - finish Sprint 3 PR before starting Sprint 4.
+## Success Criteria
+
+Sprint 4 is complete when:
+
+✅ All 474 lines of stub code replaced with production implementation  
+✅ Full workflow implemented: expand → compliance → priority → filter → sort → recommend → report  
+✅ Cost tracking working (total_cost_usd, api_calls)  
+✅ Budget guard enforced (max $5 default)  
+✅ Fallback pattern working (SEMrush → Ahrefs)  
+✅ Reports saved to Obsidian vault  
+✅ All 7 integration tests passing  
+✅ Documentation updated with usage examples  
+✅ PR created and ready for review
+
+---
+
+## Estimated Time
+
+- Core integration: 2-3 hours
+- Workflow implementation: 1-2 hours
+- Testing: 1 hour
+- Documentation: 30 minutes
+- **Total: 4.5-6.5 hours**
+
+---
+
+## Notes
+
+- Sprint 3 took 3 review cycles (product + technical + fixes)
+- Sprint 4 should be cleaner - all components already tested
+- Focus on integration, not reimplementation
+- Reuse existing tests as specification
+- Keep commits atomic (one feature per commit)
+
+---
+
+**Ready to start Sprint 4!** 🚀
