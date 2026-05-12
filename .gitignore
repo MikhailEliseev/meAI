@@ -62,3 +62,6 @@ e2e_test_vault/
 scenario_vault/
 .worktrees/
 server.log
+
+# Deep research archives (raw data)
+obsidian/deep-research/raw/
