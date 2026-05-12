@@ -5,11 +5,11 @@ Pydantic models for compliance checking, risk assessment, and audit trails.
 Used by Keyword Research Agent compliance integration.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional, List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class RiskLevel(str, Enum):
@@ -36,13 +36,9 @@ class ComplianceAction(str, Enum):
 
 class PatternMatch(BaseModel):
     """Single pattern match result"""
-    pattern: str = Field(..., description="Matched pattern text")
-    category: str = Field(..., description="Pattern category (e.g., 'cure_claims', 'guarantees')")
-    severity: int = Field(..., ge=1, le=5, description="Pattern severity (1-5)")
-    rationale: str = Field(..., description="Why this pattern is prohibited")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "pattern": "cure.*cancer",
                 "category": "cure_claims",
@@ -50,18 +46,19 @@ class PatternMatch(BaseModel):
                 "rationale": "FDA prohibits cure claims for cancer without approval"
             }
         }
+    )
+
+    pattern: str = Field(..., description="Matched pattern text")
+    category: str = Field(..., description="Pattern category (e.g., 'cure_claims', 'guarantees')")
+    severity: int = Field(..., ge=1, le=5, description="Pattern severity (1-5)")
+    rationale: str = Field(..., description="Why this pattern is prohibited")
 
 
 class FDAEnforcementRecord(BaseModel):
     """FDA enforcement action record"""
-    recall_number: str = Field(..., description="FDA recall number")
-    product_description: str = Field(..., description="Product description")
-    reason_for_recall: str = Field(..., description="Reason for recall")
-    classification: str = Field(..., description="FDA classification (Class I, II, III)")
-    recall_initiation_date: Optional[str] = Field(None, description="Recall date")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "recall_number": "F-1234-2026",
                 "product_description": "Dietary supplement claiming to cure diabetes",
@@ -70,6 +67,13 @@ class FDAEnforcementRecord(BaseModel):
                 "recall_initiation_date": "2026-03-15"
             }
         }
+    )
+
+    recall_number: str = Field(..., description="FDA recall number")
+    product_description: str = Field(..., description="Product description")
+    reason_for_recall: str = Field(..., description="Reason for recall")
+    classification: str = Field(..., description="FDA classification (Class I, II, III)")
+    recall_initiation_date: Optional[str] = Field(None, description="Recall date")
 
 
 class ComplianceCheckResult(BaseModel):
@@ -78,6 +82,34 @@ class ComplianceCheckResult(BaseModel):
     Contains all compliance data: pattern matches, FDA enforcement,
     risk scoring, and recommended action.
     """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "keyword": "cure diabetes naturally",
+                "matched_patterns": [
+                    {
+                        "pattern": "cure.*diabetes",
+                        "category": "cure_claims",
+                        "severity": 5,
+                        "rationale": "FDA prohibits cure claims for diabetes"
+                    }
+                ],
+                "pattern_severity": 5,
+                "fda_enforcement_found": True,
+                "fda_enforcement_count": 2,
+                "fda_enforcement_records": [],
+                "likelihood_score": 5,
+                "severity_score": 5,
+                "risk_score": 25,
+                "risk_level": "CRITICAL",
+                "action": "blocked",
+                "rationale": "CRITICAL risk: Cure claims for diabetes + FDA enforcement history. Likelihood=5 (pattern match + FDA history), Severity=5 (serious disease). Risk=25. Action: BLOCK keyword.",
+                "checked_at": "2026-05-11T21:35:00Z"
+            }
+        }
+    )
+
     keyword: str = Field(..., description="Keyword that was checked")
 
     # Stage 1: Pattern matching
@@ -117,33 +149,7 @@ class ComplianceCheckResult(BaseModel):
     rationale: str = Field(..., description="Detailed rationale for the decision")
 
     # Metadata
-    checked_at: datetime = Field(default_factory=datetime.utcnow, description="Check timestamp")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "keyword": "cure diabetes naturally",
-                "matched_patterns": [
-                    {
-                        "pattern": "cure.*diabetes",
-                        "category": "cure_claims",
-                        "severity": 5,
-                        "rationale": "FDA prohibits cure claims for diabetes"
-                    }
-                ],
-                "pattern_severity": 5,
-                "fda_enforcement_found": True,
-                "fda_enforcement_count": 2,
-                "fda_enforcement_records": [],
-                "likelihood_score": 5,
-                "severity_score": 5,
-                "risk_score": 25,
-                "risk_level": "CRITICAL",
-                "action": "blocked",
-                "rationale": "CRITICAL risk: Cure claims for diabetes + FDA enforcement history. Likelihood=5 (pattern match + FDA history), Severity=5 (serious disease). Risk=25. Action: BLOCK keyword.",
-                "checked_at": "2026-05-11T21:35:00Z"
-            }
-        }
+    checked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Check timestamp")
 
 
 class AuditTrailEntry(BaseModel):
@@ -152,6 +158,29 @@ class AuditTrailEntry(BaseModel):
     Immutable record of compliance check for legal/regulatory purposes.
     Stored in database for long-term retention.
     """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "keyword": "cure diabetes naturally",
+                "risk_level": "CRITICAL",
+                "action": "blocked",
+                "rationale": "CRITICAL risk: Cure claims for diabetes + FDA enforcement history",
+                "likelihood_score": 5,
+                "severity_score": 5,
+                "risk_score": 25,
+                "matched_patterns": '[{"pattern": "cure.*diabetes", "severity": 5}]',
+                "pattern_severity": 5,
+                "fda_enforcement_found": True,
+                "fda_enforcement_count": 2,
+                "fda_enforcement_details": '[{"recall_number": "F-1234-2026"}]',
+                "agent_id": "keyword-research-agent",
+                "task_id": "task-123",
+                "timestamp": "2026-05-11T21:35:00Z"
+            }
+        }
+    )
+
     keyword: str = Field(..., description="Keyword that was checked")
     risk_level: RiskLevel = Field(..., description="Risk level classification")
     action: ComplianceAction = Field(..., description="Action taken")
@@ -174,25 +203,4 @@ class AuditTrailEntry(BaseModel):
     # Metadata
     agent_id: str = Field(..., description="Agent that performed check")
     task_id: Optional[str] = Field(None, description="Task ID if applicable")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Check timestamp")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "keyword": "cure diabetes naturally",
-                "risk_level": "CRITICAL",
-                "action": "blocked",
-                "rationale": "CRITICAL risk: Cure claims for diabetes + FDA enforcement history",
-                "likelihood_score": 5,
-                "severity_score": 5,
-                "risk_score": 25,
-                "matched_patterns": '[{"pattern": "cure.*diabetes", "severity": 5}]',
-                "pattern_severity": 5,
-                "fda_enforcement_found": True,
-                "fda_enforcement_count": 2,
-                "fda_enforcement_details": '[{"recall_number": "F-1234-2026"}]',
-                "agent_id": "keyword-research-agent",
-                "task_id": "task-123",
-                "timestamp": "2026-05-11T21:35:00Z"
-            }
-        }
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Check timestamp")

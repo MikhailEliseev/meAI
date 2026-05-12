@@ -11,7 +11,7 @@ Adjustments:
 """
 
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -70,7 +70,7 @@ class PriorityCalculator:
         Returns:
             KeywordPriority with score and tier
         """
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
 
         # Step 1: Calculate base components
         volume_score = self._normalize_volume(keyword_data.volume)
@@ -109,7 +109,7 @@ class PriorityCalculator:
         # Step 7: Calculate confidence
         confidence = self._calculate_confidence(keyword_data, compliance_result)
 
-        duration = (datetime.utcnow() - start_time).total_seconds() * 1000
+        duration = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
         self.logger.info(
             "priority_calculated",

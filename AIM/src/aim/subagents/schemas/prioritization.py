@@ -28,7 +28,7 @@ class PriorityTier(str, Enum):
 class KeywordPriority(BaseModel):
     """Keyword priority calculation result
 
-    Priority Score = (Volume × Intent × Position) / (Difficulty × Competition)
+    Priority Score = (Volume × Intent × Position) / Difficulty
 
     Components:
     - Volume: Search volume (normalized 0-100)

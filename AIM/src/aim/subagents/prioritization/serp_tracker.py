@@ -4,7 +4,7 @@ Tracks SERP features (AI Overview, Featured Snippet, PAA) and their impact on CT
 Dynamically adjusts penalties based on real CTR data.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 from typing import Optional
 
 import structlog
@@ -176,7 +176,7 @@ class SERPTracker:
                 impact.ctr_reduction = (impact.ctr_reduction * n + ctr_reduction) / (n + 1)
                 impact.sample_size += 1
                 impact.confidence = min(1.0, impact.sample_size / 100)  # 100 samples = full confidence
-                impact.last_updated = datetime.utcnow()
+                impact.last_updated = datetime.now(timezone.utc)
 
         self.logger.info(
             "ctr_data_updated",
