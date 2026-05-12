@@ -31,9 +31,9 @@ class APISettings(BaseSettings):
     )
 
     # API Keys
-    semrush_api_key: str = Field(
-        ...,
-        description="SEMrush API key (required)",
+    semrush_api_key: Optional[str] = Field(
+        default=None,
+        description="SEMrush API key (required for production)",
         min_length=10,
     )
     ahrefs_api_key: Optional[str] = Field(
@@ -83,10 +83,12 @@ class APISettings(BaseSettings):
 
     @field_validator("semrush_api_key")
     @classmethod
-    def validate_semrush_key(cls, v: str) -> str:
+    def validate_semrush_key(cls, v: Optional[str]) -> Optional[str]:
         """Validate SEMrush API key format"""
-        if not v or v.strip() == "":
-            raise ValueError("SEMrush API key cannot be empty")
+        if v is None:
+            return None
+        if v.strip() == "":
+            return None
         if v.startswith("your_") or v == "REPLACE_ME":
             raise ValueError(
                 "SEMrush API key not configured. "
@@ -114,21 +116,24 @@ class APISettings(BaseSettings):
         """
         return self.ahrefs_api_key is not None
 
-    def validate_on_startup(self) -> None:
+    def validate_on_startup(self, skip_api_key_check: bool = False) -> None:
         """Validate settings on application startup
+
+        Args:
+            skip_api_key_check: Skip API key validation (for tests)
 
         Raises:
             ValueError: If configuration is invalid
         """
-        # Check primary API key
-        if not self.semrush_api_key:
+        # Check primary API key (skip in tests)
+        if not skip_api_key_check and not self.semrush_api_key:
             raise ValueError(
                 "SEMrush API key is required. "
                 "Set SEMRUSH_API_KEY environment variable."
             )
 
-        # Warn if no fallback
-        if not self.has_fallback():
+        # Warn if no fallback (only if we have primary key)
+        if self.semrush_api_key and not self.has_fallback():
             import warnings
             warnings.warn(
                 "Ahrefs API key not configured. "
@@ -152,8 +157,11 @@ class APISettings(BaseSettings):
 _settings: Optional[APISettings] = None
 
 
-def get_api_settings() -> APISettings:
+def get_api_settings(skip_validation: bool = False) -> APISettings:
     """Get API settings singleton
+
+    Args:
+        skip_validation: Skip API key validation (for tests)
 
     Returns:
         APISettings instance
@@ -164,5 +172,5 @@ def get_api_settings() -> APISettings:
     global _settings
     if _settings is None:
         _settings = APISettings()
-        _settings.validate_on_startup()
+        _settings.validate_on_startup(skip_api_key_check=skip_validation)
     return _settings
