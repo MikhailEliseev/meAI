@@ -63,12 +63,12 @@ class OpportunityScorer:
                 client_pages=client_pages,
             )
 
-            # Assign priority tier
-            priority = self._assign_priority_tier(score)
+            # Assign severity based on score
+            severity = self._assign_severity_from_score(score)
 
-            # Update gap
+            # Update gap (create new instance with updated values)
             gap.opportunity_score = score
-            gap.priority = priority
+            gap.severity = severity
 
             scored_gaps.append(gap)
 
@@ -133,48 +133,37 @@ class OpportunityScorer:
         return round(score, 2)
 
     def _calculate_competitor_traffic(self, gap: ContentGap) -> float:
-        """Calculate average competitor traffic (normalized 0-1)."""
+        """Calculate competitor coverage score (normalized 0-1)."""
         if not gap.competitor_coverage:
             return 0.0
 
-        traffic_estimates = [
-            page.get("traffic_estimate", 0)
-            for page in gap.competitor_coverage
-        ]
+        # Number of competitors covering this gap
+        num_competitors = len(gap.competitor_coverage)
 
-        if not traffic_estimates:
-            return 0.0
-
-        avg_traffic = sum(traffic_estimates) / len(traffic_estimates)
-
-        # Normalize: 0 traffic = 0.0, 10000+ traffic = 1.0
-        normalized = min(avg_traffic / 10000, 1.0)
+        # Normalize: 1 competitor = 0.2, 5+ competitors = 1.0
+        normalized = min(num_competitors / 5.0, 1.0)
 
         return normalized
 
     def _calculate_competitor_quality(self, gap: ContentGap) -> float:
-        """Calculate average competitor quality (normalized 0-1)."""
+        """Calculate competitor coverage quality (normalized 0-1)."""
         if not gap.competitor_coverage:
             return 0.0
 
-        quality_scores = [
-            page.get("quality_score", 0)
-            for page in gap.competitor_coverage
-        ]
+        # If multiple competitors cover it, assume high quality
+        num_competitors = len(gap.competitor_coverage)
 
-        if not quality_scores:
-            return 0.0
+        # Normalize: 1 competitor = 0.3, 3+ competitors = 1.0
+        normalized = min(num_competitors / 3.0, 1.0)
 
-        avg_quality = sum(quality_scores) / len(quality_scores)
-
-        return avg_quality  # Already 0-1
+        return normalized
 
     def _calculate_topic_relevance(self, gap: ContentGap, niche: str) -> float:
         """Calculate topic relevance to niche (normalized 0-1)."""
         # Simple keyword matching for now
         # TODO: Use embeddings for semantic similarity
         niche_keywords = set(niche.lower().split())
-        topic_keywords = set(gap.topic.lower().split())
+        topic_keywords = set(gap.missing_keyword.lower().split())
 
         if not topic_keywords:
             return 0.5  # Neutral
@@ -196,48 +185,26 @@ class OpportunityScorer:
         if not gap.competitor_coverage:
             return 0.5  # Medium difficulty
 
-        # Factors:
-        # 1. Average word count (longer = harder)
-        # 2. Doctor authorship requirement (yes = harder)
-        # 3. Medical citations requirement (more = harder)
+        # More competitors = higher difficulty (more established topic)
+        num_competitors = len(gap.competitor_coverage)
 
-        word_counts = [
-            page.get("word_count", 0) for page in gap.competitor_coverage
-        ]
-        avg_word_count = sum(word_counts) / len(word_counts) if word_counts else 0
+        # Normalize: 1 competitor = 0.3, 5+ competitors = 1.0
+        difficulty = min(num_competitors / 5.0, 1.0)
 
-        doctor_authored = [
-            page.get("doctor_authored", False)
-            for page in gap.competitor_coverage
-        ]
-        doctor_pct = sum(doctor_authored) / len(doctor_authored) if doctor_authored else 0
+        # Adjust by gap type
+        if gap.gap_type == "missing_topic":
+            difficulty *= 1.2  # Topics are harder
+        elif gap.gap_type == "missing_keyword":
+            difficulty *= 0.8  # Keywords are easier
 
-        citations = [
-            page.get("medical_citations", 0)
-            for page in gap.competitor_coverage
-        ]
-        avg_citations = sum(citations) / len(citations) if citations else 0
-
-        # Normalize components
-        word_count_difficulty = min(avg_word_count / 3000, 1.0)  # 3000+ words = 1.0
-        doctor_difficulty = doctor_pct  # Already 0-1
-        citation_difficulty = min(avg_citations / 10, 1.0)  # 10+ citations = 1.0
-
-        # Weighted average
-        difficulty = (
-            word_count_difficulty * 0.4
-            + doctor_difficulty * 0.3
-            + citation_difficulty * 0.3
-        )
-
-        return difficulty
+        return min(difficulty, 1.0)
 
     def _calculate_client_coverage(
         self, gap: ContentGap, client_pages: list[dict[str, Any]]
     ) -> float:
         """Calculate existing client coverage (normalized 0-1)."""
         # Check if client has any pages on this topic
-        topic_keywords = set(gap.topic.lower().split())
+        topic_keywords = set(gap.missing_keyword.lower().split())
 
         matching_pages = 0
         for page in client_pages:
@@ -254,23 +221,23 @@ class OpportunityScorer:
 
         return coverage
 
-    def _assign_priority_tier(self, score: float) -> str:
-        """Assign priority tier based on opportunity score.
+    def _assign_severity_from_score(self, score: float) -> str:
+        """Assign severity based on opportunity score.
 
         Args:
             score: Opportunity score (0-100)
 
         Returns:
-            Priority tier: P0, P1, P2, or P3
+            Severity: critical, high, medium, or low
         """
         if score >= 80:
-            return "P0"  # High Priority
+            return "critical"  # P0 - High Priority
         elif score >= 60:
-            return "P1"  # Medium Priority
+            return "high"  # P1 - Medium Priority
         elif score >= 40:
-            return "P2"  # Low Priority
+            return "medium"  # P2 - Low Priority
         else:
-            return "P3"  # Very Low Priority
+            return "low"  # P3 - Very Low Priority
 
     async def calculate_quality_comparison(
         self,

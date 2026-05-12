@@ -115,46 +115,26 @@ class GapAnalysisResult(BaseModel):
 
     model_config = ConfigDict(use_enum_values=True)
 
+    client_url: str = Field(..., description="Client website URL")
+    competitor_urls: list[str] = Field(
+        default_factory=list, description="Competitor URLs analyzed"
+    )
+    niche: str = Field(..., description="Target niche/topic")
     gaps: list[ContentGap] = Field(
         default_factory=list,
         description="Detected content gaps",
     )
-    client_pages_analyzed: int = Field(
-        default=0,
-        ge=0,
-        description="Number of client pages analyzed",
-    )
-    competitor_pages_analyzed: int = Field(
-        default=0,
-        ge=0,
-        description="Number of competitor pages analyzed",
-    )
-    topics_discovered: int = Field(
-        default=0,
-        ge=0,
-        description="Number of topics discovered",
-    )
-    cluster_quality: str = Field(
-        default="unknown",
-        description="Cluster quality classification",
-    )
-    analysis_time_seconds: float = Field(
-        default=0.0,
-        ge=0.0,
-        description="Analysis time in seconds",
-    )
-    cost_usd: float = Field(
-        default=0.0,
-        ge=0.0,
-        description="Total cost in USD",
-    )
-    topic_clusters: list[dict[str, Any]] = Field(
+    clusters: list[ContentCluster] = Field(
         default_factory=list,
-        description="Topic clusters with coverage",
+        description="Keyword clusters from SERP overlap analysis",
     )
-    quality_comparison: dict[str, Any] = Field(
+    architecture: dict[str, Any] = Field(
         default_factory=dict,
-        description="Quality comparison between client and competitors",
+        description="Hub-and-spoke content architecture",
+    )
+    briefs: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Content briefs for top gaps",
     )
     summary: dict[str, Any] = Field(
         default_factory=dict,
