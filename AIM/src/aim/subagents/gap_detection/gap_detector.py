@@ -259,18 +259,21 @@ class GapDetector:
             severity = GapSeverity.LOW
 
         # Extract competitor coverage details
-        competitor_coverage_dict = {}
+        competitor_coverage_list = []
+        seen_domains = set()
         for page in competitor_pages:
             domain = self._extract_domain(page["url"])
-            if domain not in competitor_coverage_dict:
-                competitor_coverage_dict[domain] = {
+            if domain not in seen_domains:
+                seen_domains.add(domain)
+                competitor_coverage_list.append({
+                    "domain": domain,
                     "url": page["url"],
                     "quality_score": page.get("eeat_score", 0),
                     "traffic_estimate": page.get("traffic_estimate", 0),
                     "word_count": page.get("word_count", 0),
                     "doctor_authored": page.get("doctor_authored", False),
                     "medical_citations": page.get("medical_citations", 0),
-                }
+                })
 
         # Generate recommendations
         avg_word_count = sum(p.get("word_count", 0) for p in competitor_pages) / len(
@@ -294,7 +297,7 @@ class GapDetector:
             severity=severity,
             opportunity_score=0.0,  # Will be calculated by OpportunityScorer
             priority="P3",  # Will be assigned by OpportunityScorer
-            competitor_coverage=competitor_coverage_dict,
+            competitor_coverage=competitor_coverage_list,
             recommended_actions=recommendations,
             target_keywords=target_keywords,
             detected_at=datetime.now(timezone.utc),
@@ -313,18 +316,21 @@ class GapDetector:
         severity = GapSeverity.HIGH
 
         # Extract competitor coverage details
-        competitor_coverage_dict = {}
+        competitor_coverage_list = []
+        seen_domains = set()
         for page in competitor_pages:
             domain = self._extract_domain(page["url"])
-            if domain not in competitor_coverage_dict:
-                competitor_coverage_dict[domain] = {
+            if domain not in seen_domains:
+                seen_domains.add(domain)
+                competitor_coverage_list.append({
+                    "domain": domain,
                     "url": page["url"],
                     "quality_score": page.get("eeat_score", 0),
                     "traffic_estimate": page.get("traffic_estimate", 0),
                     "word_count": page.get("word_count", 0),
                     "doctor_authored": page.get("doctor_authored", False),
                     "medical_citations": page.get("medical_citations", 0),
-                }
+                })
 
         # Generate recommendations
         avg_word_count = sum(p.get("word_count", 0) for p in competitor_pages) / len(
@@ -348,7 +354,7 @@ class GapDetector:
             severity=severity,
             opportunity_score=0.0,
             priority="P3",
-            competitor_coverage=competitor_coverage_dict,
+            competitor_coverage=competitor_coverage_list,
             recommended_actions=recommendations,
             target_keywords=target_keywords,
             detected_at=datetime.now(timezone.utc),
@@ -364,18 +370,21 @@ class GapDetector:
         severity = GapSeverity.MEDIUM
 
         # Extract competitor coverage details
-        competitor_coverage_dict = {}
+        competitor_coverage_list = []
+        seen_domains = set()
         for page in competitor_pages:
             domain = self._extract_domain(page["url"])
-            if domain not in competitor_coverage_dict:
-                competitor_coverage_dict[domain] = {
+            if domain not in seen_domains:
+                seen_domains.add(domain)
+                competitor_coverage_list.append({
+                    "domain": domain,
                     "url": page["url"],
                     "quality_score": page.get("eeat_score", 0),
                     "traffic_estimate": page.get("traffic_estimate", 0),
                     "word_count": page.get("word_count", 0),
                     "doctor_authored": page.get("doctor_authored", False),
                     "medical_citations": page.get("medical_citations", 0),
-                }
+                })
 
         # Generate recommendations
         recommendations = [
@@ -390,7 +399,7 @@ class GapDetector:
             severity=severity,
             opportunity_score=0.0,
             priority="P3",
-            competitor_coverage=competitor_coverage_dict,
+            competitor_coverage=competitor_coverage_list,
             recommended_actions=recommendations,
             target_keywords=[keyword],
             detected_at=datetime.now(timezone.utc),

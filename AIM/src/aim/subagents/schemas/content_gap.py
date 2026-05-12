@@ -36,8 +36,8 @@ class ContentGap(BaseModel):
         ..., ge=0.0, le=100.0, description="Opportunity score (0-100)"
     )
     priority: str = Field(..., description="Priority tier (P0-P3)")
-    competitor_coverage: dict[str, dict[str, Any]] = Field(
-        default_factory=dict,
+    competitor_coverage: list[dict[str, Any]] = Field(
+        default_factory=list,
         description="Competitor pages covering this topic",
     )
     recommended_actions: list[str] = Field(
@@ -47,6 +47,15 @@ class ContentGap(BaseModel):
     target_keywords: list[str] = Field(
         default_factory=list,
         description="Target keywords for this gap",
+    )
+    recommended_content_type: str = Field(
+        default="blog_post",
+        description="Recommended content type",
+    )
+    estimated_traffic_potential: int = Field(
+        default=0,
+        ge=0,
+        description="Estimated traffic potential",
     )
     detected_at: datetime = Field(
         default_factory=lambda: datetime.now(),
@@ -62,6 +71,35 @@ class GapAnalysisResult(BaseModel):
     gaps: list[ContentGap] = Field(
         default_factory=list,
         description="Detected content gaps",
+    )
+    client_pages_analyzed: int = Field(
+        default=0,
+        ge=0,
+        description="Number of client pages analyzed",
+    )
+    competitor_pages_analyzed: int = Field(
+        default=0,
+        ge=0,
+        description="Number of competitor pages analyzed",
+    )
+    topics_discovered: int = Field(
+        default=0,
+        ge=0,
+        description="Number of topics discovered",
+    )
+    cluster_quality: str = Field(
+        default="unknown",
+        description="Cluster quality classification",
+    )
+    analysis_time_seconds: float = Field(
+        default=0.0,
+        ge=0.0,
+        description="Analysis time in seconds",
+    )
+    cost_usd: float = Field(
+        default=0.0,
+        ge=0.0,
+        description="Total cost in USD",
     )
     topic_clusters: list[dict[str, Any]] = Field(
         default_factory=list,

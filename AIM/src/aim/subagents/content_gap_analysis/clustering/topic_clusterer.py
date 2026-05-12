@@ -108,25 +108,33 @@ class TopicClusterer:
         if len(texts) == 0:
             raise ValueError("Cannot fit on empty text list")
 
-        # For very small datasets, adjust parameters
-        if len(texts) < self.min_cluster_size:
-            # All will be outliers
-            topics = [-1] * len(texts)
-            probabilities = np.zeros((len(texts), 1))
+        # For very small datasets (< 10 texts), skip clustering
+        # All texts will be in one cluster (topic 0)
+        if len(texts) < 10:
+            topics = [0] * len(texts)
+            probabilities = np.ones((len(texts), 1))
             self.topics = topics
             self.probabilities = probabilities
-            self.topic_info = {}
+            self.topic_info = {
+                0: {
+                    "topic_id": 0,
+                    "name": "General Topic",
+                    "count": len(texts),
+                    "words": ["general"],
+                }
+            }
+            self.texts = texts
             return topics, probabilities
 
         # Adjust n_neighbors for small datasets
         original_n_neighbors = self.umap_model.n_neighbors
         if len(texts) < self.n_neighbors:
-            self.umap_model.n_neighbors = max(2, len(texts) - 1)
+            self.umap_model.n_neighbors = max(2, min(len(texts) - 1, 5))
 
         # Adjust n_components for small datasets
         original_n_components = self.umap_model.n_components
         if len(texts) <= self.n_components:
-            self.umap_model.n_components = max(2, len(texts) - 1)
+            self.umap_model.n_components = max(2, min(len(texts) - 1, 3))
 
         try:
             # Fit and transform

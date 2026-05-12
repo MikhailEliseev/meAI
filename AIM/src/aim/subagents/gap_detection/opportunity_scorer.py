@@ -139,7 +139,7 @@ class OpportunityScorer:
 
         traffic_estimates = [
             page.get("traffic_estimate", 0)
-            for page in gap.competitor_coverage.values()
+            for page in gap.competitor_coverage
         ]
 
         if not traffic_estimates:
@@ -159,7 +159,7 @@ class OpportunityScorer:
 
         quality_scores = [
             page.get("quality_score", 0)
-            for page in gap.competitor_coverage.values()
+            for page in gap.competitor_coverage
         ]
 
         if not quality_scores:
@@ -202,19 +202,19 @@ class OpportunityScorer:
         # 3. Medical citations requirement (more = harder)
 
         word_counts = [
-            page.get("word_count", 0) for page in gap.competitor_coverage.values()
+            page.get("word_count", 0) for page in gap.competitor_coverage
         ]
         avg_word_count = sum(word_counts) / len(word_counts) if word_counts else 0
 
         doctor_authored = [
             page.get("doctor_authored", False)
-            for page in gap.competitor_coverage.values()
+            for page in gap.competitor_coverage
         ]
         doctor_pct = sum(doctor_authored) / len(doctor_authored) if doctor_authored else 0
 
         citations = [
             page.get("medical_citations", 0)
-            for page in gap.competitor_coverage.values()
+            for page in gap.competitor_coverage
         ]
         avg_citations = sum(citations) / len(citations) if citations else 0
 
