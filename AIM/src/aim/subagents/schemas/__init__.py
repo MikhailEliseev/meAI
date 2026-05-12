@@ -1,6 +1,6 @@
 """Pydantic Schemas for API Responses
 
-Validated data models for keyword research API responses.
+Validated data models for keyword research API responses and competitor analysis.
 """
 
 from .api_responses import (
@@ -16,6 +16,18 @@ from .compliance import (
     ComplianceCheckResult,
     AuditTrailEntry,
 )
+from .competitor_analysis import (
+    AnalysisMode,
+    TargetMarket,
+    CompetitorAnalysisRequest,
+    KeywordAnalysisResult,
+    AIDetectionResult,
+    EEATScore,
+    ContentStructure,
+    TechnicalSEOResult,
+    CompetitorAnalysisResult,
+    CompetitorComparisonReport,
+)
 
 __all__ = [
     "SEMrushKeywordData",
@@ -27,4 +39,14 @@ __all__ = [
     "FDAEnforcementRecord",
     "ComplianceCheckResult",
     "AuditTrailEntry",
+    "AnalysisMode",
+    "TargetMarket",
+    "CompetitorAnalysisRequest",
+    "KeywordAnalysisResult",
+    "AIDetectionResult",
+    "EEATScore",
+    "ContentStructure",
+    "TechnicalSEOResult",
+    "CompetitorAnalysisResult",
+    "CompetitorComparisonReport",
 ]
