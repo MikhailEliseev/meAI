@@ -111,12 +111,14 @@ class KeywordAnalyzer:
         if not keywords:
             return []
 
-        # Filter out target keyword and low-frequency terms
+        # Filter out target keyword and its individual words
         target_lower = target_keyword.lower()
+        target_words = set(target_lower.split())
+
         lsi_candidates = {
             k: v
             for k, v in keywords.items()
-            if k != target_lower and v >= min_count and len(k) > 3
+            if k not in target_words and v >= min_count and len(k) > 3
         }
 
         # Sort by frequency
