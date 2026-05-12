@@ -27,7 +27,7 @@ import ssl
 from bs4 import BeautifulSoup
 
 from meai.agents.base_agent import Agent, Task, TaskResult
-from aim.core.agent_learning import AgentLearning
+from AIM.src.aim.core.agent_learning import AgentLearning
 
 
 class CIDeepAnalyzer(Agent):
@@ -1270,7 +1270,7 @@ class CIDeepAnalyzer(Agent):
         """
         try:
             # Get API config and cache
-            from aim.core.api_config import get_api_config, get_api_cache
+            from AIM.src.aim.core.api_config import get_api_config, get_api_cache
 
             api_config = get_api_config()
             api_cache = get_api_cache()
@@ -1463,7 +1463,7 @@ class CIDeepAnalyzer(Agent):
         """
         try:
             # Get API config and cache
-            from aim.core.api_config import get_api_config, get_api_cache
+            from AIM.src.aim.core.api_config import get_api_config, get_api_cache
 
             api_config = get_api_config()
             api_cache = get_api_cache()
@@ -1636,7 +1636,7 @@ class CIDeepAnalyzer(Agent):
         """
         try:
             # Get API config and cache
-            from aim.core.api_config import get_api_config, get_api_cache
+            from AIM.src.aim.core.api_config import get_api_config, get_api_cache
 
             api_config = get_api_config()
             api_cache = get_api_cache()

@@ -8,9 +8,23 @@ from .api_responses import (
     KeywordExpansionRequest,
     SEMrushKeywordData,
 )
+from .compliance import (
+    RiskLevel,
+    ComplianceAction,
+    PatternMatch,
+    FDAEnforcementRecord,
+    ComplianceCheckResult,
+    AuditTrailEntry,
+)
 
 __all__ = [
     "SEMrushKeywordData",
     "AhrefsKeywordData",
     "KeywordExpansionRequest",
+    "RiskLevel",
+    "ComplianceAction",
+    "PatternMatch",
+    "FDAEnforcementRecord",
+    "ComplianceCheckResult",
+    "AuditTrailEntry",
 ]
