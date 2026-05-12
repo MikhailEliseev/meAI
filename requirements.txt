@@ -47,3 +47,6 @@ numpy>=1.24.0,<2.0.0                # Numerical computing (BERTopic compatibilit
 scipy>=1.11.0,<2.0.0                # Scientific computing
 textstat>=0.7.0,<0.8.0              # Readability metrics
 lxml>=4.9.0,<5.0.0                  # Fast XML/HTML parser
+
+# Competitor Content Analyzer dependencies (from python-seo-analyzer)
+trafilatura>=2.0.0,<3.0.0           # Clean text extraction from HTML (production-tested)
