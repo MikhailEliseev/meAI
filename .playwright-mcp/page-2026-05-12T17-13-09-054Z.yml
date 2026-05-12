@@ -1,0 +1,1479 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e3]:
+    - complementary [ref=e5]:
+      - link "Skip to content" [ref=e6] [cursor=pointer]:
+        - /url: "#main-content"
+      - link "OmniRoute v3.6.9" [ref=e12] [cursor=pointer]:
+        - /url: /dashboard
+        - img [ref=e14]
+        - generic [ref=e26]:
+          - heading "OmniRoute" [level=1] [ref=e27]
+          - generic [ref=e28]: v3.6.9
+      - navigation "Main navigation" [ref=e29]:
+        - generic [ref=e30]:
+          - link "home Home" [ref=e31] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [ref=e32]: home
+            - generic [ref=e33]: Home
+          - link "api Endpoints" [ref=e34] [cursor=pointer]:
+            - /url: /dashboard/endpoint
+            - generic [ref=e35]: api
+            - generic [ref=e36]: Endpoints
+          - link "vpn_key API Manager" [ref=e37] [cursor=pointer]:
+            - /url: /dashboard/api-manager
+            - generic [ref=e38]: vpn_key
+            - generic [ref=e39]: API Manager
+          - link "dns Providers" [ref=e40] [cursor=pointer]:
+            - /url: /dashboard/providers
+            - generic [ref=e41]: dns
+            - generic [ref=e42]: Providers
+          - link "layers Combos" [ref=e43] [cursor=pointer]:
+            - /url: /dashboard/combos
+            - generic [ref=e44]: layers
+            - generic [ref=e45]: Combos
+          - link "account_balance_wallet Costs" [ref=e46] [cursor=pointer]:
+            - /url: /dashboard/costs
+            - generic [ref=e47]: account_balance_wallet
+            - generic [ref=e48]: Costs
+          - link "analytics Analytics" [ref=e49] [cursor=pointer]:
+            - /url: /dashboard/analytics
+            - generic [ref=e50]: analytics
+            - generic [ref=e51]: Analytics
+          - link "cached Cache" [ref=e52] [cursor=pointer]:
+            - /url: /dashboard/cache
+            - generic [ref=e53]: cached
+            - generic [ref=e54]: Cache
+          - link "tune Limits & Quotas" [ref=e55] [cursor=pointer]:
+            - /url: /dashboard/limits
+            - generic [ref=e56]: tune
+            - generic [ref=e57]: Limits & Quotas
+          - link "perm_media Media" [ref=e58] [cursor=pointer]:
+            - /url: /dashboard/cache/media
+            - generic [ref=e59]: perm_media
+            - generic [ref=e60]: Media
+        - generic [ref=e61]:
+          - paragraph [ref=e62]: CLI
+          - link "terminal Tools" [ref=e63] [cursor=pointer]:
+            - /url: /dashboard/cli-tools
+            - generic [ref=e64]: terminal
+            - generic [ref=e65]: Tools
+          - link "smart_toy Agents" [ref=e66] [cursor=pointer]:
+            - /url: /dashboard/agents
+            - generic [ref=e67]: smart_toy
+            - generic [ref=e68]: Agents
+          - link "psychology Memory" [ref=e69] [cursor=pointer]:
+            - /url: /dashboard/memory
+            - generic [ref=e70]: psychology
+            - generic [ref=e71]: Memory
+          - link "auto_fix_high Skills" [ref=e72] [cursor=pointer]:
+            - /url: /dashboard/skills
+            - generic [ref=e73]: auto_fix_high
+            - generic [ref=e74]: Skills
+        - generic [ref=e75]:
+          - paragraph [ref=e76]: System
+          - link "description Logs" [ref=e77] [cursor=pointer]:
+            - /url: /dashboard/logs
+            - generic [ref=e78]: description
+            - generic [ref=e79]: Logs
+          - link "health_and_safety Health" [ref=e80] [cursor=pointer]:
+            - /url: /dashboard/health
+            - generic [ref=e81]: health_and_safety
+            - generic [ref=e82]: Health
+          - link "history Audit Log" [ref=e83] [cursor=pointer]:
+            - /url: /dashboard/audit
+            - generic [ref=e84]: history
+            - generic [ref=e85]: Audit Log
+          - link "settings Settings" [ref=e86] [cursor=pointer]:
+            - /url: /dashboard/settings
+            - generic [ref=e87]: settings
+            - generic [ref=e88]: Settings
+        - generic [ref=e89]:
+          - paragraph [ref=e90]: Help
+          - link "menu_book Docs" [ref=e91] [cursor=pointer]:
+            - /url: /docs
+            - generic [ref=e92]: menu_book
+            - generic [ref=e93]: Docs
+          - link "bug_report Issues" [ref=e94] [cursor=pointer]:
+            - /url: https://github.com/diegosouzapw/OmniRoute/issues
+            - generic [ref=e95]: bug_report
+            - generic [ref=e96]: Issues
+      - generic [ref=e97]:
+        - button "restart_alt Restart" [ref=e98]:
+          - generic: restart_alt
+          - text: Restart
+        - button "power_settings_new Shutdown" [ref=e99]:
+          - generic: power_settings_new
+          - text: Shutdown
+    - main [ref=e100]:
+      - generic [ref=e101]:
+        - button "menu" [ref=e103]:
+          - generic: menu
+        - generic [ref=e104]:
+          - button "🇺🇸 EN expand_more" [ref=e106]:
+            - generic [ref=e107]: 🇺🇸
+            - generic [ref=e108]: EN
+            - generic: expand_more
+          - button "Switch to dark mode" [ref=e109]:
+            - generic: dark_mode
+          - button "warning" [ref=e111]:
+            - generic: warning
+          - button "logout" [ref=e112]:
+            - generic: logout
+      - generic [ref=e114]:
+        - navigation "Breadcrumb" [ref=e115]:
+          - link "Dashboard" [ref=e117] [cursor=pointer]:
+            - /url: /dashboard
+          - generic [ref=e118]:
+            - generic [ref=e119]: ›
+            - generic [ref=e120]: Providers
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - generic [ref=e123]:
+              - heading "OAuth Providers OAuth" [level=2] [ref=e124]:
+                - text: OAuth Providers
+                - generic "OAuth" [ref=e125]
+              - generic [ref=e126]:
+                - button "All models operational" [ref=e128]:
+                  - generic: verified
+                  - text: All models operational
+                - generic [ref=e129]:
+                  - switch [ref=e130] [cursor=pointer]
+                  - generic [ref=e132]: Configured only
+                - button "download Import from Zed" [ref=e133]:
+                  - generic: download
+                  - text: Import from Zed
+                - button "Test all OAuth connections" [ref=e134]:
+                  - generic: play_arrow
+                  - text: Test All
+            - generic [ref=e135]:
+              - link "Anthropic Claude Code OAuth No connections chevron_right" [ref=e136] [cursor=pointer]:
+                - /url: /dashboard/providers/claude
+                - generic [ref=e138]:
+                  - generic [ref=e139]:
+                    - img "Anthropic" [ref=e142]
+                    - generic [ref=e144]:
+                      - heading "Claude Code OAuth" [level=3] [ref=e145]:
+                        - text: Claude Code
+                        - generic "OAuth" [ref=e146]
+                      - generic [ref=e148]: No connections
+                  - generic [ref=e150]: chevron_right
+              - link "antigravity Antigravity OAuth No connections chevron_right" [ref=e151] [cursor=pointer]:
+                - /url: /dashboard/providers/antigravity
+                - generic [ref=e153]:
+                  - generic [ref=e154]:
+                    - img "antigravity" [ref=e157]
+                    - generic [ref=e158]:
+                      - heading "Antigravity OAuth" [level=3] [ref=e159]:
+                        - text: Antigravity
+                        - generic "OAuth" [ref=e160]
+                      - generic [ref=e162]: No connections
+                  - generic [ref=e164]: chevron_right
+              - link "codex OpenAI Codex OAuth No connections chevron_right" [ref=e165] [cursor=pointer]:
+                - /url: /dashboard/providers/codex
+                - generic [ref=e167]:
+                  - generic [ref=e168]:
+                    - img "codex" [ref=e171]
+                    - generic [ref=e172]:
+                      - heading "OpenAI Codex OAuth" [level=3] [ref=e173]:
+                        - text: OpenAI Codex
+                        - generic "OAuth" [ref=e174]
+                      - generic [ref=e176]: No connections
+                  - generic [ref=e178]: chevron_right
+              - link "Github GitHub Copilot OAuth No connections chevron_right" [ref=e179] [cursor=pointer]:
+                - /url: /dashboard/providers/github
+                - generic [ref=e181]:
+                  - generic [ref=e182]:
+                    - img "Github" [ref=e185]
+                    - generic [ref=e187]:
+                      - heading "GitHub Copilot OAuth" [level=3] [ref=e188]:
+                        - text: GitHub Copilot
+                        - generic "OAuth" [ref=e189]
+                      - generic [ref=e191]: No connections
+                  - generic [ref=e193]: chevron_right
+              - link "cursor Cursor IDE OAuth No connections chevron_right" [ref=e194] [cursor=pointer]:
+                - /url: /dashboard/providers/cursor
+                - generic [ref=e196]:
+                  - generic [ref=e197]:
+                    - img "cursor" [ref=e200]
+                    - generic [ref=e201]:
+                      - heading "Cursor IDE OAuth" [level=3] [ref=e202]:
+                        - text: Cursor IDE
+                        - generic "OAuth" [ref=e203]
+                      - generic [ref=e205]: No connections
+                  - generic [ref=e207]: chevron_right
+              - link "Kimi Coding OAuth No connections chevron_right" [ref=e208] [cursor=pointer]:
+                - /url: /dashboard/providers/kimi-coding
+                - generic [ref=e210]:
+                  - generic [ref=e211]:
+                    - img [ref=e214]:
+                      - img [ref=e215]
+                    - generic [ref=e220]:
+                      - heading "Kimi Coding OAuth" [level=3] [ref=e221]:
+                        - text: Kimi Coding
+                        - generic "OAuth" [ref=e222]
+                      - generic [ref=e224]: No connections
+                  - generic [ref=e226]: chevron_right
+              - link "kilocode Kilo Code OAuth No connections chevron_right" [ref=e227] [cursor=pointer]:
+                - /url: /dashboard/providers/kilocode
+                - generic [ref=e229]:
+                  - generic [ref=e230]:
+                    - img "kilocode" [ref=e233]
+                    - generic [ref=e234]:
+                      - heading "Kilo Code OAuth" [level=3] [ref=e235]:
+                        - text: Kilo Code
+                        - generic "OAuth" [ref=e236]
+                      - generic [ref=e238]: No connections
+                  - generic [ref=e240]: chevron_right
+              - link "cline Cline OAuth No connections chevron_right" [ref=e241] [cursor=pointer]:
+                - /url: /dashboard/providers/cline
+                - generic [ref=e243]:
+                  - generic [ref=e244]:
+                    - img "cline" [ref=e247]
+                    - generic [ref=e248]:
+                      - heading "Cline OAuth" [level=3] [ref=e249]:
+                        - text: Cline
+                        - generic "OAuth" [ref=e250]
+                      - generic [ref=e252]: No connections
+                  - generic [ref=e254]: chevron_right
+              - link "Qoder AI OAuth 1 Connected Toggle chevron_right" [ref=e255] [cursor=pointer]:
+                - /url: /dashboard/providers/qoder
+                - generic [ref=e257]:
+                  - generic [ref=e258]:
+                    - img [ref=e261]
+                    - generic [ref=e264]:
+                      - heading "Qoder AI OAuth" [level=3] [ref=e265]:
+                        - text: Qoder AI
+                        - generic "OAuth" [ref=e266]
+                      - generic [ref=e268]: 1 Connected
+                  - generic [ref=e270]:
+                    - switch "Toggle" [checked] [ref=e273]
+                    - generic [ref=e274]: chevron_right
+              - link "AlibabaCloud Qwen Code OAuth No connections chevron_right" [ref=e275] [cursor=pointer]:
+                - /url: /dashboard/providers/qwen
+                - generic [ref=e277]:
+                  - generic [ref=e278]:
+                    - img "AlibabaCloud" [ref=e281]
+                    - generic [ref=e284]:
+                      - heading "Qwen Code OAuth" [level=3] [ref=e285]:
+                        - text: Qwen Code
+                        - generic "OAuth" [ref=e286]
+                      - generic [ref=e288]: No connections
+                  - generic [ref=e290]: chevron_right
+              - link "Gemini CLI OAuth No connections chevron_right" [ref=e291] [cursor=pointer]:
+                - /url: /dashboard/providers/gemini-cli
+                - generic [ref=e293]:
+                  - generic [ref=e294]:
+                    - img [ref=e297]:
+                      - img [ref=e298]
+                    - generic [ref=e303]:
+                      - heading "Gemini CLI OAuth" [level=3] [ref=e304]:
+                        - text: Gemini CLI
+                        - generic "OAuth" [ref=e305]
+                      - generic [ref=e307]: No connections
+                  - generic [ref=e309]: chevron_right
+              - link "kiro Kiro AI OAuth 5 Connected Toggle chevron_right" [ref=e310] [cursor=pointer]:
+                - /url: /dashboard/providers/kiro
+                - generic [ref=e312]:
+                  - generic [ref=e313]:
+                    - img "kiro" [ref=e316]
+                    - generic [ref=e317]:
+                      - heading "Kiro AI OAuth" [level=3] [ref=e318]:
+                        - text: Kiro AI
+                        - generic "OAuth" [ref=e319]
+                      - generic [ref=e321]: 5 Connected
+                  - generic [ref=e323]:
+                    - switch "Toggle" [checked] [ref=e326]
+                    - generic [ref=e327]: chevron_right
+          - generic [ref=e328]:
+            - generic [ref=e329]:
+              - heading "API Key Providers API Key" [level=2] [ref=e330]:
+                - text: API Key Providers
+                - generic "API Key" [ref=e331]
+              - button "Test all API Key connections" [ref=e332]:
+                - generic: play_arrow
+                - text: Test All
+            - generic [ref=e333]:
+              - link "OpenRouter OpenRouter API Key No connections chevron_right" [ref=e334] [cursor=pointer]:
+                - /url: /dashboard/providers/openrouter
+                - generic [ref=e336]:
+                  - generic [ref=e337]:
+                    - img "OpenRouter" [ref=e340]
+                    - generic [ref=e342]:
+                      - heading "OpenRouter API Key" [level=3] [ref=e343]:
+                        - text: OpenRouter
+                        - generic "API Key" [ref=e344]
+                      - generic [ref=e346]: No connections
+                  - generic [ref=e348]: chevron_right
+              - link "Zhipu GLM Coding API Key No connections chevron_right" [ref=e349] [cursor=pointer]:
+                - /url: /dashboard/providers/glm
+                - generic [ref=e351]:
+                  - generic [ref=e352]:
+                    - img "Zhipu" [ref=e355]
+                    - generic [ref=e357]:
+                      - heading "GLM Coding API Key" [level=3] [ref=e358]:
+                        - text: GLM Coding
+                        - generic "API Key" [ref=e359]
+                      - generic [ref=e361]: No connections
+                  - generic [ref=e363]: chevron_right
+              - link "Zhipu GLM Thinking API Key No connections chevron_right" [ref=e364] [cursor=pointer]:
+                - /url: /dashboard/providers/glmt
+                - generic [ref=e366]:
+                  - generic [ref=e367]:
+                    - img "Zhipu" [ref=e370]
+                    - generic [ref=e372]:
+                      - heading "GLM Thinking API Key" [level=3] [ref=e373]:
+                        - text: GLM Thinking
+                        - generic "API Key" [ref=e374]
+                      - generic [ref=e376]: No connections
+                  - generic [ref=e378]: chevron_right
+              - link "bailian-coding-plan Alibaba Coding Plan API Key No connections chevron_right" [ref=e379] [cursor=pointer]:
+                - /url: /dashboard/providers/bailian-coding-plan
+                - generic [ref=e381]:
+                  - generic [ref=e382]:
+                    - img "bailian-coding-plan" [ref=e385]
+                    - generic [ref=e386]:
+                      - heading "Alibaba Coding Plan API Key" [level=3] [ref=e387]:
+                        - text: Alibaba Coding Plan
+                        - generic "API Key" [ref=e388]
+                      - generic [ref=e390]: No connections
+                  - generic [ref=e392]: chevron_right
+              - link "MoonshotAI Kimi API Key No connections chevron_right" [ref=e393] [cursor=pointer]:
+                - /url: /dashboard/providers/kimi
+                - generic [ref=e395]:
+                  - generic [ref=e396]:
+                    - img "MoonshotAI" [ref=e399]
+                    - generic [ref=e401]:
+                      - heading "Kimi API Key" [level=3] [ref=e402]:
+                        - text: Kimi
+                        - generic "API Key" [ref=e403]
+                      - generic [ref=e405]: No connections
+                  - generic [ref=e407]: chevron_right
+              - link "Kimi Coding (API Key) API Key No connections chevron_right" [ref=e408] [cursor=pointer]:
+                - /url: /dashboard/providers/kimi-coding-apikey
+                - generic [ref=e410]:
+                  - generic [ref=e411]:
+                    - img [ref=e414]:
+                      - img [ref=e415]
+                    - generic [ref=e420]:
+                      - heading "Kimi Coding (API Key) API Key" [level=3] [ref=e421]:
+                        - text: Kimi Coding (API Key)
+                        - generic "API Key" [ref=e422]
+                      - generic [ref=e424]: No connections
+                  - generic [ref=e426]: chevron_right
+              - link "Minimax Minimax Coding API Key No connections chevron_right" [ref=e427] [cursor=pointer]:
+                - /url: /dashboard/providers/minimax
+                - generic [ref=e429]:
+                  - generic [ref=e430]:
+                    - img "Minimax" [ref=e433]
+                    - generic [ref=e435]:
+                      - heading "Minimax Coding API Key" [level=3] [ref=e436]:
+                        - text: Minimax Coding
+                        - generic "API Key" [ref=e437]
+                      - generic [ref=e439]: No connections
+                  - generic [ref=e441]: chevron_right
+              - link "Minimax Minimax (China) API Key No connections chevron_right" [ref=e442] [cursor=pointer]:
+                - /url: /dashboard/providers/minimax-cn
+                - generic [ref=e444]:
+                  - generic [ref=e445]:
+                    - img "Minimax" [ref=e448]
+                    - generic [ref=e450]:
+                      - heading "Minimax (China) API Key" [level=3] [ref=e451]:
+                        - text: Minimax (China)
+                        - generic "API Key" [ref=e452]
+                      - generic [ref=e454]: No connections
+                  - generic [ref=e456]: chevron_right
+              - link "alicode Alibaba API Key No connections chevron_right" [ref=e457] [cursor=pointer]:
+                - /url: /dashboard/providers/alicode
+                - generic [ref=e459]:
+                  - generic [ref=e460]:
+                    - img "alicode" [ref=e463]
+                    - generic [ref=e464]:
+                      - heading "Alibaba API Key" [level=3] [ref=e465]:
+                        - text: Alibaba
+                        - generic "API Key" [ref=e466]
+                      - generic [ref=e468]: No connections
+                  - generic [ref=e470]: chevron_right
+              - link "alicode-intl Alibaba Intl API Key No connections chevron_right" [ref=e471] [cursor=pointer]:
+                - /url: /dashboard/providers/alicode-intl
+                - generic [ref=e473]:
+                  - generic [ref=e474]:
+                    - img "alicode-intl" [ref=e477]
+                    - generic [ref=e478]:
+                      - heading "Alibaba Intl API Key" [level=3] [ref=e479]:
+                        - text: Alibaba Intl
+                        - generic "API Key" [ref=e480]
+                      - generic [ref=e482]: No connections
+                  - generic [ref=e484]: chevron_right
+              - link "OpenAI OpenAI API Key No connections chevron_right" [ref=e485] [cursor=pointer]:
+                - /url: /dashboard/providers/openai
+                - generic [ref=e487]:
+                  - generic [ref=e488]:
+                    - img "OpenAI" [ref=e491]
+                    - generic [ref=e493]:
+                      - heading "OpenAI API Key" [level=3] [ref=e494]:
+                        - text: OpenAI
+                        - generic "API Key" [ref=e495]
+                      - generic [ref=e497]: No connections
+                  - generic [ref=e499]: chevron_right
+              - link "Anthropic Anthropic API Key No connections chevron_right" [ref=e500] [cursor=pointer]:
+                - /url: /dashboard/providers/anthropic
+                - generic [ref=e502]:
+                  - generic [ref=e503]:
+                    - img "Anthropic" [ref=e506]
+                    - generic [ref=e508]:
+                      - heading "Anthropic API Key" [level=3] [ref=e509]:
+                        - text: Anthropic
+                        - generic "API Key" [ref=e510]
+                      - generic [ref=e512]: No connections
+                  - generic [ref=e514]: chevron_right
+              - link "Google Gemini (Google AI Studio) API Key 1 Connected Toggle chevron_right" [ref=e515] [cursor=pointer]:
+                - /url: /dashboard/providers/gemini
+                - generic [ref=e517]:
+                  - generic [ref=e518]:
+                    - img "Google" [ref=e521]
+                    - generic [ref=e526]:
+                      - heading "Gemini (Google AI Studio) API Key" [level=3] [ref=e527]:
+                        - text: Gemini (Google AI Studio)
+                        - generic "API Key" [ref=e528]
+                      - generic [ref=e530]: 1 Connected
+                  - generic [ref=e532]:
+                    - switch "Toggle" [checked] [ref=e535]
+                    - generic [ref=e536]: chevron_right
+              - link "DeepSeek DeepSeek API Key No connections chevron_right" [ref=e537] [cursor=pointer]:
+                - /url: /dashboard/providers/deepseek
+                - generic [ref=e539]:
+                  - generic [ref=e540]:
+                    - img "DeepSeek" [ref=e543]
+                    - generic [ref=e545]:
+                      - heading "DeepSeek API Key" [level=3] [ref=e546]:
+                        - text: DeepSeek
+                        - generic "API Key" [ref=e547]
+                      - generic [ref=e549]: No connections
+                  - generic [ref=e551]: chevron_right
+              - link "Groq Groq API Key No connections chevron_right" [ref=e552] [cursor=pointer]:
+                - /url: /dashboard/providers/groq
+                - generic [ref=e554]:
+                  - generic [ref=e555]:
+                    - img "Groq" [ref=e558]
+                    - generic [ref=e560]:
+                      - heading "Groq API Key" [level=3] [ref=e561]:
+                        - text: Groq
+                        - generic "API Key" [ref=e562]
+                      - generic [ref=e564]: No connections
+                  - generic [ref=e566]: chevron_right
+              - link "blackbox Blackbox AI API Key No connections chevron_right" [ref=e567] [cursor=pointer]:
+                - /url: /dashboard/providers/blackbox
+                - generic [ref=e569]:
+                  - generic [ref=e570]:
+                    - img "blackbox" [ref=e573]
+                    - generic [ref=e574]:
+                      - heading "Blackbox AI API Key" [level=3] [ref=e575]:
+                        - text: Blackbox AI
+                        - generic "API Key" [ref=e576]
+                      - generic [ref=e578]: No connections
+                  - generic [ref=e580]: chevron_right
+              - link "Grok xAI (Grok) API Key No connections chevron_right" [ref=e581] [cursor=pointer]:
+                - /url: /dashboard/providers/xai
+                - generic [ref=e583]:
+                  - generic [ref=e584]:
+                    - img "Grok" [ref=e587]
+                    - generic [ref=e589]:
+                      - heading "xAI (Grok) API Key" [level=3] [ref=e590]:
+                        - text: xAI (Grok)
+                        - generic "API Key" [ref=e591]
+                      - generic [ref=e593]: No connections
+                  - generic [ref=e595]: chevron_right
+              - link "Mistral Mistral API Key No connections chevron_right" [ref=e596] [cursor=pointer]:
+                - /url: /dashboard/providers/mistral
+                - generic [ref=e598]:
+                  - generic [ref=e599]:
+                    - img "Mistral" [ref=e602]
+                    - generic [ref=e608]:
+                      - heading "Mistral API Key" [level=3] [ref=e609]:
+                        - text: Mistral
+                        - generic "API Key" [ref=e610]
+                      - generic [ref=e612]: No connections
+                  - generic [ref=e614]: chevron_right
+              - link "Perplexity Perplexity API Key No connections chevron_right" [ref=e615] [cursor=pointer]:
+                - /url: /dashboard/providers/perplexity
+                - generic [ref=e617]:
+                  - generic [ref=e618]:
+                    - img "Perplexity" [ref=e621]
+                    - generic [ref=e623]:
+                      - heading "Perplexity API Key" [level=3] [ref=e624]:
+                        - text: Perplexity
+                        - generic "API Key" [ref=e625]
+                      - generic [ref=e627]: No connections
+                  - generic [ref=e629]: chevron_right
+              - link "Together AI API Key No connections chevron_right" [ref=e630] [cursor=pointer]:
+                - /url: /dashboard/providers/together
+                - generic [ref=e632]:
+                  - generic [ref=e633]:
+                    - img [ref=e636]:
+                      - img [ref=e637]
+                    - generic [ref=e642]:
+                      - heading "Together AI API Key" [level=3] [ref=e643]:
+                        - text: Together AI
+                        - generic "API Key" [ref=e644]
+                      - generic [ref=e646]: No connections
+                  - generic [ref=e648]: chevron_right
+              - link "Fireworks AI API Key No connections chevron_right" [ref=e649] [cursor=pointer]:
+                - /url: /dashboard/providers/fireworks
+                - generic [ref=e651]:
+                  - generic [ref=e652]:
+                    - img [ref=e655]:
+                      - img [ref=e656]
+                    - generic [ref=e661]:
+                      - heading "Fireworks AI API Key" [level=3] [ref=e662]:
+                        - text: Fireworks AI
+                        - generic "API Key" [ref=e663]
+                      - generic [ref=e665]: No connections
+                  - generic [ref=e667]: chevron_right
+              - link "Cerebras Cerebras API Key No connections chevron_right" [ref=e668] [cursor=pointer]:
+                - /url: /dashboard/providers/cerebras
+                - generic [ref=e670]:
+                  - generic [ref=e671]:
+                    - img "Cerebras" [ref=e674]
+                    - generic [ref=e677]:
+                      - heading "Cerebras API Key" [level=3] [ref=e678]:
+                        - text: Cerebras
+                        - generic "API Key" [ref=e679]
+                      - generic [ref=e681]: No connections
+                  - generic [ref=e683]: chevron_right
+              - link "Cohere Cohere API Key No connections chevron_right" [ref=e684] [cursor=pointer]:
+                - /url: /dashboard/providers/cohere
+                - generic [ref=e686]:
+                  - generic [ref=e687]:
+                    - img "Cohere" [ref=e690]
+                    - generic [ref=e694]:
+                      - heading "Cohere API Key" [level=3] [ref=e695]:
+                        - text: Cohere
+                        - generic "API Key" [ref=e696]
+                      - generic [ref=e698]: No connections
+                  - generic [ref=e700]: chevron_right
+              - link "Nvidia NVIDIA NIM API Key No connections chevron_right" [ref=e701] [cursor=pointer]:
+                - /url: /dashboard/providers/nvidia
+                - generic [ref=e703]:
+                  - generic [ref=e704]:
+                    - img "Nvidia" [ref=e707]
+                    - generic [ref=e709]:
+                      - heading "NVIDIA NIM API Key" [level=3] [ref=e710]:
+                        - text: NVIDIA NIM
+                        - generic "API Key" [ref=e711]
+                      - generic [ref=e713]: No connections
+                  - generic [ref=e715]: chevron_right
+              - link "nebius Nebius AI API Key No connections chevron_right" [ref=e716] [cursor=pointer]:
+                - /url: /dashboard/providers/nebius
+                - generic [ref=e718]:
+                  - generic [ref=e719]:
+                    - img "nebius" [ref=e722]
+                    - generic [ref=e723]:
+                      - heading "Nebius AI API Key" [level=3] [ref=e724]:
+                        - text: Nebius AI
+                        - generic "API Key" [ref=e725]
+                      - generic [ref=e727]: No connections
+                  - generic [ref=e729]: chevron_right
+              - link "siliconflow SiliconFlow API Key No connections chevron_right" [ref=e730] [cursor=pointer]:
+                - /url: /dashboard/providers/siliconflow
+                - generic [ref=e732]:
+                  - generic [ref=e733]:
+                    - img "siliconflow" [ref=e736]
+                    - generic [ref=e737]:
+                      - heading "SiliconFlow API Key" [level=3] [ref=e738]:
+                        - text: SiliconFlow
+                        - generic "API Key" [ref=e739]
+                      - generic [ref=e741]: No connections
+                  - generic [ref=e743]: chevron_right
+              - link "hyperbolic Hyperbolic API Key No connections chevron_right" [ref=e744] [cursor=pointer]:
+                - /url: /dashboard/providers/hyperbolic
+                - generic [ref=e746]:
+                  - generic [ref=e747]:
+                    - img "hyperbolic" [ref=e750]
+                    - generic [ref=e751]:
+                      - heading "Hyperbolic API Key" [level=3] [ref=e752]:
+                        - text: Hyperbolic
+                        - generic "API Key" [ref=e753]
+                      - generic [ref=e755]: No connections
+                  - generic [ref=e757]: chevron_right
+              - link "nanobanana NanoBanana API Key No connections chevron_right" [ref=e758] [cursor=pointer]:
+                - /url: /dashboard/providers/nanobanana
+                - generic [ref=e760]:
+                  - generic [ref=e761]:
+                    - img "nanobanana" [ref=e764]
+                    - generic [ref=e765]:
+                      - heading "NanoBanana API Key" [level=3] [ref=e766]:
+                        - text: NanoBanana
+                        - generic "API Key" [ref=e767]
+                      - generic [ref=e769]: No connections
+                  - generic [ref=e771]: chevron_right
+              - link "Ollama Ollama Cloud API Key No connections chevron_right" [ref=e772] [cursor=pointer]:
+                - /url: /dashboard/providers/ollama-cloud
+                - generic [ref=e774]:
+                  - generic [ref=e775]:
+                    - img "Ollama" [ref=e778]
+                    - generic [ref=e780]:
+                      - heading "Ollama Cloud API Key" [level=3] [ref=e781]:
+                        - text: Ollama Cloud
+                        - generic "API Key" [ref=e782]
+                      - generic [ref=e784]: No connections
+                  - generic [ref=e786]: chevron_right
+              - link "sdwebui SD WebUI API Key No connections chevron_right" [ref=e787] [cursor=pointer]:
+                - /url: /dashboard/providers/sdwebui
+                - generic [ref=e789]:
+                  - generic [ref=e790]:
+                    - img "sdwebui" [ref=e793]
+                    - generic [ref=e794]:
+                      - heading "SD WebUI API Key" [level=3] [ref=e795]:
+                        - text: SD WebUI
+                        - generic "API Key" [ref=e796]
+                      - generic [ref=e798]: No connections
+                  - generic [ref=e800]: chevron_right
+              - link "comfyui ComfyUI API Key No connections chevron_right" [ref=e801] [cursor=pointer]:
+                - /url: /dashboard/providers/comfyui
+                - generic [ref=e803]:
+                  - generic [ref=e804]:
+                    - img "comfyui" [ref=e807]
+                    - generic [ref=e808]:
+                      - heading "ComfyUI API Key" [level=3] [ref=e809]:
+                        - text: ComfyUI
+                        - generic "API Key" [ref=e810]
+                      - generic [ref=e812]: No connections
+                  - generic [ref=e814]: chevron_right
+              - link "HuggingFace HuggingFace API Key No connections chevron_right" [ref=e815] [cursor=pointer]:
+                - /url: /dashboard/providers/huggingface
+                - generic [ref=e817]:
+                  - generic [ref=e818]:
+                    - img "HuggingFace" [ref=e821]
+                    - generic [ref=e828]:
+                      - heading "HuggingFace API Key" [level=3] [ref=e829]:
+                        - text: HuggingFace
+                        - generic "API Key" [ref=e830]
+                      - generic [ref=e832]: No connections
+                  - generic [ref=e834]: chevron_right
+              - link "synthetic Synthetic API Key No connections chevron_right" [ref=e835] [cursor=pointer]:
+                - /url: /dashboard/providers/synthetic
+                - generic [ref=e837]:
+                  - generic [ref=e838]:
+                    - img "synthetic" [ref=e841]
+                    - generic [ref=e842]:
+                      - heading "Synthetic API Key" [level=3] [ref=e843]:
+                        - text: Synthetic
+                        - generic "API Key" [ref=e844]
+                      - generic [ref=e846]: No connections
+                  - generic [ref=e848]: chevron_right
+              - link "kilo-gateway Kilo Gateway API Key No connections chevron_right" [ref=e849] [cursor=pointer]:
+                - /url: /dashboard/providers/kilo-gateway
+                - generic [ref=e851]:
+                  - generic [ref=e852]:
+                    - img "kilo-gateway" [ref=e855]
+                    - generic [ref=e856]:
+                      - heading "Kilo Gateway API Key" [level=3] [ref=e857]:
+                        - text: Kilo Gateway
+                        - generic "API Key" [ref=e858]
+                      - generic [ref=e860]: No connections
+                  - generic [ref=e862]: chevron_right
+              - link "vertex Vertex AI API Key No connections chevron_right" [ref=e863] [cursor=pointer]:
+                - /url: /dashboard/providers/vertex
+                - generic [ref=e865]:
+                  - generic [ref=e866]:
+                    - img "vertex" [ref=e869]
+                    - generic [ref=e870]:
+                      - heading "Vertex AI API Key" [level=3] [ref=e871]:
+                        - text: Vertex AI
+                        - generic "API Key" [ref=e872]
+                      - generic [ref=e874]: No connections
+                  - generic [ref=e876]: chevron_right
+              - link "zai Z.AI API Key No connections chevron_right" [ref=e877] [cursor=pointer]:
+                - /url: /dashboard/providers/zai
+                - generic [ref=e879]:
+                  - generic [ref=e880]:
+                    - img "zai" [ref=e883]
+                    - generic [ref=e884]:
+                      - heading "Z.AI API Key" [level=3] [ref=e885]:
+                        - text: Z.AI
+                        - generic "API Key" [ref=e886]
+                      - generic [ref=e888]: No connections
+                  - generic [ref=e890]: chevron_right
+              - link "opencode-zen OpenCode Zen API Key No connections chevron_right" [ref=e891] [cursor=pointer]:
+                - /url: /dashboard/providers/opencode-zen
+                - generic [ref=e893]:
+                  - generic [ref=e894]:
+                    - img "opencode-zen" [ref=e897]
+                    - generic [ref=e898]:
+                      - heading "OpenCode Zen API Key" [level=3] [ref=e899]:
+                        - text: OpenCode Zen
+                        - generic "API Key" [ref=e900]
+                      - generic [ref=e902]: No connections
+                  - generic [ref=e904]: chevron_right
+              - link "opencode-go OpenCode Go API Key No connections chevron_right" [ref=e905] [cursor=pointer]:
+                - /url: /dashboard/providers/opencode-go
+                - generic [ref=e907]:
+                  - generic [ref=e908]:
+                    - img "opencode-go" [ref=e911]
+                    - generic [ref=e912]:
+                      - heading "OpenCode Go API Key" [level=3] [ref=e913]:
+                        - text: OpenCode Go
+                        - generic "API Key" [ref=e914]
+                      - generic [ref=e916]: No connections
+                  - generic [ref=e918]: chevron_right
+              - link "AlibabaCloud Alibaba Cloud (DashScope) API Key No connections chevron_right" [ref=e919] [cursor=pointer]:
+                - /url: /dashboard/providers/alibaba
+                - generic [ref=e921]:
+                  - generic [ref=e922]:
+                    - img "AlibabaCloud" [ref=e925]
+                    - generic [ref=e928]:
+                      - heading "Alibaba Cloud (DashScope) API Key" [level=3] [ref=e929]:
+                        - text: Alibaba Cloud (DashScope)
+                        - generic "API Key" [ref=e930]
+                      - generic [ref=e932]: No connections
+                  - generic [ref=e934]: chevron_right
+              - link "longcat LongCat AI API Key No connections chevron_right" [ref=e935] [cursor=pointer]:
+                - /url: /dashboard/providers/longcat
+                - generic [ref=e937]:
+                  - generic [ref=e938]:
+                    - img "longcat" [ref=e941]
+                    - generic [ref=e942]:
+                      - heading "LongCat AI API Key" [level=3] [ref=e943]:
+                        - text: LongCat AI
+                        - generic "API Key" [ref=e944]
+                      - generic [ref=e946]: No connections
+                  - generic [ref=e948]: chevron_right
+              - link "pollinations Pollinations AI API Key No connections chevron_right" [ref=e949] [cursor=pointer]:
+                - /url: /dashboard/providers/pollinations
+                - generic [ref=e951]:
+                  - generic [ref=e952]:
+                    - img "pollinations" [ref=e955]
+                    - generic [ref=e956]:
+                      - heading "Pollinations AI API Key" [level=3] [ref=e957]:
+                        - text: Pollinations AI
+                        - generic "API Key" [ref=e958]
+                      - generic [ref=e960]: No connections
+                  - generic [ref=e962]: chevron_right
+              - link "puter Puter AI API Key No connections chevron_right" [ref=e963] [cursor=pointer]:
+                - /url: /dashboard/providers/puter
+                - generic [ref=e965]:
+                  - generic [ref=e966]:
+                    - img "puter" [ref=e969]
+                    - generic [ref=e970]:
+                      - heading "Puter AI API Key" [level=3] [ref=e971]:
+                        - text: Puter AI
+                        - generic "API Key" [ref=e972]
+                      - generic [ref=e974]: No connections
+                  - generic [ref=e976]: chevron_right
+              - link "Cloudflare Cloudflare Workers AI API Key No connections chevron_right" [ref=e977] [cursor=pointer]:
+                - /url: /dashboard/providers/cloudflare-ai
+                - generic [ref=e979]:
+                  - generic [ref=e980]:
+                    - img "Cloudflare" [ref=e983]
+                    - generic [ref=e986]:
+                      - heading "Cloudflare Workers AI API Key" [level=3] [ref=e987]:
+                        - text: Cloudflare Workers AI
+                        - generic "API Key" [ref=e988]
+                      - generic [ref=e990]: No connections
+                  - generic [ref=e992]: chevron_right
+              - link "scaleway Scaleway AI API Key No connections chevron_right" [ref=e993] [cursor=pointer]:
+                - /url: /dashboard/providers/scaleway
+                - generic [ref=e995]:
+                  - generic [ref=e996]:
+                    - img "scaleway" [ref=e999]
+                    - generic [ref=e1000]:
+                      - heading "Scaleway AI API Key" [level=3] [ref=e1001]:
+                        - text: Scaleway AI
+                        - generic "API Key" [ref=e1002]
+                      - generic [ref=e1004]: No connections
+                  - generic [ref=e1006]: chevron_right
+              - link "DeepInfra API Key No connections chevron_right" [ref=e1007] [cursor=pointer]:
+                - /url: /dashboard/providers/deepinfra
+                - generic [ref=e1009]:
+                  - generic [ref=e1010]:
+                    - img [ref=e1013]
+                    - generic [ref=e1016]:
+                      - heading "DeepInfra API Key" [level=3] [ref=e1017]:
+                        - text: DeepInfra
+                        - generic "API Key" [ref=e1018]
+                      - generic [ref=e1020]: No connections
+                  - generic [ref=e1022]: chevron_right
+              - link "Vercel AI Gateway API Key No connections chevron_right" [ref=e1023] [cursor=pointer]:
+                - /url: /dashboard/providers/vercel-ai-gateway
+                - generic [ref=e1025]:
+                  - generic [ref=e1026]:
+                    - img [ref=e1029]
+                    - generic [ref=e1032]:
+                      - heading "Vercel AI Gateway API Key" [level=3] [ref=e1033]:
+                        - text: Vercel AI Gateway
+                        - generic "API Key" [ref=e1034]
+                      - generic [ref=e1036]: No connections
+                  - generic [ref=e1038]: chevron_right
+              - link "Lambda AI API Key No connections chevron_right" [ref=e1039] [cursor=pointer]:
+                - /url: /dashboard/providers/lambda-ai
+                - generic [ref=e1041]:
+                  - generic [ref=e1042]:
+                    - img [ref=e1045]
+                    - generic [ref=e1048]:
+                      - heading "Lambda AI API Key" [level=3] [ref=e1049]:
+                        - text: Lambda AI
+                        - generic "API Key" [ref=e1050]
+                      - generic [ref=e1052]: No connections
+                  - generic [ref=e1054]: chevron_right
+              - link "SambaNova API Key No connections chevron_right" [ref=e1055] [cursor=pointer]:
+                - /url: /dashboard/providers/sambanova
+                - generic [ref=e1057]:
+                  - generic [ref=e1058]:
+                    - img [ref=e1061]
+                    - generic [ref=e1064]:
+                      - heading "SambaNova API Key" [level=3] [ref=e1065]:
+                        - text: SambaNova
+                        - generic "API Key" [ref=e1066]
+                      - generic [ref=e1068]: No connections
+                  - generic [ref=e1070]: chevron_right
+              - link "nScale API Key No connections chevron_right" [ref=e1071] [cursor=pointer]:
+                - /url: /dashboard/providers/nscale
+                - generic [ref=e1073]:
+                  - generic [ref=e1074]:
+                    - img [ref=e1077]
+                    - generic [ref=e1080]:
+                      - heading "nScale API Key" [level=3] [ref=e1081]:
+                        - text: nScale
+                        - generic "API Key" [ref=e1082]
+                      - generic [ref=e1084]: No connections
+                  - generic [ref=e1086]: chevron_right
+              - link "OVHcloud AI API Key No connections chevron_right" [ref=e1087] [cursor=pointer]:
+                - /url: /dashboard/providers/ovhcloud
+                - generic [ref=e1089]:
+                  - generic [ref=e1090]:
+                    - img [ref=e1093]
+                    - generic [ref=e1096]:
+                      - heading "OVHcloud AI API Key" [level=3] [ref=e1097]:
+                        - text: OVHcloud AI
+                        - generic "API Key" [ref=e1098]
+                      - generic [ref=e1100]: No connections
+                  - generic [ref=e1102]: chevron_right
+              - link "Baseten API Key No connections chevron_right" [ref=e1103] [cursor=pointer]:
+                - /url: /dashboard/providers/baseten
+                - generic [ref=e1105]:
+                  - generic [ref=e1106]:
+                    - img [ref=e1109]
+                    - generic [ref=e1112]:
+                      - heading "Baseten API Key" [level=3] [ref=e1113]:
+                        - text: Baseten
+                        - generic "API Key" [ref=e1114]
+                      - generic [ref=e1116]: No connections
+                  - generic [ref=e1118]: chevron_right
+              - link "PublicAI API Key No connections chevron_right" [ref=e1119] [cursor=pointer]:
+                - /url: /dashboard/providers/publicai
+                - generic [ref=e1121]:
+                  - generic [ref=e1122]:
+                    - img [ref=e1125]
+                    - generic [ref=e1128]:
+                      - heading "PublicAI API Key" [level=3] [ref=e1129]:
+                        - text: PublicAI
+                        - generic "API Key" [ref=e1130]
+                      - generic [ref=e1132]: No connections
+                  - generic [ref=e1134]: chevron_right
+              - link "MoonshotAI Moonshot AI API Key No connections chevron_right" [ref=e1135] [cursor=pointer]:
+                - /url: /dashboard/providers/moonshot
+                - generic [ref=e1137]:
+                  - generic [ref=e1138]:
+                    - img "MoonshotAI" [ref=e1141]
+                    - generic [ref=e1143]:
+                      - heading "Moonshot AI API Key" [level=3] [ref=e1144]:
+                        - text: Moonshot AI
+                        - generic "API Key" [ref=e1145]
+                      - generic [ref=e1147]: No connections
+                  - generic [ref=e1149]: chevron_right
+              - link "Meta Llama API API Key No connections chevron_right" [ref=e1150] [cursor=pointer]:
+                - /url: /dashboard/providers/meta-llama
+                - generic [ref=e1152]:
+                  - generic [ref=e1153]:
+                    - img [ref=e1156]
+                    - generic [ref=e1159]:
+                      - heading "Meta Llama API API Key" [level=3] [ref=e1160]:
+                        - text: Meta Llama API
+                        - generic "API Key" [ref=e1161]
+                      - generic [ref=e1163]: No connections
+                  - generic [ref=e1165]: chevron_right
+              - link "v0 (Vercel) API Key No connections chevron_right" [ref=e1166] [cursor=pointer]:
+                - /url: /dashboard/providers/v0-vercel
+                - generic [ref=e1168]:
+                  - generic [ref=e1169]:
+                    - img [ref=e1172]
+                    - generic [ref=e1175]:
+                      - heading "v0 (Vercel) API Key" [level=3] [ref=e1176]:
+                        - text: v0 (Vercel)
+                        - generic "API Key" [ref=e1177]
+                      - generic [ref=e1179]: No connections
+                  - generic [ref=e1181]: chevron_right
+              - link "Morph API Key No connections chevron_right" [ref=e1182] [cursor=pointer]:
+                - /url: /dashboard/providers/morph
+                - generic [ref=e1184]:
+                  - generic [ref=e1185]:
+                    - img [ref=e1188]
+                    - generic [ref=e1191]:
+                      - heading "Morph API Key" [level=3] [ref=e1192]:
+                        - text: Morph
+                        - generic "API Key" [ref=e1193]
+                      - generic [ref=e1195]: No connections
+                  - generic [ref=e1197]: chevron_right
+              - link "Featherless AI API Key No connections chevron_right" [ref=e1198] [cursor=pointer]:
+                - /url: /dashboard/providers/featherless-ai
+                - generic [ref=e1200]:
+                  - generic [ref=e1201]:
+                    - img [ref=e1204]
+                    - generic [ref=e1207]:
+                      - heading "Featherless AI API Key" [level=3] [ref=e1208]:
+                        - text: Featherless AI
+                        - generic "API Key" [ref=e1209]
+                      - generic [ref=e1211]: No connections
+                  - generic [ref=e1213]: chevron_right
+              - link "FriendliAI API Key No connections chevron_right" [ref=e1214] [cursor=pointer]:
+                - /url: /dashboard/providers/friendliai
+                - generic [ref=e1216]:
+                  - generic [ref=e1217]:
+                    - img [ref=e1220]
+                    - generic [ref=e1223]:
+                      - heading "FriendliAI API Key" [level=3] [ref=e1224]:
+                        - text: FriendliAI
+                        - generic "API Key" [ref=e1225]
+                      - generic [ref=e1227]: No connections
+                  - generic [ref=e1229]: chevron_right
+              - link "LlamaGate API Key No connections chevron_right" [ref=e1230] [cursor=pointer]:
+                - /url: /dashboard/providers/llamagate
+                - generic [ref=e1232]:
+                  - generic [ref=e1233]:
+                    - img [ref=e1236]
+                    - generic [ref=e1239]:
+                      - heading "LlamaGate API Key" [level=3] [ref=e1240]:
+                        - text: LlamaGate
+                        - generic "API Key" [ref=e1241]
+                      - generic [ref=e1243]: No connections
+                  - generic [ref=e1245]: chevron_right
+              - link "Heroku AI API Key No connections chevron_right" [ref=e1246] [cursor=pointer]:
+                - /url: /dashboard/providers/heroku
+                - generic [ref=e1248]:
+                  - generic [ref=e1249]:
+                    - img [ref=e1252]
+                    - generic [ref=e1255]:
+                      - heading "Heroku AI API Key" [level=3] [ref=e1256]:
+                        - text: Heroku AI
+                        - generic "API Key" [ref=e1257]
+                      - generic [ref=e1259]: No connections
+                  - generic [ref=e1261]: chevron_right
+              - link "Galadriel API Key No connections chevron_right" [ref=e1262] [cursor=pointer]:
+                - /url: /dashboard/providers/galadriel
+                - generic [ref=e1264]:
+                  - generic [ref=e1265]:
+                    - img [ref=e1268]
+                    - generic [ref=e1271]:
+                      - heading "Galadriel API Key" [level=3] [ref=e1272]:
+                        - text: Galadriel
+                        - generic "API Key" [ref=e1273]
+                      - generic [ref=e1275]: No connections
+                  - generic [ref=e1277]: chevron_right
+              - link "Databricks API Key No connections chevron_right" [ref=e1278] [cursor=pointer]:
+                - /url: /dashboard/providers/databricks
+                - generic [ref=e1280]:
+                  - generic [ref=e1281]:
+                    - img [ref=e1284]
+                    - generic [ref=e1287]:
+                      - heading "Databricks API Key" [level=3] [ref=e1288]:
+                        - text: Databricks
+                        - generic "API Key" [ref=e1289]
+                      - generic [ref=e1291]: No connections
+                  - generic [ref=e1293]: chevron_right
+              - link "Snowflake Cortex API Key No connections chevron_right" [ref=e1294] [cursor=pointer]:
+                - /url: /dashboard/providers/snowflake
+                - generic [ref=e1296]:
+                  - generic [ref=e1297]:
+                    - img [ref=e1300]
+                    - generic [ref=e1303]:
+                      - heading "Snowflake Cortex API Key" [level=3] [ref=e1304]:
+                        - text: Snowflake Cortex
+                        - generic "API Key" [ref=e1305]
+                      - generic [ref=e1307]: No connections
+                  - generic [ref=e1309]: chevron_right
+              - link "Weights & Biases Inference API Key No connections chevron_right" [ref=e1310] [cursor=pointer]:
+                - /url: /dashboard/providers/wandb
+                - generic [ref=e1312]:
+                  - generic [ref=e1313]:
+                    - img [ref=e1316]
+                    - generic [ref=e1319]:
+                      - heading "Weights & Biases Inference API Key" [level=3] [ref=e1320]:
+                        - text: Weights & Biases Inference
+                        - generic "API Key" [ref=e1321]
+                      - generic [ref=e1323]: No connections
+                  - generic [ref=e1325]: chevron_right
+              - link "Volcengine API Key No connections chevron_right" [ref=e1326] [cursor=pointer]:
+                - /url: /dashboard/providers/volcengine
+                - generic [ref=e1328]:
+                  - generic [ref=e1329]:
+                    - img [ref=e1332]
+                    - generic [ref=e1335]:
+                      - heading "Volcengine API Key" [level=3] [ref=e1336]:
+                        - text: Volcengine
+                        - generic "API Key" [ref=e1337]
+                      - generic [ref=e1339]: No connections
+                  - generic [ref=e1341]: chevron_right
+              - link "AI21 AI21 Labs API Key No connections chevron_right" [ref=e1342] [cursor=pointer]:
+                - /url: /dashboard/providers/ai21
+                - generic [ref=e1344]:
+                  - generic [ref=e1345]:
+                    - img "AI21" [ref=e1348]
+                    - generic [ref=e1350]:
+                      - heading "AI21 Labs API Key" [level=3] [ref=e1351]:
+                        - text: AI21 Labs
+                        - generic "API Key" [ref=e1352]
+                      - generic [ref=e1354]: No connections
+                  - generic [ref=e1356]: chevron_right
+              - link "GigaChat (Sber) API Key No connections chevron_right" [ref=e1357] [cursor=pointer]:
+                - /url: /dashboard/providers/gigachat
+                - generic [ref=e1359]:
+                  - generic [ref=e1360]:
+                    - img [ref=e1363]
+                    - generic [ref=e1366]:
+                      - heading "GigaChat (Sber) API Key" [level=3] [ref=e1367]:
+                        - text: GigaChat (Sber)
+                        - generic "API Key" [ref=e1368]
+                      - generic [ref=e1370]: No connections
+                  - generic [ref=e1372]: chevron_right
+              - link "Venice.ai API Key No connections chevron_right" [ref=e1373] [cursor=pointer]:
+                - /url: /dashboard/providers/venice
+                - generic [ref=e1375]:
+                  - generic [ref=e1376]:
+                    - img [ref=e1379]
+                    - generic [ref=e1382]:
+                      - heading "Venice.ai API Key" [level=3] [ref=e1383]:
+                        - text: Venice.ai
+                        - generic "API Key" [ref=e1384]
+                      - generic [ref=e1386]: No connections
+                  - generic [ref=e1388]: chevron_right
+              - link "Mistral Codestral API Key No connections chevron_right" [ref=e1389] [cursor=pointer]:
+                - /url: /dashboard/providers/codestral
+                - generic [ref=e1391]:
+                  - generic [ref=e1392]:
+                    - img "Mistral" [ref=e1395]
+                    - generic [ref=e1401]:
+                      - heading "Codestral API Key" [level=3] [ref=e1402]:
+                        - text: Codestral
+                        - generic "API Key" [ref=e1403]
+                      - generic [ref=e1405]: No connections
+                  - generic [ref=e1407]: chevron_right
+              - link "Upstage API Key No connections chevron_right" [ref=e1408] [cursor=pointer]:
+                - /url: /dashboard/providers/upstage
+                - generic [ref=e1410]:
+                  - generic [ref=e1411]:
+                    - img [ref=e1414]
+                    - generic [ref=e1417]:
+                      - heading "Upstage API Key" [level=3] [ref=e1418]:
+                        - text: Upstage
+                        - generic "API Key" [ref=e1419]
+                      - generic [ref=e1421]: No connections
+                  - generic [ref=e1423]: chevron_right
+              - link "Maritalk API Key No connections chevron_right" [ref=e1424] [cursor=pointer]:
+                - /url: /dashboard/providers/maritalk
+                - generic [ref=e1426]:
+                  - generic [ref=e1427]:
+                    - img [ref=e1430]
+                    - generic [ref=e1433]:
+                      - heading "Maritalk API Key" [level=3] [ref=e1434]:
+                        - text: Maritalk
+                        - generic "API Key" [ref=e1435]
+                      - generic [ref=e1437]: No connections
+                  - generic [ref=e1439]: chevron_right
+              - link "Xiaomi MiMo API Key No connections chevron_right" [ref=e1440] [cursor=pointer]:
+                - /url: /dashboard/providers/xiaomi-mimo
+                - generic [ref=e1442]:
+                  - generic [ref=e1443]:
+                    - img [ref=e1446]
+                    - generic [ref=e1449]:
+                      - heading "Xiaomi MiMo API Key" [level=3] [ref=e1450]:
+                        - text: Xiaomi MiMo
+                        - generic "API Key" [ref=e1451]
+                      - generic [ref=e1453]: No connections
+                  - generic [ref=e1455]: chevron_right
+              - link "Inference.net API Key No connections chevron_right" [ref=e1456] [cursor=pointer]:
+                - /url: /dashboard/providers/inference-net
+                - generic [ref=e1458]:
+                  - generic [ref=e1459]:
+                    - img [ref=e1462]
+                    - generic [ref=e1465]:
+                      - heading "Inference.net API Key" [level=3] [ref=e1466]:
+                        - text: Inference.net
+                        - generic "API Key" [ref=e1467]
+                      - generic [ref=e1469]: No connections
+                  - generic [ref=e1471]: chevron_right
+              - link "NanoGPT API Key No connections chevron_right" [ref=e1472] [cursor=pointer]:
+                - /url: /dashboard/providers/nanogpt
+                - generic [ref=e1474]:
+                  - generic [ref=e1475]:
+                    - img [ref=e1478]
+                    - generic [ref=e1481]:
+                      - heading "NanoGPT API Key" [level=3] [ref=e1482]:
+                        - text: NanoGPT
+                        - generic "API Key" [ref=e1483]
+                      - generic [ref=e1485]: No connections
+                  - generic [ref=e1487]: chevron_right
+              - link "Predibase API Key No connections chevron_right" [ref=e1488] [cursor=pointer]:
+                - /url: /dashboard/providers/predibase
+                - generic [ref=e1490]:
+                  - generic [ref=e1491]:
+                    - img [ref=e1494]
+                    - generic [ref=e1497]:
+                      - heading "Predibase API Key" [level=3] [ref=e1498]:
+                        - text: Predibase
+                        - generic "API Key" [ref=e1499]
+                      - generic [ref=e1501]: No connections
+                  - generic [ref=e1503]: chevron_right
+              - link "Bytez API Key No connections chevron_right" [ref=e1504] [cursor=pointer]:
+                - /url: /dashboard/providers/bytez
+                - generic [ref=e1506]:
+                  - generic [ref=e1507]:
+                    - img [ref=e1510]
+                    - generic [ref=e1513]:
+                      - heading "Bytez API Key" [level=3] [ref=e1514]:
+                        - text: Bytez
+                        - generic "API Key" [ref=e1515]
+                      - generic [ref=e1517]: No connections
+                  - generic [ref=e1519]: chevron_right
+              - link "aimlapi AI/ML API API Key No connections chevron_right" [ref=e1520] [cursor=pointer]:
+                - /url: /dashboard/providers/aimlapi
+                - generic [ref=e1522]:
+                  - generic [ref=e1523]:
+                    - img "aimlapi" [ref=e1526]
+                    - generic [ref=e1527]:
+                      - heading "AI/ML API API Key" [level=3] [ref=e1528]:
+                        - text: AI/ML API
+                        - generic "API Key" [ref=e1529]
+                      - generic [ref=e1531]: No connections
+                  - generic [ref=e1533]: chevron_right
+              - link "Novita AI API Key No connections chevron_right" [ref=e1534] [cursor=pointer]:
+                - /url: /dashboard/providers/novita
+                - generic [ref=e1536]:
+                  - generic [ref=e1537]:
+                    - img [ref=e1540]
+                    - generic [ref=e1543]:
+                      - heading "Novita AI API Key" [level=3] [ref=e1544]:
+                        - text: Novita AI
+                        - generic "API Key" [ref=e1545]
+                      - generic [ref=e1547]: No connections
+                  - generic [ref=e1549]: chevron_right
+              - link "PiAPI API Key No connections chevron_right" [ref=e1550] [cursor=pointer]:
+                - /url: /dashboard/providers/piapi
+                - generic [ref=e1552]:
+                  - generic [ref=e1553]:
+                    - img [ref=e1556]
+                    - generic [ref=e1559]:
+                      - heading "PiAPI API Key" [level=3] [ref=e1560]:
+                        - text: PiAPI
+                        - generic "API Key" [ref=e1561]
+                      - generic [ref=e1563]: No connections
+                  - generic [ref=e1565]: chevron_right
+              - link "GoAPI API Key No connections chevron_right" [ref=e1566] [cursor=pointer]:
+                - /url: /dashboard/providers/getgoapi
+                - generic [ref=e1568]:
+                  - generic [ref=e1569]:
+                    - img [ref=e1572]
+                    - generic [ref=e1575]:
+                      - heading "GoAPI API Key" [level=3] [ref=e1576]:
+                        - text: GoAPI
+                        - generic "API Key" [ref=e1577]
+                      - generic [ref=e1579]: No connections
+                  - generic [ref=e1581]: chevron_right
+              - link "LaoZhang AI API Key No connections chevron_right" [ref=e1582] [cursor=pointer]:
+                - /url: /dashboard/providers/laozhang
+                - generic [ref=e1584]:
+                  - generic [ref=e1585]:
+                    - img [ref=e1588]
+                    - generic [ref=e1591]:
+                      - heading "LaoZhang AI API Key" [level=3] [ref=e1592]:
+                        - text: LaoZhang AI
+                        - generic "API Key" [ref=e1593]
+                      - generic [ref=e1595]: No connections
+                  - generic [ref=e1597]: chevron_right
+              - link "Fal.ai API Key No connections chevron_right" [ref=e1598] [cursor=pointer]:
+                - /url: /dashboard/providers/fal-ai
+                - generic [ref=e1600]:
+                  - generic [ref=e1601]:
+                    - img [ref=e1604]
+                    - generic [ref=e1607]:
+                      - heading "Fal.ai API Key" [level=3] [ref=e1608]:
+                        - text: Fal.ai
+                        - generic "API Key" [ref=e1609]
+                      - generic [ref=e1611]: No connections
+                  - generic [ref=e1613]: chevron_right
+              - link "Stability Stability AI API Key No connections chevron_right" [ref=e1614] [cursor=pointer]:
+                - /url: /dashboard/providers/stability-ai
+                - generic [ref=e1616]:
+                  - generic [ref=e1617]:
+                    - img "Stability" [ref=e1620]
+                    - generic [ref=e1623]:
+                      - heading "Stability AI API Key" [level=3] [ref=e1624]:
+                        - text: Stability AI
+                        - generic "API Key" [ref=e1625]
+                      - generic [ref=e1627]: No connections
+                  - generic [ref=e1629]: chevron_right
+              - link "Black Forest Labs API Key No connections chevron_right" [ref=e1630] [cursor=pointer]:
+                - /url: /dashboard/providers/black-forest-labs
+                - generic [ref=e1632]:
+                  - generic [ref=e1633]:
+                    - img [ref=e1636]
+                    - generic [ref=e1639]:
+                      - heading "Black Forest Labs API Key" [level=3] [ref=e1640]:
+                        - text: Black Forest Labs
+                        - generic "API Key" [ref=e1641]
+                      - generic [ref=e1643]: No connections
+                  - generic [ref=e1645]: chevron_right
+              - link "Recraft API Key No connections chevron_right" [ref=e1646] [cursor=pointer]:
+                - /url: /dashboard/providers/recraft
+                - generic [ref=e1648]:
+                  - generic [ref=e1649]:
+                    - img [ref=e1652]
+                    - generic [ref=e1655]:
+                      - heading "Recraft API Key" [level=3] [ref=e1656]:
+                        - text: Recraft
+                        - generic "API Key" [ref=e1657]
+                      - generic [ref=e1659]: No connections
+                  - generic [ref=e1661]: chevron_right
+              - link "Topaz API Key No connections chevron_right" [ref=e1662] [cursor=pointer]:
+                - /url: /dashboard/providers/topaz
+                - generic [ref=e1664]:
+                  - generic [ref=e1665]:
+                    - img [ref=e1668]
+                    - generic [ref=e1671]:
+                      - heading "Topaz API Key" [level=3] [ref=e1672]:
+                        - text: Topaz
+                        - generic "API Key" [ref=e1673]
+                      - generic [ref=e1675]: No connections
+                  - generic [ref=e1677]: chevron_right
+          - generic [ref=e1678]:
+            - generic [ref=e1679]:
+              - heading "Web / Cookie Providers Web/Cookie" [level=2] [ref=e1680]:
+                - text: Web / Cookie Providers
+                - generic "Web/Cookie" [ref=e1681]
+              - button "play_arrow Test All" [ref=e1682]:
+                - generic: play_arrow
+                - text: Test All
+            - generic [ref=e1683]:
+              - link "Grok Grok Web (Subscription) API Key No connections chevron_right" [ref=e1684] [cursor=pointer]:
+                - /url: /dashboard/providers/grok-web
+                - generic [ref=e1686]:
+                  - generic [ref=e1687]:
+                    - img "Grok" [ref=e1690]
+                    - generic [ref=e1692]:
+                      - heading "Grok Web (Subscription) API Key" [level=3] [ref=e1693]:
+                        - text: Grok Web (Subscription)
+                        - generic "API Key" [ref=e1694]
+                      - generic [ref=e1696]: No connections
+                  - generic [ref=e1698]: chevron_right
+              - link "Perplexity Perplexity Web (Pro/Max) API Key No connections chevron_right" [ref=e1699] [cursor=pointer]:
+                - /url: /dashboard/providers/perplexity-web
+                - generic [ref=e1701]:
+                  - generic [ref=e1702]:
+                    - img "Perplexity" [ref=e1705]
+                    - generic [ref=e1707]:
+                      - heading "Perplexity Web (Pro/Max) API Key" [level=3] [ref=e1708]:
+                        - text: Perplexity Web (Pro/Max)
+                        - generic "API Key" [ref=e1709]
+                      - generic [ref=e1711]: No connections
+                  - generic [ref=e1713]: chevron_right
+          - generic [ref=e1714]:
+            - generic [ref=e1715]:
+              - heading "Search Providers Search" [level=2] [ref=e1716]:
+                - text: Search Providers
+                - generic "Search" [ref=e1717]
+              - button "play_arrow Test All" [ref=e1718]:
+                - generic: play_arrow
+                - text: Test All
+            - generic [ref=e1719]:
+              - link "Perplexity Perplexity Search API Key No connections chevron_right" [ref=e1720] [cursor=pointer]:
+                - /url: /dashboard/providers/perplexity-search
+                - generic [ref=e1722]:
+                  - generic [ref=e1723]:
+                    - img "Perplexity" [ref=e1726]
+                    - generic [ref=e1728]:
+                      - heading "Perplexity Search API Key" [level=3] [ref=e1729]:
+                        - text: Perplexity Search
+                        - generic "API Key" [ref=e1730]
+                      - generic [ref=e1732]: No connections
+                  - generic [ref=e1734]: chevron_right
+              - link "serper-search Serper Search API Key No connections chevron_right" [ref=e1735] [cursor=pointer]:
+                - /url: /dashboard/providers/serper-search
+                - generic [ref=e1737]:
+                  - generic [ref=e1738]:
+                    - img "serper-search" [ref=e1741]
+                    - generic [ref=e1742]:
+                      - heading "Serper Search API Key" [level=3] [ref=e1743]:
+                        - text: Serper Search
+                        - generic "API Key" [ref=e1744]
+                      - generic [ref=e1746]: No connections
+                  - generic [ref=e1748]: chevron_right
+              - link "brave-search Brave Search API Key No connections chevron_right" [ref=e1749] [cursor=pointer]:
+                - /url: /dashboard/providers/brave-search
+                - generic [ref=e1751]:
+                  - generic [ref=e1752]:
+                    - img "brave-search" [ref=e1755]
+                    - generic [ref=e1756]:
+                      - heading "Brave Search API Key" [level=3] [ref=e1757]:
+                        - text: Brave Search
+                        - generic "API Key" [ref=e1758]
+                      - generic [ref=e1760]: No connections
+                  - generic [ref=e1762]: chevron_right
+              - link "exa-search Exa Search API Key No connections chevron_right" [ref=e1763] [cursor=pointer]:
+                - /url: /dashboard/providers/exa-search
+                - generic [ref=e1765]:
+                  - generic [ref=e1766]:
+                    - img "exa-search" [ref=e1769]
+                    - generic [ref=e1770]:
+                      - heading "Exa Search API Key" [level=3] [ref=e1771]:
+                        - text: Exa Search
+                        - generic "API Key" [ref=e1772]
+                      - generic [ref=e1774]: No connections
+                  - generic [ref=e1776]: chevron_right
+              - link "tavily-search Tavily Search API Key No connections chevron_right" [ref=e1777] [cursor=pointer]:
+                - /url: /dashboard/providers/tavily-search
+                - generic [ref=e1779]:
+                  - generic [ref=e1780]:
+                    - img "tavily-search" [ref=e1783]
+                    - generic [ref=e1784]:
+                      - heading "Tavily Search API Key" [level=3] [ref=e1785]:
+                        - text: Tavily Search
+                        - generic "API Key" [ref=e1786]
+                      - generic [ref=e1788]: No connections
+                  - generic [ref=e1790]: chevron_right
+              - link "Google Google Programmable Search API Key No connections chevron_right" [ref=e1791] [cursor=pointer]:
+                - /url: /dashboard/providers/google-pse-search
+                - generic [ref=e1793]:
+                  - generic [ref=e1794]:
+                    - img "Google" [ref=e1797]
+                    - generic [ref=e1802]:
+                      - heading "Google Programmable Search API Key" [level=3] [ref=e1803]:
+                        - text: Google Programmable Search
+                        - generic "API Key" [ref=e1804]
+                      - generic [ref=e1806]: No connections
+                  - generic [ref=e1808]: chevron_right
+              - link "Linkup Search API Key No connections chevron_right" [ref=e1809] [cursor=pointer]:
+                - /url: /dashboard/providers/linkup-search
+                - generic [ref=e1811]:
+                  - generic [ref=e1812]:
+                    - img [ref=e1815]
+                    - generic [ref=e1818]:
+                      - heading "Linkup Search API Key" [level=3] [ref=e1819]:
+                        - text: Linkup Search
+                        - generic "API Key" [ref=e1820]
+                      - generic [ref=e1822]: No connections
+                  - generic [ref=e1824]: chevron_right
+              - link "SearchAPI API Key No connections chevron_right" [ref=e1825] [cursor=pointer]:
+                - /url: /dashboard/providers/searchapi-search
+                - generic [ref=e1827]:
+                  - generic [ref=e1828]:
+                    - img [ref=e1831]
+                    - generic [ref=e1834]:
+                      - heading "SearchAPI API Key" [level=3] [ref=e1835]:
+                        - text: SearchAPI
+                        - generic "API Key" [ref=e1836]
+                      - generic [ref=e1838]: No connections
+                  - generic [ref=e1840]: chevron_right
+              - link "SearXNG Search API Key No connections chevron_right" [ref=e1841] [cursor=pointer]:
+                - /url: /dashboard/providers/searxng-search
+                - generic [ref=e1843]:
+                  - generic [ref=e1844]:
+                    - img [ref=e1847]
+                    - generic [ref=e1850]:
+                      - heading "SearXNG Search API Key" [level=3] [ref=e1851]:
+                        - text: SearXNG Search
+                        - generic "API Key" [ref=e1852]
+                      - generic [ref=e1854]: No connections
+                  - generic [ref=e1856]: chevron_right
+          - generic [ref=e1857]:
+            - generic [ref=e1858]:
+              - heading "Audio Providers Audio" [level=2] [ref=e1859]:
+                - text: Audio Providers
+                - generic "Audio" [ref=e1860]
+              - button "play_arrow Test All" [ref=e1861]:
+                - generic: play_arrow
+                - text: Test All
+            - generic [ref=e1862]:
+              - link "deepgram Deepgram API Key No connections chevron_right" [ref=e1863] [cursor=pointer]:
+                - /url: /dashboard/providers/deepgram
+                - generic [ref=e1865]:
+                  - generic [ref=e1866]:
+                    - img "deepgram" [ref=e1869]
+                    - generic [ref=e1870]:
+                      - heading "Deepgram API Key" [level=3] [ref=e1871]:
+                        - text: Deepgram
+                        - generic "API Key" [ref=e1872]
+                      - generic [ref=e1874]: No connections
+                  - generic [ref=e1876]: chevron_right
+              - link "assemblyai AssemblyAI API Key No connections chevron_right" [ref=e1877] [cursor=pointer]:
+                - /url: /dashboard/providers/assemblyai
+                - generic [ref=e1879]:
+                  - generic [ref=e1880]:
+                    - img "assemblyai" [ref=e1883]
+                    - generic [ref=e1884]:
+                      - heading "AssemblyAI API Key" [level=3] [ref=e1885]:
+                        - text: AssemblyAI
+                        - generic "API Key" [ref=e1886]
+                      - generic [ref=e1888]: No connections
+                  - generic [ref=e1890]: chevron_right
+              - link "elevenlabs ElevenLabs API Key No connections chevron_right" [ref=e1891] [cursor=pointer]:
+                - /url: /dashboard/providers/elevenlabs
+                - generic [ref=e1893]:
+                  - generic [ref=e1894]:
+                    - img "elevenlabs" [ref=e1897]
+                    - generic [ref=e1898]:
+                      - heading "ElevenLabs API Key" [level=3] [ref=e1899]:
+                        - text: ElevenLabs
+                        - generic "API Key" [ref=e1900]
+                      - generic [ref=e1902]: No connections
+                  - generic [ref=e1904]: chevron_right
+              - link "cartesia Cartesia API Key No connections chevron_right" [ref=e1905] [cursor=pointer]:
+                - /url: /dashboard/providers/cartesia
+                - generic [ref=e1907]:
+                  - generic [ref=e1908]:
+                    - img "cartesia" [ref=e1911]
+                    - generic [ref=e1912]:
+                      - heading "Cartesia API Key" [level=3] [ref=e1913]:
+                        - text: Cartesia
+                        - generic "API Key" [ref=e1914]
+                      - generic [ref=e1916]: No connections
+                  - generic [ref=e1918]: chevron_right
+              - link "playht PlayHT API Key No connections chevron_right" [ref=e1919] [cursor=pointer]:
+                - /url: /dashboard/providers/playht
+                - generic [ref=e1921]:
+                  - generic [ref=e1922]:
+                    - img "playht" [ref=e1925]
+                    - generic [ref=e1926]:
+                      - heading "PlayHT API Key" [level=3] [ref=e1927]:
+                        - text: PlayHT
+                        - generic "API Key" [ref=e1928]
+                      - generic [ref=e1930]: No connections
+                  - generic [ref=e1932]: chevron_right
+              - link "inworld Inworld API Key No connections chevron_right" [ref=e1933] [cursor=pointer]:
+                - /url: /dashboard/providers/inworld
+                - generic [ref=e1935]:
+                  - generic [ref=e1936]:
+                    - img "inworld" [ref=e1939]
+                    - generic [ref=e1940]:
+                      - heading "Inworld API Key" [level=3] [ref=e1941]:
+                        - text: Inworld
+                        - generic "API Key" [ref=e1942]
+                      - generic [ref=e1944]: No connections
+                  - generic [ref=e1946]: chevron_right
+          - generic [ref=e1947]:
+            - generic [ref=e1948]:
+              - heading "API Key Compatible Providers Compatible" [level=2] [ref=e1949]:
+                - text: API Key Compatible Providers
+                - generic "Compatible" [ref=e1950]
+              - generic [ref=e1951]:
+                - button "Add Anthropic Compatible" [ref=e1952] [cursor=pointer]:
+                  - generic: add
+                  - text: Add Anthropic Compatible
+                - button "Add OpenAI Compatible" [ref=e1953] [cursor=pointer]:
+                  - generic: add
+                  - text: Add OpenAI Compatible
+            - generic [ref=e1954]:
+              - generic [ref=e1955]: extension
+              - paragraph [ref=e1956]: No compatible providers added yet
+              - paragraph [ref=e1957]: Use the buttons above to add OpenAI or Anthropic compatible endpoints
+  - alert [ref=e1958]
