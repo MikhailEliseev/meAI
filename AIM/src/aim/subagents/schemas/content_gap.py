@@ -19,9 +19,19 @@ class GapType(str, Enum):
 class GapSeverity(str, Enum):
     """Severity of content gap."""
 
-    HIGH = "high"  # Missing completely (0 pages)
-    MEDIUM = "medium"  # Underrepresented (1-2 pages vs 5+)
-    LOW = "low"  # Comparable coverage
+    CRITICAL = "critical"  # P0 - Missing completely, high volume
+    HIGH = "high"  # P1 - Missing completely or high priority
+    MEDIUM = "medium"  # P2 - Underrepresented (1-2 pages vs 5+)
+    LOW = "low"  # P3 - Comparable coverage
+
+
+class IntentType(str, Enum):
+    """Search intent type."""
+
+    INFORMATIONAL = "informational"
+    COMMERCIAL = "commercial"
+    TRANSACTIONAL = "transactional"
+    NAVIGATIONAL = "navigational"
 
 
 class ContentGap(BaseModel):
@@ -29,16 +39,16 @@ class ContentGap(BaseModel):
 
     model_config = ConfigDict(use_enum_values=True)
 
-    topic: str = Field(..., description="Topic or keyword of the gap")
+    missing_keyword: str = Field(..., description="Missing keyword or topic")
     gap_type: GapType = Field(..., description="Type of gap")
     severity: GapSeverity = Field(..., description="Severity of gap")
+    search_volume: int = Field(default=0, ge=0, description="Monthly search volume")
     opportunity_score: float = Field(
-        ..., ge=0.0, le=100.0, description="Opportunity score (0-100)"
+        ..., ge=0.0, le=1.0, description="Opportunity score (0.0-1.0)"
     )
-    priority: str = Field(..., description="Priority tier (P0-P3)")
-    competitor_coverage: list[dict[str, Any]] = Field(
-        default_factory=list,
-        description="Competitor pages covering this topic",
+    competitor_coverage: dict[str, bool] = Field(
+        default_factory=dict,
+        description="Competitor coverage map (domain -> has_content)",
     )
     recommended_actions: list[str] = Field(
         default_factory=list,
@@ -60,6 +70,43 @@ class ContentGap(BaseModel):
     detected_at: datetime = Field(
         default_factory=lambda: datetime.now(),
         description="When gap was detected",
+    )
+
+    # Legacy field for backward compatibility
+    @property
+    def topic(self) -> str:
+        """Alias for missing_keyword."""
+        return self.missing_keyword
+
+    @property
+    def priority(self) -> str:
+        """Priority tier based on severity."""
+        severity_to_priority = {
+            GapSeverity.CRITICAL: "P0",
+            GapSeverity.HIGH: "P1",
+            GapSeverity.MEDIUM: "P2",
+            GapSeverity.LOW: "P3",
+        }
+        return severity_to_priority.get(self.severity, "P3")
+
+
+class ContentCluster(BaseModel):
+    """Topic cluster from SERP overlap analysis."""
+
+    model_config = ConfigDict(use_enum_values=True)
+
+    hub_keyword: str = Field(..., description="Hub keyword (cluster center)")
+    spoke_keywords: list[str] = Field(
+        default_factory=list, description="Spoke keywords (cluster members)"
+    )
+    keywords: list[str] = Field(
+        default_factory=list, description="All keywords in cluster"
+    )
+    total_search_volume: int = Field(
+        default=0, ge=0, description="Total search volume for cluster"
+    )
+    primary_intent: IntentType = Field(
+        default=IntentType.INFORMATIONAL, description="Primary search intent"
     )
 
 
