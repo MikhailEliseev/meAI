@@ -61,3 +61,4 @@ test_vault_*/
 e2e_test_vault/
 scenario_vault/
 .worktrees/
+server.log
