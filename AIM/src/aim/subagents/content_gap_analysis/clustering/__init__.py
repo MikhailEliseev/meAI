@@ -1,3 +1,15 @@
-"""Topic clustering components"""
+"""
+Topic Clustering Module
 
-# Will be implemented in Sprint 2
+Semantic clustering of content using Sentence-BERT embeddings and BERTopic.
+"""
+
+from .embeddings_generator import EmbeddingsGenerator
+from .topic_clusterer import TopicClusterer
+from .cluster_analyzer import ClusterAnalyzer
+
+__all__ = [
+    "EmbeddingsGenerator",
+    "TopicClusterer",
+    "ClusterAnalyzer",
+]
