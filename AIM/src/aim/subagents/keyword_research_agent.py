@@ -73,6 +73,7 @@ class KeywordResearchAgent(Agent):
         )
 
         self.database_url = database_url
+        self.vault_path = vault_path
         self.event_bus = event_bus
         self.logger = logger.bind(agent_id=agent_id)
 
@@ -489,13 +490,96 @@ class KeywordResearchAgent(Agent):
         Args:
             report: Research report to save
         """
-        # TODO: Implement Obsidian vault integration
-        # For now, just log
+        from pathlib import Path
+
+        # Create reports directory if not exists
+        vault_path = Path(self.vault_path)
+        reports_dir = vault_path / "wiki" / "reports" / "keyword-research"
+        reports_dir.mkdir(parents=True, exist_ok=True)
+
+        # Generate filename with timestamp
+        timestamp = report.requested_at.strftime("%Y%m%d_%H%M%S")
+        filename = f"{timestamp}_{report.seed_keyword.replace(' ', '_')}.md"
+        report_path = reports_dir / filename
+
+        # Format report as markdown
+        content = self._format_report_markdown(report)
+
+        # Write to vault
+        report_path.write_text(content, encoding="utf-8")
+
         self.logger.info(
             "report_saved_to_vault",
             seed_keyword=report.seed_keyword,
             total_keywords=report.total_keywords,
+            path=str(report_path),
         )
+
+    def _format_report_markdown(self, report: KeywordResearchReport) -> str:
+        """Format report as markdown
+
+        Args:
+            report: Research report
+
+        Returns:
+            Markdown formatted report
+        """
+        lines = []
+
+        # Header
+        lines.append(f"# Keyword Research Report: {report.seed_keyword}")
+        lines.append("")
+        lines.append(f"**Generated:** {report.requested_at.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        lines.append(f"**Duration:** {report.analysis_duration_seconds:.2f}s")
+        lines.append(f"**Cost:** ${report.total_cost_usd:.4f} ({report.api_calls} API calls)")
+        lines.append("")
+
+        # Summary
+        lines.append("## Summary")
+        lines.append("")
+        lines.append(f"- **Total Keywords:** {report.total_keywords}")
+        lines.append(f"- **P0 (Critical):** {report.p0_count} ({report.tier_distribution.get('P0', 0)*100:.1f}%)")
+        lines.append(f"- **P1 (High):** {report.p1_count} ({report.tier_distribution.get('P1', 0)*100:.1f}%)")
+        lines.append(f"- **P2 (Medium):** {report.p2_count} ({report.tier_distribution.get('P2', 0)*100:.1f}%)")
+        lines.append(f"- **P3 (Low):** {report.p3_count} ({report.tier_distribution.get('P3', 0)*100:.1f}%)")
+        lines.append(f"- **Blocked:** {report.blocked_count}")
+        lines.append(f"- **Average Priority Score:** {report.average_priority_score:.2f}")
+        lines.append("")
+
+        # Recommendations
+        if report.recommendations:
+            lines.append("## Recommendations")
+            lines.append("")
+            for i, rec in enumerate(report.recommendations, 1):
+                lines.append(f"### {i}. {rec.title} ({rec.priority.value})")
+                lines.append("")
+                lines.append(rec.description)
+                lines.append("")
+                lines.append(f"**Keywords:** {', '.join(rec.keywords)}")
+                lines.append(f"**Impact:** {rec.estimated_impact}")
+                lines.append(f"**Effort:** {rec.effort}")
+                lines.append("")
+
+        # Keywords by tier
+        for tier in [PriorityTier.P0, PriorityTier.P1, PriorityTier.P2, PriorityTier.P3]:
+            tier_keywords = [kw for kw in report.keywords if kw.priority.tier == tier]
+            if tier_keywords:
+                lines.append(f"## {tier.value} Keywords ({len(tier_keywords)})")
+                lines.append("")
+                lines.append("| Keyword | Volume | Difficulty | Intent | Priority | Risk |")
+                lines.append("|---------|--------|------------|--------|----------|------|")
+                for kw in tier_keywords[:20]:  # Limit to top 20 per tier
+                    lines.append(
+                        f"| {kw.keyword_data.keyword} | "
+                        f"{kw.keyword_data.volume:,} | "
+                        f"{kw.keyword_data.difficulty} | "
+                        f"{kw.keyword_data.intent} | "
+                        f"{kw.priority.adjusted_score:.1f} | "
+                        f"{kw.compliance.risk_level.value} |"
+                    )
+                lines.append("")
+
+        return "\n".join(lines)
 
     async def collect_feedback(self, feedback: UserFeedback) -> None:
         """Collect user feedback for adaptive learning
@@ -503,8 +587,30 @@ class KeywordResearchAgent(Agent):
         Args:
             feedback: User feedback on keyword research
         """
-        # TODO: Store feedback in database
-        # TODO: Trigger priority calculator weight adjustment
+        from sqlalchemy import insert
+        from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+        from sqlalchemy.orm import sessionmaker
+
+        from src.aim.storage.models import UserFeedbackModel
+
+        # Create async engine and session
+        engine = create_async_engine(self.database_url, echo=False)
+        async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+        async with async_session() as session:
+            # Insert feedback
+            stmt = insert(UserFeedbackModel).values(
+                keyword=feedback.keyword,
+                feedback_type=feedback.feedback_type.value,
+                rating=feedback.rating,
+                comment=feedback.comment,
+                original_priority=feedback.original_priority.value if feedback.original_priority else None,
+                suggested_priority=feedback.suggested_priority.value if feedback.suggested_priority else None,
+                user_id=feedback.user_id,
+                created_at=feedback.created_at,
+            )
+            await session.execute(stmt)
+            await session.commit()
 
         self.logger.info(
             "feedback_collected",
@@ -512,6 +618,9 @@ class KeywordResearchAgent(Agent):
             feedback_type=feedback.feedback_type.value,
             rating=feedback.rating,
         )
+
+        # TODO: Trigger priority calculator weight adjustment based on feedback
+        # This would analyze feedback patterns and adjust weights in prioritization_weights.yaml
 
     async def close(self) -> None:
         """Close all clients"""
