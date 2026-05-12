@@ -213,6 +213,119 @@ Bash(command="wc -l spec.md && ls -lh spec.md")
 - Со skill: 45-60 минут (автоматическое исследование + создание)
 - Экономия: ~60-70%
 
+## Teacher Agent — Continuous System Learning
+
+**КРИТИЧЕСКИ ВАЖНО:** Teacher Agent — это Chief Learning Officer системы. Его единственная задача — следить за всеми источниками знаний и обучать остальных агентов.
+
+**Принцип:** Система должна постоянно учиться и улучшаться, не устаревать.
+
+**Workflow Teacher Agent (каждые 2-4 недели):**
+
+```
+Teacher Agent
+  ↓
+1. Читает список критических субагентов
+  ↓
+2. Для каждого субагента:
+   ├─ Проверяет дату последнего обучения
+   ├─ Запускает GitHub Search (новые топовые репо за период)
+   ├─ Запускает Deep Research (новые best practices, API updates)
+   ├─ Сравнивает с текущей реализацией субагента
+   └─ Генерирует "Learning Report" с gap analysis
+  ↓
+3. Приоритизирует обновления:
+   ├─ 🔴 CRITICAL: Новые алгоритмы/API (внедрить немедленно)
+   ├─ 🟡 HIGH: Улучшения производительности (запланировать)
+   └─ 🟢 LOW: Опциональные фичи (backlog)
+  ↓
+4. Создаёт задачи для обновления субагентов
+  ↓
+5. Сохраняет в Obsidian vault:
+   └─ obsidian/teacher/wiki/learning-cycles/YYYY-MM-DD.md
+```
+
+**Что проверяет Teacher:**
+
+1. **GitHub Monitoring:**
+   - Новые топовые репо по теме субагента (за последние 2-4 недели)
+   - Обновления в существующих репо (commits, releases)
+   - Новые паттерны и архитектуры
+   - Новые библиотеки/инструменты
+
+2. **Industry Updates:**
+   - Новые best practices (статьи, документация)
+   - Обновления API (breaking changes, новые фичи)
+   - Изменения алгоритмов (Google updates, Яндекс updates)
+   - Новые compliance требования
+
+3. **Performance Metrics:**
+   - Метрики субагента (precision, recall, speed)
+   - Сравнение с бенчмарками из GitHub
+   - Bottlenecks и optimization opportunities
+
+4. **Gap Analysis:**
+   - Что есть в топовых GitHub решениях, но нет у нас
+   - Что устарело в нашей реализации
+   - Что можно улучшить
+
+**Learning Report Format:**
+
+```markdown
+# Learning Cycle: YYYY-MM-DD
+
+## Субагент: [Name]
+
+### GitHub Findings
+- **New Repo:** `user/repo` (stars, released date)
+  - Feature: [что нового]
+  - Architecture: [подход]
+  - **Action:** [что внедрить]
+
+### Industry Updates
+- [Update description]
+- **Action:** [что изменить]
+
+### Performance Gap
+- Current: [текущие метрики]
+- Benchmark: [бенчмарк из GitHub]
+- **Action:** [как оптимизировать]
+
+### Recommendations
+🔴 CRITICAL (implement now):
+1. [Критичное обновление]
+
+🟡 HIGH (plan for next sprint):
+1. [Важное улучшение]
+
+🟢 LOW (backlog):
+1. [Опциональная фича]
+```
+
+**Obsidian Vault Structure:**
+
+```
+obsidian/teacher/
+├── wiki/
+│   ├── learning-cycles/          # Отчёты по циклам обучения
+│   ├── subagents/                # Профили субагентов
+│   ├── github-tracking/          # Отслеживание GitHub репо
+│   └── industry-updates/         # Обновления индустрии
+└── decisions/
+    └── learning-strategy.md      # Стратегия обучения
+```
+
+**Метрики успеха Teacher Agent:**
+- **Coverage:** % критических субагентов проверено
+- **Freshness:** Средний возраст знаний субагентов (< 4 недели)
+- **Impact:** % рекомендаций внедрено
+- **Performance:** Улучшение метрик субагентов после обновления
+
+**Почему это важно:**
+- Система не устаревает (знания обновляются каждые 2-4 недели)
+- Автоматическое отслеживание лучших практик из GitHub
+- Проактивное обучение (не ждём проблем, предупреждаем их)
+- Continuous improvement всей системы
+
 ## Excalidraw Diagrams Rule
 
 **КРИТИЧЕСКИ ВАЖНО:** Excalidraw диаграммы должны максимально чётко отражать реальную структуру кода.
