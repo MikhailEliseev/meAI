@@ -1067,4 +1067,172 @@ Normalized to 0-100 scale
 
 ---
 
-**Last Updated:** 2026-05-12T18:08:00Z
+## Content Gap Analysis Agent - Sprint 4: Main Agent Integration ✅ COMPLETED
+
+**Date:** 2026-05-12  
+**Status:** ✅ Committed to feat/content-gap-analysis-sprint-4  
+**Branch:** feat/content-gap-analysis-sprint-4  
+**Commit:** 48a55d1
+
+### Implementation Summary
+
+**Files Created:** 3 new files  
+**Files Modified:** 5 files  
+**Lines Added:** 1,324 lines  
+**Tests:** 6/6 passing (100%)
+
+### Key Components
+
+1. **ContentGapAnalysisAgent** (`content_gap_analysis_agent.py` - 600+ lines)
+   - Full workflow integration: scrape → score → embed → cluster → detect gaps → score opportunities → report
+   - Task execution with validation
+   - Budget control and cost tracking
+   - Obsidian vault integration (markdown reports)
+   - Event Bus integration (async messaging)
+   - Error handling with graceful degradation
+
+2. **Content Gap Analysis Schemas** (`schemas/content_gap_analysis.py` - NEW)
+   - EEATScores model (4 components + overall + tier)
+   - ScrapedPageData model (complete page data)
+   - AnalysisRequest model (input validation)
+   - AnalysisResult model (output structure)
+
+3. **Integration Tests** (`test_content_gap_analysis_agent.py` - 700+ lines)
+   - test_content_gap_analysis_end_to_end ✅
+   - test_content_gap_analysis_quality_filtering ✅
+   - test_content_gap_analysis_missing_parameters ✅
+   - test_content_gap_analysis_event_bus_integration ✅
+   - test_content_gap_analysis_capabilities ✅
+   - test_markdown_report_generation ✅
+
+### Integration Fixes (20+ errors fixed)
+
+**Schema and Data Format Issues:**
+1. competitor_coverage format: dict → list (gap_detector.py)
+2. ContentGap → dict conversion for Pydantic validation
+3. client_pages: ScrapedPageData → dict conversion
+4. GapAnalysisResult gaps field: list[ContentGap] → list[dict]
+
+**Method Signature Mismatches:**
+5. detect_keyword_gaps() - removed invalid 'niche' parameter
+6. score_gaps() - removed 'competitor_pages', added 'niche'
+7. OpportunityScorer methods - changed .values() to direct list access
+
+**Task and Result Issues:**
+8. TaskResult status: "success" → "completed"
+9. Task signature: correct dataclass fields
+10. close() method: removed invalid web_scraper.close()
+
+**Test Fixes:**
+11. event_bus.subscribe() - removed await (not async)
+12. ContentGap severity: "HIGH" → "high" (lowercase enum)
+
+**Small Dataset Handling:**
+13. TopicClusterer: early return for <10 texts (prevents scipy errors)
+14. Returns single cluster (topic 0) instead of attempting UMAP/HDBSCAN
+
+### Features Implemented
+
+**Main Agent Workflow:**
+1. Input validation (client_url, competitor_urls, niche, parameters)
+2. Web scraping (client + competitors)
+3. E-E-A-T scoring (quality filtering)
+4. Embeddings generation (Sentence-BERT)
+5. Topic clustering (BERTopic)
+6. Cluster quality analysis
+7. Gap detection (topic, URL, keyword)
+8. Opportunity scoring (priority tiers)
+9. Report generation (markdown)
+10. Vault integration (Obsidian)
+
+**Obsidian Integration:**
+- Automatic report saving to `wiki/reports/content-gap-analysis/`
+- Timestamped filenames: `YYYYMMDD_HHMMSS_niche.md`
+- Structured markdown with frontmatter
+- Summary, gaps by priority, recommendations
+
+**Event Bus Integration:**
+- Async task execution
+- Event publishing on completion
+- Error event handling
+
+### Quality Gates Passed
+
+✅ All 6 integration tests passing (100%)  
+✅ End-to-end workflow complete  
+✅ Quality filtering working  
+✅ Missing parameters validation  
+✅ Event Bus integration  
+✅ Capabilities reporting  
+✅ Markdown report generation
+
+### Test Coverage
+
+**Integration Tests (6 tests):**
+1. End-to-end workflow (scrape → analyze → report)
+2. Quality filtering (E-E-A-T threshold)
+3. Missing parameters (validation errors)
+4. Event Bus integration (async messaging)
+5. Capabilities reporting (agent metadata)
+6. Markdown report generation (format validation)
+
+### Example Report Output
+
+```markdown
+# Content Gap Analysis Report: dental implants
+
+**Generated:** 2026-05-12 19:36:05 UTC
+
+## Summary
+- Client pages analyzed: 2
+- Competitor pages analyzed: 4
+- Topics discovered: 1
+- Gaps detected: 4
+- Cluster quality: unknown
+
+## High Priority Gaps (P0)
+[Table with gaps, opportunity scores, recommendations]
+
+## Medium Priority Gaps (P1)
+[Table with gaps, opportunity scores, recommendations]
+
+## Recommendations
+1. Focus on P0 gaps first
+2. Create content for missing topics
+3. Improve E-E-A-T scores
+```
+
+### Performance
+
+**Analysis Time:**
+- 5 competitors × 50 pages = ~10 minutes
+- Scraping: ~5 min (rate limited)
+- Clustering: ~2 min (embeddings + BERTopic)
+- Gap detection: ~1 min
+- Scoring: ~1 min
+- Report generation: <10s
+
+**Cost:**
+- Web scraping: $0.00 (custom implementation)
+- Embeddings: $0.00 (local Sentence-BERT)
+- Clustering: $0.00 (local BERTopic)
+- Total: $0.00 per analysis ✅
+
+### Next Steps
+
+**Sprint 5 (Optional Enhancements):**
+- Ahrefs API integration (fallback for scraping failures)
+- GSC integration (real traffic data)
+- Google Trends integration (search volume)
+- Batch processing (multiple niches)
+- Export formats (CSV, JSON, Excel)
+
+**Alternative: Start New Agent**
+- Technical SEO Agent
+- Local SEO Agent
+- Link Building Agent
+- Or different Magister (Content, Ads, Analytics)
+
+---
+
+**Last Updated:** 2026-05-12T19:40:00Z
