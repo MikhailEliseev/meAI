@@ -923,4 +923,148 @@ scipy>=1.11.0,<2.0.0                 # Scientific computing (pinned for BERTopic
 
 ---
 
-**Last Updated:** 2026-05-12T16:00:00Z
+## Content Gap Analysis Agent - Sprint 3: Gap Detection ✅ COMPLETED
+
+**Date:** 2026-05-12  
+**Status:** ✅ Committed to feat/content-gap-analysis-sprint-2  
+**Branch:** feat/content-gap-analysis-sprint-2  
+**Commit:** 61d630a
+
+### Implementation Summary
+
+**Files Created:** 5 new files  
+**Lines Added:** 1,460 lines  
+**Tests:** 28 tests passing (100%)
+
+### Key Components
+
+1. **GapDetector** (`gap_detection/gap_detector.py` - 420 lines)
+   - Topic-based gap detection (missing/underrepresented topics)
+   - URL-based gap detection (missing pages)
+   - Keyword-based gap detection (missing keywords)
+   - Quality filtering (min E-E-A-T score 0.6)
+   - Gap severity classification (HIGH/MEDIUM/LOW)
+   - Competitor coverage extraction
+   - Recommendation generation
+
+2. **OpportunityScorer** (`gap_detection/opportunity_scorer.py` - 330 lines)
+   - Multi-factor opportunity scoring formula
+   - Numerator: traffic (0.4) + quality (0.3) + relevance (0.2) + volume (0.1)
+   - Denominator: difficulty (0.6) + coverage (0.4)
+   - Priority tier assignment (P0-P3)
+   - Quality comparison (client vs competitors)
+   - Metrics aggregation
+
+3. **ContentGap Schemas** (`schemas/content_gap.py` - 70 lines)
+   - ContentGap model (topic, type, severity, score, priority)
+   - GapAnalysisResult model (gaps, clusters, comparison)
+   - GapType enum (missing_topic, missing_url, missing_keyword)
+   - GapSeverity enum (high, medium, low)
+
+4. **Tests** (28 tests, all passing ✅)
+   - test_gap_detector.py: 10 tests (detection, grouping, URL handling)
+   - test_opportunity_scorer.py: 18 tests (scoring, metrics, comparison)
+
+### Features Implemented
+
+**Gap Detection:**
+- Three types of gaps: topic, URL, keyword
+- Quality filtering (E-E-A-T score >= 0.6)
+- Severity classification based on coverage
+- Competitor coverage extraction with metrics
+- Automatic recommendation generation
+- Target keywords extraction
+
+**Opportunity Scoring:**
+- Traffic component (normalized 0-1, 10000+ = 1.0)
+- Quality component (E-E-A-T score 0-1)
+- Relevance component (keyword matching)
+- Volume component (placeholder for Keyword Research Agent)
+- Difficulty component (word count, doctor authorship, citations)
+- Coverage component (existing client pages)
+- Priority tiers: P0 (80-100), P1 (60-79), P2 (40-59), P3 (0-39)
+
+**Quality Comparison:**
+- Client metrics aggregation
+- Competitor metrics aggregation
+- Gap calculation (word count, E-E-A-T, authorship, citations)
+
+### Quality Gates Passed
+
+✅ All 28 tests passing (100%)  
+✅ GapDetector: 10/10 tests  
+✅ OpportunityScorer: 18/18 tests  
+✅ Type hints throughout  
+✅ Pydantic v2 validation working
+
+### Test Coverage
+
+**GapDetector (10 tests):**
+- Topic gap detection (missing, underrepresented, quality filter)
+- URL gap detection (missing pages)
+- Keyword gap detection (missing keywords)
+- URL grouping and similarity
+- URL normalization and pattern extraction
+- Domain extraction
+
+**OpportunityScorer (18 tests):**
+- Gap scoring (multiple gaps, sorting)
+- Opportunity score calculation (high/low traffic)
+- Competitor traffic calculation
+- Competitor quality calculation
+- Topic relevance calculation (high/low)
+- Content difficulty calculation (high/low)
+- Client coverage calculation (zero/partial)
+- Priority tier assignment (P0-P3)
+- Quality comparison (client vs competitors)
+- Metrics aggregation (empty/full)
+
+### Algorithm Details
+
+**Gap Detection Formula:**
+```
+For each topic cluster:
+  client_coverage = count(client pages in cluster)
+  competitor_coverage = count(quality competitor pages in cluster)
+  
+  if competitor_coverage > client_coverage:
+    gap detected
+    severity = HIGH if client_coverage == 0
+             = MEDIUM if client_coverage < competitor_coverage / 2
+             = LOW otherwise
+```
+
+**Opportunity Scoring Formula:**
+```
+opportunity_score = (
+    competitor_avg_traffic * 0.4 +
+    competitor_avg_quality * 0.3 +
+    topic_relevance_to_niche * 0.2 +
+    keyword_search_volume * 0.1
+) / (
+    content_difficulty * 0.6 +
+    existing_client_coverage * 0.4
+) * 100
+
+Normalized to 0-100 scale
+```
+
+**Priority Tiers:**
+- P0 (High Priority): score >= 80
+- P1 (Medium Priority): score 60-79
+- P2 (Low Priority): score 40-59
+- P3 (Very Low Priority): score < 40
+
+### Next Steps
+
+**Sprint 4: Production Implementation**
+- Main ContentGapAnalysisAgent class
+- Event Bus integration
+- Obsidian vault integration
+- End-to-end testing
+- Performance optimization
+- Report generation (Markdown format)
+
+---
+
+**Last Updated:** 2026-05-12T18:08:00Z
