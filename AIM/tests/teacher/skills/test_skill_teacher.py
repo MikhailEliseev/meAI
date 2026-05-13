@@ -17,9 +17,7 @@ import pytest
 
 from AIM.src.aim.teacher.skills.skill_comparator import (
     ComparisonResult,
-    SkillScore,
 )
-from AIM.src.aim.teacher.skills.skill_extractor import SkillType
 from AIM.src.aim.teacher.skills.skill_teacher import (
     AdaptedCode,
     IntegrationPoint,
