@@ -561,6 +561,10 @@ class SEOMagisterV2:
         Returns:
             Score from 0 to 100
         """
+        # Handle error status
+        if isinstance(gap_result, dict) and gap_result.get("status") == "error":
+            return 0.0
+
         # Handle GapAnalysisResult object
         if hasattr(gap_result, "summary"):
             summary = gap_result.summary
