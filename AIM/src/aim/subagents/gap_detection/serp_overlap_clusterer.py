@@ -21,44 +21,9 @@ from pydantic import BaseModel, Field, field_validator
 from AIM.src.aim.subagents.schemas.content_gap import (
     ContentCluster,
     IntentType,
+    KeywordSERPData,
+    SERPResult,
 )
-
-
-class SERPResult(BaseModel):
-    """Single SERP result for a keyword."""
-
-    keyword: str = Field(..., description="Search keyword")
-    url: str = Field(..., description="Ranking URL")
-    position: int = Field(..., ge=1, le=100, description="SERP position (1-100)")
-    title: str = Field(..., description="Page title")
-    intent: IntentType = Field(default=IntentType.INFORMATIONAL, description="Search intent")
-
-    @field_validator("url")
-    @classmethod
-    def validate_url(cls, v: str) -> str:
-        """Validate URL format."""
-        if not v.startswith(("http://", "https://")):
-            raise ValueError(f"Invalid URL: {v}")
-        return v
-
-
-class KeywordSERPData(BaseModel):
-    """SERP data for a single keyword."""
-
-    keyword: str = Field(..., description="Search keyword")
-    serp_results: list[SERPResult] = Field(
-        default_factory=list, description="Top 30 SERP results"
-    )
-    search_volume: int = Field(default=0, ge=0, description="Monthly search volume")
-    intent: IntentType = Field(default=IntentType.INFORMATIONAL, description="Primary intent")
-
-    @field_validator("serp_results")
-    @classmethod
-    def validate_serp_results(cls, v: list[SERPResult]) -> list[SERPResult]:
-        """Validate SERP results count."""
-        if len(v) > 100:
-            raise ValueError(f"Too many SERP results: {len(v)} (max 100)")
-        return v
 
 
 @dataclass

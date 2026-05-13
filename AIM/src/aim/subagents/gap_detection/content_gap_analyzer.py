@@ -17,6 +17,10 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Any
 
+from AIM.src.aim.subagents.api_clients.serp_client import (
+    SERPAPIClient,
+    SERPClientConfig,
+)
 from AIM.src.aim.subagents.gap_detection.architecture_planner import (
     ArchitecturePlanner,
 )
@@ -25,6 +29,7 @@ from AIM.src.aim.subagents.gap_detection.gap_detector import GapDetector
 from AIM.src.aim.subagents.gap_detection.opportunity_scorer import OpportunityScorer
 from AIM.src.aim.subagents.gap_detection.serp_overlap_clusterer import (
     ClusteringConfig,
+    KeywordSERPData,
     SERPOverlapClusterer,
 )
 from AIM.src.aim.subagents.schemas.content_gap import (
@@ -41,6 +46,8 @@ class ContentGapAnalyzer:
         min_content_quality: float = 0.6,
         overlap_threshold: float = 0.4,
         max_cost_usd: float = 1.0,
+        serp_api_key: str | None = None,
+        serp_provider: str = "mock",
     ):
         """Initialize Content Gap Analyzer.
 
@@ -48,6 +55,8 @@ class ContentGapAnalyzer:
             min_content_quality: Minimum E-E-A-T score to consider (0.0-1.0)
             overlap_threshold: SERP overlap threshold for clustering (0.0-1.0)
             max_cost_usd: Maximum budget for API calls
+            serp_api_key: API key for SERP provider (optional, uses mock if not provided)
+            serp_provider: SERP data provider (dataforseo, semrush, mock)
         """
         self.min_content_quality = min_content_quality
         self.overlap_threshold = overlap_threshold
@@ -63,6 +72,17 @@ class ContentGapAnalyzer:
 
         self.architecture_planner = ArchitecturePlanner()
         self.brief_generator = BriefGenerator()
+
+        # Initialize SERP client (optional, for keyword clustering)
+        self.serp_client: SERPAPIClient | None = None
+        if serp_api_key or serp_provider == "mock":
+            serp_config = SERPClientConfig(
+                provider=serp_provider,
+                api_key=serp_api_key or "mock_key",
+                serp_depth=30,
+                max_cost_per_keyword=0.02,
+            )
+            self.serp_client = SERPAPIClient(config=serp_config)
 
     async def analyze(
         self,
@@ -110,32 +130,41 @@ class ContentGapAnalyzer:
             client_pages=client_pages,
         )
 
-        # Step 3: Cluster keywords (if provided)
-        # NOTE: Clustering requires SERP data, not just keywords
-        # In production, this would fetch SERP data for keywords first
-        # For now, skip clustering when only keywords provided
+        # Step 3: Cluster keywords (if provided and SERP client available)
         clusters = []
-        # TODO: Implement SERP data fetching + clustering
-        # if keywords:
-        #     serp_data = await self._fetch_serp_data(keywords)
-        #     clusters = await self.serp_clusterer.cluster_keywords(serp_data)
+        if keywords and self.serp_client:
+            # Fetch SERP data for keywords
+            serp_data = await self._fetch_serp_data(keywords)
+
+            # Cluster keywords by SERP overlap
+            if serp_data:
+                clusters = await self.serp_clusterer.cluster_keywords(serp_data)
 
         # Step 4: Plan content architecture (only if clusters available)
         architecture = {}
         if clusters:
-            architecture = await self.architecture_planner.plan_architecture(
+            arch_result = await self.architecture_planner.plan_architecture(
                 gaps=scored_gaps,
                 clusters=clusters,
             )
+            # Convert ContentArchitecture to dict
+            architecture = arch_result.model_dump() if arch_result else {}
 
         # Step 5: Generate content briefs for top gaps (only if architecture available)
         briefs = []
-        if architecture:
-            briefs = await self.brief_generator.generate_briefs(
-                gaps=scored_gaps[:10],  # Top 10 gaps
-                niche=niche,
-                architecture=architecture,
-            )
+        if architecture and "pages" in architecture:
+            # Generate briefs for pages in architecture
+            pages = architecture["pages"]
+            for i, page in enumerate(pages[:10]):  # Top 10 pages
+                # Find corresponding gap
+                gap = scored_gaps[i] if i < len(scored_gaps) else scored_gaps[0]
+
+                brief = await self.brief_generator.generate_brief(
+                    page=page,
+                    gap=gap,
+                    competitor_urls=competitor_urls,
+                )
+                briefs.append(brief)
 
         # Calculate execution time
         end_time = datetime.now(timezone.utc)
@@ -333,3 +362,41 @@ class ContentGapAnalyzer:
                 "doctor_authorship_gap": round(doctor_gap, 1),
             },
         }
+
+    async def _fetch_serp_data(
+        self,
+        keywords: list[str],
+        location: str = "United States",
+        language: str = "en",
+    ) -> list[KeywordSERPData]:
+        """
+        Fetch SERP data for keywords using SERP API client.
+
+        Args:
+            keywords: List of keywords to fetch SERP data for
+            location: Geographic location for search results
+            language: Language code (en, ru, etc.)
+
+        Returns:
+            List of KeywordSERPData with SERP results
+
+        Raises:
+            ValueError: If SERP client not initialized or budget exceeded
+        """
+        if not self.serp_client:
+            raise ValueError("SERP client not initialized. Provide serp_api_key in constructor.")
+
+        # Fetch SERP data with budget control
+        serp_data = await self.serp_client.fetch_serp_data(
+            keywords=keywords,
+            location=location,
+            language=language,
+            max_cost_usd=self.max_cost_usd,
+        )
+
+        return serp_data
+
+    async def close(self) -> None:
+        """Close SERP client if initialized."""
+        if self.serp_client:
+            await self.serp_client.close()

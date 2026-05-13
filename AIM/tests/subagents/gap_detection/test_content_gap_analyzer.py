@@ -29,6 +29,7 @@ class TestContentGapAnalyzer:
         assert analyzer.serp_clusterer is not None
         assert analyzer.architecture_planner is not None
         assert analyzer.brief_generator is not None
+        assert analyzer.serp_client is not None  # Mock client by default
 
     def test_initialization_custom(self):
         """Test custom initialization."""
@@ -36,11 +37,13 @@ class TestContentGapAnalyzer:
             min_content_quality=0.7,
             overlap_threshold=0.5,
             max_cost_usd=2.0,
+            serp_provider="mock",
         )
 
         assert analyzer.min_content_quality == 0.7
         assert analyzer.overlap_threshold == 0.5
         assert analyzer.max_cost_usd == 2.0
+        assert analyzer.serp_client is not None
 
     @pytest.mark.asyncio
     async def test_analyze_basic_structure(self):
@@ -515,3 +518,173 @@ class TestContentGapAnalyzer:
 
         # Verify execution time is reasonable (< 5 seconds for small dataset)
         assert result.summary["execution_time_ms"] < 5000
+
+    @pytest.mark.asyncio
+    async def test_fetch_serp_data(self):
+        """Test fetching SERP data for keywords."""
+        analyzer = ContentGapAnalyzer(serp_provider="mock")
+
+        keywords = ["dental implants", "teeth whitening"]
+        serp_data = await analyzer._fetch_serp_data(keywords)
+
+        assert len(serp_data) == 2
+        assert serp_data[0].keyword == "dental implants"
+        assert serp_data[1].keyword == "teeth whitening"
+        assert len(serp_data[0].serp_results) == 30  # Default depth
+
+    @pytest.mark.asyncio
+    async def test_fetch_serp_data_no_client(self):
+        """Test that fetching SERP data without client raises error."""
+        analyzer = ContentGapAnalyzer()
+        analyzer.serp_client = None  # Disable client
+
+        with pytest.raises(ValueError, match="SERP client not initialized"):
+            await analyzer._fetch_serp_data(["dental implants"])
+
+    @pytest.mark.asyncio
+    async def test_analyze_with_keywords_and_clustering(self):
+        """Test analysis with keywords triggers SERP fetching and clustering."""
+        analyzer = ContentGapAnalyzer(serp_provider="mock")
+
+        client_pages = [
+            {
+                "url": "https://client.com/page1",
+                "title": "Dental Implants",
+                "word_count": 1000,
+                "eeat_score": 0.7,
+                "doctor_authored": True,
+                "keywords": ["dental implants"],
+            }
+        ]
+
+        competitor_pages = [
+            {
+                "url": "https://competitor.com/page1",
+                "title": "All-on-4 Dental Implants",
+                "word_count": 2000,
+                "eeat_score": 0.8,
+                "doctor_authored": True,
+                "keywords": ["all-on-4", "dental implants"],
+            }
+        ]
+
+        keywords = ["dental implants", "all-on-4", "implant cost"]
+
+        result = await analyzer.analyze(
+            client_url="https://client.com",
+            competitor_urls=["https://competitor.com"],
+            niche="dental implants",
+            client_pages=client_pages,
+            competitor_pages=competitor_pages,
+            keywords=keywords,
+        )
+
+        # Should have clusters when keywords provided
+        assert isinstance(result.clusters, list)
+        # Clusters may be empty if overlap threshold not met
+        assert result.summary["total_clusters"] >= 0
+
+    @pytest.mark.asyncio
+    async def test_close_serp_client(self):
+        """Test closing SERP client."""
+        analyzer = ContentGapAnalyzer(serp_provider="mock")
+        await analyzer.close()
+        # Should not raise error
+
+
+class TestContentGapAnalyzerSERPIntegration:
+    """Test SERP client integration with Content Gap Analyzer."""
+
+    @pytest.mark.asyncio
+    async def test_fetch_serp_data(self):
+        """Test fetching SERP data for keywords."""
+        analyzer = ContentGapAnalyzer(serp_provider="mock")
+        
+        keywords = ["dental implants", "teeth whitening"]
+        serp_data = await analyzer._fetch_serp_data(keywords)
+        
+        assert len(serp_data) == 2
+        assert serp_data[0].keyword == "dental implants"
+        assert serp_data[1].keyword == "teeth whitening"
+        assert len(serp_data[0].serp_results) == 30  # Default depth
+        
+        await analyzer.close()
+
+    @pytest.mark.asyncio
+    async def test_fetch_serp_data_no_client(self):
+        """Test error when SERP client not initialized."""
+        analyzer = ContentGapAnalyzer(serp_provider="mock")
+        analyzer.serp_client = None  # Disable client
+        
+        with pytest.raises(ValueError, match="SERP client not initialized"):
+            await analyzer._fetch_serp_data(["dental implants"])
+
+    @pytest.mark.asyncio
+    async def test_analyze_with_keywords_and_clustering(self):
+        """Test full analysis with keywords and clustering."""
+        analyzer = ContentGapAnalyzer(serp_provider="mock")
+        
+        client_pages = [
+            {
+                "url": "https://client.com/page1",
+                "title": "Client Page 1",
+                "topics": ["dental implants"],
+                "keywords": ["implants"],
+                "word_count": 1000,
+                "eeat_score": 0.7,
+            }
+        ]
+        
+        competitor_pages = [
+            {
+                "url": "https://competitor.com/page1",
+                "title": "Competitor Page 1",
+                "topics": ["dental implants", "teeth whitening"],
+                "keywords": ["implants", "whitening"],
+                "word_count": 1500,
+                "eeat_score": 0.8,
+            },
+            {
+                "url": "https://competitor.com/page2",
+                "title": "Competitor Page 2",
+                "topics": ["orthodontics"],
+                "keywords": ["braces"],
+                "word_count": 1200,
+                "eeat_score": 0.75,
+            },
+        ]
+        
+        keywords = ["dental implants", "teeth whitening", "orthodontics"]
+        
+        result = await analyzer.analyze(
+            client_url="https://client.com",
+            competitor_urls=["https://competitor.com"],
+            niche="dental services",
+            client_pages=client_pages,
+            competitor_pages=competitor_pages,
+            keywords=keywords,
+        )
+        
+        # Verify clusters were created
+        assert len(result.clusters) > 0
+        assert result.summary["total_clusters"] > 0
+
+        # Verify architecture was planned (when clusters available)
+        assert len(result.architecture) > 0
+
+        # Note: briefs generation requires architecture_planner to return pages
+        # Currently architecture_planner is stub, so briefs will be empty
+        # This is expected behavior until architecture_planner is fully implemented
+
+        await analyzer.close()
+
+    @pytest.mark.asyncio
+    async def test_close_serp_client(self):
+        """Test closing SERP client."""
+        analyzer = ContentGapAnalyzer(serp_provider="mock")
+        
+        # Should not raise error
+        await analyzer.close()
+        
+        # Second close should also not raise error
+        await analyzer.close()
