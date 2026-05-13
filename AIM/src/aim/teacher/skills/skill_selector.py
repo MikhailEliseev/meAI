@@ -362,14 +362,14 @@ class SkillSelector:
                 f"**Priority Score:** {skill.selection_score:.1f}",
                 f"**Reason:** {skill.selection_reason}",
                 "",
-                f"**Scores:**",
+                "**Scores:**",
                 f"- GitHub: {comp.github_score.total_score:.0f}/100",
                 f"- Ours: {comp.our_score.total_score:.0f}/100",
                 f"- Improvement: +{skill.metadata['improvement']:.0f} points",
                 "",
                 f"**Recommendation:** {comp.recommendation}",
                 "",
-                f"**Action Items:**",
+                "**Action Items:**",
             ])
 
             for item in comp.action_items:

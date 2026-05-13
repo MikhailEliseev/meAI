@@ -10,7 +10,6 @@ Detects and extracts common patterns:
 """
 
 import ast
-import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
