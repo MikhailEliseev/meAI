@@ -11,6 +11,10 @@ from AIM.src.aim.teacher.reference_repos import get_reference_repos
 from AIM.src.aim.teacher.repo_cloner import RepoCloner
 from AIM.src.aim.teacher.subagent_inventory import SubagentInventory
 from AIM.src.aim.teacher.upgrade_applier import UpgradeApplier
+from AIM.src.aim.teacher.skills.skill_selector import SkillSelector, Skill
+from AIM.src.aim.teacher.skills.skill_comparator import SkillComparator, ComparisonResult
+from AIM.src.aim.teacher.adoption.full_adopter import FullAdopter, AdoptionResult
+from AIM.src.aim.teacher.adoption_report import AdoptionReportGenerator
 
 
 class TeacherAgent:
@@ -24,6 +28,12 @@ class TeacherAgent:
         self.gap_detector = GapDetector()
         self.report_generator = AuditReportGenerator()
         self.upgrade_applier = UpgradeApplier()
+
+        # Phase 2.0 components
+        self.skill_selector = SkillSelector()
+        self.skill_comparator = SkillComparator()
+        self.full_adopter = FullAdopter()
+        self.adoption_report_generator = AdoptionReportGenerator()
 
     def audit_subagent(self, subagent_path: Path) -> AuditResult:
         """
@@ -199,3 +209,71 @@ class TeacherAgent:
                 score -= 10
 
         return max(0.0, score)
+
+    async def deep_audit_subagent(self, subagent_path: Path, topic: str) -> list[Skill]:
+        """
+        Deep audit subagent by finding and extracting skills from GitHub.
+
+        Phase 2.0 method - replaces shallow audit with deep skill extraction.
+
+        Args:
+            subagent_path: Path to subagent file
+            topic: Topic to search for (e.g., "circuit breaker python")
+
+        Returns:
+            List of extracted skills from GitHub repos
+        """
+        # Search GitHub for relevant repos
+        repos = await self.skill_selector.search_github_repos(
+            query=topic,
+            max_results=5,
+        )
+
+        # Extract skills from each repo
+        all_skills = []
+        for repo in repos:
+            # Clone repo
+            clone_path = Path(f"/tmp/teacher_repos/{repo.url.split('/')[-1]}")
+            await self.skill_selector.clone_repo(repo.url, clone_path)
+
+            # Extract skills
+            skills = await self.skill_selector.extract_skills(clone_path)
+
+            # Add source repo to each skill
+            for skill in skills:
+                skill.source_repo = repo.url
+
+            all_skills.extend(skills)
+
+        return all_skills
+
+    async def compare_solutions(self, skills: list[Skill]) -> ComparisonResult:
+        """
+        Compare multiple skill implementations and rank them.
+
+        Phase 2.0 method - multi-dimensional comparison.
+
+        Args:
+            skills: List of skills to compare
+
+        Returns:
+            ComparisonResult with ranked skills and best implementation
+        """
+        return await self.skill_comparator.compare(skills)
+
+    async def adopt_solution(
+        self, skill: Skill, target_dir: Path
+    ) -> AdoptionResult:
+        """
+        Adopt best skill implementation into project.
+
+        Phase 2.0 method - full adoption with code adaptation.
+
+        Args:
+            skill: Skill to adopt
+            target_dir: Target directory for adoption
+
+        Returns:
+            AdoptionResult with adoption details
+        """
+        return await self.full_adopter.adopt(skill, target_dir)
