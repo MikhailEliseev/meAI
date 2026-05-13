@@ -865,3 +865,77 @@ async def adopt_solution(skill, target_dir) -> AdoptionResult
 ---
 
 **СТАТУС:** ✅ PRODUCTION READY - Система полностью готова к развёртыванию
+
+---
+
+## ⚠️ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ (2026-05-13 22:13 GMT+3)
+
+### Проблема обнаружена
+
+Session 13 "обучение" было **FAKE**:
+- ❌ Copy-paste 3 паттернов во все 7 субагентов
+- ❌ Нет индивидуального deep research для каждого
+- ❌ Нет GitHub search специализированных решений
+- ❌ Нет анализа кода из domain-specific репо
+- ❌ Общие паттерны вместо специфичных
+
+### Пример провала
+
+**Ads субагент:**
+- Нужно: yandex-ads-mcp (https://github.com/Yurich-ru/yandex-ads-mcp)
+- Сделано: скопированы общие Circuit Breaker, Retry, Rate Limiting
+- Результат: НЕ обучен специфике Яндекс.Директ
+
+### Что сделано
+
+1. ✅ Добавлено критическое правило в CLAUDE.md
+2. ✅ Откачено fake обучение (удалено 21 файл)
+3. ✅ Коммиты:
+   - fb0b69d: docs: add critical Teacher Agent rule
+   - fa06eca: revert: remove fake training
+
+### Правильный подход
+
+**Для КАЖДОГО субагента отдельно:**
+
+1. **Deep Research**
+   - Ads: "yandex direct api python", "yandex ads mcp"
+   - SEO: "python seo tools", "serp api python"
+   - Content: "content generation python", "ai content writer"
+   - И так далее
+
+2. **GitHub Search**
+   - Найти топовые специализированные репо
+   - Пример: yandex-ads-mcp для Ads субагента
+
+3. **Code Analysis**
+   - Клонировать репо
+   - Изучить архитектуру
+   - Понять domain-specific паттерны
+
+4. **Pattern Extraction**
+   - Извлечь специфичные для домена решения
+   - НЕ общие паттерны!
+
+5. **Adaptation**
+   - Адаптировать под наш субагент
+   - Интеграция с Event Bus + Obsidian
+
+### Следующие шаги
+
+1. Запустить Superflow Phase 1 для правильного плана
+2. Для каждого субагента: индивидуальное исследование
+3. Начать с Ads субагента (yandex-ads-mcp)
+4. Затем SEO, Content, и остальные
+
+### Урок
+
+**Teacher Agent должен:**
+- ✅ Индивидуальное исследование для каждого
+- ✅ Специализированные решения
+- ✅ Анализ кода из топовых репо
+- ❌ НЕ copy-paste общих паттернов
+
+---
+
+**Статус:** Откат завершён, готов к правильной реализации
