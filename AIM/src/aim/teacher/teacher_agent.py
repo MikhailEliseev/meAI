@@ -210,40 +210,81 @@ class TeacherAgent:
 
         return max(0.0, score)
 
-    async def deep_audit_subagent(self, subagent_path: Path, topic: str) -> list[Skill]:
+    async def deep_audit_subagent(
+        self, subagent_path: Path, subagent_name: str, domain: str
+    ) -> list[Skill]:
         """
-        Deep audit subagent by finding and extracting skills from GitHub.
+        Deep audit subagent by finding domain-specific solutions from GitHub.
 
-        Phase 2.0 method - replaces shallow audit with deep skill extraction.
+        Phase 2.0 method - uses domain-specific research instead of generic patterns.
 
         Args:
             subagent_path: Path to subagent file
-            topic: Topic to search for (e.g., "circuit breaker python")
+            subagent_name: Name of subagent (e.g., "ads", "seo")
+            domain: Domain description (e.g., "advertising automation")
 
         Returns:
-            List of extracted skills from GitHub repos
+            List of extracted skills from domain-specific GitHub repos
         """
-        # Search GitHub for relevant repos
-        repos = await self.skill_selector.search_github_repos(
-            query=topic,
-            max_results=5,
+        self.logger.info(
+            "deep_audit_start",
+            subagent=subagent_name,
+            domain=domain,
+            path=str(subagent_path),
         )
 
-        # Extract skills from each repo
+        # Phase 1: Domain-specific research
+        research_results = await self.skill_selector.research_domain_specific(
+            subagent_name=subagent_name,
+            domain=domain,
+        )
+
+        # Phase 2: Clone and extract skills from all found repos
         all_skills = []
-        for repo in repos:
-            # Clone repo
-            clone_path = Path(f"/tmp/teacher_repos/{repo.url.split('/')[-1]}")
-            await self.skill_selector.clone_repo(repo.url, clone_path)
+        for query, repos in research_results.items():
+            self.logger.info(
+                "processing_query_repos",
+                query=query,
+                repos_count=len(repos),
+            )
 
-            # Extract skills
-            skills = await self.skill_selector.extract_skills(clone_path)
+            for repo in repos:
+                try:
+                    # Clone repo
+                    repo_name = repo.url.split("/")[-1]
+                    clone_path = Path(f"/tmp/teacher_repos/{subagent_name}/{repo_name}")
+                    clone_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Add source repo to each skill
-            for skill in skills:
-                skill.source_repo = repo.url
+                    await self.skill_selector.clone_repo(repo.url, clone_path)
 
-            all_skills.extend(skills)
+                    # Extract skills
+                    skills = await self.skill_selector.extract_skills(clone_path)
+
+                    # Add metadata
+                    for skill in skills:
+                        skill.source_repo = repo.url
+
+                    all_skills.extend(skills)
+
+                    self.logger.info(
+                        "repo_processed",
+                        repo=repo.url,
+                        skills_extracted=len(skills),
+                    )
+
+                except Exception as e:
+                    self.logger.error(
+                        "repo_processing_failed",
+                        repo=repo.url,
+                        error=str(e),
+                    )
+                    continue
+
+        self.logger.info(
+            "deep_audit_complete",
+            subagent=subagent_name,
+            total_skills=len(all_skills),
+        )
 
         return all_skills
 

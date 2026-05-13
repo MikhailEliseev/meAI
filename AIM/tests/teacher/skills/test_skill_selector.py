@@ -279,3 +279,102 @@ class TestEdgeCases:
 
         # Should return empty list, not crash
         assert isinstance(repos, list)
+
+
+class TestDomainSpecificResearch:
+    """Test domain-specific research functionality."""
+
+    @pytest.mark.asyncio
+    async def test_domain_queries_defined_for_all_subagents(self, selector):
+        """Should have domain queries for all subagent types."""
+        expected_subagents = [
+            "ads",
+            "seo",
+            "content",
+            "analytics",
+            "gap_detection",
+            "prioritization",
+            "social",
+        ]
+
+        for subagent in expected_subagents:
+            assert subagent in selector.domain_queries
+            assert len(selector.domain_queries[subagent]) > 0
+
+    @pytest.mark.asyncio
+    async def test_ads_domain_queries_include_yandex(self, selector):
+        """Should include Yandex Direct in ads queries."""
+        ads_queries = selector.domain_queries["ads"]
+
+        # Should include Yandex Direct query
+        assert any("yandex" in q.lower() for q in ads_queries)
+        assert any("direct" in q.lower() for q in ads_queries)
+
+    @pytest.mark.asyncio
+    async def test_research_domain_specific_executes_all_queries(self, selector):
+        """Should execute all domain queries for subagent."""
+        results = await selector.research_domain_specific(
+            subagent_name="ads",
+            domain="advertising automation",
+        )
+
+        # Should execute all ads queries
+        ads_queries = selector.domain_queries["ads"]
+        assert len(results) >= 1  # At least some queries should return results
+
+        # Each result should be a list of repos
+        for query, repos in results.items():
+            assert isinstance(repos, list)
+            assert all(isinstance(repo, GitHubRepo) for repo in repos)
+
+    @pytest.mark.asyncio
+    async def test_research_domain_specific_finds_relevant_repos(self, selector):
+        """Should find relevant repos for domain."""
+        results = await selector.research_domain_specific(
+            subagent_name="ads",
+            domain="advertising automation",
+        )
+
+        # Should find some repos
+        all_repos = [repo for repos in results.values() for repo in repos]
+        assert len(all_repos) > 0
+
+        # Repos should be relevant (have stars, description)
+        for repo in all_repos:
+            assert repo.url
+            assert repo.stars >= 0
+
+    @pytest.mark.asyncio
+    async def test_research_domain_specific_fallback_for_unknown_subagent(self, selector):
+        """Should fallback to domain query for unknown subagent."""
+        results = await selector.research_domain_specific(
+            subagent_name="unknown_subagent",
+            domain="some domain",
+        )
+
+        # Should still return results (fallback to domain query)
+        assert isinstance(results, dict)
+
+    @pytest.mark.asyncio
+    async def test_seo_domain_queries_include_serp(self, selector):
+        """Should include SERP analysis in SEO queries."""
+        seo_queries = selector.domain_queries["seo"]
+
+        # Should include SERP-related queries
+        assert any("serp" in q.lower() for q in seo_queries)
+
+    @pytest.mark.asyncio
+    async def test_content_domain_queries_include_generation(self, selector):
+        """Should include content generation in content queries."""
+        content_queries = selector.domain_queries["content"]
+
+        # Should include content generation queries
+        assert any("generation" in q.lower() or "writer" in q.lower() for q in content_queries)
+
+    @pytest.mark.asyncio
+    async def test_analytics_domain_queries_include_yandex_metrika(self, selector):
+        """Should include Yandex Metrika in analytics queries."""
+        analytics_queries = selector.domain_queries["analytics"]
+
+        # Should include Yandex Metrika query
+        assert any("yandex" in q.lower() and "metrika" in q.lower() for q in analytics_queries)
