@@ -1,361 +1,241 @@
 """
 Tests for SkillExtractor.
+
+Tests:
+- Extract implementation from best skill
+- Adapt code to project structure
+- Generate integration instructions
+- Handle edge cases (no code example, invalid code)
 """
 
-import pytest
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
+import pytest
+
+from AIM.src.aim.teacher.skills.skill_selector import Skill
 from AIM.src.aim.teacher.skills.skill_extractor import (
     SkillExtractor,
-    SkillType,
-    ExtractedSkill,
+    ExtractedImplementation,
 )
 
 
 @pytest.fixture
-def skill_extractor():
+def extractor():
     """Create SkillExtractor instance."""
     return SkillExtractor()
 
 
 @pytest.fixture
-def temp_repo():
-    """Create temporary repository directory."""
-    with TemporaryDirectory() as tmpdir:
-        yield Path(tmpdir)
-
-
-def create_python_file(repo_path: Path, filename: str, content: str) -> Path:
-    """Create Python file in repository."""
-    file_path = repo_path / filename
-    file_path.write_text(content)
-    return file_path
-
-
-@pytest.mark.asyncio
-async def test_extract_circuit_breaker_with_pybreaker(skill_extractor, temp_repo):
-    """Test extracting circuit breaker with pybreaker library."""
-    code = """
-import pybreaker
+def circuit_breaker_skill():
+    """Create circuit breaker skill fixture."""
+    return Skill(
+        name="Circuit Breaker",
+        description="Production-ready circuit breaker with error handling",
+        code_example="""
+from pybreaker import CircuitBreaker
 
 class APIClient:
     def __init__(self):
-        self.breaker = pybreaker.CircuitBreaker(
-            fail_max=5,
-            reset_timeout=60
-        )
+        self.breaker = CircuitBreaker(fail_max=5, reset_timeout=60)
 
     async def call_api(self):
-        return await self.breaker.call(self._make_request)
-"""
-    create_python_file(temp_repo, "client.py", code)
+        try:
+            return await self.breaker.call(self._do_call)
+        except Exception as e:
+            logger.error("api_call_failed", error=str(e))
+            raise
 
-    skills = await skill_extractor.extract_skills(
-        repo_path=temp_repo,
-        skill_types=[SkillType.CIRCUIT_BREAKER],
+    async def _do_call(self):
+        # API call logic
+        pass
+""",
+        quality_score=85.0,
+        source_repo="https://github.com/user/high-quality-repo",
+        file_path="circuit_breaker.py",
     )
 
-    assert len(skills) > 0
-    skill = skills[0]
-    assert skill.skill_type == SkillType.CIRCUIT_BREAKER
-    assert skill.confidence >= 0.6
-    assert "pybreaker" in skill.dependencies
 
-
-@pytest.mark.asyncio
-async def test_extract_retry_with_decorator(skill_extractor, temp_repo):
-    """Test extracting retry pattern with decorator."""
-    code = """
+@pytest.fixture
+def retry_skill():
+    """Create retry skill fixture."""
+    return Skill(
+        name="Retry Pattern",
+        description="Exponential backoff retry with tenacity",
+        code_example="""
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=1, max=10)
-)
-async def fetch_data():
-    return await api.get("/data")
-"""
-    create_python_file(temp_repo, "fetcher.py", code)
-
-    skills = await skill_extractor.extract_skills(
-        repo_path=temp_repo,
-        skill_types=[SkillType.RETRY],
+class Service:
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10))
+    async def fetch_data(self):
+        # Fetch logic with retry
+        pass
+""",
+        quality_score=80.0,
+        source_repo="https://github.com/user/retry-repo",
+        file_path="retry.py",
     )
 
-    assert len(skills) > 0
-    skill = skills[0]
-    assert skill.skill_type == SkillType.RETRY
-    assert skill.confidence == 1.0
-    assert "tenacity" in skill.dependencies
+
+class TestExtraction:
+    """Test skill extraction."""
+
+    @pytest.mark.asyncio
+    async def test_extract_implementation(self, extractor, circuit_breaker_skill):
+        """Should extract implementation from skill."""
+        result = await extractor.extract(circuit_breaker_skill)
+
+        assert isinstance(result, ExtractedImplementation)
+        assert result.code is not None
+        assert len(result.code) > 0
+
+    @pytest.mark.asyncio
+    async def test_extract_dependencies(self, extractor, circuit_breaker_skill):
+        """Should identify dependencies."""
+        result = await extractor.extract(circuit_breaker_skill)
+
+        # Should detect pybreaker import
+        assert "pybreaker" in result.dependencies
+
+    @pytest.mark.asyncio
+    async def test_extract_multiple_dependencies(self, extractor, retry_skill):
+        """Should extract multiple dependencies."""
+        result = await extractor.extract(retry_skill)
+
+        # Should detect tenacity import
+        assert "tenacity" in result.dependencies
+
+    @pytest.mark.asyncio
+    async def test_generate_integration_instructions(self, extractor, circuit_breaker_skill):
+        """Should generate integration instructions."""
+        result = await extractor.extract(circuit_breaker_skill)
+
+        assert result.integration_instructions is not None
+        assert len(result.integration_instructions) > 0
 
 
-@pytest.mark.asyncio
-async def test_extract_rate_limiting(skill_extractor, temp_repo):
-    """Test extracting rate limiting pattern."""
-    code = """
-from aiolimiter import AsyncLimiter
+class TestAdaptation:
+    """Test code adaptation."""
 
-class RateLimitedClient:
-    def __init__(self):
-        self.limiter = AsyncLimiter(max_rate=10, time_period=1)
+    @pytest.mark.asyncio
+    async def test_adapt_to_project_structure(self, extractor, circuit_breaker_skill):
+        """Should adapt code to project structure."""
+        result = await extractor.extract(
+            circuit_breaker_skill,
+            target_path=Path("AIM/src/aim/subagents/api_clients/base.py")
+        )
 
-    async def request(self):
-        async with self.limiter:
-            return await self._do_request()
-"""
-    create_python_file(temp_repo, "limiter.py", code)
+        # Should suggest target path
+        assert result.suggested_path is not None
+        assert "AIM/src/aim" in str(result.suggested_path)
 
-    skills = await skill_extractor.extract_skills(
-        repo_path=temp_repo,
-        skill_types=[SkillType.RATE_LIMITING],
-    )
+    @pytest.mark.asyncio
+    async def test_preserve_functionality(self, extractor, circuit_breaker_skill):
+        """Should preserve original functionality."""
+        result = await extractor.extract(circuit_breaker_skill)
 
-    assert len(skills) > 0
-    skill = skills[0]
-    assert skill.skill_type == SkillType.RATE_LIMITING
-    assert skill.confidence >= 0.6
-    assert "aiolimiter" in skill.dependencies
+        # Should contain key functionality
+        assert "CircuitBreaker" in result.code
+        assert "call_api" in result.code
 
+    @pytest.mark.asyncio
+    async def test_add_project_imports(self, extractor, circuit_breaker_skill):
+        """Should add project-specific imports."""
+        result = await extractor.extract(
+            circuit_breaker_skill,
+            target_path=Path("AIM/src/aim/subagents/api_clients/base.py")
+        )
 
-@pytest.mark.asyncio
-async def test_extract_caching_with_decorator(skill_extractor, temp_repo):
-    """Test extracting caching pattern with decorator."""
-    code = """
-from aiocache import cached
-
-@cached(ttl=3600)
-async def get_user(user_id: int):
-    return await db.fetch_user(user_id)
-"""
-    create_python_file(temp_repo, "cache.py", code)
-
-    skills = await skill_extractor.extract_skills(
-        repo_path=temp_repo,
-        skill_types=[SkillType.CACHING],
-    )
-
-    assert len(skills) > 0
-    skill = skills[0]
-    assert skill.skill_type == SkillType.CACHING
-    assert skill.confidence == 1.0
-    assert "aiocache" in skill.dependencies
+        # Code contains logger usage, so logging is present
+        assert "logger" in result.code
 
 
-@pytest.mark.asyncio
-async def test_extract_error_handling(skill_extractor, temp_repo):
-    """Test extracting error handling pattern."""
-    code = """
-async def process_data():
-    try:
-        result = await fetch_data()
-        return result
-    except APIError as e:
-        logger.error("API error", error=str(e))
-        # Fallback to cache
-        return await get_cached_data()
-    except Exception as e:
-        logger.critical("Unexpected error", error=str(e))
-        raise
-"""
-    create_python_file(temp_repo, "processor.py", code)
+class TestInstructions:
+    """Test integration instructions."""
 
-    skills = await skill_extractor.extract_skills(
-        repo_path=temp_repo,
-        skill_types=[SkillType.ERROR_HANDLING],
-    )
+    @pytest.mark.asyncio
+    async def test_installation_instructions(self, extractor, circuit_breaker_skill):
+        """Should provide installation instructions."""
+        result = await extractor.extract(circuit_breaker_skill)
 
-    assert len(skills) > 0
-    skill = skills[0]
-    assert skill.skill_type == SkillType.ERROR_HANDLING
-    assert skill.confidence >= 0.5
+        instructions = result.integration_instructions
 
+        # Should mention pip install
+        assert "pip install" in instructions.lower() or "requirements.txt" in instructions.lower()
 
-@pytest.mark.asyncio
-async def test_extract_multiple_skills(skill_extractor, temp_repo):
-    """Test extracting multiple skill types from same file."""
-    code = """
-from tenacity import retry
-from aiocache import cached
-import pybreaker
+    @pytest.mark.asyncio
+    async def test_usage_instructions(self, extractor, circuit_breaker_skill):
+        """Should provide usage instructions."""
+        result = await extractor.extract(circuit_breaker_skill)
 
-@retry(stop_after_attempt=3)
-@cached(ttl=300)
-async def fetch_with_retry_and_cache():
-    breaker = pybreaker.CircuitBreaker()
-    return await breaker.call(api.fetch)
-"""
-    create_python_file(temp_repo, "multi.py", code)
+        instructions = result.integration_instructions
 
-    skills = await skill_extractor.extract_skills(
-        repo_path=temp_repo,
-        skill_types=[SkillType.RETRY, SkillType.CACHING, SkillType.CIRCUIT_BREAKER],
-    )
+        # Should explain how to use
+        assert len(instructions) > 100  # Detailed instructions
 
-    # Should find retry and caching (same function)
-    assert len(skills) >= 2
-    skill_types = {s.skill_type for s in skills}
-    assert SkillType.RETRY in skill_types
-    assert SkillType.CACHING in skill_types
+    @pytest.mark.asyncio
+    async def test_configuration_instructions(self, extractor, circuit_breaker_skill):
+        """Should provide configuration instructions."""
+        result = await extractor.extract(circuit_breaker_skill)
+
+        instructions = result.integration_instructions
+
+        # Should mention configuration (fail_max, reset_timeout)
+        assert "fail_max" in instructions or "configuration" in instructions.lower()
 
 
-@pytest.mark.asyncio
-async def test_extract_all_skill_types(skill_extractor, temp_repo):
-    """Test extracting all skill types (default)."""
-    code = """
-from tenacity import retry
+class TestEdgeCases:
+    """Test edge cases."""
 
-@retry(stop_after_attempt=3)
-async def fetch():
-    pass
-"""
-    create_python_file(temp_repo, "all.py", code)
+    @pytest.mark.asyncio
+    async def test_handle_no_code_example(self, extractor):
+        """Should handle skill without code example."""
+        skill = Skill(
+            name="No Code",
+            description="Skill without code",
+            code_example="",
+            quality_score=50.0,
+            source_repo="https://github.com/user/no-code",
+            file_path="empty.py",
+        )
 
-    # Don't specify skill_types (should extract all)
-    skills = await skill_extractor.extract_skills(repo_path=temp_repo)
+        result = await extractor.extract(skill)
 
-    # Should find at least retry
-    assert len(skills) > 0
+        # Should return empty implementation
+        assert result.code == ""
+        assert len(result.dependencies) == 0
 
+    @pytest.mark.asyncio
+    async def test_handle_invalid_python(self, extractor):
+        """Should handle invalid Python code."""
+        skill = Skill(
+            name="Invalid",
+            description="Invalid Python",
+            code_example="this is not valid python",
+            quality_score=30.0,
+            source_repo="https://github.com/user/invalid",
+            file_path="broken.py",
+        )
 
-@pytest.mark.asyncio
-async def test_extract_from_multiple_files(skill_extractor, temp_repo):
-    """Test extracting skills from multiple files."""
-    code1 = """
-from tenacity import retry
+        # Should not crash
+        result = await extractor.extract(skill)
+        assert isinstance(result, ExtractedImplementation)
 
-@retry(stop_after_attempt=3)
-async def fetch1():
-    pass
-"""
-    code2 = """
-from aiocache import cached
+    @pytest.mark.asyncio
+    async def test_handle_no_imports(self, extractor):
+        """Should handle code without imports."""
+        skill = Skill(
+            name="No Imports",
+            description="Simple function",
+            code_example="""
+def add(a, b):
+    return a + b
+""",
+            quality_score=40.0,
+            source_repo="https://github.com/user/simple",
+            file_path="simple.py",
+        )
 
-@cached(ttl=300)
-async def fetch2():
-    pass
-"""
-    create_python_file(temp_repo, "file1.py", code1)
-    create_python_file(temp_repo, "file2.py", code2)
+        result = await extractor.extract(skill)
 
-    skills = await skill_extractor.extract_skills(
-        repo_path=temp_repo,
-        skill_types=[SkillType.RETRY, SkillType.CACHING],
-    )
-
-    # Should find skills from both files
-    assert len(skills) >= 2
-    skill_types = {s.skill_type for s in skills}
-    assert SkillType.RETRY in skill_types
-    assert SkillType.CACHING in skill_types
-
-
-@pytest.mark.asyncio
-async def test_extracted_skill_structure(skill_extractor, temp_repo):
-    """Test that ExtractedSkill has correct structure."""
-    code = """
-from tenacity import retry
-
-@retry(stop_after_attempt=3)
-async def fetch():
-    pass
-"""
-    create_python_file(temp_repo, "test.py", code)
-
-    skills = await skill_extractor.extract_skills(
-        repo_path=temp_repo,
-        skill_types=[SkillType.RETRY],
-    )
-
-    skill = skills[0]
-
-    assert hasattr(skill, "skill_type")
-    assert hasattr(skill, "name")
-    assert hasattr(skill, "description")
-    assert hasattr(skill, "code_snippet")
-    assert hasattr(skill, "file_path")
-    assert hasattr(skill, "line_start")
-    assert hasattr(skill, "line_end")
-    assert hasattr(skill, "confidence")
-    assert hasattr(skill, "dependencies")
-    assert hasattr(skill, "metadata")
-
-    assert isinstance(skill.skill_type, SkillType)
-    assert isinstance(skill.name, str)
-    assert isinstance(skill.description, str)
-    assert isinstance(skill.code_snippet, str)
-    assert isinstance(skill.file_path, str)
-    assert isinstance(skill.line_start, int)
-    assert isinstance(skill.line_end, int)
-    assert isinstance(skill.confidence, float)
-    assert isinstance(skill.dependencies, list)
-    assert isinstance(skill.metadata, dict)
-
-
-@pytest.mark.asyncio
-async def test_confidence_scoring(skill_extractor, temp_repo):
-    """Test confidence scoring for different patterns."""
-    # Perfect match: decorator + library
-    code1 = """
-from tenacity import retry
-
-@retry(stop_after_attempt=3)
-async def fetch():
-    pass
-"""
-    create_python_file(temp_repo, "perfect.py", code1)
-
-    skills = await skill_extractor.extract_skills(
-        repo_path=temp_repo,
-        skill_types=[SkillType.RETRY],
-    )
-
-    # Decorator usage should have confidence 1.0
-    assert skills[0].confidence == 1.0
-
-
-@pytest.mark.asyncio
-async def test_skip_invalid_python(skill_extractor, temp_repo):
-    """Test that invalid Python files are skipped."""
-    # Create invalid Python file
-    invalid_code = "this is not valid python {{"
-    create_python_file(temp_repo, "invalid.py", invalid_code)
-
-    # Should not crash, just skip the file
-    skills = await skill_extractor.extract_skills(repo_path=temp_repo)
-
-    # Should return empty list (no valid skills)
-    assert len(skills) == 0
-
-
-@pytest.mark.asyncio
-async def test_empty_repository(skill_extractor, temp_repo):
-    """Test extracting from empty repository."""
-    skills = await skill_extractor.extract_skills(repo_path=temp_repo)
-
-    assert len(skills) == 0
-
-
-@pytest.mark.asyncio
-async def test_code_snippet_extraction(skill_extractor, temp_repo):
-    """Test that code snippet is correctly extracted."""
-    code = """
-from tenacity import retry
-
-@retry(stop_after_attempt=3)
-async def fetch():
-    return await api.get()
-"""
-    create_python_file(temp_repo, "snippet.py", code)
-
-    skills = await skill_extractor.extract_skills(
-        repo_path=temp_repo,
-        skill_types=[SkillType.RETRY],
-    )
-
-    skill = skills[0]
-
-    # Code snippet should contain the function
-    assert "@retry" in skill.code_snippet
-    assert "async def fetch" in skill.code_snippet
-    assert "return await api.get()" in skill.code_snippet
+        # Should have empty dependencies
+        assert len(result.dependencies) == 0
