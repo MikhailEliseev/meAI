@@ -1107,3 +1107,78 @@ AIM/src/aim/subagents/ads/
 4. **Real training takes time** - 11 minutes for 1 subagent, not 20 minutes for 7
 5. **Quality over speed** - better to do 1 subagent right than 7 subagents wrong
 
+
+---
+
+## Session 14: Training All Subagents (2026-05-13, 22:30 - 23:06)
+
+**Duration:** ~36 minutes  
+**Status:** ✅ COMPLETE
+
+### Task #20: Train Remaining 5 Subagents
+
+**Approach:** Sequential training with `train_one_subagent.py`
+
+**Results:**
+
+| Subagent | Skills | Quality | Top Repo | Stars |
+|----------|--------|---------|----------|-------|
+| Content | 0 | - | hand_detection | 275 |
+| Analytics | 1,051 | 83.7/100 | PostHog | 34,459 |
+| Gap Detection | 14 | 89.6/100 | amazon-omniscient | 6 |
+| Prioritization | 0 | - | pyDecision | 350 |
+| Social | 122 | 88.1/100 | AstrBot | 32,090 |
+
+**Total Across All 7 Subagents:** 2,347 skills
+
+### Key Findings
+
+1. **Production Platforms Win:**
+   - PostHog (Analytics): 1,051 skills
+   - AstrBot (Social): 122 skills
+   - google-ads-python (Ads): 1,147 skills
+
+2. **Domain-Specific Libraries:**
+   - advertools (SEO): 6 skills (functionality, not resilience)
+   - pyDecision (Prioritization): 0 skills (mathematical library)
+
+3. **Niche Domains:**
+   - Gap Detection: 14 skills (few production solutions)
+   - Content: 0 skills (API-driven, not custom implementations)
+
+### Pattern Distribution (All Subagents)
+
+- **Caching:** 1,173 instances (50%)
+- **Retry with Exponential Backoff:** 893 instances (38%)
+- **Rate Limiting:** 246 instances (10%)
+- **Circuit Breaker:** 35 instances (2%)
+
+### Files Created
+
+1. `scripts/train_one_subagent.py` - Sequential training script
+2. `scripts/train_remaining_subagents.py` - Parallel training (deprecated)
+3. `AIM/obsidian/teacher/wiki/adoption-reports/remaining-subagents-training-2026-05-13.md` - Full report
+
+### Commit
+
+```
+feat(teacher): complete training for remaining 5 subagents
+
+Training Results:
+- Analytics: 1,051 skills (PostHog - 34,459 stars)
+- Social: 122 skills (AstrBot, python-telegram-bot)
+- Gap Detection: 14 skills (amazon-omniscient)
+- Content: 0 skills (no production platforms found)
+- Prioritization: 0 skills (mathematical libraries, no resilience)
+
+Total across all 7 subagents: 2,347 skills extracted
+```
+
+### Next Steps
+
+**Task #21: Global Project Audit**
+- Find all places where not following user instructions
+- Check CLAUDE.md compliance
+- Verify Teacher Agent implementation matches spec
+- Ensure all subagents follow domain-specific research approach
+
