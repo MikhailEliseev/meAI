@@ -21,46 +21,23 @@ def sample_gaps():
     """Sample content gaps."""
     return [
         ContentGap(
-            topic="All-on-4 Implants",
+            missing_keyword="All-on-4 Implants",
             gap_type=GapType.MISSING_TOPIC,
             severity=GapSeverity.HIGH,
             opportunity_score=0.0,  # Will be calculated
-            priority="P3",  # Will be assigned
             competitor_coverage={
-                "competitor1.com": {
-                    "url": "https://competitor1.com/all-on-4",
-                    "quality_score": 0.9,
-                    "traffic_estimate": 1500,
-                    "word_count": 2500,
-                    "doctor_authored": True,
-                    "medical_citations": 8,
-                },
-                "competitor2.com": {
-                    "url": "https://competitor2.com/all-on-4-guide",
-                    "quality_score": 0.85,
-                    "traffic_estimate": 1200,
-                    "word_count": 2200,
-                    "doctor_authored": True,
-                    "medical_citations": 6,
-                },
+                "competitor1.com": True,
+                "competitor2.com": True,
             },
             target_keywords=["all on 4", "full arch implants"],
         ),
         ContentGap(
-            topic="Teeth Whitening",
+            missing_keyword="Teeth Whitening",
             gap_type=GapType.MISSING_TOPIC,
             severity=GapSeverity.MEDIUM,
             opportunity_score=0.0,
-            priority="P3",
             competitor_coverage={
-                "competitor1.com": {
-                    "url": "https://competitor1.com/whitening",
-                    "quality_score": 0.7,
-                    "traffic_estimate": 500,
-                    "word_count": 1200,
-                    "doctor_authored": False,
-                    "medical_citations": 1,
-                },
+                "competitor1.com": True,
             },
             target_keywords=["teeth whitening"],
         ),
@@ -173,27 +150,26 @@ async def test_calculate_opportunity_score_low_traffic(
 
 def test_calculate_competitor_traffic(opportunity_scorer, sample_gaps):
     """Test competitor traffic calculation."""
-    gap = sample_gaps[0]  # Traffic: 1500, 1200
+    gap = sample_gaps[0]  # 2 competitors
 
     traffic = opportunity_scorer._calculate_competitor_traffic(gap)
 
     assert traffic > 0.0
     assert traffic <= 1.0
-    # Average traffic: (1500 + 1200) / 2 = 1350
-    # Normalized: 1350 / 10000 = 0.135
-    assert traffic == pytest.approx(0.135, abs=0.01)
+    # 2 competitors: min(2 / 5.0, 1.0) = 0.4
+    assert traffic == pytest.approx(0.4, abs=0.01)
 
 
 def test_calculate_competitor_quality(opportunity_scorer, sample_gaps):
     """Test competitor quality calculation."""
-    gap = sample_gaps[0]  # Quality: 0.9, 0.85
+    gap = sample_gaps[0]  # 2 competitors
 
     quality = opportunity_scorer._calculate_competitor_quality(gap)
 
     assert quality > 0.0
     assert quality <= 1.0
-    # Average quality: (0.9 + 0.85) / 2 = 0.875
-    assert quality == pytest.approx(0.875, abs=0.01)
+    # 2 competitors: min(2 / 3.0, 1.0) = 0.667
+    assert quality == pytest.approx(0.667, abs=0.01)
 
 
 def test_calculate_topic_relevance_high(opportunity_scorer, sample_gaps):
@@ -228,26 +204,26 @@ def test_calculate_topic_relevance_low(opportunity_scorer, sample_gaps):
 
 def test_calculate_content_difficulty_high(opportunity_scorer, sample_gaps):
     """Test content difficulty calculation (high difficulty)."""
-    gap = sample_gaps[0]  # Long content, doctor-authored, many citations
+    gap = sample_gaps[0]  # 2 competitors, missing_topic type
 
     difficulty = opportunity_scorer._calculate_content_difficulty(gap)
 
     assert difficulty > 0.0
     assert difficulty <= 1.0
-    # High word count (2500, 2200), doctor-authored, many citations
-    assert difficulty > 0.5
+    # 2 competitors: min(2 / 5.0, 1.0) * 1.2 = 0.48 (missing_topic multiplier)
+    assert difficulty == pytest.approx(0.48, abs=0.01)
 
 
 def test_calculate_content_difficulty_low(opportunity_scorer, sample_gaps):
     """Test content difficulty calculation (low difficulty)."""
-    gap = sample_gaps[1]  # Shorter content, not doctor-authored, few citations
+    gap = sample_gaps[1]  # 1 competitor, missing_topic type
 
     difficulty = opportunity_scorer._calculate_content_difficulty(gap)
 
     assert difficulty >= 0.0
     assert difficulty <= 1.0
-    # Lower word count (1200), not doctor-authored, few citations
-    assert difficulty < 0.5
+    # 1 competitor: min(1 / 5.0, 1.0) * 1.2 = 0.24 (missing_topic multiplier)
+    assert difficulty == pytest.approx(0.24, abs=0.01)
 
 
 def test_calculate_client_coverage_zero(opportunity_scorer, sample_gaps, client_pages):
@@ -285,28 +261,28 @@ def test_calculate_client_coverage_partial(opportunity_scorer, sample_gaps):
     assert coverage <= 1.0
 
 
-def test_assign_priority_tier_p0(opportunity_scorer):
+def test_assign_severity_from_score_p0(opportunity_scorer):
     """Test priority tier assignment (P0)."""
-    assert opportunity_scorer._assign_priority_tier(85.0) == "P0"
-    assert opportunity_scorer._assign_priority_tier(100.0) == "P0"
+    assert opportunity_scorer._assign_severity_from_score(85.0) == "critical"
+    assert opportunity_scorer._assign_severity_from_score(100.0) == "critical"
 
 
-def test_assign_priority_tier_p1(opportunity_scorer):
+def test_assign_severity_from_score_p1(opportunity_scorer):
     """Test priority tier assignment (P1)."""
-    assert opportunity_scorer._assign_priority_tier(70.0) == "P1"
-    assert opportunity_scorer._assign_priority_tier(60.0) == "P1"
+    assert opportunity_scorer._assign_severity_from_score(70.0) == "high"
+    assert opportunity_scorer._assign_severity_from_score(60.0) == "high"
 
 
-def test_assign_priority_tier_p2(opportunity_scorer):
+def test_assign_severity_from_score_p2(opportunity_scorer):
     """Test priority tier assignment (P2)."""
-    assert opportunity_scorer._assign_priority_tier(50.0) == "P2"
-    assert opportunity_scorer._assign_priority_tier(40.0) == "P2"
+    assert opportunity_scorer._assign_severity_from_score(50.0) == "medium"
+    assert opportunity_scorer._assign_severity_from_score(40.0) == "medium"
 
 
-def test_assign_priority_tier_p3(opportunity_scorer):
+def test_assign_severity_from_score_p3(opportunity_scorer):
     """Test priority tier assignment (P3)."""
-    assert opportunity_scorer._assign_priority_tier(30.0) == "P3"
-    assert opportunity_scorer._assign_priority_tier(0.0) == "P3"
+    assert opportunity_scorer._assign_severity_from_score(30.0) == "low"
+    assert opportunity_scorer._assign_severity_from_score(0.0) == "low"
 
 
 @pytest.mark.asyncio
