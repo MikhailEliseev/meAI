@@ -1,7 +1,7 @@
 """
 Ads Orchestrator - Coordinates Campaign creation tasks
 
-Real implementation with AdsCampaignCreatorAgent integration.
+Real implementation with Google Ads API integration via Services Layer.
 """
 
 from typing import Any, Dict, List, Optional, Callable
@@ -13,25 +13,31 @@ from pathlib import Path
 from meai.agents.base_agent import Agent, Task, TaskResult, TaskStatus
 from meai.events.event_bus import EventBus
 
-# Import AdsCampaignCreatorAgent
+# Import real services
 import sys
 aim_path = Path(__file__).parent.parent.parent.parent
 if str(aim_path) not in sys.path:
     sys.path.insert(0, str(aim_path))
 
-from AIM.src.aim.subagents.ads_campaign_creator_agent import AdsCampaignCreatorAgent
+from AIM.src.aim.subagents.ads.services.campaign_service import CampaignService
+from AIM.src.aim.subagents.ads.services.content_optimizer import ContentOptimizer
+from AIM.src.aim.subagents.ads.services.analytics_service import AnalyticsService
+from AIM.src.aim.subagents.ads.config.settings import AdsSettings
 
 logger = logging.getLogger(__name__)
 
 
 class AdsOrchestrator(Agent):
-    """Ads Orchestrator - Coordinates Campaign creation tasks
+    """Ads Orchestrator - Coordinates Campaign management tasks
 
     Responsibilities:
-    - Execute Campaign creation tasks
-    - Coordinate SEO agents
+    - Execute Campaign creation via CampaignService
+    - Optimize ad content via ContentOptimizer
+    - Track performance via AnalyticsService
     - Provide progress callbacks
     - Aggregate results
+
+    Uses real Google Ads API integration (no mock data).
     """
 
     def __init__(
@@ -49,12 +55,18 @@ class AdsOrchestrator(Agent):
         )
         self.event_bus = event_bus
 
+        # Initialize real services
+        self.settings = AdsSettings()
+        self.campaign_service = CampaignService(settings=self.settings)
+        self.content_optimizer = ContentOptimizer(settings=self.settings)
+        self.analytics_service = AnalyticsService(settings=self.settings)
+
     def get_capabilities(self) -> list[str]:
         """Get Ads Orchestrator capabilities"""
         return [
-            "content_generation",
+            "campaign_creation",
             "content_optimization",
-            "technical_audit"
+            "performance_analytics"
         ]
 
     async def execute_campaign_creation(
@@ -67,10 +79,11 @@ class AdsOrchestrator(Agent):
         Args:
             task_data: Task data dict with:
                 - task_id: Task identifier
-                - campaign_type: "keyword" | "content" | "technical"
-                - target: URL or keyword
+                - campaign_type: "campaign" | "optimization" | "analytics"
+                - target: Campaign name or campaign ID
                 - niche: Business niche
                 - geo: Geographic location
+                - budget: Campaign budget (for creation)
             progress_callback: Async callback for progress updates
                                Called with (step: int, status: str, message: str)
 
@@ -83,27 +96,27 @@ class AdsOrchestrator(Agent):
                 - errors: List of error messages
         """
         start_time = datetime.now()
-        campaign_type = task_data.get("campaign_type", "keyword")
+        campaign_type = task_data.get("campaign_type", "campaign")
         task_id = task_data.get("task_id", "unknown")
 
         try:
             # Progress update: starting
             if progress_callback:
-                await progress_callback(1, "in_progress", f"Starting {campaign_type} analysis")
+                await progress_callback(1, "in_progress", f"Starting {campaign_type} operation")
 
-            # Execute analysis based on type
-            if campaign_type == "keyword":
+            # Execute operation based on type
+            if campaign_type == "campaign":
                 results = await self._execute_campaign_creation(task_data, progress_callback)
-            elif campaign_type == "content":
+            elif campaign_type == "optimization":
                 results = await self._execute_content_optimization(task_data, progress_callback)
-            elif campaign_type == "technical":
-                results = await self._execute_readability_analysis(task_data, progress_callback)
+            elif campaign_type == "analytics":
+                results = await self._execute_performance_analytics(task_data, progress_callback)
             else:
-                results = {"error": f"Unknown analysis type: {campaign_type}"}
+                results = {"error": f"Unknown operation type: {campaign_type}"}
 
             # Progress update: completed
             if progress_callback:
-                await progress_callback(2, "completed", "Analysis complete")
+                await progress_callback(2, "completed", "Operation complete")
 
             # Calculate execution time
             execution_time = (datetime.now() - start_time).total_seconds()
@@ -113,19 +126,19 @@ class AdsOrchestrator(Agent):
                 "task_id": task_id,
                 "campaign_type": campaign_type,
                 "results": results,
-                "status": results.get("status", "completed"),  # Add status to top level
+                "status": results.get("status", "completed"),
                 "execution_time_seconds": int(execution_time),
                 "errors": []
             }
 
         except Exception as e:
-            logger.error(f"Campaign creation failed: {e}", exc_info=True)
+            logger.error(f"Campaign operation failed: {e}", exc_info=True)
             return {
                 "task_id": task_id,
                 "campaign_type": campaign_type,
                 "results": {},
                 "execution_time_seconds": 0,
-                "errors": [f"Campaign creation failed: {str(e)}"]
+                "errors": [f"Campaign operation failed: {str(e)}"]
             }
 
     async def _execute_campaign_creation(
@@ -133,11 +146,12 @@ class AdsOrchestrator(Agent):
         task_data: Dict[str, Any],
         progress_callback: Optional[Callable] = None
     ) -> Dict[str, Any]:
-        """Execute campaign creation using AdsCampaignCreatorAgent"""
+        """Execute campaign creation using CampaignService (REAL API)"""
 
         campaign_name = task_data.get("target", "") or task_data.get("campaign_name", "")
-        campaign_type = task_data.get("campaign_type", "ppc")
-        niche = task_data.get("niche", "")
+        budget_usd = task_data.get("budget", 50.0)
+        channel_type = task_data.get("channel_type", "SEARCH")
+        status = task_data.get("status", "PAUSED")
 
         if not campaign_name:
             return {
@@ -147,53 +161,40 @@ class AdsOrchestrator(Agent):
 
         # Progress update
         if progress_callback:
-            await progress_callback(1, "in_progress", "Initializing campaign creation")
+            await progress_callback(1, "in_progress", "Creating campaign via Google Ads API")
 
-        # Create AdsCampaignCreatorAgent
-        ads_agent = AdsCampaignCreatorAgent(
-            agent_id=f"ads-campaign-{task_data.get('task_id', 'unknown')}",
-            database_url=self.db.database_url if hasattr(self.db, 'database_url') else "sqlite+aiosqlite:///:memory:",
-        )
+        try:
+            # Create campaign via REAL API
+            campaign = await self.campaign_service.create_campaign_with_validation(
+                name=campaign_name,
+                budget_usd=budget_usd,
+                channel_type=channel_type,
+                status=status,
+                validate_budget=True,
+            )
 
-        # Prepare task for agent
-        agent_task = Task(
-            task_id=task_data.get("task_id", "unknown"),
-            subtask_id=f"campaign-{task_data.get('task_id', 'unknown')}",
-            action="create_campaign",
-            data={
-                "campaign_name": campaign_name,
-                "campaign_type": campaign_type,
-                "niche": niche,
-                "budget": task_data.get("budget", 10000),
-                "geo": task_data.get("geo", "")
-            },
-            priority=1
-        )
+            # Progress update
+            if progress_callback:
+                await progress_callback(2, "completed", "Campaign created successfully")
 
-        # Progress update
-        if progress_callback:
-            await progress_callback(2, "in_progress", "Creating campaign")
-
-        # Execute campaign creation
-        result = await ads_agent.execute_task(agent_task)
-
-        # Progress update
-        if progress_callback:
-            await progress_callback(3, "completed", "Campaign creation complete")
-
-        # Return results
-        if result.status == "success":
+            # Return REAL results from API
             return {
-                "campaign_name": campaign_name,
-                "campaign_type": campaign_type,
-                "campaign_id": result.result.get("campaign_id", ""),
-                "ads_count": result.result.get("ads_count", 0),
+                "campaign_name": campaign["name"],
+                "campaign_id": campaign["resource_name"].split("/")[-1],
+                "resource_name": campaign["resource_name"],
+                "budget_usd": budget_usd,
+                "budget_micros": campaign["budget_amount_micros"],
+                "channel_type": channel_type,
+                "status": campaign["status"],
+                "validation": campaign["validation"],
                 "status": "completed"
             }
-        else:
+
+        except Exception as e:
+            logger.error(f"Campaign creation failed: {e}", exc_info=True)
             return {
                 "status": "error",
-                "error": result.error or "Campaign creation failed"
+                "error": f"Campaign creation failed: {str(e)}"
             }
 
     async def _execute_content_optimization(
@@ -201,68 +202,110 @@ class AdsOrchestrator(Agent):
         task_data: Dict[str, Any],
         progress_callback: Optional[Callable] = None
     ) -> Dict[str, Any]:
-        """Execute ads optimization"""
+        """Execute content optimization using ContentOptimizer (REAL API)"""
 
-        campaign_name = task_data.get("target", "") or task_data.get("campaign_name", "")
+        campaign_id = task_data.get("target", "") or task_data.get("campaign_id", "")
 
-        if not campaign_name:
+        if not campaign_id:
             return {
                 "status": "error",
-                "error": "'campaign_name' is required for ads optimization"
+                "error": "'campaign_id' is required for optimization"
             }
 
         if progress_callback:
-            await progress_callback(1, "in_progress", "Optimizing ads")
+            await progress_callback(1, "in_progress", "Analyzing campaign performance")
 
-        await asyncio.sleep(0.1)
+        try:
+            # Get REAL performance analysis from API
+            analysis = await self.content_optimizer.analyze_campaign_performance(
+                campaign_id=campaign_id,
+                date_range="LAST_30_DAYS",
+            )
 
-        return {
-            "campaign_name": campaign_name,
-            "optimizations": [
-                "Improved ad copy CTR by 15%",
-                "Reduced CPC by 20%",
-                "Added negative keywords",
-                "Optimized bidding strategy"
-            ],
-            "ctr_before": 2.5,
-            "ctr_after": 2.9,
-            "cpc_before": 1.50,
-            "cpc_after": 1.20,
-            "status": "completed"
-        }
+            if progress_callback:
+                await progress_callback(2, "in_progress", "Generating optimization suggestions")
 
-    async def _execute_readability_analysis(
+            # Get REAL optimization suggestions
+            suggestions = await self.content_optimizer.suggest_optimizations(
+                campaign_id=campaign_id,
+            )
+
+            if progress_callback:
+                await progress_callback(3, "completed", "Optimization analysis complete")
+
+            # Return REAL results from API
+            return {
+                "campaign_id": campaign_id,
+                "campaign_name": analysis["campaign_name"],
+                "current_metrics": analysis["metrics"],
+                "health_score": analysis["overall_health"],
+                "recommendations": analysis["recommendations"],
+                "quick_wins": suggestions["quick_wins"],
+                "long_term": suggestions["long_term"],
+                "status": "completed"
+            }
+
+        except Exception as e:
+            logger.error(f"Content optimization failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "error": f"Content optimization failed: {str(e)}"
+            }
+
+    async def _execute_performance_analytics(
         self,
         task_data: Dict[str, Any],
         progress_callback: Optional[Callable] = None
     ) -> Dict[str, Any]:
-        """Execute performance analysis"""
+        """Execute performance analytics using AnalyticsService (REAL API)"""
 
-        campaign_name = task_data.get("target", "") or task_data.get("campaign_name", "")
+        campaign_id = task_data.get("target", "") or task_data.get("campaign_id", "")
 
-        if not campaign_name:
+        if not campaign_id:
             return {
                 "status": "error",
-                "error": "'campaign_name' is required for performance analysis"
+                "error": "'campaign_id' is required for analytics"
             }
 
         if progress_callback:
-            await progress_callback(1, "in_progress", "Analyzing performance")
+            await progress_callback(1, "in_progress", "Fetching performance metrics")
 
-        await asyncio.sleep(0.1)
+        try:
+            # Get REAL performance metrics from API
+            performance = await self.analytics_service.get_campaign_performance(
+                campaign_id=campaign_id,
+                date_range="LAST_30_DAYS",
+            )
 
-        return {
-            "campaign_name": campaign_name,
-            "impressions": 15000,
-            "clicks": 450,
-            "conversions": 23,
-            "ctr": 3.0,
-            "conversion_rate": 5.1,
-            "cost": 540,
-            "revenue": 2300,
-            "roas": 4.26,
-            "status": "completed"
-        }
+            if progress_callback:
+                await progress_callback(2, "in_progress", "Calculating ROI")
+
+            # Calculate REAL ROI from API data
+            roi_analysis = await self.analytics_service.calculate_roi(
+                campaign_id=campaign_id,
+                date_range="LAST_30_DAYS",
+            )
+
+            if progress_callback:
+                await progress_callback(3, "completed", "Analytics complete")
+
+            # Return REAL results from API
+            return {
+                "campaign_id": campaign_id,
+                "campaign_name": performance["campaign_name"],
+                "raw_metrics": performance["raw_metrics"],
+                "calculated_metrics": performance["calculated_metrics"],
+                "business_metrics": performance["business_metrics"],
+                "roi_analysis": roi_analysis,
+                "status": "completed"
+            }
+
+        except Exception as e:
+            logger.error(f"Performance analytics failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "error": f"Performance analytics failed: {str(e)}"
+            }
 
     async def execute_task(self, task: Task) -> TaskResult:
         """Execute task (required by Agent base class)"""
@@ -270,13 +313,18 @@ class AdsOrchestrator(Agent):
         # Convert Task to task_data dict
         task_data = {
             "task_id": task.task_id,
-            "campaign_type": task.data.get("campaign_type", "keyword"),
+            "campaign_type": task.data.get("campaign_type", "campaign"),
             "target": task.data.get("target", ""),
+            "campaign_id": task.data.get("campaign_id", ""),
+            "campaign_name": task.data.get("campaign_name", ""),
+            "budget": task.data.get("budget", 50.0),
+            "channel_type": task.data.get("channel_type", "SEARCH"),
+            "status": task.data.get("status", "PAUSED"),
             "niche": task.data.get("niche", ""),
             "geo": task.data.get("geo", "")
         }
 
-        # Execute analysis
+        # Execute operation
         result = await self.execute_campaign_creation(task_data)
 
         # Return TaskResult
@@ -290,3 +338,10 @@ class AdsOrchestrator(Agent):
             duration_seconds=result["execution_time_seconds"],
             completed_at=datetime.now(timezone.utc)
         )
+
+    async def close(self) -> None:
+        """Close orchestrator and cleanup services"""
+        self.campaign_service.close()
+        self.content_optimizer.close()
+        self.analytics_service.close()
+        logger.info("ads_orchestrator_closed")
