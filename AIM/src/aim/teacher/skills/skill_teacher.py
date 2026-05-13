@@ -17,6 +17,7 @@ This is the main entry point for teaching subagents.
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+import subprocess
 
 import structlog
 
@@ -26,6 +27,24 @@ from AIM.src.aim.teacher.skills.skill_selector import Skill, SkillSelector
 from AIM.src.aim.teacher.skills.skill_applier import SkillApplier
 
 logger = structlog.get_logger()
+
+
+@dataclass
+class TestResults:
+    """Results of test execution."""
+    success: bool
+    summary: str
+    output: str
+    failures: list[str] = field(default_factory=list)
+
+
+@dataclass
+class CommitResult:
+    """Result of git commit."""
+    success: bool
+    commit_hash: str | None
+    message: str = ""
+    error: str | None = None
 
 
 @dataclass
@@ -42,6 +61,7 @@ class TeachingReport:
     files_modified: list[Path] = field(default_factory=list)
     dependencies_added: list[str] = field(default_factory=list)
     tests_created: list[Path] = field(default_factory=list)
+    test_results: TestResults | None = None
     commit_hash: str | None = None
     success: bool = False
     error: str | None = None
@@ -108,6 +128,101 @@ class SkillTeacher:
         self.extractor = SkillExtractor()
         self.comparator = SkillComparator()
         self.applier = SkillApplier(project_root)
+
+    async def _run_tests(
+        self,
+        test_files: list[Path],
+        subagent_name: str
+    ) -> TestResults:
+        """Run pytest on applied code."""
+
+        if not test_files:
+            return TestResults(
+                success=True,
+                summary="No tests to run",
+                output=""
+            )
+
+        # Run pytest
+        cmd = f"pytest {' '.join(str(f) for f in test_files)} -v"
+        result = subprocess.run(
+            cmd,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+
+        return TestResults(
+            success=result.returncode == 0,
+            summary=f"{len(test_files)} test files",
+            output=result.stdout + result.stderr,
+            failures=[] if result.returncode == 0 else ["pytest failed"]
+        )
+
+    async def _commit_changes(
+        self,
+        files_created: list[Path],
+        files_modified: list[Path],
+        subagent_name: str,
+        skill_name: str,
+        source_repo: str
+    ) -> CommitResult:
+        """Commit applied changes with teaching metadata."""
+
+        all_files = files_created + files_modified
+
+        if not all_files:
+            return CommitResult(
+                success=True,
+                commit_hash=None,
+                message="No changes to commit"
+            )
+
+        # Stage files
+        for file in all_files:
+            subprocess.run(["git", "add", str(file)], check=True)
+
+        # Create commit message
+        message = f"""teach({subagent_name}): apply {skill_name}
+
+Taught {subagent_name} with skill from {source_repo}
+
+Files created: {len(files_created)}
+Files modified: {len(files_modified)}
+
+Source: {source_repo}
+Skill: {skill_name}
+
+Co-Authored-By: Teacher Agent <teacher@aim.ai>"""
+
+        # Commit
+        result = subprocess.run(
+            ["git", "commit", "-m", message],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode != 0:
+            return CommitResult(
+                success=False,
+                commit_hash=None,
+                error=result.stderr
+            )
+
+        # Get commit hash
+        hash_result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+
+        return CommitResult(
+            success=True,
+            commit_hash=hash_result.stdout.strip(),
+            message=message
+        )
 
     async def teach_subagent(
         self, subagent_name: str, domain: str
@@ -244,13 +359,38 @@ class SkillTeacher:
                 tests_created=len(application.tests_created),
             )
 
-            # Step 6: Test (TODO)
-            self.logger.warning("step_6_test", status="TODO")
-            # TODO: Run tests
+            # Step 7: Test
+            self.logger.info("step_7_test")
 
-            # Step 7: Commit (TODO)
-            self.logger.warning("step_7_commit", status="TODO")
-            # TODO: Git commit
+            test_results = await self._run_tests(
+                test_files=application.tests_created,
+                subagent_name=subagent_name
+            )
+
+            report.test_results = test_results
+
+            if not test_results.success:
+                self.logger.error("tests_failed", failures=test_results.failures)
+                report.error = f"Tests failed: {test_results.summary}"
+                return report
+
+            # Step 8: Commit
+            self.logger.info("step_8_commit")
+
+            commit_result = await self._commit_changes(
+                files_created=application.files_created,
+                files_modified=application.files_modified,
+                subagent_name=subagent_name,
+                skill_name=report.best_skill.name if report.best_skill else "unknown",
+                source_repo=report.best_skill.source_repo if report.best_skill else "unknown"
+            )
+
+            report.commit_hash = commit_result.commit_hash
+
+            if not commit_result.success:
+                self.logger.error("commit_failed", error=commit_result.error)
+                report.error = f"Commit failed: {commit_result.error}"
+                return report
 
             report.success = True
             report.dependencies_added = implementation.dependencies
