@@ -380,6 +380,134 @@ class TestDomainSpecificResearch:
         assert any("yandex" in q.lower() and "metrika" in q.lower() for q in analytics_queries)
 
 
+class TestResearchAndClone:
+    """Test research_and_clone workflow (CRITICAL FIX 2026-05-14)."""
+
+    @pytest.mark.asyncio
+    async def test_research_and_clone_workflow(self, selector, tmp_path):
+        """Should research and clone ALL repos."""
+        from unittest.mock import patch, AsyncMock
+
+        # Mock GitHub repos
+        mock_repos = [
+            GitHubRepo(
+                url="https://github.com/user/repo1",
+                stars=100,
+                description="Test repo 1",
+            ),
+            GitHubRepo(
+                url="https://github.com/user/repo2",
+                stars=200,
+                description="Test repo 2",
+            ),
+        ]
+
+        # Mock research_domain_specific
+        with patch.object(
+            selector,
+            "research_domain_specific",
+            return_value={"test query": mock_repos}
+        ):
+            # Mock clone_repo to create directories
+            async def mock_clone(url: str, path: Path):
+                path.mkdir(parents=True, exist_ok=True)
+                (path / "README.md").write_text(f"Mock repo: {url}")
+
+            with patch.object(selector, "clone_repo", side_effect=mock_clone):
+                # Override Path.home() to use tmp_path
+                with patch("pathlib.Path.home", return_value=tmp_path):
+                    cloned_repos = await selector.research_and_clone(
+                        subagent_name="ads",
+                        domain="advertising automation",
+                    )
+
+                    # Should clone ALL repos
+                    assert len(cloned_repos) == len(mock_repos)
+
+                    # Each repo should be mapped to a path
+                    for url, path in cloned_repos.items():
+                        assert isinstance(path, Path)
+                        assert path.exists()
+                        assert (path / "README.md").exists()
+
+    @pytest.mark.asyncio
+    async def test_research_and_clone_skips_existing(self, selector, tmp_path):
+        """Should skip repos that are already cloned."""
+        from unittest.mock import patch
+
+        mock_repos = [
+            GitHubRepo(url="https://github.com/user/existing", stars=100, description="Test"),
+        ]
+
+        # Create existing repo
+        existing_path = tmp_path / "temp" / "research-repos" / "existing"
+        existing_path.mkdir(parents=True, exist_ok=True)
+        (existing_path / "README.md").write_text("Already exists")
+
+        with patch.object(
+            selector,
+            "research_domain_specific",
+            return_value={"test": mock_repos}
+        ):
+            with patch("pathlib.Path.home", return_value=tmp_path):
+                clone_called = False
+
+                async def mock_clone(url: str, path: Path):
+                    nonlocal clone_called
+                    clone_called = True
+
+                with patch.object(selector, "clone_repo", side_effect=mock_clone):
+                    cloned_repos = await selector.research_and_clone(
+                        subagent_name="test",
+                        domain="test",
+                    )
+
+                    # Should find existing repo
+                    assert len(cloned_repos) == 1
+
+                    # Should NOT call clone_repo
+                    assert not clone_called
+
+    @pytest.mark.asyncio
+    async def test_research_and_clone_continues_on_error(self, selector, tmp_path):
+        """Should continue cloning other repos if one fails."""
+        from unittest.mock import patch
+
+        mock_repos = [
+            GitHubRepo(url="https://github.com/user/good", stars=100, description="Good"),
+            GitHubRepo(url="https://github.com/user/bad", stars=200, description="Bad"),
+            GitHubRepo(url="https://github.com/user/good2", stars=300, description="Good 2"),
+        ]
+
+        with patch.object(
+            selector,
+            "research_domain_specific",
+            return_value={"test": mock_repos}
+        ):
+            clone_count = 0
+
+            async def mock_clone(url: str, path: Path):
+                nonlocal clone_count
+                clone_count += 1
+
+                if "bad" in url:
+                    raise Exception("Clone failed")
+
+                path.mkdir(parents=True, exist_ok=True)
+                (path / "README.md").write_text(f"Mock: {url}")
+
+            with patch.object(selector, "clone_repo", side_effect=mock_clone):
+                with patch("pathlib.Path.home", return_value=tmp_path):
+                    cloned_repos = await selector.research_and_clone(
+                        subagent_name="test",
+                        domain="test",
+                    )
+
+                    # Should clone 2 out of 3 repos (one failed)
+                    assert len(cloned_repos) == 2
+                    assert clone_count == 3  # Tried all 3
+
+
 class TestDomainSpecificPatternExtraction:
     """Test domain-specific pattern extraction (CRITICAL FIX 2026-05-13)."""
 
