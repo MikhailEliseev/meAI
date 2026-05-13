@@ -16,7 +16,6 @@ from typing import Any
 import structlog
 
 from AIM.src.aim.teacher.skills.skill_comparator import ComparisonResult
-from AIM.src.aim.teacher.skills.skill_extractor import SkillType
 
 logger = structlog.get_logger()
 
