@@ -1,310 +1,254 @@
-# Memo: Next Session Quick Start
+# Teacher Agent v2.0 - Final Summary
 
 **Date:** 2026-05-13  
-**Last Session:** 2026-05-12 (Deep Research: Competitor Content Analyzer)
+**Status:** ✅ COMPLETE - Ready for Your Approval
 
 ---
 
-## 🎯 What We Just Completed
+## Что Сделано
 
-### Deep Research: Competitor Content Analyzer ✅
+Создана полная спецификация Teacher Agent v2.0, которая **полностью соответствует твоим требованиям**.
 
-**Status:** Research completed successfully  
-**Duration:** 58 minutes  
-**Cost:** $0.15 USD (95% under budget)  
-**Quality:** 15 sources, 87/100 credibility, 100% verification
+### Твои Требования
 
-**Key Achievement:** First successful test of GitHub-integrated deep research approach!
+1. **"Тичер сам решает, без моего апрува"** ✅
+   - Autonomous workflow (no approval gates)
+   - AdoptionDecisionMaker принимает решения автономно
 
-**Research Output:**
-- Location: `~/Documents/Competitor_Content_Analysis_SEO_Research_20260512/`
-- Main report: `report.md` (85KB, 2,278 lines, ~18,500 words)
-- Supporting files: sources.jsonl, evidence.jsonl, claims.jsonl, run_manifest.json
+2. **"Скачивает, устанавливает, понимает как работает"** ✅
+   - Clone репозиториев в sandbox
+   - Architecture Analysis (понимание структуры)
+   - Skill Extraction (извлечение паттернов)
 
-**Key Findings:**
-1. **GitHub Repos (4 repos, 880+ stars):**
-   - python-seo-analyzer (300★) - keyword density, meta tags
-   - python-for-seo (250★) - API integrations with retry logic
-   - seo-analyzer (150★) - circuit breaker, caching patterns
-   - ai-content-detector (180★) - DistilBERT, 94% accuracy
+3. **"Берёт только лучшие навыки"** ✅
+   - SkillComparator (сравнение каждого навыка: GitHub vs наш)
+   - SkillSelector (выбор только лучших, threshold +10)
+   - Не копирует целые решения, а учит конкретным паттернам
 
-2. **2026 SEO Best Practices:**
-   - Keyword density: 0.5-1.5% (Google), 2-3% (Yandex)
-   - LSI keywords: 5-10 variants per 1000 words
-   - E-E-A-T for medical: reviewer required, 20-30% updates every 6-12 months
-   - Core Web Vitals: LCP <2.5s, INP <200ms, CLS <0.1
+4. **"Проводит глубокие исследования через Brave/Exa/Perplexity"** ✅
+   - WebResearcher с Exa MCP tools
+   - web_search_exa (20 результатов)
+   - deep_researcher_start (глубокий анализ)
+   - 3 уровня глубины: quick ($0.50), standard ($1.50), deep ($3.00)
 
-3. **Russian Market (Yandex vs Google):**
-   - Yandex: user behavior (CTR, dwell time) > backlinks
-   - Google: backlinks > user behavior
-   - Keyword density tolerance: 2-3% (Yandex) vs 0.5-1.5% (Google)
-
-4. **API Costs:**
-   - SEMrush Business: $499.95/month (50K API units/day)
-   - Ahrefs Advanced + API: $949/month
-   - Playwright: Free (open-source)
-
-5. **Production Architecture Patterns:**
-   - Circuit breaker (fail after 5 errors, reset 60s)
-   - Exponential backoff (1s → 30s max)
-   - Rate limiting (token bucket, 10 req/s)
-   - Caching (1-hour TTL)
-   - 25+ code examples adapted from production repos
-
-**Validation:** GitHub-integrated approach works! Provides production-ready patterns, real costs, battle-tested architecture that traditional research misses.
+5. **"Ищет и исследования, и GitHub"** ✅
+   - GitHubSearcher (dual search: GitHub API + Exa)
+   - Параллельное выполнение обоих поисков
+   - RepoRanker (качественное ранжирование)
 
 ---
 
-## 📋 Next Steps (Priority Order)
+## Архитектура
 
-### 1. Archive Research to Obsidian Vault ✅ COMPLETED
-
-**Status:** ✅ Research archived successfully  
-**Date:** 2026-05-13T00:04:00Z  
-**Location:** `obsidian/deep-research/raw/2026-05-12-Competitor_Content_Analysis_SEO/`
-
-**Archived:**
-- Research report (85KB, 2,278 lines)
-- Sources registry (15 sources, 87/100 avg credibility)
-- Evidence store (100% verification)
-- Claims ledger (13/13 verified)
-- Run manifest (cost: $0.15, duration: 58 min)
-
-### 2. Create Competitor Content Analyzer Specification ✅ COMPLETED
-
-**Status:** ✅ Specification created successfully  
-**Date:** 2026-05-13T00:11:00Z  
-**Commit:** 687c99c
-
-**Output:**
-- Spec: `docs/subagents-specs/COMPETITOR_CONTENT_ANALYZER_SPEC.md` (35KB, 1,089 lines)
-- Brief: `docs/briefs/COMPETITOR_CONTENT_ANALYZER_BRIEF.md`
-
-**Included:**
-- ✅ GitHub repos and architecture patterns (4 repos, 880+ stars)
-- ✅ Keyword density optimization (market-specific thresholds)
-- ✅ E-E-A-T scoring for medical YMYL content
-- ✅ AI content detection (DistilBERT, 94% accuracy)
-- ✅ Yandex vs Google optimization strategies
-- ✅ API integration costs (SEMrush, Ahrefs, Playwright)
-- ✅ Production resilience patterns (circuit breaker, retry, rate limiting, caching)
-- ✅ 25+ code examples adapted from production repos
-- ✅ Russian market specifics throughout
-
-### 3. Update Teacher Agent Pattern ✅ COMPLETED
-
-**Status:** ✅ Pattern documented successfully  
-**Date:** 2026-05-13T00:17:00Z  
-**Commit:** 4abb96c
-
-**Output:**
-- Pattern: `docs/patterns/TEACHER_AGENT_CONTINUOUS_LEARNING.md` (25KB, 850+ lines)
-
-**Documented:**
-- ✅ Learning cycle workflow (every 2-4 weeks)
-- ✅ GitHub monitoring strategy (top repos by stars)
-- ✅ Deep research execution (GitHub-integrated approach)
-- ✅ Gap analysis methodology (current vs best practices)
-- ✅ Priority matrix (CRITICAL/HIGH/LOW with scoring formula)
-- ✅ Learning report template (comprehensive)
-- ✅ Metrics and KPIs (coverage, freshness, quality, impact)
-- ✅ Cost analysis and ROI calculation (564% example)
-- ✅ Automation roadmap (3 phases)
-- ✅ Best practices (DO/DON'T)
-- ✅ Example: Competitor Content Analyzer learning cycle
-
-**Validation:**
-- GitHub-integrated approach works (tested 2026-05-12)
-- Cost-effective ($0.15 vs expected $1-3)
-- High quality (100% verification, 87/100 credibility)
-- Production-ready patterns extracted
-
-### 4. Test Spec Creation from Research ✅ COMPLETED
-
-**Status:** ✅ Validated successfully  
-**Date:** 2026-05-13T00:11:00Z
-
-**Test Case:** Competitor Content Analyzer specification
-
-**Success Criteria Met:**
-- ✅ Spec includes all GitHub repos and patterns (4 repos, 880+ stars)
-- ✅ Code examples adapted (not copied) from research (25+ examples)
-- ✅ API costs and integration details included (SEMrush, Ahrefs, Playwright)
-- ✅ Russian market specifics documented throughout
-- ✅ E-E-A-T requirements for medical content (YMYL compliance)
-- ✅ Size > 30KB (35KB achieved, 1,089 lines)
-
-**Validation:** Research → spec workflow produces high-quality specifications ✅
-
----
-
-## 🔄 Previous Session Recovery (Completed)
-
-### Content Gap Analysis Components ✅
-
-**Status:** Restored and committed (commit dc3a21c)
-
-**Recovered:**
-- `serp_overlap_clusterer.py` (350 lines, 10 tests)
-- `architecture_planner.py` (450 lines, 13 tests)
-- `brief_generator.py` (520 lines, 17 tests)
-- Total: 2,215 lines, 40 tests
-
-**Bug Fixed:** Pydantic `use_enum_values=True` in brief_generator.py
-
----
-
-## 📊 Current Project Status
-
-### Sprint 4: Content Gap Analysis Agent
-
-**Status:** Main agent integration completed ✅  
-**Commit:** adc875f
-
-**Components:**
-- ✅ Opportunity Scorer (gap detection and scoring)
-- ✅ SERP Overlap Clusterer (keyword clustering)
-- ✅ Architecture Planner (hub-and-spoke content architecture)
-- ✅ Brief Generator (SEO content briefs with E-E-A-T)
-- ✅ Main Agent (orchestration and workflow)
-
-**Tests:** 40 tests passing (serp_overlap_clusterer, architecture_planner, brief_generator)
-
-**Next Sprint:** Competitor Content Analyzer (research completed, spec creation next)
-
----
-
-## 🎓 Lessons Learned
-
-### GitHub-Integrated Deep Research (VALIDATED ✅)
-
-**What Worked:**
-- Finding production-ready repos (150+ stars) with battle-tested patterns
-- Extracting real API costs and integration details
-- Adapting code examples (not copying) for architecture patterns
-- Russian market specifics (Yandex vs Google) from industry sources
-- Cost efficiency: $0.15 vs expected $1-3
-
-**What to Keep:**
-- Mandatory GitHub search for all spec-writer/deep-research tasks
-- Star count filtering (>50, >100, >150) for quality
-- Code pattern adaptation (not direct copying)
-- Cross-verification across 3+ sources for core claims
-- Evidence-based claims with confidence scores
-
-**What to Improve:**
-- Consider JavaScript/PHP repos (not just Python)
-- Include enterprise pricing analysis
-- Add regional variations (not just Russia-wide)
-- Test code examples in production before including
-
----
-
-## 🚀 Quick Commands
-
-**Archive research:**
-```bash
-python scripts/ingest_research.py ~/Documents/Competitor_Content_Analysis_SEO_Research_20260512/
 ```
-
-**Check research vault:**
-```bash
-ls -lh obsidian/deep-research/raw/
-cat obsidian/deep-research/wiki/log.md | tail -20
-```
-
-**Create spec from research:**
-```bash
-# Read research report
-cat ~/Documents/Competitor_Content_Analysis_SEO_Research_20260512/report.md
-
-# Read brief
-cat docs/briefs/COMPETITOR_CONTENT_ANALYZER_BRIEF.md
-
-# Use template
-cat docs/templates/SUBAGENT_SPEC_TEMPLATE.md
-```
-
-**Commit changes:**
-```bash
-git add SESSION.md CLAUDE.md docs/MEMO-NEXT-SESSION.md
-git commit -m "docs: complete Competitor Content Analyzer deep research
-
-GitHub-integrated research approach validated:
-- 4 production repos (880+ stars)
-- 25+ code examples (adapted)
-- Russian market specifics (Yandex vs Google)
-- API costs and integration patterns
-- 100% claim verification
-
-Research: 58 min, $0.15 USD, 18.5K words
-Quality: 15 sources, 87/100 credibility
-
-Next: Archive to vault, create specification
-
-Co-Authored-By: Claude Sonnet 4 <noreply@anthropic.com>"
+1. GitHub Discovery & Research ⭐ (NEW)
+   ├─ ResearchOrchestrator
+   ├─ WebResearcher (Exa deep research)
+   ├─ GitHubSearcher (GitHub API + Exa)
+   └─ RepoRanker
+   ↓
+2. Architecture Analysis
+   ↓
+2.3 Skill Extraction & Teaching ⭐ (NEW)
+   ├─ SkillExtractor (find patterns)
+   ├─ SkillComparator (GitHub vs ours)
+   ├─ SkillSelector (choose best)
+   └─ SkillTeacher (adapt & integrate)
+   ↓
+3. Solution Comparison
+   ↓
+4. Adoption Decision (autonomous)
+   ↓
+5. Full Adoption (sandbox + validation)
 ```
 
 ---
 
-## ✅ Session Complete: All Tasks Finished
+## Пример Работы
 
-**Date:** 2026-05-13T00:17:32Z  
-**Duration:** ~3 hours (from 2026-05-12T20:00:00Z)
+**Сценарий:** Улучшение SEO Agent с circuit breaker
 
-### Completed Tasks
+**Шаг 1: Deep Research**
+```
+WebResearcher (Exa):
+- Нашёл 20 статей (Martin Fowler, AWS, Netflix)
+- Извлёк 25 best practices
+- Идентифицировал 12 tools/libraries
+- Industry insights: Netflix 50% threshold, AWS 60s timeout
 
-1. ✅ **Component Recovery** - Restored 3 lost Content Gap Analysis components (2,215 lines, 40 tests)
-2. ✅ **Deep Research** - Competitor Content Analyzer (58 min, $0.15, 18.5K words)
-3. ✅ **Research Archive** - Saved to obsidian/deep-research/ vault
-4. ✅ **Specification** - Created COMPETITOR_CONTENT_ANALYZER_SPEC.md (35KB, 1,089 lines)
-5. ✅ **Teacher Agent Pattern** - Documented continuous learning workflow (25KB, 850+ lines)
+GitHubSearcher:
+- GitHub API: 10 repos
+- Exa search: 8 repos (3 новых)
+- Merged: 15 unique repos
 
-### Key Achievements
+RepoRanker:
+- pybreaker: 92.65/100
+- Netflix/Hystrix: 90.0/100
+- resilience4j: 88.5/100
 
-**GitHub-Integrated Research Validated:**
-- First successful test case (Competitor Content Analyzer)
-- 4 production repos (880+ stars)
-- 25+ code examples adapted
-- Real API costs and architecture patterns
-- 100% claim verification
-- Cost: $0.15 (95% under budget)
+Result: Top 5 repos + 25 best practices + 12 tools
+Cost: $1.50
+```
 
-**Documentation Created:**
-- Competitor Content Analyzer specification (production-ready)
-- Teacher Agent Continuous Learning pattern (comprehensive)
-- Session logs and memos updated
+**Шаг 2: Clone & Analyze**
+```
+Clone: git clone https://github.com/pybreaker/pybreaker
+Analyze:
+- File structure: 15 files, 2500 lines
+- Dependencies: 3 (redis, threading, logging)
+- Patterns: State pattern, Observer pattern
+- Tests: 85% coverage
+```
 
-**System Improvements:**
-- CLAUDE.md updated with validated approach
-- LLM Wiki Pattern applied (research archived)
-- Complete Before Next Rule followed (100% completion)
+**Шаг 3: Extract Skills**
+```
+Found 5 skills:
+1. circuit_breaker (resilience): confidence 0.95
+2. exponential_backoff (resilience): confidence 0.90
+3. half_open_state (resilience): confidence 0.85
+4. failure_rate_monitoring (observability): confidence 0.80
+5. state_change_events (observability): confidence 0.75
+```
 
-### Commits
+**Шаг 4: Compare Each Skill**
+```
+circuit_breaker:
+  GitHub: 85/100 (has half_open, reset_timeout)
+  Ours: 60/100 (basic, no half_open)
+  Winner: github (+25)
+  Recommendation: adopt
 
-1. `dc3a21c` - Component recovery (serp_overlap_clusterer, architecture_planner, brief_generator)
-2. `31941a3` - Teacher Agent rule added to CLAUDE.md
-3. `a27e513` - Deep research completion documented
-4. `687c99c` - Competitor Content Analyzer specification created
-5. `2d28343` - Session log updated with specification completion
-6. `4abb96c` - Teacher Agent Continuous Learning pattern documented
+exponential_backoff:
+  GitHub: 70/100 (basic)
+  Ours: 85/100 (tenacity library, better)
+  Winner: ours (+15)
+  Recommendation: keep_ours
+```
 
-### Next Session Focus
+**Шаг 5: Select Best**
+```
+Strategy: balanced (threshold +10)
 
-**Sprint 5: Competitor Content Analyzer Implementation**
-- Implement specification (35KB, 1,089 lines)
-- 10-step algorithm (validation → fetch → analysis → recommendations)
-- Production patterns (circuit breaker, retry, rate limiting, caching)
-- Russian market optimization (Yandex vs Google)
-- E-E-A-T scoring for medical content
-- AI content detection (DistilBERT)
+To adopt: 2 skills
+- circuit_breaker (delta +25)
+- half_open_state (delta +20)
 
-**Estimated Effort:**
-- Implementation: 16-20 hours
-- Testing: 4-6 hours
-- Integration: 2-4 hours
-- **Total:** ~22-30 hours (3-4 days)
+To keep: 2 skills
+- exponential_backoff (ours +15)
+- failure_rate_monitoring (ours +10)
+
+To skip: 1 skill
+- state_change_events (delta +5, below threshold)
+```
+
+**Шаг 6: Teach Skills**
+```
+Teaching circuit_breaker to SEO Agent:
+
+1. Analyze integration points: BaseClient._fetch()
+2. Adapt pattern:
+   - Use pybreaker library (production-ready)
+   - Add Event Bus integration
+   - Add Obsidian logging
+3. Integrate: Update BaseClient class
+4. Write tests: 5 unit + 2 integration
+5. Measure improvement: 95% reduction in cascading failures
+
+✅ circuit_breaker taught successfully!
+```
+
+**Result:**
+- 2 skills adopted
+- 2 skills kept (ours better)
+- 1 skill skipped
+- Overall improvement: 35%
+- Cost: $1.50 + 15 min
 
 ---
 
-**Last Updated:** 2026-05-13T00:17:32Z
+## Спецификация
+
+**File:** `docs/TEACHER_AGENT.md`  
+**Size:** 3996 lines, 132 KB  
+**Components:** 9 (4 research + 5 skill extraction)
+
+**Качество:**
+- ✅ Autonomous workflow (no approval gates)
+- ✅ Deep research (Exa + GitHub)
+- ✅ Skill-level adoption (не all-or-nothing)
+- ✅ Safety mechanisms (sandbox, validation, rollback)
+- ✅ HIPAA compliance (6 specific checks)
+- ✅ Implementation details (формулы, heuristics, git commands)
+- ✅ Medical context (security 2x weight, zero-error tolerance)
+
+---
+
+## Review Documents
+
+1. **Consolidated Findings** (`2026-05-13-teacher-agent-v2-consolidated-findings.md`)
+   - Dual-model review (Opus + Sonnet)
+   - 11 blockers identified
+   - Fix recommendations
+
+2. **Fixes Applied** (`2026-05-13-teacher-agent-v2-fixes-applied.md`)
+   - All 11 blockers fixed
+   - Readiness: 70% → 95%+
+
+3. **Skill Layer Added** (`2026-05-13-teacher-agent-v2-skill-extraction-added.md`)
+   - 5 components (SkillExtractor, SkillComparator, SkillSelector, SkillTeacher, Orchestrator)
+   - +934 lines, +37 KB
+
+4. **Research Layer Added** (`2026-05-13-teacher-agent-v2-research-layer-added.md`)
+   - 4 components (ResearchOrchestrator, WebResearcher, GitHubSearcher, RepoRanker)
+   - +417 lines, +14 KB
+
+---
+
+## Что Дальше?
+
+**Если одобришь спецификацию:**
+
+1. **Phase 1.0: Research Layer** (3-4 hours)
+   - Implement ResearchOrchestrator
+   - Implement WebResearcher (Exa integration)
+   - Implement GitHubSearcher (dual search)
+   - Implement RepoRanker
+   - Tests (15+ tests)
+
+2. **Phase 1.5: Skill Layer** (4-5 hours)
+   - Implement SkillExtractor
+   - Implement SkillComparator
+   - Implement SkillSelector
+   - Implement SkillTeacher
+   - Implement SkillExtractionOrchestrator
+   - Tests (20+ tests)
+
+3. **Phase 2+: Full Workflow** (8-12 hours)
+   - Architecture Analysis
+   - Solution Comparison
+   - Adoption Decision
+   - Full Adoption (sandbox + validation)
+   - Tests (30+ tests)
+
+**Total:** 15-21 hours implementation
+
+---
+
+## Вопрос к Тебе
+
+**Готов начинать implementation?**
+
+Спецификация полностью соответствует твоим требованиям:
+- ✅ Autonomous (сам решает)
+- ✅ Deep research (Exa + GitHub)
+- ✅ Skill-level adoption (берёт только лучшее)
+- ✅ Pattern teaching (не копирование кода)
+- ✅ Production-ready (sandbox, validation, rollback)
+
+Если да → начинаю Phase 1.0 (Research Layer)  
+Если нужны изменения → скажи что изменить
+
+---
+
+**Created:** 2026-05-13 16:57 GMT+3  
+**Status:** ✅ Ready for Your Approval
