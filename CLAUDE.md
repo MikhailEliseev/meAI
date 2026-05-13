@@ -974,3 +974,45 @@ pytest AIM/tests/subagents/api_clients/test_base.py::test_circuit_breaker_opens_
 - Next: End-to-end test
 
 <!-- updated-by-sprint-1:2026-05-11 -->
+
+## Teacher Agent - КРИТИЧЕСКОЕ ПРАВИЛО
+
+**ЗАПРЕЩЕНО:**
+- ❌ Copy-paste одинаковых паттернов во все субагенты
+- ❌ "Обучение" без deep research для каждого субагента
+- ❌ Общие решения (Circuit Breaker, Retry, Rate Limiting) для всех
+- ❌ Пропускать GitHub search специализированных решений
+- ❌ Не анализировать код из найденных репо
+
+**ОБЯЗАТЕЛЬНО:**
+- ✅ Для КАЖДОГО субагента: индивидуальное deep research
+- ✅ GitHub search с правильными запросами (например: "yandex direct api python" для Ads)
+- ✅ Клонирование и изучение кода из топовых репо
+- ✅ Извлечение специфичных для домена паттернов
+- ✅ Каждый субагент получает уникальное обучение
+
+**Пример правильного подхода:**
+
+**Ads субагент:**
+1. Deep research: "yandex direct api python", "yandex ads mcp"
+2. Найти: yandex-ads-mcp (https://github.com/Yurich-ru/yandex-ads-mcp)
+3. Клонировать и изучить код
+4. Извлечь специфичные паттерны для Яндекс.Директ
+5. Адаптировать под наш Ads субагент
+
+**SEO субагент:**
+1. Deep research: "python seo tools", "serp api python"
+2. Найти специализированные SEO библиотеки
+3. Изучить их архитектуру
+4. Извлечь SEO-specific паттерны
+5. Адаптировать под наш SEO субагент
+
+**Content субагент:**
+1. Deep research: "content generation python", "ai content writer"
+2. Найти content generation решения
+3. Изучить их подход
+4. Извлечь content-specific паттерны
+5. Адаптировать под наш Content субагент
+
+**Правило:** Каждый субагент — это отдельное исследование, отдельные решения, отдельное обучение.
+
