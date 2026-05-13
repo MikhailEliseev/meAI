@@ -4506,3 +4506,634 @@ class Operator:
 - ✅ Transparency: user sees all endpoint health status
 
 ---
+
+### 1.4 Triggers & Workflow
+
+**КРИТИЧЕСКИ ВАЖНО:** Teacher Agent должен работать автономно по расписанию и событиям, не только по ручным командам.
+
+#### Автоматические Триггеры
+
+**1. Scheduled (Cron-like):**
+```python
+# Полный цикл обучения
+- Каждые 2 недели: Audit всех субагентов + Learning cycle для критических
+- Каждую неделю: GitHub market research (новые топовые репо)
+- Каждый день: Health check всех субагентов (метрики, статус)
+
+# Реализация через Event Bus
+await event_bus.schedule_recurring(
+    event_type="teacher.full_learning_cycle",
+    interval=timedelta(weeks=2),
+    priority=Priority.P2
+)
+```
+
+**2. Event-Driven:**
+```python
+# Новый субагент создан
+Event: "subagent.created"
+→ Teacher: Initial research + teaching
+
+# Субагент показывает плохие метрики
+Event: "subagent.metrics_degraded"
+→ Teacher: Check for better solutions on GitHub
+
+# GitHub webhook: новый релиз в отслеживаемом репо
+Event: "github.release_published"
+→ Teacher: Analyze changes, update if needed
+
+# Субагент "заболел" (код удалён/переименован)
+Event: "subagent.missing"
+→ Teacher: Handle via SystemAuditor
+```
+
+**3. Manual Triggers:**
+```bash
+# Полный цикл для всех субагентов
+python scripts/teacher_cli.py run-learning-cycle --strategy sequential
+
+# Аудит системы
+python scripts/teacher_cli.py audit-system
+
+# Обучение конкретного субагента
+python scripts/teacher_cli.py teach <subagent_name> --depth deep
+
+# Исследование рынка для категории
+python scripts/teacher_cli.py research-market --category seo
+```
+
+#### Complete Workflow
+
+```
+┌─────────────────────────────────────────┐
+│  TRIGGER (auto/manual)                  │
+│  - Scheduled (every 2 weeks)            │
+│  - Event (new subagent, bad metrics)    │
+│  - Manual (CLI command)                 │
+└─────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────┐
+│  1. SYSTEM AUDIT                        │
+│  SystemAuditor.audit_all_subagents()    │
+│  - Discover all subagents               │
+│  - Check health (healthy/degraded/...)  │
+│  - Check last taught date               │
+│  - Check performance metrics            │
+│  - Handle missing/deprecated            │
+└─────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────┐
+│  2. LEARNING PLAN                       │
+│  LearningScheduler.create_learning_plan()│
+│  - Prioritize (P1-P4)                   │
+│  - Choose strategy (sequential/parallel)│
+│  - Estimate time & cost                 │
+└─────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────┐
+│  3. MARKET RESEARCH (for each subagent) │
+│  ResearchOrchestrator.research_topic()  │
+│  - Deep research (Exa)                  │
+│  - GitHub search (API + Exa)            │
+│  - Rank repos                           │
+└─────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────┐
+│  4. TEACH (for each subagent)           │
+│  SkillExtractionOrchestrator.teach()    │
+│  - Clone → Analyze → Extract → Compare  │
+│  - Select → Teach → Validate            │
+└─────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────┐
+│  5. REPORT                              │
+│  - Update Obsidian vault                │
+│  - Send summary to Operator             │
+│  - Schedule next learning cycle         │
+└─────────────────────────────────────────┘
+```
+
+#### Frequency & Cost Estimates
+
+**Full Learning Cycle (all subagents):**
+- Frequency: Every 2 weeks
+- Duration: 2-4 hours (depends on # of subagents)
+- Cost: $5-15 (depends on research depth)
+
+**Single Subagent Teaching:**
+- Duration: 15-30 minutes
+- Cost: $1.50-3.00 (standard/deep research)
+
+**Daily Health Check:**
+- Duration: 5 minutes
+- Cost: $0 (no external APIs)
+
+
+### 2.1 System Auditor
+
+**Purpose:** Аудит всех субагентов системы, обнаружение "заболевших" и "отчисленных", приоритизация обучения.
+
+#### 2.1.1 Data Structures
+
+```python
+@dataclass
+class SubagentHealth:
+    name: str
+    status: str                    # "healthy" | "degraded" | "missing" | "deprecated"
+    last_taught: datetime | None
+    performance_metrics: dict[str, float]
+    needs_update: bool
+    priority: int                  # 1-5 (1 = critical, 5 = low)
+    reason: str                    # Why needs update or status
+
+@dataclass
+class SystemAuditReport:
+    audit_timestamp: datetime
+    total_subagents: int
+    healthy: int
+    degraded: int
+    missing: int
+    deprecated: int
+    needs_teaching: list[SubagentHealth]
+    priority_queue: list[SubagentHealth]  # Sorted by priority
+```
+
+#### 2.1.2 SystemAuditor Implementation
+
+```python
+class SystemAuditor:
+    """Аудит всей системы субагентов."""
+    
+    def __init__(self, event_bus: EventBus, obsidian: ObsidianVault):
+        self.event_bus = event_bus
+        self.obsidian = obsidian
+        self.registry_path = "AIM/src/aim/subagents/"
+        self.critical_subagents = [
+            "keyword_research",
+            "content_gap_analysis",
+            "competitor_analysis",
+            "technical_seo"
+        ]
+    
+    async def audit_all_subagents(self) -> SystemAuditReport:
+        """
+        Полный аудит всех субагентов системы.
+        
+        Workflow:
+        1. Discover all subagents (from registry + filesystem)
+        2. Check each subagent health
+        3. Classify by status
+        4. Prioritize for teaching
+        5. Handle missing/deprecated
+        """
+        
+        # 1. Discover all subagents
+        subagents = await self._discover_all_subagents()
+        
+        # 2. Check health for each
+        health_reports = []
+        for subagent in subagents:
+            health = await self._check_subagent_health(subagent)
+            health_reports.append(health)
+        
+        # 3. Classify by status
+        healthy = [h for h in health_reports if h.status == "healthy"]
+        degraded = [h for h in health_reports if h.status == "degraded"]
+        missing = [h for h in health_reports if h.status == "missing"]
+        deprecated = [h for h in health_reports if h.status == "deprecated"]
+        
+        # 4. Prioritize for teaching
+        needs_teaching = [h for h in health_reports if h.needs_update]
+        priority_queue = sorted(needs_teaching, key=lambda h: h.priority)
+        
+        # 5. Handle missing/deprecated
+        for subagent in missing:
+            await self._handle_missing_subagent(subagent)
+        
+        # 6. Create report
+        report = SystemAuditReport(
+            audit_timestamp=datetime.now(),
+            total_subagents=len(subagents),
+            healthy=len(healthy),
+            degraded=len(degraded),
+            missing=len(missing),
+            deprecated=len(deprecated),
+            needs_teaching=needs_teaching,
+            priority_queue=priority_queue
+        )
+        
+        # 7. Log to Obsidian
+        await self.obsidian.log(
+            f"System audit completed: {len(subagents)} total, {len(needs_teaching)} need teaching",
+            metadata=report.__dict__
+        )
+        
+        return report
+    
+    async def _discover_all_subagents(self) -> list[str]:
+        """
+        Discover all subagents from:
+        1. Registry (AIM/src/aim/subagents/)
+        2. Specs (docs/subagents-specs/)
+        3. Obsidian vaults (obsidian/*/wiki/agents/)
+        """
+        
+        subagents = set()
+        
+        # From filesystem
+        if os.path.exists(self.registry_path):
+            for item in os.listdir(self.registry_path):
+                if os.path.isdir(os.path.join(self.registry_path, item)):
+                    if not item.startswith("_"):
+                        subagents.add(item)
+        
+        # From specs
+        specs_path = "docs/subagents-specs/"
+        if os.path.exists(specs_path):
+            for spec_file in os.listdir(specs_path):
+                if spec_file.endswith("_SPEC.md"):
+                    name = spec_file.replace("_SPEC.md", "").lower()
+                    subagents.add(name)
+        
+        return sorted(list(subagents))
+    
+    async def _check_subagent_health(self, subagent_name: str) -> SubagentHealth:
+        """
+        Check health of a single subagent.
+        
+        Checks:
+        1. Code exists?
+        2. Last taught date (from Obsidian)
+        3. Performance metrics (from database)
+        4. Recent errors (from logs)
+        """
+        
+        # Check if code exists
+        code_path = os.path.join(self.registry_path, subagent_name)
+        code_exists = os.path.exists(code_path)
+        
+        if not code_exists:
+            return SubagentHealth(
+                name=subagent_name,
+                status="missing",
+                last_taught=None,
+                performance_metrics={},
+                needs_update=False,
+                priority=1 if subagent_name in self.critical_subagents else 3,
+                reason="Code directory not found"
+            )
+        
+        # Check last taught date
+        last_taught = await self._get_last_taught_date(subagent_name)
+        days_since_taught = (datetime.now() - last_taught).days if last_taught else 999
+        
+        # Check performance metrics
+        metrics = await self._get_performance_metrics(subagent_name)
+        
+        # Determine status
+        if days_since_taught > 60:
+            status = "degraded"
+            reason = f"Not taught for {days_since_taught} days"
+            needs_update = True
+            priority = 2
+        elif metrics.get("error_rate", 0) > 0.1:
+            status = "degraded"
+            reason = f"High error rate: {metrics['error_rate']:.1%}"
+            needs_update = True
+            priority = 1
+        elif days_since_taught > 28:
+            status = "healthy"
+            reason = "Due for routine update"
+            needs_update = True
+            priority = 3
+        else:
+            status = "healthy"
+            reason = "Recently taught, metrics good"
+            needs_update = False
+            priority = 5
+        
+        # Critical subagents get higher priority
+        if subagent_name in self.critical_subagents and needs_update:
+            priority = max(1, priority - 1)
+        
+        return SubagentHealth(
+            name=subagent_name,
+            status=status,
+            last_taught=last_taught,
+            performance_metrics=metrics,
+            needs_update=needs_update,
+            priority=priority,
+            reason=reason
+        )
+    
+    async def _handle_missing_subagent(self, subagent: SubagentHealth):
+        """
+        Handle subagent that is "missing" (code deleted/renamed).
+        
+        Actions:
+        1. Check git history - was it renamed?
+        2. If renamed → update registry
+        3. If deleted → mark as deprecated
+        4. If critical → alert user via Operator
+        """
+        
+        # Check git history
+        git_log = await self._check_git_history(subagent.name)
+        
+        if git_log.get("renamed_to"):
+            # Renamed → update registry
+            new_name = git_log["renamed_to"]
+            await self.obsidian.log(
+                f"Subagent renamed: {subagent.name} → {new_name}",
+                metadata={"old_name": subagent.name, "new_name": new_name}
+            )
+            
+        elif git_log.get("deleted"):
+            # Deleted → mark deprecated
+            await self.obsidian.log(
+                f"Subagent deleted: {subagent.name}",
+                metadata={"subagent": subagent.name, "deleted_at": git_log["deleted_at"]}
+            )
+            
+            # If critical → alert
+            if subagent.name in self.critical_subagents:
+                await self.event_bus.publish(Event(
+                    type="teacher.critical_subagent_missing",
+                    priority=Priority.P0,
+                    data={
+                        "subagent": subagent.name,
+                        "message": f"🚨 Critical subagent {subagent.name} was deleted!",
+                        "action_required": "Restore or replace immediately"
+                    }
+                ))
+    
+    async def _check_git_history(self, subagent_name: str) -> dict:
+        """Check git history for renames/deletions."""
+        
+        # Check for renames
+        result = subprocess.run(
+            ["git", "log", "--follow", "--diff-filter=R", "--", f"*{subagent_name}*"],
+            capture_output=True,
+            text=True
+        )
+        
+        if "renamed" in result.stdout.lower():
+            # Parse renamed_to from git log
+            # Simplified - real implementation would parse git output
+            return {"renamed_to": "new_name"}
+        
+        # Check for deletions
+        result = subprocess.run(
+            ["git", "log", "--diff-filter=D", "--", f"*{subagent_name}*"],
+            capture_output=True,
+            text=True
+        )
+        
+        if result.stdout:
+            return {"deleted": True, "deleted_at": datetime.now()}
+        
+        return {}
+    
+    async def _get_last_taught_date(self, subagent_name: str) -> datetime | None:
+        """Get last taught date from Obsidian vault."""
+        
+        # Read from obsidian/teacher/wiki/agents/subagents-profile.md
+        profile_path = "obsidian/teacher/wiki/agents/subagents-profile.md"
+        
+        if not os.path.exists(profile_path):
+            return None
+        
+        # Parse profile for last_taught date
+        # Simplified - real implementation would parse markdown
+        return datetime.now() - timedelta(days=30)  # Placeholder
+    
+    async def _get_performance_metrics(self, subagent_name: str) -> dict[str, float]:
+        """Get performance metrics from database."""
+        
+        # Query database for recent metrics
+        # Simplified - real implementation would query actual DB
+        return {
+            "success_rate": 0.95,
+            "error_rate": 0.05,
+            "avg_response_time": 1.2,
+            "requests_per_day": 100
+        }
+```
+
+#### 2.1.3 CLI Commands
+
+```bash
+# Full system audit
+python scripts/teacher_cli.py audit-system
+
+# Output:
+# ╔═══════════════════════════════════════════════════════════╗
+# ║  System Audit Report - 2026-05-13 17:15                  ║
+# ╚═══════════════════════════════════════════════════════════╝
+# 
+# Total subagents: 25
+# ✅ Healthy: 20
+# ⚠️  Degraded: 3
+#    - keyword_research (not taught for 45 days)
+#    - content_gap_analysis (high error rate: 12%)
+#    - ads_budget_optimizer (not taught for 35 days)
+# ❌ Missing: 1
+#    - old_analytics_agent (deleted)
+# 🗑️  Deprecated: 1
+#    - legacy_seo_agent
+# 
+# Priority Queue (needs teaching):
+# 1. [P1] content_gap_analysis (high error rate)
+# 2. [P2] keyword_research (not taught for 45 days)
+# 3. [P2] ads_budget_optimizer (not taught for 35 days)
+# 4. [P3] technical_seo (routine update)
+# 5. [P3] competitor_analyzer (routine update)
+
+# Check specific subagent
+python scripts/teacher_cli.py check-health <subagent_name>
+```
+
+---
+
+### 2.2 Learning Scheduler
+
+**Purpose:** Планирование и приоритизация обучения на основе аудита системы.
+
+#### 2.2.1 Data Structures
+
+```python
+@dataclass
+class LearningTask:
+    subagent_name: str
+    priority: Priority              # P1-P4
+    reason: str                     # Why needs teaching
+    research_depth: str             # "quick" | "standard" | "deep"
+    estimated_time: int             # Minutes
+    estimated_cost: float           # USD
+
+@dataclass
+class LearningPlan:
+    created_at: datetime
+    strategy: str                   # "sequential" | "parallel" | "batch"
+    total_subagents: int
+    total_estimated_time: int       # Minutes
+    total_estimated_cost: float     # USD
+    tasks: list[LearningTask]
+```
+
+#### 2.2.2 LearningScheduler Implementation
+
+```python
+class LearningScheduler:
+    """Планирование и приоритизация обучения."""
+    
+    def __init__(self, event_bus: EventBus, obsidian: ObsidianVault):
+        self.event_bus = event_bus
+        self.obsidian = obsidian
+    
+    async def create_learning_plan(
+        self,
+        audit_report: SystemAuditReport,
+        strategy: str = "sequential"
+    ) -> LearningPlan:
+        """
+        Create learning plan based on audit report.
+        
+        Priorities:
+        - P1 (CRITICAL): Degraded + critical for business
+        - P2 (HIGH): Not taught for >4 weeks
+        - P3 (MEDIUM): New top repos on GitHub
+        - P4 (LOW): Optional improvements
+        
+        Strategies:
+        - sequential: Teach one by one (safe, slow)
+        - parallel: Teach multiple in parallel (fast, risky)
+        - batch: Group by category (SEO, Content, Ads)
+        """
+        
+        tasks = []
+        
+        # P1: Critical degraded subagents
+        for subagent in audit_report.priority_queue:
+            if subagent.priority == 1:
+                tasks.append(LearningTask(
+                    subagent_name=subagent.name,
+                    priority=Priority.P1,
+                    reason=subagent.reason,
+                    research_depth="deep",
+                    estimated_time=60,
+                    estimated_cost=3.0
+                ))
+        
+        # P2: Not taught recently (>28 days)
+        for subagent in audit_report.priority_queue:
+            if subagent.priority == 2:
+                days_since = (datetime.now() - subagent.last_taught).days if subagent.last_taught else 999
+                tasks.append(LearningTask(
+                    subagent_name=subagent.name,
+                    priority=Priority.P2,
+                    reason=f"Not taught for {days_since} days",
+                    research_depth="standard",
+                    estimated_time=30,
+                    estimated_cost=1.5
+                ))
+        
+        # P3: Routine updates
+        for subagent in audit_report.priority_queue:
+            if subagent.priority == 3:
+                tasks.append(LearningTask(
+                    subagent_name=subagent.name,
+                    priority=Priority.P3,
+                    reason="Routine update",
+                    research_depth="quick",
+                    estimated_time=15,
+                    estimated_cost=0.5
+                ))
+        
+        # Calculate totals
+        total_time = sum(t.estimated_time for t in tasks)
+        total_cost = sum(t.estimated_cost for t in tasks)
+        
+        plan = LearningPlan(
+            created_at=datetime.now(),
+            strategy=strategy,
+            total_subagents=len(tasks),
+            total_estimated_time=total_time,
+            total_estimated_cost=total_cost,
+            tasks=tasks
+        )
+        
+        # Save plan to Obsidian
+        await self._save_plan(plan)
+        
+        return plan
+    
+    async def _save_plan(self, plan: LearningPlan):
+        """Save learning plan to Obsidian."""
+        
+        plan_md = f"""# Learning Plan - {plan.created_at.strftime('%Y-%m-%d')}
+
+**Strategy:** {plan.strategy}  
+**Total Subagents:** {plan.total_subagents}  
+**Estimated Time:** {plan.total_estimated_time} minutes  
+**Estimated Cost:** ${plan.total_estimated_cost:.2f}
+
+## Tasks
+
+"""
+        
+        for i, task in enumerate(plan.tasks, 1):
+            plan_md += f"""### {i}. {task.subagent_name} [{task.priority.name}]
+
+**Reason:** {task.reason}  
+**Research Depth:** {task.research_depth}  
+**Estimated Time:** {task.estimated_time} min  
+**Estimated Cost:** ${task.estimated_cost:.2f}
+
+---
+
+"""
+        
+        plan_file = f"obsidian/teacher/wiki/projects/learning-plans/{plan.created_at.strftime('%Y-%m-%d')}.md"
+        os.makedirs(os.path.dirname(plan_file), exist_ok=True)
+        
+        with open(plan_file, "w") as f:
+            f.write(plan_md)
+        
+        await self.obsidian.log(
+            f"Learning plan created: {plan.total_subagents} subagents, {plan.total_estimated_time} min, ${plan.total_estimated_cost:.2f}",
+            metadata=plan.__dict__
+        )
+```
+
+#### 2.2.3 CLI Commands
+
+```bash
+# Create learning plan from audit
+python scripts/teacher_cli.py create-learning-plan --strategy sequential
+
+# Output:
+# ╔═══════════════════════════════════════════════════════════╗
+# ║  Learning Plan Created - 2026-05-13 17:20                 ║
+# ╚═══════════════════════════════════════════════════════════╝
+# 
+# Strategy: sequential
+# Total subagents: 5
+# Estimated time: 3 hours 15 minutes
+# Estimated cost: $9.50
+# 
+# Tasks:
+# 1. [P1] content_gap_analysis (deep, 60 min, $3.00)
+# 2. [P2] keyword_research (standard, 30 min, $1.50)
+# 3. [P2] ads_budget_optimizer (standard, 30 min, $1.50)
+# 4. [P3] technical_seo (quick, 15 min, $0.50)
+# 5. [P3] competitor_analyzer (quick, 15 min, $0.50)
+# 
+# Plan saved to: obsidian/teacher/wiki/projects/learning-plans/2026-05-13.md
+# 
+# Execute plan? (y/n)
+
+# Execute existing plan
+python scripts/teacher_cli.py execute-plan obsidian/teacher/wiki/projects/learning-plans/2026-05-13.md
+```
+
