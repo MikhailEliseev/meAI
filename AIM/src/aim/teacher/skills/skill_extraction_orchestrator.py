@@ -29,7 +29,6 @@ from AIM.src.aim.teacher.skills.skill_extractor import (
 )
 from AIM.src.aim.teacher.skills.skill_selector import (
     SelectionCriteria,
-    SelectedSkill,
     SkillSelector,
 )
 from AIM.src.aim.teacher.skills.skill_teacher import (
