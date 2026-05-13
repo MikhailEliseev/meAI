@@ -19,8 +19,11 @@ Teacher Agent v2.0 — полностью автономная система н
 
 **В scope:**
 - Автономный анализ GitHub решений (архитектура, код, тесты)
+- **Извлечение отдельных навыков (skills) из решений** ⭐
+- **Сравнение каждого навыка индивидуально (GitHub vs наш)** ⭐
+- **Обучение системы конкретным паттернам (не копирование кода)** ⭐
 - Автоматическое принятие решений (Full/Partial/Custom/Reject)
-- Изолированное тестирование в sandbox (git worktree)
+- Изолированное тестирование в sandbox (git worktree + venv)
 - Автоматическая валидация (5 gates)
 - Автоматическое внедрение при успешной валидации
 - Автоматический rollback при проблемах
@@ -34,6 +37,7 @@ Teacher Agent v2.0 — полностью автономная система н
 - User review gates
 - Автоматическое внедрение без валидации
 - Поддержка языков кроме Python
+- Копирование кода без адаптации (только skill extraction + teaching)
 
 ### 1.3 Architecture Overview
 
@@ -58,6 +62,16 @@ Teacher Agent v2.0 — полностью автономная система н
         │   - DesignPatternDetector               │
         │   - TestCoverageAnalyzer                │
         │   → ArchitectureAnalysis (quality_score)│
+        └─────────────────────────────────────────┘
+                              │
+                              ▼
+        ┌─────────────────────────────────────────┐
+        │   2.3 Skill Extraction & Teaching ⭐    │
+        │   - SkillExtractor (find patterns)      │
+        │   - SkillComparator (GitHub vs ours)    │
+        │   - SkillSelector (choose best)         │
+        │   - SkillTeacher (adapt & integrate)    │
+        │   → Individual skill adoption           │
         └─────────────────────────────────────────┘
                               │
                               ▼
@@ -444,6 +458,770 @@ class ArchitectureAnalyzer:
             quality_score=quality_score,
             analysis_timestamp=datetime.now(),
             repo_url=repo_url
+        )
+```
+
+---
+
+## 2.3 Skill Extraction & Teaching Layer
+
+**КРИТИЧЕСКИ ВАЖНО:** Teacher Agent должен извлекать и обучать ОТДЕЛЬНЫМ НАВЫКАМ (skills), а не просто копировать целые решения.
+
+**Принцип:** Разбираем GitHub решения до молекул → Берём только лучшие навыки → Учим нашу систему конкретным паттернам.
+
+### 2.3.1 SkillExtractor
+
+**Purpose:** Извлечение конкретных навыков (skills) из GitHub решений.
+
+**Input:**
+```python
+repo_path: Path
+architecture_analysis: ArchitectureAnalysis
+```
+
+**Output:**
+```python
+@dataclass
+class ExtractedSkill:
+    name: str                           # "circuit_breaker", "retry_logic", "rate_limiting"
+    category: str                       # "resilience" | "performance" | "security" | "observability" | "error_handling"
+    implementation: str                 # Код реализации (функция/класс)
+    dependencies: list[str]             # Внешние зависимости (pybreaker, tenacity, etc.)
+    usage_examples: list[str]           # Примеры использования из репо
+    metrics: dict[str, float]           # Метрики (latency_ms, success_rate, etc.)
+    confidence: float                   # 0-1 (уверенность в качестве)
+    source_file: str                    # Путь к файлу в репо
+    source_lines: tuple[int, int]       # Диапазон строк (start, end)
+
+@dataclass
+class SkillExtractionResult:
+    skills: list[ExtractedSkill]        # Все найденные навыки
+    categories: dict[str, int]          # Категория -> количество
+    total_skills: int
+    extraction_timestamp: datetime
+```
+
+**Skill Categories:**
+
+1. **Resilience (устойчивость):**
+   - Circuit Breaker (защита от каскадных сбоев)
+   - Retry Logic (повторные попытки с backoff)
+   - Timeout Handling (таймауты для операций)
+   - Fallback Mechanisms (запасные варианты)
+   - Bulkhead Pattern (изоляция ресурсов)
+
+2. **Performance (производительность):**
+   - Caching (кеширование ответов)
+   - Connection Pooling (пул соединений)
+   - Lazy Loading (отложенная загрузка)
+   - Batch Processing (пакетная обработка)
+   - Async/Await Patterns (асинхронность)
+
+3. **Security (безопасность):**
+   - Input Validation (валидация входных данных)
+   - SQL Injection Prevention (защита от SQL injection)
+   - XSS Prevention (защита от XSS)
+   - Secret Management (управление секретами)
+   - Rate Limiting (ограничение запросов)
+
+4. **Observability (наблюдаемость):**
+   - Structured Logging (структурированные логи)
+   - Metrics Collection (сбор метрик)
+   - Distributed Tracing (трассировка)
+   - Health Checks (проверки здоровья)
+   - Error Tracking (отслеживание ошибок)
+
+5. **Error Handling (обработка ошибок):**
+   - Custom Exceptions (кастомные исключения)
+   - Error Recovery (восстановление после ошибок)
+   - Graceful Degradation (плавная деградация)
+   - Error Reporting (отчёты об ошибках)
+   - Dead Letter Queue (очередь неудачных задач)
+
+**Detection Heuristics:**
+
+```python
+# Circuit Breaker
+if "circuit" in code.lower() or "breaker" in code.lower():
+    if has_state_machine(code) and has_failure_threshold(code):
+        skill = "circuit_breaker"
+
+# Retry Logic
+if "retry" in code.lower() or "tenacity" in imports:
+    if has_exponential_backoff(code) or has_max_attempts(code):
+        skill = "retry_logic"
+
+# Rate Limiting
+if "rate" in code.lower() and "limit" in code.lower():
+    if has_token_bucket(code) or has_sliding_window(code):
+        skill = "rate_limiting"
+
+# Caching
+if "cache" in code.lower() or "redis" in imports or "memcached" in imports:
+    if has_ttl(code) or has_invalidation(code):
+        skill = "caching"
+
+# Structured Logging
+if "structlog" in imports or "loguru" in imports:
+    if has_context_binding(code) or has_json_output(code):
+        skill = "structured_logging"
+```
+
+**Algorithm:**
+1. Сканировать все Python файлы в репо
+2. Для каждого файла:
+   - Парсить AST (функции, классы, декораторы)
+   - Искать паттерны по heuristics
+   - Извлекать код реализации
+   - Найти примеры использования (в tests/ или examples/)
+   - Извлечь метрики (если есть в коде или документации)
+3. Группировать навыки по категориям
+4. Оценить confidence (0-1) на основе:
+   - Полнота реализации (0.3)
+   - Наличие тестов (0.3)
+   - Наличие документации (0.2)
+   - Наличие примеров (0.2)
+
+**Implementation:**
+```python
+class SkillExtractor:
+    def __init__(self):
+        self.heuristics = self._load_heuristics()
+    
+    async def extract_skills(
+        self,
+        repo_path: Path,
+        architecture_analysis: ArchitectureAnalysis
+    ) -> SkillExtractionResult:
+        skills = []
+        
+        # Scan all Python files
+        for file_path in repo_path.rglob("*.py"):
+            # Parse AST
+            tree = ast.parse(file_path.read_text())
+            
+            # Detect skills using heuristics
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                    detected_skills = self._detect_skills(node, file_path)
+                    skills.extend(detected_skills)
+        
+        # Group by category
+        categories = {}
+        for skill in skills:
+            categories[skill.category] = categories.get(skill.category, 0) + 1
+        
+        return SkillExtractionResult(
+            skills=skills,
+            categories=categories,
+            total_skills=len(skills),
+            extraction_timestamp=datetime.now()
+        )
+    
+    def _detect_skills(self, node: ast.AST, file_path: Path) -> list[ExtractedSkill]:
+        # Apply heuristics to detect skills
+        # Extract implementation code
+        # Find usage examples
+        # Calculate confidence
+        pass
+```
+
+### 2.3.2 SkillComparator
+
+**Purpose:** Сравнение каждого навыка индивидуально (GitHub vs наш).
+
+**Input:**
+```python
+github_skill: ExtractedSkill
+our_repo_path: Path
+our_architecture_analysis: ArchitectureAnalysis
+```
+
+**Output:**
+```python
+@dataclass
+class SkillComparison:
+    skill_name: str                     # "circuit_breaker"
+    category: str                       # "resilience"
+    github_score: float                 # 0-100
+    our_score: float                    # 0-100 (0 если нет у нас)
+    winner: str                         # "github" | "ours" | "tie" | "missing"
+    delta: float                        # github_score - our_score
+    reasoning: str                      # Почему один лучше другого
+    adoption_recommendation: str        # "adopt" | "keep_ours" | "hybrid" | "skip"
+    github_implementation: str          # Код из GitHub
+    our_implementation: str | None      # Код из нашей системы (если есть)
+```
+
+**Scoring Criteria (0-100 per skill):**
+
+1. **Implementation Quality (40 points):**
+   - Полнота реализации: 0-15
+   - Обработка edge cases: 0-10
+   - Код читаемый и понятный: 0-10
+   - Следует best practices: 0-5
+
+2. **Testing (25 points):**
+   - Unit тесты есть: +10
+   - Integration тесты есть: +10
+   - Test coverage > 80%: +5
+
+3. **Documentation (15 points):**
+   - Docstrings есть: +5
+   - Примеры использования: +5
+   - Inline комментарии для сложных мест: +5
+
+4. **Performance (10 points):**
+   - Метрики производительности указаны: +5
+   - Оптимизирован для production: +5
+
+5. **Maintainability (10 points):**
+   - Конфигурируемый (не hardcoded): +5
+   - Легко интегрируется: +5
+
+**Decision Rules:**
+
+```python
+# Adopt GitHub skill
+if github_score > our_score + 10:  # Минимум 10 points разница
+    return "adopt"
+
+# Keep our skill
+elif our_score > github_score + 10:
+    return "keep_ours"
+
+# Hybrid (взять лучшее из обоих)
+elif abs(github_score - our_score) <= 10 and both_have_unique_features:
+    return "hybrid"
+
+# Skip (оба плохие или не нужно)
+else:
+    return "skip"
+```
+
+**Algorithm:**
+1. Найти аналогичный навык в нашей системе (по имени и категории)
+2. Если не найден → our_score = 0, winner = "github", recommendation = "adopt"
+3. Если найден:
+   - Оценить GitHub implementation (0-100)
+   - Оценить our implementation (0-100)
+   - Сравнить scores
+   - Определить winner
+   - Сгенерировать reasoning
+   - Дать recommendation
+
+**Implementation:**
+```python
+class SkillComparator:
+    async def compare_skill(
+        self,
+        github_skill: ExtractedSkill,
+        our_repo_path: Path,
+        our_architecture_analysis: ArchitectureAnalysis
+    ) -> SkillComparison:
+        # Find our implementation of same skill
+        our_skill = await self._find_our_skill(
+            github_skill.name,
+            github_skill.category,
+            our_repo_path
+        )
+        
+        # Score GitHub implementation
+        github_score = self._score_implementation(github_skill)
+        
+        # Score our implementation (0 if not found)
+        our_score = 0
+        our_implementation = None
+        if our_skill:
+            our_score = self._score_implementation(our_skill)
+            our_implementation = our_skill.implementation
+        
+        # Determine winner
+        if our_score == 0:
+            winner = "missing"
+            recommendation = "adopt"
+        elif github_score > our_score + 10:
+            winner = "github"
+            recommendation = "adopt"
+        elif our_score > github_score + 10:
+            winner = "ours"
+            recommendation = "keep_ours"
+        elif abs(github_score - our_score) <= 10:
+            winner = "tie"
+            recommendation = "hybrid"
+        else:
+            winner = "tie"
+            recommendation = "skip"
+        
+        # Generate reasoning
+        reasoning = self._generate_reasoning(
+            github_skill, our_skill, github_score, our_score
+        )
+        
+        return SkillComparison(
+            skill_name=github_skill.name,
+            category=github_skill.category,
+            github_score=github_score,
+            our_score=our_score,
+            winner=winner,
+            delta=github_score - our_score,
+            reasoning=reasoning,
+            adoption_recommendation=recommendation,
+            github_implementation=github_skill.implementation,
+            our_implementation=our_implementation
+        )
+```
+
+### 2.3.3 SkillSelector
+
+**Purpose:** Выбор только лучших навыков для внедрения.
+
+**Input:**
+```python
+skill_comparisons: list[SkillComparison]
+adoption_strategy: str  # "aggressive" | "conservative" | "balanced"
+```
+
+**Output:**
+```python
+@dataclass
+class SkillSelectionResult:
+    skills_to_adopt: list[SkillComparison]      # Навыки для внедрения
+    skills_to_keep: list[SkillComparison]       # Наши навыки лучше
+    skills_to_hybrid: list[SkillComparison]     # Гибридный подход
+    skills_to_skip: list[SkillComparison]       # Пропустить
+    total_improvement: float                     # Ожидаемое улучшение (%)
+    selection_rationale: str                     # Обоснование выбора
+```
+
+**Selection Strategies:**
+
+1. **Aggressive (берём всё, что лучше):**
+   - Adopt if github_score > our_score + 5
+   - Риск: может сломать существующую систему
+   - Польза: максимальное улучшение
+
+2. **Conservative (берём только явно лучшее):**
+   - Adopt if github_score > our_score + 20
+   - Риск: минимальный
+   - Польза: только проверенные улучшения
+
+3. **Balanced (золотая середина):**
+   - Adopt if github_score > our_score + 10
+   - Риск: умеренный
+   - Польза: значимые улучшения
+
+**Algorithm:**
+1. Фильтровать comparisons по adoption_strategy
+2. Группировать по recommendation (adopt, keep_ours, hybrid, skip)
+3. Рассчитать total_improvement:
+   ```python
+   total_improvement = sum(
+       (comp.github_score - comp.our_score) / comp.our_score * 100
+       for comp in skills_to_adopt
+       if comp.our_score > 0
+   ) / len(skills_to_adopt)
+   ```
+4. Сгенерировать selection_rationale
+
+**Implementation:**
+```python
+class SkillSelector:
+    def select_skills(
+        self,
+        skill_comparisons: list[SkillComparison],
+        adoption_strategy: str = "balanced"
+    ) -> SkillSelectionResult:
+        # Define threshold based on strategy
+        threshold = {
+            "aggressive": 5,
+            "conservative": 20,
+            "balanced": 10
+        }[adoption_strategy]
+        
+        # Filter by recommendation and threshold
+        skills_to_adopt = [
+            comp for comp in skill_comparisons
+            if comp.adoption_recommendation == "adopt"
+            and comp.delta >= threshold
+        ]
+        
+        skills_to_keep = [
+            comp for comp in skill_comparisons
+            if comp.adoption_recommendation == "keep_ours"
+        ]
+        
+        skills_to_hybrid = [
+            comp for comp in skill_comparisons
+            if comp.adoption_recommendation == "hybrid"
+        ]
+        
+        skills_to_skip = [
+            comp for comp in skill_comparisons
+            if comp.adoption_recommendation == "skip"
+        ]
+        
+        # Calculate total improvement
+        total_improvement = self._calculate_improvement(skills_to_adopt)
+        
+        # Generate rationale
+        selection_rationale = self._generate_rationale(
+            skills_to_adopt, skills_to_keep, skills_to_hybrid, skills_to_skip,
+            adoption_strategy, threshold
+        )
+        
+        return SkillSelectionResult(
+            skills_to_adopt=skills_to_adopt,
+            skills_to_keep=skills_to_keep,
+            skills_to_hybrid=skills_to_hybrid,
+            skills_to_skip=skills_to_skip,
+            total_improvement=total_improvement,
+            selection_rationale=selection_rationale
+        )
+```
+
+### 2.3.4 SkillTeacher
+
+**Purpose:** Обучение нашей системы конкретным навыкам (не копирование кода, а адаптация паттернов).
+
+**Input:**
+```python
+skill_to_adopt: SkillComparison
+target_subagent: str                    # Имя субагента для обучения
+sandbox: SandboxEnvironment
+```
+
+**Output:**
+```python
+@dataclass
+class TeachingResult:
+    skill_name: str
+    target_subagent: str
+    taught_successfully: bool
+    integration_points: list[str]       # Где интегрирован навык
+    before_metrics: dict[str, float]    # Метрики до обучения
+    after_metrics: dict[str, float]     # Метрики после обучения
+    improvement: float                  # % улучшения
+    code_changes: list[str]             # Список изменённых файлов
+    tests_added: list[str]              # Список добавленных тестов
+    teaching_notes: str                 # Заметки о процессе обучения
+```
+
+**Teaching Process:**
+
+1. **Analyze Integration Points:**
+   - Где в нашем коде нужен этот навык?
+   - Какие файлы/классы/функции затронуты?
+   - Какие зависимости нужно добавить?
+
+2. **Adapt Pattern (не копировать код!):**
+   - Понять ПРИНЦИП работы навыка
+   - Адаптировать под нашу архитектуру
+   - Сохранить наш стиль кода
+   - Добавить наши конвенции (Event Bus, Obsidian, etc.)
+
+3. **Integrate:**
+   - Создать/обновить файлы в sandbox
+   - Добавить зависимости в requirements.txt
+   - Обновить импорты
+   - Добавить конфигурацию
+
+4. **Test:**
+   - Написать unit тесты для навыка
+   - Написать integration тесты
+   - Запустить все тесты
+   - Измерить метрики (до/после)
+
+5. **Document:**
+   - Добавить docstrings
+   - Обновить документацию субагента
+   - Добавить примеры использования
+   - Записать teaching notes
+
+**Example: Teaching Circuit Breaker**
+
+```python
+# GitHub implementation (python-seo-analyzer)
+class CircuitBreaker:
+    def __init__(self, fail_max=5, reset_timeout=60):
+        self.fail_count = 0
+        self.fail_max = fail_max
+        self.reset_timeout = reset_timeout
+        self.state = "closed"
+    
+    def call(self, func):
+        if self.state == "open":
+            if time.time() - self.last_fail > self.reset_timeout:
+                self.state = "half_open"
+            else:
+                raise CircuitBreakerError("Circuit is open")
+        
+        try:
+            result = func()
+            if self.state == "half_open":
+                self.state = "closed"
+                self.fail_count = 0
+            return result
+        except Exception as e:
+            self.fail_count += 1
+            if self.fail_count >= self.fail_max:
+                self.state = "open"
+                self.last_fail = time.time()
+            raise
+
+# Our adapted implementation (AIM/src/aim/subagents/api_clients/base.py)
+from pybreaker import CircuitBreaker
+from aim.events.event_bus import EventBus
+
+class BaseClient:
+    def __init__(self, event_bus: EventBus):
+        self.event_bus = event_bus
+        # Adapted: use pybreaker library (production-ready)
+        self.circuit_breaker = CircuitBreaker(
+            fail_max=5,
+            reset_timeout=60,
+            listeners=[self._on_circuit_open, self._on_circuit_close]
+        )
+    
+    async def _fetch(self, url: str):
+        # Adapted: integrated with Event Bus
+        try:
+            result = self.circuit_breaker.call(
+                lambda: httpx.get(url)
+            )
+            await self.event_bus.publish(
+                "api.request.success",
+                {"url": url, "status": "ok"}
+            )
+            return result
+        except CircuitBreakerError:
+            await self.event_bus.publish(
+                "api.circuit.open",
+                {"url": url, "reason": "too_many_failures"}
+            )
+            raise
+    
+    def _on_circuit_open(self):
+        # Adapted: log to Obsidian
+        self.obsidian.log("Circuit breaker opened - too many failures")
+    
+    def _on_circuit_close(self):
+        # Adapted: log to Obsidian
+        self.obsidian.log("Circuit breaker closed - service recovered")
+```
+
+**Algorithm:**
+1. Analyze GitHub implementation (понять принцип)
+2. Find integration points в нашем коде
+3. Adapt pattern:
+   - Использовать production-ready библиотеки (pybreaker вместо custom)
+   - Интегрировать с Event Bus (публиковать события)
+   - Интегрировать с Obsidian (логировать состояния)
+   - Сохранить наш стиль (async/await, type hints, docstrings)
+4. Write tests:
+   - Unit тесты для circuit breaker
+   - Integration тесты с Event Bus
+   - Тесты для edge cases (half_open state, reset_timeout)
+5. Measure improvement:
+   - Before: no circuit breaker, cascading failures
+   - After: circuit breaker, graceful degradation
+   - Improvement: 95% reduction in cascading failures
+
+**Implementation:**
+```python
+class SkillTeacher:
+    def __init__(self, event_bus: EventBus, obsidian: ObsidianVault):
+        self.event_bus = event_bus
+        self.obsidian = obsidian
+    
+    async def teach_skill(
+        self,
+        skill_to_adopt: SkillComparison,
+        target_subagent: str,
+        sandbox: SandboxEnvironment
+    ) -> TeachingResult:
+        # 1. Analyze integration points
+        integration_points = await self._analyze_integration_points(
+            skill_to_adopt, target_subagent
+        )
+        
+        # 2. Measure before metrics
+        before_metrics = await self._measure_metrics(target_subagent)
+        
+        # 3. Adapt pattern (NOT copy code!)
+        adapted_code = await self._adapt_pattern(
+            skill_to_adopt.github_implementation,
+            target_subagent,
+            integration_points
+        )
+        
+        # 4. Integrate into sandbox
+        code_changes = await self._integrate_code(
+            adapted_code, target_subagent, sandbox
+        )
+        
+        # 5. Write tests
+        tests_added = await self._write_tests(
+            skill_to_adopt, target_subagent, sandbox
+        )
+        
+        # 6. Run tests
+        test_results = await self._run_tests(sandbox)
+        
+        # 7. Measure after metrics
+        after_metrics = await self._measure_metrics(target_subagent)
+        
+        # 8. Calculate improvement
+        improvement = self._calculate_improvement(
+            before_metrics, after_metrics
+        )
+        
+        # 9. Document
+        teaching_notes = await self._document_teaching(
+            skill_to_adopt, integration_points, improvement
+        )
+        
+        return TeachingResult(
+            skill_name=skill_to_adopt.skill_name,
+            target_subagent=target_subagent,
+            taught_successfully=test_results.all_passed,
+            integration_points=integration_points,
+            before_metrics=before_metrics,
+            after_metrics=after_metrics,
+            improvement=improvement,
+            code_changes=code_changes,
+            tests_added=tests_added,
+            teaching_notes=teaching_notes
+        )
+    
+    async def _adapt_pattern(
+        self,
+        github_implementation: str,
+        target_subagent: str,
+        integration_points: list[str]
+    ) -> str:
+        # NOT copying code - adapting pattern!
+        # 1. Understand the principle
+        # 2. Use production-ready libraries
+        # 3. Integrate with our architecture (Event Bus, Obsidian)
+        # 4. Follow our conventions (async/await, type hints, docstrings)
+        # 5. Add our error handling
+        pass
+```
+
+### 2.3.5 SkillExtractionOrchestrator
+
+**Purpose:** Оркестрация всего процесса извлечения и обучения навыкам.
+
+**Input:**
+```python
+github_repo_url: str
+target_subagent: str
+adoption_strategy: str  # "aggressive" | "conservative" | "balanced"
+```
+
+**Output:**
+```python
+@dataclass
+class SkillExtractionReport:
+    github_repo_url: str
+    target_subagent: str
+    extraction_result: SkillExtractionResult
+    comparisons: list[SkillComparison]
+    selection_result: SkillSelectionResult
+    teaching_results: list[TeachingResult]
+    overall_improvement: float          # % улучшения субагента
+    skills_adopted: int
+    skills_kept: int
+    skills_skipped: int
+    total_time: float                   # Время выполнения (секунды)
+    report_timestamp: datetime
+```
+
+**Workflow:**
+1. Clone GitHub repo
+2. Extract skills (SkillExtractor)
+3. Compare each skill (SkillComparator)
+4. Select best skills (SkillSelector)
+5. Teach selected skills (SkillTeacher)
+6. Aggregate results
+7. Return report
+
+**Implementation:**
+```python
+class SkillExtractionOrchestrator:
+    def __init__(self):
+        self.extractor = SkillExtractor()
+        self.comparator = SkillComparator()
+        self.selector = SkillSelector()
+        self.teacher = SkillTeacher()
+    
+    async def extract_and_teach(
+        self,
+        github_repo_url: str,
+        target_subagent: str,
+        adoption_strategy: str = "balanced"
+    ) -> SkillExtractionReport:
+        start_time = time.time()
+        
+        # 1. Clone repo
+        repo_path = await self._clone_repo(github_repo_url)
+        
+        # 2. Analyze architecture
+        architecture_analysis = await self._analyze_architecture(repo_path)
+        
+        # 3. Extract skills
+        extraction_result = await self.extractor.extract_skills(
+            repo_path, architecture_analysis
+        )
+        
+        # 4. Compare each skill
+        our_repo_path = Path(f"AIM/src/aim/subagents/{target_subagent}")
+        our_analysis = await self._analyze_architecture(our_repo_path)
+        
+        comparisons = []
+        for skill in extraction_result.skills:
+            comparison = await self.comparator.compare_skill(
+                skill, our_repo_path, our_analysis
+            )
+            comparisons.append(comparison)
+        
+        # 5. Select best skills
+        selection_result = self.selector.select_skills(
+            comparisons, adoption_strategy
+        )
+        
+        # 6. Create sandbox
+        sandbox = await self._create_sandbox(target_subagent)
+        
+        # 7. Teach selected skills
+        teaching_results = []
+        for skill_comp in selection_result.skills_to_adopt:
+            teaching_result = await self.teacher.teach_skill(
+                skill_comp, target_subagent, sandbox
+            )
+            teaching_results.append(teaching_result)
+        
+        # 8. Calculate overall improvement
+        overall_improvement = sum(
+            tr.improvement for tr in teaching_results
+        ) / len(teaching_results) if teaching_results else 0
+        
+        total_time = time.time() - start_time
+        
+        return SkillExtractionReport(
+            github_repo_url=github_repo_url,
+            target_subagent=target_subagent,
+            extraction_result=extraction_result,
+            comparisons=comparisons,
+            selection_result=selection_result,
+            teaching_results=teaching_results,
+            overall_improvement=overall_improvement,
+            skills_adopted=len(selection_result.skills_to_adopt),
+            skills_kept=len(selection_result.skills_to_keep),
+            skills_skipped=len(selection_result.skills_to_skip),
+            total_time=total_time,
+            report_timestamp=datetime.now()
         )
 ```
 
@@ -2222,6 +3000,18 @@ python scripts/teacher_cli.py search <subagent_name> --query "circuit breaker py
 # Сравнение решений
 python scripts/teacher_cli.py compare <subagent_name> --repo <github_url>
 
+# ⭐ Extract skills from GitHub repo
+python scripts/teacher_cli.py extract-skills --repo <github_url>
+
+# ⭐ Compare specific skill (GitHub vs ours)
+python scripts/teacher_cli.py compare-skill <subagent_name> --skill <skill_name> --repo <github_url>
+
+# ⭐ Teach specific skill to subagent
+python scripts/teacher_cli.py teach-skill <subagent_name> --skill <skill_name> --repo <github_url>
+
+# ⭐ Extract and teach all skills (full skill adoption workflow)
+python scripts/teacher_cli.py extract-and-teach <subagent_name> --repo <github_url> --strategy <aggressive|balanced|conservative>
+
 # Autonomous adoption (если decision Full/Partial)
 python scripts/teacher_cli.py adopt <subagent_name> --repo <github_url>
 
@@ -2267,6 +3057,111 @@ async def compare(subagent_name: str, repo: str):
     result = await teacher.compare_solution(subagent_name, repo)
     click.echo(f"Decision: {result.decision.decision}")
     click.echo(f"Rationale: {result.decision.rationale}")
+
+@cli.command()
+@click.option('--repo', required=True)
+async def extract_skills(repo: str):
+    """Extract skills from GitHub repo."""
+    teacher = TeacherAgent(event_bus, obsidian)
+    result = await teacher.skill_orchestrator.extract_skills(repo)
+    
+    click.echo(f"✅ Extracted {result.total_skills} skills")
+    click.echo("\nBy category:")
+    for category, count in result.categories.items():
+        click.echo(f"  {category}: {count}")
+    
+    click.echo("\nTop skills:")
+    for skill in sorted(result.skills, key=lambda s: s.confidence, reverse=True)[:10]:
+        click.echo(f"  - {skill.name} ({skill.category}): confidence {skill.confidence:.2f}")
+
+@cli.command()
+@click.argument('subagent_name')
+@click.option('--skill', required=True)
+@click.option('--repo', required=True)
+async def compare_skill(subagent_name: str, skill: str, repo: str):
+    """Compare specific skill (GitHub vs ours)."""
+    teacher = TeacherAgent(event_bus, obsidian)
+    
+    # Extract skills from GitHub
+    extraction = await teacher.skill_orchestrator.extract_skills(repo)
+    github_skill = next((s for s in extraction.skills if s.name == skill), None)
+    
+    if not github_skill:
+        click.echo(f"❌ Skill '{skill}' not found in {repo}")
+        return
+    
+    # Compare
+    comparison = await teacher.skill_orchestrator.comparator.compare_skill(
+        github_skill, subagent_name
+    )
+    
+    click.echo(f"Skill: {comparison.skill_name}")
+    click.echo(f"GitHub Score: {comparison.github_score}/100")
+    click.echo(f"Our Score: {comparison.our_score}/100")
+    click.echo(f"Winner: {comparison.winner}")
+    click.echo(f"Recommendation: {comparison.adoption_recommendation}")
+    click.echo(f"\nReasoning: {comparison.reasoning}")
+
+@cli.command()
+@click.argument('subagent_name')
+@click.option('--skill', required=True)
+@click.option('--repo', required=True)
+async def teach_skill(subagent_name: str, skill: str, repo: str):
+    """Teach specific skill to subagent."""
+    teacher = TeacherAgent(event_bus, obsidian)
+    
+    # Extract and compare skill
+    extraction = await teacher.skill_orchestrator.extract_skills(repo)
+    github_skill = next((s for s in extraction.skills if s.name == skill), None)
+    
+    if not github_skill:
+        click.echo(f"❌ Skill '{skill}' not found")
+        return
+    
+    comparison = await teacher.skill_orchestrator.comparator.compare_skill(
+        github_skill, subagent_name
+    )
+    
+    # Create sandbox
+    sandbox = await teacher.sandbox_manager.create_sandbox(subagent_name)
+    
+    # Teach skill
+    result = await teacher.skill_orchestrator.teacher.teach_skill(
+        comparison, subagent_name, sandbox
+    )
+    
+    if result.taught_successfully:
+        click.echo(f"✅ Skill '{skill}' taught successfully!")
+        click.echo(f"Improvement: {result.improvement:.1f}%")
+        click.echo(f"Files changed: {len(result.code_changes)}")
+        click.echo(f"Tests added: {len(result.tests_added)}")
+    else:
+        click.echo(f"❌ Failed to teach skill '{skill}'")
+
+@cli.command()
+@click.argument('subagent_name')
+@click.option('--repo', required=True)
+@click.option('--strategy', default='balanced', type=click.Choice(['aggressive', 'balanced', 'conservative']))
+async def extract_and_teach(subagent_name: str, repo: str, strategy: str):
+    """Extract and teach all skills (full workflow)."""
+    teacher = TeacherAgent(event_bus, obsidian)
+    
+    click.echo(f"🔍 Extracting skills from {repo}...")
+    report = await teacher.skill_orchestrator.extract_and_teach(
+        repo, subagent_name, strategy
+    )
+    
+    click.echo(f"\n✅ Skill extraction complete!")
+    click.echo(f"Total skills extracted: {report.extraction_result.total_skills}")
+    click.echo(f"Skills adopted: {report.skills_adopted}")
+    click.echo(f"Skills kept (ours better): {report.skills_kept}")
+    click.echo(f"Skills skipped: {report.skills_skipped}")
+    click.echo(f"Overall improvement: {report.overall_improvement:.1f}%")
+    click.echo(f"Time: {report.total_time:.1f}s")
+    
+    click.echo("\n📊 Teaching results:")
+    for result in report.teaching_results:
+        click.echo(f"  - {result.skill_name}: {result.improvement:.1f}% improvement")
 
 @cli.command()
 @click.argument('subagent_name')
@@ -2435,6 +3330,32 @@ class ValidationGateSettings:
 - Target: 90%+ (Teacher learns from failures)
 - Measurement: (corrected_decisions / total_failed_decisions) * 100
 
+### 8.5 Skill Extraction Metrics ⭐
+
+**Skills Extracted Per Repo:**
+- Target: 10-20 skills per GitHub repo
+- Measurement: Average skills extracted across all analyzed repos
+
+**Skill Adoption Rate:**
+- Target: 30-50% of extracted skills adopted
+- Measurement: (skills_adopted / skills_extracted) * 100
+
+**Skill Categories Coverage:**
+- Target: All 5 categories represented (Resilience, Performance, Security, Observability, Error Handling)
+- Measurement: Track distribution across categories
+
+**Skill-Level Improvement:**
+- Target: 15-25% average improvement per skill
+- Measurement: Average (github_skill_score - our_skill_score) for adopted skills
+
+**Teaching Success Rate:**
+- Target: 95%+ skills taught successfully
+- Measurement: (skills_taught_successfully / skills_attempted) * 100
+
+**Integration Quality:**
+- Target: 90%+ skills integrate without breaking existing code
+- Measurement: (skills_integrated_cleanly / skills_taught) * 100
+
 ---
 
 ## 9. Implementation Timeline
@@ -2450,6 +3371,19 @@ class ValidationGateSettings:
 6. Write unit tests (15+ tests)
 
 **Deliverable:** ArchitectureAnalysis with quality_score
+
+### Phase 1.5: Skill Extraction & Teaching Layer ⭐ (4-5 hours)
+
+**Tasks:**
+1. Implement SkillExtractor (pattern detection heuristics)
+2. Implement SkillComparator (GitHub vs ours scoring)
+3. Implement SkillSelector (selection strategies)
+4. Implement SkillTeacher (pattern adaptation & integration)
+5. Implement SkillExtractionOrchestrator
+6. Write unit tests (20+ tests)
+7. Write integration tests (skill extraction → comparison → teaching)
+
+**Deliverable:** SkillExtractionReport with teaching results
 
 ### Phase 2: Solution Comparison (2-3 hours)
 
