@@ -61,7 +61,7 @@ async def train_subagent(subagent_name: str, domain: str):
             clone_path.parent.mkdir(parents=True, exist_ok=True)
 
             await selector.clone_repo(repo.url, clone_path)
-            skills = await selector.extract_skills(clone_path)
+            skills = await selector.extract_skills(clone_path, subagent_type=subagent_name)
 
             for skill in skills:
                 skill.source_repo = repo.url
