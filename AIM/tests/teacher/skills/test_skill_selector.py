@@ -378,3 +378,213 @@ class TestDomainSpecificResearch:
 
         # Should include Yandex Metrika query
         assert any("yandex" in q.lower() and "metrika" in q.lower() for q in analytics_queries)
+
+
+class TestDomainSpecificPatternExtraction:
+    """Test domain-specific pattern extraction (CRITICAL FIX 2026-05-13)."""
+
+    @pytest.mark.asyncio
+    async def test_domain_pattern_signatures_exist(self, selector):
+        """Should have domain pattern signatures for all subagent types."""
+        expected_types = ["ads", "seo", "analytics", "content", "gap_detection", "prioritization", "social"]
+
+        for subagent_type in expected_types:
+            assert subagent_type in selector.domain_pattern_signatures, \
+                f"Missing domain patterns for {subagent_type}"
+            assert len(selector.domain_pattern_signatures[subagent_type]) > 0, \
+                f"Empty domain patterns for {subagent_type}"
+
+    @pytest.mark.asyncio
+    async def test_ads_mcp_server_pattern_detection(self, selector, tmp_path):
+        """Should detect MCP server pattern for Ads subagent."""
+        repo = tmp_path / "ads_repo"
+        repo.mkdir()
+
+        (repo / "server.py").write_text("""
+from mcp.server.Server import Server
+import mcp.server.stdio as stdio
+
+server = Server("yandex-ads")
+
+@server.tool()
+async def get_campaigns():
+    pass
+""")
+
+        skills = await selector.extract_skills(repo, subagent_type="ads")
+
+        mcp_skills = [s for s in skills if "mcp" in s.name.lower()]
+        assert len(mcp_skills) > 0, "Should detect MCP server pattern"
+
+    @pytest.mark.asyncio
+    async def test_seo_dataframe_first_pattern_detection(self, selector, tmp_path):
+        """Should detect DataFrame-first pattern for SEO subagent."""
+        repo = tmp_path / "seo_repo"
+        repo.mkdir()
+
+        (repo / "crawler.py").write_text("""
+import pandas as pd
+
+def crawl_website(url: str) -> pd.DataFrame:
+    data = {"url": [url], "title": ["Example"]}
+    df = pd.DataFrame(data)
+    return df
+""")
+
+        skills = await selector.extract_skills(repo, subagent_type="seo")
+
+        df_skills = [s for s in skills if "dataframe" in s.name.lower()]
+        assert len(df_skills) > 0, "Should detect DataFrame-first pattern"
+
+    @pytest.mark.asyncio
+    async def test_analytics_event_driven_pattern_detection(self, selector, tmp_path):
+        """Should detect event-driven pattern for Analytics subagent."""
+        repo = tmp_path / "analytics_repo"
+        repo.mkdir()
+
+        (repo / "events.py").write_text("""
+class EventBus:
+    def emit(self, event_name, data):
+        pass
+
+    def on(self, event_name, handler):
+        pass
+
+event_bus = EventBus()
+event_bus.emit("user_action", {"action": "click"})
+""")
+
+        skills = await selector.extract_skills(repo, subagent_type="analytics")
+
+        event_skills = [s for s in skills if "event" in s.name.lower()]
+        assert len(event_skills) > 0, "Should detect event-driven pattern"
+
+    @pytest.mark.asyncio
+    async def test_content_llm_api_pattern_detection(self, selector, tmp_path):
+        """Should detect LLM API pattern for Content subagent."""
+        repo = tmp_path / "content_repo"
+        repo.mkdir()
+
+        (repo / "generator.py").write_text("""
+import openai
+
+async def generate_content(prompt: str):
+    response = await openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response
+""")
+
+        skills = await selector.extract_skills(repo, subagent_type="content")
+
+        llm_skills = [s for s in skills if "llm" in s.name.lower()]
+        assert len(llm_skills) > 0, "Should detect LLM API pattern"
+
+    @pytest.mark.asyncio
+    async def test_social_telegram_bot_pattern_detection(self, selector, tmp_path):
+        """Should detect Telegram bot pattern for Social subagent."""
+        repo = tmp_path / "social_repo"
+        repo.mkdir()
+
+        (repo / "bot.py").write_text("""
+from telegram import Bot, Update
+from telegram.ext import Updater, CommandHandler
+
+def start_command(update: Update, context):
+    update.message.reply_text("Hello!")
+
+updater = Updater(token="TOKEN")
+updater.dispatcher.add_handler(CommandHandler("start", start_command))
+""")
+
+        skills = await selector.extract_skills(repo, subagent_type="social")
+
+        telegram_skills = [s for s in skills if "telegram" in s.name.lower()]
+        assert len(telegram_skills) > 0, "Should detect Telegram bot pattern"
+
+    @pytest.mark.asyncio
+    async def test_generic_and_domain_patterns_together(self, selector, tmp_path):
+        """Should detect both generic and domain-specific patterns."""
+        repo = tmp_path / "mixed_repo"
+        repo.mkdir()
+
+        (repo / "client.py").write_text("""
+from pybreaker import CircuitBreaker
+from mcp.server.Server import Server
+
+breaker = CircuitBreaker(fail_max=5, reset_timeout=60)
+server = Server("test")
+""")
+
+        skills = await selector.extract_skills(repo, subagent_type="ads")
+
+        # Should detect both generic and domain-specific patterns
+        generic_skills = [s for s in skills if "circuit breaker" in s.name.lower()]
+        domain_skills = [s for s in skills if "mcp" in s.name.lower()]
+
+        assert len(generic_skills) > 0, "Should detect generic patterns"
+        assert len(domain_skills) > 0, "Should detect domain-specific patterns"
+
+    @pytest.mark.asyncio
+    async def test_no_subagent_type_only_generic_patterns(self, selector, tmp_path):
+        """Should only detect generic patterns without subagent_type."""
+        repo = tmp_path / "generic_repo"
+        repo.mkdir()
+
+        (repo / "mixed.py").write_text("""
+from pybreaker import CircuitBreaker
+from mcp.server.Server import Server
+
+breaker = CircuitBreaker(fail_max=5)
+server = Server("test")
+""")
+
+        skills = await selector.extract_skills(repo, subagent_type=None)
+
+        # Should only detect generic patterns
+        generic_skills = [s for s in skills if "circuit breaker" in s.name.lower()]
+        domain_skills = [s for s in skills if "mcp" in s.name.lower()]
+
+        assert len(generic_skills) > 0, "Should detect generic patterns"
+        assert len(domain_skills) == 0, "Should NOT detect domain-specific patterns without subagent_type"
+
+    @pytest.mark.asyncio
+    async def test_pattern_description_generation(self, selector):
+        """Should generate descriptions for domain patterns."""
+        desc = selector._get_domain_pattern_description("ads", "mcp_server")
+        assert "MCP server" in desc
+        assert len(desc) > 10
+
+        desc = selector._get_domain_pattern_description("seo", "dataframe_first")
+        assert "DataFrame" in desc
+
+        desc = selector._get_domain_pattern_description("unknown", "unknown")
+        assert "Domain-specific pattern" in desc
+
+    @pytest.mark.asyncio
+    async def test_has_pattern_from_signatures(self, selector):
+        """Should match patterns from signatures."""
+        code = "from mcp.server.Server import Server"
+        signatures = ["mcp.server.Server", "stdio", "@server.tool"]
+
+        assert selector._has_pattern_from_signatures(code, signatures)
+
+        code = "import requests"
+        assert not selector._has_pattern_from_signatures(code, signatures)
+
+    @pytest.mark.asyncio
+    async def test_extract_pattern_code_from_signatures(self, selector):
+        """Should extract code from signatures."""
+        code = """
+Some code before
+from mcp.server.Server import Server
+server = Server("test")
+Some code after
+"""
+        signatures = ["mcp.server.Server"]
+
+        extracted = selector._extract_pattern_code_from_signatures(code, signatures)
+        assert "mcp.server.Server" in extracted
+        assert len(extracted) > 0
+        assert len(extracted) <= 500
