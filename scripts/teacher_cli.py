@@ -61,6 +61,11 @@ def audit_all():
         status = "✅" if result.score >= 80 else "⚠️" if result.score >= 60 else "❌"
         print(f"{status} {result.subagent_name}: {result.score:.1f}/100")
 
+        # Save detailed report for each subagent
+        report_path = Path(f"AIM/reports/teacher/{result.subagent_name}_audit.md")
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        teacher.report_generator.save(result, report_path)
+
     # Save summary report
     summary_path = Path("AIM/reports/teacher/audit_summary.md")
     summary_path.parent.mkdir(parents=True, exist_ok=True)
@@ -75,6 +80,7 @@ def audit_all():
             f.write(f"**Gaps:** {len(result.gaps)}\n\n")
 
     print(f"\n📝 Summary saved to: {summary_path}")
+    print(f"📝 Detailed reports saved to: AIM/reports/teacher/*_audit.md")
 
 
 def upgrade_subagent(agent_name: str):

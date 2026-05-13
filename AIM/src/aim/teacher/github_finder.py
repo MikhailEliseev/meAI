@@ -1,6 +1,7 @@
 # AIM/src/aim/teacher/github_finder.py
 """GitHub repository finder for subagent topics."""
 
+import os
 from dataclasses import dataclass
 import httpx
 
@@ -18,9 +19,18 @@ class GitHubRepo:
 class GitHubFinder:
     """Find relevant GitHub repositories for subagent topics."""
 
-    def __init__(self, min_stars: int = 50):
+    def __init__(self, min_stars: int = 50, github_token: str | None = None):
         self.min_stars = min_stars
-        self.client = httpx.Client(timeout=30.0)
+
+        # Get token from parameter or environment
+        self.github_token = github_token or os.getenv("GITHUB_TOKEN")
+
+        # Setup headers with authentication if token available
+        headers = {}
+        if self.github_token:
+            headers["Authorization"] = f"token {self.github_token}"
+
+        self.client = httpx.Client(timeout=30.0, headers=headers)
 
     def find_repos(self, topic: str, max_results: int = 10) -> list[GitHubRepo]:
         """
