@@ -1,380 +1,309 @@
 """
-Skill Selector - Select best skills based on comparison results.
+SkillSelector - Extract skills from GitHub repositories.
 
-Selection strategy:
-- Threshold-based filtering (min score to adopt)
-- Priority-based ranking (security > quality > completeness)
-- Conflict resolution (multiple skills for same type)
-- Budget constraints (max skills to adopt)
+Identifies:
+- Resilience patterns (circuit breaker, retry, rate limiting, caching)
+- Best practices (error handling, async patterns)
+- Code quality metrics
+- Reusable implementations
 """
 
-from dataclasses import dataclass
-from typing import Any
+import ast
+import subprocess
+from dataclasses import dataclass, field
+from pathlib import Path
 
+import httpx
 import structlog
-
-from AIM.src.aim.teacher.skills.skill_comparator import ComparisonResult
-from AIM.src.aim.teacher.skills.skill_extractor import SkillType
 
 logger = structlog.get_logger()
 
 
 @dataclass
-class SelectionCriteria:
-    """Criteria for skill selection."""
-    min_score_threshold: float = 70.0  # Min total score to consider
-    min_improvement_threshold: float = 10.0  # Min improvement over ours
-    max_skills_per_type: int = 3  # Max skills to select per type
-    prioritize_security: bool = True  # Prioritize high security scores
-    budget_limit: int | None = None  # Max total skills to adopt
+class Skill:
+    """Extracted skill from repository."""
+
+    name: str
+    description: str
+    code_example: str
+    quality_score: float  # 0-100
+    source_repo: str
+    file_path: str
 
 
 @dataclass
-class SelectedSkill:
-    """Selected skill with selection rationale."""
-    comparison: ComparisonResult
-    selection_score: float  # 0-100 (priority score)
-    selection_reason: str
-    priority: int  # 1 (highest) to N (lowest)
-    metadata: dict[str, Any]
+class GitHubRepo:
+    """GitHub repository metadata."""
+
+    url: str
+    stars: int
+    description: str
+    language: str = "Python"
 
 
 class SkillSelector:
     """
-    Select best skills based on comparison results.
+    Extract skills from GitHub repositories.
 
-    Selection algorithm:
-    1. Filter by threshold (min score, min improvement)
-    2. Rank by priority (security weight, total score)
-    3. Resolve conflicts (best per skill type)
-    4. Apply budget (top N skills)
+    Responsibilities:
+    - Search GitHub for relevant repositories
+    - Clone repositories locally
+    - Extract patterns and best practices
+    - Score code quality
+    - Identify reusable implementations
     """
 
-    def __init__(
-        self,
-        criteria: SelectionCriteria | None = None,
-    ):
+    def __init__(self):
+        self.logger = logger.bind(component="skill_selector")
+
+        # Pattern signatures for detection
+        self.pattern_signatures = {
+            "circuit_breaker": ["CircuitBreaker", "pybreaker", "fail_max", "reset_timeout"],
+            "retry": ["retry", "tenacity", "stop_after_attempt", "wait_exponential"],
+            "rate_limiting": ["AsyncLimiter", "aiolimiter", "RateLimiter", "rate_limit"],
+            "caching": ["cached", "aiocache", "@cache", "ttl"],
+        }
+
+    async def search_github_repos(
+        self, query: str, max_results: int = 10
+    ) -> list[GitHubRepo]:
         """
-        Initialize SkillSelector.
+        Search GitHub repositories.
 
         Args:
-            criteria: Selection criteria (default: medical context)
-        """
-        self.criteria = criteria or SelectionCriteria()
-        logger.info(
-            "skill_selector_initialized",
-            min_score=self.criteria.min_score_threshold,
-            min_improvement=self.criteria.min_improvement_threshold,
-        )
+            query: Search query
+            max_results: Maximum number of results
 
-    def select_skills(
-        self,
-        comparisons: list[ComparisonResult],
-        criteria: SelectionCriteria | None = None,
-    ) -> dict[str, Any]:
+        Returns:
+            List of GitHub repositories
         """
-        Select best skills from comparison results.
+        self.logger.info("searching_github", query=query, max_results=max_results)
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    "https://api.github.com/search/repositories",
+                    params={
+                        "q": f"{query} language:python",
+                        "sort": "stars",
+                        "order": "desc",
+                        "per_page": max_results,
+                    },
+                    headers={"Accept": "application/vnd.github.v3+json"},
+                    timeout=30.0,
+                )
+
+                if response.status_code != 200:
+                    self.logger.warning(
+                        "github_search_failed",
+                        status_code=response.status_code,
+                        query=query,
+                    )
+                    return []
+
+                data = response.json()
+                repos = []
+
+                for item in data.get("items", []):
+                    repos.append(
+                        GitHubRepo(
+                            url=item["html_url"],
+                            stars=item["stargazers_count"],
+                            description=item.get("description", ""),
+                            language=item.get("language", "Python"),
+                        )
+                    )
+
+                self.logger.info("github_search_complete", repos_found=len(repos))
+                return repos
+
+        except Exception as e:
+            self.logger.error("github_search_error", error=str(e), query=query)
+            return []
+
+    async def clone_repo(self, repo_url: str, clone_path: Path) -> None:
+        """
+        Clone GitHub repository.
 
         Args:
-            comparisons: List of comparison results
-            criteria: Optional override criteria
-
-        Returns:
-            Dict with skills_to_adopt, skills_to_keep, skills_to_skip
+            repo_url: Repository URL
+            clone_path: Local path to clone to
         """
-        if criteria:
-            self.criteria = criteria
+        self.logger.info("cloning_repo", url=repo_url, path=str(clone_path))
 
-        logger.info(
-            "selecting_skills",
-            total_comparisons=len(comparisons),
-        )
-
-        # Step 1: Filter by threshold
-        filtered = self._filter_by_threshold(comparisons)
-        logger.info(
-            "filtered_by_threshold",
-            remaining=len(filtered),
-        )
-
-        # Step 2: Rank by priority
-        ranked = self._rank_by_priority(filtered)
-        logger.info(
-            "ranked_by_priority",
-            total=len(ranked),
-        )
-
-        # Step 3: Resolve conflicts (best per type)
-        resolved = self._resolve_conflicts(ranked)
-        logger.info(
-            "conflicts_resolved",
-            remaining=len(resolved),
-        )
-
-        # Step 4: Apply budget
-        selected = self._apply_budget(resolved)
-        logger.info(
-            "budget_applied",
-            selected=len(selected),
-        )
-
-        # Assign priorities
-        for i, skill in enumerate(selected, start=1):
-            skill.priority = i
-
-        logger.info(
-            "selection_complete",
-            selected_count=len(selected),
-        )
-
-        return selected
-
-    def _filter_by_threshold(
-        self,
-        comparisons: list[ComparisonResult],
-    ) -> list[ComparisonResult]:
-        """
-        Filter comparisons by threshold.
-
-        Keeps only:
-        - GitHub score >= min_score_threshold
-        - Improvement >= min_improvement_threshold
-        - Recommendation is "adopt" or "improve"
-        """
-        filtered = []
-
-        for comp in comparisons:
-            github_score = comp.github_score.total_score
-            our_score = comp.our_score.total_score
-            improvement = github_score - our_score
-
-            # Check thresholds
-            if github_score < self.criteria.min_score_threshold:
-                logger.debug(
-                    "filtered_low_score",
-                    skill_type=comp.skill_type,
-                    score=github_score,
-                )
-                continue
-
-            if improvement < self.criteria.min_improvement_threshold:
-                logger.debug(
-                    "filtered_low_improvement",
-                    skill_type=comp.skill_type,
-                    improvement=improvement,
-                )
-                continue
-
-            # Check recommendation
-            if comp.recommendation not in ["adopt", "improve"]:
-                logger.debug(
-                    "filtered_recommendation",
-                    skill_type=comp.skill_type,
-                    recommendation=comp.recommendation,
-                )
-                continue
-
-            filtered.append(comp)
-
-        return filtered
-
-    def _rank_by_priority(
-        self,
-        comparisons: list[ComparisonResult],
-    ) -> list[tuple[ComparisonResult, float]]:
-        """
-        Rank comparisons by priority score.
-
-        Priority calculation:
-        - Base: GitHub total score (0-100)
-        - Bonus: Security score * 0.5 (if prioritize_security)
-        - Bonus: Improvement over ours * 0.2
-        """
-        ranked = []
-
-        for comp in comparisons:
-            github_score = comp.github_score.total_score
-            security_score = comp.github_score.security
-            improvement = github_score - comp.our_score.total_score
-
-            # Calculate priority score
-            priority_score = github_score
-
-            if self.criteria.prioritize_security:
-                priority_score += security_score * 0.5  # Increased from 0.3
-
-            priority_score += improvement * 0.2
-
-            ranked.append((comp, priority_score))
-
-        # Sort by priority score (descending)
-        ranked.sort(key=lambda x: x[1], reverse=True)
-
-        return ranked
-
-    def _resolve_conflicts(
-        self,
-        ranked: list[tuple[ComparisonResult, float]],
-    ) -> list[tuple[ComparisonResult, float]]:
-        """
-        Resolve conflicts (multiple skills per type).
-
-        Keeps only top N skills per type (max_skills_per_type).
-        """
-        # Group by skill type
-        by_type: dict[SkillType, list[tuple[ComparisonResult, float]]] = {}
-        for comp, score in ranked:
-            if comp.skill_type not in by_type:
-                by_type[comp.skill_type] = []
-            by_type[comp.skill_type].append((comp, score))
-
-        # Keep top N per type
-        resolved = []
-        for skill_type, skills in by_type.items():
-            top_n = skills[:self.criteria.max_skills_per_type]
-            resolved.extend(top_n)
-
-            if len(skills) > self.criteria.max_skills_per_type:
-                logger.info(
-                    "conflict_resolved",
-                    skill_type=skill_type,
-                    total=len(skills),
-                    kept=len(top_n),
-                )
-
-        # Re-sort by priority score
-        resolved.sort(key=lambda x: x[1], reverse=True)
-
-        return resolved
-
-    def _apply_budget(
-        self,
-        ranked: list[tuple[ComparisonResult, float]],
-    ) -> list[SelectedSkill]:
-        """
-        Apply budget limit (max skills to adopt).
-
-        Returns:
-            List of selected skills
-        """
-        # Apply budget
-        if self.criteria.budget_limit:
-            ranked = ranked[:self.criteria.budget_limit]
-            logger.info(
-                "budget_limit_applied",
-                limit=self.criteria.budget_limit,
-                selected=len(ranked),
+        try:
+            subprocess.run(
+                ["git", "clone", "--depth", "1", repo_url, str(clone_path)],
+                check=True,
+                capture_output=True,
+                text=True,
             )
+            self.logger.info("repo_cloned", path=str(clone_path))
 
-        # Convert to SelectedSkill
-        selected = []
-        for comp, priority_score in ranked:
-            reason = self._generate_selection_reason(comp, priority_score)
-
-            selected_skill = SelectedSkill(
-                comparison=comp,
-                selection_score=priority_score,
-                selection_reason=reason,
-                priority=0,  # Will be assigned later
-                metadata={
-                    "github_score": comp.github_score.total_score,
-                    "our_score": comp.our_score.total_score,
-                    "improvement": comp.github_score.total_score - comp.our_score.total_score,
-                    "recommendation": comp.recommendation,
-                },
+        except subprocess.CalledProcessError as e:
+            self.logger.error(
+                "clone_failed",
+                url=repo_url,
+                error=e.stderr,
             )
-            selected.append(selected_skill)
+            raise
 
-        return selected
-
-    def _generate_selection_reason(
-        self,
-        comp: ComparisonResult,
-        priority_score: float,
-    ) -> str:
+    async def extract_skills(self, repo_path: Path) -> list[Skill]:
         """
-        Generate selection reason.
-
-        Returns:
-            Human-readable reason
-        """
-        github_score = comp.github_score.total_score
-        our_score = comp.our_score.total_score
-        improvement = github_score - our_score
-
-        reasons = []
-
-        # High score
-        if github_score >= 85:
-            reasons.append(f"Excellent quality ({github_score:.0f}/100)")
-        elif github_score >= 70:
-            reasons.append(f"Good quality ({github_score:.0f}/100)")
-
-        # Significant improvement
-        if improvement >= 30:
-            reasons.append(f"Major improvement (+{improvement:.0f} points)")
-        elif improvement >= 20:
-            reasons.append(f"Significant improvement (+{improvement:.0f} points)")
-        elif improvement >= 10:
-            reasons.append(f"Notable improvement (+{improvement:.0f} points)")
-
-        # Security strength
-        if comp.github_score.security >= 80:
-            reasons.append(f"Strong security ({comp.github_score.security:.0f}/100)")
-
-        # Quality strength
-        if comp.github_score.quality >= 80:
-            reasons.append(f"High code quality ({comp.github_score.quality:.0f}/100)")
-
-        if not reasons:
-            reasons.append("Meets selection criteria")
-
-        return "; ".join(reasons)
-
-    def format_selection_report(
-        self,
-        selected: list[SelectedSkill],
-    ) -> str:
-        """
-        Format selection report as markdown.
+        Extract skills from repository.
 
         Args:
-            selected: List of selected skills
+            repo_path: Path to repository
 
         Returns:
-            Markdown report
+            List of extracted skills
         """
-        lines = [
-            "# Skill Selection Report",
-            "",
-            f"**Selected:** {len(selected)} skills",
-            f"**Criteria:** Score ≥ {self.criteria.min_score_threshold}, Improvement ≥ {self.criteria.min_improvement_threshold}",
-            "",
-            "## Selected Skills",
-            "",
-        ]
+        self.logger.info("extracting_skills", repo_path=str(repo_path))
 
-        for skill in selected:
-            comp = skill.comparison
-            lines.extend([
-                f"### {skill.priority}. {comp.skill_type.value.replace('_', ' ').title()}",
-                "",
-                f"**Priority Score:** {skill.selection_score:.1f}",
-                f"**Reason:** {skill.selection_reason}",
-                "",
-                "**Scores:**",
-                f"- GitHub: {comp.github_score.total_score:.0f}/100",
-                f"- Ours: {comp.our_score.total_score:.0f}/100",
-                f"- Improvement: +{skill.metadata['improvement']:.0f} points",
-                "",
-                f"**Recommendation:** {comp.recommendation}",
-                "",
-                "**Action Items:**",
-            ])
+        skills = []
 
-            for item in comp.action_items:
-                lines.append(f"- {item}")
+        # Scan all Python files
+        for file_path in repo_path.rglob("*.py"):
+            if self._should_skip_file(file_path):
+                continue
 
-            lines.append("")
+            try:
+                content = file_path.read_text()
+                tree = ast.parse(content)
 
-        return "\n".join(lines)
+                # Detect patterns in file
+                detected_patterns = self._detect_patterns(content, tree)
+
+                for pattern_name, pattern_info in detected_patterns.items():
+                    skill = Skill(
+                        name=pattern_info["name"],
+                        description=pattern_info["description"],
+                        code_example=pattern_info["code"],
+                        quality_score=pattern_info["quality_score"],
+                        source_repo=str(repo_path),
+                        file_path=str(file_path.relative_to(repo_path)),
+                    )
+                    skills.append(skill)
+
+            except (SyntaxError, UnicodeDecodeError) as e:
+                self.logger.warning(
+                    "file_parse_error",
+                    file_path=str(file_path),
+                    error=str(e),
+                )
+                continue
+
+        self.logger.info("skills_extracted", count=len(skills))
+        return skills
+
+    def _detect_patterns(self, content: str, tree: ast.AST) -> dict:
+        """
+        Detect patterns in code.
+
+        Args:
+            content: File content
+            tree: AST tree
+
+        Returns:
+            Dict of detected patterns
+        """
+        patterns = {}
+
+        # Check for circuit breaker
+        if self._has_pattern(content, "circuit_breaker"):
+            patterns["circuit_breaker"] = {
+                "name": "Circuit Breaker",
+                "description": "Prevents cascading failures by stopping requests to failing services",
+                "code": self._extract_pattern_code(content, "circuit_breaker"),
+                "quality_score": self._score_pattern(content, "circuit_breaker"),
+            }
+
+        # Check for retry
+        if self._has_pattern(content, "retry"):
+            patterns["retry"] = {
+                "name": "Retry with Exponential Backoff",
+                "description": "Automatically retries failed operations with increasing delays",
+                "code": self._extract_pattern_code(content, "retry"),
+                "quality_score": self._score_pattern(content, "retry"),
+            }
+
+        # Check for rate limiting
+        if self._has_pattern(content, "rate_limiting"):
+            patterns["rate_limiting"] = {
+                "name": "Rate Limiting",
+                "description": "Controls request rate to prevent overwhelming services",
+                "code": self._extract_pattern_code(content, "rate_limiting"),
+                "quality_score": self._score_pattern(content, "rate_limiting"),
+            }
+
+        # Check for caching
+        if self._has_pattern(content, "caching"):
+            patterns["caching"] = {
+                "name": "Caching",
+                "description": "Stores responses to reduce redundant requests",
+                "code": self._extract_pattern_code(content, "caching"),
+                "quality_score": self._score_pattern(content, "caching"),
+            }
+
+        return patterns
+
+    def _has_pattern(self, content: str, pattern_name: str) -> bool:
+        """Check if content contains pattern."""
+        signatures = self.pattern_signatures.get(pattern_name, [])
+        return any(sig in content for sig in signatures)
+
+    def _extract_pattern_code(self, content: str, pattern_name: str) -> str:
+        """Extract code example for pattern."""
+        # Return first 500 characters containing pattern
+        signatures = self.pattern_signatures.get(pattern_name, [])
+        for sig in signatures:
+            if sig in content:
+                start = content.find(sig)
+                return content[max(0, start - 100) : start + 400]
+        return ""
+
+    def _score_pattern(self, content: str, pattern_name: str) -> float:
+        """
+        Score pattern implementation quality.
+
+        Factors:
+        - Completeness (has error handling, configuration)
+        - Best practices (async, type hints)
+        - Documentation (docstrings, comments)
+
+        Returns:
+            Quality score (0-100)
+        """
+        score = 50.0  # Base score
+
+        # Check for error handling
+        if "try:" in content and "except" in content:
+            score += 15.0
+
+        # Check for async
+        if "async def" in content or "await" in content:
+            score += 10.0
+
+        # Check for type hints
+        if "->" in content and ":" in content:
+            score += 10.0
+
+        # Check for docstrings
+        if '"""' in content or "'''" in content:
+            score += 10.0
+
+        # Check for configuration
+        if "config" in content.lower() or "settings" in content.lower():
+            score += 5.0
+
+        return min(score, 100.0)
+
+    def _should_skip_file(self, file_path: Path) -> bool:
+        """Check if file should be skipped."""
+        if any(part.startswith(".") for part in file_path.parts):
+            return True
+        if "__pycache__" in file_path.parts:
+            return True
+        if "test" in file_path.name:
+            return True
+        return False
