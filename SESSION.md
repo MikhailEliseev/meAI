@@ -126,14 +126,99 @@ Completed main orchestrator integrating all 5 gap detection components:
 
 1. `a6a51e1` - Sprint 4: Content Gap Analysis Agent main orchestrator (86 tests passing)
 
-### Next Steps (Sprint 5)
+### Sprint 5: Keyword Research Agent Integration ✅ COMPLETED
 
-**Production Integration:**
-- Integrate with Keyword Research Agent (Sprint 1)
-- Add SERP data fetching for clustering
-- Connect to SEO Magister
-- End-to-end workflow testing
-- Production deployment
+**Status:** ✅ Integration complete and tested  
+**Duration:** ~1 hour (2026-05-13T05:49 - 2026-05-13T06:50)  
+**Tests:** 32/32 passing (26 existing + 6 new)
+
+#### Task #12: Integrate Content Gap Analyzer with Keyword Research Agent ✅
+
+**Summary:**
+Enabled automatic keyword expansion using SEMrush client from Sprint 1. Users can now provide a seed keyword and have it automatically expanded to 100+ related keywords for better gap analysis and clustering.
+
+**Changes Made:**
+
+**1. ContentGapAnalyzer Integration** (`content_gap_analyzer.py`)
+- Added SEMrushClient import and initialization
+- New `expand_keywords()` method for automatic keyword expansion
+- Updated `analyze()` method with 4 new parameters:
+  - `expand_keywords: bool` - Enable automatic expansion (default False)
+  - `seed_keyword: str` - Seed keyword for expansion (required if expand_keywords=True)
+  - `max_keywords: int` - Maximum keywords to expand (default 100)
+  - `min_volume: int` - Minimum search volume filter (default 10)
+- Implemented Step 0 in analysis workflow (before gap detection)
+- Budget control: 50% for keyword expansion, 50% for SERP data
+- Updated `close()` method to cleanup both SERP and SEMrush clients
+- Added `keywords_used` to summary metrics
+
+**2. Test Coverage** (`test_content_gap_analyzer.py`)
+- New test class: `TestContentGapAnalyzerKeywordResearch` (6 tests)
+- Tests cover:
+  - Successful keyword expansion with mocked SEMrush client
+  - Error handling when SEMrush client not initialized
+  - Full workflow with `expand_keywords=True`
+  - Error when `expand_keywords=True` but no `seed_keyword`
+  - Keyword merging (provided + expanded keywords)
+  - Client cleanup verification (both SERP and SEMrush)
+- All tests use AsyncMock to avoid real API calls
+- All 32 tests passing (26 existing + 6 new)
+
+**Integration Details:**
+
+**Workflow with Keyword Expansion:**
+```python
+# Step 0: Expand keywords (NEW)
+if expand_keywords:
+    expanded_keywords = await self.expand_keywords(
+        seed_keyword=seed_keyword,
+        max_keywords=max_keywords,
+        min_volume=min_volume,
+        max_cost_usd=self.max_cost_usd * 0.5,  # 50% budget
+    )
+    keywords = list(set(keywords + expanded_keywords))
+
+# Step 1: Detect gaps (existing)
+# Step 2: Score gaps (existing)
+# Step 3: Cluster keywords (existing)
+# Step 4: Plan architecture (existing)
+# Step 5: Generate briefs (existing)
+```
+
+**Usage Example:**
+```python
+analyzer = ContentGapAnalyzer(
+    semrush_api_key="your_key",
+    max_cost_usd=1.0,
+)
+
+result = await analyzer.analyze(
+    client_url="https://example.com",
+    competitor_urls=["https://competitor.com"],
+    niche="dental implants",
+    client_pages=[...],
+    competitor_pages=[...],
+    expand_keywords=True,           # Enable expansion
+    seed_keyword="dental implants", # Seed for expansion
+    max_keywords=100,               # Expand to 100 keywords
+    min_volume=10,                  # Min search volume 10
+)
+
+# Result includes expanded keywords in summary
+print(result.summary["keywords_used"])  # 100+ keywords
+```
+
+**Files Changed (2 files, 294 lines):**
+- `AIM/src/aim/subagents/gap_detection/content_gap_analyzer.py` (+150 lines)
+- `AIM/tests/subagents/gap_detection/test_content_gap_analyzer.py` (+144 lines)
+
+**Commits:**
+1. `2ffaa5f` - feat(sprint-5): integrate Keyword Research Agent with Content Gap Analyzer
+
+**Next Steps (Sprint 5 - Remaining):**
+- Task #14: Connect Content Gap Analyzer to SEO Magister
+- Task #15: Create end-to-end workflow tests
+- Task #16: Prepare production deployment configuration
 
 ---
 
@@ -1111,3 +1196,121 @@ AI-generated text:
 ---
 
 **Last Updated:** 2026-05-13T02:40:00Z
+
+---
+
+## Sprint 5: Content Gap Analysis - SEO Magister Integration ✅ COMPLETED
+
+**Status:** ✅ SEO Magister v2 with 4-agent orchestration  
+**Duration:** ~4 hours (2026-05-13T03:06 - 2026-05-13T07:05)  
+**Tests:** 14/14 passing (100% coverage)
+
+### Summary
+
+Integrated Content Gap Analyzer as fourth agent in SEO Magister v2:
+1. **Task #12** - Integrate Keyword Research Agent with Content Gap Analyzer ✅
+2. **Task #13** - Add SERP data fetching for clustering ✅
+3. **Task #14** - Connect Content Gap Analyzer to SEO Magister ✅
+
+### Task #14: SEO Magister v2 Integration
+
+**SEOMagisterV2** (`seo_magister_v2.py` - 850+ lines)
+- **4-agent orchestration:**
+  - Technical SEO Agent (30% weight)
+  - Content SEO Agent (25% weight)
+  - Links SEO Agent (20% weight)
+  - Content Gap Analyzer (25% weight)
+
+- **Parallel dispatch:**
+  - asyncio.gather for all 4 agents
+  - Timeout handling (default 10 minutes)
+  - Error isolation (gap analyzer failure doesn't crash analysis)
+
+- **Weighted scoring:**
+  - Overall score = tech*0.30 + content*0.25 + links*0.20 + gaps*0.25
+  - Gap score calculation: 100 - P0*20 - P1*10 - P2*5 (deductive)
+  - Floor at 0 (no negative scores)
+
+- **Enhanced recommendations:**
+  - Aggregates recommendations from all 4 agents
+  - Adds content gap opportunities with priority
+  - Structured format: {issue, action, priority, category}
+
+- **Keyword expansion support:**
+  - Optional SEMrush integration
+  - Parameters: expand_keywords, seed_keyword, max_keywords, min_volume
+  - Budget control (50% for expansion, 50% for SERP)
+
+- **Client cleanup:**
+  - close() method for API clients
+  - Proper resource management
+
+**Test Coverage** (`test_seo_magister_v2.py` - 530+ lines, 14 tests)
+- **Initialization (2 tests):**
+  - Without gap analyzer params (mock provider)
+  - With gap analyzer params (SEMrush + SERP)
+
+- **Analysis coordination (3 tests):**
+  - Without gap analyzer (3 agents only)
+  - With gap analyzer (4 agents)
+  - With keyword expansion
+
+- **Gap scoring (4 tests):**
+  - No gaps (perfect score 100)
+  - P0 gaps only (critical deduction)
+  - Mixed P0/P1/P2 gaps
+  - Floor at zero (no negative)
+
+- **Recommendations (2 tests):**
+  - Include content gaps
+  - Priority order (critical > high > medium)
+
+- **Error handling (1 test):**
+  - Gap analyzer failure doesn't crash
+
+- **Cleanup (2 tests):**
+  - Without gap analyzer
+  - With gap analyzer
+
+### Files Changed
+
+**New Files (3):**
+- `AIM/src/aim/magisters/seo_magister_v2.py` (850+ lines)
+- `AIM/tests/magisters/test_seo_magister_v2.py` (530+ lines)
+- `AIM/src/aim/magisters/__init__.py` (export SEOMagisterV2)
+
+**Total:** 1,380+ lines added
+
+### Commits
+
+**Sprint 5 Task #14:**
+```
+feat(sprint-5): integrate Content Gap Analyzer with SEO Magister v2
+
+Created SEO Magister v2 that orchestrates 4 agents in parallel:
+- Technical SEO Agent (30% weight)
+- Content SEO Agent (25% weight)
+- Links SEO Agent (20% weight)
+- Content Gap Analyzer (25% weight)
+
+Tests: 14/14 passed
+```
+
+### Next Steps
+
+**Task #15:** Create end-to-end workflow tests
+- Test full SEO analysis workflow
+- Verify all 4 agents integration
+- Test keyword expansion flow
+- Test error recovery
+
+**Task #16:** Prepare production deployment configuration
+- Environment variables
+- API keys management
+- Docker configuration
+- Deployment documentation
+
+---
+
+**Session End:** 2026-05-13T07:05  
+**Status:** Sprint 5 Task #14 completed, ready for Task #15
