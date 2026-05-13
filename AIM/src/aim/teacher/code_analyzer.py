@@ -17,7 +17,7 @@ class CodeAnalyzer:
             code: Python source code
 
         Returns:
-            List of imported module names
+            List of imported module names (full paths)
         """
         imports = []
 
@@ -27,10 +27,10 @@ class CodeAnalyzer:
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
                     for alias in node.names:
-                        imports.append(alias.name.split(".")[0])
+                        imports.append(alias.name)  # Full path, not just first part
                 elif isinstance(node, ast.ImportFrom):
                     if node.module:
-                        imports.append(node.module.split(".")[0])
+                        imports.append(node.module)  # Full path, not just first part
         except SyntaxError:
             pass
 
