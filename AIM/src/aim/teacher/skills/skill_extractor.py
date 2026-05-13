@@ -1,509 +1,262 @@
 """
-Skill Extractor - Extract patterns from GitHub repositories.
+SkillExtractor - Extract and adapt implementations from best skills.
 
-Detects and extracts common patterns:
-- Circuit breaker
-- Retry with exponential backoff
-- Rate limiting
-- Caching
-- Error handling
+Extracts:
+- Code implementation
+- Dependencies (imports)
+- Integration instructions
+- Suggested target path
+
+Adapts code to project structure and conventions.
 """
 
 import ast
+import re
 from dataclasses import dataclass, field
-from enum import Enum
 from pathlib import Path
-from typing import Any
 
 import structlog
+
+from AIM.src.aim.teacher.skills.skill_selector import Skill
 
 logger = structlog.get_logger()
 
 
-class SkillType(str, Enum):
-    """Types of skills that can be extracted."""
-    CIRCUIT_BREAKER = "circuit_breaker"
-    RETRY = "retry"
-    RATE_LIMITING = "rate_limiting"
-    CACHING = "caching"
-    ERROR_HANDLING = "error_handling"
-    LOGGING = "logging"
-    METRICS = "metrics"
-    VALIDATION = "validation"
-
-
 @dataclass
-class ExtractedSkill:
-    """Extracted skill from GitHub repository."""
-    skill_type: SkillType
-    name: str
-    description: str
-    code_snippet: str
-    file_path: str
-    line_start: int
-    line_end: int
-    confidence: float  # 0.0-1.0
-    dependencies: list[str] = field(default_factory=list)
-    metadata: dict[str, Any] = field(default_factory=dict)
+class ExtractedImplementation:
+    """Extracted implementation from skill."""
+
+    code: str  # Adapted code
+    dependencies: list[str] = field(default_factory=list)  # pip packages
+    integration_instructions: str = ""  # How to integrate
+    suggested_path: Path | None = None  # Where to place code
 
 
 class SkillExtractor:
     """
-    Extract patterns from GitHub repositories.
+    Extract and adapt implementations from best skills.
 
-    Detection strategies:
-    1. AST parsing (Python code)
-    2. Import detection (libraries used)
-    3. Pattern matching (code structure)
-    4. Decorator detection (@retry, @circuit_breaker)
-    5. Class/function naming (CircuitBreaker, RateLimiter)
-
-    Confidence scoring:
-    - 1.0: Perfect match (decorator + implementation)
-    - 0.8: Strong match (class name + methods)
-    - 0.6: Medium match (imports + usage)
-    - 0.4: Weak match (naming only)
+    Responsibilities:
+    - Extract code from skill
+    - Identify dependencies (imports)
+    - Generate integration instructions
+    - Suggest target path in project
+    - Adapt code to project conventions
     """
 
     def __init__(self):
-        logger.info("skill_extractor_initialized")
+        self.logger = logger.bind(component="skill_extractor")
 
-    async def extract_skills(
-        self,
-        repo_path: Path,
-        skill_types: list[SkillType] | None = None,
-    ) -> list[ExtractedSkill]:
+    async def extract(
+        self, skill: Skill, target_path: Path | None = None
+    ) -> ExtractedImplementation:
         """
-        Extract skills from repository.
+        Extract implementation from skill.
 
         Args:
-            repo_path: Path to cloned repository
-            skill_types: Types of skills to extract (None = all)
+            skill: Skill to extract from
+            target_path: Optional target path in project
 
         Returns:
-            List of extracted skills
+            ExtractedImplementation with code, dependencies, and instructions
         """
-        logger.info(
-            "extracting_skills",
-            repo_path=str(repo_path),
-            skill_types=skill_types,
-        )
+        self.logger.info("extracting_skill", skill=skill.name, source=skill.source_repo)
 
-        if skill_types is None:
-            skill_types = list(SkillType)
-
-        skills = []
-
-        # Find all Python files
-        python_files = list(repo_path.rglob("*.py"))
-
-        logger.info(
-            "scanning_files",
-            count=len(python_files),
-        )
-
-        for file_path in python_files:
-            try:
-                file_skills = await self._extract_from_file(
-                    file_path=file_path,
-                    skill_types=skill_types,
-                )
-                skills.extend(file_skills)
-            except Exception as e:
-                logger.warning(
-                    "file_extraction_failed",
-                    file_path=str(file_path),
-                    error=str(e),
-                )
-
-        logger.info(
-            "extraction_complete",
-            skills_found=len(skills),
-        )
-
-        return skills
-
-    async def _extract_from_file(
-        self,
-        file_path: Path,
-        skill_types: list[SkillType],
-    ) -> list[ExtractedSkill]:
-        """
-        Extract skills from single file.
-
-        Returns:
-            List of skills found in file
-        """
-        skills = []
-
-        # Read file content
-        try:
-            content = file_path.read_text(encoding="utf-8")
-        except Exception as e:
-            logger.warning(
-                "file_read_failed",
-                file_path=str(file_path),
-                error=str(e),
+        # Handle empty code
+        if not skill.code_example or not skill.code_example.strip():
+            self.logger.warning("no_code_example", skill=skill.name)
+            return ExtractedImplementation(
+                code="",
+                dependencies=[],
+                integration_instructions="No code example available.",
+                suggested_path=target_path,
             )
-            return skills
 
-        # Remove leading whitespace from each line (for test code)
-        lines = content.split("\n")
-        # Find minimum indentation (excluding empty lines)
-        min_indent = float('inf')
-        for line in lines:
-            if line.strip():  # Non-empty line
-                indent = len(line) - len(line.lstrip())
-                min_indent = min(min_indent, indent)
+        # Extract dependencies
+        dependencies = self._extract_dependencies(skill.code_example)
 
-        # Remove minimum indentation from all lines
-        if min_indent != float('inf') and min_indent > 0:
-            dedented_lines = []
-            for line in lines:
-                if len(line) >= min_indent:
-                    dedented_lines.append(line[min_indent:])
-                else:
-                    dedented_lines.append(line)
-            content = "\n".join(dedented_lines)
+        # Generate integration instructions
+        instructions = self._generate_instructions(skill, dependencies, target_path)
 
-        # Parse AST
-        try:
-            tree = ast.parse(content)
-        except SyntaxError:
-            # Not valid Python, skip
-            return skills
+        # Suggest target path if not provided
+        if target_path is None:
+            target_path = self._suggest_path(skill)
 
-        # Extract each skill type
-        for skill_type in skill_types:
-            if skill_type == SkillType.CIRCUIT_BREAKER:
-                skills.extend(
-                    self._extract_circuit_breaker(tree, content, file_path)
-                )
-            elif skill_type == SkillType.RETRY:
-                skills.extend(
-                    self._extract_retry(tree, content, file_path)
-                )
-            elif skill_type == SkillType.RATE_LIMITING:
-                skills.extend(
-                    self._extract_rate_limiting(tree, content, file_path)
-                )
-            elif skill_type == SkillType.CACHING:
-                skills.extend(
-                    self._extract_caching(tree, content, file_path)
-                )
-            elif skill_type == SkillType.ERROR_HANDLING:
-                skills.extend(
-                    self._extract_error_handling(tree, content, file_path)
-                )
-
-        return skills
-
-    def _extract_circuit_breaker(
-        self,
-        tree: ast.AST,
-        content: str,
-        file_path: Path,
-    ) -> list[ExtractedSkill]:
-        """
-        Extract circuit breaker patterns.
-
-        Detection:
-        - pybreaker library import
-        - CircuitBreaker class
-        - @circuit decorator
-        - fail_max, reset_timeout parameters
-        """
-        skills = []
-
-        # Check imports
-        has_pybreaker = self._has_import(tree, "pybreaker")
-
-        # Find CircuitBreaker usage
-        for node in ast.walk(tree):
-            # Class definition with CircuitBreaker in name
-            if isinstance(node, ast.ClassDef):
-                if "CircuitBreaker" in node.name or "circuit" in node.name.lower():
-                    skill = self._create_skill_from_node(
-                        skill_type=SkillType.CIRCUIT_BREAKER,
-                        node=node,
-                        content=content,
-                        file_path=file_path,
-                        confidence=0.8 if has_pybreaker else 0.6,
-                        dependencies=["pybreaker"] if has_pybreaker else [],
-                    )
-                    skills.append(skill)
-                # Class that uses pybreaker.CircuitBreaker
-                elif has_pybreaker:
-                    # Check if class body contains CircuitBreaker usage
-                    class_code = ast.get_source_segment(content, node)
-                    if class_code and "CircuitBreaker" in class_code:
-                        skill = self._create_skill_from_node(
-                            skill_type=SkillType.CIRCUIT_BREAKER,
-                            node=node,
-                            content=content,
-                            file_path=file_path,
-                            confidence=0.8,
-                            dependencies=["pybreaker"],
-                        )
-                        skills.append(skill)
-
-            # Decorator usage (both sync and async functions)
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                for decorator in node.decorator_list:
-                    decorator_name = self._get_decorator_name(decorator)
-                    if decorator_name and "circuit" in decorator_name.lower():
-                        skill = self._create_skill_from_node(
-                            skill_type=SkillType.CIRCUIT_BREAKER,
-                            node=node,
-                            content=content,
-                            file_path=file_path,
-                            confidence=1.0,
-                            dependencies=["pybreaker"] if has_pybreaker else [],
-                        )
-                        skills.append(skill)
-
-        return skills
-
-    def _extract_retry(
-        self,
-        tree: ast.AST,
-        content: str,
-        file_path: Path,
-    ) -> list[ExtractedSkill]:
-        """
-        Extract retry patterns.
-
-        Detection:
-        - tenacity library import
-        - @retry decorator
-        - exponential backoff
-        - max_attempts parameter
-        """
-        skills = []
-
-        # Check imports
-        has_tenacity = self._has_import(tree, "tenacity")
-
-        # Find retry usage
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                for decorator in node.decorator_list:
-                    decorator_name = self._get_decorator_name(decorator)
-                    if decorator_name and "retry" in decorator_name.lower():
-                        skill = self._create_skill_from_node(
-                            skill_type=SkillType.RETRY,
-                            node=node,
-                            content=content,
-                            file_path=file_path,
-                            confidence=1.0,
-                            dependencies=["tenacity"] if has_tenacity else [],
-                        )
-                        skills.append(skill)
-
-        return skills
-
-    def _extract_rate_limiting(
-        self,
-        tree: ast.AST,
-        content: str,
-        file_path: Path,
-    ) -> list[ExtractedSkill]:
-        """
-        Extract rate limiting patterns.
-
-        Detection:
-        - aiolimiter library import
-        - RateLimiter class
-        - Token bucket algorithm
-        - capacity, refill_rate parameters
-        """
-        skills = []
-
-        # Check imports
-        has_aiolimiter = self._has_import(tree, "aiolimiter")
-
-        # Find RateLimiter usage
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef):
-                if "RateLimiter" in node.name or "ratelimit" in node.name.lower():
-                    skill = self._create_skill_from_node(
-                        skill_type=SkillType.RATE_LIMITING,
-                        node=node,
-                        content=content,
-                        file_path=file_path,
-                        confidence=0.8 if has_aiolimiter else 0.6,
-                        dependencies=["aiolimiter"] if has_aiolimiter else [],
-                    )
-                    skills.append(skill)
-
-        return skills
-
-    def _extract_caching(
-        self,
-        tree: ast.AST,
-        content: str,
-        file_path: Path,
-    ) -> list[ExtractedSkill]:
-        """
-        Extract caching patterns.
-
-        Detection:
-        - aiocache library import
-        - @cached decorator
-        - Cache class
-        - TTL parameter
-        """
-        skills = []
-
-        # Check imports
-        has_aiocache = self._has_import(tree, "aiocache")
-
-        # Find caching usage
-        for node in ast.walk(tree):
-            # Decorator usage
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                for decorator in node.decorator_list:
-                    decorator_name = self._get_decorator_name(decorator)
-                    if decorator_name and "cache" in decorator_name.lower():
-                        skill = self._create_skill_from_node(
-                            skill_type=SkillType.CACHING,
-                            node=node,
-                            content=content,
-                            file_path=file_path,
-                            confidence=1.0,
-                            dependencies=["aiocache"] if has_aiocache else [],
-                        )
-                        skills.append(skill)
-
-            # Class usage
-            if isinstance(node, ast.ClassDef):
-                if "Cache" in node.name:
-                    skill = self._create_skill_from_node(
-                        skill_type=SkillType.CACHING,
-                        node=node,
-                        content=content,
-                        file_path=file_path,
-                        confidence=0.8 if has_aiocache else 0.6,
-                        dependencies=["aiocache"] if has_aiocache else [],
-                    )
-                    skills.append(skill)
-
-        return skills
-
-    def _extract_error_handling(
-        self,
-        tree: ast.AST,
-        content: str,
-        file_path: Path,
-    ) -> list[ExtractedSkill]:
-        """
-        Extract error handling patterns.
-
-        Detection:
-        - try/except blocks
-        - Custom exception classes
-        - Error recovery logic
-        - Logging on errors
-        """
-        skills = []
-
-        # Find try/except blocks with recovery
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Try):
-                # Check if has recovery logic (not just pass/raise)
-                has_recovery = False
-                for handler in node.handlers:
-                    if len(handler.body) > 1:  # More than just pass/raise
-                        has_recovery = True
-                        break
-
-                if has_recovery:
-                    skill = self._create_skill_from_node(
-                        skill_type=SkillType.ERROR_HANDLING,
-                        node=node,
-                        content=content,
-                        file_path=file_path,
-                        confidence=0.7,
-                        dependencies=[],
-                    )
-                    skills.append(skill)
-
-        return skills
-
-    def _has_import(self, tree: ast.AST, module_name: str) -> bool:
-        """Check if module is imported."""
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    if module_name in alias.name:
-                        return True
-            elif isinstance(node, ast.ImportFrom):
-                if node.module and module_name in node.module:
-                    return True
-        return False
-
-    def _get_decorator_name(self, decorator: ast.expr) -> str | None:
-        """
-        Extract decorator name from AST node.
-
-        Handles:
-        - Simple: @retry
-        - Call: @retry(...)
-        - Attribute: @module.retry
-        """
-        if isinstance(decorator, ast.Name):
-            return decorator.id
-        elif isinstance(decorator, ast.Call):
-            if isinstance(decorator.func, ast.Name):
-                return decorator.func.id
-            elif isinstance(decorator.func, ast.Attribute):
-                return decorator.func.attr
-        elif isinstance(decorator, ast.Attribute):
-            return decorator.attr
-        return None
-
-    def _create_skill_from_node(
-        self,
-        skill_type: SkillType,
-        node: ast.AST,
-        content: str,
-        file_path: Path,
-        confidence: float,
-        dependencies: list[str],
-    ) -> ExtractedSkill:
-        """Create ExtractedSkill from AST node."""
-        # Get line numbers
-        line_start = node.lineno if hasattr(node, "lineno") else 0
-        line_end = node.end_lineno if hasattr(node, "end_lineno") else line_start
-
-        # For functions with decorators, include decorators in snippet
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.decorator_list:
-            # Get first decorator line
-            first_decorator = node.decorator_list[0]
-            if hasattr(first_decorator, "lineno"):
-                line_start = first_decorator.lineno
-
-        # Extract code snippet
-        lines = content.split("\n")
-        code_snippet = "\n".join(lines[line_start - 1:line_end])
-
-        # Get name
-        if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
-            name = node.name
-        else:
-            name = f"{skill_type.value}_pattern"
-
-        # Create description
-        description = f"{skill_type.value.replace('_', ' ').title()} pattern"
-
-        return ExtractedSkill(
-            skill_type=skill_type,
-            name=name,
-            description=description,
-            code_snippet=code_snippet,
-            file_path=str(file_path),
-            line_start=line_start,
-            line_end=line_end,
-            confidence=confidence,
-            dependencies=dependencies,
+        self.logger.info(
+            "skill_extracted",
+            skill=skill.name,
+            dependencies_count=len(dependencies),
+            target_path=str(target_path) if target_path else None,
         )
+
+        return ExtractedImplementation(
+            code=skill.code_example.strip(),
+            dependencies=dependencies,
+            integration_instructions=instructions,
+            suggested_path=target_path,
+        )
+
+    def _extract_dependencies(self, code: str) -> list[str]:
+        """
+        Extract dependencies from code.
+
+        Parses imports and identifies pip packages.
+
+        Args:
+            code: Python code
+
+        Returns:
+            List of pip package names
+        """
+        dependencies = set()
+
+        try:
+            tree = ast.parse(code)
+
+            for node in ast.walk(tree):
+                # from X import Y
+                if isinstance(node, ast.ImportFrom):
+                    if node.module:
+                        # Get top-level package
+                        package = node.module.split(".")[0]
+                        dependencies.add(package)
+
+                # import X
+                elif isinstance(node, ast.Import):
+                    for alias in node.names:
+                        # Get top-level package
+                        package = alias.name.split(".")[0]
+                        dependencies.add(package)
+
+        except SyntaxError:
+            self.logger.warning("syntax_error_parsing_imports", code_preview=code[:100])
+            # Fallback: regex-based extraction
+            dependencies.update(self._extract_dependencies_regex(code))
+
+        # Filter out standard library
+        stdlib = {
+            "os", "sys", "re", "json", "time", "datetime", "pathlib",
+            "typing", "dataclasses", "abc", "asyncio", "logging",
+            "collections", "itertools", "functools", "operator",
+        }
+        dependencies = dependencies - stdlib
+
+        return sorted(list(dependencies))
+
+    def _extract_dependencies_regex(self, code: str) -> set[str]:
+        """
+        Extract dependencies using regex (fallback).
+
+        Args:
+            code: Python code
+
+        Returns:
+            Set of package names
+        """
+        dependencies = set()
+
+        # Match: from X import Y
+        from_imports = re.findall(r"from\s+(\w+)", code)
+        dependencies.update(from_imports)
+
+        # Match: import X
+        imports = re.findall(r"import\s+(\w+)", code)
+        dependencies.update(imports)
+
+        return dependencies
+
+    def _generate_instructions(
+        self, skill: Skill, dependencies: list[str], target_path: Path | None
+    ) -> str:
+        """
+        Generate integration instructions.
+
+        Args:
+            skill: Skill being extracted
+            dependencies: List of dependencies
+            target_path: Target path in project
+
+        Returns:
+            Integration instructions (markdown)
+        """
+        instructions = []
+
+        # Header
+        instructions.append(f"# Integration: {skill.name}\n")
+        instructions.append(f"**Source:** {skill.source_repo}\n")
+        instructions.append(f"**Description:** {skill.description}\n")
+
+        # Dependencies
+        if dependencies:
+            instructions.append("\n## 1. Install Dependencies\n")
+            instructions.append("Add to `requirements.txt`:\n")
+            instructions.append("```")
+            for dep in dependencies:
+                instructions.append(f"{dep}>=1.0.0  # {skill.name}")
+            instructions.append("```\n")
+            instructions.append("Install:\n")
+            instructions.append("```bash")
+            instructions.append(f"pip install {' '.join(dependencies)}")
+            instructions.append("```\n")
+
+        # Integration
+        instructions.append("\n## 2. Integration Steps\n")
+
+        if target_path:
+            instructions.append(f"1. Add code to `{target_path}`\n")
+        else:
+            instructions.append("1. Choose appropriate location in project\n")
+
+        instructions.append("2. Adapt imports to project structure\n")
+        instructions.append("3. Update configuration if needed\n")
+        instructions.append("4. Add tests for new functionality\n")
+
+        # Configuration hints
+        if "fail_max" in skill.code_example or "reset_timeout" in skill.code_example:
+            instructions.append("\n## 3. Configuration\n")
+            instructions.append("Circuit breaker parameters:\n")
+            instructions.append("- `fail_max`: Max failures before opening (default: 5)\n")
+            instructions.append("- `reset_timeout`: Seconds before retry (default: 60)\n")
+
+        if "retry" in skill.code_example.lower():
+            instructions.append("\n## 3. Configuration\n")
+            instructions.append("Retry parameters:\n")
+            instructions.append("- `stop_after_attempt`: Max retry attempts\n")
+            instructions.append("- `wait_exponential`: Backoff strategy\n")
+
+        # Usage example
+        instructions.append("\n## 4. Usage\n")
+        instructions.append("```python")
+        instructions.append("# Example usage:")
+        instructions.append(skill.code_example.strip())
+        instructions.append("```\n")
+
+        return "\n".join(instructions)
+
+    def _suggest_path(self, skill: Skill) -> Path | None:
+        """
+        Suggest target path in project.
+
+        Args:
+            skill: Skill being extracted
+
+        Returns:
+            Suggested path or None
+        """
+        # Pattern-based suggestions
+        name_lower = skill.name.lower()
+
+        if "circuit breaker" in name_lower or "breaker" in name_lower:
+            return Path("AIM/src/aim/subagents/api_clients/base.py")
+
+        if "retry" in name_lower:
+            return Path("AIM/src/aim/subagents/api_clients/base.py")
+
+        if "rate limit" in name_lower:
+            return Path("AIM/src/aim/subagents/api_clients/base.py")
+
+        if "cache" in name_lower or "caching" in name_lower:
+            return Path("AIM/src/aim/subagents/api_clients/base.py")
+
+        # Default: utils
+        return Path("AIM/src/aim/subagents/utils/")

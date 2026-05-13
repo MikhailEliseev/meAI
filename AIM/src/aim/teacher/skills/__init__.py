@@ -6,8 +6,7 @@ Components for extracting and teaching skills from GitHub repositories.
 
 from AIM.src.aim.teacher.skills.skill_extractor import (
     SkillExtractor,
-    SkillType,
-    ExtractedSkill,
+    ExtractedImplementation,
 )
 from AIM.src.aim.teacher.skills.skill_comparator import (
     SkillComparator,
@@ -16,8 +15,7 @@ from AIM.src.aim.teacher.skills.skill_comparator import (
 
 __all__ = [
     "SkillExtractor",
-    "SkillType",
-    "ExtractedSkill",
+    "ExtractedImplementation",
     "SkillComparator",
     "ComparisonResult",
 ]
