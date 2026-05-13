@@ -20,7 +20,6 @@ from AIM.src.aim.teacher.skills.skill_comparator import (
 )
 from AIM.src.aim.teacher.skills.skill_extractor import (
     ExtractedSkill,
-    SkillExtractionResult,
     SkillType,
 )
 from AIM.src.aim.teacher.skills.skill_extraction_orchestrator import (
@@ -30,7 +29,6 @@ from AIM.src.aim.teacher.skills.skill_extraction_orchestrator import (
 from AIM.src.aim.teacher.skills.skill_selector import (
     SelectedSkill,
     SelectionCriteria,
-    SkillSelectionResult,
 )
 from AIM.src.aim.teacher.skills.skill_teacher import TeachingResult
 
@@ -44,31 +42,32 @@ def orchestrator():
 @pytest.fixture
 def sample_extraction_result():
     """Create sample extraction result."""
-    return SkillExtractionResult(
-        skills=[
-            ExtractedSkill(
-                skill_name="Circuit Breaker",
-                skill_type=SkillType.ERROR_HANDLING,
-                file_path=Path("api_client.py"),
-                code_snippet="class CircuitBreaker: ...",
-                description="Circuit breaker pattern",
-                dependencies=[],
-                metadata={},
-            ),
-            ExtractedSkill(
-                skill_name="Retry Logic",
-                skill_type=SkillType.RETRY_LOGIC,
-                file_path=Path("api_client.py"),
-                code_snippet="@retry(...)",
-                description="Exponential backoff retry",
-                dependencies=["tenacity"],
-                metadata={},
-            ),
-        ],
-        total_skills=2,
-        extraction_time=1.5,
-        metadata={},
-    )
+    return [
+        ExtractedSkill(
+            skill_type=SkillType.ERROR_HANDLING,
+            name="Circuit Breaker",
+            description="Circuit breaker pattern",
+            code_snippet="class CircuitBreaker: ...",
+            file_path="api_client.py",
+            line_start=10,
+            line_end=50,
+            confidence=0.9,
+            dependencies=[],
+            metadata={},
+        ),
+        ExtractedSkill(
+            skill_type=SkillType.RETRY,
+            name="Retry Logic",
+            description="Exponential backoff retry",
+            code_snippet="@retry(...)",
+            file_path="api_client.py",
+            line_start=60,
+            line_end=80,
+            confidence=0.85,
+            dependencies=["tenacity"],
+            metadata={},
+        ),
+    ]
 
 
 @pytest.fixture
@@ -76,28 +75,68 @@ def sample_comparisons():
     """Create sample skill comparisons."""
     return [
         ComparisonResult(
-            skill_name="Circuit Breaker",
-            skill_type="error_handling",
-            github_score=SkillScore(90.0, 85.0, 95.0, 80.0, 87.5),
-            our_score=SkillScore(60.0, 70.0, 75.0, 65.0, 67.5),
-            improvement_potential=20.0,
-            recommendation="ADOPT",
-            rationale="Better error handling",
-            github_implementation="...",
-            our_implementation="...",
-            metadata={},
+            skill_type=SkillType.ERROR_HANDLING,
+            github_score=SkillScore(
+                skill_type=SkillType.ERROR_HANDLING,
+                source="github",
+                completeness=90.0,
+                quality=85.0,
+                performance=80.0,
+                maintainability=85.0,
+                security=95.0,
+                total_score=87.5,
+                strengths=["Robust error handling"],
+                weaknesses=["Complex setup"],
+                metadata={},
+            ),
+            our_score=SkillScore(
+                skill_type=SkillType.ERROR_HANDLING,
+                source="ours",
+                completeness=60.0,
+                quality=70.0,
+                performance=65.0,
+                maintainability=70.0,
+                security=75.0,
+                total_score=67.5,
+                strengths=["Simple"],
+                weaknesses=["Missing circuit breaker"],
+                metadata={},
+            ),
+            recommendation="adopt",
+            gap_analysis="Better error handling",
+            action_items=["Implement circuit breaker"],
         ),
         ComparisonResult(
-            skill_name="Retry Logic",
-            skill_type="retry_logic",
-            github_score=SkillScore(85.0, 80.0, 90.0, 75.0, 82.5),
-            our_score=SkillScore(80.0, 75.0, 85.0, 70.0, 77.5),
-            improvement_potential=5.0,
-            recommendation="CONSIDER",
-            rationale="Minor improvement",
-            github_implementation="...",
-            our_implementation="...",
-            metadata={},
+            skill_type=SkillType.RETRY,
+            github_score=SkillScore(
+                skill_type=SkillType.RETRY,
+                source="github",
+                completeness=85.0,
+                quality=80.0,
+                performance=75.0,
+                maintainability=80.0,
+                security=90.0,
+                total_score=82.5,
+                strengths=["Exponential backoff"],
+                weaknesses=["Limited configuration"],
+                metadata={},
+            ),
+            our_score=SkillScore(
+                skill_type=SkillType.RETRY,
+                source="ours",
+                completeness=80.0,
+                quality=75.0,
+                performance=70.0,
+                maintainability=75.0,
+                security=85.0,
+                total_score=77.5,
+                strengths=["Simple retry"],
+                weaknesses=["No backoff"],
+                metadata={},
+            ),
+            recommendation="improve",
+            gap_analysis="Minor improvement",
+            action_items=["Add exponential backoff"],
         ),
     ]
 
@@ -105,8 +144,8 @@ def sample_comparisons():
 @pytest.fixture
 def sample_selection_result(sample_comparisons):
     """Create sample selection result."""
-    return SkillSelectionResult(
-        skills_to_adopt=[
+    return {
+        "skills_to_adopt": [
             SelectedSkill(
                 comparison=sample_comparisons[0],
                 selection_score=85.0,
@@ -115,12 +154,9 @@ def sample_selection_result(sample_comparisons):
                 metadata={},
             )
         ],
-        skills_to_keep=[sample_comparisons[1]],
-        skills_to_skip=[],
-        selection_criteria=SelectionCriteria(),
-        total_evaluated=2,
-        metadata={},
-    )
+        "skills_to_keep": [sample_comparisons[1]],
+        "skills_to_skip": [],
+    }
 
 
 @pytest.fixture
@@ -440,14 +476,11 @@ class TestReportFormatting:
             target_subagent="keyword-research",
             extraction_result=sample_extraction_result,
             comparisons=sample_comparisons,
-            selection_result=SkillSelectionResult(
-                skills_to_adopt=[],
-                skills_to_keep=[],
-                skills_to_skip=[],
-                selection_criteria=SelectionCriteria(),
-                total_evaluated=2,
-                metadata={},
-            ),
+            selection_result={
+                "skills_to_adopt": [],
+                "skills_to_keep": [],
+                "skills_to_skip": [],
+            },
             teaching_results=[],
             overall_improvement=0.0,
             skills_adopted=0,
@@ -474,14 +507,11 @@ class TestReportFormatting:
             target_subagent="keyword-research",
             extraction_result=sample_extraction_result,
             comparisons=sample_comparisons,
-            selection_result=SkillSelectionResult(
-                skills_to_adopt=[],
-                skills_to_keep=[],
-                skills_to_skip=[],
-                selection_criteria=SelectionCriteria(),
-                total_evaluated=2,
-                metadata={},
-            ),
+            selection_result={
+                "skills_to_adopt": [],
+                "skills_to_keep": [],
+                "skills_to_skip": [],
+            },
             teaching_results=[],
             overall_improvement=0.0,
             skills_adopted=0,

@@ -16,6 +16,7 @@ from typing import Any
 import structlog
 
 from AIM.src.aim.teacher.skills.skill_comparator import ComparisonResult
+from AIM.src.aim.teacher.skills.skill_extractor import SkillType
 
 logger = structlog.get_logger()
 
@@ -101,7 +102,6 @@ class SkillTeacher:
         """
         self.logger.info(
             "teaching_skill",
-            skill_name=skill.skill_name,
             skill_type=skill.skill_type,
             target_subagent=target_subagent,
         )
@@ -142,8 +142,8 @@ class SkillTeacher:
         taught_successfully = test_results["passed"] and improvement > 0
 
         return TeachingResult(
-            skill_name=skill.skill_name,
-            skill_type=skill.skill_type,
+            skill_name=str(skill.skill_type.value),
+            skill_type=str(skill.skill_type.value),
             target_subagent=target_subagent,
             taught_successfully=taught_successfully,
             integration_points=integration_points,
@@ -273,7 +273,7 @@ class SkillTeacher:
             AdaptedCode with original and adapted patterns
         """
         # Example adaptation for circuit breaker
-        if skill.skill_type == "error_handling" and "circuit" in skill.skill_name.lower():
+        if skill.skill_type == SkillType.ERROR_HANDLING:
             original_pattern = """
 # GitHub pattern (custom implementation)
 class CircuitBreaker:
@@ -355,8 +355,8 @@ Adaptations made:
 
         # Default: generic adaptation template
         return AdaptedCode(
-            original_pattern=f"# GitHub pattern for {skill.skill_name}",
-            adapted_pattern=f"# Adapted pattern for {skill.skill_name} (TODO: implement)",
+            original_pattern=f"# GitHub pattern for {skill.skill_type.value}",
+            adapted_pattern=f"# Adapted pattern for {skill.skill_type.value} (TODO: implement)",
             adaptation_notes="Generic adaptation - needs manual implementation",
             dependencies=[],
             imports=[],
@@ -425,12 +425,12 @@ Adaptations made:
         test_dir = sandbox_path / "AIM" / "tests" / "subagents" / target_subagent
         test_dir.mkdir(parents=True, exist_ok=True)
 
-        test_file = test_dir / f"test_{skill.skill_type}_{skill.skill_name.lower().replace(' ', '_')}.py"
+        test_file = test_dir / f"test_{skill.skill_type.value}.py"
 
         # TODO: Generate actual test code
         # For now, create placeholder
         test_content = f'''"""
-Tests for {skill.skill_name} skill.
+Tests for {skill.skill_type.value} skill.
 
 Taught by SkillTeacher from GitHub best practices.
 """
@@ -438,8 +438,8 @@ Taught by SkillTeacher from GitHub best practices.
 import pytest
 
 
-class Test{skill.skill_name.replace(" ", "")}:
-    """Test {skill.skill_name} skill."""
+class Test{skill.skill_type.value.replace("_", "").title()}:
+    """Test {skill.skill_type.value} skill."""
 
     def test_basic_functionality(self):
         """Test basic functionality."""
@@ -525,13 +525,13 @@ class Test{skill.skill_name.replace(" ", "")}:
         Returns:
             Teaching notes (markdown format)
         """
-        notes = f"""# Teaching: {skill.skill_name}
+        notes = f"""# Teaching: {skill.skill_type.value}
 
 ## Skill Details
-- **Type:** {skill.skill_type}
-- **GitHub Score:** {skill.github_score.total:.1f}/100
-- **Our Score:** {skill.our_score.total:.1f}/100
-- **Improvement Potential:** {skill.improvement_potential:.1f}%
+- **Type:** {skill.skill_type.value}
+- **GitHub Score:** {skill.github_score.total_score:.1f}/100
+- **Our Score:** {skill.our_score.total_score:.1f}/100
+- **Gap Analysis:** {skill.gap_analysis}
 
 ## Integration Points
 """
