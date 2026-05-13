@@ -3994,3 +3994,515 @@ class ValidationGateSettings:
 **Created:** 2026-05-13  
 **Author:** meAI Architect (via Claude Sonnet 4)  
 **Status:** 📋 Ready for Review
+
+---
+
+## 9. Monitoring & Alerting System
+
+### 9.1 Purpose
+
+**Критически важно:** Если Exa, GitHub API или другие endpoints недоступны, Teacher Agent не может получать данные для обучения системы. Это означает, что система перестаёт расти и улучшаться.
+
+**Решение:** Автоматические алерты пользователю через Operator при любых проблемах с источниками данных.
+
+### 9.2 Monitored Endpoints
+
+**Research Endpoints:**
+1. **Exa API** (web_search_exa, deep_researcher_start)
+   - Critical: без этого нет deep research
+   - Fallback: Brave Search API (если доступен)
+
+2. **GitHub API** (search repositories, get repo details)
+   - Critical: без этого нет GitHub discovery
+   - Rate limit: 60 req/hour (unauthenticated), 5000 req/hour (authenticated)
+
+3. **Brave Search API** (fallback для Exa)
+   - Optional: используется только если Exa недоступен
+
+**Integration Endpoints:**
+4. **Event Bus** (publish events)
+   - Critical: без этого нет коммуникации с Operator
+
+5. **Obsidian Vault** (write logs, decisions)
+   - Critical: без этого нет audit trail
+
+### 9.3 Health Check System
+
+```python
+@dataclass
+class EndpointHealth:
+    endpoint_name: str              # "exa_api", "github_api", etc.
+    status: str                     # "healthy", "degraded", "down"
+    last_check: datetime
+    last_success: datetime
+    consecutive_failures: int
+    error_message: str | None
+    response_time_ms: float | None
+
+@dataclass
+class SystemHealth:
+    overall_status: str             # "healthy", "degraded", "critical"
+    endpoints: list[EndpointHealth]
+    can_research: bool              # Can perform deep research?
+    can_discover_github: bool       # Can find GitHub repos?
+    can_alert: bool                 # Can send alerts to Operator?
+    timestamp: datetime
+
+class HealthMonitor:
+    def __init__(self, event_bus: EventBus, obsidian: ObsidianVault):
+        self.event_bus = event_bus
+        self.obsidian = obsidian
+        self.endpoints = {
+            "exa_api": EndpointHealth(...),
+            "github_api": EndpointHealth(...),
+            "brave_api": EndpointHealth(...),
+            "event_bus": EndpointHealth(...),
+            "obsidian": EndpointHealth(...)
+        }
+        self.alert_threshold = 3  # Alert after 3 consecutive failures
+    
+    async def check_all_endpoints(self) -> SystemHealth:
+        """Check health of all critical endpoints."""
+        for name, endpoint in self.endpoints.items():
+            await self._check_endpoint(name, endpoint)
+        
+        # Determine overall status
+        overall_status = self._calculate_overall_status()
+        
+        # Check capabilities
+        can_research = self._can_perform_research()
+        can_discover_github = self._can_discover_github()
+        can_alert = self._can_send_alerts()
+        
+        health = SystemHealth(
+            overall_status=overall_status,
+            endpoints=list(self.endpoints.values()),
+            can_research=can_research,
+            can_discover_github=can_discover_github,
+            can_alert=can_alert,
+            timestamp=datetime.now()
+        )
+        
+        # Send alerts if needed
+        await self._send_alerts_if_needed(health)
+        
+        return health
+    
+    async def _check_endpoint(self, name: str, endpoint: EndpointHealth):
+        """Check single endpoint health."""
+        start_time = time.time()
+        
+        try:
+            if name == "exa_api":
+                # Quick test: search for "test"
+                await self.exa_client.web_search_exa(
+                    query="test",
+                    numResults=1
+                )
+            elif name == "github_api":
+                # Quick test: search for "python"
+                await self.github_client.search_repositories(
+                    query="python",
+                    per_page=1
+                )
+            elif name == "brave_api":
+                # Quick test: search for "test"
+                await self.brave_client.search(query="test", count=1)
+            elif name == "event_bus":
+                # Quick test: publish test event
+                await self.event_bus.publish(Event(
+                    type="teacher.health_check",
+                    data={"test": True}
+                ))
+            elif name == "obsidian":
+                # Quick test: write to vault
+                await self.obsidian.log("Health check", metadata={"test": True})
+            
+            # Success
+            response_time = (time.time() - start_time) * 1000
+            endpoint.status = "healthy"
+            endpoint.last_check = datetime.now()
+            endpoint.last_success = datetime.now()
+            endpoint.consecutive_failures = 0
+            endpoint.error_message = None
+            endpoint.response_time_ms = response_time
+            
+        except Exception as e:
+            # Failure
+            endpoint.status = "down"
+            endpoint.last_check = datetime.now()
+            endpoint.consecutive_failures += 1
+            endpoint.error_message = str(e)
+            endpoint.response_time_ms = None
+    
+    def _calculate_overall_status(self) -> str:
+        """Calculate overall system health status."""
+        critical_endpoints = ["exa_api", "github_api", "event_bus"]
+        
+        # Check critical endpoints
+        critical_down = [
+            name for name in critical_endpoints
+            if self.endpoints[name].status == "down"
+        ]
+        
+        if len(critical_down) >= 2:
+            return "critical"  # 2+ critical endpoints down
+        elif len(critical_down) == 1:
+            return "degraded"  # 1 critical endpoint down
+        else:
+            return "healthy"   # All critical endpoints up
+    
+    def _can_perform_research(self) -> bool:
+        """Check if system can perform deep research."""
+        exa_healthy = self.endpoints["exa_api"].status == "healthy"
+        brave_healthy = self.endpoints["brave_api"].status == "healthy"
+        
+        # Can research if Exa OR Brave is available
+        return exa_healthy or brave_healthy
+    
+    def _can_discover_github(self) -> bool:
+        """Check if system can discover GitHub repos."""
+        return self.endpoints["github_api"].status == "healthy"
+    
+    def _can_send_alerts(self) -> bool:
+        """Check if system can send alerts to Operator."""
+        return self.endpoints["event_bus"].status == "healthy"
+    
+    async def _send_alerts_if_needed(self, health: SystemHealth):
+        """Send alerts to Operator if endpoints are down."""
+        for endpoint in health.endpoints:
+            # Alert after N consecutive failures
+            if endpoint.consecutive_failures >= self.alert_threshold:
+                await self._send_alert(endpoint, health)
+    
+    async def _send_alert(
+        self,
+        endpoint: EndpointHealth,
+        health: SystemHealth
+    ):
+        """Send alert to Operator about endpoint failure."""
+        # Determine severity
+        if endpoint.endpoint_name in ["exa_api", "github_api"]:
+            severity = "CRITICAL"
+        else:
+            severity = "WARNING"
+        
+        # Determine impact
+        impact = []
+        if not health.can_research:
+            impact.append("❌ Cannot perform deep research")
+        if not health.can_discover_github:
+            impact.append("❌ Cannot discover GitHub repos")
+        if not health.can_alert:
+            impact.append("❌ Cannot send alerts (this is the last one!)")
+        
+        # Create alert message
+        alert_message = f"""
+🚨 Teacher Agent Alert: {severity}
+
+Endpoint: {endpoint.endpoint_name}
+Status: {endpoint.status}
+Consecutive failures: {endpoint.consecutive_failures}
+Last success: {endpoint.last_success.strftime('%Y-%m-%d %H:%M:%S')}
+Error: {endpoint.error_message}
+
+Impact on system:
+{chr(10).join(impact) if impact else "✅ System can still operate (fallback available)"}
+
+Overall system status: {health.overall_status.upper()}
+
+Action required:
+1. Check {endpoint.endpoint_name} availability
+2. Verify API keys/credentials
+3. Check rate limits (GitHub: 60/hour without token, 5000/hour with token)
+4. Review error logs in Obsidian vault
+
+⚠️ System growth is blocked until this is resolved!
+        """.strip()
+        
+        # Send to Operator via Event Bus
+        try:
+            await self.event_bus.publish(Event(
+                type="teacher.alert",
+                priority=Priority.P0 if severity == "CRITICAL" else Priority.P1,
+                data={
+                    "severity": severity,
+                    "endpoint": endpoint.endpoint_name,
+                    "message": alert_message,
+                    "health": health,
+                    "timestamp": datetime.now().isoformat()
+                }
+            ))
+            
+            # Log to Obsidian
+            await self.obsidian.log(
+                f"Alert sent: {endpoint.endpoint_name} down",
+                metadata={
+                    "severity": severity,
+                    "consecutive_failures": endpoint.consecutive_failures,
+                    "error": endpoint.error_message
+                }
+            )
+            
+        except Exception as e:
+            # Cannot send alert via Event Bus - log to Obsidian as last resort
+            await self.obsidian.log(
+                f"CRITICAL: Cannot send alert! Event Bus down. Original alert: {alert_message}",
+                metadata={"error": str(e)}
+            )
+```
+
+### 9.4 Integration with TeacherAgent
+
+```python
+class TeacherAgent:
+    def __init__(self, event_bus: EventBus, obsidian: ObsidianVault):
+        self.event_bus = event_bus
+        self.obsidian = obsidian
+        
+        # Existing components
+        self.research_orchestrator = ResearchOrchestrator()
+        self.skill_orchestrator = SkillExtractionOrchestrator()
+        # ...
+        
+        # NEW: Health monitoring
+        self.health_monitor = HealthMonitor(event_bus, obsidian)
+    
+    async def learn_from_github(
+        self,
+        subagent_name: str,
+        research_depth: str = "standard"
+    ) -> LearningResult:
+        """Main learning workflow with health checks."""
+        
+        # 1. Check system health BEFORE starting
+        health = await self.health_monitor.check_all_endpoints()
+        
+        if health.overall_status == "critical":
+            # Cannot proceed - send alert and abort
+            await self._handle_critical_health(health)
+            raise SystemHealthError(
+                "Cannot proceed: critical endpoints down. "
+                "User has been alerted via Operator."
+            )
+        
+        if health.overall_status == "degraded":
+            # Can proceed with limitations - log warning
+            await self.obsidian.log(
+                f"Starting learning with degraded health: {health}",
+                metadata={"subagent": subagent_name}
+            )
+        
+        # 2. Proceed with learning workflow
+        try:
+            # GitHub discovery
+            if health.can_discover_github:
+                repos = await self.find_github_solutions(...)
+            else:
+                # Fallback: use cached repos or skip
+                repos = await self._get_cached_repos(subagent_name)
+            
+            # Deep research
+            if health.can_research:
+                research = await self.research_orchestrator.research_topic(...)
+            else:
+                # Fallback: use cached research or skip
+                research = await self._get_cached_research(subagent_name)
+            
+            # Continue with skill extraction, comparison, teaching...
+            
+        except Exception as e:
+            # Check if failure is due to endpoint issues
+            health_after = await self.health_monitor.check_all_endpoints()
+            if health_after.overall_status != health.overall_status:
+                # Health degraded during execution - alert user
+                await self._handle_health_degradation(health, health_after)
+            raise
+    
+    async def _handle_critical_health(self, health: SystemHealth):
+        """Handle critical system health - alert user and abort."""
+        alert_message = f"""
+🚨 CRITICAL: Teacher Agent Cannot Operate
+
+System health: {health.overall_status.upper()}
+
+Endpoints down:
+{chr(10).join(f'- {e.endpoint_name}: {e.error_message}' for e in health.endpoints if e.status == 'down')}
+
+Impact:
+- Can research: {health.can_research}
+- Can discover GitHub: {health.can_discover_github}
+- Can alert: {health.can_alert}
+
+⚠️ SYSTEM GROWTH IS BLOCKED!
+
+Action required immediately:
+1. Check endpoint availability
+2. Verify API keys/credentials
+3. Review rate limits
+4. Check error logs in Obsidian vault
+
+Learning workflow aborted.
+        """.strip()
+        
+        await self.event_bus.publish(Event(
+            type="teacher.critical_health",
+            priority=Priority.P0,
+            data={
+                "message": alert_message,
+                "health": health,
+                "timestamp": datetime.now().isoformat()
+            }
+        ))
+    
+    async def _handle_health_degradation(
+        self,
+        health_before: SystemHealth,
+        health_after: SystemHealth
+    ):
+        """Handle health degradation during execution."""
+        alert_message = f"""
+⚠️ WARNING: System Health Degraded During Execution
+
+Before: {health_before.overall_status}
+After: {health_after.overall_status}
+
+New failures:
+{chr(10).join(
+    f'- {e.endpoint_name}: {e.error_message}'
+    for e in health_after.endpoints
+    if e.status == 'down' and e.consecutive_failures == 1
+)}
+
+Current learning workflow may be incomplete.
+        """.strip()
+        
+        await self.event_bus.publish(Event(
+            type="teacher.health_degraded",
+            priority=Priority.P1,
+            data={
+                "message": alert_message,
+                "health_before": health_before,
+                "health_after": health_after,
+                "timestamp": datetime.now().isoformat()
+            }
+        ))
+```
+
+### 9.5 Operator Integration
+
+```python
+class Operator:
+    async def handle_teacher_alert(self, event: Event):
+        """Handle alerts from Teacher Agent."""
+        severity = event.data["severity"]
+        message = event.data["message"]
+        
+        # Log to Operator's vault
+        await self.obsidian.log(
+            f"Teacher Alert: {severity}",
+            metadata=event.data
+        )
+        
+        # Notify user via configured channel
+        if severity == "CRITICAL":
+            # Critical: notify immediately
+            await self._notify_user_urgent(message)
+        else:
+            # Warning: add to daily digest
+            await self._add_to_digest(message)
+    
+    async def _notify_user_urgent(self, message: str):
+        """Notify user immediately about critical issue."""
+        # Option 1: Telegram (if configured)
+        if self.telegram_enabled:
+            await self.telegram.send_message(
+                chat_id=self.user_chat_id,
+                text=f"🚨 URGENT: Teacher Agent\n\n{message}"
+            )
+        
+        # Option 2: Email (if configured)
+        if self.email_enabled:
+            await self.email.send(
+                to=self.user_email,
+                subject="🚨 URGENT: Teacher Agent Cannot Operate",
+                body=message
+            )
+        
+        # Option 3: Console output (always)
+        print(f"\n{'='*60}")
+        print("🚨 URGENT ALERT FROM TEACHER AGENT")
+        print(f"{'='*60}")
+        print(message)
+        print(f"{'='*60}\n")
+```
+
+### 9.6 Health Check Schedule
+
+**Frequency:**
+- Before each learning cycle: Always check health
+- During learning cycle: Check after each major step (research, GitHub discovery, skill extraction)
+- Periodic: Every 1 hour (background health check)
+
+**Alert Thresholds:**
+- 3 consecutive failures → Send alert
+- 5 consecutive failures → Mark as critical
+- 10 consecutive failures → Disable endpoint (use fallback)
+
+### 9.7 Fallback Strategies
+
+**If Exa API down:**
+- Use Brave Search API (if available)
+- Use cached research from previous cycles
+- Skip deep research, proceed with GitHub discovery only
+
+**If GitHub API down:**
+- Use cached repository list
+- Skip new repository discovery
+- Focus on improving existing subagents with cached data
+
+**If both Exa and GitHub down:**
+- CRITICAL: Cannot proceed with learning
+- Alert user immediately
+- System growth is blocked
+
+**If Event Bus down:**
+- CRITICAL: Cannot communicate with Operator
+- Log to Obsidian vault as last resort
+- System is isolated
+
+### 9.8 Metrics & Monitoring
+
+**Health Metrics:**
+- Endpoint uptime percentage (target: 99%+)
+- Average response time per endpoint
+- Consecutive failure count
+- Time since last successful check
+
+**Alert Metrics:**
+- Alerts sent per day
+- Alert severity distribution (CRITICAL vs WARNING)
+- Time to resolution (from alert to endpoint recovery)
+- False positive rate
+
+**Impact Metrics:**
+- Learning cycles blocked due to endpoint failures
+- Subagents not updated due to data unavailability
+- System growth rate (with vs without endpoint issues)
+
+### 9.9 Success Criteria
+
+**System Health:**
+- ✅ All critical endpoints monitored
+- ✅ Alerts sent within 1 minute of failure threshold
+- ✅ User notified via Operator (Telegram/Email/Console)
+- ✅ Fallback strategies implemented
+- ✅ No silent failures (always alert on critical issues)
+
+**User Experience:**
+- ✅ User knows immediately when system cannot grow
+- ✅ Clear action items in alert messages
+- ✅ No surprise "why isn't Teacher working?" moments
+- ✅ Transparency: user sees all endpoint health status
+
+---
