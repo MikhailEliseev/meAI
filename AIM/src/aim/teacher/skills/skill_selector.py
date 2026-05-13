@@ -208,6 +208,80 @@ class SkillSelector:
 
         return results
 
+    async def research_and_clone(
+        self, subagent_name: str, domain: str
+    ) -> dict[str, Path]:
+        """
+        Research domain-specific solutions AND clone ALL repos.
+
+        This is the CORRECT workflow:
+        1. Search GitHub for repos
+        2. Clone ALL found repos to ~/temp/research-repos/
+        3. Return mapping of URL -> local path
+
+        Args:
+            subagent_name: Name of subagent (e.g., "ads", "seo")
+            domain: Domain description (e.g., "advertising automation")
+
+        Returns:
+            Dict mapping repo URL to local clone path
+        """
+        self.logger.info(
+            "research_and_clone_start",
+            subagent=subagent_name,
+            domain=domain,
+        )
+
+        # Step 1: Research (search GitHub)
+        results = await self.research_domain_specific(subagent_name, domain)
+
+        # Step 2: Clone ALL repos
+        cloned_repos = {}
+        base_path = Path.home() / "temp" / "research-repos"
+        base_path.mkdir(parents=True, exist_ok=True)
+
+        for query, repos in results.items():
+            for repo in repos:
+                # Extract repo name from URL
+                repo_name = repo.url.rstrip("/").split("/")[-1]
+                clone_path = base_path / repo_name
+
+                # Skip if already cloned
+                if clone_path.exists():
+                    self.logger.info(
+                        "repo_already_cloned",
+                        url=repo.url,
+                        path=str(clone_path),
+                    )
+                    cloned_repos[repo.url] = clone_path
+                    continue
+
+                # Clone repo
+                try:
+                    await self.clone_repo(repo.url, clone_path)
+                    cloned_repos[repo.url] = clone_path
+                    self.logger.info(
+                        "repo_cloned_success",
+                        url=repo.url,
+                        path=str(clone_path),
+                    )
+                except Exception as e:
+                    self.logger.error(
+                        "repo_clone_failed",
+                        url=repo.url,
+                        error=str(e),
+                    )
+                    # Continue with other repos even if one fails
+
+        self.logger.info(
+            "research_and_clone_complete",
+            subagent=subagent_name,
+            total_repos_found=sum(len(repos) for repos in results.values()),
+            repos_cloned=len(cloned_repos),
+        )
+
+        return cloned_repos
+
     async def search_github_repos(
         self, query: str, max_results: int = 10
     ) -> list[GitHubRepo]:
