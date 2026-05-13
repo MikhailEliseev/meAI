@@ -67,19 +67,24 @@ class SkillSelector:
             min_improvement=self.criteria.min_improvement_threshold,
         )
 
-    async def select_skills(
+    def select_skills(
         self,
         comparisons: list[ComparisonResult],
-    ) -> list[SelectedSkill]:
+        criteria: SelectionCriteria | None = None,
+    ) -> dict[str, Any]:
         """
         Select best skills from comparison results.
 
         Args:
             comparisons: List of comparison results
+            criteria: Optional override criteria
 
         Returns:
-            List of selected skills (sorted by priority)
+            Dict with skills_to_adopt, skills_to_keep, skills_to_skip
         """
+        if criteria:
+            self.criteria = criteria
+
         logger.info(
             "selecting_skills",
             total_comparisons=len(comparisons),

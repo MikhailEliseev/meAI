@@ -152,7 +152,7 @@ def medium_quality_comparison():
 @pytest.mark.asyncio
 async def test_select_high_quality_skills(selector, high_quality_comparison):
     """Test selecting high quality skills."""
-    selected = await selector.select_skills([high_quality_comparison])
+    selected = selector.select_skills([high_quality_comparison])
 
     assert len(selected) == 1
     assert selected[0].comparison.skill_type == SkillType.CIRCUIT_BREAKER
@@ -162,7 +162,7 @@ async def test_select_high_quality_skills(selector, high_quality_comparison):
 @pytest.mark.asyncio
 async def test_filter_low_quality_skills(selector, low_quality_comparison):
     """Test filtering out low quality skills."""
-    selected = await selector.select_skills([low_quality_comparison])
+    selected = selector.select_skills([low_quality_comparison])
 
     # Should be filtered out (score < 70)
     assert len(selected) == 0
@@ -171,7 +171,7 @@ async def test_filter_low_quality_skills(selector, low_quality_comparison):
 @pytest.mark.asyncio
 async def test_select_medium_quality_skills(selector, medium_quality_comparison):
     """Test selecting medium quality skills."""
-    selected = await selector.select_skills([medium_quality_comparison])
+    selected = selector.select_skills([medium_quality_comparison])
 
     # Should pass (score >= 70, improvement >= 10)
     assert len(selected) == 1
@@ -181,7 +181,7 @@ async def test_select_medium_quality_skills(selector, medium_quality_comparison)
 @pytest.mark.asyncio
 async def test_priority_ranking(selector, high_quality_comparison, medium_quality_comparison):
     """Test priority ranking (high quality first)."""
-    selected = await selector.select_skills([
+    selected = selector.select_skills([
         medium_quality_comparison,
         high_quality_comparison,
     ])
@@ -242,7 +242,7 @@ async def test_custom_threshold():
         action_items=["Improve"],
     )
 
-    selected = await selector.select_skills([comparison])
+    selected = selector.select_skills([comparison])
 
     # Should be filtered out (75 < 80)
     assert len(selected) == 0
@@ -295,7 +295,7 @@ async def test_improvement_threshold():
         action_items=["Improve"],
     )
 
-    selected = await selector.select_skills([comparison])
+    selected = selector.select_skills([comparison])
 
     # Should be filtered out (improvement 15 < 20)
     assert len(selected) == 0
@@ -352,7 +352,7 @@ async def test_budget_limit():
         )
         comparisons.append(comparison)
 
-    selected = await selector.select_skills(comparisons)
+    selected = selector.select_skills(comparisons)
 
     # Should only select top 2
     assert len(selected) == 2
@@ -412,7 +412,7 @@ async def test_max_skills_per_type():
         )
         comparisons.append(comparison)
 
-    selected = await selector.select_skills(comparisons)
+    selected = selector.select_skills(comparisons)
 
     # Should only select top 2 circuit breakers
     assert len(selected) == 2
@@ -490,7 +490,7 @@ async def test_security_prioritization():
         action_items=["Adopt"],
     )
 
-    selected = await selector.select_skills([comp1, comp2])
+    selected = selector.select_skills([comp1, comp2])
 
     # High security should be priority 1 (despite lower total score)
     assert len(selected) == 2
@@ -501,7 +501,7 @@ async def test_security_prioritization():
 @pytest.mark.asyncio
 async def test_selection_reason_generation(selector, high_quality_comparison):
     """Test selection reason generation."""
-    selected = await selector.select_skills([high_quality_comparison])
+    selected = selector.select_skills([high_quality_comparison])
 
     assert len(selected) == 1
     reason = selected[0].selection_reason
@@ -514,7 +514,7 @@ async def test_selection_reason_generation(selector, high_quality_comparison):
 @pytest.mark.asyncio
 async def test_format_selection_report(selector, high_quality_comparison, medium_quality_comparison):
     """Test selection report formatting."""
-    selected = await selector.select_skills([
+    selected = selector.select_skills([
         high_quality_comparison,
         medium_quality_comparison,
     ])
@@ -533,7 +533,7 @@ async def test_format_selection_report(selector, high_quality_comparison, medium
 @pytest.mark.asyncio
 async def test_selected_skill_structure(selector, high_quality_comparison):
     """Test SelectedSkill structure."""
-    selected = await selector.select_skills([high_quality_comparison])
+    selected = selector.select_skills([high_quality_comparison])
 
     skill = selected[0]
 
@@ -590,7 +590,7 @@ async def test_filter_keep_ours_recommendation(selector):
         action_items=["Keep ours"],
     )
 
-    selected = await selector.select_skills([comparison])
+    selected = selector.select_skills([comparison])
 
     # Should be filtered out (recommendation is keep_ours)
     assert len(selected) == 0
@@ -599,6 +599,6 @@ async def test_filter_keep_ours_recommendation(selector):
 @pytest.mark.asyncio
 async def test_empty_comparisons(selector):
     """Test with empty comparisons list."""
-    selected = await selector.select_skills([])
+    selected = selector.select_skills([])
 
     assert len(selected) == 0

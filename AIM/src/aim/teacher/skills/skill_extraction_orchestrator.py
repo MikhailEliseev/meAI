@@ -15,6 +15,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import structlog
 
@@ -23,12 +24,12 @@ from AIM.src.aim.teacher.skills.skill_comparator import (
     SkillComparator,
 )
 from AIM.src.aim.teacher.skills.skill_extractor import (
-    SkillExtractionResult,
+    ExtractedSkill,
     SkillExtractor,
 )
 from AIM.src.aim.teacher.skills.skill_selector import (
     SelectionCriteria,
-    SkillSelectionResult,
+    SelectedSkill,
     SkillSelector,
 )
 from AIM.src.aim.teacher.skills.skill_teacher import (
@@ -44,9 +45,9 @@ class SkillExtractionReport:
     """Complete report of skill extraction and teaching."""
     github_repo_url: str
     target_subagent: str
-    extraction_result: SkillExtractionResult
+    extraction_result: list[ExtractedSkill]
     comparisons: list[ComparisonResult]
-    selection_result: SkillSelectionResult
+    selection_result: dict[str, Any]  # From SkillSelector.select_skills()
     teaching_results: list[TeachingResult]
     overall_improvement: float  # % improvement
     skills_adopted: int
@@ -121,8 +122,8 @@ class SkillExtractionOrchestrator:
 
         self.logger.info(
             "skills_extracted",
-            count=len(extraction_result.skills),
-            types=list(set(s.skill_type for s in extraction_result.skills)),
+            count=len(extraction_result),
+            types=list(set(s.skill_type for s in extraction_result)),
         )
 
         # 3. Compare each skill
@@ -130,7 +131,7 @@ class SkillExtractionOrchestrator:
         our_repo_path = Path(f"AIM/src/aim/subagents/{target_subagent}")
 
         comparisons = []
-        for skill in extraction_result.skills:
+        for skill in extraction_result:
             comparison = await self.comparator.compare_skill(
                 skill, our_repo_path
             )
@@ -139,9 +140,9 @@ class SkillExtractionOrchestrator:
         self.logger.info(
             "skills_compared",
             total=len(comparisons),
-            adopt=sum(1 for c in comparisons if c.recommendation == "ADOPT"),
-            consider=sum(1 for c in comparisons if c.recommendation == "CONSIDER"),
-            skip=sum(1 for c in comparisons if c.recommendation == "SKIP"),
+            adopt=sum(1 for c in comparisons if c.recommendation == "adopt"),
+            consider=sum(1 for c in comparisons if c.recommendation == "improve"),
+            skip=sum(1 for c in comparisons if c.recommendation == "keep_ours"),
         )
 
         # 4. Select best skills
@@ -153,9 +154,9 @@ class SkillExtractionOrchestrator:
 
         self.logger.info(
             "skills_selected",
-            to_adopt=len(selection_result.skills_to_adopt),
-            to_keep=len(selection_result.skills_to_keep),
-            to_skip=len(selection_result.skills_to_skip),
+            to_adopt=len(selection_result["skills_to_adopt"]),
+            to_keep=len(selection_result["skills_to_keep"]),
+            to_skip=len(selection_result["skills_to_skip"]),
         )
 
         # 5. Create sandbox (or use provided)
@@ -163,10 +164,10 @@ class SkillExtractionOrchestrator:
             sandbox_path = await self._create_sandbox(target_subagent)
 
         # 6. Teach selected skills
-        self.logger.info("teaching_skills", count=len(selection_result.skills_to_adopt))
+        self.logger.info("teaching_skills", count=len(selection_result["skills_to_adopt"]))
         teaching_results = []
 
-        for selected_skill in selection_result.skills_to_adopt:
+        for selected_skill in selection_result["skills_to_adopt"]:
             try:
                 teaching_result = await self.teacher.teach_skill(
                     selected_skill.comparison,
@@ -184,7 +185,7 @@ class SkillExtractionOrchestrator:
             except Exception as e:
                 self.logger.error(
                     "skill_teaching_failed",
-                    skill_name=selected_skill.comparison.skill_name,
+                    skill_name=selected_skill.comparison.skill_type.value,
                     error=str(e),
                 )
 
@@ -218,8 +219,8 @@ class SkillExtractionOrchestrator:
             teaching_results=teaching_results,
             overall_improvement=overall_improvement,
             skills_adopted=len(teaching_results),
-            skills_kept=len(selection_result.skills_to_keep),
-            skills_skipped=len(selection_result.skills_to_skip),
+            skills_kept=len(selection_result["skills_to_keep"]),
+            skills_skipped=len(selection_result["skills_to_skip"]),
             total_time=total_time,
             report_timestamp=datetime.now(),
         )
@@ -319,14 +320,14 @@ class SkillExtractionOrchestrator:
 
 **GitHub Repo:** {report.github_repo_url}
 **Target Subagent:** {report.target_subagent}
-**Timestamp:** {report.report_timestamp.strftime('%Y-%m-%d %H:%M:%S')}
+**Timestamp:** {report.report_timestamp.strftime('%Y-%m-%d %H:%M:%S') if report.report_timestamp else 'N/A'}
 **Total Time:** {report.total_time:.1f}s
 
 ---
 
 ## Summary
 
-- **Skills Extracted:** {len(report.extraction_result.skills)}
+- **Skills Extracted:** {len(report.extraction_result)}
 - **Skills Compared:** {len(report.comparisons)}
 - **Skills Adopted:** {report.skills_adopted}
 - **Skills Kept:** {report.skills_kept}
@@ -339,32 +340,31 @@ class SkillExtractionOrchestrator:
 
 """
 
-        for skill in report.extraction_result.skills:
-            md += f"- **{skill.skill_name}** ({skill.skill_type})\n"
+        for skill in report.extraction_result:
+            md += f"- **{skill.name}** ({skill.skill_type.value})\n"
 
         md += "\n---\n\n## Comparisons\n\n"
 
         for comp in report.comparisons:
-            md += f"""### {comp.skill_name}
+            md += f"""### {comp.skill_type.value}
 
-- **Type:** {comp.skill_type}
-- **GitHub Score:** {comp.github_score.total:.1f}/100
-- **Our Score:** {comp.our_score.total:.1f}/100
-- **Improvement Potential:** {comp.improvement_potential:.1f}%
+- **Type:** {comp.skill_type.value}
+- **GitHub Score:** {comp.github_score.total_score:.1f}/100
+- **Our Score:** {comp.our_score.total_score:.1f}/100
+- **Gap Analysis:** {comp.gap_analysis}
 - **Recommendation:** {comp.recommendation}
-- **Rationale:** {comp.rationale}
 
 """
 
         md += "---\n\n## Selection Results\n\n"
 
-        md += f"**Skills to Adopt:** {len(report.selection_result.skills_to_adopt)}\n\n"
-        for selected in report.selection_result.skills_to_adopt:
-            md += f"- {selected.comparison.skill_name} (priority {selected.priority}, score {selected.selection_score:.1f})\n"
+        md += f"**Skills to Adopt:** {len(report.selection_result['skills_to_adopt'])}\n\n"
+        for selected in report.selection_result['skills_to_adopt']:
+            md += f"- {selected.comparison.skill_type.value} (priority {selected.priority}, score {selected.selection_score:.1f})\n"
 
-        md += f"\n**Skills to Keep:** {len(report.selection_result.skills_to_keep)}\n\n"
-        for kept in report.selection_result.skills_to_keep:
-            md += f"- {kept.skill_name}\n"
+        md += f"\n**Skills to Keep:** {len(report.selection_result['skills_to_keep'])}\n\n"
+        for kept in report.selection_result['skills_to_keep']:
+            md += f"- {kept.skill_type.value}\n"
 
         md += "\n---\n\n## Teaching Results\n\n"
 

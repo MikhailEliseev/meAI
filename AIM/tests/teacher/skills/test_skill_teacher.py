@@ -19,6 +19,7 @@ from AIM.src.aim.teacher.skills.skill_comparator import (
     ComparisonResult,
     SkillScore,
 )
+from AIM.src.aim.teacher.skills.skill_extractor import SkillType
 from AIM.src.aim.teacher.skills.skill_teacher import (
     AdaptedCode,
     IntegrationPoint,
@@ -37,28 +38,36 @@ def skill_teacher():
 def sample_skill():
     """Create sample skill comparison."""
     return ComparisonResult(
-        skill_name="Circuit Breaker",
-        skill_type="error_handling",
+        skill_type=SkillType.ERROR_HANDLING,
         github_score=SkillScore(
+            skill_type=SkillType.ERROR_HANDLING,
+            source="github",
             completeness=90.0,
             quality=85.0,
-            security=95.0,
             performance=80.0,
-            total=87.5,
+            maintainability=85.0,
+            security=95.0,
+            total_score=87.5,
+            strengths=["Robust error handling", "Production-ready"],
+            weaknesses=["Complex setup"],
+            metadata={},
         ),
         our_score=SkillScore(
+            skill_type=SkillType.ERROR_HANDLING,
+            source="ours",
             completeness=60.0,
             quality=70.0,
-            security=75.0,
             performance=65.0,
-            total=67.5,
+            maintainability=70.0,
+            security=75.0,
+            total_score=67.5,
+            strengths=["Simple implementation"],
+            weaknesses=["Missing circuit breaker", "No retry logic"],
+            metadata={},
         ),
-        improvement_potential=20.0,
-        recommendation="ADOPT",
-        rationale="GitHub implementation has better error handling",
-        github_implementation="class CircuitBreaker: ...",
-        our_implementation="# No circuit breaker",
-        metadata={},
+        recommendation="adopt",
+        gap_analysis="GitHub implementation has better error handling with circuit breaker pattern",
+        action_items=["Implement circuit breaker", "Add retry logic", "Improve error handling"],
     )
 
 
@@ -382,7 +391,6 @@ class TestTeachingDocumentation:
             test_results={"passed": True, "coverage": 85.0},
         )
 
-        assert "Circuit Breaker" in notes
         assert "error_handling" in notes
         assert "15.5%" in notes
         assert "85.0%" in notes
@@ -433,7 +441,7 @@ class TestFullTeachingWorkflow:
         )
 
         assert isinstance(result, TeachingResult)
-        assert result.skill_name == "Circuit Breaker"
+        assert result.skill_name == "error_handling"
         assert result.skill_type == "error_handling"
         assert result.target_subagent == "keyword-research"
 
@@ -472,7 +480,7 @@ class TestFullTeachingWorkflow:
         )
 
         assert len(result.teaching_notes) > 0
-        assert "Circuit Breaker" in result.teaching_notes
+        assert "error_handling" in result.teaching_notes
 
     @pytest.mark.asyncio
     async def test_mark_as_successful_when_tests_pass(
