@@ -9,9 +9,17 @@ from AIM.src.aim.teacher.skills.skill_extractor import (
     SkillType,
     ExtractedSkill,
 )
+from AIM.src.aim.teacher.skills.skill_comparator import (
+    SkillComparator,
+    SkillScore,
+    ComparisonResult,
+)
 
 __all__ = [
     "SkillExtractor",
     "SkillType",
     "ExtractedSkill",
+    "SkillComparator",
+    "SkillScore",
+    "ComparisonResult",
 ]
