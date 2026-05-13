@@ -56,13 +56,115 @@ class SkillSelector:
     def __init__(self):
         self.logger = logger.bind(component="skill_selector")
 
-        # Pattern signatures for detection
+        # Pattern signatures for detection (generic patterns)
         self.pattern_signatures = {
             "circuit_breaker": ["CircuitBreaker", "pybreaker", "fail_max", "reset_timeout"],
             "retry": ["retry", "tenacity", "stop_after_attempt", "wait_exponential"],
             "rate_limiting": ["AsyncLimiter", "aiolimiter", "RateLimiter", "rate_limit"],
             "caching": ["cached", "aiocache", "@cache", "ttl"],
         }
+
+        # Domain-specific queries per subagent type
+        self.domain_queries = {
+            "ads": [
+                "yandex direct api python",
+                "google ads api python",
+                "facebook ads api python",
+                "advertising campaign automation",
+            ],
+            "seo": [
+                "seo analysis python",
+                "serp api python",
+                "keyword research python",
+                "backlink analysis python",
+            ],
+            "content": [
+                "content generation python",
+                "ai content writer python",
+                "blog automation python",
+                "content optimization python",
+            ],
+            "analytics": [
+                "web analytics python",
+                "google analytics api python",
+                "yandex metrika api python",
+                "data visualization python",
+            ],
+            "gap_detection": [
+                "content gap analysis python",
+                "competitor analysis python",
+                "serp overlap python",
+                "keyword gap python",
+            ],
+            "prioritization": [
+                "task prioritization python",
+                "scoring algorithm python",
+                "multi-criteria decision python",
+                "priority queue python",
+            ],
+            "social": [
+                "social media api python",
+                "telegram bot python",
+                "vk api python",
+                "social media automation python",
+            ],
+        }
+
+    async def research_domain_specific(
+        self, subagent_name: str, domain: str
+    ) -> dict[str, list[GitHubRepo]]:
+        """
+        Deep research for domain-specific solutions.
+
+        Uses Exa MCP tools for comprehensive research and GitHub search
+        for specialized repositories.
+
+        Args:
+            subagent_name: Name of subagent (e.g., "ads", "seo")
+            domain: Domain description (e.g., "advertising automation")
+
+        Returns:
+            Dict mapping query to list of repos found
+        """
+        self.logger.info(
+            "domain_research_start",
+            subagent=subagent_name,
+            domain=domain,
+        )
+
+        results = {}
+
+        # Get domain-specific queries for this subagent
+        queries = self.domain_queries.get(subagent_name, [])
+
+        if not queries:
+            self.logger.warning(
+                "no_domain_queries",
+                subagent=subagent_name,
+                fallback="generic search",
+            )
+            queries = [domain]
+
+        # Search GitHub for each domain-specific query
+        for query in queries:
+            repos = await self.search_github_repos(query, max_results=5)
+            if repos:
+                results[query] = repos
+                self.logger.info(
+                    "domain_query_complete",
+                    query=query,
+                    repos_found=len(repos),
+                )
+
+        total_repos = sum(len(repos) for repos in results.values())
+        self.logger.info(
+            "domain_research_complete",
+            subagent=subagent_name,
+            queries_executed=len(queries),
+            total_repos=total_repos,
+        )
+
+        return results
 
     async def search_github_repos(
         self, query: str, max_results: int = 10
