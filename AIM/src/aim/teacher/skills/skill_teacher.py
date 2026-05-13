@@ -23,6 +23,7 @@ import structlog
 from AIM.src.aim.teacher.skills.skill_comparator import SkillComparator
 from AIM.src.aim.teacher.skills.skill_extractor import SkillExtractor
 from AIM.src.aim.teacher.skills.skill_selector import Skill, SkillSelector
+from AIM.src.aim.teacher.skills.skill_applier import SkillApplier
 
 logger = structlog.get_logger()
 
@@ -101,11 +102,12 @@ class SkillTeacher:
     - Apply to codebase (not just document)
     """
 
-    def __init__(self):
+    def __init__(self, project_root: Path):
         self.logger = logger.bind(component="skill_teacher")
         self.selector = SkillSelector()
         self.extractor = SkillExtractor()
         self.comparator = SkillComparator()
+        self.applier = SkillApplier(project_root)
 
     async def teach_subagent(
         self, subagent_name: str, domain: str
@@ -213,9 +215,34 @@ class SkillTeacher:
                 else None,
             )
 
-            # Step 5: Apply to codebase (TODO)
-            self.logger.warning("step_5_apply_to_codebase", status="TODO")
-            # TODO: Create SkillApplier and apply implementation
+            # Step 5: Apply to codebase
+            self.logger.info("step_5_apply_to_codebase")
+            application = await self.applier.apply(
+                implementation,
+                target_path=None,  # Use suggested path from implementation
+                subagent_name=subagent_name,
+            )
+
+            if not application.success:
+                self.logger.error(
+                    "application_failed",
+                    error=application.error,
+                )
+                report.error = f"Application failed: {application.error}"
+                return report
+
+            report.files_created = application.files_created
+            report.files_modified = application.files_modified
+            report.dependencies_added = application.dependencies_added
+            report.tests_created = application.tests_created
+
+            self.logger.info(
+                "application_complete",
+                files_created=len(application.files_created),
+                files_modified=len(application.files_modified),
+                dependencies_added=len(application.dependencies_added),
+                tests_created=len(application.tests_created),
+            )
 
             # Step 6: Test (TODO)
             self.logger.warning("step_6_test", status="TODO")
