@@ -201,6 +201,495 @@ obsidian/teacher/
 
 ## 2. Core Components
 
+### 2.0 GitHub Discovery & Research Layer
+
+**КРИТИЧЕСКИ ВАЖНО:** Teacher Agent должен проводить глубокие исследования через Brave/Exa/Perplexity для поиска лучших GitHub решений.
+
+**Принцип:** Не просто искать по GitHub API → Глубокое исследование темы → Находить топовые репозитории → Анализировать каждый.
+
+#### 2.0.1 ResearchOrchestrator
+
+**Purpose:** Оркестрация глубокого исследования темы через multiple sources.
+
+**Input:**
+```python
+subagent_name: str              # Имя субагента (e.g., "seo_analyzer")
+topic: str                      # Тема для исследования (e.g., "SEO analysis Python")
+research_depth: str             # "quick" | "standard" | "deep"
+```
+
+**Output:**
+```python
+@dataclass
+class ResearchResult:
+    topic: str
+    github_repos: list[GitHubRepo]          # Топовые репозитории
+    best_practices: list[str]               # Лучшие практики из статей
+    tools_and_libraries: list[str]          # Инструменты и библиотеки
+    industry_insights: list[str]            # Инсайты индустрии
+    research_sources: list[str]             # Источники (URLs)
+    research_timestamp: datetime
+    research_cost: float                    # Стоимость исследования ($)
+```
+
+**Workflow:**
+1. **Web Research** (Brave/Exa/Perplexity) → best practices, tools, insights
+2. **GitHub Search** (GitHub API + Exa) → top repositories
+3. **Rank & Filter** → select top 5-10 repos
+4. **Return** ResearchResult
+
+**Implementation:**
+```python
+class ResearchOrchestrator:
+    def __init__(self):
+        self.web_researcher = WebResearcher()      # Brave/Exa/Perplexity
+        self.github_searcher = GitHubSearcher()    # GitHub API + Exa
+        self.repo_ranker = RepoRanker()
+    
+    async def research_topic(
+        self,
+        subagent_name: str,
+        topic: str,
+        research_depth: str = "standard"
+    ) -> ResearchResult:
+        # 1. Web research (parallel)
+        web_results = await self.web_researcher.research(
+            topic=topic,
+            depth=research_depth,
+            focus=["best practices", "tools", "libraries", "patterns"]
+        )
+        
+        # 2. GitHub search (parallel)
+        github_results = await self.github_searcher.search(
+            query=topic,
+            language="Python",
+            min_stars=100,
+            max_results=20
+        )
+        
+        # 3. Rank repositories
+        ranked_repos = await self.repo_ranker.rank(
+            repos=github_results,
+            criteria=["stars", "activity", "quality", "relevance"]
+        )
+        
+        # 4. Select top repos
+        top_repos = ranked_repos[:10]
+        
+        return ResearchResult(
+            topic=topic,
+            github_repos=top_repos,
+            best_practices=web_results.best_practices,
+            tools_and_libraries=web_results.tools,
+            industry_insights=web_results.insights,
+            research_sources=web_results.sources + [r.url for r in top_repos],
+            research_timestamp=datetime.now(),
+            research_cost=web_results.cost
+        )
+```
+
+#### 2.0.2 WebResearcher
+
+**Purpose:** Глубокое исследование темы через Brave/Exa/Perplexity.
+
+**Input:**
+```python
+topic: str                      # "SEO analysis Python"
+depth: str                      # "quick" | "standard" | "deep"
+focus: list[str]                # ["best practices", "tools", "patterns"]
+```
+
+**Output:**
+```python
+@dataclass
+class WebResearchResult:
+    best_practices: list[str]               # Лучшие практики
+    tools: list[str]                        # Инструменты и библиотеки
+    insights: list[str]                     # Инсайты индустрии
+    sources: list[str]                      # URLs источников
+    cost: float                             # Стоимость ($)
+```
+
+**Research Strategy:**
+
+**Quick (5-10 minutes, ~$0.50):**
+- Exa web_search_exa: 10 results
+- Extract key points from top 5 articles
+- Focus: tools, libraries, top repos
+
+**Standard (10-20 minutes, ~$1.50):**
+- Exa web_search_exa: 20 results
+- Exa deep_researcher_start: "standard" model
+- Extract: best practices, tools, patterns, insights
+- Focus: comprehensive overview
+
+**Deep (20-40 minutes, ~$3.00):**
+- Exa web_search_exa: 30 results
+- Exa deep_researcher_start: "pro" model
+- Multiple research angles:
+  - Best practices and patterns
+  - Production implementations
+  - Performance optimization
+  - Security considerations
+  - Industry trends
+- Focus: deep understanding, edge cases, trade-offs
+
+**Implementation:**
+```python
+class WebResearcher:
+    def __init__(self):
+        self.exa_client = ExaClient()
+        self.brave_client = BraveClient()  # Fallback
+    
+    async def research(
+        self,
+        topic: str,
+        depth: str = "standard",
+        focus: list[str] = None
+    ) -> WebResearchResult:
+        if depth == "quick":
+            return await self._quick_research(topic, focus)
+        elif depth == "standard":
+            return await self._standard_research(topic, focus)
+        else:  # deep
+            return await self._deep_research(topic, focus)
+    
+    async def _quick_research(
+        self,
+        topic: str,
+        focus: list[str]
+    ) -> WebResearchResult:
+        # Exa web search
+        search_results = await self.exa_client.web_search_exa(
+            query=f"{topic} best practices tools libraries",
+            numResults=10
+        )
+        
+        # Extract key points from top 5
+        best_practices = []
+        tools = []
+        insights = []
+        
+        for result in search_results[:5]:
+            # Parse content
+            if "best practice" in result.text.lower():
+                best_practices.extend(self._extract_practices(result.text))
+            if "library" in result.text.lower() or "tool" in result.text.lower():
+                tools.extend(self._extract_tools(result.text))
+        
+        return WebResearchResult(
+            best_practices=best_practices,
+            tools=tools,
+            insights=insights,
+            sources=[r.url for r in search_results[:5]],
+            cost=0.50
+        )
+    
+    async def _standard_research(
+        self,
+        topic: str,
+        focus: list[str]
+    ) -> WebResearchResult:
+        # 1. Exa web search (broader)
+        search_results = await self.exa_client.web_search_exa(
+            query=f"{topic} {' '.join(focus)}",
+            numResults=20
+        )
+        
+        # 2. Deep research with Exa
+        research_prompt = f"""
+        Research topic: {topic}
+        
+        Focus areas:
+        {chr(10).join(f'- {f}' for f in focus)}
+        
+        Please provide:
+        1. Best practices and patterns
+        2. Popular tools and libraries
+        3. Industry insights and trends
+        4. Production implementation examples
+        """
+        
+        research_id = await self.exa_client.deep_researcher_start(
+            instructions=research_prompt,
+            model="exa-research"  # Standard model
+        )
+        
+        # Wait for completion
+        research_result = await self._wait_for_research(research_id)
+        
+        # Parse research result
+        best_practices = self._extract_practices(research_result)
+        tools = self._extract_tools(research_result)
+        insights = self._extract_insights(research_result)
+        
+        return WebResearchResult(
+            best_practices=best_practices,
+            tools=tools,
+            insights=insights,
+            sources=[r.url for r in search_results] + [research_result.source],
+            cost=1.50
+        )
+    
+    async def _deep_research(
+        self,
+        topic: str,
+        focus: list[str]
+    ) -> WebResearchResult:
+        # 1. Exa web search (comprehensive)
+        search_results = await self.exa_client.web_search_exa(
+            query=f"{topic} {' '.join(focus)} production implementation",
+            numResults=30
+        )
+        
+        # 2. Multiple deep research angles
+        research_angles = [
+            "Best practices and design patterns",
+            "Production implementations and case studies",
+            "Performance optimization techniques",
+            "Security considerations and compliance",
+            "Industry trends and future directions"
+        ]
+        
+        research_results = []
+        for angle in research_angles:
+            research_prompt = f"""
+            Research topic: {topic}
+            Angle: {angle}
+            
+            Provide detailed analysis with:
+            - Specific examples and code patterns
+            - Trade-offs and considerations
+            - Real-world implementations
+            - Edge cases and pitfalls
+            """
+            
+            research_id = await self.exa_client.deep_researcher_start(
+                instructions=research_prompt,
+                model="exa-research-pro"  # Pro model for deep research
+            )
+            
+            result = await self._wait_for_research(research_id)
+            research_results.append(result)
+        
+        # Synthesize all research
+        best_practices = []
+        tools = []
+        insights = []
+        
+        for result in research_results:
+            best_practices.extend(self._extract_practices(result))
+            tools.extend(self._extract_tools(result))
+            insights.extend(self._extract_insights(result))
+        
+        # Deduplicate
+        best_practices = list(set(best_practices))
+        tools = list(set(tools))
+        insights = list(set(insights))
+        
+        return WebResearchResult(
+            best_practices=best_practices,
+            tools=tools,
+            insights=insights,
+            sources=[r.url for r in search_results] + [r.source for r in research_results],
+            cost=3.00
+        )
+    
+    async def _wait_for_research(self, research_id: str) -> dict:
+        """Wait for deep research to complete."""
+        while True:
+            result = await self.exa_client.deep_researcher_check(research_id)
+            if result["status"] == "completed":
+                return result
+            await asyncio.sleep(5)
+```
+
+#### 2.0.3 GitHubSearcher
+
+**Purpose:** Поиск топовых GitHub репозиториев по теме.
+
+**Input:**
+```python
+query: str                      # "SEO analysis Python"
+language: str                   # "Python"
+min_stars: int                  # 100
+max_results: int                # 20
+```
+
+**Output:**
+```python
+@dataclass
+class GitHubRepo:
+    url: str                            # https://github.com/user/repo
+    name: str                           # user/repo
+    description: str
+    stars: int
+    forks: int
+    last_updated: datetime
+    language: str
+    topics: list[str]
+    readme_summary: str                 # First 500 chars of README
+```
+
+**Search Strategy:**
+
+1. **GitHub API Search:**
+   - Query: `{query} language:{language} stars:>={min_stars}`
+   - Sort by: stars, updated
+   - Filter: active repos (updated in last 6 months)
+
+2. **Exa GitHub Search (parallel):**
+   - Query: `{query} site:github.com`
+   - Extract repo URLs
+   - Cross-reference with GitHub API results
+
+3. **Merge & Deduplicate:**
+   - Combine results from both sources
+   - Remove duplicates
+   - Return top N by stars
+
+**Implementation:**
+```python
+class GitHubSearcher:
+    def __init__(self):
+        self.github_client = GitHubAPIClient()
+        self.exa_client = ExaClient()
+    
+    async def search(
+        self,
+        query: str,
+        language: str = "Python",
+        min_stars: int = 100,
+        max_results: int = 20
+    ) -> list[GitHubRepo]:
+        # 1. GitHub API search
+        github_results = await self.github_client.search_repositories(
+            query=f"{query} language:{language} stars:>={min_stars}",
+            sort="stars",
+            order="desc",
+            per_page=max_results
+        )
+        
+        # 2. Exa search (parallel)
+        exa_results = await self.exa_client.web_search_exa(
+            query=f"{query} site:github.com",
+            numResults=max_results
+        )
+        
+        # 3. Parse Exa results to extract GitHub URLs
+        exa_repos = []
+        for result in exa_results:
+            if "github.com" in result.url:
+                repo_info = await self.github_client.get_repo_info(result.url)
+                if repo_info and repo_info.stars >= min_stars:
+                    exa_repos.append(repo_info)
+        
+        # 4. Merge and deduplicate
+        all_repos = github_results + exa_repos
+        unique_repos = {repo.url: repo for repo in all_repos}.values()
+        
+        # 5. Sort by stars
+        sorted_repos = sorted(unique_repos, key=lambda r: r.stars, reverse=True)
+        
+        return sorted_repos[:max_results]
+```
+
+#### 2.0.4 RepoRanker
+
+**Purpose:** Ранжирование репозиториев по качеству и релевантности.
+
+**Input:**
+```python
+repos: list[GitHubRepo]
+criteria: list[str]             # ["stars", "activity", "quality", "relevance"]
+```
+
+**Output:**
+```python
+@dataclass
+class RankedRepo:
+    repo: GitHubRepo
+    rank_score: float               # 0-100
+    stars_score: float              # 0-100
+    activity_score: float           # 0-100
+    quality_score: float            # 0-100
+    relevance_score: float          # 0-100
+```
+
+**Ranking Criteria:**
+
+**Stars Score (0-100):**
+- Linear scale: 100 stars = 0, 10000+ stars = 100
+- Formula: `min(100, (stars - 100) / 100)`
+
+**Activity Score (0-100):**
+- Last commit within 1 month: 100
+- Last commit within 3 months: 80
+- Last commit within 6 months: 60
+- Last commit within 1 year: 40
+- Older: 20
+
+**Quality Score (0-100):**
+- Has README: +20
+- Has tests: +20
+- Has CI/CD: +20
+- Has documentation: +20
+- Has examples: +20
+
+**Relevance Score (0-100):**
+- Topic match: +30 (if repo topics match query)
+- Description match: +30 (semantic similarity)
+- Language match: +20 (if language matches)
+- Recent activity: +20 (updated in last 3 months)
+
+**Overall Rank Score:**
+```python
+rank_score = (
+    stars_score * 0.30 +
+    activity_score * 0.25 +
+    quality_score * 0.25 +
+    relevance_score * 0.20
+)
+```
+
+**Implementation:**
+```python
+class RepoRanker:
+    async def rank(
+        self,
+        repos: list[GitHubRepo],
+        criteria: list[str]
+    ) -> list[RankedRepo]:
+        ranked = []
+        
+        for repo in repos:
+            stars_score = self._score_stars(repo.stars)
+            activity_score = self._score_activity(repo.last_updated)
+            quality_score = await self._score_quality(repo)
+            relevance_score = self._score_relevance(repo)
+            
+            rank_score = (
+                stars_score * 0.30 +
+                activity_score * 0.25 +
+                quality_score * 0.25 +
+                relevance_score * 0.20
+            )
+            
+            ranked.append(RankedRepo(
+                repo=repo,
+                rank_score=rank_score,
+                stars_score=stars_score,
+                activity_score=activity_score,
+                quality_score=quality_score,
+                relevance_score=relevance_score
+            ))
+        
+        # Sort by rank_score
+        return sorted(ranked, key=lambda r: r.rank_score, reverse=True)
+```
+
+---
+
 ### 2.1 Architecture Analysis Layer
 
 #### 2.1.1 FileStructureAnalyzer
@@ -2794,8 +3283,10 @@ class TeacherAgent:
         self.obsidian = obsidian
         
         # Initialize components
+        self.research_orchestrator = ResearchOrchestrator()  # NEW: Deep research
         self.architecture_analyzer = ArchitectureAnalyzer()
         self.solution_comparator = SolutionComparator()
+        self.skill_orchestrator = SkillExtractionOrchestrator()  # NEW: Skill extraction
         self.full_adopter = FullAdopter()
         self.report_generator = AdoptionReportGenerator()
         self.audit_logger = AuditTrailLogger()
@@ -2815,12 +3306,31 @@ class TeacherAgent:
     async def find_github_solutions(
         self,
         subagent_name: str,
-        query: str
+        query: str,
+        research_depth: str = "standard"
     ) -> list[str]:
-        """Search GitHub for relevant solutions."""
-        # Use GitHub API to search
-        # Rank by stars, activity, quality
-        # Return top 5 repo URLs
+        """Search GitHub for relevant solutions using deep research."""
+        # Use ResearchOrchestrator for deep research
+        research_result = await self.research_orchestrator.research_topic(
+            subagent_name=subagent_name,
+            topic=query,
+            research_depth=research_depth
+        )
+        
+        # Log research to Obsidian
+        await self.obsidian.log(
+            f"Research completed: {len(research_result.github_repos)} repos found",
+            metadata={
+                "topic": query,
+                "depth": research_depth,
+                "cost": research_result.research_cost,
+                "best_practices": len(research_result.best_practices),
+                "tools": len(research_result.tools_and_libraries)
+            }
+        )
+        
+        # Return top repo URLs
+        return [repo.url for repo in research_result.github_repos[:5]]
     
     async def compare_solution(
         self,
@@ -2994,8 +3504,11 @@ class TeacherAgent:
 # Deep audit субагента
 python scripts/teacher_cli.py audit <subagent_name>
 
-# Поиск GitHub решений
-python scripts/teacher_cli.py search <subagent_name> --query "circuit breaker python"
+# ⭐ Deep research topic (Brave/Exa/Perplexity + GitHub)
+python scripts/teacher_cli.py research <subagent_name> --query "circuit breaker python" --depth <quick|standard|deep>
+
+# Поиск GitHub решений (uses research internally)
+python scripts/teacher_cli.py search <subagent_name> --query "circuit breaker python" --depth <quick|standard|deep>
 
 # Сравнение решений
 python scripts/teacher_cli.py compare <subagent_name> --repo <github_url>
@@ -3019,7 +3532,7 @@ python scripts/teacher_cli.py adopt <subagent_name> --repo <github_url>
 python scripts/teacher_cli.py rollback <adoption_id>
 
 # Full autonomous learning cycle
-python scripts/teacher_cli.py learn <subagent_name>
+python scripts/teacher_cli.py learn <subagent_name> --depth <quick|standard|deep>
 
 # List all adoptions
 python scripts/teacher_cli.py list-adoptions
