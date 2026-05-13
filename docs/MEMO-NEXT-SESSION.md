@@ -36,39 +36,68 @@
    - Параллельное выполнение обоих поисков
    - RepoRanker (качественное ранжирование)
 
-6. **"Алерт если Exa или endpoints недоступны"** ✅ NEW
+6. **"Алерт если Exa или endpoints недоступны"** ✅
    - HealthMonitor (проверка всех endpoints)
    - Автоматические алерты через Operator
    - Telegram/Email/Console уведомления
    - Fallback стратегии (Brave API, cached data)
    - Нет silent failures - всегда знаешь когда система не растёт
 
+7. **"Как часто запускается Teacher?"** ✅ NEW
+   - Автоматически каждые 2 недели (полный цикл)
+   - Каждую неделю (GitHub market research)
+   - Каждый день (health check)
+   - Event-driven (новый субагент, плохие метрики)
+   - Manual (CLI команды)
+
+8. **"Аудит всей системы - кто из учеников в классе"** ✅ NEW
+   - SystemAuditor проверяет всех субагентов
+   - Статусы: healthy/degraded/missing/deprecated
+   - Priority queue для обучения
+
+9. **"Если ученик заболел/убежал/отчислился"** ✅ NEW
+   - SystemAuditor обрабатывает missing субагентов
+   - Проверка git history (rename/delete)
+   - Алерт если критический субагент удалён
+   - Автоматическое обновление registry
+
 ---
 
 ## Архитектура
 
 ```
-1. GitHub Discovery & Research ⭐
+TRIGGER (auto/manual) ⭐ NEW
+   ├─ Scheduled (every 2 weeks)
+   ├─ Event-driven (new subagent, bad metrics)
+   └─ Manual (CLI commands)
+   ↓
+1. System Audit ⭐ NEW
+   └─ SystemAuditor (audit all subagents, handle missing/deprecated)
+   ↓
+2. Learning Plan ⭐ NEW
+   └─ LearningScheduler (prioritize P1-P4, estimate time/cost)
+   ↓
+3. GitHub Discovery & Research
    ├─ ResearchOrchestrator
    ├─ WebResearcher (Exa deep research)
    ├─ GitHubSearcher (GitHub API + Exa)
    └─ RepoRanker
    ↓
-2. Architecture Analysis
+4. Architecture Analysis
    ↓
-2.3 Skill Extraction & Teaching ⭐
+5. Skill Extraction & Teaching
    ├─ SkillExtractor (find patterns)
    ├─ SkillComparator (GitHub vs ours)
    ├─ SkillSelector (choose best)
    └─ SkillTeacher (adapt & integrate)
    ↓
-3. Solution Comparison
+6. Solution Comparison
    ↓
-4. Adoption Decision (autonomous)
+7. Adoption Decision (autonomous)
    ↓
-5. Full Adoption (sandbox + validation)
+8. Full Adoption (sandbox + validation)
    ↓
-9. Monitoring & Alerting ⭐ NEW
+9. Monitoring & Alerting
    └─ HealthMonitor (endpoint health checks)
 ```
 
@@ -195,8 +224,8 @@ Cost: $1.50
 ## Спецификация
 
 **File:** `docs/TEACHER_AGENT.md`  
-**Size:** 4508 lines, 150 KB  
-**Components:** 10 (4 research + 5 skill extraction + 1 monitoring)
+**Size:** 5139 lines, 173 KB  
+**Components:** 13 (4 research + 5 skill extraction + 1 monitoring + 3 scheduling/audit)
 
 **Качество:**
 - ✅ Autonomous workflow (no approval gates)
@@ -206,7 +235,10 @@ Cost: $1.50
 - ✅ HIPAA compliance (6 specific checks)
 - ✅ Implementation details (формулы, heuristics, git commands)
 - ✅ Medical context (security 2x weight, zero-error tolerance)
-- ✅ Monitoring & alerting (no silent failures) ⭐ NEW
+- ✅ Monitoring & alerting (no silent failures)
+- ✅ Scheduling & triggers (automatic + manual) ⭐ NEW
+- ✅ System audit (all subagents) ⭐ NEW
+- ✅ Learning prioritization (P1-P4) ⭐ NEW
 
 ---
 
@@ -272,3 +304,76 @@ Cost: $1.50
 
 **Created:** 2026-05-13 17:02 GMT+3  
 **Status:** ✅ Ready for Your Approval
+
+---
+
+## Latest Addition (2026-05-13 17:15)
+
+**User Question:**
+> "Как часто активируется Teacher? Как аудирует систему? Что делать с 'заболевшими/отчисленными' субагентами?"
+
+**Solution: 3 New Components**
+
+1. **Section 1.4: Triggers & Workflow**
+   - Automatic: Every 2 weeks (full cycle), weekly (market research), daily (health check)
+   - Event-driven: New subagent, bad metrics, GitHub releases
+   - Manual: CLI commands
+
+2. **Section 2.1: SystemAuditor**
+   - Discovers all subagents (registry + specs + vaults)
+   - Checks health: healthy/degraded/missing/deprecated
+   - Handles missing: check git history → rename/deprecate → alert if critical
+   - Priority queue: P1-P4
+
+3. **Section 2.2: LearningScheduler**
+   - Creates learning plan from audit report
+   - Prioritizes: P1 (critical), P2 (>4 weeks), P3 (routine), P4 (optional)
+   - Strategies: sequential/parallel/batch
+   - Estimates time & cost
+
+**Added:** +631 lines, +23 KB
+
+---
+
+## Updated Implementation Plan
+
+### Phase 1.0: Research + Monitoring + Scheduling (4-5 hours)
+
+**Tasks:**
+1. Implement ResearchOrchestrator
+2. Implement WebResearcher (Exa integration)
+3. Implement GitHubSearcher (dual search)
+4. Implement RepoRanker
+5. Implement HealthMonitor
+6. Implement SystemAuditor ⭐ NEW
+7. Implement LearningScheduler ⭐ NEW
+8. Tests (25+ tests)
+
+**Deliverable:** Full autonomous learning system with scheduling
+
+### Phase 1.5: Skill Layer (4-5 hours)
+
+**Tasks:**
+1. Implement SkillExtractor
+2. Implement SkillComparator
+3. Implement SkillSelector
+4. Implement SkillTeacher
+5. Implement SkillExtractionOrchestrator
+6. Tests (20+ tests)
+
+**Deliverable:** Skill-level teaching system
+
+### Phase 2+: Full Workflow (8-12 hours)
+
+**Tasks:**
+1. Implement Architecture Analysis
+2. Implement Solution Comparison
+3. Implement Adoption Decision
+4. Implement Full Adoption (sandbox + validation)
+5. Tests (30+ tests)
+6. End-to-end testing
+
+**Deliverable:** Complete Teacher Agent v2.0
+
+**Total:** 16-22 hours
+
