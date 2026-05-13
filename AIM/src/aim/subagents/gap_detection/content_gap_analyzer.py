@@ -17,6 +17,7 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Any
 
+from AIM.src.aim.subagents.api_clients.semrush import SEMrushClient
 from AIM.src.aim.subagents.api_clients.serp_client import (
     SERPAPIClient,
     SERPClientConfig,
@@ -48,6 +49,7 @@ class ContentGapAnalyzer:
         max_cost_usd: float = 1.0,
         serp_api_key: str | None = None,
         serp_provider: str = "mock",
+        semrush_api_key: str | None = None,
     ):
         """Initialize Content Gap Analyzer.
 
@@ -57,6 +59,7 @@ class ContentGapAnalyzer:
             max_cost_usd: Maximum budget for API calls
             serp_api_key: API key for SERP provider (optional, uses mock if not provided)
             serp_provider: SERP data provider (dataforseo, semrush, mock)
+            semrush_api_key: API key for SEMrush Keyword Research (optional)
         """
         self.min_content_quality = min_content_quality
         self.overlap_threshold = overlap_threshold
@@ -84,6 +87,16 @@ class ContentGapAnalyzer:
             )
             self.serp_client = SERPAPIClient(config=serp_config)
 
+        # Initialize SEMrush client (optional, for keyword expansion)
+        self.semrush_client: SEMrushClient | None = None
+        if semrush_api_key:
+            self.semrush_client = SEMrushClient(
+                api_key=semrush_api_key,
+                rate_limit_capacity=10,
+                rate_limit_refill=1.0,
+                cache_ttl=3600,
+            )
+
     async def analyze(
         self,
         client_url: str,
@@ -92,6 +105,10 @@ class ContentGapAnalyzer:
         client_pages: list[dict[str, Any]],
         competitor_pages: list[dict[str, Any]],
         keywords: list[str] | None = None,
+        expand_keywords: bool = False,
+        seed_keyword: str | None = None,
+        max_keywords: int = 100,
+        min_volume: int = 10,
     ) -> GapAnalysisResult:
         """Analyze content gaps between client and competitors.
 
@@ -102,6 +119,10 @@ class ContentGapAnalyzer:
             client_pages: List of client pages with metadata
             competitor_pages: List of competitor pages with metadata
             keywords: Optional list of seed keywords for clustering
+            expand_keywords: If True, expand seed_keyword using Keyword Research Agent
+            seed_keyword: Seed keyword for expansion (required if expand_keywords=True)
+            max_keywords: Maximum keywords to expand (default 100)
+            min_volume: Minimum search volume for expanded keywords (default 10)
 
         Returns:
             GapAnalysisResult with detected gaps, clusters, architecture, and briefs
@@ -116,6 +137,25 @@ class ContentGapAnalyzer:
             client_pages=client_pages,
             competitor_pages=competitor_pages,
         )
+
+        # Step 0: Expand keywords if requested (Keyword Research Agent integration)
+        if expand_keywords:
+            if not seed_keyword:
+                raise ValueError("seed_keyword is required when expand_keywords=True")
+
+            # Expand keywords using SEMrush Keyword Research Agent
+            expanded_keywords = await self.expand_keywords(
+                seed_keyword=seed_keyword,
+                max_keywords=max_keywords,
+                min_volume=min_volume,
+                max_cost_usd=self.max_cost_usd * 0.5,  # Use 50% of budget for expansion
+            )
+
+            # Merge with provided keywords
+            if keywords:
+                keywords = list(set(keywords + expanded_keywords))
+            else:
+                keywords = expanded_keywords
 
         # Step 1: Detect gaps (topic, URL, keyword)
         gaps = await self._detect_all_gaps(
@@ -188,6 +228,7 @@ class ContentGapAnalyzer:
                 "total_briefs": len(briefs),
                 "execution_time_ms": execution_time_ms,
                 "pages_analyzed": len(client_pages) + len(competitor_pages),
+                "keywords_used": len(keywords) if keywords else 0,
             },
             analyzed_at=end_time,
         )
@@ -397,6 +438,48 @@ class ContentGapAnalyzer:
         return serp_data
 
     async def close(self) -> None:
-        """Close SERP client if initialized."""
+        """Close SERP client and SEMrush client if initialized."""
         if self.serp_client:
             await self.serp_client.close()
+        if self.semrush_client:
+            await self.semrush_client.close()
+
+    async def expand_keywords(
+        self,
+        seed_keyword: str,
+        max_keywords: int = 100,
+        min_volume: int = 10,
+        max_cost_usd: float = 0.5,
+    ) -> list[str]:
+        """
+        Expand seed keyword using Keyword Research Agent (SEMrush).
+
+        Args:
+            seed_keyword: Seed keyword to expand (e.g., "dental implants")
+            max_keywords: Maximum keywords to return
+            min_volume: Minimum search volume filter
+            max_cost_usd: Maximum budget for keyword expansion
+
+        Returns:
+            List of expanded keywords
+
+        Raises:
+            ValueError: If SEMrush client not initialized
+        """
+        if not self.semrush_client:
+            raise ValueError(
+                "SEMrush client not initialized. Provide semrush_api_key in constructor."
+            )
+
+        # Expand keywords using SEMrush Keyword Magic Tool
+        keyword_data = await self.semrush_client.expand_keywords(
+            seed_keyword=seed_keyword,
+            max_keywords=max_keywords,
+            min_volume=min_volume,
+            max_cost_usd=max_cost_usd,
+        )
+
+        # Extract keyword strings from unified data
+        keywords = [kw["keyword"] for kw in keyword_data]
+
+        return keywords

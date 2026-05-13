@@ -688,3 +688,213 @@ class TestContentGapAnalyzerSERPIntegration:
         
         # Second close should also not raise error
         await analyzer.close()
+
+
+class TestContentGapAnalyzerKeywordResearch:
+    """Test Keyword Research Agent integration."""
+
+    @pytest.mark.asyncio
+    async def test_expand_keywords_success(self):
+        """Test keyword expansion with SEMrush."""
+        from unittest.mock import AsyncMock, MagicMock
+        
+        # Create analyzer with mock SEMrush client
+        analyzer = ContentGapAnalyzer(serp_provider="mock")
+        
+        # Mock SEMrush client
+        mock_semrush = AsyncMock()
+        mock_semrush.expand_keywords = AsyncMock(return_value=[
+            {"keyword": "dental implants cost", "volume": 1000, "difficulty": 50},
+            {"keyword": "dental implants near me", "volume": 800, "difficulty": 45},
+            {"keyword": "dental implants procedure", "volume": 600, "difficulty": 40},
+        ])
+        analyzer.semrush_client = mock_semrush
+        
+        # Expand keywords
+        keywords = await analyzer.expand_keywords(
+            seed_keyword="dental implants",
+            max_keywords=100,
+            min_volume=10,
+            max_cost_usd=0.5,
+        )
+        
+        # Verify results
+        assert len(keywords) == 3
+        assert "dental implants cost" in keywords
+        assert "dental implants near me" in keywords
+        assert "dental implants procedure" in keywords
+        
+        # Verify SEMrush client was called
+        mock_semrush.expand_keywords.assert_called_once_with(
+            seed_keyword="dental implants",
+            max_keywords=100,
+            min_volume=10,
+            max_cost_usd=0.5,
+        )
+        
+        await analyzer.close()
+
+    @pytest.mark.asyncio
+    async def test_expand_keywords_no_client(self):
+        """Test keyword expansion without SEMrush client."""
+        analyzer = ContentGapAnalyzer(serp_provider="mock")
+        
+        # Should raise error when SEMrush client not initialized
+        with pytest.raises(ValueError, match="SEMrush client not initialized"):
+            await analyzer.expand_keywords(
+                seed_keyword="dental implants",
+                max_keywords=100,
+                min_volume=10,
+                max_cost_usd=0.5,
+            )
+        
+        await analyzer.close()
+
+    @pytest.mark.asyncio
+    async def test_analyze_with_keyword_expansion(self):
+        """Test analysis with automatic keyword expansion."""
+        from unittest.mock import AsyncMock
+        
+        # Create analyzer with mock clients
+        analyzer = ContentGapAnalyzer(serp_provider="mock")
+        
+        # Mock SEMrush client
+        mock_semrush = AsyncMock()
+        mock_semrush.expand_keywords = AsyncMock(return_value=[
+            {"keyword": "dental implants cost", "volume": 1000, "difficulty": 50},
+            {"keyword": "dental implants near me", "volume": 800, "difficulty": 45},
+            {"keyword": "dental implants procedure", "volume": 600, "difficulty": 40},
+        ])
+        mock_semrush.close = AsyncMock()
+        analyzer.semrush_client = mock_semrush
+        
+        # Sample data
+        client_pages = [
+            {
+                "url": "https://client.com/page1",
+                "title": "Client Page 1",
+                "topics": ["dental services"],
+                "keywords": ["dentist"],
+                "word_count": 1000,
+                "eeat_score": 0.7,
+            }
+        ]
+        
+        competitor_pages = [
+            {
+                "url": "https://competitor.com/page1",
+                "title": "Competitor Page 1",
+                "topics": ["dental implants", "teeth whitening"],
+                "keywords": ["implants", "whitening"],
+                "word_count": 1500,
+                "eeat_score": 0.8,
+            }
+        ]
+        
+        # Analyze with keyword expansion
+        result = await analyzer.analyze(
+            client_url="https://client.com",
+            competitor_urls=["https://competitor.com"],
+            niche="dental services",
+            client_pages=client_pages,
+            competitor_pages=competitor_pages,
+            expand_keywords=True,
+            seed_keyword="dental implants",
+            max_keywords=100,
+            min_volume=10,
+        )
+        
+        # Verify keyword expansion was called
+        mock_semrush.expand_keywords.assert_called_once()
+        
+        # Verify results
+        assert result.summary["keywords_used"] == 3
+        assert len(result.gaps) > 0
+        assert len(result.clusters) > 0
+        
+        await analyzer.close()
+
+    @pytest.mark.asyncio
+    async def test_analyze_with_keyword_expansion_no_seed(self):
+        """Test analysis with keyword expansion but no seed keyword."""
+        from unittest.mock import AsyncMock
+        
+        analyzer = ContentGapAnalyzer(serp_provider="mock")
+        
+        # Mock SEMrush client
+        mock_semrush = AsyncMock()
+        analyzer.semrush_client = mock_semrush
+        
+        client_pages = [{"url": "https://client.com/page1", "title": "Page 1", "topics": [], "keywords": [], "word_count": 1000, "eeat_score": 0.7}]
+        competitor_pages = [{"url": "https://competitor.com/page1", "title": "Page 1", "topics": [], "keywords": [], "word_count": 1000, "eeat_score": 0.7}]
+        
+        # Should raise error when expand_keywords=True but no seed_keyword
+        with pytest.raises(ValueError, match="seed_keyword is required"):
+            await analyzer.analyze(
+                client_url="https://client.com",
+                competitor_urls=["https://competitor.com"],
+                niche="dental services",
+                client_pages=client_pages,
+                competitor_pages=competitor_pages,
+                expand_keywords=True,  # True but no seed_keyword
+            )
+        
+        await analyzer.close()
+
+    @pytest.mark.asyncio
+    async def test_analyze_merge_expanded_and_provided_keywords(self):
+        """Test merging expanded keywords with provided keywords."""
+        from unittest.mock import AsyncMock
+        
+        analyzer = ContentGapAnalyzer(serp_provider="mock")
+        
+        # Mock SEMrush client
+        mock_semrush = AsyncMock()
+        mock_semrush.expand_keywords = AsyncMock(return_value=[
+            {"keyword": "dental implants cost", "volume": 1000, "difficulty": 50},
+            {"keyword": "dental implants near me", "volume": 800, "difficulty": 45},
+        ])
+        mock_semrush.close = AsyncMock()
+        analyzer.semrush_client = mock_semrush
+        
+        client_pages = [{"url": "https://client.com/page1", "title": "Page 1", "topics": [], "keywords": [], "word_count": 1000, "eeat_score": 0.7}]
+        competitor_pages = [{"url": "https://competitor.com/page1", "title": "Page 1", "topics": [], "keywords": [], "word_count": 1000, "eeat_score": 0.7}]
+        
+        # Provide some keywords and expand more
+        provided_keywords = ["orthodontics", "teeth whitening"]
+        
+        result = await analyzer.analyze(
+            client_url="https://client.com",
+            competitor_urls=["https://competitor.com"],
+            niche="dental services",
+            client_pages=client_pages,
+            competitor_pages=competitor_pages,
+            keywords=provided_keywords,
+            expand_keywords=True,
+            seed_keyword="dental implants",
+            max_keywords=100,
+            min_volume=10,
+        )
+        
+        # Verify keywords were merged (2 provided + 2 expanded = 4 unique)
+        assert result.summary["keywords_used"] == 4
+        
+        await analyzer.close()
+
+    @pytest.mark.asyncio
+    async def test_close_both_clients(self):
+        """Test closing both SERP and SEMrush clients."""
+        from unittest.mock import AsyncMock
+        
+        analyzer = ContentGapAnalyzer(serp_provider="mock")
+        
+        # Mock both clients
+        mock_semrush = AsyncMock()
+        mock_semrush.close = AsyncMock()
+        analyzer.semrush_client = mock_semrush
+        
+        # Close should call both clients
+        await analyzer.close()
+        
+        # Verify both were closed
+        mock_semrush.close.assert_called_once()
