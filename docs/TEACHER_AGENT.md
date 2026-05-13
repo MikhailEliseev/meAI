@@ -214,10 +214,16 @@ class FileStructure:
 ```
 
 **Algorithm:**
-1. Сканировать директории рекурсивно
-2. Классифицировать файлы по назначению (regex patterns)
-3. Подсчитать метрики (файлы, строки)
-4. Определить entry points (main, __init__, app)
+1. Сканировать директории рекурсивно (pathlib.rglob("*.py"))
+2. Классифицировать файлы по назначению используя regex patterns:
+   - clients: r".*/(client|api|service)s?/.*\.py"
+   - models: r".*/(model|schema|entity)s?/.*\.py"
+   - utils: r".*/(util|helper|tool)s?/.*\.py"
+   - tests: r".*/tests?/.*\.py|.*test_.*\.py|.*_test\.py"
+   - config: r".*/(config|setting)s?/.*\.py"
+   - core: r".*/core/.*\.py"
+3. Подсчитать метрики (файлы, строки кода без комментариев)
+4. Определить entry points (main.py, __main__.py, app.py, cli.py)
 
 **Implementation:**
 ```python
@@ -243,20 +249,20 @@ file_structure: FileStructure
 ```python
 @dataclass
 class ComponentRelations:
-    dependency_graph: dict[str, list[str]]  # module -> [dependencies]
-    coupling_score: float                    # 0-100 (100 = low coupling)
+    dependency_graph: dict[str, list[str]]  # module_path -> [dependency_module_paths]
+    coupling_score: float                    # 0-100: (edges / nodes) * 100, normalized
     circular_deps: list[tuple[str, str]]    # Circular dependencies
-    core_components: list[str]               # Most depended upon
-    peripheral_components: list[str]         # Least depended upon
+    core_components: list[str]               # Most depended upon (in-degree >= 3)
+    peripheral_components: list[str]         # Least depended upon (in-degree <= 1)
 ```
 
 
 **Algorithm:**
 1. Parse imports из всех Python файлов (AST)
-2. Построить граф зависимостей (networkx)
-3. Найти circular dependencies (cycle detection)
-4. Вычислить coupling score (edges / nodes ratio)
-5. Определить core vs peripheral (in-degree)
+2. Построить граф зависимостей (networkx): nodes = module paths, edges = imports
+3. Найти circular dependencies (networkx.simple_cycles)
+4. Вычислить coupling score: (num_edges / num_nodes) * 100, clamped to 0-100
+5. Определить core vs peripheral: core if in-degree >= 3, peripheral if in-degree <= 1
 
 **Implementation:**
 ```python
@@ -285,7 +291,7 @@ component_relations: ComponentRelations
 @dataclass
 class DesignPatterns:
     patterns: list[str]                      # ["Strategy", "Factory", "Observer"]
-    architecture_style: str                  # "Layered" | "Hexagonal" | "Clean" | "MVC"
+    architecture_style: str                  # "Layered" | "Hexagonal" | "Clean" | "MVC" | "Microservices" | "Event-Driven" | "CQRS"
     solid_compliance: dict[str, bool]        # S, O, L, I, D principles
     pattern_confidence: dict[str, float]     # Pattern -> confidence (0-1)
 ```
@@ -300,11 +306,24 @@ class DesignPatterns:
 - **Circuit Breaker:** Fault tolerance pattern
 
 **Algorithm:**
-1. Analyze class hierarchies (inheritance, interfaces)
-2. Detect creation patterns (factory methods)
-3. Find event/callback patterns (observer)
-4. Check SOLID principles (SRP, OCP, LSP, ISP, DIP)
-5. Determine architecture style (layering, dependencies)
+1. Analyze class hierarchies (AST: ClassDef nodes, bases attribute for inheritance)
+2. Detect creation patterns:
+   - Factory: methods named create_*, build_*, make_* returning different types
+   - Builder: methods returning self for chaining
+3. Find event/callback patterns:
+   - Observer: methods named on_*, handle_*, callback with function args
+   - Event Bus: publish/subscribe method pairs
+4. Check SOLID principles:
+   - SRP: class has single responsibility (low method count, focused naming)
+   - OCP: uses inheritance/composition (abstract base classes)
+   - LSP: subclasses don't break parent contracts (no NotImplementedError in overrides)
+   - ISP: small focused interfaces (ABC with few methods)
+   - DIP: depends on abstractions (imports from .base, .interface modules)
+5. Determine architecture style:
+   - Layered: dependency direction top-down (presentation → business → data)
+   - Hexagonal: core has no external dependencies (ports/adapters pattern)
+   - Clean: dependency inversion (domain independent of infrastructure)
+   - Event-Driven: event bus usage, async handlers
 
 **Implementation:**
 ```python
@@ -332,20 +351,23 @@ file_structure: FileStructure
 @dataclass
 class TestCoverage:
     test_types: dict[str, int]               # {"unit": 50, "integration": 10, "e2e": 5}
-    coverage_estimate: float                 # 0-100 (based on test count vs functions)
+    coverage_estimate: float                 # 0-100: (test_count / function_count) * 100
     has_fixtures: bool                       # pytest fixtures detected
     has_mocks: bool                          # unittest.mock or pytest-mock detected
     test_scenarios: list[str]                # Extracted from test names
-    test_quality_score: float                # 0-100 (based on assertions, coverage)
+    test_quality_score: float                # 0-100: (assertions_per_test * 0.4 + fixture_usage * 0.3 + mock_usage * 0.3) * 100
 ```
 
 **Algorithm:**
 1. Найти все test файлы (test_*.py, *_test.py)
-2. Классифицировать тесты (unit, integration, e2e) по patterns
-3. Подсчитать количество тестов vs функций (coverage estimate)
-4. Детектировать fixtures и mocks
-5. Извлечь test scenarios из имён тестов
-6. Оценить качество тестов (assertions per test, coverage)
+2. Классифицировать тесты (unit, integration, e2e) по patterns:
+   - unit: test functions without external dependencies (no db, no api calls)
+   - integration: test functions with db/api mocks or fixtures
+   - e2e: test functions with full system setup (no mocks)
+3. Подсчитать coverage_estimate: (total_test_count / total_function_count) * 100
+4. Детектировать fixtures (pytest.fixture decorator) и mocks (unittest.mock, pytest-mock imports)
+5. Извлечь test scenarios из имён тестов (test_should_*, test_when_*, test_given_*)
+6. Оценить test_quality_score: (assertions_per_test * 0.4 + fixture_usage * 0.3 + mock_usage * 0.3) * 100
 
 **Implementation:**
 ```python
@@ -761,9 +783,10 @@ class AdoptionDecision:
 # Calculate composite scores
 quality_composite = (architecture_score.overall + quality_score.overall) / 2
 fit_composite = fit_score.overall
-risk_composite = 100 - risk_score.overall  # Invert (lower risk = higher score)
+# risk_score semantics: 0 = safe, 100 = dangerous (no inversion needed)
+risk_composite = risk_score.overall
 
-# Full Adoption
+# Full Adoption (low risk threshold)
 if quality_composite >= 80 and fit_composite >= 80 and risk_composite <= 20:
     return AdoptionDecision(
         decision="Full",
@@ -772,7 +795,7 @@ if quality_composite >= 80 and fit_composite >= 80 and risk_composite <= 20:
         action_plan="Clone → Adapt → Validate → Auto-merge"
     )
 
-# Partial Adoption
+# Partial Adoption (acceptable risk threshold)
 elif quality_composite >= 70 and fit_composite >= 70 and risk_composite <= 30:
     return AdoptionDecision(
         decision="Partial",
@@ -998,14 +1021,16 @@ class SandboxEnvironment:
     worktree_path: Path                      # Путь к worktree
     branch_name: str                         # Имя ветки
     snapshot_id: str                         # ID snapshot для rollback
+    venv_path: Path                          # Путь к venv для dependency isolation
     created_at: datetime
 ```
 
 **Workflow:**
 1. Create git worktree: `.claude/worktrees/teacher-{adoption_id}`
 2. Create branch: `teacher/{subagent_name}-{adoption_id}`
-3. Create snapshot (git commit hash)
-4. Return SandboxEnvironment
+3. Create venv: `.claude/worktrees/teacher-{adoption_id}/.venv`
+4. Create snapshot (git commit hash)
+5. Return SandboxEnvironment
 
 **Implementation:**
 ```python
@@ -1015,12 +1040,37 @@ class SandboxManager:
         subagent_name: str,
         adoption_id: str
     ) -> SandboxEnvironment:
-        # Create worktree
+        # Create worktree with specific git commands
         worktree_path = Path(f".claude/worktrees/teacher-{adoption_id}")
         branch_name = f"teacher/{subagent_name}-{adoption_id}"
         
+        # Git command: git worktree add <path> -b <branch>
         await self._run_git_command(
             f"worktree add {worktree_path} -b {branch_name}"
+        )
+        
+        # Create venv for dependency isolation
+        venv_path = worktree_path / ".venv"
+        await self._run_command(
+            f"python -m venv {venv_path}"
+        )
+        
+        # Create snapshot (current commit hash)
+        snapshot_id = await self._run_git_command("rev-parse HEAD")
+        
+        return SandboxEnvironment(
+            worktree_path=worktree_path,
+            branch_name=branch_name,
+            snapshot_id=snapshot_id.strip(),
+            venv_path=venv_path,
+            created_at=datetime.now()
+        )
+    
+    async def cleanup_sandbox(self, sandbox: SandboxEnvironment) -> None:
+        # Git command: git worktree remove <path> --force
+        await self._run_git_command(
+            f"worktree remove {sandbox.worktree_path} --force"
+        )
         )
         
         # Create snapshot
@@ -1391,11 +1441,14 @@ class GateResult:
 - Fail condition: Any high/medium severity issues
 
 **Gate 4: Compliance Check (HIPAA)**
-- Check for PII logging
-- Check for encryption (at rest, in transit)
-- Check for audit trail
-- Pass condition: All compliance checks pass
-- Fail condition: Any compliance check fails
+- Check for PHI (Protected Health Information) detection and handling
+- Check for encryption at rest (database, files) and in transit (HTTPS, TLS)
+- Check for audit logging for all PHI access (who, when, what)
+- Check for role-based access control (RBAC) implementation
+- Check for data retention policies compliance (minimum necessary principle)
+- Check for breach notification procedures implementation
+- Pass condition: All 6 HIPAA checks pass
+- Fail condition: Any HIPAA check fails
 
 **Gate 5: Integration Test**
 - Test Event Bus integration
