@@ -24,11 +24,10 @@ from AIM.src.aim.teacher.skills.skill_comparator import (
     SkillComparator,
 )
 from AIM.src.aim.teacher.skills.skill_extractor import (
-    ExtractedSkill,
+    ExtractedImplementation,
     SkillExtractor,
 )
 from AIM.src.aim.teacher.skills.skill_selector import (
-    SelectionCriteria,
     SkillSelector,
 )
 from AIM.src.aim.teacher.skills.skill_teacher import (
@@ -44,7 +43,7 @@ class SkillExtractionReport:
     """Complete report of skill extraction and teaching."""
     github_repo_url: str
     target_subagent: str
-    extraction_result: list[ExtractedSkill]
+    extraction_result: list[ExtractedImplementation]
     comparisons: list[ComparisonResult]
     selection_result: dict[str, Any]  # From SkillSelector.select_skills()
     teaching_results: list[TeachingResult]
