@@ -1043,3 +1043,598 @@ GitPython>=3.1.0,<4.0.0          # Git operations
       decision = "Full"  # risk ≤ 20 = low risk
   ```
 
+
+### 🟡 MAJOR (need clarification)
+
+#### 9. Semantic Similarity Algorithm Missing
+- **Location:** Section 3.3 (FitAnalyzer, lines 600-606)
+- **Impact:** Cannot calculate task_match score без алгоритма
+- **Need:** Добавить в spec:
+  ```python
+  async def _score_task_match(
+      self,
+      subagent_spec_path: Path,
+      github_analysis: ArchitectureAnalysis
+  ) -> float:
+      # Read spec
+      spec_content = await self._read_file(subagent_spec_path)
+      spec_purpose = self._extract_purpose(spec_content)  # Section 1: Overview
+      
+      # Extract GitHub purpose
+      github_readme = await self._read_file(github_analysis.repo_path / "README.md")
+      github_purpose = self._extract_purpose(github_readme)
+      
+      # Calculate semantic similarity
+      # Option 1: Keyword matching (simple)
+      keywords_spec = set(spec_purpose.lower().split())
+      keywords_github = set(github_purpose.lower().split())
+      overlap = len(keywords_spec & keywords_github)
+      similarity = (overlap / len(keywords_spec | keywords_github)) * 100
+      
+      # Option 2: Embeddings (advanced, requires sentence-transformers)
+      # from sentence_transformers import SentenceTransformer
+      # model = SentenceTransformer('all-MiniLM-L6-v2')
+      # emb_spec = model.encode(spec_purpose)
+      # emb_github = model.encode(github_purpose)
+      # similarity = cosine_similarity(emb_spec, emb_github) * 100
+      
+      return similarity
+  ```
+
+#### 10. Performance Metrics Not Defined
+- **Location:** Section 4.6, Gate 2 (lines 1381-1386)
+- **Impact:** Cannot check performance degradation
+- **Need:** Добавить в spec (Opus уже нашёл):
+  ```python
+  class MetricsChecker:
+      async def check_performance(
+          self,
+          sandbox: SandboxEnvironment,
+          subagent_name: str
+      ) -> PerformanceMetrics:
+          # Run pytest-benchmark in sandbox
+          benchmark_results = await self._run_benchmarks(sandbox, subagent_name)
+          
+          # Load baseline metrics
+          baseline = await self._load_baseline_metrics(subagent_name)
+          
+          # Calculate degradation
+          degradation = {}
+          for metric in ["response_time_ms", "throughput_rps", "memory_mb"]:
+              current = benchmark_results[metric]
+              baseline_val = baseline[metric]
+              degradation[metric] = ((current - baseline_val) / baseline_val) * 100
+          
+          max_degradation = max(degradation.values())
+          
+          return PerformanceMetrics(
+              response_time_ms=benchmark_results["response_time_ms"],
+              throughput_rps=benchmark_results["throughput_rps"],
+              memory_mb=benchmark_results["memory_mb"],
+              degradation_percent=max_degradation
+          )
+      
+      async def _run_benchmarks(
+          self,
+          sandbox: SandboxEnvironment,
+          subagent_name: str
+      ) -> dict:
+          # Run pytest-benchmark
+          result = await asyncio.create_subprocess_exec(
+              str(sandbox.venv_path / "bin" / "pytest"),
+              f"AIM/tests/subagents/{subagent_name}/",
+              "--benchmark-only",
+              "--benchmark-json=benchmark.json",
+              cwd=sandbox.worktree_path
+          )
+          
+          # Parse results
+          with open(sandbox.worktree_path / "benchmark.json") as f:
+              data = json.load(f)
+          
+          return {
+              "response_time_ms": data["benchmarks"][0]["stats"]["mean"] * 1000,
+              "throughput_rps": 1 / data["benchmarks"][0]["stats"]["mean"],
+              "memory_mb": data["benchmarks"][0]["stats"]["max_memory_mb"]
+          }
+  ```
+
+#### 11. Dependency Vulnerability Scan Missing
+- **Location:** Section 4.6, Gate 3 (lines 1387-1392)
+- **Impact:** Can adopt vulnerable dependencies
+- **Need:** Добавить в spec (Opus уже нашёл):
+  ```python
+  class SecurityScanner:
+      async def scan_dependencies(self, repo_path: Path) -> DependencySecurityResult:
+          # Run safety check
+          result = await asyncio.create_subprocess_exec(
+              "safety", "check",
+              "--json",
+              "--file", str(repo_path / "requirements.txt"),
+              stdout=asyncio.subprocess.PIPE
+          )
+          
+          stdout, _ = await result.communicate()
+          vulnerabilities = json.loads(stdout)
+          
+          # Filter by severity
+          high_severity = [v for v in vulnerabilities if v["severity"] == "high"]
+          medium_severity = [v for v in vulnerabilities if v["severity"] == "medium"]
+          
+          passed = len(high_severity) == 0 and len(medium_severity) == 0
+          
+          return DependencySecurityResult(
+              passed=passed,
+              vulnerabilities=vulnerabilities,
+              high_count=len(high_severity),
+              medium_count=len(medium_severity),
+              details=self._format_vulnerabilities(vulnerabilities)
+          )
+  ```
+
+#### 12. Retry Logic Not Described
+- **Location:** Throughout spec (GitHub API, git commands, etc.)
+- **Impact:** Failures on transient errors
+- **Need:** Добавить в spec:
+  ```python
+  from tenacity import retry, stop_after_attempt, wait_exponential
+  
+  class TeacherAgent:
+      @retry(
+          stop=stop_after_attempt(3),
+          wait=wait_exponential(multiplier=1, min=1, max=10),
+          retry=retry_if_exception_type((httpx.NetworkError, httpx.TimeoutException))
+      )
+      async def find_github_solutions(self, subagent_name: str, query: str) -> list[str]:
+          # GitHub API call with retry
+          ...
+      
+      @retry(
+          stop=stop_after_attempt(3),
+          wait=wait_exponential(multiplier=1, min=1, max=10),
+          retry=retry_if_exception_type(git.GitCommandError)
+      )
+      async def _clone_repo(self, repo_url: str) -> Path:
+          # Git clone with retry
+          ...
+  ```
+
+#### 13. Merge Strategy Not Defined
+- **Location:** Section 4.1 (SandboxManager.cleanup_sandbox, line 1043)
+- **Impact:** Unclear how to merge (fast-forward? squash? merge commit?)
+- **Need:** Добавить в spec:
+  ```python
+  async def cleanup_sandbox(
+      self,
+      sandbox: SandboxEnvironment,
+      keep_changes: bool = False
+  ) -> None:
+      if keep_changes:
+          # Merge to main with squash (clean history)
+          await self._run_git_command("checkout main")
+          await self._run_git_command(
+              f"merge --squash {sandbox.branch_name}",
+              f"-m 'Teacher Agent: Adopt improvements from {sandbox.branch_name}'"
+          )
+          
+          # Handle merge conflicts
+          if await self._has_merge_conflicts():
+              # Auto-resolve conflicts (prefer incoming changes)
+              await self._run_git_command("checkout --theirs .")
+              await self._run_git_command("add .")
+          
+          await self._run_git_command("commit")
+      
+      # Remove worktree
+      await self._run_git_command(f"worktree remove {sandbox.worktree_path}")
+      
+      # Delete branch
+      await self._run_git_command(f"branch -D {sandbox.branch_name}")
+  ```
+
+#### 14. File Classification Patterns Missing
+- **Location:** Section 2.1.1 (FileStructureAnalyzer, line 218)
+- **Impact:** Cannot classify files без patterns
+- **Need:** Добавить в spec:
+  ```python
+  FILE_PATTERNS = {
+      "entry_points": [r"main\.py$", r"__main__\.py$", r"app\.py$", r"__init__\.py$"],
+      "clients": [r".*client\.py$", r".*api\.py$", r".*service\.py$"],
+      "models": [r".*model\.py$", r".*schema\.py$", r".*entity\.py$", r".*dto\.py$"],
+      "tests": [r"test_.*\.py$", r".*_test\.py$"],
+      "configs": [r"settings\.py$", r"config\.py$", r"\.env$", r".*\.yaml$", r".*\.toml$"],
+      "utils": [r"utils/.*\.py$", r"helpers/.*\.py$", r"common/.*\.py$"],
+      "docs": [r"README\.md$", r"docs/.*\.md$", r".*\.md$"]
+  }
+  ```
+
+#### 15. Test Classification Patterns Missing
+- **Location:** Section 2.1.4 (TestCoverageAnalyzer, line 343)
+- **Impact:** Cannot classify tests без patterns
+- **Need:** Добавить в spec:
+  ```python
+  TEST_PATTERNS = {
+      "unit": [
+          r"test_.*_unit\.py$",
+          r".*mock.*",  # Uses mocks = likely unit test
+          r".*fixture.*"  # Uses fixtures = likely unit test
+      ],
+      "integration": [
+          r"test_.*_integration\.py$",
+          r".*database.*",  # Database tests = integration
+          r".*api.*"  # API tests = integration
+      ],
+      "e2e": [
+          r"test_.*_e2e\.py$",
+          r"test_.*_end_to_end\.py$",
+          r".*selenium.*",  # Browser tests = e2e
+          r".*playwright.*"  # Browser tests = e2e
+      ]
+  }
+  ```
+
+#### 16. SOLID Compliance Rules Missing
+- **Location:** Section 2.1.3 (DesignPatternDetector, line 305)
+- **Impact:** Cannot check SOLID без rules
+- **Need:** Добавить в spec:
+  ```python
+  def check_solid_compliance(self, repo_path: Path) -> dict[str, bool]:
+      return {
+          "S": self._check_srp(repo_path),  # Single Responsibility
+          "O": self._check_ocp(repo_path),  # Open/Closed
+          "L": self._check_lsp(repo_path),  # Liskov Substitution
+          "I": self._check_isp(repo_path),  # Interface Segregation
+          "D": self._check_dip(repo_path)   # Dependency Inversion
+      }
+  
+  def _check_srp(self, repo_path: Path) -> bool:
+      """Single Responsibility: Each class has one reason to change."""
+      # Heuristic: Class with <10 methods, <200 lines
+      # Check all classes, return True if 80%+ comply
+      ...
+  
+  def _check_ocp(self, repo_path: Path) -> bool:
+      """Open/Closed: Open for extension, closed for modification."""
+      # Heuristic: Uses inheritance/composition, not if/else chains
+      # Check for abstract base classes, interfaces
+      ...
+  
+  def _check_lsp(self, repo_path: Path) -> bool:
+      """Liskov Substitution: Subclasses can replace base classes."""
+      # Heuristic: Subclasses don't override methods with incompatible signatures
+      # Check method signatures in inheritance hierarchy
+      ...
+  
+  def _check_isp(self, repo_path: Path) -> bool:
+      """Interface Segregation: Many specific interfaces > one general."""
+      # Heuristic: Interfaces have <5 methods
+      # Check abstract base classes
+      ...
+  
+  def _check_dip(self, repo_path: Path) -> bool:
+      """Dependency Inversion: Depend on abstractions, not concretions."""
+      # Heuristic: Constructor injection, depends on abstract base classes
+      # Check __init__ parameters
+      ...
+  ```
+
+#### 17. Core vs Peripheral Threshold Missing
+- **Location:** Section 2.1.2 (ComponentRelationAnalyzer, line 260)
+- **Impact:** Cannot determine core components без threshold
+- **Need:** Добавить в spec:
+  ```python
+  def _identify_core_components(self, dependency_graph: nx.DiGraph) -> list[str]:
+      """Identify core components by in-degree."""
+      # Calculate in-degree for each node
+      in_degrees = dict(dependency_graph.in_degree())
+      
+      # Threshold: top 20% by in-degree = core
+      threshold = sorted(in_degrees.values(), reverse=True)[int(len(in_degrees) * 0.2)]
+      
+      core = [node for node, degree in in_degrees.items() if degree >= threshold]
+      return core
+  
+  def _identify_peripheral_components(self, dependency_graph: nx.DiGraph) -> list[str]:
+      """Identify peripheral components by in-degree."""
+      # Threshold: bottom 20% by in-degree = peripheral
+      in_degrees = dict(dependency_graph.in_degree())
+      threshold = sorted(in_degrees.values())[int(len(in_degrees) * 0.2)]
+      
+      peripheral = [node for node, degree in in_degrees.items() if degree <= threshold]
+      return peripheral
+  ```
+
+#### 18. Documentation Quality Scoring Missing
+- **Location:** Section 3.1 (ArchitectureScorer, line 467)
+- **Impact:** Cannot score maintainability без documentation scoring
+- **Need:** Добавить в spec:
+  ```python
+  def _score_documentation(self, repo_path: Path) -> float:
+      """Score documentation quality (0-30 points)."""
+      score = 0
+      
+      # README quality (0-10 points)
+      readme_path = repo_path / "README.md"
+      if readme_path.exists():
+          readme_content = readme_path.read_text()
+          if len(readme_content) > 500:  # Substantial README
+              score += 5
+          if "## Installation" in readme_content:  # Has installation section
+              score += 2
+          if "## Usage" in readme_content:  # Has usage section
+              score += 3
+      
+      # Docstring coverage (0-15 points)
+      docstring_coverage = self._calculate_docstring_coverage(repo_path)
+      score += docstring_coverage * 0.15  # 100% coverage = 15 points
+      
+      # Inline comments (0-5 points)
+      comment_ratio = self._calculate_comment_ratio(repo_path)
+      score += min(5, comment_ratio * 50)  # 10% comments = 5 points
+      
+      return score
+  ```
+
+#### 19. Code Style Checking Missing
+- **Location:** Section 3.1 (ArchitectureScorer, line 469)
+- **Impact:** Cannot score maintainability без style checking
+- **Need:** Добавить в spec:
+  ```python
+  async def _check_code_style(self, repo_path: Path) -> bool:
+      """Check if code follows consistent style."""
+      # Run ruff check
+      result = await asyncio.create_subprocess_exec(
+          "ruff", "check", str(repo_path),
+          stdout=asyncio.subprocess.PIPE,
+          stderr=asyncio.subprocess.PIPE
+      )
+      
+      stdout, stderr = await result.communicate()
+      
+      # Parse output
+      violations = len(stdout.decode().split("\n"))
+      
+      # Threshold: <10 violations per 1000 lines = consistent
+      total_lines = self._count_total_lines(repo_path)
+      violations_per_1k = (violations / total_lines) * 1000
+      
+      return violations_per_1k < 10
+  ```
+
+#### 20. Clear Naming Evaluation Missing
+- **Location:** Section 3.1 (ArchitectureScorer, line 470)
+- **Impact:** Cannot score maintainability без naming evaluation
+- **Need:** Добавить в spec:
+  ```python
+  def _evaluate_naming_clarity(self, repo_path: Path) -> float:
+      """Evaluate naming clarity (0-20 points)."""
+      score = 0
+      
+      # Check average identifier length (not too short, not too long)
+      avg_length = self._calculate_avg_identifier_length(repo_path)
+      if 5 <= avg_length <= 20:  # Sweet spot
+          score += 10
+      
+      # Check for abbreviations (fewer = better)
+      abbrev_ratio = self._calculate_abbreviation_ratio(repo_path)
+      score += (1 - abbrev_ratio) * 10  # 0% abbreviations = 10 points
+      
+      return score
+  ```
+
+### 🟢 MINOR (nice to have)
+
+#### 21. Dataclasses Should Use Pydantic
+- **Location:** All dataclasses throughout spec
+- **Impact:** No runtime validation
+- **Recommendation:** Migrate to Pydantic BaseModel
+- **Priority:** LOW - можно добавить позже
+
+#### 22. TestCoverageAnalyzer Should Use pytest-cov
+- **Location:** Section 2.1.4 (lines 341-361)
+- **Impact:** Coverage estimate неточный
+- **Recommendation:** Use pytest-cov для реального coverage
+- **Priority:** LOW - estimate достаточен для v2.0
+
+---
+
+## Comparison with Opus Review
+
+### Agreement Areas
+
+**Both reviews found same BLOCKERS:**
+1. ✅ Risk score calculation logic wrong (Opus line 86-116, Sonnet #8)
+2. ✅ Compliance checks insufficient (Opus line 224-300, Sonnet #7)
+3. ✅ Sandbox venv isolation missing (Opus line 168-330, Sonnet #6)
+
+**Both reviews found same MAJOR issues:**
+4. ✅ Performance metrics not defined (Opus line 176-180, Sonnet #10)
+5. ✅ Dependency vulnerability scan missing (Opus line 247-379, Sonnet #11)
+6. ✅ GitHub download mechanism not described (Opus line 382-400, Sonnet #5)
+7. ✅ Missing dependencies in requirements (Opus line 404-411, Sonnet - Dependencies section)
+8. ✅ CLI commands not async (Opus line 413-429, Sonnet - noted but not blocker)
+
+### Sonnet Found Additional Issues
+
+**Implementation-specific blockers (Opus missed):**
+1. 🆕 Pattern detection algorithms missing (#1) - BIGGEST GAP
+2. 🆕 Metrics calculation formulas missing (#2)
+3. 🆕 File adaptation logic missing (#3)
+4. 🆕 Import mapping algorithm missing (#4)
+5. 🆕 Semantic similarity algorithm missing (#9)
+6. 🆕 Retry logic not described (#12)
+7. 🆕 Merge strategy not defined (#13)
+8. 🆕 File classification patterns missing (#14)
+9. 🆕 Test classification patterns missing (#15)
+10. 🆕 SOLID compliance rules missing (#16)
+11. 🆕 Core vs peripheral threshold missing (#17)
+12. 🆕 Documentation quality scoring missing (#18)
+13. 🆕 Code style checking missing (#19)
+14. 🆕 Clear naming evaluation missing (#20)
+
+**Why Opus missed these:**
+- Opus focused on architecture and high-level feasibility
+- Sonnet focused on line-by-line implementation details
+- Opus assumed "algorithms can be implemented" without checking HOW
+- Sonnet checked "can I write code from this spec?" and found gaps
+
+### Complementary Reviews
+
+**Opus strengths:**
+- Strategic architecture review
+- Business logic validation
+- Risk assessment
+- Timeline feasibility
+
+**Sonnet strengths:**
+- Implementation details
+- Algorithm specifications
+- Code-level feasibility
+- Testing strategy
+
+**Together:** Complete picture of spec quality
+
+---
+
+## Recommendation
+
+**NEEDS CLARIFICATION BEFORE IMPLEMENTATION**
+
+Спецификация Teacher Agent v2.0 хорошо продумана на архитектурном уровне, но имеет существенные пробелы в деталях реализации. Многие алгоритмы описаны на высоком уровне ("analyze", "detect", "score") без конкретных шагов, формул, или heuristics.
+
+**Critical Issues:**
+- 8 BLOCKERS (cannot implement without)
+- 12 MAJOR clarifications needed
+- 2 MINOR improvements (optional)
+
+**After fixing blockers and major issues:** Спецификация будет готова к реализации с высокой уверенностью в успехе.
+
+**Estimated Fix Time:** 4-6 hours (добавить недостающие алгоритмы и формулы)
+
+---
+
+## Implementation Estimate
+
+**After fixes:**
+
+### Phase 1: Architecture Analysis (4-5 hours)
+- FileStructureAnalyzer: 1h (+ patterns)
+- ComponentRelationAnalyzer: 1h (+ coupling formula)
+- DesignPatternDetector: 2h (+ detection heuristics) ⚠️ COMPLEX
+- TestCoverageAnalyzer: 1h (+ formulas)
+- Unit tests: 1h
+
+**Complexity:** HIGH (pattern detection)
+
+### Phase 2: Solution Comparison (3-4 hours)
+- ArchitectureScorer: 1h (+ scoring formulas)
+- QualityScorer: 1h (+ pattern detection)
+- FitAnalyzer: 1h (+ semantic similarity)
+- RiskAnalyzer: 0.5h
+- DecisionMaker: 0.5h (+ fix risk logic)
+- Unit tests: 1h
+
+**Complexity:** MEDIUM
+
+### Phase 3: Full Adoption (5-6 hours)
+- SandboxManager: 1h (+ venv creation)
+- FileCopier: 1.5h (+ adaptation logic)
+- DependencyInstaller: 0.5h
+- ImportUpdater: 1.5h (+ mapping algorithm)
+- TestMigrator: 0.5h
+- ValidationGateRunner: 1h (+ compliance rules)
+- RollbackManager: 0.5h
+- Unit tests: 1.5h
+
+**Complexity:** HIGH (file adaptation, import mapping)
+
+### Phase 4: Reporting & Integration (2-3 hours)
+- AdoptionReportGenerator: 0.5h
+- AuditTrailLogger: 0.5h
+- NotificationSender: 0.5h
+- TeacherAgent: 1h (+ GitHub API, retry logic)
+- CLI: 0.5h (+ async fix)
+- Integration tests: 1h
+
+**Complexity:** MEDIUM
+
+**Total Time:** 14-18 hours (vs spec estimate 8-12 hours)
+
+**Why longer:**
+- Missing algorithms need to be designed AND implemented
+- Pattern detection is complex (2h → 3-4h realistically)
+- File adaptation and import mapping are complex (1h each → 2-3h each)
+- Testing will take longer with more edge cases
+
+---
+
+## Next Steps
+
+### Immediate (Before Implementation)
+
+**Priority 1: Fix Opus Blockers (2-3 hours)**
+1. Fix risk score calculation logic (30 min)
+2. Add HIPAA compliance rules (1 hour)
+3. Add sandbox venv isolation (30 min)
+4. Add performance metrics (30 min)
+5. Add dependency vulnerability scan (30 min)
+
+**Priority 2: Add Implementation Details (2-3 hours)**
+6. Add pattern detection algorithms (1 hour) ⚠️ CRITICAL
+7. Add metrics calculation formulas (30 min)
+8. Add file adaptation logic (30 min)
+9. Add import mapping algorithm (30 min)
+10. Add GitHub API integration (30 min)
+
+**Priority 3: Add Missing Patterns (1 hour)**
+11. Add file classification patterns (15 min)
+12. Add test classification patterns (15 min)
+13. Add SOLID compliance rules (30 min)
+
+### After Fixes (Implementation Phase)
+
+**Phase 1:** Implement Architecture Analysis Layer (4-5 hours)
+**Phase 2:** Implement Solution Comparison Layer (3-4 hours)
+**Phase 3:** Implement Full Adoption Layer (5-6 hours)
+**Phase 4:** Implement Reporting & Integration (2-3 hours)
+
+### Optional (Post-v2.0)
+
+- Migrate dataclasses to Pydantic
+- Improve TestCoverageAnalyzer with pytest-cov
+- Add semantic similarity with embeddings (sentence-transformers)
+
+---
+
+## Conclusion
+
+Спецификация Teacher Agent v2.0 хорошо продумана на архитектурном уровне и покрывает все основные компоненты автономной системы обучения. Однако, с точки зрения implementation, спецификация имеет существенные пробелы в деталях.
+
+**Strengths:**
+- ✅ Архитектура sound и хорошо структурирована
+- ✅ Decision framework чёткий с точными thresholds
+- ✅ Validation gates адекватны для medical marketing
+- ✅ Dataclasses хорошо определены (структура)
+- ✅ Integration points определены (Event Bus, Obsidian, GitHub)
+
+**Weaknesses:**
+- 🔴 Algorithms слишком абстрактные (pattern detection, scoring)
+- 🔴 Formulas отсутствуют (coupling_score, coverage_estimate, test_quality_score)
+- 🔴 File adaptation logic не описана
+- 🔴 Import mapping algorithm не определён
+- 🔴 GitHub API integration не детализирован
+- 🔴 Error handling scenarios не покрыты
+- 🔴 Retry logic не описана
+- 🔴 Test scenarios и mock data не определены
+
+**After fixing 8 blockers and 12 major issues:** Спецификация будет готова к реализации с высокой уверенностью в успехе.
+
+**Realistic Implementation Time:** 14-18 hours (vs spec estimate 8-12 hours)
+
+**Recommendation:** Consolidate Opus and Sonnet reviews, apply fixes, then start implementation.
+
+---
+
+**Review Completed:** 2026-05-13  
+**Reviewer:** Implementation Reviewer (Sonnet 4.5)  
+**Status:** ⚠️ NEEDS CLARIFICATION (fix 8 blockers + 12 major issues)
