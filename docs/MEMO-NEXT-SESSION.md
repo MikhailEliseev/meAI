@@ -36,12 +36,19 @@
    - Параллельное выполнение обоих поисков
    - RepoRanker (качественное ранжирование)
 
+6. **"Алерт если Exa или endpoints недоступны"** ✅ NEW
+   - HealthMonitor (проверка всех endpoints)
+   - Автоматические алерты через Operator
+   - Telegram/Email/Console уведомления
+   - Fallback стратегии (Brave API, cached data)
+   - Нет silent failures - всегда знаешь когда система не растёт
+
 ---
 
 ## Архитектура
 
 ```
-1. GitHub Discovery & Research ⭐ (NEW)
+1. GitHub Discovery & Research ⭐
    ├─ ResearchOrchestrator
    ├─ WebResearcher (Exa deep research)
    ├─ GitHubSearcher (GitHub API + Exa)
@@ -49,7 +56,7 @@
    ↓
 2. Architecture Analysis
    ↓
-2.3 Skill Extraction & Teaching ⭐ (NEW)
+2.3 Skill Extraction & Teaching ⭐
    ├─ SkillExtractor (find patterns)
    ├─ SkillComparator (GitHub vs ours)
    ├─ SkillSelector (choose best)
@@ -60,13 +67,97 @@
 4. Adoption Decision (autonomous)
    ↓
 5. Full Adoption (sandbox + validation)
+   ↓
+9. Monitoring & Alerting ⭐ NEW
+   └─ HealthMonitor (endpoint health checks)
 ```
+
+---
+
+## Система Мониторинга (NEW)
+
+**Проблема:**
+Если Exa или GitHub API недоступны → Teacher не получает данные → система не растёт → ты не знаешь об этом.
+
+**Решение:**
+
+### Мониторинг Endpoints
+
+**Critical (must be up):**
+- Exa API (deep research)
+- GitHub API (repo discovery)
+- Event Bus (communication)
+- Obsidian (audit trail)
+
+**Optional (fallback):**
+- Brave API (fallback for Exa)
+
+### Алерты
+
+**Когда:**
+- 3 consecutive failures → Alert
+- 5 consecutive failures → Critical
+- 10 consecutive failures → Disable endpoint
+
+**Куда:**
+- Telegram (если настроен)
+- Email (если настроен)
+- Console (всегда)
+
+**Формат:**
+```
+🚨 Teacher Agent Alert: CRITICAL
+
+Endpoint: exa_api
+Status: down
+Consecutive failures: 3
+Error: Connection timeout
+
+Impact:
+❌ Cannot perform deep research
+✅ Can still discover GitHub repos
+
+Action:
+1. Check Exa API status
+2. Verify API key
+3. Check rate limits
+
+⚠️ System growth is blocked!
+```
+
+### Fallback Стратегии
+
+**Exa down:**
+- Use Brave API
+- Use cached research
+- Skip deep research
+
+**GitHub down:**
+- Use cached repos
+- Skip new discovery
+
+**Both down:**
+- CRITICAL alert
+- Abort learning
+- System growth blocked
 
 ---
 
 ## Пример Работы
 
 **Сценарий:** Улучшение SEO Agent с circuit breaker
+
+**Шаг 0: Health Check** ⭐ NEW
+```
+HealthMonitor checks:
+✅ Exa API: healthy (response: 45ms)
+✅ GitHub API: healthy (response: 120ms)
+✅ Event Bus: healthy
+✅ Obsidian: healthy
+
+Overall status: HEALTHY
+Can proceed with learning.
+```
 
 **Шаг 1: Deep Research**
 ```
@@ -90,72 +181,7 @@ Result: Top 5 repos + 25 best practices + 12 tools
 Cost: $1.50
 ```
 
-**Шаг 2: Clone & Analyze**
-```
-Clone: git clone https://github.com/pybreaker/pybreaker
-Analyze:
-- File structure: 15 files, 2500 lines
-- Dependencies: 3 (redis, threading, logging)
-- Patterns: State pattern, Observer pattern
-- Tests: 85% coverage
-```
-
-**Шаг 3: Extract Skills**
-```
-Found 5 skills:
-1. circuit_breaker (resilience): confidence 0.95
-2. exponential_backoff (resilience): confidence 0.90
-3. half_open_state (resilience): confidence 0.85
-4. failure_rate_monitoring (observability): confidence 0.80
-5. state_change_events (observability): confidence 0.75
-```
-
-**Шаг 4: Compare Each Skill**
-```
-circuit_breaker:
-  GitHub: 85/100 (has half_open, reset_timeout)
-  Ours: 60/100 (basic, no half_open)
-  Winner: github (+25)
-  Recommendation: adopt
-
-exponential_backoff:
-  GitHub: 70/100 (basic)
-  Ours: 85/100 (tenacity library, better)
-  Winner: ours (+15)
-  Recommendation: keep_ours
-```
-
-**Шаг 5: Select Best**
-```
-Strategy: balanced (threshold +10)
-
-To adopt: 2 skills
-- circuit_breaker (delta +25)
-- half_open_state (delta +20)
-
-To keep: 2 skills
-- exponential_backoff (ours +15)
-- failure_rate_monitoring (ours +10)
-
-To skip: 1 skill
-- state_change_events (delta +5, below threshold)
-```
-
-**Шаг 6: Teach Skills**
-```
-Teaching circuit_breaker to SEO Agent:
-
-1. Analyze integration points: BaseClient._fetch()
-2. Adapt pattern:
-   - Use pybreaker library (production-ready)
-   - Add Event Bus integration
-   - Add Obsidian logging
-3. Integrate: Update BaseClient class
-4. Write tests: 5 unit + 2 integration
-5. Measure improvement: 95% reduction in cascading failures
-
-✅ circuit_breaker taught successfully!
-```
+**Шаг 2-6:** (Clone, Analyze, Extract, Compare, Select, Teach)
 
 **Result:**
 - 2 skills adopted
@@ -169,8 +195,8 @@ Teaching circuit_breaker to SEO Agent:
 ## Спецификация
 
 **File:** `docs/TEACHER_AGENT.md`  
-**Size:** 3996 lines, 132 KB  
-**Components:** 9 (4 research + 5 skill extraction)
+**Size:** 4508 lines, 150 KB  
+**Components:** 10 (4 research + 5 skill extraction + 1 monitoring)
 
 **Качество:**
 - ✅ Autonomous workflow (no approval gates)
@@ -180,27 +206,19 @@ Teaching circuit_breaker to SEO Agent:
 - ✅ HIPAA compliance (6 specific checks)
 - ✅ Implementation details (формулы, heuristics, git commands)
 - ✅ Medical context (security 2x weight, zero-error tolerance)
+- ✅ Monitoring & alerting (no silent failures) ⭐ NEW
 
 ---
 
 ## Review Documents
 
-1. **Consolidated Findings** (`2026-05-13-teacher-agent-v2-consolidated-findings.md`)
-   - Dual-model review (Opus + Sonnet)
-   - 11 blockers identified
-   - Fix recommendations
+1. **Consolidated Findings** - Dual-model review (Opus + Sonnet), 11 blockers
+2. **Fixes Applied** - All 11 blockers fixed, readiness 70% → 95%+
+3. **Skill Layer Added** - 5 components, +934 lines
+4. **Research Layer Added** - 4 components, +417 lines
+5. **Monitoring Added** - 1 component, +512 lines ⭐ NEW
 
-2. **Fixes Applied** (`2026-05-13-teacher-agent-v2-fixes-applied.md`)
-   - All 11 blockers fixed
-   - Readiness: 70% → 95%+
-
-3. **Skill Layer Added** (`2026-05-13-teacher-agent-v2-skill-extraction-added.md`)
-   - 5 components (SkillExtractor, SkillComparator, SkillSelector, SkillTeacher, Orchestrator)
-   - +934 lines, +37 KB
-
-4. **Research Layer Added** (`2026-05-13-teacher-agent-v2-research-layer-added.md`)
-   - 4 components (ResearchOrchestrator, WebResearcher, GitHubSearcher, RepoRanker)
-   - +417 lines, +14 KB
+**Total Growth:** +1863 lines, +71 KB (from 2496 lines to 4508 lines)
 
 ---
 
@@ -213,7 +231,8 @@ Teaching circuit_breaker to SEO Agent:
    - Implement WebResearcher (Exa integration)
    - Implement GitHubSearcher (dual search)
    - Implement RepoRanker
-   - Tests (15+ tests)
+   - Implement HealthMonitor ⭐ NEW
+   - Tests (20+ tests)
 
 2. **Phase 1.5: Skill Layer** (4-5 hours)
    - Implement SkillExtractor
@@ -244,11 +263,12 @@ Teaching circuit_breaker to SEO Agent:
 - ✅ Skill-level adoption (берёт только лучшее)
 - ✅ Pattern teaching (не копирование кода)
 - ✅ Production-ready (sandbox, validation, rollback)
+- ✅ Monitoring & alerting (всегда знаешь статус системы) ⭐ NEW
 
-Если да → начинаю Phase 1.0 (Research Layer)  
+Если да → начинаю Phase 1.0 (Research Layer + Monitoring)  
 Если нужны изменения → скажи что изменить
 
 ---
 
-**Created:** 2026-05-13 16:57 GMT+3  
+**Created:** 2026-05-13 17:02 GMT+3  
 **Status:** ✅ Ready for Your Approval
