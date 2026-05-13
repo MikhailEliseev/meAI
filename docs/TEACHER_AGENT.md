@@ -8,7 +8,209 @@
 
 Teacher Agent — автономный Chief Learning Officer системы meAI. Его задача — непрерывно обучать и улучшать субагентов, используя лучшие практики из GitHub.
 
+## Core Principles: Deep Analysis & Full Adoption
+
+**КРИТИЧЕСКИ ВАЖНО:** Teacher Agent должен работать как архитектор-копировщик, а не просто детектор пробелов.
+
+### Принцип 1: Разбор по молекулам
+
+**Требование:** Анализировать GitHub решения ПОЛНОСТЬЮ, а не только отдельные паттерны.
+
+**Что анализировать:**
+1. **Архитектура:**
+   - Структура файлов и директорий
+   - Связи между компонентами
+   - Паттерны проектирования (Strategy, Factory, Observer)
+   - Разделение ответственности (SRP, DRY)
+
+2. **Реализация:**
+   - Как организован код (классы, функции, модули)
+   - Как обрабатываются ошибки end-to-end
+   - Как реализованы resilience patterns (circuit breaker + retry + rate limiting вместе)
+   - Как организовано логирование и метрики
+
+3. **Тестирование:**
+   - Структура тестов (unit, integration, e2e)
+   - Покрытие кода
+   - Моки и фикстуры
+   - Тестовые сценарии
+
+4. **Зависимости:**
+   - Какие библиотеки используются
+   - Версии и совместимость
+   - Конфигурация (settings, env vars)
+
+**Запрещено:**
+- ❌ Анализировать только отдельные паттерны (circuit_breaker, retry)
+- ❌ Смотреть только на один файл
+- ❌ Игнорировать архитектуру и связи
+
+**Обязательно:**
+- ✅ Изучить ВСЮ архитектуру решения
+- ✅ Понять КАК компоненты работают вместе
+- ✅ Разобрать ПОЧЕМУ выбраны такие решения
+- ✅ Найти edge cases и их обработку
+
+### Принцип 2: Решение о внедрении
+
+**Три варианта:**
+
+#### A. Полное внедрение (100% adoption)
+
+**Когда:** GitHub решение подходит на 100% под наши задачи.
+
+**Критерии:**
+- ✅ Решает ту же задачу, что наш агент
+- ✅ Архитектура лучше нашей (modularity, testability, maintainability)
+- ✅ Все паттерны production-ready
+- ✅ Хорошее тестовое покрытие
+- ✅ Активная поддержка (commits, issues, stars)
+
+**Действия:**
+1. Копировать архитектуру полностью (файлы, структура)
+2. Адаптировать под наши naming conventions
+3. Установить зависимости
+4. Портировать тесты
+5. Интегрировать с нашей системой (Event Bus, Obsidian)
+6. Запустить тесты → всё работает
+7. Закоммитить: `refactor(agent): adopt production architecture from {repo}`
+
+**Пример:**
+```
+Нашли: python-social-media-api-client (1000+ stars)
+Их архитектура:
+  - client/base.py (все resilience patterns)
+  - client/twitter.py (наследуется от base)
+  - models/post.py (Pydantic схемы)
+  - tests/ (95% coverage)
+
+Наш social_agent.py: 4.2 KB, всё в одном файле
+
+Решение: ПОЛНОЕ ВНЕДРЕНИЕ
+→ Создаём social_agent/client/, models/, tests/
+→ Копируем их архитектуру с адаптацией
+→ Результат: production-ready агент
+```
+
+#### B. Частичное внедрение (Partial adoption)
+
+**Когда:** GitHub решение частично подходит, но не на 100%.
+
+**Критерии:**
+- ✅ Решает похожую задачу
+- ⚠️ Архитектура избыточна или недостаточна
+- ✅ Есть ценные паттерны и решения
+- ⚠️ Нужна адаптация под наши нужды
+
+**Действия:**
+1. Взять лучшие куски (классы, функции, паттерны)
+2. Адаптировать под нашу архитектуру
+3. Интегрировать с существующим кодом
+4. Добавить недостающее
+5. Протестировать
+6. Закоммитить: `feat(agent): adopt {pattern} from {repo}`
+
+**Пример:**
+```
+Нашли: content-analyzer-ml (500+ stars)
+Их решение: ML-модель для анализа контента
+Наш агент: rule-based анализ
+
+Решение: ЧАСТИЧНОЕ ВНЕДРЕНИЕ
+→ Берём их feature extraction (TF-IDF, embeddings)
+→ Берём их error handling patterns
+→ НЕ берём ML-модель (пока не нужна)
+→ Результат: улучшенный feature extraction
+```
+
+#### C. Разработка своего (Custom development)
+
+**Когда:** GitHub решения не подходят.
+
+**Критерии:**
+- ❌ Нет подходящих решений на GitHub
+- ❌ Все решения устаревшие или плохого качества
+- ✅ Наша задача уникальна
+- ✅ Но есть лучшие практики для изучения
+
+**Действия:**
+1. Изучить лучшие практики из топовых репо
+2. Взять архитектурные паттерны
+3. Разработать своё решение с нуля
+4. Применить все production patterns
+5. Протестировать
+6. Закоммитить: `feat(agent): implement {feature} with best practices`
+
+**Пример:**
+```
+Задача: Medical content compliance checker (YMYL)
+GitHub: нет специализированных решений
+
+Решение: РАЗРАБОТКА СВОЕГО
+→ Изучаем архитектуру из healthcare-compliance-tools
+→ Берём паттерны из content-analyzers
+→ Разрабатываем свой checker с этими паттернами
+→ Результат: уникальное решение с best practices
+```
+
+### Принцип 3: Качество важнее скорости
+
+**Правило:** Лучше потратить 2 часа на глубокий анализ, чем 10 минут на поверхностный.
+
+**Почему:**
+- Поверхностный анализ → пропускаем важные детали
+- Глубокий анализ → находим edge cases, архитектурные решения, best practices
+- Качественное внедрение → агент работает production-ready
+
+**Время на анализ:**
+- Простой агент (API client): 30-60 минут
+- Средний агент (content analyzer): 1-2 часа
+- Сложный агент (ML pipeline): 2-4 часа
+
+### Принцип 4: Документирование решений
+
+**Требование:** Каждое решение о внедрении должно быть задокументировано.
+
+**Что документировать:**
+1. **Какие GitHub репо изучены** (название, stars, URL)
+2. **Что взяли** (архитектура, паттерны, код)
+3. **Почему взяли** (критерии, преимущества)
+4. **Как адаптировали** (изменения, интеграция)
+5. **Результат** (метрики, тесты, score)
+
+**Формат:**
+```markdown
+# Adoption Report: {agent_name}
+
+## GitHub Repositories Analyzed
+1. {repo_name} ({stars} stars) - {description}
+   - Architecture: {summary}
+   - Patterns: {list}
+   - Quality: {score}/100
+
+## Decision: {Full/Partial/Custom}
+
+**Rationale:**
+- {reason 1}
+- {reason 2}
+
+## What We Adopted
+- {component 1}: {description}
+- {component 2}: {description}
+
+## Adaptations Made
+- {change 1}
+- {change 2}
+
+## Results
+- Score: {before} → {after}
+- Tests: {count} passing
+- Coverage: {percentage}%
+```
+
 ## Architecture
+
+### Current Architecture (v1.0 - Pattern Detection)
 
 ```
 Teacher Agent
@@ -30,6 +232,256 @@ Teacher Agent
 8. CodeGenerator → генерирует код для внедрения
   ↓
 9. UpgradeApplier → применяет улучшения с backup
+```
+
+**Status:** ✅ Implemented (v1.0)  
+**Capability:** Detects missing patterns, generates gap reports
+
+### Target Architecture (v2.0 - Deep Analysis & Full Adoption)
+
+```
+Teacher Agent
+  ↓
+1. SubagentInventory → сканирует все субагенты
+  ↓
+2. GitHubFinder → находит топовые репо (reference + topic-specific)
+  ↓
+3. RepoCloner → клонирует репо для анализа
+  ↓
+4. ArchitectureAnalyzer → анализирует архитектуру целиком ⭐ NEW
+   ├─ FileStructureAnalyzer → структура файлов и директорий
+   ├─ ComponentRelationAnalyzer → связи между компонентами
+   ├─ DesignPatternDetector → паттерны проектирования
+   └─ TestCoverageAnalyzer → тестовое покрытие
+  ↓
+5. SolutionComparator → сравнивает решения ⭐ NEW
+   ├─ ArchitectureScorer → оценка архитектуры (modularity, testability)
+   ├─ QualityScorer → оценка качества (patterns, error handling)
+   ├─ FitAnalyzer → соответствие нашим задачам
+   └─ DecisionMaker → Full/Partial/Custom adoption
+  ↓
+6. FullAdopter → полное внедрение решения ⭐ NEW
+   ├─ FileCopier → копирование файлов с адаптацией
+   ├─ DependencyInstaller → установка зависимостей
+   ├─ ImportUpdater → обновление импортов
+   ├─ TestMigrator → портирование тестов
+   └─ IntegrationVerifier → проверка интеграции
+  ↓
+7. AdoptionReportGenerator → отчёт о внедрении ⭐ NEW
+  ↓
+8. [Legacy] GapDetector → сравнивает паттерны (fallback)
+  ↓
+9. [Legacy] PatternExtractor → извлекает паттерны (fallback)
+  ↓
+10. [Legacy] UpgradeApplier → частичное внедрение (fallback)
+```
+
+**Status:** 🚧 Planned (v2.0)  
+**Capability:** Deep analysis, full adoption, architecture comparison
+
+### New Components (v2.0)
+
+#### 4. ArchitectureAnalyzer ⭐ NEW
+
+**Purpose:** Анализирует архитектуру GitHub решения целиком.
+
+**Sub-components:**
+
+1. **FileStructureAnalyzer:**
+   - Сканирует структуру директорий
+   - Определяет назначение каждого файла
+   - Находит entry points и main modules
+   - Выявляет конфигурационные файлы
+
+2. **ComponentRelationAnalyzer:**
+   - Строит граф зависимостей между модулями
+   - Определяет coupling и cohesion
+   - Находит circular dependencies
+   - Выявляет core vs peripheral components
+
+3. **DesignPatternDetector:**
+   - Детектирует паттерны проектирования (Strategy, Factory, Observer, etc.)
+   - Находит архитектурные стили (Layered, Hexagonal, Clean Architecture)
+   - Определяет принципы (SOLID, DRY, KISS)
+
+4. **TestCoverageAnalyzer:**
+   - Анализирует структуру тестов (unit, integration, e2e)
+   - Оценивает покрытие кода
+   - Находит test fixtures и mocks
+   - Определяет тестовые сценарии
+
+**Output:**
+```python
+@dataclass
+class ArchitectureAnalysis:
+    file_structure: dict[str, str]  # path -> purpose
+    components: list[Component]  # name, type, dependencies
+    design_patterns: list[str]  # detected patterns
+    test_coverage: float  # percentage
+    quality_score: float  # 0-100
+```
+
+#### 5. SolutionComparator ⭐ NEW
+
+**Purpose:** Сравнивает GitHub решение с нашим агентом и принимает решение о внедрении.
+
+**Sub-components:**
+
+1. **ArchitectureScorer:**
+   - Modularity (0-100): насколько модульная архитектура
+   - Testability (0-100): насколько легко тестировать
+   - Maintainability (0-100): насколько легко поддерживать
+   - Scalability (0-100): насколько легко масштабировать
+
+2. **QualityScorer:**
+   - Patterns (0-100): наличие production patterns
+   - Error Handling (0-100): обработка ошибок end-to-end
+   - Documentation (0-100): качество документации
+   - Code Quality (0-100): читаемость, стиль, complexity
+
+3. **FitAnalyzer:**
+   - Task Match (0-100): соответствие задаче
+   - Integration Effort (0-100): сложность интеграции (инверсия: 100 = легко)
+   - Dependency Compatibility (0-100): совместимость зависимостей
+   - Customization Need (0-100): необходимость кастомизации (инверсия: 100 = не нужна)
+
+4. **DecisionMaker:**
+   - Анализирует все scores
+   - Применяет правила принятия решений
+   - Возвращает: Full/Partial/Custom + rationale
+
+**Decision Rules:**
+```python
+if fit_score >= 90 and quality_score >= 80:
+    return "Full Adoption"  # Подходит на 100%
+elif fit_score >= 70 and quality_score >= 70:
+    return "Partial Adoption"  # Берём лучшие куски
+else:
+    return "Custom Development"  # Разрабатываем своё
+```
+
+**Output:**
+```python
+@dataclass
+class ComparisonResult:
+    decision: str  # "Full" | "Partial" | "Custom"
+    rationale: str  # Почему такое решение
+    github_score: float  # 0-100
+    our_score: float  # 0-100
+    fit_score: float  # 0-100
+    adoption_plan: AdoptionPlan  # Что делать
+```
+
+#### 6. FullAdopter ⭐ NEW
+
+**Purpose:** Полное внедрение GitHub решения в наш агент.
+
+**Sub-components:**
+
+1. **FileCopier:**
+   - Копирует файлы из GitHub репо
+   - Адаптирует naming conventions
+   - Обновляет docstrings и комментарии
+   - Сохраняет backup оригинальных файлов
+
+2. **DependencyInstaller:**
+   - Извлекает зависимости из requirements.txt / pyproject.toml
+   - Проверяет совместимость версий
+   - Устанавливает через pip
+   - Обновляет наш requirements.txt
+
+3. **ImportUpdater:**
+   - Обновляет импорты в скопированных файлах
+   - Адаптирует пути (их структура → наша структура)
+   - Добавляет интеграцию с Event Bus, Obsidian
+   - Проверяет отсутствие circular imports
+
+4. **TestMigrator:**
+   - Копирует тесты из GitHub репо
+   - Адаптирует fixtures и mocks
+   - Обновляет импорты в тестах
+   - Интегрирует с нашим pytest setup
+
+5. **IntegrationVerifier:**
+   - Запускает тесты → проверяет что всё работает
+   - Проверяет интеграцию с Event Bus
+   - Проверяет интеграцию с Obsidian
+   - Генерирует отчёт о проблемах
+
+**Output:**
+```python
+@dataclass
+class AdoptionResult:
+    success: bool
+    files_copied: list[str]
+    dependencies_installed: list[str]
+    tests_passing: int
+    tests_failing: int
+    issues: list[str]  # Проблемы при внедрении
+```
+
+#### 7. AdoptionReportGenerator ⭐ NEW
+
+**Purpose:** Генерирует детальный отчёт о внедрении.
+
+**Report Structure:**
+```markdown
+# Adoption Report: {agent_name}
+
+**Date:** {date}  
+**Decision:** {Full/Partial/Custom}  
+**Status:** {Success/Failed}
+
+## GitHub Repositories Analyzed
+
+1. **{repo_name}** ({stars} stars)
+   - URL: {url}
+   - Architecture Score: {score}/100
+   - Quality Score: {score}/100
+   - Fit Score: {score}/100
+
+## Decision Rationale
+
+{detailed explanation why Full/Partial/Custom}
+
+## What We Adopted
+
+### Architecture
+- {component 1}: {description}
+- {component 2}: {description}
+
+### Patterns
+- {pattern 1}: {description}
+- {pattern 2}: {description}
+
+### Dependencies
+- {library 1}: {version}
+- {library 2}: {version}
+
+## Adaptations Made
+
+1. {adaptation 1}
+2. {adaptation 2}
+
+## Integration
+
+- Event Bus: {status}
+- Obsidian: {status}
+- Tests: {passing}/{total}
+
+## Results
+
+**Before:**
+- Score: {score}/100
+- Patterns: {list}
+- Tests: {count}
+
+**After:**
+- Score: {score}/100
+- Patterns: {list}
+- Tests: {count}
+
+**Improvement:** +{delta} points
 ```
 
 ## Components
