@@ -1,16 +1,20 @@
 """
 Tests for SkillComparator.
+
+Tests:
+- Multi-dimensional skill comparison (quality, completeness, maintainability, performance)
+- Ranking skills by total score
+- Identifying best implementation
+- Edge cases (single skill, empty list, identical skills)
 """
+
+from pathlib import Path
 
 import pytest
 
-from AIM.src.aim.teacher.skills.skill_extractor import (
-    ExtractedSkill,
-    SkillType,
-)
+from AIM.src.aim.teacher.skills.skill_selector import Skill
 from AIM.src.aim.teacher.skills.skill_comparator import (
     SkillComparator,
-    SkillScore,
     ComparisonResult,
 )
 
@@ -22,484 +26,231 @@ def comparator():
 
 
 @pytest.fixture
-def github_circuit_breaker():
-    """GitHub circuit breaker skill (high quality)."""
-    return ExtractedSkill(
-        skill_type=SkillType.CIRCUIT_BREAKER,
-        name="APIClient",
-        description="Circuit breaker pattern",
-        code_snippet='''
-import pybreaker
-
-class APIClient:
-    """API client with circuit breaker."""
-
-    def __init__(self):
-        self.breaker = pybreaker.CircuitBreaker(
-            fail_max=5,
-            reset_timeout=60
-        )
-        self.logger = logging.getLogger(__name__)
-
-    async def call_api(self, url: str) -> dict:
-        """Call API with circuit breaker protection."""
-        try:
-            return await self.breaker.call(self._make_request, url)
-        except Exception as e:
-            self.logger.error("API call failed", error=str(e))
-            raise
-
-    async def _make_request(self, url: str) -> dict:
-        """Make HTTP request."""
-        if not url:
-            raise ValueError("URL is required")
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url)
-            return response.json()
-''',
-        file_path="/github/repo/client.py",
-        line_start=1,
-        line_end=25,
-        confidence=1.0,
-        dependencies=["pybreaker", "httpx"],
+def high_quality_skill():
+    """Create high quality skill fixture."""
+    return Skill(
+        name="Circuit Breaker",
+        description="Production-ready circuit breaker with error handling",
+        code_example="""
+async def call_api(self):
+    try:
+        return await self.breaker.call(self._do_call)
+    except Exception as e:
+        logger.error("api_call_failed", error=str(e))
+        raise
+""",
+        quality_score=85.0,
+        source_repo="https://github.com/user/high-quality-repo",
+        file_path="circuit_breaker.py",
     )
 
 
 @pytest.fixture
-def our_circuit_breaker():
-    """Our circuit breaker skill (lower quality)."""
-    return ExtractedSkill(
-        skill_type=SkillType.CIRCUIT_BREAKER,
-        name="SimpleBreaker",
-        description="Circuit breaker pattern",
-        code_snippet='''
-class SimpleBreaker:
-    def __init__(self):
-        self.failures = 0
-
-    def call(self, func):
-        if self.failures > 5:
-            raise Exception("Circuit open")
-        try:
-            return func()
-        except:
-            self.failures += 1
-            raise
-''',
-        file_path="/our/repo/breaker.py",
-        line_start=1,
-        line_end=12,
-        confidence=0.6,
-        dependencies=[],
+def medium_quality_skill():
+    """Create medium quality skill fixture."""
+    return Skill(
+        name="Circuit Breaker",
+        description="Basic circuit breaker implementation",
+        code_example="""
+def call_api(self):
+    return self.breaker.call(self._do_call)
+""",
+        quality_score=60.0,
+        source_repo="https://github.com/user/medium-repo",
+        file_path="breaker.py",
     )
 
 
-@pytest.mark.asyncio
-async def test_compare_with_our_implementation(comparator, github_circuit_breaker, our_circuit_breaker):
-    """Test comparing GitHub skill with our implementation."""
-    result = await comparator.compare_skills(
-        github_skill=github_circuit_breaker,
-        our_skill=our_circuit_breaker,
+@pytest.fixture
+def low_quality_skill():
+    """Create low quality skill fixture."""
+    return Skill(
+        name="Circuit Breaker",
+        description="Simple circuit breaker",
+        code_example="""
+def call():
+    pass
+""",
+        quality_score=30.0,
+        source_repo="https://github.com/user/low-repo",
+        file_path="simple.py",
     )
 
-    assert isinstance(result, ComparisonResult)
-    assert result.skill_type == SkillType.CIRCUIT_BREAKER
-    assert result.github_score.total_score > result.our_score.total_score
-    assert result.recommendation in ["adopt", "improve", "keep_ours"]
 
+class TestSkillComparison:
+    """Test skill comparison."""
 
-@pytest.mark.asyncio
-async def test_compare_without_our_implementation(comparator, github_circuit_breaker):
-    """Test comparing when we don't have implementation."""
-    result = await comparator.compare_skills(
-        github_skill=github_circuit_breaker,
-        our_skill=None,
-    )
-
-    assert result.our_score.total_score == 0.0
-    assert result.recommendation == "adopt"
-    assert len(result.action_items) > 0
-
-
-@pytest.mark.asyncio
-async def test_score_completeness(comparator, github_circuit_breaker):
-    """Test completeness scoring."""
-    score = await comparator._score_skill(github_circuit_breaker, "github")
-
-    # Should have high completeness (has implementation, error handling, config, docs)
-    assert score.completeness >= 80
-
-
-@pytest.mark.asyncio
-async def test_score_quality(comparator, github_circuit_breaker):
-    """Test quality scoring."""
-    score = await comparator._score_skill(github_circuit_breaker, "github")
-
-    # Should have high quality (type hints, error handling, logging)
-    assert score.quality >= 75
-
-
-@pytest.mark.asyncio
-async def test_score_security(comparator, github_circuit_breaker):
-    """Test security scoring."""
-    score = await comparator._score_skill(github_circuit_breaker, "github")
-
-    # Should have good security (validation, error handling, no secrets)
-    assert score.security >= 70
-
-
-@pytest.mark.asyncio
-async def test_score_performance(comparator, github_circuit_breaker):
-    """Test performance scoring."""
-    score = await comparator._score_skill(github_circuit_breaker, "github")
-
-    # Should have good performance (async/await)
-    assert score.performance >= 60
-
-
-@pytest.mark.asyncio
-async def test_score_maintainability(comparator, github_circuit_breaker):
-    """Test maintainability scoring."""
-    score = await comparator._score_skill(github_circuit_breaker, "github")
-
-    # Should have good maintainability (docs, clear names, modular)
-    assert score.maintainability >= 60
-
-
-@pytest.mark.asyncio
-async def test_weighted_total_score(comparator, github_circuit_breaker):
-    """Test that total score uses correct weights."""
-    score = await comparator._score_skill(github_circuit_breaker, "github")
-
-    # Calculate expected total
-    expected = (
-        score.completeness * 0.20
-        + score.quality * 0.25
-        + score.performance * 0.10
-        + score.maintainability * 0.15
-        + score.security * 0.30
-    )
-
-    assert abs(score.total_score - expected) < 0.01
-
-
-@pytest.mark.asyncio
-async def test_custom_weights(github_circuit_breaker):
-    """Test custom scoring weights."""
-    custom_weights = {
-        "security": 0.50,  # Higher security weight
-        "quality": 0.20,
-        "completeness": 0.15,
-        "maintainability": 0.10,
-        "performance": 0.05,
-    }
-    comparator = SkillComparator(weights=custom_weights)
-
-    score = await comparator._score_skill(github_circuit_breaker, "github")
-
-    # Calculate expected total with custom weights
-    expected = (
-        score.completeness * 0.15
-        + score.quality * 0.20
-        + score.performance * 0.05
-        + score.maintainability * 0.10
-        + score.security * 0.50
-    )
-
-    assert abs(score.total_score - expected) < 0.01
-
-
-@pytest.mark.asyncio
-async def test_recommendation_adopt(comparator, github_circuit_breaker, our_circuit_breaker):
-    """Test 'adopt' recommendation when GitHub is significantly better."""
-    result = await comparator.compare_skills(
-        github_skill=github_circuit_breaker,
-        our_skill=our_circuit_breaker,
-    )
-
-    # GitHub should be significantly better (>20 points)
-    diff = result.github_score.total_score - result.our_score.total_score
-    if diff > 20:
-        assert result.recommendation == "adopt"
-
-
-@pytest.mark.asyncio
-async def test_recommendation_improve(comparator):
-    """Test 'improve' recommendation when GitHub is slightly better."""
-    # Create two similar skills
-    github_skill = ExtractedSkill(
-        skill_type=SkillType.RETRY,
-        name="retry_func",
-        description="Retry pattern",
-        code_snippet='''
-from tenacity import retry
-
-@retry(stop_after_attempt=3)
-async def fetch():
-    """Fetch data with retry."""
-    return await api.get()
-''',
-        file_path="/github/retry.py",
-        line_start=1,
-        line_end=6,
-        confidence=1.0,
-        dependencies=["tenacity"],
-    )
-
-    our_skill = ExtractedSkill(
-        skill_type=SkillType.RETRY,
-        name="retry_func",
-        description="Retry pattern",
-        code_snippet='''
-@retry(stop_after_attempt=3)
-def fetch():
-    return api.get()
-''',
-        file_path="/our/retry.py",
-        line_start=1,
-        line_end=4,
-        confidence=0.8,
-        dependencies=["tenacity"],
-    )
-
-    result = await comparator.compare_skills(
-        github_skill=github_skill,
-        our_skill=our_skill,
-    )
-
-    # Should recommend improve (small difference)
-    diff = result.github_score.total_score - result.our_score.total_score
-    if 0 < diff <= 20:
-        assert result.recommendation == "improve"
-
-
-@pytest.mark.asyncio
-async def test_recommendation_keep_ours(comparator, github_circuit_breaker):
-    """Test 'keep_ours' recommendation when our implementation is better."""
-    # Create better our implementation
-    our_better = ExtractedSkill(
-        skill_type=SkillType.CIRCUIT_BREAKER,
-        name="AdvancedBreaker",
-        description="Advanced circuit breaker",
-        code_snippet='''
-import pybreaker
-from typing import Optional
-
-class AdvancedBreaker:
-    """
-    Advanced circuit breaker with monitoring.
-
-    Features:
-    - Configurable thresholds
-    - Metrics tracking
-    - Health checks
-    """
-
-    def __init__(self, fail_max: int = 5, reset_timeout: int = 60):
-        self.breaker = pybreaker.CircuitBreaker(
-            fail_max=fail_max,
-            reset_timeout=reset_timeout
+    @pytest.mark.asyncio
+    async def test_compare_two_skills(self, comparator, high_quality_skill, medium_quality_skill):
+        """Should compare two skills across dimensions."""
+        result = await comparator.compare(
+            [high_quality_skill, medium_quality_skill]
         )
-        self.logger = logging.getLogger(__name__)
-        self.metrics = MetricsCollector()
 
-    async def call(self, func, *args, **kwargs) -> Optional[dict]:
-        """Call function with circuit breaker protection."""
-        try:
-            if not callable(func):
-                raise ValueError("Function must be callable")
+        assert len(result.ranked_skills) == 2
+        assert result.best_skill is not None
+        assert len(result.dimension_scores) == 2
 
-            result = await self.breaker.call(func, *args, **kwargs)
-            self.metrics.record_success()
-            return result
-        except Exception as e:
-            self.logger.error("Call failed", error=str(e), func=func.__name__)
-            self.metrics.record_failure()
-            raise
-        finally:
-            await self.cleanup()
+    @pytest.mark.asyncio
+    async def test_rank_by_total_score(self, comparator, high_quality_skill, medium_quality_skill, low_quality_skill):
+        """Should rank skills by total score."""
+        result = await comparator.compare(
+            [low_quality_skill, high_quality_skill, medium_quality_skill]
+        )
 
-    async def cleanup(self):
-        """Cleanup resources."""
-        pass
-''',
-        file_path="/our/advanced_breaker.py",
-        line_start=1,
-        line_end=40,
-        confidence=1.0,
-        dependencies=["pybreaker"],
-    )
+        # Should be ranked: high > medium > low
+        assert result.ranked_skills[0] == high_quality_skill
+        assert result.ranked_skills[1] == medium_quality_skill
+        assert result.ranked_skills[2] == low_quality_skill
 
-    result = await comparator.compare_skills(
-        github_skill=github_circuit_breaker,
-        our_skill=our_better,
-    )
+    @pytest.mark.asyncio
+    async def test_identify_best_skill(self, comparator, high_quality_skill, medium_quality_skill):
+        """Should identify best skill."""
+        result = await comparator.compare(
+            [medium_quality_skill, high_quality_skill]
+        )
 
-    # Our implementation should be better
-    if result.our_score.total_score >= result.github_score.total_score:
-        assert result.recommendation == "keep_ours"
+        assert result.best_skill == high_quality_skill
 
 
-@pytest.mark.asyncio
-async def test_gap_analysis(comparator, github_circuit_breaker, our_circuit_breaker):
-    """Test gap analysis generation."""
-    result = await comparator.compare_skills(
-        github_skill=github_circuit_breaker,
-        our_skill=our_circuit_breaker,
-    )
+class TestMultiDimensionalScoring:
+    """Test multi-dimensional scoring."""
 
-    assert isinstance(result.gap_analysis, str)
-    assert len(result.gap_analysis) > 0
+    @pytest.mark.asyncio
+    async def test_score_quality_dimension(self, comparator, high_quality_skill):
+        """Should score quality dimension."""
+        result = await comparator.compare([high_quality_skill])
 
+        scores = result.dimension_scores[high_quality_skill.source_repo]
+        assert "quality" in scores
+        assert 0.0 <= scores["quality"] <= 100.0
 
-@pytest.mark.asyncio
-async def test_action_items_for_adopt(comparator, github_circuit_breaker):
-    """Test action items for 'adopt' recommendation."""
-    result = await comparator.compare_skills(
-        github_skill=github_circuit_breaker,
-        our_skill=None,
-    )
+    @pytest.mark.asyncio
+    async def test_score_completeness_dimension(self, comparator, high_quality_skill):
+        """Should score completeness dimension."""
+        result = await comparator.compare([high_quality_skill])
 
-    assert result.recommendation == "adopt"
-    assert len(result.action_items) > 0
-    assert any("Adopt" in item for item in result.action_items)
-    assert any("dependencies" in item.lower() for item in result.action_items)
+        scores = result.dimension_scores[high_quality_skill.source_repo]
+        assert "completeness" in scores
+        assert 0.0 <= scores["completeness"] <= 100.0
 
+    @pytest.mark.asyncio
+    async def test_score_maintainability_dimension(self, comparator, high_quality_skill):
+        """Should score maintainability dimension."""
+        result = await comparator.compare([high_quality_skill])
 
-@pytest.mark.asyncio
-async def test_action_items_for_improve(comparator):
-    """Test action items for 'improve' recommendation."""
-    github_skill = ExtractedSkill(
-        skill_type=SkillType.CACHING,
-        name="cache_func",
-        description="Caching pattern",
-        code_snippet='''
-from aiocache import cached
+        scores = result.dimension_scores[high_quality_skill.source_repo]
+        assert "maintainability" in scores
+        assert 0.0 <= scores["maintainability"] <= 100.0
 
-@cached(ttl=3600)
-async def get_data(key: str) -> dict:
-    """Get data with caching."""
-    if not key:
-        raise ValueError("Key required")
-    return await db.fetch(key)
-''',
-        file_path="/github/cache.py",
-        line_start=1,
-        line_end=8,
-        confidence=1.0,
-        dependencies=["aiocache"],
-    )
+    @pytest.mark.asyncio
+    async def test_score_performance_dimension(self, comparator, high_quality_skill):
+        """Should score performance dimension."""
+        result = await comparator.compare([high_quality_skill])
 
-    our_skill = ExtractedSkill(
-        skill_type=SkillType.CACHING,
-        name="cache_func",
-        description="Caching pattern",
-        code_snippet='''
-@cached(ttl=3600)
-def get_data(key):
-    return db.fetch(key)
-''',
-        file_path="/our/cache.py",
-        line_start=1,
-        line_end=4,
-        confidence=0.7,
-        dependencies=["aiocache"],
-    )
+        scores = result.dimension_scores[high_quality_skill.source_repo]
+        assert "performance" in scores
+        assert 0.0 <= scores["performance"] <= 100.0
 
-    result = await comparator.compare_skills(
-        github_skill=github_skill,
-        our_skill=our_skill,
-    )
+    @pytest.mark.asyncio
+    async def test_higher_score_for_async(self, comparator):
+        """Should give higher performance score for async code."""
+        async_skill = Skill(
+            name="Async API",
+            description="Async implementation",
+            code_example="async def fetch(): await client.get()",
+            quality_score=70.0,
+            source_repo="https://github.com/user/async-repo",
+            file_path="async.py",
+        )
 
-    if result.recommendation == "improve":
-        assert len(result.action_items) > 0
-        assert any("Improve" in item for item in result.action_items)
+        sync_skill = Skill(
+            name="Sync API",
+            description="Sync implementation",
+            code_example="def fetch(): return client.get()",
+            quality_score=70.0,
+            source_repo="https://github.com/user/sync-repo",
+            file_path="sync.py",
+        )
 
+        result = await comparator.compare([async_skill, sync_skill])
 
-@pytest.mark.asyncio
-async def test_strengths_and_weaknesses(comparator, github_circuit_breaker, our_circuit_breaker):
-    """Test identification of strengths and weaknesses."""
-    result = await comparator.compare_skills(
-        github_skill=github_circuit_breaker,
-        our_skill=our_circuit_breaker,
-    )
+        async_perf = result.dimension_scores[async_skill.source_repo]["performance"]
+        sync_perf = result.dimension_scores[sync_skill.source_repo]["performance"]
+        assert async_perf > sync_perf
 
-    # GitHub should have strengths
-    assert len(result.github_score.strengths) > 0
+    @pytest.mark.asyncio
+    async def test_higher_score_for_error_handling(self, comparator):
+        """Should give higher quality score for error handling."""
+        with_errors = Skill(
+            name="With Errors",
+            description="Has error handling",
+            code_example="try: call() except Exception: handle()",
+            quality_score=70.0,
+            source_repo="https://github.com/user/with-errors",
+            file_path="errors.py",
+        )
 
-    # Our implementation should have weaknesses
-    assert len(result.our_score.weaknesses) > 0
+        without_errors = Skill(
+            name="Without Errors",
+            description="No error handling",
+            code_example="call()",
+            quality_score=70.0,
+            source_repo="https://github.com/user/without-errors",
+            file_path="no_errors.py",
+        )
 
+        result = await comparator.compare([with_errors, without_errors])
 
-@pytest.mark.asyncio
-async def test_security_penalty_for_hardcoded_secrets(comparator):
-    """Test security penalty for hardcoded secrets."""
-    skill_with_secret = ExtractedSkill(
-        skill_type=SkillType.CIRCUIT_BREAKER,
-        name="BadClient",
-        description="Client with hardcoded secret",
-        code_snippet='''
-class BadClient:
-    def __init__(self):
-        self.api_key = "sk-1234567890"  # Hardcoded!
-        self.password = "admin123"
-''',
-        file_path="/bad/client.py",
-        line_start=1,
-        line_end=5,
-        confidence=0.5,
-        dependencies=[],
-    )
-
-    score = await comparator._score_skill(skill_with_secret, "bad")
-
-    # Should have low security score (penalty for hardcoded secrets)
-    assert score.security < 50
+        with_quality = result.dimension_scores[with_errors.source_repo]["quality"]
+        without_quality = result.dimension_scores[without_errors.source_repo]["quality"]
+        assert with_quality > without_quality
 
 
-@pytest.mark.asyncio
-async def test_security_penalty_for_unsafe_operations(comparator):
-    """Test security penalty for unsafe operations."""
-    skill_with_eval = ExtractedSkill(
-        skill_type=SkillType.CIRCUIT_BREAKER,
-        name="UnsafeClient",
-        description="Client with eval",
-        code_snippet='''
-class UnsafeClient:
-    def execute(self, code):
-        return eval(code)  # Unsafe!
-''',
-        file_path="/unsafe/client.py",
-        line_start=1,
-        line_end=4,
-        confidence=0.5,
-        dependencies=[],
-    )
+class TestEdgeCases:
+    """Test edge cases."""
 
-    score = await comparator._score_skill(skill_with_eval, "unsafe")
+    @pytest.mark.asyncio
+    async def test_compare_single_skill(self, comparator, high_quality_skill):
+        """Should handle single skill comparison."""
+        result = await comparator.compare([high_quality_skill])
 
-    # Should have very low security score (penalty for eval)
-    assert score.security < 40
+        assert len(result.ranked_skills) == 1
+        assert result.best_skill == high_quality_skill
+        assert high_quality_skill.source_repo in result.dimension_scores
 
+    @pytest.mark.asyncio
+    async def test_compare_empty_list(self, comparator):
+        """Should handle empty skill list."""
+        result = await comparator.compare([])
 
-@pytest.mark.asyncio
-async def test_comparison_result_structure(comparator, github_circuit_breaker, our_circuit_breaker):
-    """Test that ComparisonResult has correct structure."""
-    result = await comparator.compare_skills(
-        github_skill=github_circuit_breaker,
-        our_skill=our_circuit_breaker,
-    )
+        assert len(result.ranked_skills) == 0
+        assert result.best_skill is None
+        assert len(result.dimension_scores) == 0
 
-    assert hasattr(result, "skill_type")
-    assert hasattr(result, "github_score")
-    assert hasattr(result, "our_score")
-    assert hasattr(result, "recommendation")
-    assert hasattr(result, "gap_analysis")
-    assert hasattr(result, "action_items")
+    @pytest.mark.asyncio
+    async def test_compare_identical_skills(self, comparator):
+        """Should handle skills with identical scores."""
+        skill1 = Skill(
+            name="Same",
+            description="Same description",
+            code_example="same code",
+            quality_score=70.0,
+            source_repo="https://github.com/user/repo1",
+            file_path="file1.py",
+        )
 
-    assert isinstance(result.skill_type, SkillType)
-    assert isinstance(result.github_score, SkillScore)
-    assert isinstance(result.our_score, SkillScore)
-    assert isinstance(result.recommendation, str)
-    assert isinstance(result.gap_analysis, str)
-    assert isinstance(result.action_items, list)
+        skill2 = Skill(
+            name="Same",
+            description="Same description",
+            code_example="same code",
+            quality_score=70.0,
+            source_repo="https://github.com/user/repo2",
+            file_path="file2.py",
+        )
+
+        result = await comparator.compare([skill1, skill2])
+
+        # Should still rank them (order may vary)
+        assert len(result.ranked_skills) == 2
+        assert result.best_skill in [skill1, skill2]
