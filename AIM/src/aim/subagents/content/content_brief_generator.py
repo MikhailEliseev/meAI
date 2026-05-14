@@ -560,3 +560,28 @@ async def json_completion(self, system_prompt: str, user_payload: dict[str, Any]
             return json.loads(content)
         except Exception:
             return None
+
+# ==============================================================================
+# Added by Teacher Agent: content-brief
+# ==============================================================================
+
+async def json_completion(self, system_prompt: str, user_payload: dict[str, Any]) -> dict[str, Any] | None:
+        if not self.available:
+            return None
+        try:
+            from openai import AsyncOpenAI
+
+            client = AsyncOpenAI(api_key=self.settings.openai_api_key, timeout=self.settings.llm_timeout_seconds)
+            response = await client.chat.completions.create(
+                model=self.settings.openai_model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.7,
+            )
+            content = response.choices[0].message.content or "{}"
+            return json.loads(content)
+        except Exception:
+            return None
