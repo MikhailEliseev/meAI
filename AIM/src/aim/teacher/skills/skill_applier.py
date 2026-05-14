@@ -68,7 +68,8 @@ class SkillApplier:
                 libraries=set(),
                 error_style="raise",
                 base_classes=[],
-                imports=set()
+                imports=set(),
+                subagent_name=subagent_name
             )
 
         content = target_path.read_text()
