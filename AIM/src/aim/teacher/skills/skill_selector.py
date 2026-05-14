@@ -64,6 +64,42 @@ class SkillSelector:
             "caching": ["cached", "aiocache", "@cache", "ttl"],
         }
 
+        # Domain-specific import signatures per subagent type
+        self.domain_import_signatures = {
+            "ci-content": [
+                "trafilatura",
+                "BeautifulSoup",
+                "lxml",
+                "scrapy",
+                "crawlee",
+            ],
+            "ci-tech": [
+                "lighthouse",
+                "playwright",
+                "selenium",
+            ],
+            "keyword-research": [
+                "semrush",
+                "ahrefs",
+                "serpapi",
+            ],
+            "seo": [
+                "pandas",
+                "requests",
+                "httpx",
+            ],
+            "content": [
+                "openai",
+                "anthropic",
+                "langchain",
+            ],
+            "ads": [
+                "yandex",
+                "google",
+                "facebook",
+            ],
+        }
+
         # Domain-specific pattern signatures per subagent type
         self.domain_pattern_signatures = {
             "ci-content": {
@@ -474,17 +510,19 @@ class SkillSelector:
         # These are already in base.py and should NOT be extracted again
         # We only want domain-specific patterns for each subagent
 
-        # Check for domain-specific patterns if subagent_type provided
-        if subagent_type and subagent_type in self.domain_pattern_signatures:
-            domain_patterns = self.domain_pattern_signatures[subagent_type]
-            for pattern_name, signatures in domain_patterns.items():
-                if self._has_pattern_from_signatures(content, signatures):
-                    patterns[f"{subagent_type}_{pattern_name}"] = {
-                        "name": f"{subagent_type.title()} - {pattern_name.replace('_', ' ').title()}",
-                        "description": self._get_domain_pattern_description(subagent_type, pattern_name),
-                        "code": self._extract_pattern_code_from_signatures(content, signatures),
-                        "quality_score": self._score_pattern(content, pattern_name),
-                    }
+        # Extract domain-specific functions by imports (NEW APPROACH)
+        if subagent_type and subagent_type in self.domain_import_signatures:
+            target_imports = self.domain_import_signatures[subagent_type]
+            functions = self._extract_functions_using_imports(content, target_imports)
+
+            for func in functions:
+                pattern_key = f"{subagent_type}_{func['name']}"
+                patterns[pattern_key] = {
+                    "name": f"{subagent_type.title()} - {func['name'].replace('_', ' ').title()}",
+                    "description": func['docstring'] or f"Function using {', '.join(func['imports_used'])}",
+                    "code": func['code'],
+                    "quality_score": self._score_pattern(func['code'], func['name']),
+                }
 
         return patterns
 
@@ -591,6 +629,69 @@ class SkillSelector:
     def _has_pattern_from_signatures(self, content: str, signatures: list[str]) -> bool:
         """Check if content contains any of the given signatures."""
         return any(sig in content for sig in signatures)
+
+    def _extract_functions_using_imports(
+        self,
+        content: str,
+        target_imports: list[str]
+    ) -> list[dict]:
+        """
+        Extract functions that use specific imports.
+
+        Args:
+            content: File content
+            target_imports: List of import names to look for
+                           (e.g., ["trafilatura", "BeautifulSoup"])
+
+        Returns:
+            List of functions using these imports
+        """
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            return []
+
+        # Step 1: Find all imports in file
+        imports = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imports.add(alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    imports.add(node.module)
+                for alias in node.names:
+                    imports.add(alias.name)
+
+        # Step 2: Check if any target imports present
+        matching_imports = [imp for imp in target_imports if any(imp in file_imp for file_imp in imports)]
+        if not matching_imports:
+            return []
+
+        # Step 3: Find functions using these imports
+        functions = []
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                try:
+                    func_code = ast.get_source_segment(content, node)
+                    if not func_code:
+                        continue
+
+                    # Check if function uses target imports
+                    uses_import = any(imp in func_code for imp in matching_imports)
+
+                    if uses_import:
+                        functions.append({
+                            "name": node.name,
+                            "code": func_code,
+                            "is_async": isinstance(node, ast.AsyncFunctionDef),
+                            "docstring": ast.get_docstring(node) or "",
+                            "imports_used": matching_imports,
+                        })
+                except (ValueError, AttributeError):
+                    continue
+
+        return functions
 
     def _extract_pattern_code_from_signatures(self, content: str, signatures: list[str]) -> str:
         """Extract code example for pattern from signatures."""

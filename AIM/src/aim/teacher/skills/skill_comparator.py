@@ -106,11 +106,39 @@ class SkillComparator:
         # Count keyword matches
         matches = sum(1 for kw in keywords if kw in text)
 
-        # Score: 0-100 based on match percentage
-        max_matches = len(keywords)
-        score = (matches / max_matches) * 100 if max_matches > 0 else 50.0
+        # Bonus for library usage (trafilatura.extract, BeautifulSoup, etc.)
+        library_usage_bonus = 0.0
+        has_trafilatura_extract = "trafilatura.extract" in text or "trafilatura.extract_metadata" in text
+        has_beautifulsoup = "beautifulsoup" in text or "soup." in text
+        has_lxml = "lxml" in text
 
-        return score
+        if has_trafilatura_extract:
+            library_usage_bonus += 30.0
+        if has_beautifulsoup:
+            library_usage_bonus += 20.0
+        if has_lxml:
+            library_usage_bonus += 10.0
+
+        # Score: 0-100 based on match percentage + library usage bonus
+        max_matches = len(keywords)
+        base_score = (matches / max_matches) * 100 if max_matches > 0 else 50.0
+        final_score = min(base_score + library_usage_bonus, 100.0)
+
+        # Log scoring details
+        self.logger.info(
+            "domain_relevance_scored",
+            skill_name=skill.name,
+            keyword_matches=matches,
+            max_keywords=max_matches,
+            base_score=round(base_score, 2),
+            library_bonus=round(library_usage_bonus, 2),
+            has_trafilatura=has_trafilatura_extract,
+            has_beautifulsoup=has_beautifulsoup,
+            has_lxml=has_lxml,
+            final_score=round(final_score, 2),
+        )
+
+        return final_score
 
     async def compare(self, skills: list[Skill]) -> ComparisonResult:
         """
@@ -273,6 +301,17 @@ class SkillComparator:
             combined_score = (domain_score * 0.7) + (quality_score * 0.3)
 
             skill.quality_score = combined_score
+
+            # Log detailed scoring breakdown
+            self.logger.info(
+                "skill_scored",
+                skill_name=skill.name,
+                source=skill.source_repo,
+                domain_score=round(domain_score, 2),
+                quality_score=round(quality_score, 2),
+                combined_score=round(combined_score, 2),
+                code_length=len(skill.code_example) if skill.code_example else 0,
+            )
 
         # Sort by combined score
         ranked = sorted(compatible_skills, key=lambda s: s.quality_score, reverse=True)

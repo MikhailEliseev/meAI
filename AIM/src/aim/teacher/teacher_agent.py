@@ -2,6 +2,7 @@
 """Teacher Agent - Chief Learning Officer for continuous system learning."""
 
 from pathlib import Path
+import structlog
 
 from AIM.src.aim.teacher.audit_report import AuditReportGenerator, AuditResult
 from AIM.src.aim.teacher.code_analyzer import CodeAnalyzer
@@ -21,6 +22,7 @@ class TeacherAgent:
     """Teacher Agent - audits and upgrades subagents using GitHub best practices."""
 
     def __init__(self):
+        self.logger = structlog.get_logger()
         self.inventory = SubagentInventory()
         self.github_finder = GitHubFinder(min_stars=50)
         self.repo_cloner = RepoCloner()
@@ -255,10 +257,18 @@ class TeacherAgent:
                     clone_path = Path(f"/tmp/teacher_repos/{subagent_name}/{repo_name}")
                     clone_path.parent.mkdir(parents=True, exist_ok=True)
 
-                    await self.skill_selector.clone_repo(repo.url, clone_path)
+                    # Skip cloning if repo already exists
+                    if not clone_path.exists():
+                        await self.skill_selector.clone_repo(repo.url, clone_path)
+                    else:
+                        self.logger.info(
+                            "repo_already_cloned",
+                            repo=repo.url,
+                            path=str(clone_path),
+                        )
 
-                    # Extract skills
-                    skills = await self.skill_selector.extract_skills(clone_path)
+                    # Extract skills with subagent_type for domain-specific extraction
+                    skills = await self.skill_selector.extract_skills(clone_path, subagent_name)
 
                     # Add metadata
                     for skill in skills:
