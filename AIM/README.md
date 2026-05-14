@@ -1,5 +1,8 @@
 # AIM Agency
 
+[![Tests](https://github.com/MikhailEliseev/meAI/actions/workflows/tests.yml/badge.svg)](https://github.com/MikhailEliseev/meAI/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/MikhailEliseev/meAI/branch/main/graph/badge.svg)](https://codecov.io/gh/MikhailEliseev/meAI)
+
 **AI-first Medical Marketing Agency**
 
 Domain: iamaim.ru
