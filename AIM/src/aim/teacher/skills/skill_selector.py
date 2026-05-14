@@ -483,12 +483,61 @@ class SkillSelector:
 
     def _extract_pattern_code(self, content: str, pattern_name: str) -> str:
         """Extract code example for pattern."""
-        # Return first 500 characters containing pattern
         signatures = self.pattern_signatures.get(pattern_name, [])
+
+        # Try to extract full function/class containing the pattern
         for sig in signatures:
             if sig in content:
-                start = content.find(sig)
-                return content[max(0, start - 100) : start + 400]
+                # Find the signature position
+                sig_pos = content.find(sig)
+
+                # Search backwards for function/class definition
+                lines = content[:sig_pos].split('\n')
+                start_line_idx = None
+
+                for i in range(len(lines) - 1, -1, -1):
+                    line = lines[i]
+                    # Look for function or class definition
+                    if line.strip().startswith('def ') or line.strip().startswith('async def ') or line.strip().startswith('class '):
+                        start_line_idx = i
+                        break
+
+                if start_line_idx is not None:
+                    # Found function/class start, now find the end
+                    start_pos = len('\n'.join(lines[:start_line_idx])) + (1 if start_line_idx > 0 else 0)
+
+                    # Find end of function/class (next def/class at same or lower indentation)
+                    remaining = content[start_pos:]
+                    remaining_lines = remaining.split('\n')
+
+                    if not remaining_lines:
+                        return content[start_pos:]
+
+                    # Get indentation of the definition
+                    first_line = remaining_lines[0]
+                    def_indent = len(first_line) - len(first_line.lstrip())
+
+                    end_line_idx = len(remaining_lines)
+                    for i in range(1, len(remaining_lines)):
+                        line = remaining_lines[i]
+                        if line.strip():  # Non-empty line
+                            line_indent = len(line) - len(line.lstrip())
+                            # If we find a line at same or lower indentation that starts a new def/class
+                            if line_indent <= def_indent and (line.strip().startswith('def ') or
+                                                              line.strip().startswith('async def ') or
+                                                              line.strip().startswith('class ')):
+                                end_line_idx = i
+                                break
+
+                    # Extract the full function/class
+                    extracted = '\n'.join(remaining_lines[:end_line_idx])
+                    return extracted.strip()
+                else:
+                    # Fallback: return context around signature (larger window)
+                    start = max(0, sig_pos - 200)
+                    end = min(len(content), sig_pos + 1000)
+                    return content[start:end].strip()
+
         return ""
 
     def _score_pattern(self, content: str, pattern_name: str) -> float:
