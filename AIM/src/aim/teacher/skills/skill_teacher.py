@@ -129,6 +129,16 @@ class SkillTeacher:
         self.comparator = SkillComparator()
         self.applier = SkillApplier(project_root)
 
+        # Mapping subagent_name → target_file
+        self.subagent_target_files = {
+            "keyword-research": "src/aim/subagents/api_clients/base.py",
+            "ci-content": "src/aim/subagents/competitive_intel/agents/ci_content.py",
+            "ci-tech": "src/aim/subagents/competitive_intel/agents/ci_tech.py",
+            "seo": "src/aim/subagents/seo/seo_agent.py",
+            "content": "src/aim/subagents/content/content_agent.py",
+            "ads": "src/aim/subagents/ads/ads_agent.py",
+        }
+
     async def _run_tests(
         self,
         test_files: list[Path],
@@ -301,9 +311,13 @@ Co-Authored-By: Teacher Agent <teacher@aim.ai>"""
             # Step 3: Analyze target context (before comparison)
             self.logger.info("step_3_analyze_target_context")
 
-            # Determine target path - use hardcoded path for keyword-research
-            # In future, this should be determined from subagent configuration
-            target_path = self.applier.project_root / "src" / "aim" / "subagents" / "api_clients" / "base.py"
+            # Get target file from mapping
+            target_file = self.subagent_target_files.get(subagent_name)
+            if not target_file:
+                self.logger.warning("no_target_file_mapping", subagent=subagent_name, fallback="base.py")
+                target_file = "src/aim/subagents/api_clients/base.py"
+
+            target_path = self.applier.project_root / target_file
 
             target_context = await self.applier._analyze_target_context(target_path)
 
