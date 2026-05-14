@@ -1,0 +1,146 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Host:
+      - api.semrush.com
+      User-Agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://api.semrush.com/analytics/v1/?type=phrase_related&key=test_key&phrase=dental+implants&database=us&display_limit=100&display_offset=0&export_columns=Ph%2CNq%2CCp%2CCo%2CNr%2CTd&display_filter=%2B%7CNq%7CGt%7C100
+  response:
+    body:
+      string: Validation Error
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000
+      Content-Length:
+      - '16'
+      backend-version:
+      - v0.7.5-61-gb7c4c803
+      cache-control:
+      - must-revalidate
+      content-type:
+      - text/plain; charset=utf-8
+      date:
+      - Thu, 14 May 2026 18:18:51 GMT
+      pragma:
+      - public
+      sm-log-id:
+      - api-flb-a224c677b20ed1f770d4190a23bca89a
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      via:
+      - 1.1 google
+      x-content-type-options:
+      - nosniff
+      x-request-id:
+      - a224c677-b20e-d1f7-70d4-190a23bca89a
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: ''
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Host:
+      - api.semrush.com
+      User-Agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://api.semrush.com/analytics/v1/?type=phrase_related&key=test_key&phrase=dental+implants&database=us&display_limit=100&display_offset=0&export_columns=Ph%2CNq%2CCp%2CCo%2CNr%2CTd&display_filter=%2B%7CNq%7CGt%7C100
+  response:
+    body:
+      string: Validation Error
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000
+      Content-Length:
+      - '16'
+      backend-version:
+      - v0.7.5-61-gb7c4c803
+      cache-control:
+      - must-revalidate
+      content-type:
+      - text/plain; charset=utf-8
+      date:
+      - Thu, 14 May 2026 18:18:52 GMT
+      pragma:
+      - public
+      sm-log-id:
+      - api-flb-3a8725332f7f03f914e1932f98055e20
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      via:
+      - 1.1 google
+      x-content-type-options:
+      - nosniff
+      x-request-id:
+      - 3a872533-2f7f-03f9-14e1-932f98055e20
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: ''
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Host:
+      - api.semrush.com
+      User-Agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://api.semrush.com/analytics/v1/?type=phrase_related&key=test_key&phrase=dental+implants&database=us&display_limit=100&display_offset=0&export_columns=Ph%2CNq%2CCp%2CCo%2CNr%2CTd&display_filter=%2B%7CNq%7CGt%7C100
+  response:
+    body:
+      string: Validation Error
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000
+      Content-Length:
+      - '16'
+      backend-version:
+      - v0.7.5-61-gb7c4c803
+      cache-control:
+      - must-revalidate
+      content-type:
+      - text/plain; charset=utf-8
+      date:
+      - Thu, 14 May 2026 18:18:55 GMT
+      pragma:
+      - public
+      sm-log-id:
+      - api-flb-3be1a7fc95af75de8ec0d826073ee04b
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      via:
+      - 1.1 google
+      x-content-type-options:
+      - nosniff
+      x-request-id:
+      - 3be1a7fc-95af-75de-8ec0-d826073ee04b
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 400
+      message: Bad Request
+version: 1
