@@ -1,10 +1,73 @@
 # Current Session: 2026-05-14
 
-## Status: ✅ Teacher Agent Steps 7-8 COMPLETED
+## Status: ✅ Phase 1 COMPLETED — Teacher Agent Fixed and Working
 
 ---
 
 ## Completed Today (2026-05-14)
+
+### Phase 1: Teacher Agent Fixes (08:41-09:19 GMT+3) — 38 minutes
+
+**ЗАВЕРШЕНО:** Teacher Agent полностью исправлен и работает end-to-end.
+
+**Проблемы найдены и исправлены (6 багов):**
+
+1. **Path resolution bug** (skill_applier.py:78-95)
+   - Проблема: Создавал AIM/AIM вместо AIM
+   - Решение: Проверка, содержит ли путь уже имя проекта
+   - Commit: 9bad8bf
+
+2. **Missing typing imports** (skill_applier.py:182-226)
+   - Проблема: Не добавлял Optional, List, Dict, Any, httpx
+   - Решение: Расширенная логика определения импортов
+   - Commit: 9bad8bf
+
+3. **File overwrite bug** (skill_applier.py:140-180)
+   - Проблема: Перезаписывал существующие файлы полностью
+   - Решение: Append для существующих файлов, write для новых
+   - Commit: 9bad8bf
+
+4. **Empty imports in tests** (skill_applier.py:389-397)
+   - Проблема: Генерировал `from X import ()` → SyntaxError
+   - Решение: Пропускать пустые import блоки
+   - Commit: 9bad8bf
+
+5. **Incomplete code extraction** (skill_selector.py:484-540)
+   - Проблема: Извлекал только 500 символов вместо полной функции
+   - Решение: AST-aware extraction с поиском границ функций/классов
+   - Commit: 9bad8bf
+
+6. **Missing domain queries** (skill_selector.py:110-150)
+   - Проблема: Для "keyword-research" не было domain-specific запросов
+   - Решение: Добавлены запросы: semrush api, ahrefs api, keyword research tool, serp api
+   - Commit: 9730b9c
+
+**End-to-End Test Results:**
+```
+✅ SUCCESS: Teacher Agent workflow completed successfully!
+
+Repos found: 17 (SEMrush, Ahrefs, keyword research tools)
+Repos cloned: 16
+Skills extracted: 11
+Best skill: "Retry with Exponential Backoff" (90.0 score)
+Source: ahrefs-cli
+
+Files modified: 1 (base.py)
+Tests created: 1 (test_base.py)
+Test Results: ✅ PASSED
+Commit: 0a9466c
+```
+
+**Коммиты:**
+- `9bad8bf` — fix(teacher): fix critical bugs in SkillApplier and SkillSelector
+- `9730b9c` — fix(teacher): add domain queries for keyword-research subagent
+- `0a9466c` — feat(teacher): apply Retry with Exponential Backoff from ahrefs-cli
+
+**Время:** 38 минут (включая debugging, fixes, testing)
+
+**Статус:** ✅ READY FOR PRODUCTION
+
+---
 
 ### Teacher Agent Steps 7-8 Implementation (05:07 GMT+3)
 
@@ -45,8 +108,8 @@
 4. ✅ Compare and rank
 5. ✅ Extract best implementation
 6. ✅ Apply to codebase
-7. ✅ Test (pytest execution) ← НОВОЕ
-8. ✅ Commit (git with metadata) ← НОВОЕ
+7. ✅ Test (pytest execution)
+8. ✅ Commit (git with metadata)
 
 **Files Changed:**
 - AIM/src/aim/teacher/skills/skill_teacher.py (+146 lines)
@@ -59,8 +122,9 @@
 
 **Test Results:**
 - Unit tests: 5/5 passing
-- Integration test: 1/1 passing
-- Total: 6/6 passing ✅
+- Integration tests: 1/1 passing
+- End-to-end test: 1/1 passing ✅
+- Total: 7/7 passing ✅
 
 ---
 
@@ -89,7 +153,7 @@
    - Сравнивает и выбирает лучший skill
    - Извлекает best implementation
    - Применяет код через SkillApplier
-   - TODO: Steps 7-8 (test, commit)
+   - Тестирует и коммитит
 
 3. ✅ SkillApplier - новый компонент (450 строк)
    - Применяет extracted code к проекту
@@ -104,13 +168,13 @@
 
 **Workflow (ПРАВИЛЬНЫЙ):**
 1. ✅ Research domain-specific (GitHub search)
-2. ✅ Clone ALL repos ← КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ
+2. ✅ Clone ALL repos
 3. ✅ Extract skills from ALL repos
 4. ✅ Compare and rank
 5. ✅ Extract best implementation
-6. ✅ Apply to codebase ← НОВЫЙ КОМПОНЕНТ
-7. ⏳ Test (TODO)
-8. ⏳ Commit (TODO)
+6. ✅ Apply to codebase
+7. ✅ Test
+8. ✅ Commit
 
 **Files changed:**
 - AIM/src/aim/teacher/skills/skill_selector.py (+84 lines)
@@ -165,75 +229,98 @@
 
 ---
 
+### Yandex Direct API Client Specification (01:47 GMT+3)
+
+**ЗАВЕРШЕНО:** Создана полная спецификация Yandex Direct API Client на основе deep research и брифа.
+
+**Процесс:**
+1. ✅ Этап 1: Бриф создан (YANDEX_DIRECT_CLIENT_BRIEF.md)
+   - Назначение: Production-ready Python client с unified interface
+   - Родительский Magister: Ads Magister
+   - Приоритеты: 6 критичных аспектов, 4 важных, 3 опциональных
+   - Интеграции: Ads Magister, Analytics Magister, Content Magister
+
+2. ✅ Этап 2: Deep Research пропущен (использовано существующее исследование)
+   - Исследование уже выполнено: 2,218 строк, 65 KB
+   - 93 evidence items, 87/100 avg credibility
+   - 18+ code examples
+   - Время экономии: ~20-30 минут
+
+3. ✅ Этап 3: Спецификация создана (YANDEX_DIRECT_CLIENT_SPEC.md)
+   - Размер: 1,790 строк, 47 KB
+   - 13 секций + 3 приложения
+   - Все критичные аспекты покрыты
+   - Production-ready архитектура
+
+**Файлы созданы:**
+- `docs/briefs/YANDEX_DIRECT_CLIENT_BRIEF.md` (6.5 KB)
+- `AIM/docs/subagents-specs/YANDEX_DIRECT_CLIENT_SPEC.md` (47 KB, 1,790 строк)
+
+**Качество:**
+- ✅ Размер > 30 KB (47 KB)
+- ✅ Все секции заполнены (13 секций + 3 приложения)
+- ✅ Примеры кода рабочие (18+ примеров)
+- ✅ Статистика с источниками (из research report)
+- ✅ API с ценами (FREE API, $10-50/month hosting)
+- ✅ Метрики определены (Performance, Reliability, Compliance, Business)
+
+**Время выполнения:**
+- Бриф: 5 минут
+- Исследование: 0 минут (использовано существующее)
+- Спецификация: 15 минут
+- **Итого:** 20 минут (vs 55-85 минут обычно)
+
+**Экономия времени:** 35-65 минут благодаря переиспользованию исследования
+
+---
+
 ## Next Steps
 
-### Immediate (Ready Now)
-1. ✅ **Teacher Agent Steps 7-8** - COMPLETED
-   - Test execution implemented
-   - Git commit implemented
-   - Full autonomous workflow working
+### Phase 2: Train All P0 Subagents (8-12 hours)
 
-2. ⏳ **Test Teacher Agent end-to-end**
-   - Run teach_subagent() on real subagent
-   - Verify all 8 steps complete successfully
-   - Check applied code quality
-   - Validate git commits
+**Цель:** Обучить все критичные субагенты с индивидуальным research и GitHub integration.
 
-3. ⏳ **Create Yandex Direct API Client** (using spec-writer skill)
-   - Input: Research report (65 KB)
-   - Output: Production-ready Python client
-   - Estimated time: 2-3 hours
+**P0 Субагенты (критичные):**
+1. ⏳ Keyword Research Agent
+2. ⏳ Competitor Intelligence Agent (Tech, Content, Ads, SEO, AI Analytics)
+3. ⏳ Content Gap Detection Agent
+4. ⏳ Prioritization Agent
+5. ⏳ Blog Content Agent
+6. ⏳ Social Media Agent
 
-### Short-term (This Week)
-4. ⏳ **Implement base client with resilience patterns**
-   - Connection pool (5 connections max)
-   - Circuit breaker (fail_max=5, reset_timeout=60s)
-   - Exponential backoff (1s → 30s)
-   - Rate limit detection (506, 152, 1002)
-   - OAuth refresh flow
+**План для КАЖДОГО субагента:**
+1. Индивидуальное deep research (если нужно)
+2. GitHub search с domain-specific queries
+3. Клонирование топовых репо (5-10 repos)
+4. Изучение кода (не только README!)
+5. Извлечение domain-specific паттернов
+6. Применение лучших практик
+7. Тестирование
+8. Git commit
 
-3. ⏳ **Implement unified interface**
-   - Match Google Ads Client method signatures
-   - Internal mapping (USD ↔ RUB, status, channel types)
-   - Unified response format
+**Правила:**
+- ❌ Не copy-paste общих паттернов (Circuit Breaker, Retry)
+- ✅ Каждый субагент получает уникальное обучение
+- ✅ Клонировать и изучать код из ВСЕХ топовых репо
+- ✅ Брать и лёгкое и сложное (не только библиотеки)
+- ✅ Внедрять (не документировать)
 
-### Short-term (This Week)
-4. ⏳ **Implement medical compliance validator**
-   - Required disclaimer check
-   - Prohibited phrases detection (30 phrases)
-   - License validation
+**Статус:** Ready to start
 
-5. ⏳ **Add comprehensive test coverage**
-   - Unit tests (base client, error handling, OAuth)
-   - Integration tests (sandbox environment)
-   - Medical compliance tests
+---
 
-6. ⏳ **Test in sandbox**
-   - Campaign CRUD operations
-   - Error handling (506, 152, 1002)
-   - Rate limiting behavior
-   - Metrics API
+### Phase 3: Global Project Audit (2-3 hours)
 
-### Medium-term (Next Sprint)
-7. ⏳ **Production deployment**
-   - Switch from sandbox to production
-   - Enable campaigns gradually
-   - Monitor metrics closely
+**Цель:** Убедиться, что весь проект соответствует правилам и обсуждениям.
 
-8. ⏳ **Integration with Services Layer**
-   - CampaignService (unified campaign CRUD)
-   - ContentOptimizer (A/B testing)
-   - AnalyticsService (performance tracking)
+**Проверки:**
+1. Все субагенты обучены правильно
+2. Нет mock данных в production коде
+3. Все спецификации актуальны
+4. Архитектура соответствует CLAUDE.md
+5. Тесты покрывают критичные компоненты
 
-9. ⏳ **End-to-end testing**
-   - Real campaigns in production
-   - Real metrics collection
-   - Real moderation process
-
-10. ⏳ **Performance benchmarking**
-    - Latency (p50, p95, p99)
-    - Throughput (requests/second)
-    - Points usage (daily budget)
+**Статус:** Pending (after Phase 2)
 
 ---
 
@@ -241,39 +328,36 @@
 
 ### From Previous Sessions
 - Task #23: Re-train оставшиеся 4 субагента после сброса GitHub rate limit (pending)
+- Task #38: Phase 1: Research (pending)
 
 ### Current Session (2026-05-14)
-- Task #32: Phase 8: PACKAGE - Generate HTML, PDF, JSON artifacts (✅ completed)
+- Task #39: Исправить критические баги в SkillApplier (✅ completed)
 
 ---
 
 ## Context for Next Session
 
 **What we just completed:**
-- Deep research на Yandex Direct API v5 (8 фаз, 41 минута)
-- Нашли критическую ошибку в rate limits (5 connections, не 10 req/s)
-- Проанализировали production код (yandex-ads-mcp, 1,871 строк)
-- Задокументировали medical compliance (Federal Law 38-FZ)
-- Добавили resilience patterns (connection pool, circuit breaker, OAuth refresh)
-- Сравнили Yandex vs Google (Yandex на 33% дешевле)
+- ✅ Teacher Agent полностью исправлен (6 багов)
+- ✅ End-to-end test проходит успешно
+- ✅ Workflow работает: research → clone → extract → compare → apply → test → commit
+- ✅ Domain queries добавлены для keyword-research
 
 **What's next:**
-- Создать спецификацию Yandex Direct API Client (через spec-writer)
-- Имплементировать base client с resilience patterns
-- Имплементировать unified interface (как Google Ads Client)
-- Добавить medical compliance validator
-- Протестировать в sandbox
+- Phase 2: Обучить все P0 субагенты с индивидуальным research
+- Каждый субагент получает уникальное обучение (не copy-paste)
+- Клонировать и изучать код из топовых GitHub репо
+- Внедрять лучшие практики (не только документировать)
 
 **Important files:**
-- Research report: `~/Documents/Yandex_Direct_API_Research_20260514/Yandex_Direct_API_Research_Report.md`
-- Brief: `AIM/docs/briefs/YANDEX_DIRECT_CLIENT_BRIEF.md`
-- Archived: `obsidian/deep-research/raw/2026-05-14-Yandex_Direct_API/`
+- Teacher Agent: `AIM/src/aim/teacher/skills/skill_teacher.py`
+- Test script: `scripts/test_teacher_end_to_end.py`
+- Plan: `docs/plans/2026-05-14-teacher-agent-fixes-plan.md`
 
 **Key decisions:**
-- Yandex Direct integration is profitable (ROI 388% over 12 months)
-- Allocate 70% budget to Yandex, 30% to Google
-- Use sandbox for all testing before production
-- Implement all resilience patterns from day 1
+- Teacher Agent готов к production use
+- Можно начинать Phase 2 (обучение P0 субагентов)
+- Каждый субагент требует индивидуального подхода
 
 ---
 
@@ -299,137 +383,6 @@
 
 ---
 
-**Last updated:** 2026-05-14 01:15 GMT+3  
-**Session duration:** ~45 minutes  
-**Status:** Ready for specification creation
-
-### Yandex Direct API Client Specification (01:47 GMT+3)
-
-**ЗАВЕРШЕНО:** Создана полная спецификация Yandex Direct API Client на основе deep research и брифа.
-
-**Процесс:**
-1. ✅ Этап 1: Бриф создан (YANDEX_DIRECT_CLIENT_BRIEF.md)
-   - Назначение: Production-ready Python client с unified interface
-   - Родительский Magister: Ads Magister
-   - Приоритеты: 6 критичных аспектов, 4 важных, 3 опциональных
-   - Интеграции: Ads Magister, Analytics Magister, Content Magister
-
-2. ✅ Этап 2: Deep Research пропущен (использовано существующее исследование)
-   - Исследование уже выполнено: 2,218 строк, 65 KB
-   - 93 evidence items, 87/100 avg credibility
-   - 18+ code examples
-   - Время экономии: ~20-30 минут
-
-3. ✅ Этап 3: Спецификация создана (YANDEX_DIRECT_CLIENT_SPEC.md)
-   - Размер: 1,790 строк, 47 KB
-   - 13 секций + 3 приложения
-   - Все критичные аспекты покрыты
-   - Production-ready архитектура
-
-**Содержание спецификации:**
-
-**Секция 1: Overview**
-- Purpose: Production-ready client с unified interface
-- Role in System: Platform Clients Layer под Services Layer
-- Success Metrics: Performance, Reliability, Compliance, Interface
-- Critical Findings: Rate limits (5 connections), Production gaps, Medical compliance, Changes service
-
-**Секция 2: Input Data**
-- Campaign parameters (name, budget, targeting, strategy)
-- Bidding strategies (8 типов: WB_MAXIMUM_CLICKS, PAY_FOR_CONVERSION, etc.)
-- Ad copy and creatives (title, text, URLs, extensions)
-- Keywords and bids (keyword, bid_micros, negative_keywords)
-- Medical license information (number, authority, date)
-
-**Секция 3: Algorithm and Logic**
-- Architecture: ConnectionPool + CircuitBreaker + RetryHandler + RateLimitDetector + PointsBudgetTracker + ChangesServiceOptimizer + MedicalAdValidator + UnifiedInterfaceMapper
-- Core Workflow: Campaign creation (7 steps)
-- Resilience Patterns:
-  - Connection pooling (max 5 connections)
-  - Circuit breaker (fail_max=5, reset_timeout=60s)
-  - Exponential backoff (1s → 30s max)
-  - Rate limit detection (error 152, 506, 1002)
-- Changes Service Optimization (80-90% API call reduction)
-- Medical Compliance Validation (required disclaimer, prohibited phrases)
-- Unified Interface Mapping (Yandex ↔ Google)
-
-**Секция 4: Output Data**
-- Campaign creation result (campaign_id, status, moderation_status, points_used)
-- Performance metrics (impressions, clicks, CTR, cost, CPC, conversions, CPA, ROAS)
-- Error reports (error_code, error_message, context, resolution)
-
-**Секция 5: Success Metrics and KPIs**
-- Performance: p95 < 2s, ≤ 5 connections, < 100k points/day, 80-90% API call reduction
-- Reliability: Circuit breaker, Retry strategy, Error handling, 99.9% uptime
-- Compliance: 100% disclaimer, 0 prohibited phrases, 100% license validation
-- Business: Cost efficiency, Campaign performance
-
-**Секция 6: Communication Patterns**
-- Event Bus Integration (12 events published, 5 events subscribed)
-- API Communication (JSON-RPC style, OAuth 2.0)
-- Logging and Monitoring (structlog, Prometheus metrics)
-
-**Секция 7: Error Handling**
-- Error Classification (Critical, Retryable, Non-Retryable)
-- Error Handling Matrix (7 error types)
-- Error Recovery Strategies (Circuit breaker, OAuth refresh, Points budget)
-- Error Logging and Monitoring
-
-**Секция 8: Testing Strategy**
-- Unit Tests (connection pooling, circuit breaker, exponential backoff, rate limit detection, medical compliance)
-- Integration Tests (campaign CRUD, OAuth refresh, medical compliance end-to-end)
-- Load Tests (concurrent connections, points budget, circuit breaker under load)
-- Medical Compliance Tests (disclaimer, prohibited phrases, license validation)
-
-**Секция 9: Usage Examples**
-- Basic campaign creation
-- Medical campaign with compliance
-- Optimized campaign monitoring (Changes service)
-- Performance metrics collection
-- Error handling
-
-**Секция 10: Dependencies and Integration**
-- Python Dependencies (httpx, pybreaker, tenacity, aiocache, prometheus-client, structlog, pydantic)
-- External Services (Yandex Direct API v5, Yandex OAuth, Redis, Prometheus)
-- Environment Variables (15 variables)
-- Integration with Services Layer (unified interface)
-
-**Секция 11: Deployment**
-- Docker Container (Dockerfile, health check)
-- Kubernetes Deployment (2 replicas, resource limits, probes)
-- Monitoring Setup (Prometheus, Grafana dashboard)
-
-**Секция 12: Changelog**
-- Version 1.0.0 (2026-05-14): Initial release
-
-**Секция 13: TODO and Future Enhancements**
-- Phase 1: Core Implementation (✅ completed)
-- Phase 2: Advanced Features (⏳ next sprint)
-- Phase 3: Production Hardening (⏳ future)
-- Phase 4: AI Integration (⏳ future)
-
-**Приложения:**
-- Appendix A: Research Report Summary (key findings, statistics, sources)
-- Appendix B: API Reference (campaign methods, metrics methods, medical compliance methods)
-- Appendix C: Error Codes Reference (7 error codes)
-
-**Файлы созданы:**
-- `docs/briefs/YANDEX_DIRECT_CLIENT_BRIEF.md` (6.5 KB)
-- `AIM/docs/subagents-specs/YANDEX_DIRECT_CLIENT_SPEC.md` (47 KB, 1,790 строк)
-
-**Качество:**
-- ✅ Размер > 30 KB (47 KB)
-- ✅ Все секции заполнены (13 секций + 3 приложения)
-- ✅ Примеры кода рабочие (18+ примеров)
-- ✅ Статистика с источниками (из research report)
-- ✅ API с ценами (FREE API, $10-50/month hosting)
-- ✅ Метрики определены (Performance, Reliability, Compliance, Business)
-
-**Время выполнения:**
-- Бриф: 5 минут
-- Исследование: 0 минут (использовано существующее)
-- Спецификация: 15 минут
-- **Итого:** 20 минут (vs 55-85 минут обычно)
-
-**Экономия времени:** 35-65 минут благодаря переиспользованию исследования
-
+**Last updated:** 2026-05-14 09:19 GMT+3  
+**Session duration:** ~2.5 hours  
+**Status:** Phase 1 completed, ready for Phase 2
