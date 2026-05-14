@@ -78,7 +78,7 @@ class ContentWriterAgent(Agent):
             "dentistry": ["dental implants", "teeth whitening", "orthodontics", "root canal"],
             "dermatology": ["acne treatment", "botox", "laser therapy", "skin care"],
             "plastic_surgery": ["rhinoplasty", "liposuction", "breast augmentation"],
-            "ophthalmology": ["lasik", "cataract surgery", "vision correction"],
+            "ophthalmology": ["lasik", "laser eye surgery", "cataract surgery", "vision correction", "eye surgery"],
         }
 
     async def execute_task(self, task: Task) -> TaskResult:
