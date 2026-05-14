@@ -545,6 +545,179 @@ class GA4Client:
             )
             raise
 
+    async def get_attribution_data(
+        self,
+        start_date: str,
+        end_date: str,
+    ) -> list[dict[str, Any]]:
+        """
+        Get conversion attribution data by source/medium/campaign.
+
+        Args:
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+
+        Returns:
+            List of attribution data with conversions and revenue
+        """
+        cache_key = f"attribution:{self.property_id}:{start_date}:{end_date}"
+
+        # Check cache
+        cached = await self._get_cached(cache_key)
+        if cached:
+            logger.info("ga4_attribution_cache_hit", cache_key=cache_key)
+            return cached
+
+        # Rate limiting
+        await self.rate_limiter.acquire()
+
+        # Build request
+        request = RunReportRequest(
+            property=f"properties/{self.property_id}",
+            dimensions=[
+                Dimension(name="sessionSource"),
+                Dimension(name="sessionMedium"),
+                Dimension(name="sessionCampaignName"),
+            ],
+            metrics=[
+                Metric(name="conversions"),
+                Metric(name="totalRevenue"),
+            ],
+            date_ranges=[DateRange(start_date=start_date, end_date=end_date)],
+        )
+
+        # Execute request
+        try:
+            response: RunReportResponse = await asyncio.to_thread(
+                self.client.run_report,
+                request=request,
+            )
+
+            # Parse response
+            attributions = []
+            for row in response.rows:
+                source = row.dimension_values[0].value
+                medium = row.dimension_values[1].value
+                campaign = row.dimension_values[2].value
+                conversions = int(float(row.metric_values[0].value))
+                revenue = float(row.metric_values[1].value)
+
+                attributions.append({
+                    "source": source,
+                    "medium": medium,
+                    "campaign": campaign,
+                    "conversions": conversions,
+                    "revenue": revenue,
+                })
+
+            # Cache result
+            await self._set_cached(cache_key, attributions)
+
+            logger.info(
+                "ga4_attribution_fetched",
+                attributions_count=len(attributions),
+            )
+
+            return attributions
+
+        except Exception as e:
+            logger.error(
+                "ga4_attribution_error",
+                error=str(e),
+                property_id=self.property_id,
+            )
+            raise
+
+    async def get_revenue_data(
+        self,
+        start_date: str,
+        end_date: str,
+    ) -> dict[str, Any]:
+        """
+        Get revenue metrics.
+
+        Args:
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+
+        Returns:
+            Revenue metrics dictionary
+        """
+        cache_key = f"revenue:{self.property_id}:{start_date}:{end_date}"
+
+        # Check cache
+        cached = await self._get_cached(cache_key)
+        if cached:
+            logger.info("ga4_revenue_cache_hit", cache_key=cache_key)
+            return cached
+
+        # Rate limiting
+        await self.rate_limiter.acquire()
+
+        # Build request
+        request = RunReportRequest(
+            property=f"properties/{self.property_id}",
+            metrics=[
+                Metric(name="totalRevenue"),
+                Metric(name="transactions"),
+                Metric(name="averagePurchaseRevenue"),
+                Metric(name="sessions"),
+                Metric(name="totalUsers"),
+            ],
+            date_ranges=[DateRange(start_date=start_date, end_date=end_date)],
+        )
+
+        # Execute request
+        try:
+            response: RunReportResponse = await asyncio.to_thread(
+                self.client.run_report,
+                request=request,
+            )
+
+            # Parse response
+            if response.rows:
+                row = response.rows[0]
+                total_revenue = float(row.metric_values[0].value)
+                transactions = int(float(row.metric_values[1].value))
+                avg_order_value = float(row.metric_values[2].value)
+                sessions = int(float(row.metric_values[3].value))
+                users = int(float(row.metric_values[4].value))
+
+                result = {
+                    "total_revenue": total_revenue,
+                    "transactions": transactions,
+                    "avg_order_value": avg_order_value,
+                    "revenue_per_session": total_revenue / sessions if sessions > 0 else 0.0,
+                    "revenue_per_user": total_revenue / users if users > 0 else 0.0,
+                }
+            else:
+                result = {
+                    "total_revenue": 0.0,
+                    "transactions": 0,
+                    "avg_order_value": 0.0,
+                    "revenue_per_session": 0.0,
+                    "revenue_per_user": 0.0,
+                }
+
+            # Cache result
+            await self._set_cached(cache_key, result)
+
+            logger.info(
+                "ga4_revenue_fetched",
+                total_revenue=result["total_revenue"],
+                transactions=result["transactions"],
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(
+                "ga4_revenue_error",
+                error=str(e),
+                property_id=self.property_id,
+            )
+            raise
+
     async def close(self) -> None:
         """Close client and cleanup resources."""
         await self.cache.close()
