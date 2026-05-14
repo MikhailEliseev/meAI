@@ -37,17 +37,46 @@ class AnalyticsMagister(BaseMagister):
     def __init__(
         self,
         magister_id: str,
-        event_bus: EventBus,
-        vault_path: Path,
-        data_path: Path
+        event_bus: EventBus | None = None,
+        vault_path: Path | None = None,
+        data_path: Path | None = None,
+        vault: Any | None = None,
     ):
-        super().__init__(
-            magister_id=magister_id,
-            name="Analytics Magister",
-            specialization="analytics",
-            event_bus=event_bus,
-            vault_path=vault_path
-        )
+        """Initialize Analytics Magister
+
+        Args:
+            magister_id: Unique Magister ID
+            event_bus: Optional EventBus instance (for testing)
+            vault_path: Optional Path to Analytics Magister's Obsidian vault
+            data_path: Optional Path to data directory
+            vault: Optional ObsidianVault instance (for testing)
+        """
+        # Use defaults if not provided
+        if vault_path is None:
+            vault_path = Path("./AIM/obsidian/analytics-magister")
+        if data_path is None:
+            data_path = Path("./AIM/data/analytics")
+
+        # Initialize parent (only if event_bus provided)
+        if event_bus is not None:
+            super().__init__(
+                magister_id=magister_id,
+                name="Analytics Magister",
+                specialization="analytics",
+                event_bus=event_bus,
+                vault_path=vault_path
+            )
+        else:
+            # For testing without event_bus
+            self.magister_id = magister_id
+            self.name = "Analytics Magister"
+            self.specialization = "analytics"
+            self.vault_path = vault_path
+
+        # Allow dependency injection for testing
+        if vault is not None:
+            self.vault = vault
+
         self.data_path = data_path
         self.data_path.mkdir(parents=True, exist_ok=True)
 
