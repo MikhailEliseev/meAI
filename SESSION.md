@@ -1,6 +1,42 @@
 # Current Session: 2026-05-14
 
-## Status: ✅ Phase 1 COMPLETED — Teacher Agent Context-Aware Fixes Applied
+## Status: ⏳ Phase 2 IN PROGRESS — Training CI Content Agent
+
+**Current Issue:** SkillExtractor извлекает example usage код вместо реализации паттерна
+
+---
+
+## Current Work (10:36 GMT+3)
+
+### Phase 2: Training CI Content Agent — BLOCKED (FUNDAMENTAL ISSUE)
+
+**КРИТИЧЕСКАЯ ПРОБЛЕМА:** Teacher Agent извлекает generic patterns вместо domain-specific решений.
+
+**Что происходит:**
+1. ✅ Teacher Agent находит правильные репо (23 repos: python-seo-analyzer, WebAnalyzer, crawlee-python)
+2. ✅ Извлекает skills (103 skills)
+3. ✅ Фильтрует по async/sync (29 compatible)
+4. ❌ Выбирает generic pattern: "Retry with Exponential Backoff" (crawlee-python)
+5. ❌ Это нарушает правило: "Каждый субагент получает уникальное обучение, не copy-paste generic patterns"
+
+**Что ДОЛЖНО быть для CI Content Agent:**
+- ✅ Content extraction patterns (trafilatura, BeautifulSoup)
+- ✅ SEO analysis patterns (meta tags, headings, keyword density)
+- ✅ Competitor analysis patterns (content comparison, gap detection)
+- ✅ AI content detection patterns
+- ❌ НЕ generic retry/circuit breaker (это уже есть в base.py)
+
+**Корневая причина:**
+- SkillComparator оценивает skills по generic критериям (quality_score)
+- Не учитывает domain-specific relevance для субагента
+- Выбирает "лучший" generic pattern вместо domain-specific решения
+
+**Commits:**
+- 7827f04: Added domain queries for ci-content
+- 1817484: Added subagent target file mapping
+- c3fe57c: Pass correct target_path to extractor.extract()
+
+**Next Step:** Переработать SkillComparator для domain-specific scoring
 
 ---
 

@@ -49,6 +49,69 @@ class SkillComparator:
     def __init__(self):
         self.logger = logger.bind(component="skill_comparator")
 
+        # Domain keywords for each subagent type
+        self.domain_keywords = {
+            "ci-content": [
+                "content", "extraction", "scraping", "parsing",
+                "seo", "meta", "heading", "keyword", "density",
+                "competitor", "comparison", "gap", "analysis",
+                "trafilatura", "beautifulsoup", "html", "text",
+                "article", "blog", "readability", "quality"
+            ],
+            "ci-tech": [
+                "lighthouse", "performance", "vitals", "speed",
+                "technical", "crawl", "sitemap", "robots",
+                "schema", "structured", "data", "audit",
+                "core web vitals", "lcp", "fid", "cls"
+            ],
+            "keyword-research": [
+                "keyword", "search", "volume", "difficulty",
+                "serp", "ranking", "competition", "cpc",
+                "semrush", "ahrefs", "api", "research"
+            ],
+            "seo": [
+                "seo", "optimization", "ranking", "serp",
+                "backlink", "authority", "indexing", "crawl"
+            ],
+            "content": [
+                "content", "generation", "writing", "blog",
+                "article", "copywriting", "tone", "style"
+            ],
+            "ads": [
+                "ads", "advertising", "campaign", "bidding",
+                "yandex", "direct", "conversion", "roi"
+            ],
+        }
+
+    def _score_domain_relevance(self, skill: Skill, subagent_name: str) -> float:
+        """
+        Score domain relevance for subagent.
+
+        Args:
+            skill: Skill to score
+            subagent_name: Name of target subagent
+
+        Returns:
+            0-100 score (higher = more relevant to domain)
+        """
+        keywords = self.domain_keywords.get(subagent_name, [])
+
+        if not keywords:
+            # No domain keywords defined, return neutral score
+            return 50.0
+
+        # Combine skill text for matching
+        text = f"{skill.name} {skill.description} {skill.code_example}".lower()
+
+        # Count keyword matches
+        matches = sum(1 for kw in keywords if kw in text)
+
+        # Score: 0-100 based on match percentage
+        max_matches = len(keywords)
+        score = (matches / max_matches) * 100 if max_matches > 0 else 50.0
+
+        return score
+
     async def compare(self, skills: list[Skill]) -> ComparisonResult:
         """
         Compare skills and rank by total score.
@@ -196,8 +259,36 @@ class SkillComparator:
             filtered_out=len(skills) - len(compatible_skills)
         )
 
-        # Compare only compatible skills
-        return await self.compare(compatible_skills)
+        # Score each compatible skill with domain-specific weighting
+        for skill in compatible_skills:
+            # Generic quality score (0-100)
+            dimension_scores = self._score_all_dimensions(skill)
+            quality_score = sum(dimension_scores.values()) / len(dimension_scores)
+
+            # Domain relevance score (0-100)
+            domain_score = self._score_domain_relevance(skill, target_context.subagent_name)
+
+            # Combined score: 70% domain + 30% quality
+            # Domain relevance is MORE important than code quality
+            combined_score = (domain_score * 0.7) + (quality_score * 0.3)
+
+            skill.quality_score = combined_score
+
+        # Sort by combined score
+        ranked = sorted(compatible_skills, key=lambda s: s.quality_score, reverse=True)
+
+        self.logger.info(
+            "skills_compared",
+            total_skills=len(ranked),
+            best_skill=ranked[0].name if ranked else None,
+            best_score=ranked[0].quality_score if ranked else None
+        )
+
+        return ComparisonResult(
+            ranked_skills=ranked,
+            best_skill=ranked[0] if ranked else None,
+            dimension_scores={}
+        )
 
     def _score_all_dimensions(self, skill: Skill) -> dict[str, float]:
         """
