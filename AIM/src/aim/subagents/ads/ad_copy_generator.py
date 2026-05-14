@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import Any
 
 import structlog
+from langchain_openai import ChatOpenAI
 
 
 @dataclass
