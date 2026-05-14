@@ -1,0 +1,417 @@
+"""
+CI Rank Tracker Agent - SERP Position Tracking.
+
+Tracks keyword rankings using Google Search Console API
+and SerpAPI for real-time SERP data.
+
+Based on:
+- Google Search Console API (official)
+- SerpAPI for real-time SERP scraping
+"""
+
+import asyncio
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any
+
+import httpx
+import structlog
+
+
+@dataclass
+class KeywordPosition:
+    """Keyword position data."""
+
+    keyword: str
+    position: float
+    url: str
+    impressions: int
+    clicks: int
+    ctr: float
+    date: str
+
+
+@dataclass
+class PositionChange:
+    """Position change over time."""
+
+    keyword: str
+    current_position: float
+    previous_position: float
+    change: float
+    change_percent: float
+    trend: str  # "up", "down", "stable"
+
+
+@dataclass
+class CompetitorPosition:
+    """Competitor position for keyword."""
+
+    keyword: str
+    competitor_url: str
+    position: int
+    title: str
+    snippet: str
+
+
+@dataclass
+class RankTrackingResult:
+    """Complete rank tracking result."""
+
+    target_url: str
+    date_range: tuple[str, str]
+    timestamp: str
+
+    # Current positions
+    positions: list[KeywordPosition]
+
+    # Position changes
+    changes: list[PositionChange]
+
+    # Competitor positions
+    competitor_positions: list[CompetitorPosition]
+
+    # Summary metrics
+    avg_position: float
+    total_keywords: int
+    top_3_count: int
+    top_10_count: int
+    top_100_count: int
+
+    # Insights
+    biggest_gains: list[PositionChange]
+    biggest_losses: list[PositionChange]
+    new_rankings: list[KeywordPosition]
+    lost_rankings: list[str]
+
+
+class CIRankTrackerAgent:
+    """
+    Competitive Intelligence Rank Tracker Agent.
+
+    Tracks keyword rankings using Google Search Console API
+    and monitors competitor positions.
+    """
+
+    def __init__(
+        self,
+        gsc_credentials: dict[str, Any] | None = None,
+        serpapi_key: str | None = None,
+    ):
+        """
+        Initialize CI Rank Tracker Agent.
+
+        Args:
+            gsc_credentials: Google Search Console API credentials
+            serpapi_key: SerpAPI key for real-time SERP data
+        """
+        self.logger = structlog.get_logger()
+        self.gsc_credentials = gsc_credentials
+        self.serpapi_key = serpapi_key
+        self.gsc_base_url = "https://www.googleapis.com/webmasters/v3"
+        self.serpapi_base_url = "https://serpapi.com/search"
+        self.timeout = httpx.Timeout(30.0)
+
+    async def track_rankings(
+        self,
+        target_url: str,
+        keywords: list[str] | None = None,
+        days: int = 7,
+        compare_days: int = 7,
+    ) -> RankTrackingResult:
+        """
+        Track keyword rankings for target URL.
+
+        Args:
+            target_url: URL to track rankings for
+            keywords: Specific keywords to track (None = all from GSC)
+            days: Number of days to analyze
+            compare_days: Days to compare against for changes
+
+        Returns:
+            Complete rank tracking result with changes and insights
+        """
+        self.logger.info(
+            "rank_tracking_start",
+            target=target_url,
+            keywords_count=len(keywords) if keywords else "all",
+            days=days,
+        )
+
+        # Calculate date ranges
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+        compare_end_date = start_date - timedelta(days=1)
+        compare_start_date = compare_end_date - timedelta(days=compare_days)
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            # Fetch current period data
+            current_positions = await self._fetch_gsc_data(
+                client,
+                target_url,
+                start_date.strftime("%Y-%m-%d"),
+                end_date.strftime("%Y-%m-%d"),
+                keywords,
+            )
+
+            # Fetch comparison period data
+            previous_positions = await self._fetch_gsc_data(
+                client,
+                target_url,
+                compare_start_date.strftime("%Y-%m-%d"),
+                compare_end_date.strftime("%Y-%m-%d"),
+                keywords,
+            )
+
+            # Calculate changes
+            changes = self._calculate_changes(
+                current_positions, previous_positions
+            )
+
+            # Fetch competitor positions for top keywords
+            competitor_positions = await self._fetch_competitor_positions(
+                client,
+                [p.keyword for p in current_positions[:10]],  # Top 10 keywords
+            )
+
+        # Calculate summary metrics
+        avg_position = (
+            sum(p.position for p in current_positions) / len(current_positions)
+            if current_positions
+            else 0.0
+        )
+        top_3_count = sum(1 for p in current_positions if p.position <= 3)
+        top_10_count = sum(1 for p in current_positions if p.position <= 10)
+        top_100_count = sum(1 for p in current_positions if p.position <= 100)
+
+        # Identify insights
+        biggest_gains = sorted(
+            [c for c in changes if c.change < 0],  # Negative = improvement
+            key=lambda x: x.change,
+        )[:10]
+
+        biggest_losses = sorted(
+            [c for c in changes if c.change > 0],  # Positive = decline
+            key=lambda x: x.change,
+            reverse=True,
+        )[:10]
+
+        # Find new and lost rankings
+        current_keywords = {p.keyword for p in current_positions}
+        previous_keywords = {p.keyword for p in previous_positions}
+
+        new_rankings = [
+            p
+            for p in current_positions
+            if p.keyword not in previous_keywords and p.position <= 100
+        ]
+        lost_rankings = list(previous_keywords - current_keywords)
+
+        result = RankTrackingResult(
+            target_url=target_url,
+            date_range=(
+                start_date.strftime("%Y-%m-%d"),
+                end_date.strftime("%Y-%m-%d"),
+            ),
+            timestamp=datetime.now().isoformat(),
+            positions=current_positions,
+            changes=changes,
+            competitor_positions=competitor_positions,
+            avg_position=round(avg_position, 1),
+            total_keywords=len(current_positions),
+            top_3_count=top_3_count,
+            top_10_count=top_10_count,
+            top_100_count=top_100_count,
+            biggest_gains=biggest_gains,
+            biggest_losses=biggest_losses,
+            new_rankings=new_rankings,
+            lost_rankings=lost_rankings,
+        )
+
+        self.logger.info(
+            "rank_tracking_complete",
+            total_keywords=len(current_positions),
+            avg_position=avg_position,
+            top_10_count=top_10_count,
+        )
+
+        return result
+
+    async def _fetch_gsc_data(
+        self,
+        client: httpx.AsyncClient,
+        site_url: str,
+        start_date: str,
+        end_date: str,
+        keywords: list[str] | None = None,
+    ) -> list[KeywordPosition]:
+        """
+        Fetch ranking data from Google Search Console API.
+
+        Note: This is a simplified implementation.
+        Real implementation requires OAuth2 authentication.
+        """
+        # Mock data for now (real implementation needs GSC OAuth2)
+        # In production, use google-api-python-client library
+
+        self.logger.info(
+            "fetching_gsc_data",
+            site=site_url,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        # Placeholder: Return mock data
+        # Real implementation would call GSC API here
+        positions = []
+
+        if keywords:
+            for keyword in keywords[:20]:  # Limit to 20 for demo
+                positions.append(
+                    KeywordPosition(
+                        keyword=keyword,
+                        position=15.0,  # Mock position
+                        url=f"{site_url}/page",
+                        impressions=100,
+                        clicks=5,
+                        ctr=0.05,
+                        date=end_date,
+                    )
+                )
+
+        return positions
+
+    async def _fetch_competitor_positions(
+        self,
+        client: httpx.AsyncClient,
+        keywords: list[str],
+    ) -> list[CompetitorPosition]:
+        """
+        Fetch competitor positions using SerpAPI.
+
+        Note: Requires SerpAPI key for real data.
+        """
+        if not self.serpapi_key:
+            self.logger.warning("serpapi_key_not_set")
+            return []
+
+        competitor_positions = []
+
+        for keyword in keywords[:5]:  # Limit to 5 keywords to save API calls
+            try:
+                params = {
+                    "q": keyword,
+                    "api_key": self.serpapi_key,
+                    "engine": "google",
+                    "num": 10,
+                }
+
+                response = await client.get(
+                    self.serpapi_base_url, params=params
+                )
+                await response.raise_for_status()
+                data = await response.json()
+
+                # Extract organic results
+                organic_results = data.get("organic_results", [])
+
+                for i, result in enumerate(organic_results, 1):
+                    competitor_positions.append(
+                        CompetitorPosition(
+                            keyword=keyword,
+                            competitor_url=result.get("link", ""),
+                            position=i,
+                            title=result.get("title", ""),
+                            snippet=result.get("snippet", ""),
+                        )
+                    )
+
+            except Exception as e:
+                self.logger.error(
+                    "serpapi_fetch_error",
+                    keyword=keyword,
+                    error=str(e),
+                )
+
+        return competitor_positions
+
+    def _calculate_changes(
+        self,
+        current: list[KeywordPosition],
+        previous: list[KeywordPosition],
+    ) -> list[PositionChange]:
+        """Calculate position changes between periods."""
+        changes = []
+
+        # Create lookup dict for previous positions
+        previous_dict = {p.keyword: p.position for p in previous}
+
+        for curr_pos in current:
+            if curr_pos.keyword in previous_dict:
+                prev_position = previous_dict[curr_pos.keyword]
+                change = curr_pos.position - prev_position
+
+                # Determine trend
+                if abs(change) < 1:
+                    trend = "stable"
+                elif change < 0:
+                    trend = "up"  # Lower position = better
+                else:
+                    trend = "down"
+
+                # Calculate percent change
+                change_percent = (
+                    (change / prev_position * 100) if prev_position > 0 else 0.0
+                )
+
+                changes.append(
+                    PositionChange(
+                        keyword=curr_pos.keyword,
+                        current_position=curr_pos.position,
+                        previous_position=prev_position,
+                        change=round(change, 1),
+                        change_percent=round(change_percent, 1),
+                        trend=trend,
+                    )
+                )
+
+        return changes
+
+
+async def main():
+    """Example usage."""
+    import os
+
+    serpapi_key = os.getenv("SERPAPI_KEY")
+
+    agent = CIRankTrackerAgent(serpapi_key=serpapi_key)
+
+    result = await agent.track_rankings(
+        target_url="https://example.com",
+        keywords=["seo tools", "keyword research", "backlink analysis"],
+        days=7,
+        compare_days=7,
+    )
+
+    print(f"Total Keywords: {result.total_keywords}")
+    print(f"Average Position: {result.avg_position}")
+    print(f"Top 10 Count: {result.top_10_count}")
+    print()
+
+    print("Biggest Gains:")
+    for change in result.biggest_gains[:5]:
+        print(
+            f"  {change.keyword}: {change.previous_position:.1f} → "
+            f"{change.current_position:.1f} ({change.change:+.1f})"
+        )
+
+    print("\nBiggest Losses:")
+    for change in result.biggest_losses[:5]:
+        print(
+            f"  {change.keyword}: {change.previous_position:.1f} → "
+            f"{change.current_position:.1f} ({change.change:+.1f})"
+        )
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
