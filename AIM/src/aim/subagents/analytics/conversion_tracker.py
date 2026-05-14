@@ -498,3 +498,84 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+# ==============================================================================
+# Added by Teacher Agent: conversion-tracker
+# ==============================================================================
+
+import asyncio
+
+async def generate_monthly_summary(self, year: int, month: int, save_to_file: bool = True) -> str:
+        """
+        Generate a monthly financial summary report.
+        
+        Args:
+            year: Year for the report
+            month: Month for the report
+            save_to_file: Whether to save the report to a file
+            
+        Returns:
+            str: Generated report content
+        """
+        monthly_summary = self.budget_manager.get_monthly_summary(year, month)
+        budget_status = self.budget_manager.get_budget_status(year, month)
+        category_summary = self.budget_manager.get_category_summary(year, month)
+        overspending_alerts = self.budget_manager.get_overspending_alerts(year, month)
+        
+        report_lines = []
+        report_lines.append("=" * 60)
+        report_lines.append(f"MONTHLY FINANCIAL SUMMARY - {format_date(f'{year}-{month:02d}-01', output_format='%B %Y')}")
+        report_lines.append("=" * 60)
+        report_lines.append(f"Generated on: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}")
+        report_lines.append("")
+        
+        # Financial overview
+        report_lines.append("FINANCIAL OVERVIEW")
+        report_lines.append("-" * 20)
+        report_lines.append(f"Total Income: {format_currency(monthly_summary['total_income'])}")
+        report_lines.append(f"Total Expenses: {format_currency(monthly_summary['total_expenses'])}")
+        report_lines.append(f"Net Income: {format_currency(monthly_summary['net_income'])}")
+        report_lines.append(f"Savings Rate: {monthly_summary['savings_rate']:.1f}%")
+        report_lines.append("")
+        
+        # Budget status
+        if budget_status:
+            report_lines.append("BUDGET STATUS")
+            report_lines.append("-" * 15)
+            for category, status in budget_status.items():
+                status_icon = "🔴" if status['is_over_budget'] else "🟢"
+                report_lines.append(f"{status_icon} {category}: {format_currency(status['spent'])} / {format_currency(status['limit'])} "
+                                  f"({status['percentage_used']:.1f}%)")
+                if status['remaining'] > 0:
+                    report_lines.append(f"   Remaining: {format_currency(status['remaining'])}")
+            report_lines.append("")
+        
+        # Overspending alerts
+        if overspending_alerts:
+            report_lines.append("OVERSPENDING ALERTS")
+            report_lines.append("-" * 20)
+            for alert in overspending_alerts:
+                report_lines.append(f"⚠️  {alert['category']}: Over budget by {format_currency(alert['overspent'])} "
+                                  f"({alert['percentage_over']:.1f}% over limit)")
+            report_lines.append("")
+        
+        # Category breakdown
+        if category_summary:
+            report_lines.append("EXPENSE BREAKDOWN BY CATEGORY")
+            report_lines.append("-" * 30)
+            total_expenses = sum(category_summary.values())
+            for category, amount in sorted(category_summary.items(), key=lambda x: x[1], reverse=True):
+                percentage = (amount / total_expenses * 100) if total_expenses > 0 else 0
+                report_lines.append(f"{category}: {format_currency(amount)} ({percentage:.1f}%)")
+        
+        report_content = "\n".join(report_lines)
+        
+        if save_to_file:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"reports/monthly_summary_{year}_{month:02d}_{timestamp}.txt"
+            with open(filename, 'w') as f:
+                f.write(report_content)
+            print(f"Monthly summary saved to: {filename}")
+        
+        return report_content
