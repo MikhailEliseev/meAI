@@ -494,3 +494,100 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+# ==============================================================================
+# Added by Teacher Agent: traffic-analyzer
+# ==============================================================================
+
+import asyncio
+
+async def execute(
+        self, recompute_atoms: set[str] | None = None
+    ) -> dict[str, AtomResult]:
+        """
+        Executes atoms in the workflow, with selective recomputation.
+
+        Args:
+            recompute_atoms: Optional set of atom names to force recomputation,
+                           regardless of cache status
+        """
+        self._is_rerun = True  # prevent duplicate re-registration
+        try:
+            # Clear caches and component producers, but not atoms
+            self.cache.cache.clear()
+            self._component_producers.clear()
+
+            execution_order = self._get_execution_order()
+            atoms_to_recompute = self._get_affected_atoms(recompute_atoms or set())
+
+            logger.info(f"[DAG] Atoms to recompute {atoms_to_recompute=}")
+
+            for atom_name in execution_order:
+                if self._is_rerun and recompute_atoms and atom_name not in atoms_to_recompute:
+                    logger.info(f"[DAG] Skipping atom (not affected) {atom_name=}")
+                    continue
+
+                atom = self.atoms[atom_name]
+                if atom_name in atoms_to_recompute:
+                    atom.force_recompute = True
+
+                result = self._execute_atom(atom)
+                self.context.set_result(atom_name, result)
+                atom.force_recompute = False
+
+                if result.status == AtomStatus.FAILED:
+                    logger.error(f"[DAG] Execution halted due to failure {atom_name=}")
+                    break
+
+            return self.context.results
+        finally:
+            self._is_rerun = False
+
+# ==============================================================================
+# Added by Teacher Agent: traffic-analyzer
+# ==============================================================================
+
+import asyncio
+
+async def execute(
+        self, recompute_atoms: set[str] | None = None
+    ) -> dict[str, AtomResult]:
+        """
+        Executes atoms in the workflow, with selective recomputation.
+
+        Args:
+            recompute_atoms: Optional set of atom names to force recomputation,
+                           regardless of cache status
+        """
+        self._is_rerun = True  # prevent duplicate re-registration
+        try:
+            # Clear caches and component producers, but not atoms
+            self.cache.cache.clear()
+            self._component_producers.clear()
+
+            execution_order = self._get_execution_order()
+            atoms_to_recompute = self._get_affected_atoms(recompute_atoms or set())
+
+            logger.info(f"[DAG] Atoms to recompute {atoms_to_recompute=}")
+
+            for atom_name in execution_order:
+                if self._is_rerun and recompute_atoms and atom_name not in atoms_to_recompute:
+                    logger.info(f"[DAG] Skipping atom (not affected) {atom_name=}")
+                    continue
+
+                atom = self.atoms[atom_name]
+                if atom_name in atoms_to_recompute:
+                    atom.force_recompute = True
+
+                result = self._execute_atom(atom)
+                self.context.set_result(atom_name, result)
+                atom.force_recompute = False
+
+                if result.status == AtomStatus.FAILED:
+                    logger.error(f"[DAG] Execution halted due to failure {atom_name=}")
+                    break
+
+            return self.context.results
+        finally:
+            self._is_rerun = False
