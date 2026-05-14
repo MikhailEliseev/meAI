@@ -234,6 +234,20 @@ class SkillSelector:
                 "core web vitals python",
                 "page speed analysis python",
             ],
+            "content-gap": [
+                "content gap analysis python",
+                "serp overlap python",
+                "keyword gap analysis python",
+                "competitor content analysis python",
+                "topic clustering python",
+            ],
+            "backlink": [
+                "backlink analysis python",
+                "link building python",
+                "domain authority python",
+                "ahrefs api python",
+                "moz api python",
+            ],
         }
 
     async def research_domain_specific(
