@@ -1,16 +1,18 @@
 # Current Session: 2026-05-14
 
-## Status: ⏳ Phase 2 IN PROGRESS — Training CI Content Agent
+## Status: ⏳ Phase 2 IN PROGRESS — Training CI Content Agent (BLOCKED)
 
 **Current Issue:** SkillExtractor извлекает example usage код вместо реализации паттерна
 
+**Blocking Issue:** Keyword-based pattern extraction не может отличить example от implementation
+
 ---
 
-## Current Work (10:51 GMT+3)
+## Current Work (10:53 GMT+3)
 
-### Phase 2: Training CI Content Agent — BLOCKED (FUNDAMENTAL EXTRACTION ISSUE)
+### Phase 2: Training CI Content Agent — BLOCKED (EXTRACTION APPROACH ISSUE)
 
-**КРИТИЧЕСКАЯ ПРОБЛЕМА:** SkillSelector извлекает example usage код вместо реализации паттерна.
+**КРИТИЧЕСКАЯ ПРОБЛЕМА:** Keyword-based pattern extraction не может отличить example usage от реализации.
 
 **Попытка 1 (10:41-10:46):** Добавлены domain_pattern_signatures
 - ✅ Добавлены ci-content patterns (content_extraction, seo_analysis, keyword_density, competitor_comparison)
@@ -50,22 +52,23 @@ content = trafilatura.extract(
 )
 ```
 
-**Новый подход (ПРАВИЛЬНЫЙ):**
+**Решение (Import-Based Extraction):**
 1. Найти **импорты библиотек** (import trafilatura, from bs4 import BeautifulSoup)
 2. Извлечь **функции, которые используют эти импорты**
 3. Это будет реальная реализация, а не примеры
+
+**План создан:** `docs/plans/2026-05-14-teacher-agent-import-based-extraction.md`
 
 **Commits:**
 - 7827f04: Added domain queries for ci-content
 - 1817484: Added subagent target file mapping
 - c3fe57c: Pass correct target_path to extractor.extract()
 - aba003e: Implement domain-specific scoring
-- (uncommitted): Added ci-content domain_pattern_signatures
-- (uncommitted): Improved _extract_pattern_code_from_signatures
+- 87031de: feat(teacher): add domain-specific pattern extraction (WIP)
 
-**Next Step:** Переработать подход - искать по импортам библиотек, не по keywords
+**Next Step:** Реализовать import-based extraction подход (1-1.5 часа)
 
-**Время потрачено:** ~1.5 часа (10:36-10:51 GMT+3)
+**Время потрачено:** ~1.5 часа (10:36-10:53 GMT+3)
 
 ---
 
