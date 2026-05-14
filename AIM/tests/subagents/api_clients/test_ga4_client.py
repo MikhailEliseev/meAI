@@ -325,6 +325,81 @@ async def test_error_handling(ga4_credentials, mock_credentials, mock_ga4_client
 
 
 @pytest.mark.asyncio
+async def test_get_attribution_data(ga4_credentials, mock_credentials, mock_ga4_client):
+    """Test fetching attribution data."""
+    mock_row = MagicMock()
+    mock_row.dimension_values = [
+        MagicMock(value="google"),
+        MagicMock(value="cpc"),
+        MagicMock(value="brand_campaign"),
+    ]
+    mock_row.metric_values = [
+        MagicMock(value="150"),    # conversions
+        MagicMock(value="7500.0"), # revenue
+    ]
+
+    mock_response = MagicMock()
+    mock_response.rows = [mock_row]
+
+    mock_client = MagicMock()
+    mock_client.run_report = MagicMock(return_value=mock_response)
+    mock_ga4_client.return_value = mock_client
+
+    client = GA4Client(credentials=ga4_credentials)
+
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=7)
+
+    attributions = await client.get_attribution_data(
+        start_date=start_date.isoformat(),
+        end_date=end_date.isoformat(),
+    )
+
+    assert len(attributions) == 1
+    assert attributions[0]["source"] == "google"
+    assert attributions[0]["medium"] == "cpc"
+    assert attributions[0]["campaign"] == "brand_campaign"
+    assert attributions[0]["conversions"] == 150
+    assert attributions[0]["revenue"] == 7500.0
+
+
+@pytest.mark.asyncio
+async def test_get_revenue_data(ga4_credentials, mock_credentials, mock_ga4_client):
+    """Test fetching revenue data."""
+    mock_row = MagicMock()
+    mock_row.metric_values = [
+        MagicMock(value="50000.0"),  # total_revenue
+        MagicMock(value="1000"),     # transactions
+        MagicMock(value="50.0"),     # avg_order_value
+        MagicMock(value="10000"),    # sessions
+        MagicMock(value="8000"),     # users
+    ]
+
+    mock_response = MagicMock()
+    mock_response.rows = [mock_row]
+
+    mock_client = MagicMock()
+    mock_client.run_report = MagicMock(return_value=mock_response)
+    mock_ga4_client.return_value = mock_client
+
+    client = GA4Client(credentials=ga4_credentials)
+
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=7)
+
+    revenue = await client.get_revenue_data(
+        start_date=start_date.isoformat(),
+        end_date=end_date.isoformat(),
+    )
+
+    assert revenue["total_revenue"] == 50000.0
+    assert revenue["transactions"] == 1000
+    assert revenue["avg_order_value"] == 50.0
+    assert revenue["revenue_per_session"] == 5.0  # 50000 / 10000
+    assert revenue["revenue_per_user"] == 6.25    # 50000 / 8000
+
+
+@pytest.mark.asyncio
 async def test_close(ga4_credentials, mock_credentials, mock_ga4_client):
     """Test client cleanup."""
     client = GA4Client(credentials=ga4_credentials)

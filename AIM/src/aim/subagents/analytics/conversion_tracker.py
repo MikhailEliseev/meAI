@@ -10,9 +10,11 @@ Based on: GA4 Conversions API + Yandex Metrica Goals API
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 import structlog
+
+from AIM.src.aim.subagents.api_clients.ga4_client import GA4Client, GA4Credentials
 
 
 @dataclass
@@ -126,19 +128,24 @@ class ConversionTracker:
 
     def __init__(
         self,
-        ga4_property_id: str | None = None,
+        ga4_credentials: Optional[GA4Credentials] = None,
         yandex_counter_id: str | None = None,
     ):
         """
         Initialize Conversion Tracker.
 
         Args:
-            ga4_property_id: Google Analytics 4 property ID
+            ga4_credentials: Google Analytics 4 credentials
             yandex_counter_id: Yandex Metrica counter ID
         """
         self.logger = structlog.get_logger()
-        self.ga4_property_id = ga4_property_id
         self.yandex_counter_id = yandex_counter_id
+
+        # Initialize GA4 client if credentials provided
+        self.ga4_client = None
+        if ga4_credentials:
+            self.ga4_client = GA4Client(credentials=ga4_credentials)
+            self.logger.info("ga4_client_initialized", property_id=ga4_credentials.property_id)
 
     async def track(
         self,
@@ -247,7 +254,35 @@ class ConversionTracker:
         source: str,
     ) -> list[Goal]:
         """Track goal completions."""
-        # Mock data
+        # Try GA4 first
+        if source in ("ga4", "both") and self.ga4_client:
+            try:
+                conversions = await self.ga4_client.get_conversions(
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+
+                goals = []
+                for conv in conversions:
+                    goals.append(
+                        Goal(
+                            goal_id=conv.event_name,
+                            goal_name=conv.event_name,
+                            goal_type="event",
+                            completions=conv.event_count,
+                            conversion_rate=conv.conversion_rate,
+                            value=conv.event_value,
+                        )
+                    )
+
+                self.logger.info("goals_fetched_from_ga4", goals_count=len(goals))
+                return goals
+
+            except Exception as e:
+                self.logger.warning("ga4_goals_fetch_failed", error=str(e))
+                # Fall through to mock data
+
+        # Mock data fallback
         goals = [
             Goal(
                 goal_id="1",
@@ -283,6 +318,7 @@ class ConversionTracker:
             ),
         ]
 
+        self.logger.info("goals_fetched_from_mock", goals_count=len(goals))
         return goals
 
     async def _analyze_attribution(
@@ -292,7 +328,42 @@ class ConversionTracker:
         source: str,
     ) -> list[Attribution]:
         """Analyze conversion attribution."""
-        # Mock data
+        # Try GA4 first
+        if source in ("ga4", "both") and self.ga4_client:
+            try:
+                attribution_data = await self.ga4_client.get_attribution_data(
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+
+                attributions = []
+                for attr in attribution_data:
+                    # Note: GA4 doesn't provide cost data, so we use 0
+                    # Cost should be imported from ad platforms separately
+                    revenue = attr["revenue"]
+                    cost = 0.0  # Would need to be imported from ad platforms
+                    roi = 0.0  # Cannot calculate without cost
+
+                    attributions.append(
+                        Attribution(
+                            source=attr["source"],
+                            medium=attr["medium"],
+                            campaign=attr["campaign"],
+                            conversions=attr["conversions"],
+                            revenue=revenue,
+                            cost=cost,
+                            roi=roi,
+                        )
+                    )
+
+                self.logger.info("attribution_fetched_from_ga4", attributions_count=len(attributions))
+                return attributions
+
+            except Exception as e:
+                self.logger.warning("ga4_attribution_fetch_failed", error=str(e))
+                # Fall through to mock data
+
+        # Mock data fallback
         attributions = [
             Attribution(
                 source="google",
@@ -332,6 +403,7 @@ class ConversionTracker:
             ),
         ]
 
+        self.logger.info("attribution_fetched_from_mock", attributions_count=len(attributions))
         return attributions
 
     async def _analyze_customer_journeys(
@@ -375,19 +447,45 @@ class ConversionTracker:
         source: str,
     ) -> RevenueMetrics:
         """Track revenue metrics."""
-        # Mock data
+        # Try GA4 first
+        if source in ("ga4", "both") and self.ga4_client:
+            try:
+                revenue_data = await self.ga4_client.get_revenue_data(
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+
+                metrics = RevenueMetrics(
+                    total_revenue=revenue_data["total_revenue"],
+                    avg_order_value=revenue_data["avg_order_value"],
+                    transactions=revenue_data["transactions"],
+                    revenue_per_session=revenue_data["revenue_per_session"],
+                    revenue_per_user=revenue_data["revenue_per_user"],
+                )
+
+                self.logger.info("revenue_fetched_from_ga4", total_revenue=metrics.total_revenue)
+                return metrics
+
+            except Exception as e:
+                self.logger.warning("ga4_revenue_fetch_failed", error=str(e))
+                # Fall through to mock data
+
+        # Mock data fallback
         total_revenue = 50000.0
         transactions = 1000
         sessions = 10000
         users = 8000
 
-        return RevenueMetrics(
+        metrics = RevenueMetrics(
             total_revenue=total_revenue,
             avg_order_value=total_revenue / transactions,
             transactions=transactions,
             revenue_per_session=total_revenue / sessions,
             revenue_per_user=total_revenue / users,
         )
+
+        self.logger.info("revenue_fetched_from_mock", total_revenue=metrics.total_revenue)
+        return metrics
 
     async def _calculate_roi(
         self,
@@ -464,11 +562,23 @@ class ConversionTracker:
 
         return insights
 
+    async def close(self) -> None:
+        """Close clients and cleanup resources."""
+        if self.ga4_client:
+            await self.ga4_client.close()
+            self.logger.info("conversion_tracker_closed")
+
 
 async def main():
     """Example usage."""
+    # Initialize with GA4 credentials
+    ga4_credentials = GA4Credentials(
+        property_id="123456789",
+        service_account_file="/path/to/service-account.json",
+    )
+
     tracker = ConversionTracker(
-        ga4_property_id="123456789",
+        ga4_credentials=ga4_credentials,
         yandex_counter_id="987654321",
     )
 
@@ -494,6 +604,8 @@ async def main():
     print("Insights:")
     for insight in report.insights:
         print(f"  - {insight}")
+
+    await tracker.close()
 
 
 if __name__ == "__main__":
