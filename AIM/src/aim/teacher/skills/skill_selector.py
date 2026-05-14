@@ -66,6 +66,34 @@ class SkillSelector:
 
         # Domain-specific pattern signatures per subagent type
         self.domain_pattern_signatures = {
+            "ci-content": {
+                "content_extraction": [
+                    "extract", "parse", "scrape", "trafilatura",
+                    "beautifulsoup", "html", "text", "article"
+                ],
+                "seo_analysis": [
+                    "meta", "title", "description", "keywords",
+                    "heading", "h1", "h2", "seo", "optimize"
+                ],
+                "keyword_density": [
+                    "density", "frequency", "keyword", "count",
+                    "occurrence", "distribution"
+                ],
+                "competitor_comparison": [
+                    "compare", "competitor", "gap", "difference",
+                    "similarity", "overlap"
+                ],
+            },
+            "ci-tech": {
+                "lighthouse_audit": [
+                    "lighthouse", "performance", "vitals", "audit",
+                    "lcp", "fid", "cls", "speed"
+                ],
+                "crawl_analysis": [
+                    "crawl", "sitemap", "robots", "indexing",
+                    "spider", "discover"
+                ],
+            },
             "ads": {
                 "mcp_server": ["mcp.server.Server", "stdio", "@server.tool", "server.list_tools"],
                 "api_client": ["httpx.AsyncClient", "timeout=", "headers=", "async with"],
@@ -442,38 +470,9 @@ class SkillSelector:
         """
         patterns = {}
 
-        # Check for generic patterns (circuit breaker, retry, rate limiting, caching)
-        if self._has_pattern(content, "circuit_breaker"):
-            patterns["circuit_breaker"] = {
-                "name": "Circuit Breaker",
-                "description": "Prevents cascading failures by stopping requests to failing services",
-                "code": self._extract_pattern_code(content, "circuit_breaker"),
-                "quality_score": self._score_pattern(content, "circuit_breaker"),
-            }
-
-        if self._has_pattern(content, "retry"):
-            patterns["retry"] = {
-                "name": "Retry with Exponential Backoff",
-                "description": "Automatically retries failed operations with increasing delays",
-                "code": self._extract_pattern_code(content, "retry"),
-                "quality_score": self._score_pattern(content, "retry"),
-            }
-
-        if self._has_pattern(content, "rate_limiting"):
-            patterns["rate_limiting"] = {
-                "name": "Rate Limiting",
-                "description": "Controls request rate to prevent overwhelming services",
-                "code": self._extract_pattern_code(content, "rate_limiting"),
-                "quality_score": self._score_pattern(content, "rate_limiting"),
-            }
-
-        if self._has_pattern(content, "caching"):
-            patterns["caching"] = {
-                "name": "Caching",
-                "description": "Stores responses to reduce redundant requests",
-                "code": self._extract_pattern_code(content, "caching"),
-                "quality_score": self._score_pattern(content, "caching"),
-            }
+        # SKIP generic patterns (circuit breaker, retry, rate limiting, caching)
+        # These are already in base.py and should NOT be extracted again
+        # We only want domain-specific patterns for each subagent
 
         # Check for domain-specific patterns if subagent_type provided
         if subagent_type and subagent_type in self.domain_pattern_signatures:
@@ -595,16 +594,87 @@ class SkillSelector:
 
     def _extract_pattern_code_from_signatures(self, content: str, signatures: list[str]) -> str:
         """Extract code example for pattern from signatures."""
-        # Return first 500 characters containing any signature
+        # Find ALL signature matches and extract functions
+        all_matches = []
+
         for sig in signatures:
-            if sig in content:
-                start = content.find(sig)
-                return content[max(0, start - 100) : start + 400]
+            pos = 0
+            while True:
+                sig_pos = content.find(sig, pos)
+                if sig_pos == -1:
+                    break
+
+                # Check if signature is in docstring/comment
+                lines_before = content[:sig_pos].split('\n')
+                if lines_before:
+                    last_line = lines_before[-1]
+                    # Skip if inside docstring or comment
+                    if '"""' in last_line or "'''" in last_line or last_line.strip().startswith('#'):
+                        pos = sig_pos + 1
+                        continue
+
+                # Search backwards for function/class definition
+                start_line_idx = None
+                for i in range(len(lines_before) - 1, -1, -1):
+                    line = lines_before[i]
+                    # Look for function or class definition
+                    if line.strip().startswith('def ') or line.strip().startswith('async def ') or line.strip().startswith('class '):
+                        start_line_idx = i
+                        break
+
+                if start_line_idx is not None:
+                    # Found function/class start, now find the end
+                    start_pos = len('\n'.join(lines_before[:start_line_idx])) + (1 if start_line_idx > 0 else 0)
+
+                    # Find end of function/class (next def/class at same or lower indentation)
+                    remaining = content[start_pos:]
+                    remaining_lines = remaining.split('\n')
+
+                    if not remaining_lines:
+                        pos = sig_pos + 1
+                        continue
+
+                    # Get indentation of the definition
+                    first_line = remaining_lines[0]
+                    def_indent = len(first_line) - len(first_line.lstrip())
+
+                    end_line_idx = len(remaining_lines)
+                    for i in range(1, len(remaining_lines)):
+                        line = remaining_lines[i]
+                        if line.strip():  # Non-empty line
+                            line_indent = len(line) - len(line.lstrip())
+                            # If we find a line at same or lower indentation that starts a new def/class
+                            if line_indent <= def_indent and (line.strip().startswith('def ') or
+                                                              line.strip().startswith('async def ') or
+                                                              line.strip().startswith('class ')):
+                                end_line_idx = i
+                                break
+
+                    # Extract the full function/class
+                    extracted = '\n'.join(remaining_lines[:end_line_idx])
+                    all_matches.append(extracted.strip())
+
+                pos = sig_pos + 1
+
+        # Return longest match (most complete implementation)
+        if all_matches:
+            return max(all_matches, key=len)
+
         return ""
 
     def _get_domain_pattern_description(self, subagent_type: str, pattern_name: str) -> str:
         """Get description for domain-specific pattern."""
         descriptions = {
+            "ci-content": {
+                "content_extraction": "Content extraction from web pages using trafilatura or BeautifulSoup",
+                "seo_analysis": "SEO meta analysis (title, description, keywords, headings)",
+                "keyword_density": "Keyword density calculation and frequency analysis",
+                "competitor_comparison": "Competitor content comparison and gap detection",
+            },
+            "ci-tech": {
+                "lighthouse_audit": "Lighthouse performance audit and Core Web Vitals analysis",
+                "crawl_analysis": "Website crawl analysis (sitemap, robots.txt, indexing)",
+            },
             "ads": {
                 "mcp_server": "MCP server architecture for tool registration and communication",
                 "api_client": "Async HTTP client pattern with timeout and header management",
