@@ -227,6 +227,13 @@ class SkillSelector:
                 "web scraping beautifulsoup python",
                 "trafilatura content extraction python",
             ],
+            "ci-tech": [
+                "lighthouse python",
+                "playwright python seo",
+                "technical seo audit python",
+                "core web vitals python",
+                "page speed analysis python",
+            ],
         }
 
     async def research_domain_specific(
