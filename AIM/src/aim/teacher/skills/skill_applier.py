@@ -195,9 +195,8 @@ class SkillApplier:
             adapted_implementation = ExtractedImplementation(
                 code=adapted_code,
                 dependencies=implementation.dependencies,
+                integration_instructions=implementation.integration_instructions,
                 suggested_path=implementation.suggested_path,
-                tests=implementation.tests,
-                documentation=implementation.documentation
             )
 
             return await self.apply(

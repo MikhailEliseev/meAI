@@ -284,3 +284,86 @@ class APIClientBase(ABC):
             List of keyword data dictionaries
         """
         pass
+
+
+# ==============================================================================
+# Added by Teacher Agent: keyword-research
+# ==============================================================================
+
+from typing import Any
+import asyncio
+import httpx
+
+async def _request(
+        self,
+        api_section: str,
+        endpoint: str,
+        request_model: BaseModel,
+        response_model_class: type[T],
+        *,
+        exclude_none: bool = False,
+        http_method: str = "GET",
+        query_params: dict[str, Any] | None = None,
+    ) -> T:
+        """Make a typed API request. Called by generated endpoint methods."""
+        url: str = build_url(self._config.base_url, api_section, endpoint)
+        params: dict[str, Any] = request_model.model_dump(
+            mode="json", by_alias=True, exclude_none=exclude_none
+        )
+
+        last_exc: Exception | None = None
+        for attempt in range(1 + self._config.max_retries):
+            if attempt > 0 and last_exc is not None:
+                if (
+                    isinstance(last_exc, RateLimitError)
+                    and last_exc.retry_after is not None
+                ):
+                    delay: float = last_exc.retry_after
+                else:
+                    delay = calculate_backoff(attempt=attempt - 1)
+                await asyncio.sleep(delay)
+            try:
+                if http_method in ("POST", "PUT", "PATCH"):
+                    body: dict[str, Any] = params
+                    url_params: dict[str, Any] | None = (
+                        {k: v for k, v in query_params.items() if v is not None}
+                        if query_params
+                        else None
+                    )
+                    if url_params:
+                        url_params = flatten_list_params(url_params)
+                        body = {
+                            k: v for k, v in params.items() if k not in url_params
+                        }
+                    response = await self._client.request(
+                        http_method,
+                        url,
+                        json=body,
+                        params=url_params or None,
+                        headers=build_headers(self._config.api_key),
+                    )
+                else:
+                    response = await self._client.get(
+                        url,
+                        params=flatten_list_params(params),
+                        headers=build_headers(self._config.api_key),
+                    )
+                raise_for_status(response)
+                return response_model_class.model_validate(response.json())
+            except RateLimitError as exc:
+                last_exc = exc
+            except APIError as exc:
+                if exc.status_code >= 500:
+                    last_exc = exc
+                else:
+                    raise
+            except httpx.TimeoutException as exc:
+                last_exc = cast(Exception, APITimeoutError(message=str(exc)))
+                last_exc.__cause__ = exc
+            except httpx.NetworkError as exc:
+                last_exc = cast(Exception, APIConnectionError(message=str(exc)))
+                last_exc.__cause__ = exc
+
+        if last_exc is None:
+            raise RuntimeError("No exception to re-raise after retries")
+        raise last_exc
