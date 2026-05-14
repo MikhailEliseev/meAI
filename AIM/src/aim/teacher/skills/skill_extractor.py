@@ -28,6 +28,7 @@ class ExtractedImplementation:
 
     code: str  # Adapted code
     dependencies: list[str] = field(default_factory=list)  # pip packages
+    python_imports: list[str] = field(default_factory=list)  # Python import statements
     integration_instructions: str = ""  # How to integrate
     suggested_path: Path | None = None  # Where to place code
 
@@ -68,12 +69,16 @@ class SkillExtractor:
             return ExtractedImplementation(
                 code="",
                 dependencies=[],
+                python_imports=[],
                 integration_instructions="No code example available.",
                 suggested_path=target_path,
             )
 
         # Extract dependencies
         dependencies = self._extract_dependencies(skill.code_example)
+
+        # Extract Python import statements
+        python_imports = self._extract_python_imports(skill.code_example)
 
         # Generate integration instructions
         instructions = self._generate_instructions(skill, dependencies, target_path)
@@ -86,12 +91,14 @@ class SkillExtractor:
             "skill_extracted",
             skill=skill.name,
             dependencies_count=len(dependencies),
+            python_imports_count=len(python_imports),
             target_path=str(target_path) if target_path else None,
         )
 
         return ExtractedImplementation(
             code=skill.code_example.strip(),
             dependencies=dependencies,
+            python_imports=python_imports,
             integration_instructions=instructions,
             suggested_path=target_path,
         )
@@ -164,6 +171,61 @@ class SkillExtractor:
         dependencies.update(imports)
 
         return dependencies
+
+    def _extract_python_imports(self, code: str) -> list[str]:
+        """
+        Extract Python import statements using AST parsing.
+
+        Returns full import statements (not just package names):
+        - "from openai import ChatOpenAI"
+        - "import httpx"
+        - "from typing import Any, Dict"
+
+        Args:
+            code: Python code
+
+        Returns:
+            List of import statements (deduplicated)
+        """
+        import_statements = []
+
+        try:
+            tree = ast.parse(code)
+        except SyntaxError:
+            self.logger.warning("syntax_error_extracting_imports", code_preview=code[:100])
+            return []
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                # import httpx, asyncio
+                for alias in node.names:
+                    if alias.asname:
+                        import_statements.append(f"import {alias.name} as {alias.asname}")
+                    else:
+                        import_statements.append(f"import {alias.name}")
+
+            elif isinstance(node, ast.ImportFrom):
+                # from openai import ChatOpenAI
+                module = node.module or ""
+                names = []
+                for alias in node.names:
+                    if alias.asname:
+                        names.append(f"{alias.name} as {alias.asname}")
+                    else:
+                        names.append(alias.name)
+
+                if names:
+                    import_statements.append(f"from {module} import {', '.join(names)}")
+
+        # Deduplicate while preserving order
+        seen = set()
+        unique_imports = []
+        for stmt in import_statements:
+            if stmt not in seen:
+                seen.add(stmt)
+                unique_imports.append(stmt)
+
+        return unique_imports
 
     def _generate_instructions(
         self, skill: Skill, dependencies: list[str], target_path: Path | None
