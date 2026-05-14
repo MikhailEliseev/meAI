@@ -44,3 +44,12 @@ structlog>=24.1.0
 
 # Settings Management
 pydantic-settings>=2.0.0
+
+# Added by Teacher Agent
+PlaywrightCrawler
+crawlee
+extract_playwright_context
+rs_trafilatura
+
+# Added by Teacher Agent
+the

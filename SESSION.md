@@ -6,37 +6,66 @@
 
 ---
 
-## Current Work (10:36 GMT+3)
+## Current Work (10:51 GMT+3)
 
-### Phase 2: Training CI Content Agent — BLOCKED (FUNDAMENTAL ISSUE)
+### Phase 2: Training CI Content Agent — BLOCKED (FUNDAMENTAL EXTRACTION ISSUE)
 
-**КРИТИЧЕСКАЯ ПРОБЛЕМА:** Teacher Agent извлекает generic patterns вместо domain-specific решений.
+**КРИТИЧЕСКАЯ ПРОБЛЕМА:** SkillSelector извлекает example usage код вместо реализации паттерна.
 
-**Что происходит:**
-1. ✅ Teacher Agent находит правильные репо (23 repos: python-seo-analyzer, WebAnalyzer, crawlee-python)
-2. ✅ Извлекает skills (103 skills)
-3. ✅ Фильтрует по async/sync (29 compatible)
-4. ❌ Выбирает generic pattern: "Retry with Exponential Backoff" (crawlee-python)
-5. ❌ Это нарушает правило: "Каждый субагент получает уникальное обучение, не copy-paste generic patterns"
+**Попытка 1 (10:41-10:46):** Добавлены domain_pattern_signatures
+- ✅ Добавлены ci-content patterns (content_extraction, seo_analysis, keyword_density, competitor_comparison)
+- ✅ Отключено извлечение generic patterns (retry, circuit breaker)
+- ✅ 1,625 skills извлечено (было 103)
+- ✅ Best skill: "Ci-Content - Seo Analysis" (domain-specific!)
+- ❌ Извлечён example usage из docstring, не реализация
+- ❌ SyntaxError: "Usage with PlaywrightCrawler:" в коде
 
-**Что ДОЛЖНО быть для CI Content Agent:**
-- ✅ Content extraction patterns (trafilatura, BeautifulSoup)
-- ✅ SEO analysis patterns (meta tags, headings, keyword density)
-- ✅ Competitor analysis patterns (content comparison, gap detection)
-- ✅ AI content detection patterns
-- ❌ НЕ generic retry/circuit breaker (это уже есть в base.py)
+**Попытка 2 (10:46-10:50):** Улучшена логика извлечения
+- ✅ Добавлена проверка docstrings/comments
+- ✅ Извлечение всех matches, выбор longest
+- ❌ Всё равно извлечён example handler, не библиотечная функция
+- ❌ Код: `async def request_handler(context: BeautifulSoupCrawlingContext)` - это пример использования
 
 **Корневая причина:**
-- SkillComparator оценивает skills по generic критериям (quality_score)
-- Не учитывает domain-specific relevance для субагента
-- Выбирает "лучший" generic pattern вместо domain-specific решения
+- Domain signatures ищут **использование** библиотек ("extract", "parse", "trafilatura")
+- Находят и примеры (в docstrings, examples), и реальную реализацию
+- Невозможно отличить example от implementation по keywords
+
+**Что РЕАЛЬНО нужно извлечь из python-seo-analyzer:**
+```python
+# Реальное использование trafilatura (page.py:220-240)
+metadata = trafilatura.extract_metadata(
+    filecontent=raw_html,
+    default_url=self.url,
+    extensive=True,
+)
+
+content = trafilatura.extract(
+    raw_html,
+    include_links=True,
+    include_formatting=False,
+    include_tables=True,
+    include_images=True,
+    output_format="json",
+)
+```
+
+**Новый подход (ПРАВИЛЬНЫЙ):**
+1. Найти **импорты библиотек** (import trafilatura, from bs4 import BeautifulSoup)
+2. Извлечь **функции, которые используют эти импорты**
+3. Это будет реальная реализация, а не примеры
 
 **Commits:**
 - 7827f04: Added domain queries for ci-content
 - 1817484: Added subagent target file mapping
 - c3fe57c: Pass correct target_path to extractor.extract()
+- aba003e: Implement domain-specific scoring
+- (uncommitted): Added ci-content domain_pattern_signatures
+- (uncommitted): Improved _extract_pattern_code_from_signatures
 
-**Next Step:** Переработать SkillComparator для domain-specific scoring
+**Next Step:** Переработать подход - искать по импортам библиотек, не по keywords
+
+**Время потрачено:** ~1.5 часа (10:36-10:51 GMT+3)
 
 ---
 
