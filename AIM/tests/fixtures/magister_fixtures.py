@@ -5,6 +5,7 @@ Provides mock subagents and configured Magister instances for unit tests.
 
 import pytest
 from unittest.mock import AsyncMock
+from pathlib import Path
 
 from AIM.src.aim.subagents.seo.technical_agent import TechnicalSEOAgent
 from AIM.src.aim.subagents.seo.content_agent import ContentSEOAgent
@@ -12,6 +13,7 @@ from AIM.src.aim.subagents.seo.links_agent import LinksSEOAgent
 from AIM.src.aim.magisters.seo_magister import SEOMagister
 from AIM.src.aim.magisters.content_magister import ContentMagister
 from AIM.src.aim.magisters.ads_magister import AdsMagister
+from AIM.src.aim.magisters.analytics_magister import AnalyticsMagister
 
 
 @pytest.fixture
@@ -130,5 +132,55 @@ def ads_magister(mock_ads_subagents):
     # Inject mocked methods
     magister.identify_subagents = mock_ads_subagents["identify_subagents"]
     magister.aggregate_results = mock_ads_subagents["aggregate_results"]
+
+    return magister
+
+
+@pytest.fixture
+def mock_analytics_subagents():
+    """Mock Analytics subagents for unit testing
+
+    Returns dict with AsyncMock instances for Analytics subagent methods.
+    Mocks execute_task and delegation methods.
+    """
+    return {
+        "execute_task": AsyncMock(return_value={
+            "status": "success",
+            "message": "Task executed",
+        }),
+        "_delegate_to_subagent": AsyncMock(),
+        "_collect_report_data": AsyncMock(return_value={
+            "summary": {"total_sessions": 10000},
+            "metrics": {"traffic": {"growth": "+15%"}},
+            "insights": ["Test insight"],
+            "recommendations": ["Test recommendation"],
+        }),
+    }
+
+
+@pytest.fixture
+def analytics_magister(mock_analytics_subagents, tmp_path):
+    """Analytics Magister with mocked dependencies for unit testing
+
+    Uses dependency injection to inject AsyncMock event_bus and vault.
+    Uses tmp_path for data_path to avoid filesystem side effects.
+    """
+    mock_event_bus = AsyncMock()
+    mock_vault = AsyncMock()
+    mock_vault.vault_path = tmp_path / "vault"
+    mock_vault.vault_path.mkdir(parents=True, exist_ok=True)
+
+    magister = AnalyticsMagister(
+        magister_id="test-analytics-magister",
+        event_bus=mock_event_bus,
+        vault_path=tmp_path / "vault",
+        data_path=tmp_path / "data",
+        vault=mock_vault,
+    )
+
+    # Inject mocked methods
+    magister.execute_task = mock_analytics_subagents["execute_task"]
+    magister._delegate_to_subagent = mock_analytics_subagents["_delegate_to_subagent"]
+    magister._collect_report_data = mock_analytics_subagents["_collect_report_data"]
 
     return magister
