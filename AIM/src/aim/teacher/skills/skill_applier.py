@@ -10,6 +10,7 @@ Applies:
 Adapts code to project structure and conventions.
 """
 
+import ast
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -123,6 +124,99 @@ class SkillApplier:
             subagent_name=subagent_name
         )
 
+    def _merge_imports(
+        self,
+        existing_code: str,
+        new_imports: list[str]
+    ) -> str:
+        """
+        Merge new imports into existing code.
+
+        Strategy:
+        1. Parse existing imports using AST
+        2. Deduplicate with new imports
+        3. Insert after existing imports (preserve order)
+        4. Handle edge cases (no existing imports, syntax errors)
+
+        Args:
+            existing_code: Existing file content
+            new_imports: List of import statements to add
+
+        Returns:
+            Code with merged imports
+        """
+        if not new_imports:
+            return existing_code
+
+        try:
+            tree = ast.parse(existing_code)
+        except SyntaxError:
+            self.logger.warning("syntax_error_merging_imports", fallback="insert_at_top")
+            # Fallback: insert at top
+            return "\n".join(new_imports) + "\n\n" + existing_code
+
+        # Find last import line number
+        last_import_line = 0
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                if hasattr(node, 'lineno'):
+                    last_import_line = max(last_import_line, node.lineno)
+
+        # Parse existing imports
+        existing_imports = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.asname:
+                        existing_imports.add(f"import {alias.name} as {alias.asname}")
+                    else:
+                        existing_imports.add(f"import {alias.name}")
+            elif isinstance(node, ast.ImportFrom):
+                module = node.module or ""
+                names = []
+                for alias in node.names:
+                    if alias.asname:
+                        names.append(f"{alias.name} as {alias.asname}")
+                    else:
+                        names.append(alias.name)
+                if names:
+                    existing_imports.add(f"from {module} import {', '.join(names)}")
+
+        # Filter out duplicates
+        unique_new_imports = [
+            imp for imp in new_imports
+            if imp not in existing_imports
+        ]
+
+        if not unique_new_imports:
+            self.logger.info("no_new_imports_needed", all_imports_exist=True)
+            return existing_code
+
+        # Insert after last import
+        lines = existing_code.split('\n')
+
+        if last_import_line == 0:
+            # No existing imports, insert at top (after docstring if present)
+            insert_line = 0
+            if lines and lines[0].strip().startswith('"""'):
+                # Find end of docstring
+                for i, line in enumerate(lines[1:], 1):
+                    if '"""' in line:
+                        insert_line = i + 1
+                        break
+            lines.insert(insert_line, '\n'.join(unique_new_imports) + '\n')
+        else:
+            # Insert after last import (line numbers are 1-indexed)
+            lines.insert(last_import_line, '\n'.join(unique_new_imports))
+
+        self.logger.info(
+            "imports_merged",
+            new_imports_added=len(unique_new_imports),
+            total_imports=len(existing_imports) + len(unique_new_imports)
+        )
+
+        return '\n'.join(lines)
+
     async def apply_with_validation(
         self,
         implementation: ExtractedImplementation,
@@ -198,6 +292,7 @@ class SkillApplier:
             adapted_implementation = ExtractedImplementation(
                 code=adapted_code,
                 dependencies=implementation.dependencies,
+                python_imports=implementation.python_imports,
                 integration_instructions=implementation.integration_instructions,
                 suggested_path=implementation.suggested_path,
             )
@@ -265,6 +360,7 @@ class SkillApplier:
                     implementation.code,
                     final_path,
                     subagent_name,
+                    python_imports=implementation.python_imports,
                 )
                 if created:
                     result.files_created.append(final_path)
@@ -398,6 +494,7 @@ class SkillApplier:
         code: str,
         target_path: Path,
         subagent_name: str | None = None,
+        python_imports: list[str] | None = None,
     ) -> bool:
         """
         Apply code to target file.
@@ -406,6 +503,7 @@ class SkillApplier:
             code: Code to apply
             target_path: Target file path
             subagent_name: Subagent name for context
+            python_imports: Python import statements to merge
 
         Returns:
             True if file was created, False if modified
@@ -424,10 +522,22 @@ class SkillApplier:
             with open(target_path, "w") as f:
                 f.write(header)
                 f.write("\n\n")
+                # Add imports if provided
+                if python_imports:
+                    f.write("\n".join(python_imports))
+                    f.write("\n\n")
                 f.write(adapted_code)
         else:
-            # Existing file: append code with separator
-            with open(target_path, "a") as f:
+            # Existing file: merge imports first, then append code
+            existing_code = target_path.read_text()
+
+            # Merge imports if provided
+            if python_imports:
+                existing_code = self._merge_imports(existing_code, python_imports)
+
+            # Append adapted code with separator
+            with open(target_path, "w") as f:
+                f.write(existing_code)
                 f.write("\n\n")
                 f.write("# " + "=" * 78 + "\n")
                 f.write(f"# Added by Teacher Agent: {subagent_name or 'skill extraction'}\n")
@@ -438,6 +548,7 @@ class SkillApplier:
             "code_applied",
             path=str(target_path),
             created=created,
+            imports_merged=len(python_imports) if python_imports else 0,
         )
 
         return created
