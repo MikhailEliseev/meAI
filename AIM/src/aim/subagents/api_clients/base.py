@@ -284,3 +284,59 @@ class APIClientBase(ABC):
             List of keyword data dictionaries
         """
         pass
+
+
+# ==============================================================================
+# Added by Teacher Agent: keyword-research
+# ==============================================================================
+
+def api_get(path: str, params: dict, api_key: str) -> tuple[dict, int]:
+    """Make a GET request to Ahrefs API v3. Returns (data, units_cost)."""
+    params = {k: v for k, v in params.items() if v is not None}
+    query = urllib.parse.urlencode(params, doseq=True)
+    url = f"{API_BASE}/{path}?{query}"
+
+    req = urllib.request.Request(url, headers={
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "application/json",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            units = 50
+            cost_header = resp.headers.get("X-Api-Units-Cost")
+            if cost_header:
+                try:
+                    units = int(float(cost_header))
+                except (ValueError, TypeError):
+                    pass
+            return json.loads(resp.read()), units
+    except urllib.error.HTTPError as e:
+        body = ""
+        try:
+            body = e.read().decode()[:500]
+        except Exception:
+            pass
+        if e.code == 429:
+            print("ERROR: Rate limited (60 req/min). Wait and retry.", file=sys.stderr)
+        elif e.code == 401:
+            print("ERROR: Invalid API key.", file=sys.stderr)
+        elif e.code == 403:
+            print("ERROR: Insufficient API permissions. Check your Ahrefs plan.", file=sys.stderr)
+        else:
+            print(f"ERROR: HTTP {e.code}: {e.reason}", file=sys.stderr)
+        if body:
+            try:
+                err = json.loads(body)
+                if isinstance(err, dict):
+                    print(f"  {err.get('error', body)}", file=sys.stderr)
+                else:
+                    print(f"  {err}", file=sys.stderr)
+            except json.JSONDecodeError:
+                print(f"  {body}", file=sys.stderr)
+        sys.exit(1)
+    except urllib.error.URLError as e:
+        print(f"ERROR: Connection failed: {e.reason}", file=sys.stderr)
+        sys.exit(1)
+    except TimeoutError:
+        print("ERROR: Request timed out (120s)", file=sys.stderr)
+        sys.exit(1)
