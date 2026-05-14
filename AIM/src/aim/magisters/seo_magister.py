@@ -28,15 +28,24 @@ class SEOMagister:
     actionable recommendations.
     """
 
-    def __init__(self, timeout: int = 600):
+    def __init__(
+        self,
+        timeout: int = 600,
+        technical_agent: TechnicalSEOAgent | None = None,
+        content_agent: ContentSEOAgent | None = None,
+        links_agent: LinksSEOAgent | None = None,
+    ):
         """Initialize SEO Magister
 
         Args:
             timeout: Maximum time for analysis in seconds (default: 10 minutes)
+            technical_agent: Optional TechnicalSEOAgent instance (for testing)
+            content_agent: Optional ContentSEOAgent instance (for testing)
+            links_agent: Optional LinksSEOAgent instance (for testing)
         """
-        self.technical_agent = TechnicalSEOAgent()
-        self.content_agent = ContentSEOAgent()
-        self.links_agent = LinksSEOAgent()
+        self.technical_agent = technical_agent or TechnicalSEOAgent()
+        self.content_agent = content_agent or ContentSEOAgent()
+        self.links_agent = links_agent or LinksSEOAgent()
         self.timeout = timeout
 
     async def coordinate_analysis(self, url: str, correlation_id: str | None = None) -> dict[str, Any]:
