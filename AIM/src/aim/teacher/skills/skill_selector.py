@@ -760,7 +760,11 @@ class SkillSelector:
         if not matching_imports:
             return []
 
-        # Step 3: Find functions using these imports
+        # Step 3: Find ALL functions in file (if file imports target libraries, all functions are relevant)
+        # Rationale: Functions use imported objects (e.g., client = Anthropic(), then client.messages.create())
+        # ast.get_source_segment() extracts only function body without file-level imports
+        # So we can't check "anthropic" in func_code - it won't be there
+        # Instead: if file imports target library, extract all non-trivial functions
         functions = []
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -769,10 +773,12 @@ class SkillSelector:
                     if not func_code:
                         continue
 
-                    # Check if function uses target imports
-                    uses_import = any(imp in func_code for imp in matching_imports)
+                    # Skip trivial functions (< 10 lines)
+                    if len(func_code.split('\n')) < 10:
+                        continue
 
-                    if uses_import:
+                    # Extract this function (file imports target library)
+                    if True:
                         functions.append({
                             "name": node.name,
                             "code": func_code,
