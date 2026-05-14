@@ -131,12 +131,25 @@ class SkillTeacher:
 
         # Mapping subagent_name → target_file
         self.subagent_target_files = {
+            # Existing mappings
             "keyword-research": "src/aim/subagents/api_clients/base.py",
             "ci-content": "src/aim/subagents/competitive_intel/agents/ci_content.py",
             "ci-tech": "src/aim/subagents/competitive_intel/agents/ci_tech.py",
             "seo": "src/aim/subagents/seo/seo_agent.py",
             "content": "src/aim/subagents/content/content_agent.py",
             "ads": "src/aim/subagents/ads/ads_agent.py",
+
+            # P1 Subagents (10 total)
+            "content-brief": "src/aim/subagents/content/content_brief_generator.py",
+            "ad-copy": "src/aim/subagents/ads/ad_copy_generator.py",
+            "traffic-analyzer": "src/aim/subagents/analytics/traffic_analyzer.py",
+            "conversion-tracker": "src/aim/subagents/analytics/conversion_tracker.py",
+            "schema-generator": "src/aim/subagents/seo/schema_generator.py",
+            "quality-checker": "src/aim/subagents/content/content_quality_checker.py",
+            "landing-page": "src/aim/subagents/ads/landing_page_analyzer.py",
+            "bid-optimizer": "src/aim/subagents/ads/bid_strategy_optimizer.py",
+            "report-generator": "src/aim/subagents/analytics/report_generator.py",
+            "calendar-manager": "src/aim/subagents/content/content_calendar_manager.py",
         }
 
     async def _run_tests(
