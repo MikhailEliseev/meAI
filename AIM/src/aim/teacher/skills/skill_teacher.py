@@ -298,13 +298,28 @@ Co-Authored-By: Teacher Agent <teacher@aim.ai>"""
                 report.error = "No skills extracted from repositories"
                 return report
 
-            # Step 3: Compare and rank skills
-            self.logger.info("step_3_compare_skills", total_skills=len(all_skills))
-            comparison = await self.comparator.compare(all_skills)
+            # Step 3: Analyze target context (before comparison)
+            self.logger.info("step_3_analyze_target_context")
+
+            # Determine target path from first skill's suggestion
+            target_path = None
+            if all_skills and all_skills[0].source_file:
+                # Use first skill's source as hint for target
+                target_path = self.applier.project_root / "src" / "aim" / "subagents" / "api_clients" / "base.py"
+
+            target_context = await self.applier._analyze_target_context(target_path) if target_path else None
+
+            # Step 4: Compare and rank skills (with context filtering)
+            self.logger.info("step_4_compare_skills", total_skills=len(all_skills))
+
+            if target_context:
+                comparison = await self.comparator.compare_with_context(all_skills, target_context)
+            else:
+                comparison = await self.comparator.compare(all_skills)
 
             if not comparison.best_skill:
                 self.logger.warning("no_best_skill")
-                report.error = "Could not determine best skill"
+                report.error = "Could not determine best skill (all filtered as incompatible)"
                 return report
 
             report.best_skill = comparison.best_skill
@@ -316,8 +331,8 @@ Co-Authored-By: Teacher Agent <teacher@aim.ai>"""
                 quality_score=comparison.best_skill.quality_score,
             )
 
-            # Step 4: Extract best implementation
-            self.logger.info("step_4_extract_implementation")
+            # Step 5: Extract best implementation
+            self.logger.info("step_5_extract_implementation")
             implementation = await self.extractor.extract(
                 comparison.best_skill, target_path=None
             )
@@ -330,9 +345,9 @@ Co-Authored-By: Teacher Agent <teacher@aim.ai>"""
                 else None,
             )
 
-            # Step 5: Apply to codebase
-            self.logger.info("step_5_apply_to_codebase")
-            application = await self.applier.apply(
+            # Step 6: Apply to codebase (with validation)
+            self.logger.info("step_6_apply_with_validation")
+            application = await self.applier.apply_with_validation(
                 implementation,
                 target_path=None,  # Use suggested path from implementation
                 subagent_name=subagent_name,
