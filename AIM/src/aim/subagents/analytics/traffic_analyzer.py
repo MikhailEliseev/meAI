@@ -19,6 +19,11 @@ from AIM.src.aim.subagents.api_clients.ga4_client import (
     GA4Credentials,
     GA4TrafficData,
 )
+from AIM.src.aim.subagents.api_clients.yandex_metrica_client import (
+    YandexMetricaClient,
+    YandexMetricaCredentials,
+    YandexMetricaTrafficData,
+)
 
 
 @dataclass
@@ -123,6 +128,7 @@ class TrafficAnalyzer:
         ga4_service_account_file: str | None = None,
         ga4_credentials_json: dict | None = None,
         yandex_counter_id: str | None = None,
+        yandex_access_token: str | None = None,
     ):
         """
         Initialize Traffic Analyzer.
@@ -132,6 +138,7 @@ class TrafficAnalyzer:
             ga4_service_account_file: Path to GA4 service account JSON file
             ga4_credentials_json: GA4 service account JSON dict
             yandex_counter_id: Yandex Metrica counter ID
+            yandex_access_token: Yandex Metrica OAuth access token
         """
         self.logger = structlog.get_logger()
         self.ga4_property_id = ga4_property_id
@@ -146,6 +153,15 @@ class TrafficAnalyzer:
                 credentials_json=ga4_credentials_json,
             )
             self.ga4_client = GA4Client(credentials=credentials)
+
+        # Initialize Yandex Metrica client if credentials provided
+        self.yandex_client: Optional[YandexMetricaClient] = None
+        if yandex_counter_id and yandex_access_token:
+            credentials = YandexMetricaCredentials(
+                counter_id=yandex_counter_id,
+                access_token=yandex_access_token,
+            )
+            self.yandex_client = YandexMetricaClient(credentials=credentials)
 
     async def analyze(
         self,
@@ -259,7 +275,7 @@ class TrafficAnalyzer:
         source: str,
     ) -> list[TrafficSource]:
         """Fetch traffic sources breakdown."""
-        # Use GA4 API if available
+        # Try GA4 first if available
         if source in ("ga4", "both") and self.ga4_client:
             try:
                 ga4_data = await self.ga4_client.get_traffic_sources(
@@ -296,6 +312,47 @@ class TrafficAnalyzer:
                 self.logger.error(
                     "ga4_fetch_error",
                     error=str(e),
+                    fallback_to_yandex=bool(self.yandex_client),
+                )
+                # Fall through to Yandex Metrica
+
+        # Try Yandex Metrica if available
+        if source in ("yandex", "both") and self.yandex_client:
+            try:
+                yandex_data = await self.yandex_client.get_traffic_sources(
+                    start_date=start_date,
+                    end_date=end_date,
+                    limit=100,
+                )
+
+                # Convert YandexMetricaTrafficData to TrafficSource
+                sources = []
+                for item in yandex_data:
+                    # Map Yandex source to our source categories
+                    source_category = self._map_yandex_source(item.source)
+
+                    sources.append(
+                        TrafficSource(
+                            source=source_category,
+                            sessions=item.visits,
+                            users=item.users,
+                            pageviews=item.pageviews,
+                            bounce_rate=item.bounce_rate,
+                            avg_session_duration=item.avg_visit_duration,
+                        )
+                    )
+
+                self.logger.info(
+                    "traffic_sources_fetched_from_yandex",
+                    sources_count=len(sources),
+                )
+
+                return sources
+
+            except Exception as e:
+                self.logger.error(
+                    "yandex_fetch_error",
+                    error=str(e),
                     fallback_to_mock=True,
                 )
                 # Fall through to mock data
@@ -303,7 +360,7 @@ class TrafficAnalyzer:
         # Mock data fallback (for testing or when API unavailable)
         self.logger.warning(
             "using_mock_traffic_data",
-            reason="GA4 client not configured or error occurred",
+            reason="No API clients configured or all failed",
         )
 
         sources = [
@@ -351,6 +408,31 @@ class TrafficAnalyzer:
 
         return sources
 
+    def _map_yandex_source(self, source: str) -> str:
+        """Map Yandex Metrica source to our source categories."""
+        source_lower = source.lower()
+
+        # Search engines
+        if "yandex" in source_lower or "яндекс" in source_lower:
+            return "yandex"
+        if "google" in source_lower:
+            return "google"
+
+        # Direct traffic
+        if source_lower in ("direct", "прямые заходы", "(direct)"):
+            return "direct"
+
+        # Social media
+        if any(s in source_lower for s in ["vk", "вконтакте", "facebook", "instagram", "twitter", "telegram"]):
+            return "social"
+
+        # Referral
+        if "referral" in source_lower or "переходы" in source_lower:
+            return "referral"
+
+        # Default to source name
+        return source_lower
+
     def _map_source_category(self, source: str, medium: str) -> str:
         """Map GA4 source/medium to our source categories."""
         source_lower = source.lower()
@@ -388,7 +470,7 @@ class TrafficAnalyzer:
         source: str,
     ) -> UserBehavior:
         """Analyze user behavior metrics."""
-        # Use GA4 API if available
+        # Try GA4 first if available
         if source in ("ga4", "both") and self.ga4_client:
             try:
                 behavior_data = await self.ga4_client.get_user_behavior(
@@ -414,6 +496,36 @@ class TrafficAnalyzer:
                 self.logger.error(
                     "ga4_user_behavior_error",
                     error=str(e),
+                    fallback_to_yandex=bool(self.yandex_client),
+                )
+                # Fall through to Yandex Metrica
+
+        # Try Yandex Metrica if available
+        if source in ("yandex", "both") and self.yandex_client:
+            try:
+                behavior_data = await self.yandex_client.get_user_behavior(
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+
+                self.logger.info(
+                    "user_behavior_fetched_from_yandex",
+                    total_users=behavior_data["total_users"],
+                )
+
+                return UserBehavior(
+                    new_users=behavior_data["new_users"],
+                    returning_users=behavior_data["returning_users"],
+                    total_users=behavior_data["total_users"],
+                    new_user_rate=behavior_data["new_user_rate"],
+                    pages_per_session=behavior_data["pages_per_session"],
+                    avg_session_duration=behavior_data["avg_session_duration"],
+                )
+
+            except Exception as e:
+                self.logger.error(
+                    "yandex_user_behavior_error",
+                    error=str(e),
                     fallback_to_mock=True,
                 )
                 # Fall through to mock data
@@ -421,7 +533,7 @@ class TrafficAnalyzer:
         # Mock data fallback
         self.logger.warning(
             "using_mock_user_behavior_data",
-            reason="GA4 client not configured or error occurred",
+            reason="No API clients configured or all failed",
         )
 
         new_users = 7000
@@ -492,7 +604,7 @@ class TrafficAnalyzer:
         source: str,
     ) -> BounceAnalysis:
         """Analyze bounce rate."""
-        # Use GA4 API if available
+        # Try GA4 first if available
         if source in ("ga4", "both") and self.ga4_client:
             try:
                 # Get bounce rate by page
@@ -542,6 +654,60 @@ class TrafficAnalyzer:
                 self.logger.error(
                     "ga4_bounce_analysis_error",
                     error=str(e),
+                    fallback_to_yandex=bool(self.yandex_client),
+                )
+                # Fall through to Yandex Metrica
+
+        # Try Yandex Metrica if available
+        if source in ("yandex", "both") and self.yandex_client:
+            try:
+                # Get bounce rate by page
+                pages_data = await self.yandex_client.get_bounce_rate_by_page(
+                    start_date=start_date,
+                    end_date=end_date,
+                    limit=20,
+                )
+
+                # Get traffic sources for bounce by source
+                traffic_sources = await self.yandex_client.get_traffic_sources(
+                    start_date=start_date,
+                    end_date=end_date,
+                    limit=100,
+                )
+
+                # Calculate overall bounce rate
+                total_visits = sum(s.visits for s in traffic_sources)
+                weighted_bounce = sum(s.visits * s.bounce_rate for s in traffic_sources)
+                overall_bounce_rate = (weighted_bounce / total_visits) if total_visits > 0 else 0
+
+                # Build bounce by source dict
+                bounce_by_source = {}
+                for item in traffic_sources:
+                    source_category = self._map_yandex_source(item.source)
+                    if source_category not in bounce_by_source:
+                        bounce_by_source[source_category] = item.bounce_rate
+
+                # Sort pages by bounce rate
+                sorted_pages = sorted(pages_data, key=lambda x: x["bounce_rate"], reverse=True)
+                high_bounce_pages = sorted_pages[:2]  # Top 2 high bounce
+                low_bounce_pages = sorted(pages_data, key=lambda x: x["bounce_rate"])[:2]  # Top 2 low bounce
+
+                self.logger.info(
+                    "bounce_analysis_fetched_from_yandex",
+                    overall_bounce_rate=overall_bounce_rate,
+                )
+
+                return BounceAnalysis(
+                    overall_bounce_rate=round(overall_bounce_rate, 2),
+                    bounce_by_source=bounce_by_source,
+                    high_bounce_pages=high_bounce_pages,
+                    low_bounce_pages=low_bounce_pages,
+                )
+
+            except Exception as e:
+                self.logger.error(
+                    "yandex_bounce_analysis_error",
+                    error=str(e),
                     fallback_to_mock=True,
                 )
                 # Fall through to mock data
@@ -549,7 +715,7 @@ class TrafficAnalyzer:
         # Mock data fallback
         self.logger.warning(
             "using_mock_bounce_data",
-            reason="GA4 client not configured or error occurred",
+            reason="No API clients configured or all failed",
         )
 
         return BounceAnalysis(
@@ -598,7 +764,9 @@ class TrafficAnalyzer:
         """Close client connections."""
         if self.ga4_client:
             await self.ga4_client.close()
-            self.logger.info("traffic_analyzer_closed")
+        if self.yandex_client:
+            await self.yandex_client.close()
+        self.logger.info("traffic_analyzer_closed")
 
     def _generate_insights(
         self,
