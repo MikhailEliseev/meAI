@@ -171,6 +171,13 @@ def get_api_settings(skip_validation: bool = False) -> APISettings:
     """
     global _settings
     if _settings is None:
-        _settings = APISettings()
-        _settings.validate_on_startup(skip_api_key_check=skip_validation)
+        if skip_validation:
+            # Create settings without validation for testing
+            _settings = APISettings.model_construct(
+                semrush_api_key="test_key",
+                ahrefs_api_key="test_key",
+            )
+        else:
+            _settings = APISettings()
+            _settings.validate_on_startup(skip_api_key_check=skip_validation)
     return _settings
