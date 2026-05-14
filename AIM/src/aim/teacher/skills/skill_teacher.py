@@ -343,7 +343,7 @@ Co-Authored-By: Teacher Agent <teacher@aim.ai>"""
             # Step 5: Extract best implementation
             self.logger.info("step_5_extract_implementation")
             implementation = await self.extractor.extract(
-                comparison.best_skill, target_path=None
+                comparison.best_skill, target_path=target_path
             )
 
             self.logger.info(
