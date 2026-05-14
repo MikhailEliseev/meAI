@@ -156,6 +156,13 @@ class SkillSelector:
                 "keyword research tool python",
                 "serp api keyword data python",
             ],
+            "ci-content": [
+                "python seo analyzer",
+                "content scraper python",
+                "competitor analysis tool python",
+                "web scraping beautifulsoup python",
+                "trafilatura content extraction python",
+            ],
         }
 
     async def research_domain_specific(
