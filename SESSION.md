@@ -216,6 +216,38 @@ Commit: 0a9466c
 
 ---
 
+## Context for Next Session
+
+**What we just completed:**
+- ✅ Добавлены domain_pattern_signatures для ci-content и ci-tech
+- ✅ Отключено извлечение generic patterns (retry, circuit breaker)
+- ✅ Улучшена логика извлечения кода (skip docstrings, longest match)
+- ✅ Обнаружена фундаментальная проблема: keyword-based подход не работает
+- ✅ Создан план import-based extraction подхода
+
+**What's blocking:**
+- ❌ Keyword-based extraction извлекает examples вместо implementation
+- ❌ Невозможно отличить example handler от real library usage по keywords
+- ❌ Результат: SyntaxError в применённом коде
+
+**What's next:**
+- Реализовать import-based extraction (1-1.5 часа)
+- Найти импорты библиотек (AST-based)
+- Извлечь функции, использующие эти импорты
+- Это гарантирует реальную реализацию, не примеры
+
+**Important files:**
+- Plan: `docs/plans/2026-05-14-teacher-agent-import-based-extraction.md`
+- SkillSelector: `AIM/src/aim/teacher/skills/skill_selector.py`
+- Test: Run Teacher Agent for ci-content после реализации
+
+**Key decisions:**
+- Keyword-based подход фундаментально не работает для domain extraction
+- Import-based подход - единственный способ отличить example от implementation
+- Нужно искать `import trafilatura`, не keyword "trafilatura"
+
+---
+
 ### Teacher Agent Steps 7-8 Implementation (05:07 GMT+3)
 
 **ЗАВЕРШЕНО:** Teacher Agent теперь полностью автономен - от исследования до коммита.
