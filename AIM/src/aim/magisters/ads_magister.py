@@ -4,6 +4,7 @@ REAL IMPLEMENTATION with business logic for advertising coordination.
 """
 
 from datetime import datetime, timezone
+from typing import Any
 from meai.agents.magister_base import BaseMagister
 
 
@@ -27,6 +28,8 @@ class AdsMagister(BaseMagister):
         magister_id: str = "ads-magister",
         database_url: str = "sqlite+aiosqlite:///./AIM/data/aim.db",
         vault_path: str = "./AIM/obsidian/ads-magister",
+        event_bus: Any | None = None,
+        vault: Any | None = None,
     ):
         """Initialize Ads Magister
 
@@ -34,12 +37,20 @@ class AdsMagister(BaseMagister):
             magister_id: Unique Magister ID
             database_url: Database connection URL
             vault_path: Path to Ads Magister's Obsidian vault
+            event_bus: Optional EventBus instance (for testing)
+            vault: Optional ObsidianVault instance (for testing)
         """
         super().__init__(
             magister_id=magister_id,
             database_url=database_url,
             vault_path=vault_path,
         )
+
+        # Allow dependency injection for testing
+        if event_bus is not None:
+            self.event_bus = event_bus
+        if vault is not None:
+            self.vault = vault
 
     async def identify_subagents(self, action: str) -> list[str]:
         """Identify which Ads Subagents are needed for this action
