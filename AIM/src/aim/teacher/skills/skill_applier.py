@@ -29,6 +29,7 @@ class TargetContext:
     error_style: str  # "raise" or "exit" or "return"
     base_classes: list[str]  # ABC, BaseModel, etc.
     imports: set[str]  # existing imports
+    subagent_name: str  # For domain-specific scoring
 
 
 @dataclass
@@ -59,7 +60,7 @@ class SkillApplier:
         self.project_root = project_root
         self.logger = logger.bind(component="skill_applier")
 
-    async def _analyze_target_context(self, target_path: Path) -> TargetContext:
+    async def _analyze_target_context(self, target_path: Path, subagent_name: str) -> TargetContext:
         """Analyze target file to understand context."""
         if not target_path.exists():
             return TargetContext(
@@ -117,7 +118,8 @@ class SkillApplier:
             libraries=libraries,
             error_style=error_style,
             base_classes=base_classes,
-            imports=imports
+            imports=imports,
+            subagent_name=subagent_name
         )
 
     async def apply_with_validation(
@@ -164,7 +166,7 @@ class SkillApplier:
 
             # Step 1: Analyze target context
             self.logger.info("step_1_analyze_context", target=str(final_path))
-            target_context = await self._analyze_target_context(final_path)
+            target_context = await self._analyze_target_context(final_path, subagent_name or "unknown")
 
             # Step 2: Check compatibility
             self.logger.info("step_2_check_compatibility")
