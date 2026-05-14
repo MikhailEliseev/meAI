@@ -14,6 +14,9 @@ from datetime import datetime
 from typing import Any
 
 import structlog
+import contextlib
+import httpx
+from mcp.types import LATEST_PROTOCOL_VERSION
 
 
 @dataclass
@@ -636,3 +639,138 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+# ==============================================================================
+# Added by Teacher Agent: landing-page
+# ==============================================================================
+
+async def _probe_streamable_http_mcp(url: str) -> bool:
+    """
+    Verify that an existing HTTP endpoint is actually an MCP server.
+
+    We do a lightweight initialize round-trip instead of trusting only "port is
+    open", so unrelated services on the same port do not get treated as MCP.
+    This probe intentionally stays at raw HTTP level and skips the follow-up
+    `notifications/initialized` exchange, which avoids noisy SSE teardown logs
+    on the already-running MCP service.
+    """
+    import contextlib
+    import httpx
+    from mcp.types import LATEST_PROTOCOL_VERSION
+
+    client = httpx.AsyncClient(timeout=httpx.Timeout(2.0, read=2.0))
+    session_id = ""
+    try:
+        response = await client.post(
+            url,
+            headers={
+                "accept": "application/json, text/event-stream",
+                "content-type": "application/json",
+            },
+            json={
+                "jsonrpc": "2.0",
+                "id": "ainiee-cli-reuse-probe",
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": LATEST_PROTOCOL_VERSION,
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "ainiee-cli-reuse-probe",
+                        "version": "1.0.0",
+                    },
+                },
+            },
+        )
+        session_id = response.headers.get("mcp-session-id", "")
+        if response.status_code >= 400:
+            return False
+
+        data = _extract_probe_response_payload(
+            response.text,
+            response.headers.get("content-type", ""),
+        )
+        if not isinstance(data, dict):
+            return False
+
+        result = data.get("result")
+        if not isinstance(result, dict):
+            return False
+
+        protocol_version = result.get("protocolVersion")
+        server_info = result.get("serverInfo")
+        return bool(protocol_version and isinstance(server_info, dict) and server_info.get("name"))
+    except Exception:
+        return False
+    finally:
+        if session_id:
+            with contextlib.suppress(Exception):
+                await client.delete(url, headers={"mcp-session-id": session_id})
+        await client.aclose()
+
+# ==============================================================================
+# Added by Teacher Agent: landing-page
+# ==============================================================================
+
+async def _probe_streamable_http_mcp(url: str) -> bool:
+    """
+    Verify that an existing HTTP endpoint is actually an MCP server.
+
+    We do a lightweight initialize round-trip instead of trusting only "port is
+    open", so unrelated services on the same port do not get treated as MCP.
+    This probe intentionally stays at raw HTTP level and skips the follow-up
+    `notifications/initialized` exchange, which avoids noisy SSE teardown logs
+    on the already-running MCP service.
+    """
+    import contextlib
+    import httpx
+    from mcp.types import LATEST_PROTOCOL_VERSION
+
+    client = httpx.AsyncClient(timeout=httpx.Timeout(2.0, read=2.0))
+    session_id = ""
+    try:
+        response = await client.post(
+            url,
+            headers={
+                "accept": "application/json, text/event-stream",
+                "content-type": "application/json",
+            },
+            json={
+                "jsonrpc": "2.0",
+                "id": "ainiee-cli-reuse-probe",
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": LATEST_PROTOCOL_VERSION,
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "ainiee-cli-reuse-probe",
+                        "version": "1.0.0",
+                    },
+                },
+            },
+        )
+        session_id = response.headers.get("mcp-session-id", "")
+        if response.status_code >= 400:
+            return False
+
+        data = _extract_probe_response_payload(
+            response.text,
+            response.headers.get("content-type", ""),
+        )
+        if not isinstance(data, dict):
+            return False
+
+        result = data.get("result")
+        if not isinstance(result, dict):
+            return False
+
+        protocol_version = result.get("protocolVersion")
+        server_info = result.get("serverInfo")
+        return bool(protocol_version and isinstance(server_info, dict) and server_info.get("name"))
+    except Exception:
+        return False
+    finally:
+        if session_id:
+            with contextlib.suppress(Exception):
+                await client.delete(url, headers={"mcp-session-id": session_id})
+        await client.aclose()

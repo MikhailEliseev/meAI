@@ -56,3 +56,15 @@ the
 
 # Added by Teacher Agent
 openai
+
+# Added by Teacher Agent
+context_cli
+llm
+profiles
+prompts
+
+# Added by Teacher Agent
+contextlib
+
+# Added by Teacher Agent
+airflow

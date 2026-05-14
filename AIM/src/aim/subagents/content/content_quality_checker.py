@@ -705,3 +705,67 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+# ==============================================================================
+# Added by Teacher Agent: quality-checker
+# ==============================================================================
+
+import asyncio
+
+async def translate(text: str) -> [GrammarCheckingTree]:
+    """Return a list of GrammarCheckingTree objects (each GrammarCheckingTree
+    object represents a sentence) based on the input text using the benepar library.
+
+    Precondition:
+        - text can only contain letters in the English alphabet and basic
+        punctuation marks (e.g. ",", ".", "?", "!").
+    """
+    grammar_trees = []
+
+    doc = nlp(text)
+    sentence_trees = list(doc.sents)
+    for sentence_tree in sentence_trees:
+        grammar_trees.append(_create_grammar_tree(sentence_tree))
+
+    return grammar_trees
+
+# ==============================================================================
+# Added by Teacher Agent: quality-checker
+# ==============================================================================
+
+async def find(
+        self,
+        path: Path,
+        *,
+        command_hash: Optional[str] = None,
+        content_hash: Optional[str] = None,
+    ) -> Optional["CloudPath"]:
+        """Find the best matching version of a file within the storage,
+        or `None` if no match can be found. If both the creation and content hash
+        are specified, only exact matches will be returned. Otherwise, the most
+        recent matching file is preferred.
+        """
+        name = self.encode_name(str(path))
+        urls = []
+        if command_hash is not None and content_hash is not None:
+            url = self.url / name / command_hash / content_hash
+            urls = [url] if url.exists() else []
+        elif command_hash is not None:
+            if (self.url / name / command_hash).exists():
+                urls = list((self.url / name / command_hash).iterdir())
+        else:
+            if (self.url / name).exists():
+                for sub_dir in (self.url / name).iterdir():
+                    urls.extend(sub_dir.iterdir())
+                if content_hash is not None:
+                    urls = [url for url in urls if url.parts[-1] == content_hash]
+        if len(urls) >= 2:
+            try:
+                urls.sort(key=lambda x: x.stat().st_mtime)
+            except Exception:
+                msg.warn(
+                    "Unable to sort remote files by last modified. The file(s) "
+                    "pulled from the cache may not be the most recent."
+                )
+        return urls[-1] if urls else None
