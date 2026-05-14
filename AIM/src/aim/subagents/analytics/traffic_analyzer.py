@@ -10,9 +10,15 @@ Based on: GA4 Reporting API + Yandex Metrica API
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Optional
 
 import structlog
+
+from AIM.src.aim.subagents.api_clients.ga4_client import (
+    GA4Client,
+    GA4Credentials,
+    GA4TrafficData,
+)
 
 
 @dataclass
@@ -114,6 +120,8 @@ class TrafficAnalyzer:
     def __init__(
         self,
         ga4_property_id: str | None = None,
+        ga4_service_account_file: str | None = None,
+        ga4_credentials_json: dict | None = None,
         yandex_counter_id: str | None = None,
     ):
         """
@@ -121,11 +129,23 @@ class TrafficAnalyzer:
 
         Args:
             ga4_property_id: Google Analytics 4 property ID
+            ga4_service_account_file: Path to GA4 service account JSON file
+            ga4_credentials_json: GA4 service account JSON dict
             yandex_counter_id: Yandex Metrica counter ID
         """
         self.logger = structlog.get_logger()
         self.ga4_property_id = ga4_property_id
         self.yandex_counter_id = yandex_counter_id
+
+        # Initialize GA4 client if credentials provided
+        self.ga4_client: Optional[GA4Client] = None
+        if ga4_property_id and (ga4_service_account_file or ga4_credentials_json):
+            credentials = GA4Credentials(
+                property_id=ga4_property_id,
+                service_account_file=ga4_service_account_file,
+                credentials_json=ga4_credentials_json,
+            )
+            self.ga4_client = GA4Client(credentials=credentials)
 
     async def analyze(
         self,
@@ -239,7 +259,53 @@ class TrafficAnalyzer:
         source: str,
     ) -> list[TrafficSource]:
         """Fetch traffic sources breakdown."""
-        # Mock data for now (real implementation would call GA4/Yandex API)
+        # Use GA4 API if available
+        if source in ("ga4", "both") and self.ga4_client:
+            try:
+                ga4_data = await self.ga4_client.get_traffic_sources(
+                    start_date=start_date,
+                    end_date=end_date,
+                    limit=100,
+                )
+
+                # Convert GA4TrafficData to TrafficSource
+                sources = []
+                for item in ga4_data:
+                    # Map GA4 source/medium to our source categories
+                    source_category = self._map_source_category(item.source, item.medium)
+
+                    sources.append(
+                        TrafficSource(
+                            source=source_category,
+                            sessions=item.sessions,
+                            users=item.users,
+                            pageviews=item.pageviews,
+                            bounce_rate=item.bounce_rate,
+                            avg_session_duration=item.avg_session_duration,
+                        )
+                    )
+
+                self.logger.info(
+                    "traffic_sources_fetched_from_ga4",
+                    sources_count=len(sources),
+                )
+
+                return sources
+
+            except Exception as e:
+                self.logger.error(
+                    "ga4_fetch_error",
+                    error=str(e),
+                    fallback_to_mock=True,
+                )
+                # Fall through to mock data
+
+        # Mock data fallback (for testing or when API unavailable)
+        self.logger.warning(
+            "using_mock_traffic_data",
+            reason="GA4 client not configured or error occurred",
+        )
+
         sources = [
             TrafficSource(
                 source="google",
@@ -285,6 +351,36 @@ class TrafficAnalyzer:
 
         return sources
 
+    def _map_source_category(self, source: str, medium: str) -> str:
+        """Map GA4 source/medium to our source categories."""
+        source_lower = source.lower()
+        medium_lower = medium.lower()
+
+        # Google organic
+        if "google" in source_lower and medium_lower in ("organic", "cpc"):
+            return "google"
+
+        # Yandex organic
+        if "yandex" in source_lower or "ya.ru" in source_lower:
+            return "yandex"
+
+        # Direct traffic
+        if source_lower == "(direct)" or medium_lower == "(none)":
+            return "direct"
+
+        # Social media
+        if medium_lower in ("social", "social-network", "social-media"):
+            return "social"
+        if any(s in source_lower for s in ["facebook", "instagram", "twitter", "linkedin", "vk"]):
+            return "social"
+
+        # Referral
+        if medium_lower == "referral":
+            return "referral"
+
+        # Default to source name
+        return source_lower
+
     async def _analyze_user_behavior(
         self,
         start_date: str,
@@ -292,7 +388,42 @@ class TrafficAnalyzer:
         source: str,
     ) -> UserBehavior:
         """Analyze user behavior metrics."""
-        # Mock data
+        # Use GA4 API if available
+        if source in ("ga4", "both") and self.ga4_client:
+            try:
+                behavior_data = await self.ga4_client.get_user_behavior(
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+
+                self.logger.info(
+                    "user_behavior_fetched_from_ga4",
+                    total_users=behavior_data["total_users"],
+                )
+
+                return UserBehavior(
+                    new_users=behavior_data["new_users"],
+                    returning_users=behavior_data["returning_users"],
+                    total_users=behavior_data["total_users"],
+                    new_user_rate=behavior_data["new_user_rate"],
+                    pages_per_session=behavior_data["pages_per_session"],
+                    avg_session_duration=behavior_data["avg_session_duration"],
+                )
+
+            except Exception as e:
+                self.logger.error(
+                    "ga4_user_behavior_error",
+                    error=str(e),
+                    fallback_to_mock=True,
+                )
+                # Fall through to mock data
+
+        # Mock data fallback
+        self.logger.warning(
+            "using_mock_user_behavior_data",
+            reason="GA4 client not configured or error occurred",
+        )
+
         new_users = 7000
         returning_users = 2850
         total_users = new_users + returning_users
@@ -361,7 +492,66 @@ class TrafficAnalyzer:
         source: str,
     ) -> BounceAnalysis:
         """Analyze bounce rate."""
-        # Mock data
+        # Use GA4 API if available
+        if source in ("ga4", "both") and self.ga4_client:
+            try:
+                # Get bounce rate by page
+                pages_data = await self.ga4_client.get_bounce_rate_by_page(
+                    start_date=start_date,
+                    end_date=end_date,
+                    limit=20,
+                )
+
+                # Get traffic sources for bounce by source
+                traffic_sources = await self.ga4_client.get_traffic_sources(
+                    start_date=start_date,
+                    end_date=end_date,
+                    limit=100,
+                )
+
+                # Calculate overall bounce rate
+                total_sessions = sum(s.sessions for s in traffic_sources)
+                weighted_bounce = sum(s.sessions * s.bounce_rate for s in traffic_sources)
+                overall_bounce_rate = (weighted_bounce / total_sessions) if total_sessions > 0 else 0
+
+                # Build bounce by source dict
+                bounce_by_source = {}
+                for item in traffic_sources:
+                    source_category = self._map_source_category(item.source, item.medium)
+                    if source_category not in bounce_by_source:
+                        bounce_by_source[source_category] = item.bounce_rate
+
+                # Sort pages by bounce rate
+                sorted_pages = sorted(pages_data, key=lambda x: x["bounce_rate"], reverse=True)
+                high_bounce_pages = sorted_pages[:2]  # Top 2 high bounce
+                low_bounce_pages = sorted(pages_data, key=lambda x: x["bounce_rate"])[:2]  # Top 2 low bounce
+
+                self.logger.info(
+                    "bounce_analysis_fetched_from_ga4",
+                    overall_bounce_rate=overall_bounce_rate,
+                )
+
+                return BounceAnalysis(
+                    overall_bounce_rate=round(overall_bounce_rate, 2),
+                    bounce_by_source=bounce_by_source,
+                    high_bounce_pages=high_bounce_pages,
+                    low_bounce_pages=low_bounce_pages,
+                )
+
+            except Exception as e:
+                self.logger.error(
+                    "ga4_bounce_analysis_error",
+                    error=str(e),
+                    fallback_to_mock=True,
+                )
+                # Fall through to mock data
+
+        # Mock data fallback
+        self.logger.warning(
+            "using_mock_bounce_data",
+            reason="GA4 client not configured or error occurred",
+        )
+
         return BounceAnalysis(
             overall_bounce_rate=47.5,
             bounce_by_source={
@@ -403,6 +593,12 @@ class TrafficAnalyzer:
             medium_sessions=5000,
             long_sessions=2500,
         )
+
+    async def close(self) -> None:
+        """Close client connections."""
+        if self.ga4_client:
+            await self.ga4_client.close()
+            self.logger.info("traffic_analyzer_closed")
 
     def _generate_insights(
         self,
