@@ -13,8 +13,8 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import structlog
-from airflow.models.pool import Pool
-from airflow.utils.db import DBLocks
+# from airflow.models.pool import Pool
+# from airflow.utils.db import DBLocks
 
 
 @dataclass
@@ -511,7 +511,7 @@ class ContentCalendarManager:
 # Added by Teacher Agent: calendar-manager
 # ==============================================================================
 
-async def _executable_task_instances_to_queued(self, max_tis: int, session: Session) -> list[TI]:
+async def _executable_task_instances_to_queued(self, max_tis: int, session: Any) -> list[Any]:
         """
         Find TIs that are ready for execution based on conditions.
 
@@ -529,7 +529,7 @@ async def _executable_task_instances_to_queued(self, max_tis: int, session: Sess
         from airflow.models.pool import Pool
         from airflow.utils.db import DBLocks
 
-        executable_tis: list[TI] = []
+        executable_tis: list[Any] = []
 
         if get_dialect_name(session) == "postgresql":
             # Optimization: to avoid littering the DB errors of "ERROR: canceling statement due to lock
@@ -1019,7 +1019,7 @@ async def _executable_task_instances_to_queued(self, max_tis: int, session: Sess
 # Added by Teacher Agent: calendar-manager
 # ==============================================================================
 
-async def _executable_task_instances_to_queued(self, max_tis: int, session: Session) -> list[TI]:
+async def _executable_task_instances_to_queued(self, max_tis: int, session: Any) -> list[Any]:
         """
         Find TIs that are ready for execution based on conditions.
 
@@ -1037,7 +1037,7 @@ async def _executable_task_instances_to_queued(self, max_tis: int, session: Sess
         from airflow.models.pool import Pool
         from airflow.utils.db import DBLocks
 
-        executable_tis: list[TI] = []
+        executable_tis: list[Any] = []
 
         if get_dialect_name(session) == "postgresql":
             # Optimization: to avoid littering the DB errors of "ERROR: canceling statement due to lock

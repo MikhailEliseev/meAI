@@ -504,7 +504,7 @@ import asyncio
 
 async def execute(
         self, recompute_atoms: set[str] | None = None
-    ) -> dict[str, AtomResult]:
+    ) -> dict[str, Any]:
         """
         Executes atoms in the workflow, with selective recomputation.
 
@@ -552,7 +552,7 @@ import asyncio
 
 async def execute(
         self, recompute_atoms: set[str] | None = None
-    ) -> dict[str, AtomResult]:
+    ) -> dict[str, Any]:
         """
         Executes atoms in the workflow, with selective recomputation.
 

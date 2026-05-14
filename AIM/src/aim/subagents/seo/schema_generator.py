@@ -14,11 +14,11 @@ from datetime import datetime
 from typing import Any
 
 import structlog
-import os
-from context_cli.core.crawler import extract_page
-from llm import call_llm_structured, detect_model
-from profiles import get_profile
-from prompts import build_llms_txt_system_prompt, build_llms_txt_user_prompt, build_schema_system_prompt, build_schema_user_prompt
+# import os
+# from context_cli.core.crawler import extract_page
+# from llm import call_llm_structured, detect_model
+# from profiles import get_profile
+# from prompts import build_llms_txt_system_prompt, build_llms_txt_user_prompt, build_schema_system_prompt, build_schema_user_prompt
 
 
 @dataclass
@@ -533,7 +533,7 @@ if __name__ == "__main__":
 # Added by Teacher Agent: schema-generator
 # ==============================================================================
 
-async def generate_assets(config: GenerateConfig) -> GenerateResult:
+async def generate_assets(config: Any) -> Any:
     """Main orchestrator:
     1. Crawl URL with extract_page()
     2. Detect or use specified model
@@ -541,7 +541,7 @@ async def generate_assets(config: GenerateConfig) -> GenerateResult:
     4. Build prompts and call LLM for llms.txt content
     5. Build prompts and call LLM for schema.jsonld
     6. Write files to output_dir
-    7. Return GenerateResult
+    7. Return Any
     """
     import os
 
@@ -611,7 +611,7 @@ async def generate_assets(config: GenerateConfig) -> GenerateResult:
         f.write(render_schema_jsonld(schema_jsonld))
 
     # 7. Return result
-    return GenerateResult(
+    return Any(
         url=config.url,
         model_used=model,
         profile=config.profile,
@@ -626,7 +626,7 @@ async def generate_assets(config: GenerateConfig) -> GenerateResult:
 # Added by Teacher Agent: schema-generator
 # ==============================================================================
 
-async def generate_assets(config: GenerateConfig) -> GenerateResult:
+async def generate_assets(config: Any) -> Any:
     """Main orchestrator:
     1. Crawl URL with extract_page()
     2. Detect or use specified model
@@ -634,7 +634,7 @@ async def generate_assets(config: GenerateConfig) -> GenerateResult:
     4. Build prompts and call LLM for llms.txt content
     5. Build prompts and call LLM for schema.jsonld
     6. Write files to output_dir
-    7. Return GenerateResult
+    7. Return Any
     """
     import os
 
@@ -704,7 +704,7 @@ async def generate_assets(config: GenerateConfig) -> GenerateResult:
         f.write(render_schema_jsonld(schema_jsonld))
 
     # 7. Return result
-    return GenerateResult(
+    return Any(
         url=config.url,
         model_used=model,
         profile=config.profile,

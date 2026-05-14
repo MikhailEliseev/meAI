@@ -21,6 +21,16 @@ logger = structlog.get_logger()
 
 
 @dataclass
+class SelectionCriteria:
+    """Criteria for skill selection."""
+
+    min_quality_score: float = 50.0
+    max_skills: int = 10
+    prefer_recent: bool = True
+    require_tests: bool = False
+
+
+@dataclass
 class Skill:
     """Extracted skill from repository."""
 

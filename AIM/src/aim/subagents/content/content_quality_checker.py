@@ -11,7 +11,8 @@ import asyncio
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from pathlib import Path
+from typing import Any, Optional
 
 import structlog
 
@@ -713,7 +714,7 @@ if __name__ == "__main__":
 
 import asyncio
 
-async def translate(text: str) -> [GrammarCheckingTree]:
+async def translate(text: str) -> list[Any]:
     """Return a list of GrammarCheckingTree objects (each GrammarCheckingTree
     object represents a sentence) based on the input text using the benepar library.
 
