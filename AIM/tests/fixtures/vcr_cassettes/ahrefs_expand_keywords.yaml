@@ -1,0 +1,154 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Host:
+      - api.ahrefs.com
+      User-Agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://api.ahrefs.com/v3/keywords?select=keyword%2Cvolume%2Ckeyword_difficulty%2Ccpc%2Cclicks%2Cparent_topic&from=keywords_explorer&where=keyword+LIKE+%27%25dental%2520implants%25%27+AND+volume+%3E%3D+100&country=us&limit=100&offset=0
+  response:
+    body:
+      string: Not found
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9fbbe8833ca6fff6-AMS
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '9'
+      Date:
+      - Thu, 14 May 2026 18:18:55 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cflb=0H28vqPC4cvrzdMCZxGHiocWB6pBXh9hQdW3hT17Wk4; SameSite=Lax; path=/;
+        expires=Fri, 15-May-26 17:18:55 GMT; HttpOnly
+      - __cf_bm=Gy.0_6gND6qMrBMi1ES9TZVTiagUrGSvVyMwb6b2KQA-1778782735-1.0.1.1-3oVdHZoqaYuW9_2oe.Z0P9ZthxK.eS6Itv7kKatMDUVeu_flu4nHJuYpc.iUJbIz3Nm1nUlZKzufyyUjSGlr8Uo8XVLHQoPYpIe_1wzJ5GY;
+        path=/; expires=Thu, 14-May-26 18:48:55 GMT; domain=.ahrefs.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=oWVze83GkJPLbG.GrI2qG2RvaAvwsFWZNz0ZkUQr9I0-1778782735936-0.0.1.1-604800000;
+        path=/; domain=.ahrefs.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Vary:
+      - Accept-Encoding
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-apo-via:
+      - origin,host
+      x-request-id:
+      - 9289c9c60bd79c9d1d24872dde9e75d6
+      x-trace-id:
+      - d27822c066daf39dba03ff7324eb17bd
+    status:
+      code: 404
+      message: Not Found
+- request:
+    body: ''
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Cookie:
+      - __cflb=0H28vqPC4cvrzdMCZxGHiocWB6pBXh9hQdW3hT17Wk4; __cf_bm=Gy.0_6gND6qMrBMi1ES9TZVTiagUrGSvVyMwb6b2KQA-1778782735-1.0.1.1-3oVdHZoqaYuW9_2oe.Z0P9ZthxK.eS6Itv7kKatMDUVeu_flu4nHJuYpc.iUJbIz3Nm1nUlZKzufyyUjSGlr8Uo8XVLHQoPYpIe_1wzJ5GY;
+        _cfuvid=oWVze83GkJPLbG.GrI2qG2RvaAvwsFWZNz0ZkUQr9I0-1778782735936-0.0.1.1-604800000
+      Host:
+      - api.ahrefs.com
+      User-Agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://api.ahrefs.com/v3/keywords?select=keyword%2Cvolume%2Ckeyword_difficulty%2Ccpc%2Cclicks%2Cparent_topic&from=keywords_explorer&where=keyword+LIKE+%27%25dental%2520implants%25%27+AND+volume+%3E%3D+100&country=us&limit=100&offset=0
+  response:
+    body:
+      string: Not found
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9fbbe88bbe9a0b3a-AMS
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '9'
+      Date:
+      - Thu, 14 May 2026 18:18:57 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Vary:
+      - Accept-Encoding
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-apo-via:
+      - origin,host
+      x-request-id:
+      - a477c1d514699f02d1f31aa9e01be868
+      x-trace-id:
+      - d6242d7d8c32db177c68da5d8319a85f
+    status:
+      code: 404
+      message: Not Found
+- request:
+    body: ''
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Cookie:
+      - __cflb=0H28vqPC4cvrzdMCZxGHiocWB6pBXh9hQdW3hT17Wk4; __cf_bm=Gy.0_6gND6qMrBMi1ES9TZVTiagUrGSvVyMwb6b2KQA-1778782735-1.0.1.1-3oVdHZoqaYuW9_2oe.Z0P9ZthxK.eS6Itv7kKatMDUVeu_flu4nHJuYpc.iUJbIz3Nm1nUlZKzufyyUjSGlr8Uo8XVLHQoPYpIe_1wzJ5GY;
+        _cfuvid=oWVze83GkJPLbG.GrI2qG2RvaAvwsFWZNz0ZkUQr9I0-1778782735936-0.0.1.1-604800000
+      Host:
+      - api.ahrefs.com
+      User-Agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://api.ahrefs.com/v3/keywords?select=keyword%2Cvolume%2Ckeyword_difficulty%2Ccpc%2Cclicks%2Cparent_topic&from=keywords_explorer&where=keyword+LIKE+%27%25dental%2520implants%25%27+AND+volume+%3E%3D+100&country=us&limit=100&offset=0
+  response:
+    body:
+      string: Not found
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9fbbe89aff444e47-AMS
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '9'
+      Date:
+      - Thu, 14 May 2026 18:18:59 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Vary:
+      - Accept-Encoding
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-apo-via:
+      - origin,host
+      x-request-id:
+      - 2b457f2ac63a4170c89921ca57a8f7e3
+      x-trace-id:
+      - 0289edb613a82eb76d00cb71633d01b1
+    status:
+      code: 404
+      message: Not Found
+version: 1
