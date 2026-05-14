@@ -83,7 +83,16 @@ class SkillApplier:
 
             # Make path absolute relative to project root
             if not final_path.is_absolute():
-                final_path = self.project_root / final_path
+                # Check if path already starts with project_root name
+                path_str = str(final_path)
+                project_name = self.project_root.name  # "AIM"
+
+                if path_str.startswith(project_name + "/"):
+                    # Path already includes project root, use as-is
+                    final_path = self.project_root.parent / final_path
+                else:
+                    # Path is relative to project root
+                    final_path = self.project_root / final_path
 
             # Step 1: Create/update code file
             if implementation.code:
@@ -153,14 +162,21 @@ class SkillApplier:
         # Adapt code to project conventions
         adapted_code = self._adapt_code(code, subagent_name)
 
-        # Add header comment
-        header = self._generate_header(subagent_name)
-
-        # Write file
-        with open(target_path, "w") as f:
-            f.write(header)
-            f.write("\n\n")
-            f.write(adapted_code)
+        if created:
+            # New file: write with header
+            header = self._generate_header(subagent_name)
+            with open(target_path, "w") as f:
+                f.write(header)
+                f.write("\n\n")
+                f.write(adapted_code)
+        else:
+            # Existing file: append code with separator
+            with open(target_path, "a") as f:
+                f.write("\n\n")
+                f.write("# " + "=" * 78 + "\n")
+                f.write(f"# Added by Teacher Agent: {subagent_name or 'skill extraction'}\n")
+                f.write("# " + "=" * 78 + "\n\n")
+                f.write(adapted_code)
 
         self.logger.info(
             "code_applied",
@@ -188,10 +204,29 @@ class SkillApplier:
         if "import" not in code and "from" not in code:
             # Add basic imports if missing
             imports = []
+
+            # Typing imports
+            typing_types = []
+            if "Optional[" in code:
+                typing_types.append("Optional")
+            if "List[" in code:
+                typing_types.append("List")
+            if "Dict[" in code:
+                typing_types.append("Dict")
+            if "Any" in code:
+                typing_types.append("Any")
+            if typing_types:
+                imports.append(f"from typing import {', '.join(typing_types)}")
+
+            # Standard library imports
             if "async" in code or "await" in code:
                 imports.append("import asyncio")
             if "Path" in code:
                 imports.append("from pathlib import Path")
+
+            # Third-party imports
+            if "httpx" in code:
+                imports.append("import httpx")
             if "structlog" in code:
                 imports.append("import structlog")
 
@@ -377,14 +412,14 @@ class SkillApplier:
         content += '"""\n\n'
         content += "import pytest\n\n"
 
-        # Add imports for detected classes/functions
-        if classes or functions:
+        # Add imports for detected classes/functions (only if there are any)
+        public_functions = [f for f in functions if not f.startswith("_")]
+        if classes or public_functions:
             content += f"from {import_path} import (\n"
             for cls in classes:
                 content += f"    {cls},\n"
-            for func in functions:
-                if not func.startswith("_"):  # Skip private functions
-                    content += f"    {func},\n"
+            for func in public_functions:
+                content += f"    {func},\n"
             content += ")\n\n"
 
         # Generate test class for each detected class
