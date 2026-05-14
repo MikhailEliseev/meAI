@@ -301,21 +301,16 @@ Co-Authored-By: Teacher Agent <teacher@aim.ai>"""
             # Step 3: Analyze target context (before comparison)
             self.logger.info("step_3_analyze_target_context")
 
-            # Determine target path from first skill's suggestion
-            target_path = None
-            if all_skills and all_skills[0].source_file:
-                # Use first skill's source as hint for target
-                target_path = self.applier.project_root / "src" / "aim" / "subagents" / "api_clients" / "base.py"
+            # Determine target path - use hardcoded path for keyword-research
+            # In future, this should be determined from subagent configuration
+            target_path = self.applier.project_root / "src" / "aim" / "subagents" / "api_clients" / "base.py"
 
-            target_context = await self.applier._analyze_target_context(target_path) if target_path else None
+            target_context = await self.applier._analyze_target_context(target_path)
 
             # Step 4: Compare and rank skills (with context filtering)
             self.logger.info("step_4_compare_skills", total_skills=len(all_skills))
 
-            if target_context:
-                comparison = await self.comparator.compare_with_context(all_skills, target_context)
-            else:
-                comparison = await self.comparator.compare(all_skills)
+            comparison = await self.comparator.compare_with_context(all_skills, target_context)
 
             if not comparison.best_skill:
                 self.logger.warning("no_best_skill")
