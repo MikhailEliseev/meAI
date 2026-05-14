@@ -319,7 +319,7 @@ Co-Authored-By: Teacher Agent <teacher@aim.ai>"""
 
             target_path = self.applier.project_root / target_file
 
-            target_context = await self.applier._analyze_target_context(target_path)
+            target_context = await self.applier._analyze_target_context(target_path, subagent_name)
 
             # Step 4: Compare and rank skills (with context filtering)
             self.logger.info("step_4_compare_skills", total_skills=len(all_skills))
