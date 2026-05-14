@@ -11,6 +11,7 @@ from AIM.src.aim.subagents.seo.content_agent import ContentSEOAgent
 from AIM.src.aim.subagents.seo.links_agent import LinksSEOAgent
 from AIM.src.aim.magisters.seo_magister import SEOMagister
 from AIM.src.aim.magisters.content_magister import ContentMagister
+from AIM.src.aim.magisters.ads_magister import AdsMagister
 
 
 @pytest.fixture
@@ -80,5 +81,54 @@ def content_magister(mock_content_subagents):
     # Inject mocked methods
     magister.identify_subagents = mock_content_subagents["identify_subagents"]
     magister.aggregate_results = mock_content_subagents["aggregate_results"]
+
+    return magister
+
+
+@pytest.fixture
+def mock_ads_subagents():
+    """Mock Ads subagents for unit testing
+
+    Returns dict with AsyncMock instances for Ads subagent methods.
+    Mocks identify_subagents and aggregate_results methods.
+    """
+    return {
+        "identify_subagents": AsyncMock(return_value=["ads-campaign-creator-agent"]),
+        "aggregate_results": AsyncMock(return_value={
+            "summary": "Test campaign summary",
+            "insights": ["Test insight"],
+            "recommendations": ["Test recommendation"],
+            "metrics": {
+                "total_campaigns": 1,
+                "total_budget": 10000.0,
+                "ctr": 2.5,
+                "conversion_rate": 5.0,
+            },
+        }),
+    }
+
+
+@pytest.fixture
+def ads_magister(mock_ads_subagents):
+    """Ads Magister with mocked dependencies for unit testing
+
+    Uses dependency injection to inject AsyncMock event_bus and vault.
+    """
+    mock_event_bus = AsyncMock()
+    mock_vault = AsyncMock()
+    mock_vault.vault_path = AsyncMock()
+    mock_vault.vault_path.exists.return_value = True
+
+    magister = AdsMagister(
+        magister_id="test-ads-magister",
+        database_url="sqlite+aiosqlite:///:memory:",
+        vault_path="./test-vault",
+        event_bus=mock_event_bus,
+        vault=mock_vault,
+    )
+
+    # Inject mocked methods
+    magister.identify_subagents = mock_ads_subagents["identify_subagents"]
+    magister.aggregate_results = mock_ads_subagents["aggregate_results"]
 
     return magister
