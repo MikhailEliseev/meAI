@@ -1,14 +1,105 @@
 # Current Session: 2026-05-14
 
-## Status: ✅ Phase 2 COMPLETED — CI Content Agent Trained Successfully
+## Status: ✅ Phase 2 IN PROGRESS — 2/6 P0 Subagents Trained
 
-**Achievement:** Import-based skill extraction работает! CI Content Agent обучен с реальным извлечением контента через trafilatura.
+**Achievement:** CI Content Agent и CI Tech Agent обучены с реальными implementations!
 
 ---
 
-## Current Work (11:25 GMT+3)
+## Current Work (11:50 GMT+3)
 
-### Phase 2: Training CI Content Agent — ✅ COMPLETED
+### Phase 2: Training CI Tech Agent — ✅ COMPLETED
+
+**УСПЕХ:** Реальный технический SEO аудит вместо mock данных!
+
+**Реализовано (11:25-11:50 GMT+3):**
+
+1. ✅ **PageSpeed Insights Integration**
+   - Lighthouse category scores (performance, SEO, accessibility, best-practices)
+   - Lab data: LCP, CLS, FCP, TTFB
+   - Field data (CrUX): real user metrics from Google
+   - CWV thresholds (April 2026): LCP < 2.5s, CLS < 0.1, INP < 200ms
+   - Rate limiting handling (429 errors)
+
+2. ✅ **Playwright Renderer**
+   - SPA detection (React, Vue, Next.js, Nuxt indicators)
+   - Lazy import (optional dependency)
+   - Headless Chromium with optimized args
+   - Network idle wait + 500ms for lazy content
+   - Graceful fallback if Playwright not installed
+
+3. ✅ **Robots.txt Audit**
+   - AI crawler blocking detection (10 crawlers: GPTBot, ClaudeBot, etc.)
+   - CSS/JS blocking detection (prevents rendering)
+   - Sitemap directive extraction
+   - Wildcard disallow detection
+
+4. ✅ **Sitemap.xml Audit**
+   - Regular sitemap vs sitemap index detection
+   - URL count validation (max 50,000)
+   - Child sitemap discovery
+   - Parse error handling
+
+5. ✅ **Tech Maturity Scoring (0-100)**
+   - Performance: 40 points (Lighthouse performance score)
+   - SEO basics: 30 points (20 for SEO score + 5 robots + 5 sitemap)
+   - Accessibility: 15 points (Lighthouse accessibility score)
+   - Best practices: 15 points (Lighthouse best-practices score)
+   - Penalties: -10 for AI blocking, -5 for CSS/JS blocking
+   - Rating: high (70+), medium (40-69), low (<40)
+
+**Test Results:**
+```
+✅ test_rate_metric_lcp - PASSED
+✅ test_rate_metric_cls - PASSED
+✅ test_rate_metric_inp - PASSED
+✅ test_fetch_pagespeed_success - PASSED
+✅ test_fetch_pagespeed_rate_limited - PASSED
+✅ test_fetch_robots_success - PASSED
+✅ test_fetch_robots_blocks_css_js - PASSED
+✅ test_fetch_robots_not_found - PASSED
+✅ test_fetch_sitemap_regular - PASSED
+✅ test_fetch_sitemap_index - PASSED
+✅ test_ci_tech_agent_capabilities - PASSED
+✅ test_ci_tech_agent_execute_task - PASSED
+✅ test_calculate_tech_score - PASSED
+✅ test_calculate_tech_score_with_penalties - PASSED
+✅ test_generate_insights - PASSED
+
+Total: 15 passed in 1.04s
+```
+
+**Best Components Selected:**
+```
+Source: https://github.com/tentacl-ai/seo-autopilot (880+ stars)
+Components:
+1. pagespeed.py - PageSpeed Insights API integration
+2. renderer.py - Playwright SPA rendering
+3. robots_sitemap.py - Robots.txt and sitemap audit
+4. Tech maturity scoring - Custom implementation
+
+Teacher Agent extracted: render_page() only (2117 chars)
+Manual integration: 4 components (750 lines total)
+```
+
+**Files Created:**
+- `AIM/src/aim/subagents/competitive_intel/agents/ci_tech_improved.py` (750 lines)
+- `AIM/tests/subagents/test_ci_tech_improved.py` (400 lines)
+- `docs/teacher/ci-tech-training-report.md` (350 lines)
+
+**Commits:**
+- 6d71d88: feat(ci-tech): apply real technical SEO audit from seo-autopilot
+
+**Время:** 25 минут (11:25-11:50 GMT+3)
+
+**Проблема Teacher Agent:**
+- ⚠️ Domain relevance score 0.0 - keywords не совпали с Playwright-based кодом
+- ⚠️ Извлёк только часть (render_page) вместо полного аудита
+- ✅ Решение: вручную изучил репо и взял 4 компонента
+
+---
+
+## Completed Today (2026-05-14)
 
 **УСПЕХ:** Import-based extraction решил проблему keyword-based подхода!
 
@@ -277,13 +368,13 @@ Commit: 0a9466c
 
 ## Next Steps
 
-### Phase 2: Train Remaining P0 Subagents (6-10 hours)
+### Phase 2: Train Remaining P0 Subagents (4-8 hours)
 
 **Цель:** Обучить оставшиеся критичные субагенты с индивидуальным research и GitHub integration.
 
 **P0 Субагенты (критичные):**
 1. ✅ Competitor Content Analyzer (ci-content) — COMPLETED
-2. ⏳ Technical SEO Auditor (ci-tech)
+2. ✅ Technical SEO Auditor (ci-tech) — COMPLETED
 3. ⏳ Content Gap Analyzer
 4. ⏳ Backlink Analyzer
 5. ⏳ Rank Tracker
@@ -307,27 +398,30 @@ Commit: 0a9466c
 - ✅ Domain relevance scoring для правильного выбора
 - ✅ Внедрять (не документировать)
 
-**Статус:** Ready to continue (1/6 completed)
+**Статус:** Ready to continue (2/6 completed)
 
 ---
 
 ## Context for Next Session
 
 **What we just completed:**
-- ✅ Import-based skill extraction реализован и работает
-- ✅ Domain relevance scoring (70/30) выбирает правильные skills
 - ✅ CI Content Agent обучен с реальным извлечением через trafilatura
-- ✅ 6 тестов проходят успешно
-- ✅ Training report создан
+- ✅ CI Tech Agent обучен с реальным техническим SEO аудитом
+- ✅ PageSpeed Insights API integration (Core Web Vitals)
+- ✅ Playwright renderer для SPA сайтов
+- ✅ Robots.txt и sitemap.xml audit
+- ✅ AI crawler blocking detection
+- ✅ 15 тестов проходят успешно
 
 **What's next:**
-- Обучить Technical SEO Auditor (ci-tech) используя тот же подход
+- Обучить Content Gap Analyzer используя тот же подход
 - Продолжить с остальными P0 субагентами
 - Каждый субагент получает индивидуальное обучение
 
 **Important files:**
 - CI Content Improved: `AIM/src/aim/subagents/competitive_intel/agents/ci_content_improved.py`
-- Training Report: `docs/teacher/ci-content-training-report.md`
+- CI Tech Improved: `AIM/src/aim/subagents/competitive_intel/agents/ci_tech_improved.py`
+- Training Reports: `docs/teacher/ci-content-training-report.md`, `docs/teacher/ci-tech-training-report.md`
 - Teacher Agent: `AIM/src/aim/teacher/teacher_agent.py`
 - SkillComparator: `AIM/src/aim/teacher/skills/skill_comparator.py`
 
@@ -336,9 +430,16 @@ Commit: 0a9466c
 - Domain relevance важнее code quality (70% vs 30%)
 - Library usage bonus критичен (+30 для trafilatura.extract)
 - Production-tested код (880+ stars) = надёжность
+- Для комплексных систем: вручную изучать репо и брать несколько компонентов
+
+**Lessons learned:**
+- Teacher Agent хорош для извлечения отдельных функций
+- Для комплексных систем нужно вручную изучать репо
+- Domain keywords критичны для правильного scoring
+- Иногда нужно взять несколько компонентов вместо одного
 
 ---
 
-**Last updated:** 2026-05-14 11:25 GMT+3  
-**Session duration:** ~3 hours  
-**Status:** Phase 2 (1/6 subagents completed)
+**Last updated:** 2026-05-14 11:51 GMT+3  
+**Session duration:** ~3.5 hours  
+**Status:** Phase 2 (2/6 subagents completed)
