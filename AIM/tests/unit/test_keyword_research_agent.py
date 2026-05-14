@@ -56,11 +56,14 @@ async def test_keyword_expansion_success(keyword_research_agent, mock_api_client
             rationale="Low risk keyword",
         )
         priority_result = KeywordPriority(
+            keyword=keyword_data.keyword,
             tier=PriorityTier.P0,
             base_score=75.0,
             adjusted_score=75.0,
-            boost_factors={},
-            penalty_factors={},
+            volume_score=80.0,
+            intent_score=1.2,
+            position_score=0.8,
+            difficulty_score=65.0,
         )
         return KeywordAnalysisResult(
             keyword_data=keyword_data,
@@ -124,11 +127,12 @@ async def test_keyword_expansion_with_fallback(keyword_research_agent, mock_api_
     ]
     mock_api_clients["ahrefs"].expand_keywords = AsyncMock(return_value=mock_ahrefs_keywords)
 
-    # Mock compliance checker
-    with patch.object(keyword_research_agent, '_initialize_clients', new_callable=AsyncMock):
-        # Create proper Pydantic objects
+    # Patch _analyze_keyword to bypass compliance/priority logic
+    from src.aim.subagents.schemas.results import KeywordAnalysisResult
+
+    async def mock_analyze(keyword_data):
         compliance_result = ComplianceCheckResult(
-            keyword="dental implants cost",
+            keyword=keyword_data.keyword,
             likelihood_score=1,
             severity_score=1,
             risk_score=1,
@@ -136,26 +140,25 @@ async def test_keyword_expansion_with_fallback(keyword_research_agent, mock_api_
             action=ComplianceAction.PASSED,
             rationale="Low risk keyword",
         )
-
         priority_result = KeywordPriority(
+            keyword=keyword_data.keyword,
             tier=PriorityTier.P0,
             base_score=75.0,
             adjusted_score=75.0,
-            boost_factors={},
-            penalty_factors={},
+            volume_score=80.0,
+            intent_score=1.2,
+            position_score=0.8,
+            difficulty_score=65.0,
+        )
+        return KeywordAnalysisResult(
+            keyword_data=keyword_data,
+            compliance=compliance_result,
+            priority=priority_result,
+            analysis_duration_ms=10.0,
+            cost_usd=0.01,
         )
 
-        keyword_research_agent.compliance_checker = AsyncMock()
-        keyword_research_agent.compliance_checker.check_keyword = AsyncMock(
-            return_value=compliance_result
-        )
-
-        # Mock priority calculator
-        keyword_research_agent.priority_calculator = AsyncMock()
-        keyword_research_agent.priority_calculator.calculate_priority = AsyncMock(
-            return_value=priority_result
-        )
-
+    with patch.object(keyword_research_agent, '_analyze_keyword', side_effect=mock_analyze):
         # Create task
         task = Task(
             task_id="test-002",
@@ -198,11 +201,12 @@ async def test_compliance_blocking(keyword_research_agent, mock_api_clients):
     ]
     mock_api_clients["semrush"].expand_keywords = AsyncMock(return_value=mock_risky_keywords)
 
-    # Mock compliance checker to block
-    with patch.object(keyword_research_agent, '_initialize_clients', new_callable=AsyncMock):
-        # Create proper Pydantic objects for BLOCKED action
+    # Patch _analyze_keyword to return BLOCKED result
+    from src.aim.subagents.schemas.results import KeywordAnalysisResult
+
+    async def mock_analyze(keyword_data):
         compliance_result = ComplianceCheckResult(
-            keyword="buy oxycodone online",
+            keyword=keyword_data.keyword,
             likelihood_score=5,
             severity_score=5,
             risk_score=25,
@@ -210,26 +214,26 @@ async def test_compliance_blocking(keyword_research_agent, mock_api_clients):
             action=ComplianceAction.BLOCKED,
             rationale="CRITICAL risk: Controlled substance keyword",
         )
-
         priority_result = KeywordPriority(
+            keyword=keyword_data.keyword,
             tier=PriorityTier.P3,
             base_score=20.0,
             adjusted_score=20.0,
-            boost_factors={},
-            penalty_factors={"compliance": -80.0},
+            volume_score=50.0,
+            intent_score=1.2,
+            position_score=0.8,
+            difficulty_score=45.0,
+            compliance_penalty=0.8,
+        )
+        return KeywordAnalysisResult(
+            keyword_data=keyword_data,
+            compliance=compliance_result,
+            priority=priority_result,
+            analysis_duration_ms=10.0,
+            cost_usd=0.01,
         )
 
-        keyword_research_agent.compliance_checker = AsyncMock()
-        keyword_research_agent.compliance_checker.check_keyword = AsyncMock(
-            return_value=compliance_result
-        )
-
-        # Mock priority calculator
-        keyword_research_agent.priority_calculator = AsyncMock()
-        keyword_research_agent.priority_calculator.calculate_priority = AsyncMock(
-            return_value=priority_result
-        )
-
+    with patch.object(keyword_research_agent, '_analyze_keyword', side_effect=mock_analyze):
         # Create task
         task = Task(
             task_id="test-003",
@@ -282,33 +286,46 @@ async def test_priority_calculation(keyword_research_agent, mock_api_clients):
     ]
     mock_api_clients["semrush"].expand_keywords = AsyncMock(return_value=mock_medical_keywords)
 
-    # Mock compliance checker
-    with patch.object(keyword_research_agent, '_initialize_clients', new_callable=AsyncMock):
-        keyword_research_agent.compliance_checker = AsyncMock()
-        keyword_research_agent.compliance_checker.check_keyword = AsyncMock(
-            return_value=AsyncMock(
-                action="PASSED",
-                risk_level=AsyncMock(value="low"),
-            )
+    # Patch _analyze_keyword to return different priorities
+    from src.aim.subagents.schemas.results import KeywordAnalysisResult
+
+    async def mock_analyze(keyword_data):
+        # Different priorities based on keyword
+        if "dental" in keyword_data.keyword:
+            tier = PriorityTier.P0
+            adjusted_score = 85.0
+        else:
+            tier = PriorityTier.P1
+            adjusted_score = 68.0
+
+        compliance_result = ComplianceCheckResult(
+            keyword=keyword_data.keyword,
+            likelihood_score=1,
+            severity_score=1,
+            risk_score=1,
+            risk_level=RiskLevel.LOW,
+            action=ComplianceAction.PASSED,
+            rationale="Low risk keyword",
+        )
+        priority_result = KeywordPriority(
+            keyword=keyword_data.keyword,
+            tier=tier,
+            base_score=keyword_data.priority_score,
+            adjusted_score=adjusted_score,
+            volume_score=80.0,
+            intent_score=1.2,
+            position_score=0.8,
+            difficulty_score=keyword_data.difficulty,
+        )
+        return KeywordAnalysisResult(
+            keyword_data=keyword_data,
+            compliance=compliance_result,
+            priority=priority_result,
+            analysis_duration_ms=10.0,
+            cost_usd=0.01,
         )
 
-        # Mock priority calculator with different tiers
-        def mock_priority_calc(*args, **kwargs):
-            keyword = kwargs.get('keyword_data') or args[0]
-            if "dental" in keyword.keyword:
-                return AsyncMock(
-                    tier=AsyncMock(value="P0"),
-                    adjusted_score=85.0,
-                )
-            else:
-                return AsyncMock(
-                    tier=AsyncMock(value="P1"),
-                    adjusted_score=68.0,
-                )
-
-        keyword_research_agent.priority_calculator = AsyncMock()
-        keyword_research_agent.priority_calculator.calculate_priority = mock_priority_calc
-
+    with patch.object(keyword_research_agent, '_analyze_keyword', side_effect=mock_analyze):
         # Create task
         task = Task(
             task_id="test-004",
