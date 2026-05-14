@@ -7,13 +7,14 @@ metrics, and structured logging for all API clients.
 import asyncio
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Optional, TypeVar
 
 import httpx
 import structlog
 from aiocache import Cache
 from aiocache.serializers import JsonSerializer
 from prometheus_client import Counter, Histogram
+from pydantic import BaseModel
 from pybreaker import CircuitBreaker
 from tenacity import (
     AsyncRetrying,
@@ -21,6 +22,8 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
+
+T = TypeVar('T')
 
 # Prometheus metrics
 api_calls_total = Counter(
