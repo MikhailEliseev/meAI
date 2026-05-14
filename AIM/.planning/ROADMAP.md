@@ -235,52 +235,74 @@ Test domain-specific subagents to ensure correct business logic and API integrat
 
 **Status:** PLANNED  
 **Time:** 2 hours (estimated)  
-**Tests:** 5+ tests (target)
+**Tests:** 15+ tests (target)  
+**Plans:** 2 plans
 
 ### Goal
-Test complete workflows from Operator to Magister to Subagent to ensure system integration.
+Test complete workflows from Magister to Subagent and multi-agent coordination to ensure system integration.
+
+### Plans
+
+**Plan 1: Individual Domain Workflows (Wave 1)**
+- SEO workflow tests (3+ tests)
+- Content workflow tests (3+ tests)
+- Ads workflow tests (3+ tests)
+- Files: `test_seo_workflow.py`, `test_content_workflow.py`, `test_ads_workflow.py`
+
+**Plan 2: Multi-Agent Coordination (Wave 2)**
+- Multi-agent coordination tests (4+ tests)
+- Real-world scenario tests (4+ tests)
+- E2E fixtures and helpers
+- Files: `test_multi_agent_coordination.py`, `test_real_world_scenario.py`, `e2e_fixtures.py`
 
 ### Deliverables
-- [ ] SEO workflow test (1 test)
-  - Operator → SEO Magister → Keyword Research Agent
-  - Full keyword research workflow
-  - Result aggregation
-- [ ] Content workflow test (1 test)
-  - Operator → Content Magister → Content Generation Agent
-  - Full content creation workflow
-  - Quality validation
-- [ ] Ads workflow test (1 test)
-  - Operator → Ads Magister → Campaign Management Agent
-  - Full campaign creation workflow
-  - Budget tracking
-- [ ] Multi-agent coordination test (1 test)
-  - Parallel execution of multiple workflows
+- [ ] SEO workflow tests (3+ tests)
+  - Keyword research workflow
+  - Multiple subagents coordination
+  - Subagent failure handling
+- [ ] Content workflow tests (3+ tests)
+  - Content writer workflow
+  - Gap analysis workflow
+  - Timeout handling
+- [ ] Ads workflow tests (3+ tests)
+  - Campaign creation workflow
+  - Budget optimization
+  - Invalid budget validation
+- [ ] Multi-agent coordination tests (4+ tests)
+  - Parallel Magister execution
   - Event Bus coordination
-  - Error recovery
-- [ ] Real-world scenario test (1 test)
+  - Multi-agent error recovery
+  - Event Store audit trail
+- [ ] Real-world scenario tests (4+ tests)
   - Complete client onboarding workflow
-  - Multiple Magisters and Subagents
-  - End-to-end validation
+  - Onboarding with SEO failure
+  - Budget constraints validation
+  - Correlation chain tracking
 
 ### Files to Create
+- `tests/e2e/__init__.py`
 - `tests/e2e/test_seo_workflow.py`
 - `tests/e2e/test_content_workflow.py`
 - `tests/e2e/test_ads_workflow.py`
 - `tests/e2e/test_multi_agent_coordination.py`
 - `tests/e2e/test_real_world_scenario.py`
+- `tests/fixtures/e2e_fixtures.py`
 
 ### Success Metrics
-- [ ] 5+ tests passing
-- [ ] Full workflow tested (Operator → Magister → Subagent)
+- [ ] 15+ tests passing (9 domain workflows + 6+ coordination)
+- [ ] Full workflow tested (Magister → Subagent → Results)
 - [ ] Multi-agent coordination validated
 - [ ] Real-world scenarios covered
 - [ ] Error recovery tested
+- [ ] Parallel execution performance validated
+- [ ] Correlation tracking verified
 
 ### Dependencies
-- All Magisters implemented
-- All Subagents implemented
-- Event Bus and Event Store working
-- Database integration
+- ✅ All Magisters implemented (SEO, Content, Ads, Analytics)
+- ✅ All Subagents implemented (19 subagents)
+- ✅ Event Bus and Event Store working
+- ✅ Database integration
+
 
 ---
 
