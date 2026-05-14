@@ -208,12 +208,10 @@ class SkillComparator:
 
         code = skill.code_example
 
-        # Check async/sync compatibility
-        skill_is_async = "async def" in code or "await " in code
-        if target_context.is_async and not skill_is_async:
-            return False, "Target is async, skill is sync"
+        # REMOVED: async/sync check - SkillApplier can convert sync to async
+        # We accept both sync and async skills for async targets
 
-        # Check library compatibility
+        # Check library compatibility (soft check - SkillApplier can adapt)
         skill_libraries = set()
         if "httpx" in code:
             skill_libraries.add("httpx")
@@ -224,14 +222,26 @@ class SkillComparator:
         if "urllib" in code:
             skill_libraries.add("urllib")
 
-        # If skill uses libraries and target has libraries, check compatibility
+        # Soft library check - we prefer matching libraries but don't reject mismatches
+        # SkillApplier can convert requests -> httpx, urllib -> httpx
+        # Just log a warning if libraries don't match
         if skill_libraries and target_context.libraries:
             if not skill_libraries.intersection(target_context.libraries):
-                return False, f"Library mismatch: skill uses {skill_libraries}, target uses {target_context.libraries}"
+                self.logger.debug(
+                    "library_mismatch_will_adapt",
+                    skill=skill.name,
+                    skill_libraries=list(skill_libraries),
+                    target_libraries=list(target_context.libraries)
+                )
 
-        # Check error handling compatibility
+        # Check error handling compatibility (soft check)
         if "sys.exit(" in code and target_context.error_style == "raise":
-            return False, "Skill uses sys.exit(), target uses raise"
+            self.logger.debug(
+                "error_style_mismatch_will_adapt",
+                skill=skill.name,
+                skill_style="sys.exit",
+                target_style="raise"
+            )
 
         return True, "Compatible"
 
