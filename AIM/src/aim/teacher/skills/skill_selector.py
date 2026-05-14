@@ -98,6 +98,78 @@ class SkillSelector:
                 "google",
                 "facebook",
             ],
+            # P1 Subagents (Priority 1)
+            "content-brief": [
+                "openai",
+                "anthropic",
+                "langchain",
+                "serper",
+                "beautifulsoup4",
+                "trafilatura",
+            ],
+            "ad-copy": [
+                "openai",
+                "anthropic",
+                "langchain",
+                "yandex",
+                "google-ads",
+            ],
+            "traffic-analyzer": [
+                "google-analytics",
+                "yandex-metrika",
+                "pandas",
+                "matplotlib",
+                "plotly",
+            ],
+            "conversion-tracker": [
+                "google-analytics",
+                "mixpanel",
+                "amplitude",
+                "pandas",
+                "numpy",
+            ],
+            "schema-generator": [
+                "schema",
+                "json-ld",
+                "rdflib",
+                "extruct",
+                "microdata",
+            ],
+            "quality-checker": [
+                "textstat",
+                "language-tool-python",
+                "grammarly",
+                "spacy",
+                "nltk",
+            ],
+            "landing-page": [
+                "playwright",
+                "selenium",
+                "lighthouse",
+                "beautifulsoup4",
+                "requests",
+            ],
+            "bid-optimizer": [
+                "google-ads",
+                "yandex-direct",
+                "pandas",
+                "numpy",
+                "scikit-learn",
+            ],
+            "report-generator": [
+                "pandas",
+                "matplotlib",
+                "plotly",
+                "reportlab",
+                "jinja2",
+            ],
+            "calendar-manager": [
+                "google-calendar",
+                "icalendar",
+                "dateutil",
+                "schedule",
+                "apscheduler",
+            ],
         }
 
         # Domain-specific pattern signatures per subagent type
@@ -248,76 +320,67 @@ class SkillSelector:
                 "ahrefs api python",
                 "moz api python",
             ],
+            # P1 Subagents (Priority 1) - GitHub search queries
             "content-brief": [
-                "openai",
-                "anthropic",
-                "langchain",
-                "serper",
-                "beautifulsoup4",
-                "trafilatura",
+                "content brief generator python",
+                "seo content brief python",
+                "content outline generator python",
+                "serp analysis content brief python",
+                "competitor content analysis python",
             ],
             "ad-copy": [
-                "openai",
-                "anthropic",
-                "langchain",
-                "yandex",
-                "google-ads",
+                "ad copy generator python",
+                "yandex direct api python",
+                "google ads api python",
+                "advertising copy automation python",
             ],
             "traffic-analyzer": [
-                "google-analytics",
-                "yandex-metrika",
-                "pandas",
-                "matplotlib",
-                "plotly",
+                "google analytics api python",
+                "yandex metrika api python",
+                "web traffic analysis python",
+                "analytics dashboard python",
             ],
             "conversion-tracker": [
-                "google-analytics",
-                "mixpanel",
-                "amplitude",
-                "pandas",
-                "numpy",
+                "conversion tracking python",
+                "goal tracking analytics python",
+                "funnel analysis python",
+                "event tracking python",
             ],
             "schema-generator": [
-                "schema",
-                "json-ld",
-                "rdflib",
-                "extruct",
-                "microdata",
+                "schema markup generator python",
+                "json-ld generator python",
+                "structured data python",
+                "seo schema python",
             ],
             "quality-checker": [
-                "textstat",
-                "language-tool-python",
-                "grammarly",
-                "spacy",
-                "nltk",
+                "content quality checker python",
+                "readability analysis python",
+                "grammar checker python",
+                "text quality metrics python",
             ],
             "landing-page": [
-                "playwright",
-                "selenium",
-                "lighthouse",
-                "beautifulsoup4",
-                "requests",
+                "landing page analyzer python",
+                "page performance analysis python",
+                "conversion optimization python",
+                "a/b testing python",
             ],
             "bid-optimizer": [
-                "google-ads",
-                "yandex-direct",
-                "pandas",
-                "numpy",
-                "scikit-learn",
+                "bid optimization python",
+                "ppc automation python",
+                "advertising budget optimization python",
+                "smart bidding python",
             ],
             "report-generator": [
-                "pandas",
-                "matplotlib",
-                "plotly",
-                "reportlab",
-                "jinja2",
+                "analytics report generator python",
+                "data visualization python",
+                "automated reporting python",
+                "dashboard generator python",
             ],
             "calendar-manager": [
-                "google-calendar",
-                "icalendar",
-                "dateutil",
-                "schedule",
-                "apscheduler",
+                "content calendar python",
+                "editorial calendar python",
+                "scheduling automation python",
+                "publication planning python",
             ],
         }
 
@@ -602,10 +665,26 @@ class SkillSelector:
         # These are already in base.py and should NOT be extracted again
         # We only want domain-specific patterns for each subagent
 
+        # DEBUG: Log entry
+        self.logger.debug(
+            "detect_patterns_called",
+            subagent_type=subagent_type,
+            has_subagent_type=bool(subagent_type),
+            in_signatures=subagent_type in self.domain_import_signatures if subagent_type else False,
+        )
+
         # Extract domain-specific functions by imports (NEW APPROACH)
         if subagent_type and subagent_type in self.domain_import_signatures:
             target_imports = self.domain_import_signatures[subagent_type]
             functions = self._extract_functions_using_imports(content, target_imports)
+
+            # DEBUG: Log extraction results
+            if functions:
+                self.logger.info(
+                    "functions_extracted_from_file",
+                    count=len(functions),
+                    subagent_type=subagent_type,
+                )
 
             for func in functions:
                 pattern_key = f"{subagent_type}_{func['name']}"
