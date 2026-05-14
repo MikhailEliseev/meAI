@@ -27,9 +27,9 @@ from AIM.src.aim.teacher.skills.skill_teacher import (
 
 
 @pytest.fixture
-def skill_teacher():
+def skill_teacher(tmp_path):
     """Create SkillTeacher instance."""
-    return SkillTeacher()
+    return SkillTeacher(project_root=tmp_path)
 
 
 @pytest.fixture
@@ -491,3 +491,97 @@ class TestFullTeachingWorkflow:
 
         # Mock returns passed=True and improvement > 0
         assert result.taught_successfully is True
+
+
+# Tests for Steps 7-8 (Test Execution and Git Commit)
+
+
+@pytest.mark.asyncio
+async def test_run_tests_success(skill_teacher, tmp_path):
+    """Should run pytest and return success."""
+    # Create dummy test file
+    test_file = tmp_path / "test_dummy.py"
+    test_file.write_text("def test_pass(): assert True")
+    
+    result = await skill_teacher._run_tests([test_file], "test")
+    
+    assert result.success
+    assert "test_dummy.py" in result.output
+    assert result.summary == "1 test files"
+    assert len(result.failures) == 0
+
+
+@pytest.mark.asyncio
+async def test_run_tests_failure(skill_teacher, tmp_path):
+    """Should capture test failures."""
+    test_file = tmp_path / "test_dummy.py"
+    test_file.write_text("def test_fail(): assert False")
+    
+    result = await skill_teacher._run_tests([test_file], "test")
+    
+    assert not result.success
+    assert len(result.failures) > 0
+    assert result.failures[0] == "pytest failed"
+
+
+@pytest.mark.asyncio
+async def test_run_tests_no_files(skill_teacher):
+    """Should handle no test files gracefully."""
+    result = await skill_teacher._run_tests([], "test")
+    
+    assert result.success
+    assert "No tests" in result.summary
+    assert result.output == ""
+
+
+@pytest.mark.asyncio
+async def test_commit_changes_success(skill_teacher, tmp_path):
+    """Should create git commit with metadata."""
+    # Setup git repo
+    import subprocess
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True, capture_output=True)
+    
+    # Create file
+    test_file = tmp_path / "test.py"
+    test_file.write_text("# test")
+    
+    # Change to tmp_path for git operations
+    import os
+    original_cwd = os.getcwd()
+    os.chdir(tmp_path)
+    
+    try:
+        result = await skill_teacher._commit_changes(
+            files_created=[test_file],
+            files_modified=[],
+            subagent_name="test",
+            skill_name="test_skill",
+            source_repo="github.com/test/repo"
+        )
+        
+        assert result.success
+        assert result.commit_hash is not None
+        assert len(result.commit_hash) == 40  # Git SHA-1
+        assert "teach(test)" in result.message
+        assert "test_skill" in result.message
+        assert "github.com/test/repo" in result.message
+    finally:
+        os.chdir(original_cwd)
+
+
+@pytest.mark.asyncio
+async def test_commit_changes_no_files(skill_teacher):
+    """Should handle no changes gracefully."""
+    result = await skill_teacher._commit_changes(
+        files_created=[],
+        files_modified=[],
+        subagent_name="test",
+        skill_name="test_skill",
+        source_repo="github.com/test/repo"
+    )
+    
+    assert result.success
+    assert result.commit_hash is None
+    assert "No changes" in result.message
