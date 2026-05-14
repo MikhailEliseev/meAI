@@ -150,6 +150,12 @@ class SkillSelector:
                 "vk api python",
                 "social media automation python",
             ],
+            "keyword-research": [
+                "semrush api python",
+                "ahrefs api python",
+                "keyword research tool python",
+                "serp api keyword data python",
+            ],
         }
 
     async def research_domain_specific(
