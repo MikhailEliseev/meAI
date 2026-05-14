@@ -22,6 +22,16 @@ logger = structlog.get_logger()
 
 
 @dataclass
+class TargetContext:
+    """Context of target file where code will be applied."""
+    is_async: bool
+    libraries: set[str]  # httpx, aiohttp, requests, urllib
+    error_style: str  # "raise" or "exit" or "return"
+    base_classes: list[str]  # ABC, BaseModel, etc.
+    imports: set[str]  # existing imports
+
+
+@dataclass
 class ApplicationResult:
     """Result of applying skill to codebase."""
 
@@ -48,6 +58,159 @@ class SkillApplier:
     def __init__(self, project_root: Path):
         self.project_root = project_root
         self.logger = logger.bind(component="skill_applier")
+
+    async def _analyze_target_context(self, target_path: Path) -> TargetContext:
+        """Analyze target file to understand context."""
+        if not target_path.exists():
+            return TargetContext(
+                is_async=False,
+                libraries=set(),
+                error_style="raise",
+                base_classes=[],
+                imports=set()
+            )
+
+        content = target_path.read_text()
+
+        # Detect async
+        is_async = "async def" in content or "await " in content
+
+        # Detect libraries
+        libraries = set()
+        if "import httpx" in content or "from httpx" in content:
+            libraries.add("httpx")
+        if "import aiohttp" in content or "from aiohttp" in content:
+            libraries.add("aiohttp")
+        if "import requests" in content or "from requests" in content:
+            libraries.add("requests")
+        if "import urllib" in content or "from urllib" in content:
+            libraries.add("urllib")
+
+        # Detect error style
+        error_style = "raise"
+        if "sys.exit(" in content:
+            error_style = "exit"
+        elif "return None" in content and "raise" not in content:
+            error_style = "return"
+
+        # Detect base classes
+        base_classes = []
+        for match in re.finditer(r"class \w+\(([^)]+)\)", content):
+            base_classes.extend(m.strip() for m in match.group(1).split(","))
+
+        # Detect imports
+        imports = set()
+        for match in re.finditer(r"^(?:from|import)\s+(\S+)", content, re.MULTILINE):
+            imports.add(match.group(1))
+
+        self.logger.info(
+            "target_context_analyzed",
+            path=str(target_path),
+            is_async=is_async,
+            libraries=list(libraries),
+            error_style=error_style,
+            base_classes=base_classes[:3] if base_classes else []
+        )
+
+        return TargetContext(
+            is_async=is_async,
+            libraries=libraries,
+            error_style=error_style,
+            base_classes=base_classes,
+            imports=imports
+        )
+
+    async def apply_with_validation(
+        self,
+        implementation: ExtractedImplementation,
+        target_path: Path | None = None,
+        subagent_name: str | None = None,
+    ) -> ApplicationResult:
+        """
+        Apply with context validation and adaptation.
+
+        Args:
+            implementation: Extracted implementation to apply
+            target_path: Target path in project (overrides suggested_path)
+            subagent_name: Name of subagent (for context)
+
+        Returns:
+            ApplicationResult with created/modified files
+        """
+        self.logger.info(
+            "applying_with_validation",
+            target_path=str(target_path) if target_path else None,
+            subagent=subagent_name,
+        )
+
+        result = ApplicationResult()
+
+        try:
+            # Determine target path
+            final_path = target_path or implementation.suggested_path
+            if not final_path:
+                result.error = "No target path specified"
+                return result
+
+            # Make path absolute relative to project root
+            if not final_path.is_absolute():
+                path_str = str(final_path)
+                project_name = self.project_root.name
+
+                if path_str.startswith(project_name + "/"):
+                    final_path = self.project_root.parent / final_path
+                else:
+                    final_path = self.project_root / final_path
+
+            # Step 1: Analyze target context
+            self.logger.info("step_1_analyze_context", target=str(final_path))
+            target_context = await self._analyze_target_context(final_path)
+
+            # Step 2: Check compatibility
+            self.logger.info("step_2_check_compatibility")
+            is_compatible, reason = self._check_code_compatibility(
+                implementation.code,
+                target_context
+            )
+
+            if not is_compatible:
+                self.logger.error(
+                    "code_incompatible",
+                    reason=reason,
+                    target=str(final_path)
+                )
+                result.error = f"Code incompatible: {reason}"
+                result.success = False
+                return result
+
+            # Step 3: Adapt code to context
+            self.logger.info("step_3_adapt_code")
+            adapted_code = self._adapt_to_context(
+                implementation.code,
+                target_context
+            )
+
+            # Step 4: Apply adapted code
+            self.logger.info("step_4_apply_code")
+            adapted_implementation = ExtractedImplementation(
+                code=adapted_code,
+                dependencies=implementation.dependencies,
+                suggested_path=implementation.suggested_path,
+                tests=implementation.tests,
+                documentation=implementation.documentation
+            )
+
+            return await self.apply(
+                adapted_implementation,
+                target_path=target_path,
+                subagent_name=subagent_name
+            )
+
+        except Exception as e:
+            self.logger.error("validation_failed", error=str(e))
+            result.error = str(e)
+            result.success = False
+            return result
 
     async def apply(
         self,
@@ -136,6 +299,90 @@ class SkillApplier:
             result.success = False
 
         return result
+
+    def _check_code_compatibility(
+        self,
+        code: str,
+        target_context: TargetContext
+    ) -> tuple[bool, str]:
+        """Check if code is compatible with target context."""
+
+        # Check async/sync compatibility
+        code_is_async = "async def" in code or "await " in code
+        if target_context.is_async and not code_is_async:
+            return False, "Target is async, code is sync"
+
+        # Check library compatibility
+        code_libraries = set()
+        if "httpx" in code:
+            code_libraries.add("httpx")
+        if "aiohttp" in code:
+            code_libraries.add("aiohttp")
+        if "requests" in code:
+            code_libraries.add("requests")
+        if "urllib" in code:
+            code_libraries.add("urllib")
+
+        # If code uses libraries, check if target uses compatible ones
+        if code_libraries and target_context.libraries:
+            if not code_libraries.intersection(target_context.libraries):
+                return False, f"Library mismatch: code uses {code_libraries}, target uses {target_context.libraries}"
+
+        # Check error handling compatibility
+        if "sys.exit(" in code and target_context.error_style == "raise":
+            return False, "Code uses sys.exit(), target uses raise"
+
+        return True, "Compatible"
+
+    def _adapt_to_context(
+        self,
+        code: str,
+        target_context: TargetContext
+    ) -> str:
+        """Adapt code to match target context."""
+
+        adapted = code
+
+        # Adapt async/sync
+        if target_context.is_async and "async def" not in code:
+            # Convert sync to async
+            adapted = adapted.replace("def ", "async def ")
+            # Add await to blocking calls (basic heuristic)
+            adapted = re.sub(
+                r"(\w+)\.(get|post|put|delete|request)\(",
+                r"await \1.\2(",
+                adapted
+            )
+
+        # Adapt libraries
+        if "urllib" in code and "httpx" in target_context.libraries:
+            # Replace urllib with httpx (basic patterns)
+            adapted = adapted.replace("urllib.request.urlopen", "httpx.AsyncClient().get")
+            adapted = adapted.replace("urllib.request.Request", "httpx.Request")
+            adapted = adapted.replace("import urllib", "import httpx")
+
+        # Adapt error handling
+        if "sys.exit(" in code and target_context.error_style == "raise":
+            # Replace sys.exit with raise
+            adapted = re.sub(
+                r"sys\.exit\((\d+)\)",
+                r"raise RuntimeError(f'Exit code: \1')",
+                adapted
+            )
+            adapted = re.sub(
+                r"sys\.exit\(\)",
+                r"raise RuntimeError('Operation failed')",
+                adapted
+            )
+
+        self.logger.info(
+            "code_adapted",
+            async_converted=target_context.is_async and "async def" not in code,
+            urllib_to_httpx="urllib" in code and "httpx" in target_context.libraries,
+            exit_to_raise="sys.exit(" in code and target_context.error_style == "raise"
+        )
+
+        return adapted
 
     async def _apply_code(
         self,
