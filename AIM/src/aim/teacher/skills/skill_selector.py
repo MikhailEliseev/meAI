@@ -9,6 +9,7 @@ Identifies:
 """
 
 import ast
+import os
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -530,6 +531,13 @@ class SkillSelector:
         self.logger.info("searching_github", query=query, max_results=max_results)
 
         try:
+            # Prepare headers with GitHub token if available
+            headers = {"Accept": "application/vnd.github.v3+json"}
+            github_token = os.getenv("GITHUB_TOKEN")
+            if github_token:
+                headers["Authorization"] = f"token {github_token}"
+                self.logger.debug("using_github_token", token_prefix=github_token[:10])
+
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     "https://api.github.com/search/repositories",
@@ -539,7 +547,7 @@ class SkillSelector:
                         "order": "desc",
                         "per_page": max_results,
                     },
-                    headers={"Accept": "application/vnd.github.v3+json"},
+                    headers=headers,
                     timeout=30.0,
                 )
 
