@@ -628,3 +628,82 @@ async def send_notification(
             "success": any(r.get("success") for r in results.values()),
             "channels": results,
         }
+
+# ==============================================================================
+# Added by Teacher Agent: report-generator
+# ==============================================================================
+
+from typing import Optional, List, Dict, Any
+import asyncio
+
+async def send_notification(
+        self,
+        user_id: int,
+        event_type: str,
+        data: Dict[str, Any],
+        channels: Optional[List[str]] = None,
+        force: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Send notification to user's configured channels.
+
+        Args:
+            user_id: User ID
+            event_type: Type of event
+            data: Event data
+            channels: Specific channels to use (None = use user preferences)
+            force: Skip rate limiting and preferences check
+
+        Returns:
+            Dict with results for each channel
+        """
+        if event_type not in self.VALID_EVENTS:
+            return {
+                "success": False,
+                "error": f"Invalid event type: {event_type}",
+            }
+
+        # Get user settings
+        settings = self._get_user_settings(user_id)
+        if not settings:
+            return {
+                "success": False,
+                "error": "User notification settings not found",
+            }
+
+        # Check if user wants this notification type
+        if not force and not self._should_notify(settings, event_type):
+            return {
+                "success": True,
+                "message": "Notification skipped (user preferences)",
+                "channels": {},
+            }
+
+        # Determine channels to use
+        if not channels:
+            channels = self._get_enabled_channels(settings)
+
+        if not channels:
+            return {
+                "success": True,
+                "message": "No channels configured",
+                "channels": {},
+            }
+
+        # Add timestamp to data
+        data["timestamp"] = datetime.now(timezone.utc).isoformat()
+
+        # Send to each channel
+        results = {}
+        for channel in channels:
+            try:
+                result = await self._send_to_channel(channel, settings, event_type, data, force)
+                results[channel] = result
+            except Exception as e:
+                logger.error(f"Failed to send {channel} notification: {e}")
+                results[channel] = {"success": False, "error": str(e)}
+
+        return {
+            "success": any(r.get("success") for r in results.values()),
+            "channels": results,
+        }
