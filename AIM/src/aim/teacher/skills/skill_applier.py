@@ -309,12 +309,10 @@ class SkillApplier:
     ) -> tuple[bool, str]:
         """Check if code is compatible with target context."""
 
-        # Check async/sync compatibility
-        code_is_async = "async def" in code or "await " in code
-        if target_context.is_async and not code_is_async:
-            return False, "Target is async, code is sync"
+        # REMOVED: async/sync check - _adapt_to_context() can convert sync to async
+        # We accept both sync and async code for async targets
 
-        # Check library compatibility
+        # Check library compatibility (soft check - _adapt_to_context() can adapt)
         code_libraries = set()
         if "httpx" in code:
             code_libraries.add("httpx")
@@ -325,14 +323,23 @@ class SkillApplier:
         if "urllib" in code:
             code_libraries.add("urllib")
 
-        # If code uses libraries, check if target uses compatible ones
+        # Soft library check - we can adapt urllib -> httpx, requests -> httpx
+        # Just log if libraries don't match
         if code_libraries and target_context.libraries:
             if not code_libraries.intersection(target_context.libraries):
-                return False, f"Library mismatch: code uses {code_libraries}, target uses {target_context.libraries}"
+                self.logger.debug(
+                    "library_mismatch_will_adapt",
+                    code_libraries=list(code_libraries),
+                    target_libraries=list(target_context.libraries)
+                )
 
-        # Check error handling compatibility
+        # Soft error handling check - we can adapt sys.exit -> raise
         if "sys.exit(" in code and target_context.error_style == "raise":
-            return False, "Code uses sys.exit(), target uses raise"
+            self.logger.debug(
+                "error_style_mismatch_will_adapt",
+                code_style="sys.exit",
+                target_style="raise"
+            )
 
         return True, "Compatible"
 
