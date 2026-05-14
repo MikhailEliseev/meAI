@@ -36,19 +36,21 @@ class AnalyticsMagister(BaseMagister):
 
     def __init__(
         self,
-        magister_id: str,
-        event_bus: EventBus | None = None,
+        magister_id: str = "analytics-magister",
+        database_url: str = "sqlite+aiosqlite:///./AIM/data/aim.db",
         vault_path: Path | None = None,
         data_path: Path | None = None,
+        event_bus: EventBus | None = None,
         vault: Any | None = None,
     ):
         """Initialize Analytics Magister
 
         Args:
             magister_id: Unique Magister ID
-            event_bus: Optional EventBus instance (for testing)
+            database_url: Database connection URL
             vault_path: Optional Path to Analytics Magister's Obsidian vault
             data_path: Optional Path to data directory
+            event_bus: Optional EventBus instance (for testing)
             vault: Optional ObsidianVault instance (for testing)
         """
         # Use defaults if not provided
@@ -57,25 +59,21 @@ class AnalyticsMagister(BaseMagister):
         if data_path is None:
             data_path = Path("./AIM/data/analytics")
 
-        # Initialize parent (only if event_bus provided)
-        if event_bus is not None:
-            super().__init__(
-                magister_id=magister_id,
-                name="Analytics Magister",
-                specialization="analytics",
-                event_bus=event_bus,
-                vault_path=vault_path
-            )
-        else:
-            # For testing without event_bus
-            self.magister_id = magister_id
-            self.name = "Analytics Magister"
-            self.specialization = "analytics"
-            self.vault_path = vault_path
+        # Initialize parent
+        super().__init__(
+            magister_id=magister_id,
+            database_url=database_url,
+            vault_path=str(vault_path),
+        )
 
         # Allow dependency injection for testing
+        if event_bus is not None:
+            self.event_bus = event_bus
         if vault is not None:
             self.vault = vault
+
+        # Store vault_path as Path for _log_to_vault
+        self.vault_path = Path(vault_path) if isinstance(vault_path, str) else vault_path
 
         self.data_path = data_path
         self.data_path.mkdir(parents=True, exist_ok=True)
@@ -233,8 +231,7 @@ class AnalyticsMagister(BaseMagister):
                 "report_type": report_type,
                 "file": str(report_file),
                 "recipients": recipients
-            },
-            priority=EventPriority.P1
+            }
         ))
 
         return {
@@ -316,8 +313,7 @@ class AnalyticsMagister(BaseMagister):
                 "subagent": subagent,
                 "task": task,
                 "timestamp": datetime.now().isoformat()
-            },
-            priority=EventPriority.P2
+            }
         ))
 
     async def _log_to_vault(self, message: str) -> None:
@@ -326,6 +322,9 @@ class AnalyticsMagister(BaseMagister):
         """
         log_file = self.vault_path / "wiki" / "log.md"
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Create directory structure if it doesn't exist
+        log_file.parent.mkdir(parents=True, exist_ok=True)
 
         with open(log_file, 'a', encoding='utf-8') as f:
             f.write(f"\n## [{timestamp}] {message}\n")
@@ -357,4 +356,56 @@ class AnalyticsMagister(BaseMagister):
             "data_sources_count": len(self.data_sources),
             "capabilities_count": len(self.get_capabilities()),
             "status": "active"
+        }
+
+    async def identify_subagents(self, action: str) -> List[str]:
+        """Identify which Subagents are needed for this action
+
+        Args:
+            action: Action to perform
+
+        Returns:
+            List of Subagent IDs
+        """
+        # Map actions to subagents
+        action_map = {
+            "collect_data": ["data_collector"],
+            "analyze_performance": ["performance_analyzer"],
+            "generate_report": ["data_collector", "performance_analyzer", "insights_generator"],
+            "get_insights": ["insights_generator"],
+        }
+        return action_map.get(action, [])
+
+    async def aggregate_results(
+        self,
+        subagent_results: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """Aggregate Subagent results into summary
+
+        Args:
+            subagent_results: List of Subagent results
+
+        Returns:
+            Aggregated result with summary, insights, issues
+        """
+        summary = {
+            "total_results": len(subagent_results),
+            "successful": sum(1 for r in subagent_results if r.get("status") == "success"),
+            "failed": sum(1 for r in subagent_results if r.get("status") == "failed"),
+        }
+
+        insights = []
+        issues = []
+
+        for result in subagent_results:
+            if result.get("insights"):
+                insights.extend(result["insights"])
+            if result.get("issues"):
+                issues.extend(result["issues"])
+
+        return {
+            "summary": summary,
+            "insights": insights,
+            "issues": issues,
+            "subagent_results": subagent_results,
         }
