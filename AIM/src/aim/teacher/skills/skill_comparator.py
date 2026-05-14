@@ -12,10 +12,14 @@ Ranks skills by total score and identifies best implementation.
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import structlog
 
 from AIM.src.aim.teacher.skills.skill_selector import Skill
+
+if TYPE_CHECKING:
+    from AIM.src.aim.teacher.skills.skill_applier import TargetContext
 
 logger = structlog.get_logger()
 
@@ -100,6 +104,100 @@ class SkillComparator:
             best_skill=best_skill,
             dimension_scores=all_dimension_scores,
         )
+
+    def _check_compatibility(
+        self,
+        skill: Skill,
+        target_context: "TargetContext"
+    ) -> tuple[bool, str]:
+        """Check if skill is compatible with target context."""
+
+        if not skill.code_example:
+            return True, "No code to check"
+
+        code = skill.code_example
+
+        # Check async/sync compatibility
+        skill_is_async = "async def" in code or "await " in code
+        if target_context.is_async and not skill_is_async:
+            return False, "Target is async, skill is sync"
+
+        # Check library compatibility
+        skill_libraries = set()
+        if "httpx" in code:
+            skill_libraries.add("httpx")
+        if "aiohttp" in code:
+            skill_libraries.add("aiohttp")
+        if "requests" in code:
+            skill_libraries.add("requests")
+        if "urllib" in code:
+            skill_libraries.add("urllib")
+
+        # If skill uses libraries and target has libraries, check compatibility
+        if skill_libraries and target_context.libraries:
+            if not skill_libraries.intersection(target_context.libraries):
+                return False, f"Library mismatch: skill uses {skill_libraries}, target uses {target_context.libraries}"
+
+        # Check error handling compatibility
+        if "sys.exit(" in code and target_context.error_style == "raise":
+            return False, "Skill uses sys.exit(), target uses raise"
+
+        return True, "Compatible"
+
+    async def compare_with_context(
+        self,
+        skills: list[Skill],
+        target_context: "TargetContext"
+    ) -> ComparisonResult:
+        """
+        Compare skills considering target context.
+
+        Filters out incompatible skills before comparison.
+
+        Args:
+            skills: List of skills to compare
+            target_context: Context of target file
+
+        Returns:
+            ComparisonResult with only compatible skills
+        """
+        if not skills:
+            self.logger.info("no_skills_to_compare")
+            return ComparisonResult()
+
+        # Filter compatible skills
+        compatible_skills = []
+        for skill in skills:
+            is_compatible, reason = self._check_compatibility(skill, target_context)
+            if is_compatible:
+                compatible_skills.append(skill)
+            else:
+                self.logger.info(
+                    "skill_filtered_incompatible",
+                    skill=skill.name,
+                    source=skill.source_repo,
+                    reason=reason
+                )
+
+        if not compatible_skills:
+            self.logger.warning(
+                "no_compatible_skills",
+                total_skills=len(skills),
+                target_async=target_context.is_async,
+                target_libraries=list(target_context.libraries),
+                target_error_style=target_context.error_style
+            )
+            return ComparisonResult()
+
+        self.logger.info(
+            "skills_filtered",
+            total=len(skills),
+            compatible=len(compatible_skills),
+            filtered_out=len(skills) - len(compatible_skills)
+        )
+
+        # Compare only compatible skills
+        return await self.compare(compatible_skills)
 
     def _score_all_dimensions(self, skill: Skill) -> dict[str, float]:
         """
