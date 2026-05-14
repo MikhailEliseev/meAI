@@ -1,0 +1,632 @@
+================================================================================
+🎓 Teaching all 10 P1 subagents...
+================================================================================
+
+
+[1/10] Teaching content-brief...
+--------------------------------------------------------------------------------
+2026-05-14 16:07:54 [info     ] teaching_start                 component=skill_teacher domain=content brief generation for SEO subagent=content-brief
+2026-05-14 16:07:54 [info     ] step_1_research_and_clone      component=skill_teacher
+2026-05-14 16:07:54 [info     ] research_and_clone_start       component=skill_selector domain=content brief generation for SEO subagent=content-brief
+2026-05-14 16:07:54 [info     ] domain_research_start          component=skill_selector domain=content brief generation for SEO subagent=content-brief
+2026-05-14 16:07:54 [info     ] searching_github               component=skill_selector max_results=5 query=content brief generator python
+2026-05-14 16:07:55 [info     ] github_search_complete         component=skill_selector repos_found=3
+2026-05-14 16:07:55 [info     ] domain_query_complete          component=skill_selector query=content brief generator python repos_found=3
+2026-05-14 16:07:55 [info     ] searching_github               component=skill_selector max_results=5 query=seo content brief python
+2026-05-14 16:07:55 [info     ] github_search_complete         component=skill_selector repos_found=3
+2026-05-14 16:07:55 [info     ] domain_query_complete          component=skill_selector query=seo content brief python repos_found=3
+2026-05-14 16:07:55 [info     ] searching_github               component=skill_selector max_results=5 query=content outline generator python
+2026-05-14 16:07:56 [info     ] github_search_complete         component=skill_selector repos_found=5
+2026-05-14 16:07:56 [info     ] domain_query_complete          component=skill_selector query=content outline generator python repos_found=5
+2026-05-14 16:07:56 [info     ] searching_github               component=skill_selector max_results=5 query=serp analysis content brief python
+2026-05-14 16:07:57 [info     ] github_search_complete         component=skill_selector repos_found=1
+2026-05-14 16:07:57 [info     ] domain_query_complete          component=skill_selector query=serp analysis content brief python repos_found=1
+2026-05-14 16:07:57 [info     ] searching_github               component=skill_selector max_results=5 query=competitor content analysis python
+2026-05-14 16:07:58 [info     ] github_search_complete         component=skill_selector repos_found=5
+2026-05-14 16:07:58 [info     ] domain_query_complete          component=skill_selector query=competitor content analysis python repos_found=5
+2026-05-14 16:07:58 [info     ] domain_research_complete       component=skill_selector queries_executed=5 subagent=content-brief total_repos=17
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/owkus-brief-generator url=https://github.com/owkusweb/owkus-brief-generator
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/mbb-ppt-generator url=https://github.com/albertojb/mbb-ppt-generator
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/auto-gen-ai url=https://github.com/nirjanadas/auto-gen-ai
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/claude-seo-skills url=https://github.com/YogeshKu7877/claude-seo-skills
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/agent-content-pipeline url=https://github.com/joelhinton-mktg-dev/agent-content-pipeline
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/owkus-brief-generator url=https://github.com/owkusweb/owkus-brief-generator
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/Automated-Course-Content-Generator url=https://github.com/pramodkoujalagi/Automated-Course-Content-Generator
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/seo-article-generator url=https://github.com/brightdata/seo-article-generator
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/AI_Content_Team url=https://github.com/edofransisco011/AI_Content_Team
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/Blog-Generator-Claude url=https://github.com/WonderingAboutAI/Blog-Generator-Claude
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/automated-course-generator url=https://github.com/yashdhudat/automated-course-generator
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/claude-seo-skills url=https://github.com/YogeshKu7877/claude-seo-skills
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/new-media-growth-agent url=https://github.com/AI-Sinored/new-media-growth-agent
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/Building-AI-Agents-with-CrewAI-using-Python url=https://github.com/fattakh/Building-AI-Agents-with-CrewAI-using-Python
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/MARA url=https://github.com/KEITH-GJINO/MARA
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/content-gen url=https://github.com/lokal0/content-gen
+2026-05-14 16:07:58 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/c2fo-strategy-tracker url=https://github.com/alanahstephens/c2fo-strategy-tracker
+2026-05-14 16:07:58 [info     ] research_and_clone_complete    component=skill_selector repos_cloned=15 subagent=content-brief total_repos_found=17
+2026-05-14 16:07:58 [info     ] step_2_extract_skills          component=skill_teacher repos=15
+2026-05-14 16:07:58 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/owkus-brief-generator subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] skills_extracted               component=skill_selector count=0
+2026-05-14 16:07:58 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/owkusweb/owkus-brief-generator skills_count=0
+2026-05-14 16:07:58 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/mbb-ppt-generator subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] skills_extracted               component=skill_selector count=0
+2026-05-14 16:07:58 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/albertojb/mbb-ppt-generator skills_count=0
+2026-05-14 16:07:58 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/auto-gen-ai subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] functions_extracted_from_file  component=skill_selector count=2 subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] skills_extracted               component=skill_selector count=2
+2026-05-14 16:07:58 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/nirjanadas/auto-gen-ai skills_count=2
+2026-05-14 16:07:58 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/claude-seo-skills subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] skills_extracted               component=skill_selector count=0
+2026-05-14 16:07:58 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/YogeshKu7877/claude-seo-skills skills_count=0
+2026-05-14 16:07:58 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/agent-content-pipeline subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] skills_extracted               component=skill_selector count=0
+2026-05-14 16:07:58 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/joelhinton-mktg-dev/agent-content-pipeline skills_count=0
+2026-05-14 16:07:58 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/Automated-Course-Content-Generator subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] skills_extracted               component=skill_selector count=0
+2026-05-14 16:07:58 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/pramodkoujalagi/Automated-Course-Content-Generator skills_count=0
+2026-05-14 16:07:58 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/seo-article-generator subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] functions_extracted_from_file  component=skill_selector count=16 subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] skills_extracted               component=skill_selector count=15
+2026-05-14 16:07:58 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/brightdata/seo-article-generator skills_count=15
+2026-05-14 16:07:58 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/AI_Content_Team subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] skills_extracted               component=skill_selector count=0
+2026-05-14 16:07:58 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/edofransisco011/AI_Content_Team skills_count=0
+2026-05-14 16:07:58 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/Blog-Generator-Claude subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] functions_extracted_from_file  component=skill_selector count=1 subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] functions_extracted_from_file  component=skill_selector count=1 subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] skills_extracted               component=skill_selector count=2
+2026-05-14 16:07:58 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/WonderingAboutAI/Blog-Generator-Claude skills_count=2
+2026-05-14 16:07:58 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/automated-course-generator subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] skills_extracted               component=skill_selector count=0
+2026-05-14 16:07:58 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/yashdhudat/automated-course-generator skills_count=0
+2026-05-14 16:07:58 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/new-media-growth-agent subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] functions_extracted_from_file  component=skill_selector count=1 subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] skills_extracted               component=skill_selector count=1
+2026-05-14 16:07:58 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/AI-Sinored/new-media-growth-agent skills_count=1
+2026-05-14 16:07:58 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/Building-AI-Agents-with-CrewAI-using-Python subagent_type=content-brief
+2026-05-14 16:07:58 [warning  ] file_parse_error               component=skill_selector error=invalid decimal literal (<unknown>, line 29) file_path=/Users/mikhaileliseev/temp/research-repos/Building-AI-Agents-with-CrewAI-using-Python/building_ai_agents_with_crewai_using_python.py
+2026-05-14 16:07:58 [info     ] skills_extracted               component=skill_selector count=0
+2026-05-14 16:07:58 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/fattakh/Building-AI-Agents-with-CrewAI-using-Python skills_count=0
+2026-05-14 16:07:58 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/MARA subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] functions_extracted_from_file  component=skill_selector count=8 subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] skills_extracted               component=skill_selector count=3
+2026-05-14 16:07:58 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/KEITH-GJINO/MARA skills_count=3
+2026-05-14 16:07:58 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/content-gen subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] functions_extracted_from_file  component=skill_selector count=4 subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] skills_extracted               component=skill_selector count=4
+2026-05-14 16:07:58 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/lokal0/content-gen skills_count=4
+2026-05-14 16:07:58 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/c2fo-strategy-tracker subagent_type=content-brief
+2026-05-14 16:07:58 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=content-brief
+2026-05-14 16:07:58 [info     ] skills_extracted               component=skill_selector count=0
+2026-05-14 16:07:58 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/alanahstephens/c2fo-strategy-tracker skills_count=0
+2026-05-14 16:07:58 [info     ] step_3_analyze_target_context  component=skill_teacher
+2026-05-14 16:07:58 [info     ] target_context_analyzed        base_classes=[] component=skill_applier error_style=return is_async=True libraries=[] path=/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/content/content_brief_generator.py
+2026-05-14 16:07:58 [info     ] step_4_compare_skills          component=skill_teacher total_skills=27
+2026-05-14 16:07:58 [info     ] skills_filtered                compatible=27 component=skill_comparator filtered_out=0 total=27
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=2047 combined_score=56.38 component=skill_comparator domain_score=50.0 quality_score=71.25 skill_name=Content-Brief - Generate source=/Users/mikhaileliseev/temp/research-repos/auto-gen-ai
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=605 combined_score=54.12 component=skill_comparator domain_score=50.0 quality_score=63.75 skill_name=Content-Brief - History source=/Users/mikhaileliseev/temp/research-repos/auto-gen-ai
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=5022 combined_score=54.5 component=skill_comparator domain_score=50.0 quality_score=65.0 skill_name=Content-Brief - Main source=/Users/mikhaileliseev/temp/research-repos/seo-article-generator
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=456 combined_score=52.62 component=skill_comparator domain_score=50.0 quality_score=58.75 skill_name=Content-Brief -   Init   source=/Users/mikhaileliseev/temp/research-repos/seo-article-generator
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=1887 combined_score=54.12 component=skill_comparator domain_score=50.0 quality_score=63.75 skill_name=Content-Brief - Scrape Serp source=/Users/mikhaileliseev/temp/research-repos/seo-article-generator
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=617 combined_score=54.88 component=skill_comparator domain_score=50.0 quality_score=66.25 skill_name=Content-Brief -  Parse Serp Results source=/Users/mikhaileliseev/temp/research-repos/seo-article-generator
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=1838 combined_score=54.12 component=skill_comparator domain_score=50.0 quality_score=63.75 skill_name=Content-Brief -  Parse Html Search Results source=/Users/mikhaileliseev/temp/research-repos/seo-article-generator
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=995 combined_score=53.38 component=skill_comparator domain_score=50.0 quality_score=61.25 skill_name=Content-Brief - Extract Serp Urls source=/Users/mikhaileliseev/temp/research-repos/seo-article-generator
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=2072 combined_score=55.62 component=skill_comparator domain_score=50.0 quality_score=68.75 skill_name=Content-Brief - Scrape Page Content source=/Users/mikhaileliseev/temp/research-repos/seo-article-generator
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=496 combined_score=53.38 component=skill_comparator domain_score=50.0 quality_score=61.25 skill_name=Content-Brief -  Extract Content From Result source=/Users/mikhaileliseev/temp/research-repos/seo-article-generator
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=809 combined_score=53.38 component=skill_comparator domain_score=50.0 quality_score=61.25 skill_name=Content-Brief -  Clean Content source=/Users/mikhaileliseev/temp/research-repos/seo-article-generator
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=868 combined_score=54.12 component=skill_comparator domain_score=50.0 quality_score=63.75 skill_name=Content-Brief - Process Content source=/Users/mikhaileliseev/temp/research-repos/seo-article-generator
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=603 combined_score=54.12 component=skill_comparator domain_score=50.0 quality_score=63.75 skill_name=Content-Brief - Identify Themes source=/Users/mikhaileliseev/temp/research-repos/seo-article-generator
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=555 combined_score=53.38 component=skill_comparator domain_score=50.0 quality_score=61.25 skill_name=Content-Brief - Generate Content Summary source=/Users/mikhaileliseev/temp/research-repos/seo-article-generator
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=991 combined_score=54.12 component=skill_comparator domain_score=50.0 quality_score=63.75 skill_name=Content-Brief - Generate Outline source=/Users/mikhaileliseev/temp/research-repos/seo-article-generator
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=903 combined_score=53.38 component=skill_comparator domain_score=50.0 quality_score=61.25 skill_name=Content-Brief - Generate Full Article source=/Users/mikhaileliseev/temp/research-repos/seo-article-generator
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=559 combined_score=53.38 component=skill_comparator domain_score=50.0 quality_score=61.25 skill_name=Content-Brief -  Format Themes For Prompt source=/Users/mikhaileliseev/temp/research-repos/seo-article-generator
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=3664 combined_score=54.88 component=skill_comparator domain_score=50.0 quality_score=66.25 skill_name=Content-Brief - Generate Blog Post source=/Users/mikhaileliseev/temp/research-repos/Blog-Generator-Claude
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=5258 combined_score=54.12 component=skill_comparator domain_score=50.0 quality_score=63.75 skill_name=Content-Brief - Generate Blog Post source=/Users/mikhaileliseev/temp/research-repos/Blog-Generator-Claude
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=910 combined_score=57.5 component=skill_comparator domain_score=50.0 quality_score=75.0 skill_name=Content-Brief - Json Completion source=/Users/mikhaileliseev/temp/research-repos/new-media-growth-agent
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=656 combined_score=55.62 component=skill_comparator domain_score=50.0 quality_score=68.75 skill_name=Content-Brief - Complete source=/Users/mikhaileliseev/temp/research-repos/MARA
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=524 combined_score=55.62 component=skill_comparator domain_score=50.0 quality_score=68.75 skill_name=Content-Brief - Complete Structured source=/Users/mikhaileliseev/temp/research-repos/MARA
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=377 combined_score=57.12 component=skill_comparator domain_score=50.0 quality_score=73.75 skill_name=Content-Brief -  Get Client source=/Users/mikhaileliseev/temp/research-repos/MARA
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=1840 combined_score=57.5 component=skill_comparator domain_score=50.0 quality_score=75.0 skill_name=Content-Brief -  Execute Tool source=/Users/mikhaileliseev/temp/research-repos/content-gen
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=3660 combined_score=55.25 component=skill_comparator domain_score=50.0 quality_score=67.5 skill_name=Content-Brief -  Build System Prompt source=/Users/mikhaileliseev/temp/research-repos/content-gen
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=1148 combined_score=55.62 component=skill_comparator domain_score=50.0 quality_score=68.75 skill_name=Content-Brief -  Structure Articles source=/Users/mikhaileliseev/temp/research-repos/content-gen
+2026-05-14 16:07:58 [info     ] skill_scored                   code_length=5427 combined_score=57.5 component=skill_comparator domain_score=50.0 quality_score=75.0 skill_name=Content-Brief - Run Content Agent source=/Users/mikhaileliseev/temp/research-repos/content-gen
+2026-05-14 16:07:58 [info     ] skills_compared                best_score=57.5 best_skill=Content-Brief - Json Completion component=skill_comparator total_skills=27
+2026-05-14 16:07:58 [info     ] best_skill_selected            component=skill_teacher quality_score=57.5 skill=Content-Brief - Json Completion source=/Users/mikhaileliseev/temp/research-repos/new-media-growth-agent
+2026-05-14 16:07:58 [info     ] step_5_extract_implementation  component=skill_teacher
+2026-05-14 16:07:58 [info     ] extracting_skill               component=skill_extractor skill=Content-Brief - Json Completion source=/Users/mikhaileliseev/temp/research-repos/new-media-growth-agent
+2026-05-14 16:07:58 [info     ] skill_extracted                component=skill_extractor dependencies_count=1 python_imports_count=1 skill=Content-Brief - Json Completion target_path=/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/content/content_brief_generator.py
+2026-05-14 16:07:58 [info     ] implementation_extracted       component=skill_teacher dependencies=1 target_path=/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/content/content_brief_generator.py
+2026-05-14 16:07:58 [info     ] step_6_apply_with_validation   component=skill_teacher
+2026-05-14 16:07:58 [info     ] applying_with_validation       component=skill_applier subagent=content-brief target_path=None
+2026-05-14 16:07:58 [info     ] step_1_analyze_context         component=skill_applier target=/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/content/content_brief_generator.py
+2026-05-14 16:07:58 [info     ] target_context_analyzed        base_classes=[] component=skill_applier error_style=return is_async=True libraries=[] path=/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/content/content_brief_generator.py
+2026-05-14 16:07:58 [info     ] step_2_check_compatibility     component=skill_applier
+2026-05-14 16:07:58 [info     ] step_3_adapt_code              component=skill_applier
+2026-05-14 16:07:58 [info     ] code_adapted                   async_converted=False component=skill_applier exit_to_raise=False urllib_to_httpx=False
+2026-05-14 16:07:58 [info     ] step_4_apply_code              component=skill_applier
+2026-05-14 16:07:58 [info     ] applying_implementation        component=skill_applier subagent=content-brief target_path=None
+2026-05-14 16:07:58 [info     ] no_new_imports_needed          all_imports_exist=True component=skill_applier
+2026-05-14 16:07:58 [info     ] code_applied                   component=skill_applier created=False imports_merged=1 path=/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/content/content_brief_generator.py
+2026-05-14 16:07:58 [info     ] test_generated                 component=skill_applier path=/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/tests/aim/subagents/content/test_content_brief_generator.py
+2026-05-14 16:07:58 [info     ] application_complete           component=skill_applier dependencies_added=0 files_created=0 files_modified=1 tests_created=1
+2026-05-14 16:07:58 [info     ] application_complete           component=skill_teacher dependencies_added=0 files_created=0 files_modified=1 tests_created=1
+2026-05-14 16:07:58 [info     ] step_7_test                    component=skill_teacher
+2026-05-14 16:08:00 [info     ] step_8_commit                  component=skill_teacher
+2026-05-14 16:08:00 [info     ] teaching_complete              best_skill=Content-Brief - Json Completion component=skill_teacher repos_cloned=15 skills_extracted=27 subagent=content-brief
+✅ SUCCESS: content-brief
+  Skills extracted: 27
+  Files modified: [PosixPath('/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/content/content_brief_generator.py')]
+  Tests: ✅ PASS
+
+[2/10] Teaching ad-copy...
+--------------------------------------------------------------------------------
+2026-05-14 16:08:00 [info     ] teaching_start                 component=skill_teacher domain=advertising copy generation subagent=ad-copy
+2026-05-14 16:08:00 [info     ] step_1_research_and_clone      component=skill_teacher
+2026-05-14 16:08:00 [info     ] research_and_clone_start       component=skill_selector domain=advertising copy generation subagent=ad-copy
+2026-05-14 16:08:00 [info     ] domain_research_start          component=skill_selector domain=advertising copy generation subagent=ad-copy
+2026-05-14 16:08:00 [info     ] searching_github               component=skill_selector max_results=5 query=ad copy generator python
+2026-05-14 16:08:01 [info     ] github_search_complete         component=skill_selector repos_found=5
+2026-05-14 16:08:01 [info     ] domain_query_complete          component=skill_selector query=ad copy generator python repos_found=5
+2026-05-14 16:08:01 [info     ] searching_github               component=skill_selector max_results=5 query=yandex direct api python
+2026-05-14 16:08:01 [warning  ] github_search_failed           component=skill_selector query=yandex direct api python status_code=403
+2026-05-14 16:08:01 [info     ] searching_github               component=skill_selector max_results=5 query=google ads api python
+2026-05-14 16:08:02 [warning  ] github_search_failed           component=skill_selector query=google ads api python status_code=403
+2026-05-14 16:08:02 [info     ] searching_github               component=skill_selector max_results=5 query=advertising copy automation python
+2026-05-14 16:08:02 [warning  ] github_search_failed           component=skill_selector query=advertising copy automation python status_code=403
+2026-05-14 16:08:02 [info     ] domain_research_complete       component=skill_selector queries_executed=4 subagent=ad-copy total_repos=5
+2026-05-14 16:08:02 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/google-ads-generator-with-ai-assistants url=https://github.com/romek-rozen/google-ads-generator-with-ai-assistants
+2026-05-14 16:08:02 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/InstAddr-Auto-Creation-GUI url=https://github.com/zakitucson/InstAddr-Auto-Creation-GUI
+2026-05-14 16:08:02 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/ai-marketing-generator url=https://github.com/Pranshu1503/ai-marketing-generator
+2026-05-14 16:08:02 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/advanced-python-otp-generator url=https://github.com/parth-ai12/advanced-python-otp-generator
+2026-05-14 16:08:02 [info     ] repo_already_cloned            component=skill_selector path=/Users/mikhaileliseev/temp/research-repos/adcraft url=https://github.com/rakibulmehedi/adcraft
+2026-05-14 16:08:02 [info     ] research_and_clone_complete    component=skill_selector repos_cloned=5 subagent=ad-copy total_repos_found=5
+2026-05-14 16:08:02 [info     ] step_2_extract_skills          component=skill_teacher repos=5
+2026-05-14 16:08:02 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/google-ads-generator-with-ai-assistants subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [info     ] skills_extracted               component=skill_selector count=0
+2026-05-14 16:08:02 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/romek-rozen/google-ads-generator-with-ai-assistants skills_count=0
+2026-05-14 16:08:02 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/InstAddr-Auto-Creation-GUI subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [info     ] skills_extracted               component=skill_selector count=0
+2026-05-14 16:08:02 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/zakitucson/InstAddr-Auto-Creation-GUI skills_count=0
+2026-05-14 16:08:02 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/ai-marketing-generator subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [info     ] skills_extracted               component=skill_selector count=0
+2026-05-14 16:08:02 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/Pranshu1503/ai-marketing-generator skills_count=0
+2026-05-14 16:08:02 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/advanced-python-otp-generator subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [info     ] skills_extracted               component=skill_selector count=0
+2026-05-14 16:08:02 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/parth-ai12/advanced-python-otp-generator skills_count=0
+2026-05-14 16:08:02 [info     ] extracting_skills              component=skill_selector repo_path=/Users/mikhaileliseev/temp/research-repos/adcraft subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [info     ] functions_extracted_from_file  component=skill_selector count=3 subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [info     ] functions_extracted_from_file  component=skill_selector count=2 subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [debug    ] detect_patterns_called         component=skill_selector has_subagent_type=True in_signatures=True subagent_type=ad-copy
+2026-05-14 16:08:02 [info     ] skills_extracted               component=skill_selector count=5
+2026-05-14 16:08:02 [info     ] skills_extracted_from_repo     component=skill_teacher repo=https://github.com/rakibulmehedi/adcraft skills_count=5
+2026-05-14 16:08:02 [info     ] step_3_analyze_target_context  component=skill_teacher
+2026-05-14 16:08:02 [info     ] target_context_analyzed        base_classes=[] component=skill_applier error_style=raise is_async=True libraries=[] path=/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/ads/ad_copy_generator.py
+2026-05-14 16:08:02 [info     ] step_4_compare_skills          component=skill_teacher total_skills=5
+2026-05-14 16:08:02 [info     ] skills_filtered                compatible=5 component=skill_comparator filtered_out=0 total=5
+2026-05-14 16:08:02 [info     ] skill_scored                   code_length=579 combined_score=54.5 component=skill_comparator domain_score=50.0 quality_score=65.0 skill_name=Ad-Copy - Build Ad Copy Chain source=/Users/mikhaileliseev/temp/research-repos/adcraft
+2026-05-14 16:08:02 [info     ] skill_scored                   code_length=877 combined_score=54.5 component=skill_comparator domain_score=50.0 quality_score=65.0 skill_name=Ad-Copy - Format Chain Input source=/Users/mikhaileliseev/temp/research-repos/adcraft
+2026-05-14 16:08:02 [info     ] skill_scored                   code_length=722 combined_score=59.0 component=skill_comparator domain_score=50.0 quality_score=80.0 skill_name=Ad-Copy - Generate Ad Copy source=/Users/mikhaileliseev/temp/research-repos/adcraft
+2026-05-14 16:08:02 [info     ] skill_scored                   code_length=586 combined_score=54.5 component=skill_comparator domain_score=50.0 quality_score=65.0 skill_name=Ad-Copy - Build Hashtag Chain source=/Users/mikhaileliseev/temp/research-repos/adcraft
+2026-05-14 16:08:02 [info     ] skill_scored                   code_length=1078 combined_score=59.75 component=skill_comparator domain_score=50.0 quality_score=82.5 skill_name=Ad-Copy - Generate Hashtags source=/Users/mikhaileliseev/temp/research-repos/adcraft
+2026-05-14 16:08:02 [info     ] skills_compared                best_score=59.75 best_skill=Ad-Copy - Generate Hashtags component=skill_comparator total_skills=5
+2026-05-14 16:08:02 [info     ] best_skill_selected            component=skill_teacher quality_score=59.75 skill=Ad-Copy - Generate Hashtags source=/Users/mikhaileliseev/temp/research-repos/adcraft
+2026-05-14 16:08:02 [info     ] step_5_extract_implementation  component=skill_teacher
+2026-05-14 16:08:02 [info     ] extracting_skill               component=skill_extractor skill=Ad-Copy - Generate Hashtags source=/Users/mikhaileliseev/temp/research-repos/adcraft
+2026-05-14 16:08:02 [info     ] skill_extracted                component=skill_extractor dependencies_count=0 python_imports_count=0 skill=Ad-Copy - Generate Hashtags target_path=/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/ads/ad_copy_generator.py
+2026-05-14 16:08:02 [info     ] implementation_extracted       component=skill_teacher dependencies=0 target_path=/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/ads/ad_copy_generator.py
+2026-05-14 16:08:02 [info     ] step_6_apply_with_validation   component=skill_teacher
+2026-05-14 16:08:02 [info     ] applying_with_validation       component=skill_applier subagent=ad-copy target_path=None
+2026-05-14 16:08:02 [info     ] step_1_analyze_context         component=skill_applier target=/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/ads/ad_copy_generator.py
+2026-05-14 16:08:02 [info     ] target_context_analyzed        base_classes=[] component=skill_applier error_style=raise is_async=True libraries=[] path=/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/ads/ad_copy_generator.py
+2026-05-14 16:08:02 [info     ] step_2_check_compatibility     component=skill_applier
+2026-05-14 16:08:02 [info     ] step_3_adapt_code              component=skill_applier
+2026-05-14 16:08:02 [info     ] code_adapted                   async_converted=False component=skill_applier exit_to_raise=False urllib_to_httpx=False
+2026-05-14 16:08:02 [info     ] step_4_apply_code              component=skill_applier
+2026-05-14 16:08:02 [info     ] applying_implementation        component=skill_applier subagent=ad-copy target_path=None
+2026-05-14 16:08:02 [info     ] code_applied                   component=skill_applier created=False imports_merged=0 path=/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/ads/ad_copy_generator.py
+2026-05-14 16:08:02 [info     ] test_generated                 component=skill_applier path=/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/tests/aim/subagents/ads/test_ad_copy_generator.py
+2026-05-14 16:08:02 [info     ] application_complete           component=skill_applier dependencies_added=0 files_created=0 files_modified=1 tests_created=1
+2026-05-14 16:08:02 [info     ] application_complete           component=skill_teacher dependencies_added=0 files_created=0 files_modified=1 tests_created=1
+2026-05-14 16:08:02 [info     ] step_7_test                    component=skill_teacher
+2026-05-14 16:08:03 [error    ] tests_failed                   component=skill_teacher failures=['pytest failed']
+❌ FAILED: ad-copy
+  Skills extracted: 5
+  Files modified: [PosixPath('/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/ads/ad_copy_generator.py')]
+  Tests: ❌ FAIL
+
+[3/10] Teaching traffic-analyzer...
+--------------------------------------------------------------------------------
+2026-05-14 16:08:03 [info     ] teaching_start                 component=skill_teacher domain=web traffic analysis subagent=traffic-analyzer
+2026-05-14 16:08:03 [info     ] step_1_research_and_clone      component=skill_teacher
+2026-05-14 16:08:03 [info     ] research_and_clone_start       component=skill_selector domain=web traffic analysis subagent=traffic-analyzer
+2026-05-14 16:08:03 [info     ] domain_research_start          component=skill_selector domain=web traffic analysis subagent=traffic-analyzer
+2026-05-14 16:08:03 [info     ] searching_github               component=skill_selector max_results=5 query=google analytics api python
+2026-05-14 16:08:03 [warning  ] github_search_failed           component=skill_selector query=google analytics api python status_code=403
+2026-05-14 16:08:03 [info     ] searching_github               component=skill_selector max_results=5 query=yandex metrika api python
+2026-05-14 16:08:04 [warning  ] github_search_failed           component=skill_selector query=yandex metrika api python status_code=403
+2026-05-14 16:08:04 [info     ] searching_github               component=skill_selector max_results=5 query=web traffic analysis python
+2026-05-14 16:08:04 [warning  ] github_search_failed           component=skill_selector query=web traffic analysis python status_code=403
+2026-05-14 16:08:04 [info     ] searching_github               component=skill_selector max_results=5 query=analytics dashboard python
+2026-05-14 16:08:04 [warning  ] github_search_failed           component=skill_selector query=analytics dashboard python status_code=403
+2026-05-14 16:08:04 [info     ] domain_research_complete       component=skill_selector queries_executed=4 subagent=traffic-analyzer total_repos=0
+2026-05-14 16:08:04 [info     ] research_and_clone_complete    component=skill_selector repos_cloned=0 subagent=traffic-analyzer total_repos_found=0
+2026-05-14 16:08:04 [warning  ] no_repos_found                 component=skill_teacher
+❌ FAILED: traffic-analyzer
+  Skills extracted: 0
+  Files modified: []
+  Tests: ⚠️  NOT RUN
+
+[4/10] Teaching conversion-tracker...
+--------------------------------------------------------------------------------
+2026-05-14 16:08:04 [info     ] teaching_start                 component=skill_teacher domain=conversion tracking and optimization subagent=conversion-tracker
+2026-05-14 16:08:04 [info     ] step_1_research_and_clone      component=skill_teacher
+2026-05-14 16:08:04 [info     ] research_and_clone_start       component=skill_selector domain=conversion tracking and optimization subagent=conversion-tracker
+2026-05-14 16:08:04 [info     ] domain_research_start          component=skill_selector domain=conversion tracking and optimization subagent=conversion-tracker
+2026-05-14 16:08:04 [info     ] searching_github               component=skill_selector max_results=5 query=conversion tracking python
+2026-05-14 16:08:05 [warning  ] github_search_failed           component=skill_selector query=conversion tracking python status_code=403
+2026-05-14 16:08:05 [info     ] searching_github               component=skill_selector max_results=5 query=goal tracking analytics python
+2026-05-14 16:08:05 [warning  ] github_search_failed           component=skill_selector query=goal tracking analytics python status_code=403
+2026-05-14 16:08:05 [info     ] searching_github               component=skill_selector max_results=5 query=funnel analysis python
+2026-05-14 16:08:06 [warning  ] github_search_failed           component=skill_selector query=funnel analysis python status_code=403
+2026-05-14 16:08:06 [info     ] searching_github               component=skill_selector max_results=5 query=event tracking python
+2026-05-14 16:08:06 [warning  ] github_search_failed           component=skill_selector query=event tracking python status_code=403
+2026-05-14 16:08:06 [info     ] domain_research_complete       component=skill_selector queries_executed=4 subagent=conversion-tracker total_repos=0
+2026-05-14 16:08:06 [info     ] research_and_clone_complete    component=skill_selector repos_cloned=0 subagent=conversion-tracker total_repos_found=0
+2026-05-14 16:08:06 [warning  ] no_repos_found                 component=skill_teacher
+❌ FAILED: conversion-tracker
+  Skills extracted: 0
+  Files modified: []
+  Tests: ⚠️  NOT RUN
+
+[5/10] Teaching schema-generator...
+--------------------------------------------------------------------------------
+2026-05-14 16:08:06 [info     ] teaching_start                 component=skill_teacher domain=schema markup generation subagent=schema-generator
+2026-05-14 16:08:06 [info     ] step_1_research_and_clone      component=skill_teacher
+2026-05-14 16:08:06 [info     ] research_and_clone_start       component=skill_selector domain=schema markup generation subagent=schema-generator
+2026-05-14 16:08:06 [info     ] domain_research_start          component=skill_selector domain=schema markup generation subagent=schema-generator
+2026-05-14 16:08:06 [info     ] searching_github               component=skill_selector max_results=5 query=schema markup generator python
+2026-05-14 16:08:06 [warning  ] github_search_failed           component=skill_selector query=schema markup generator python status_code=403
+2026-05-14 16:08:06 [info     ] searching_github               component=skill_selector max_results=5 query=json-ld generator python
+2026-05-14 16:08:07 [warning  ] github_search_failed           component=skill_selector query=json-ld generator python status_code=403
+2026-05-14 16:08:07 [info     ] searching_github               component=skill_selector max_results=5 query=structured data python
+2026-05-14 16:08:07 [warning  ] github_search_failed           component=skill_selector query=structured data python status_code=403
+2026-05-14 16:08:07 [info     ] searching_github               component=skill_selector max_results=5 query=seo schema python
+2026-05-14 16:08:08 [warning  ] github_search_failed           component=skill_selector query=seo schema python status_code=403
+2026-05-14 16:08:08 [info     ] domain_research_complete       component=skill_selector queries_executed=4 subagent=schema-generator total_repos=0
+2026-05-14 16:08:08 [info     ] research_and_clone_complete    component=skill_selector repos_cloned=0 subagent=schema-generator total_repos_found=0
+2026-05-14 16:08:08 [warning  ] no_repos_found                 component=skill_teacher
+❌ FAILED: schema-generator
+  Skills extracted: 0
+  Files modified: []
+  Tests: ⚠️  NOT RUN
+
+[6/10] Teaching quality-checker...
+--------------------------------------------------------------------------------
+2026-05-14 16:08:08 [info     ] teaching_start                 component=skill_teacher domain=content quality checking subagent=quality-checker
+2026-05-14 16:08:08 [info     ] step_1_research_and_clone      component=skill_teacher
+2026-05-14 16:08:08 [info     ] research_and_clone_start       component=skill_selector domain=content quality checking subagent=quality-checker
+2026-05-14 16:08:08 [info     ] domain_research_start          component=skill_selector domain=content quality checking subagent=quality-checker
+2026-05-14 16:08:08 [info     ] searching_github               component=skill_selector max_results=5 query=content quality checker python
+2026-05-14 16:08:08 [warning  ] github_search_failed           component=skill_selector query=content quality checker python status_code=403
+2026-05-14 16:08:08 [info     ] searching_github               component=skill_selector max_results=5 query=readability analysis python
+2026-05-14 16:08:08 [warning  ] github_search_failed           component=skill_selector query=readability analysis python status_code=403
+2026-05-14 16:08:08 [info     ] searching_github               component=skill_selector max_results=5 query=grammar checker python
+2026-05-14 16:08:09 [warning  ] github_search_failed           component=skill_selector query=grammar checker python status_code=403
+2026-05-14 16:08:09 [info     ] searching_github               component=skill_selector max_results=5 query=text quality metrics python
+2026-05-14 16:08:09 [warning  ] github_search_failed           component=skill_selector query=text quality metrics python status_code=403
+2026-05-14 16:08:09 [info     ] domain_research_complete       component=skill_selector queries_executed=4 subagent=quality-checker total_repos=0
+2026-05-14 16:08:09 [info     ] research_and_clone_complete    component=skill_selector repos_cloned=0 subagent=quality-checker total_repos_found=0
+2026-05-14 16:08:09 [warning  ] no_repos_found                 component=skill_teacher
+❌ FAILED: quality-checker
+  Skills extracted: 0
+  Files modified: []
+  Tests: ⚠️  NOT RUN
+
+[7/10] Teaching landing-page...
+--------------------------------------------------------------------------------
+2026-05-14 16:08:09 [info     ] teaching_start                 component=skill_teacher domain=landing page analysis subagent=landing-page
+2026-05-14 16:08:09 [info     ] step_1_research_and_clone      component=skill_teacher
+2026-05-14 16:08:09 [info     ] research_and_clone_start       component=skill_selector domain=landing page analysis subagent=landing-page
+2026-05-14 16:08:09 [info     ] domain_research_start          component=skill_selector domain=landing page analysis subagent=landing-page
+2026-05-14 16:08:09 [info     ] searching_github               component=skill_selector max_results=5 query=landing page analyzer python
+2026-05-14 16:08:09 [warning  ] github_search_failed           component=skill_selector query=landing page analyzer python status_code=403
+2026-05-14 16:08:09 [info     ] searching_github               component=skill_selector max_results=5 query=page performance analysis python
+2026-05-14 16:08:10 [warning  ] github_search_failed           component=skill_selector query=page performance analysis python status_code=403
+2026-05-14 16:08:10 [info     ] searching_github               component=skill_selector max_results=5 query=conversion optimization python
+2026-05-14 16:08:10 [warning  ] github_search_failed           component=skill_selector query=conversion optimization python status_code=403
+2026-05-14 16:08:10 [info     ] searching_github               component=skill_selector max_results=5 query=a/b testing python
+2026-05-14 16:08:11 [warning  ] github_search_failed           component=skill_selector query=a/b testing python status_code=403
+2026-05-14 16:08:11 [info     ] domain_research_complete       component=skill_selector queries_executed=4 subagent=landing-page total_repos=0
+2026-05-14 16:08:11 [info     ] research_and_clone_complete    component=skill_selector repos_cloned=0 subagent=landing-page total_repos_found=0
+2026-05-14 16:08:11 [warning  ] no_repos_found                 component=skill_teacher
+❌ FAILED: landing-page
+  Skills extracted: 0
+  Files modified: []
+  Tests: ⚠️  NOT RUN
+
+[8/10] Teaching bid-optimizer...
+--------------------------------------------------------------------------------
+2026-05-14 16:08:11 [info     ] teaching_start                 component=skill_teacher domain=bid optimization for ads subagent=bid-optimizer
+2026-05-14 16:08:11 [info     ] step_1_research_and_clone      component=skill_teacher
+2026-05-14 16:08:11 [info     ] research_and_clone_start       component=skill_selector domain=bid optimization for ads subagent=bid-optimizer
+2026-05-14 16:08:11 [info     ] domain_research_start          component=skill_selector domain=bid optimization for ads subagent=bid-optimizer
+2026-05-14 16:08:11 [info     ] searching_github               component=skill_selector max_results=5 query=bid optimization python
+2026-05-14 16:08:11 [warning  ] github_search_failed           component=skill_selector query=bid optimization python status_code=403
+2026-05-14 16:08:11 [info     ] searching_github               component=skill_selector max_results=5 query=ppc automation python
+2026-05-14 16:08:11 [warning  ] github_search_failed           component=skill_selector query=ppc automation python status_code=403
+2026-05-14 16:08:11 [info     ] searching_github               component=skill_selector max_results=5 query=advertising budget optimization python
+2026-05-14 16:08:12 [warning  ] github_search_failed           component=skill_selector query=advertising budget optimization python status_code=403
+2026-05-14 16:08:12 [info     ] searching_github               component=skill_selector max_results=5 query=smart bidding python
+2026-05-14 16:08:12 [warning  ] github_search_failed           component=skill_selector query=smart bidding python status_code=403
+2026-05-14 16:08:12 [info     ] domain_research_complete       component=skill_selector queries_executed=4 subagent=bid-optimizer total_repos=0
+2026-05-14 16:08:12 [info     ] research_and_clone_complete    component=skill_selector repos_cloned=0 subagent=bid-optimizer total_repos_found=0
+2026-05-14 16:08:12 [warning  ] no_repos_found                 component=skill_teacher
+❌ FAILED: bid-optimizer
+  Skills extracted: 0
+  Files modified: []
+  Tests: ⚠️  NOT RUN
+
+[9/10] Teaching report-generator...
+--------------------------------------------------------------------------------
+2026-05-14 16:08:12 [info     ] teaching_start                 component=skill_teacher domain=analytics report generation subagent=report-generator
+2026-05-14 16:08:12 [info     ] step_1_research_and_clone      component=skill_teacher
+2026-05-14 16:08:12 [info     ] research_and_clone_start       component=skill_selector domain=analytics report generation subagent=report-generator
+2026-05-14 16:08:12 [info     ] domain_research_start          component=skill_selector domain=analytics report generation subagent=report-generator
+2026-05-14 16:08:12 [info     ] searching_github               component=skill_selector max_results=5 query=analytics report generator python
+2026-05-14 16:08:13 [warning  ] github_search_failed           component=skill_selector query=analytics report generator python status_code=403
+2026-05-14 16:08:13 [info     ] searching_github               component=skill_selector max_results=5 query=data visualization python
+2026-05-14 16:08:13 [warning  ] github_search_failed           component=skill_selector query=data visualization python status_code=403
+2026-05-14 16:08:13 [info     ] searching_github               component=skill_selector max_results=5 query=automated reporting python
+2026-05-14 16:08:13 [warning  ] github_search_failed           component=skill_selector query=automated reporting python status_code=403
+2026-05-14 16:08:13 [info     ] searching_github               component=skill_selector max_results=5 query=dashboard generator python
+2026-05-14 16:08:14 [warning  ] github_search_failed           component=skill_selector query=dashboard generator python status_code=403
+2026-05-14 16:08:14 [info     ] domain_research_complete       component=skill_selector queries_executed=4 subagent=report-generator total_repos=0
+2026-05-14 16:08:14 [info     ] research_and_clone_complete    component=skill_selector repos_cloned=0 subagent=report-generator total_repos_found=0
+2026-05-14 16:08:14 [warning  ] no_repos_found                 component=skill_teacher
+❌ FAILED: report-generator
+  Skills extracted: 0
+  Files modified: []
+  Tests: ⚠️  NOT RUN
+
+[10/10] Teaching calendar-manager...
+--------------------------------------------------------------------------------
+2026-05-14 16:08:14 [info     ] teaching_start                 component=skill_teacher domain=content calendar management subagent=calendar-manager
+2026-05-14 16:08:14 [info     ] step_1_research_and_clone      component=skill_teacher
+2026-05-14 16:08:14 [info     ] research_and_clone_start       component=skill_selector domain=content calendar management subagent=calendar-manager
+2026-05-14 16:08:14 [info     ] domain_research_start          component=skill_selector domain=content calendar management subagent=calendar-manager
+2026-05-14 16:08:14 [info     ] searching_github               component=skill_selector max_results=5 query=content calendar python
+2026-05-14 16:08:14 [warning  ] github_search_failed           component=skill_selector query=content calendar python status_code=403
+2026-05-14 16:08:14 [info     ] searching_github               component=skill_selector max_results=5 query=editorial calendar python
+2026-05-14 16:08:14 [warning  ] github_search_failed           component=skill_selector query=editorial calendar python status_code=403
+2026-05-14 16:08:14 [info     ] searching_github               component=skill_selector max_results=5 query=scheduling automation python
+2026-05-14 16:08:15 [warning  ] github_search_failed           component=skill_selector query=scheduling automation python status_code=403
+2026-05-14 16:08:15 [info     ] searching_github               component=skill_selector max_results=5 query=publication planning python
+2026-05-14 16:08:15 [warning  ] github_search_failed           component=skill_selector query=publication planning python status_code=403
+2026-05-14 16:08:15 [info     ] domain_research_complete       component=skill_selector queries_executed=4 subagent=calendar-manager total_repos=0
+2026-05-14 16:08:15 [info     ] research_and_clone_complete    component=skill_selector repos_cloned=0 subagent=calendar-manager total_repos_found=0
+2026-05-14 16:08:15 [warning  ] no_repos_found                 component=skill_teacher
+❌ FAILED: calendar-manager
+  Skills extracted: 0
+  Files modified: []
+  Tests: ⚠️  NOT RUN
+
+================================================================================
+📊 FINAL REPORT
+================================================================================
+
+Total subagents: 10
+✅ Successful: 1
+❌ Failed: 9
+⚠️  Errors: 0
+
+Detailed Results:
+--------------------------------------------------------------------------------
+✅ content-brief:
+   Skills: 27
+   Files modified: [PosixPath('/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/content/content_brief_generator.py')]
+   Tests: PASS
+   Best skill: Content-Brief - Json Completion
+❌ ad-copy:
+   Skills: 5
+   Files modified: [PosixPath('/Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/src/aim/subagents/ads/ad_copy_generator.py')]
+   Tests: FAIL
+   Best skill: Ad-Copy - Generate Hashtags
+❌ traffic-analyzer:
+   Skills: 0
+   Files modified: []
+   Tests: NOT RUN
+❌ conversion-tracker:
+   Skills: 0
+   Files modified: []
+   Tests: NOT RUN
+❌ schema-generator:
+   Skills: 0
+   Files modified: []
+   Tests: NOT RUN
+❌ quality-checker:
+   Skills: 0
+   Files modified: []
+   Tests: NOT RUN
+❌ landing-page:
+   Skills: 0
+   Files modified: []
+   Tests: NOT RUN
+❌ bid-optimizer:
+   Skills: 0
+   Files modified: []
+   Tests: NOT RUN
+❌ report-generator:
+   Skills: 0
+   Files modified: []
+   Tests: NOT RUN
+❌ calendar-manager:
+   Skills: 0
+   Files modified: []
+   Tests: NOT RUN
+
+================================================================================
+Teaching complete: 1/10 successful
+================================================================================

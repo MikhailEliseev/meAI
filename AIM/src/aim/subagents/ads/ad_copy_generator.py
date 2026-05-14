@@ -511,3 +511,148 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+# ==============================================================================
+# Added by Teacher Agent: ad-copy
+# ==============================================================================
+
+import asyncio
+
+async def generate_hashtags(
+    product: str,
+    description: str,
+    target_audience: str,
+    platform: str,
+    tone: str,
+    llm: ChatOpenAI | None = None,
+) -> list[str]:
+    """
+    Generate hashtags for the given platform.
+
+    Returns empty list for platforms that don't use hashtags (google, facebook).
+    """
+    spec = get_spec(platform)
+
+    # Platforms that don't use hashtags
+    if spec.hashtag_max == 0:
+        return []
+
+    # Use midpoint of allowed range as target count
+    target_count = (spec.hashtag_min + spec.hashtag_max) // 2
+    target_count = max(target_count, spec.hashtag_min)
+
+    chain = build_hashtag_chain(llm)
+    result = await chain.ainvoke(
+        {
+            "product": product,
+            "description": description,
+            "target_audience": target_audience,
+            "platform_name": spec.name,
+            "tone": tone,
+            "hashtag_count": target_count,
+        }
+    )
+
+    hashtags = result.get("hashtags", [])
+
+    # Enforce platform limits
+    hashtags = hashtags[: spec.hashtag_max]
+
+    return hashtags
+
+# ==============================================================================
+# Added by Teacher Agent: ad-copy
+# ==============================================================================
+
+import asyncio
+
+async def generate_hashtags(
+    product: str,
+    description: str,
+    target_audience: str,
+    platform: str,
+    tone: str,
+    llm: ChatOpenAI | None = None,
+) -> list[str]:
+    """
+    Generate hashtags for the given platform.
+
+    Returns empty list for platforms that don't use hashtags (google, facebook).
+    """
+    spec = get_spec(platform)
+
+    # Platforms that don't use hashtags
+    if spec.hashtag_max == 0:
+        return []
+
+    # Use midpoint of allowed range as target count
+    target_count = (spec.hashtag_min + spec.hashtag_max) // 2
+    target_count = max(target_count, spec.hashtag_min)
+
+    chain = build_hashtag_chain(llm)
+    result = await chain.ainvoke(
+        {
+            "product": product,
+            "description": description,
+            "target_audience": target_audience,
+            "platform_name": spec.name,
+            "tone": tone,
+            "hashtag_count": target_count,
+        }
+    )
+
+    hashtags = result.get("hashtags", [])
+
+    # Enforce platform limits
+    hashtags = hashtags[: spec.hashtag_max]
+
+    return hashtags
+
+# ==============================================================================
+# Added by Teacher Agent: ad-copy
+# ==============================================================================
+
+import asyncio
+
+async def generate_hashtags(
+    product: str,
+    description: str,
+    target_audience: str,
+    platform: str,
+    tone: str,
+    llm: ChatOpenAI | None = None,
+) -> list[str]:
+    """
+    Generate hashtags for the given platform.
+
+    Returns empty list for platforms that don't use hashtags (google, facebook).
+    """
+    spec = get_spec(platform)
+
+    # Platforms that don't use hashtags
+    if spec.hashtag_max == 0:
+        return []
+
+    # Use midpoint of allowed range as target count
+    target_count = (spec.hashtag_min + spec.hashtag_max) // 2
+    target_count = max(target_count, spec.hashtag_min)
+
+    chain = build_hashtag_chain(llm)
+    result = await chain.ainvoke(
+        {
+            "product": product,
+            "description": description,
+            "target_audience": target_audience,
+            "platform_name": spec.name,
+            "tone": tone,
+            "hashtag_count": target_count,
+        }
+    )
+
+    hashtags = result.get("hashtags", [])
+
+    # Enforce platform limits
+    hashtags = hashtags[: spec.hashtag_max]
+
+    return hashtags
