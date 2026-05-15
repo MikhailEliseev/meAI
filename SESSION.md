@@ -50,9 +50,44 @@
 - `AIM/src/aim/subagents/api_clients/semrush_client.py` (280 lines, new)
 - `AIM/src/aim/subagents/api_clients/web_scraper.py` (300 lines, new)
 - `AIM/src/aim/subagents/api_clients/__init__.py` (15 lines, new)
+- `AIM/src/aim/subagents/seo/orchestrator/seo_orchestrator.py` (385 lines, +80 new)
 - `AIM/tests/subagents/seo/test_ci_research_agent.py` (523 lines, unchanged)
+- `AIM/tests/subagents/seo/test_seo_orchestrator_ci.py` (200 lines, new)
 
-**Время:** ~40 минут (реализация 15 методов + 3 API clients)
+**Время:** ~40 минут (реализация 15 методов + 3 API clients) + ~15 минут (интеграция с SEO Orchestrator)
+
+---
+
+### SEO Orchestrator Integration (Phase 2) ✅
+
+**Реализовано:**
+- Добавлен импорт `CIResearchAgent` в SEO Orchestrator
+- Добавлена capability `"competitor_intelligence"` в список возможностей
+- Реализован метод `_execute_competitor_intelligence()` (~80 строк)
+- Интеграция через Event Bus и Task delegation
+- Progress callback поддержка для отслеживания прогресса
+
+**Workflow интеграции:**
+```
+SEO Orchestrator
+  ↓ (получает задачу analysis_type="competitor_intelligence")
+  ↓ (создаёт CIResearchAgent)
+  ↓ (делегирует Task через execute_task)
+  ↓ (получает TaskResult с benchmark_report)
+  ↓ (агрегирует результаты)
+  ↓ (возвращает структурированный ответ)
+```
+
+**Тесты (5 новых):**
+- `test_capabilities_include_competitor_intelligence` — проверка capabilities
+- `test_execute_competitor_intelligence_missing_industry` — валидация входных данных
+- `test_execute_competitor_intelligence_success` — успешное выполнение
+- `test_execute_competitor_intelligence_with_progress_callback` — progress tracking
+- `test_execute_competitor_intelligence_failure` — обработка ошибок
+
+**Все 5 тестов проходят ✅**
+
+**Коммит:** (pending)
 
 ## Next Steps
 
@@ -102,9 +137,9 @@
 - ✅ CI Research Agent: Core implementation complete
 - ✅ TODO methods: Implemented (all 15 methods)
 - ✅ API integrations: Omni-Router + SEMrush + Web Scraper
+- ✅ SEO Orchestrator integration: COMPLETED (5 tests passing)
 - ⏳ Obsidian vault: Structure defined, integration pending
-- ⏳ SEO Orchestrator integration: Not done
-- ✅ All tests passing: 23/23
+- ✅ All tests passing: 28/28 (23 CI + 5 integration)
 
 ## Notes
 - Все тесты проходят без warnings
