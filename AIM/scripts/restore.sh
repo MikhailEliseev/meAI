@@ -8,7 +8,7 @@ if [ -z "$1" ]; then
 fi
 
 TIMESTAMP=$1
-BACKUP_DIR="/backups"
+BACKUP_DIR="./backups"
 
 echo "Restoring from backup: $TIMESTAMP"
 

@@ -2,7 +2,7 @@
 set -e
 
 # Configuration
-BACKUP_DIR="/backups"
+BACKUP_DIR="./backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 RETENTION_DAYS=30
 
