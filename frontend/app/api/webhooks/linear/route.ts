@@ -41,12 +41,22 @@ export async function POST(request: NextRequest) {
     const body = await request.text();
 
     // Verify signature
-    if (signature && !verifyWebhookSignature(body, signature, webhookSecret)) {
-      console.error('[Webhook] Invalid signature');
-      return NextResponse.json(
-        { error: 'Invalid signature' },
-        { status: 401 }
-      );
+    if (signature) {
+      try {
+        if (!verifyWebhookSignature(body, signature, webhookSecret)) {
+          console.error('[Webhook] Invalid signature');
+          return NextResponse.json(
+            { error: 'Invalid signature' },
+            { status: 401 }
+          );
+        }
+      } catch (error) {
+        console.error('[Webhook] Signature verification failed:', error);
+        return NextResponse.json(
+          { error: 'Invalid signature' },
+          { status: 401 }
+        );
+      }
     }
 
     const payload: LinearWebhookPayload = JSON.parse(body);
