@@ -2,7 +2,7 @@
 
 **Status:** IN PROGRESS (2026-05-15)  
 **Duration:** 4-6 hours (estimated)  
-**Progress:** 25% (Part 1 completed)
+**Progress:** 50% (Part 1-2 completed)
 
 ---
 
@@ -44,269 +44,29 @@
 
 ---
 
-## Part 2: Linear Structure Setup ⏳ TODO
+## Part 2: Linear Structure Setup ✅ COMPLETED
 
 **Goal:** Create Teams, Projects, and Labels in Linear
 
 **Estimated Time:** 1-1.5 hours
 
-### 2.1 Create Teams
+**Actual Time:** 1.5 hours (2026-05-15 12:54-14:24 GMT+3)
 
-**Teams to create:**
+**Deliverables:**
+- ✅ 6 Teams created (DEV, MKT, SEO, CNT, ADS, ANL)
+- ✅ Project #0: AIM Development (ID: cfde805b-64a9-4351-b7e3-61de2b21a8e3)
+- ✅ Project #0.1: AIM Marketing (ID: 09301e27-8ead-4b22-99ed-e953b049f2a8)
+- ✅ 17 Labels created (priority: P0-P3, type: bug/feature/docs/test/refactor/deploy/design, domain: seo/content/ads/analytics/infrastructure/automation)
+- ✅ 22 Tasks created:
+  - Milestone 1: DEV-1 to DEV-7 (retrospective, marked as Done)
+  - Milestone 2: DEV-8 to DEV-12 (DEV-8, DEV-9 Done; DEV-10, DEV-11, DEV-12 Todo)
+  - Milestone 3: DEV-13 to DEV-14 (future, marked as Todo)
+  - Marketing: MKT-1 to MKT-8 (all Todo)
 
-1. **AIM Development** (Team Key: DEV)
-   - Description: "Core AIM platform development"
-   - Members: Mikhail Eliseev
-   - Workflow: Todo → In Progress → Review → Done
+**Files Created:**
+- `scripts/setup_linear_structure.py` (388 lines) - Automated setup script
 
-2. **AIM Marketing** (Team Key: MKT)
-   - Description: "AIM self-promotion and growth"
-   - Members: Mikhail Eliseev
-   - Workflow: Todo → In Progress → Review → Done
-
-3. **SEO Services** (Team Key: SEO)
-   - Description: "Client SEO campaigns"
-   - Members: SEO Magister (bot)
-   - Workflow: Todo → In Progress → Review → Done
-
-4. **Content Services** (Team Key: CNT)
-   - Description: "Client content creation"
-   - Members: Content Magister (bot)
-   - Workflow: Todo → In Progress → Review → Done
-
-5. **Ads Services** (Team Key: ADS)
-   - Description: "Client advertising campaigns"
-   - Members: Ads Magister (bot)
-   - Workflow: Todo → In Progress → Review → Done
-
-6. **Analytics Services** (Team Key: ANL)
-   - Description: "Client analytics and reporting"
-   - Members: Analytics Magister (bot)
-   - Workflow: Todo → In Progress → Review → Done
-
-### 2.2 Create Project #0: AIM Development
-
-**Project Structure:**
-
-```
-Project #0: AIM Development (Team: AIM Development)
-│
-├── Milestone 1: Core Infrastructure ✅ COMPLETED
-│   ├── Phase 1: Foundation ✅
-│   ├── Phase 2: Event Flow ✅
-│   ├── Phase 3: API Integration ✅
-│   ├── Phase 4: Magister Tests ✅
-│   ├── Phase 5: Subagent Tests ✅
-│   ├── Phase 6: E2E Tests ✅
-│   └── Phase 7: Production Deployment ✅
-│
-├── Milestone 2: Project Management 🔄 IN PROGRESS
-│   ├── Phase 7.5: Linear Integration 🔄
-│   └── Phase 8: Multi-Tenant Frontend ⏳
-│
-└── Milestone 3: Client Acquisition ⏳ PLANNED
-    ├── Phase 9: Marketing Automation ⏳
-    └── Phase 10: First Client Onboarding ⏳
-```
-
-**Tasks to create in Linear:**
-
-**Milestone 1 (Retrospective - mark as Done):**
-- DEV-1: Foundation - Base classes and infrastructure ✅
-- DEV-2: Event Flow - Async coordination ✅
-- DEV-3: API Integration - Real API clients ✅
-- DEV-4: Magister Tests - Production orchestrators ✅
-- DEV-5: Subagent Tests - P1 subagents training ✅
-- DEV-6: E2E Tests - Multi-agent coordination ✅
-- DEV-7: Production Deployment - SSL/TLS and monitoring ✅
-
-**Milestone 2 (Current):**
-- DEV-8: Linear CLI Integration ✅ (completed today)
-- DEV-9: Linear Structure Setup ⏳ (this task)
-- DEV-10: Operator ↔ Linear Integration ⏳
-- DEV-11: Client Dashboard in Linear ⏳
-- DEV-12: Multi-Tenant Frontend ⏳
-
-**Milestone 3 (Future):**
-- DEV-13: Marketing Automation ⏳
-- DEV-14: First Client Onboarding ⏳
-
-### 2.3 Create Project #0.1: AIM Marketing
-
-**Project Structure:**
-
-```
-Project #0.1: AIM Marketing (Team: AIM Marketing)
-│
-├── Content Strategy
-│   ├── MKT-1: Blog content plan ⏳
-│   ├── MKT-2: Case studies ⏳
-│   └── MKT-3: Social media strategy ⏳
-│
-├── SEO Strategy
-│   ├── MKT-4: Keyword research for iamaim.ru ⏳
-│   ├── MKT-5: Technical SEO audit ⏳
-│   └── MKT-6: Content optimization ⏳
-│
-└── Ads Strategy
-    ├── MKT-7: Yandex Direct campaign ⏳
-    └── MKT-8: Google Ads campaign ⏳
-```
-
-**Why separate project:**
-- AIM Development = building the product
-- AIM Marketing = promoting the product
-- Different workflows and priorities
-- Demonstrates multi-project management
-
-### 2.4 Setup Labels
-
-**Priority Labels:**
-- 🔴 P0 - Critical (blocks production)
-- 🟠 P1 - High (important for milestone)
-- 🟡 P2 - Medium (nice to have)
-- 🟢 P3 - Low (future enhancement)
-
-**Type Labels:**
-- 🐛 bug - Bug fix
-- ✨ feature - New feature
-- 📝 docs - Documentation
-- 🧪 test - Testing
-- 🔧 refactor - Code refactoring
-- 🚀 deploy - Deployment
-- 🎨 design - UI/UX design
-
-**Domain Labels:**
-- 🔍 seo - SEO related
-- ✍️ content - Content related
-- 📢 ads - Advertising related
-- 📊 analytics - Analytics related
-- 🏗️ infrastructure - Infrastructure
-- 🤖 automation - Automation
-
-### 2.5 Implementation Script
-
-Create `scripts/setup_linear_structure.py`:
-
-```python
-#!/usr/bin/env python3
-"""
-Setup Linear structure for AIM Agency.
-
-Creates:
-- 6 Teams (AIM Development, AIM Marketing, SEO, Content, Ads, Analytics)
-- Project #0: AIM Development
-- Project #0.1: AIM Marketing
-- Labels (priority, type, domain)
-- Initial tasks for Milestone 1-3
-"""
-
-from scripts.linear_cli import LinearClient
-import os
-
-def setup_teams(client: LinearClient):
-    """Create teams."""
-    teams = [
-        {"name": "AIM Development", "key": "DEV", "description": "Core AIM platform development"},
-        {"name": "AIM Marketing", "key": "MKT", "description": "AIM self-promotion and growth"},
-        {"name": "SEO Services", "key": "SEO", "description": "Client SEO campaigns"},
-        {"name": "Content Services", "key": "CNT", "description": "Client content creation"},
-        {"name": "Ads Services", "key": "ADS", "description": "Client advertising campaigns"},
-        {"name": "Analytics Services", "key": "ANL", "description": "Client analytics and reporting"},
-    ]
-    
-    for team in teams:
-        print(f"Creating team: {team['name']}...")
-        # TODO: Implement team creation via GraphQL
-    
-def setup_projects(client: LinearClient):
-    """Create projects."""
-    projects = [
-        {
-            "name": "AIM Development",
-            "team": "DEV",
-            "description": "Building the AIM platform",
-        },
-        {
-            "name": "AIM Marketing",
-            "team": "MKT",
-            "description": "Promoting AIM to clients",
-        },
-    ]
-    
-    for project in projects:
-        print(f"Creating project: {project['name']}...")
-        # TODO: Implement project creation via GraphQL
-
-def setup_labels(client: LinearClient):
-    """Create labels."""
-    labels = [
-        # Priority
-        {"name": "P0 - Critical", "color": "#FF0000"},
-        {"name": "P1 - High", "color": "#FF8800"},
-        {"name": "P2 - Medium", "color": "#FFFF00"},
-        {"name": "P3 - Low", "color": "#00FF00"},
-        # Type
-        {"name": "bug", "color": "#FF0000"},
-        {"name": "feature", "color": "#0088FF"},
-        {"name": "docs", "color": "#888888"},
-        # Domain
-        {"name": "seo", "color": "#8800FF"},
-        {"name": "content", "color": "#FF00FF"},
-        {"name": "ads", "color": "#FF8800"},
-    ]
-    
-    for label in labels:
-        print(f"Creating label: {label['name']}...")
-        # TODO: Implement label creation via GraphQL
-
-def create_milestone_1_tasks(client: LinearClient):
-    """Create retrospective tasks for Milestone 1."""
-    tasks = [
-        {"title": "Foundation - Base classes and infrastructure", "state": "Done"},
-        {"title": "Event Flow - Async coordination", "state": "Done"},
-        {"title": "API Integration - Real API clients", "state": "Done"},
-        {"title": "Magister Tests - Production orchestrators", "state": "Done"},
-        {"title": "Subagent Tests - P1 subagents training", "state": "Done"},
-        {"title": "E2E Tests - Multi-agent coordination", "state": "Done"},
-        {"title": "Production Deployment - SSL/TLS and monitoring", "state": "Done"},
-    ]
-    
-    for task in tasks:
-        print(f"Creating task: {task['title']}...")
-        # TODO: Implement task creation
-
-def main():
-    api_key = os.getenv("LINEAR_API_KEY")
-    if not api_key:
-        print("Error: LINEAR_API_KEY not set")
-        return
-    
-    client = LinearClient(api_key)
-    
-    print("Setting up Linear structure for AIM Agency...")
-    print()
-    
-    setup_teams(client)
-    setup_projects(client)
-    setup_labels(client)
-    create_milestone_1_tasks(client)
-    
-    print()
-    print("✅ Linear structure setup complete!")
-
-if __name__ == "__main__":
-    main()
-```
-
-**Tasks:**
-- [ ] Implement team creation via GraphQL
-- [ ] Implement project creation via GraphQL
-- [ ] Implement label creation via GraphQL
-- [ ] Create all Milestone 1 tasks (retrospective)
-- [ ] Create all Milestone 2 tasks (current)
-- [ ] Create all Milestone 3 tasks (future)
-- [ ] Test script end-to-end
+**Commit:** TBD
 
 ---
 
