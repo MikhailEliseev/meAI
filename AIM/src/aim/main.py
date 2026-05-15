@@ -4,17 +4,23 @@ AIM Agency API - FastAPI Application
 Production-ready API with health checks, metrics, and monitoring.
 """
 
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, Request
 from fastapi.responses import JSONResponse, Response
 from datetime import datetime
-import logging
+import os
+
+# Prometheus metrics
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_fastapi_instrumentator import Instrumentator
+
+# Structured logging
+from AIM.src.aim.config.logging import configure_logging, get_logger
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+environment = os.getenv("ENVIRONMENT", "production")
+log_level = os.getenv("LOG_LEVEL", "INFO")
+configure_logging(environment=environment, log_level=log_level)
+logger = get_logger("aim.api")
 
 # Create FastAPI application
 app = FastAPI(
@@ -25,18 +31,84 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+# Custom Prometheus metrics
+api_requests_total = Counter(
+    "aim_api_requests_total",
+    "Total API requests",
+    ["method", "endpoint", "status"]
+)
+
+api_request_duration = Histogram(
+    "aim_api_request_duration_seconds",
+    "API request duration in seconds",
+    ["method", "endpoint"],
+    buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+)
+
+active_tasks = Gauge(
+    "aim_active_tasks",
+    "Number of active tasks",
+    ["magister", "subagent"]
+)
+
+api_errors_total = Counter(
+    "aim_api_errors_total",
+    "Total API errors",
+    ["endpoint", "error_type"]
+)
+
+api_cost_usd_total = Counter(
+    "aim_api_cost_usd_total",
+    "Total API costs in USD",
+    ["provider"]
+)
+
+# Instrument FastAPI with Prometheus
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+
+
+@app.middleware("http")
+async def track_metrics(request: Request, call_next):
+    """Track custom metrics for each request"""
+    method = request.method
+    endpoint = request.url.path
+
+    # Track request duration
+    with api_request_duration.labels(method=method, endpoint=endpoint).time():
+        response = await call_next(request)
+
+    # Track request count
+    api_requests_total.labels(
+        method=method,
+        endpoint=endpoint,
+        status=response.status_code
+    ).inc()
+
+    # Track errors
+    if response.status_code >= 400:
+        api_errors_total.labels(
+            endpoint=endpoint,
+            error_type=f"{response.status_code}"
+        ).inc()
+
+    return response
+
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize application on startup"""
-    logger.info("AIM Agency API starting up...")
-    logger.info("Environment: production")
+    logger.info(
+        "application_startup",
+        service="AIM Agency API",
+        version="1.0.0",
+        environment=environment
+    )
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown"""
-    logger.info("AIM Agency API shutting down...")
+    logger.info("application_shutdown", service="AIM Agency API")
 
 
 @app.get("/", status_code=status.HTTP_200_OK)
@@ -56,6 +128,7 @@ async def health_check():
     Basic health check - returns 200 if service is running.
     Used by Docker healthcheck and load balancers.
     """
+    logger.debug("health_check_called")
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat()
@@ -78,7 +151,6 @@ async def readiness_check():
     try:
         from sqlalchemy.ext.asyncio import create_async_engine
         from sqlalchemy import text
-        import os
 
         db_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/production/aim.db")
         engine = create_async_engine(db_url, echo=False)
@@ -88,8 +160,9 @@ async def readiness_check():
 
         await engine.dispose()
         checks["database"] = True
+        logger.debug("database_check_passed")
     except Exception as e:
-        logger.error(f"Database check failed: {e}")
+        logger.error("database_check_failed", error=str(e))
 
     # Check redis
     try:
@@ -100,23 +173,27 @@ async def readiness_check():
         redis.close()
         await redis.wait_closed()
         checks["redis"] = True
+        logger.debug("redis_check_passed")
     except Exception as e:
-        logger.error(f"Redis check failed: {e}")
+        logger.error("redis_check_failed", error=str(e))
 
     # Check event bus (basic check - can instantiate)
     try:
         checks["event_bus"] = True
+        logger.debug("event_bus_check_passed")
     except Exception as e:
-        logger.error(f"Event bus check failed: {e}")
+        logger.error("event_bus_check_failed", error=str(e))
 
     # All checks must pass
     if all(checks.values()):
+        logger.info("readiness_check_passed", checks=checks)
         return {
             "status": "ready",
             "checks": checks,
             "timestamp": datetime.utcnow().isoformat()
         }
     else:
+        logger.warning("readiness_check_failed", checks=checks)
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={
@@ -133,15 +210,7 @@ async def metrics():
     Prometheus metrics endpoint.
     Returns metrics in Prometheus text format.
     """
-    try:
-        from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
-        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
-    except ImportError:
-        # Fallback if prometheus_client not installed
-        return Response(
-            "# Prometheus metrics not available\n",
-            media_type="text/plain"
-        )
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 # API Routes (placeholder for future implementation)
