@@ -1,0 +1,86 @@
+{
+  "industry": "dental clinics",
+  "timestamp": "2026-05-15T19:57:00Z",
+  "competitor_profiles": [
+    {
+      "domain": "example-dental.com",
+      "acquisition_channels": [
+        "SEO",
+        "Google Ads",
+        "Referrals"
+      ],
+      "acv": 5000,
+      "cac": 800,
+      "ltv": 15000,
+      "payback_period": 3
+    },
+    {
+      "domain": "smile-clinic.com",
+      "acquisition_channels": [
+        "SEO",
+        "Social Media"
+      ],
+      "acv": 4500,
+      "cac": 600,
+      "ltv": 13500,
+      "payback_period": 2
+    }
+  ],
+  "growth_laws": [
+    {
+      "law": "SEO-first acquisition",
+      "prevalence": 0.8,
+      "transferability": "high"
+    },
+    {
+      "law": "Referral programs",
+      "prevalence": 0.6,
+      "transferability": "medium"
+    }
+  ],
+  "sales_laws": [
+    {
+      "law": "Free consultation funnel",
+      "prevalence": 0.7
+    }
+  ],
+  "do_copy": [
+    {
+      "pattern": "SEO content strategy",
+      "ice_score": 450,
+      "impact": 9,
+      "confidence": 10,
+      "ease": 5
+    },
+    {
+      "pattern": "Google Ads for high-intent keywords",
+      "ice_score": 400,
+      "impact": 8,
+      "confidence": 10,
+      "ease": 5
+    }
+  ],
+  "do_ignore": [
+    {
+      "pattern": "TV advertising",
+      "reason": "Too expensive for local clinics"
+    }
+  ],
+  "sequencing_roadmap": [
+    {
+      "phase": 1,
+      "duration": "1-2 months",
+      "patterns": [
+        "SEO content strategy",
+        "Google Ads"
+      ]
+    },
+    {
+      "phase": 2,
+      "duration": "2-3 months",
+      "patterns": [
+        "Referral programs"
+      ]
+    }
+  ]
+}

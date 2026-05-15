@@ -14,6 +14,22 @@ Format: `## [YYYY-MM-DD HH:MM] operation | Description`
 
 ---
 
+## [2026-05-15 22:57] ingest | Dental Clinics benchmark
+
+**Operation:** Benchmark ingest
+
+**Details:**
+- Industry: dental clinics
+- Competitors: 2
+- Growth Laws: 2
+- Copy Patterns: 2 (ICE > 200)
+- Output: [[dental-clinics]]
+
+**Status:** ✅ Completed
+
+---
+
+
 ## [2026-05-15 22:51] init | Vault initialization
 
 **Operation:** Vault structure created

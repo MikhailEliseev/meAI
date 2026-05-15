@@ -1,0 +1,12 @@
+{
+  "domain": "example-dental.com",
+  "acquisition_channels": [
+    "SEO",
+    "Google Ads",
+    "Referrals"
+  ],
+  "acv": 5000,
+  "cac": 800,
+  "ltv": 15000,
+  "payback_period": 3
+}

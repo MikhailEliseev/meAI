@@ -204,3 +204,53 @@ ci-research/
 
 **Коммит:** (pending)
 
+
+---
+
+### End-to-End Workflow Test ✅
+
+**Дата:** 2026-05-15 22:58 GMT+3
+
+**Тест:** CI Research Agent → Ingest Script → Obsidian Vault
+
+**Результаты:**
+
+1. **Создан тестовый benchmark report:**
+   - Industry: dental clinics
+   - Competitors: 2 (example-dental.com, smile-clinic.com)
+   - Growth Laws: 2 (SEO-first 80%, Referrals 60%)
+   - Copy Patterns: 2 (ICE 450, 400)
+   - Ignore Patterns: 1 (TV advertising)
+
+2. **Ingest script выполнен успешно:**
+   ```bash
+   python scripts/ingest_ci_benchmark.py /tmp/test_benchmark/dental_clinics_benchmark.json \
+     --industry "dental clinics" --vault AIM/obsidian/ci-research
+   ```
+
+3. **Vault структура создана:**
+   - ✅ `raw/benchmarks/2026-05-15_dental-clinics/` — исходные данные
+   - ✅ `raw/benchmarks/2026-05-15_dental-clinics/manifest.json` — метаданные
+   - ✅ `raw/benchmarks/2026-05-15_dental-clinics/report.json` — полный отчёт
+   - ✅ `raw/benchmarks/2026-05-15_dental-clinics/competitors/` — 2 профиля
+   - ✅ `wiki/projects/dental-clinics.md` — project page (95 строк)
+   - ✅ `wiki/log.md` — обновлён с новой записью
+   - ✅ `wiki/index.md` — обновлён (Projects: 1)
+
+4. **Валидация данных:**
+   - ✅ Frontmatter корректный (title, type, created, updated, status, tags, sources)
+   - ✅ Competitor profiles сохранены отдельно (example-dental_com.json, smile-clinic_com.json)
+   - ✅ Manifest содержит правильную статистику (status: processed)
+   - ✅ Log содержит запись операции с timestamp
+   - ✅ Index обновлён с первым проектом
+
+**Статус:** ✅ End-to-End workflow работает полностью
+
+**Вывод:**
+Полный цикл работает корректно:
+- CI Research Agent генерирует benchmark report
+- Ingest script обрабатывает и сохраняет в vault
+- LLM Wiki pattern соблюдён (raw/ → wiki/ → decisions/)
+- Все операции логируются
+- Статистика обновляется
+
