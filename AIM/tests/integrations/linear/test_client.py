@@ -1,6 +1,7 @@
 """Tests for Linear GraphQL API client."""
 
 import pytest
+import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 
@@ -23,7 +24,7 @@ def mock_httpx_client():
     return client
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture
 async def linear_client(mock_httpx_client):
     """Create LinearClient with mocked httpx."""
     with patch("httpx.AsyncClient", return_value=mock_httpx_client):
