@@ -1,0 +1,532 @@
+---
+title: Toast Component
+description: Display brief notifications and feedback messages
+category: components
+order: 8
+---
+
+# Toast Component
+
+Display temporary notifications and feedback messages to users.
+
+## Basic Usage
+
+```tsx
+import { useToast } from '@/hooks/use-toast'
+import { Button } from '@/components/ui/button'
+
+function Example() {
+  const { toast } = useToast()
+
+  return (
+    <Button
+      onClick={() => {
+        toast({
+          title: 'Success',
+          description: 'Your changes have been saved.',
+        })
+      }}
+    >
+      Show Toast
+    </Button>
+  )
+}
+```
+
+## Variants
+
+```tsx
+const { toast } = useToast()
+
+// Default
+toast({
+  title: 'Notification',
+  description: 'This is a default toast.',
+})
+
+// Success
+toast({
+  variant: 'success',
+  title: 'Success',
+  description: 'Operation completed successfully.',
+})
+
+// Error
+toast({
+  variant: 'destructive',
+  title: 'Error',
+  description: 'Something went wrong.',
+})
+
+// Warning
+toast({
+  variant: 'warning',
+  title: 'Warning',
+  description: 'Please review your input.',
+})
+```
+
+## Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `title` | `string` | - | Toast title |
+| `description` | `string` | - | Toast description |
+| `variant` | `'default' \| 'success' \| 'destructive' \| 'warning'` | `'default'` | Toast style |
+| `duration` | `number` | `5000` | Duration in milliseconds |
+| `action` | `ReactNode` | - | Action button |
+| `onClose` | `() => void` | - | Close callback |
+
+## Examples
+
+### With Action
+
+```tsx
+toast({
+  title: 'File deleted',
+  description: 'Your file has been moved to trash.',
+  action: (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => {
+        // Undo action
+        console.log('Undo')
+      }}
+    >
+      Undo
+    </Button>
+  ),
+})
+```
+
+### With Icon
+
+```tsx
+import { Check, X, AlertCircle, Info } from 'lucide-react'
+
+// Success with icon
+toast({
+  variant: 'success',
+  title: (
+    <div className="flex items-center gap-2">
+      <Check className="h-4 w-4" />
+      <span>Success</span>
+    </div>
+  ),
+  description: 'Your changes have been saved.',
+})
+
+// Error with icon
+toast({
+  variant: 'destructive',
+  title: (
+    <div className="flex items-center gap-2">
+      <X className="h-4 w-4" />
+      <span>Error</span>
+    </div>
+  ),
+  description: 'Failed to save changes.',
+})
+```
+
+### Custom Duration
+
+```tsx
+// Short duration (2 seconds)
+toast({
+  title: 'Quick message',
+  duration: 2000,
+})
+
+// Long duration (10 seconds)
+toast({
+  title: 'Important message',
+  description: 'Please read this carefully.',
+  duration: 10000,
+})
+
+// Persistent (no auto-dismiss)
+toast({
+  title: 'Action required',
+  description: 'Please confirm your email address.',
+  duration: Infinity,
+})
+```
+
+### Promise Toast
+
+```tsx
+async function saveData() {
+  const promise = fetch('/api/save', { method: 'POST' })
+
+  toast({
+    title: 'Saving...',
+    description: 'Please wait while we save your changes.',
+  })
+
+  try {
+    await promise
+    toast({
+      variant: 'success',
+      title: 'Saved',
+      description: 'Your changes have been saved.',
+    })
+  } catch (error) {
+    toast({
+      variant: 'destructive',
+      title: 'Error',
+      description: 'Failed to save changes.',
+    })
+  }
+}
+```
+
+### Loading Toast
+
+```tsx
+function LoadingToast() {
+  const { toast, dismiss } = useToast()
+
+  const showLoading = () => {
+    const { id } = toast({
+      title: 'Loading...',
+      description: (
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Processing your request</span>
+        </div>
+      ),
+      duration: Infinity,
+    })
+
+    // Simulate async operation
+    setTimeout(() => {
+      dismiss(id)
+      toast({
+        variant: 'success',
+        title: 'Complete',
+        description: 'Operation completed successfully.',
+      })
+    }, 3000)
+  }
+
+  return <Button onClick={showLoading}>Start Process</Button>
+}
+```
+
+### Multiple Toasts
+
+```tsx
+function MultipleToasts() {
+  const { toast } = useToast()
+
+  const showMultiple = () => {
+    toast({ title: 'First notification' })
+    
+    setTimeout(() => {
+      toast({ title: 'Second notification' })
+    }, 1000)
+    
+    setTimeout(() => {
+      toast({ title: 'Third notification' })
+    }, 2000)
+  }
+
+  return <Button onClick={showMultiple}>Show Multiple</Button>
+}
+```
+
+### Form Validation Toast
+
+```tsx
+function FormWithToast() {
+  const { toast } = useToast()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    const formData = new FormData(e.target as HTMLFormElement)
+    const email = formData.get('email')
+
+    if (!email) {
+      toast({
+        variant: 'destructive',
+        title: 'Validation Error',
+        description: 'Email is required.',
+      })
+      return
+    }
+
+    try {
+      await submitForm(formData)
+      toast({
+        variant: 'success',
+        title: 'Form Submitted',
+        description: 'We will contact you soon.',
+      })
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Submission Failed',
+        description: error.message,
+      })
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <Input name="email" type="email" placeholder="Email" />
+      <Button type="submit">Submit</Button>
+    </form>
+  )
+}
+```
+
+### Copy to Clipboard Toast
+
+```tsx
+function CopyButton({ text }: { text: string }) {
+  const { toast } = useToast()
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast({
+        variant: 'success',
+        title: 'Copied',
+        description: 'Text copied to clipboard.',
+        duration: 2000,
+      })
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to copy',
+        description: 'Please try again.',
+      })
+    }
+  }
+
+  return (
+    <Button onClick={copyToClipboard} variant="outline" size="sm">
+      <Copy className="h-4 w-4 mr-2" />
+      Copy
+    </Button>
+  )
+}
+```
+
+### Network Status Toast
+
+```tsx
+function NetworkStatusToast() {
+  const { toast } = useToast()
+
+  useEffect(() => {
+    const handleOnline = () => {
+      toast({
+        variant: 'success',
+        title: 'Back online',
+        description: 'Your connection has been restored.',
+      })
+    }
+
+    const handleOffline = () => {
+      toast({
+        variant: 'warning',
+        title: 'No connection',
+        description: 'Please check your internet connection.',
+        duration: Infinity,
+      })
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [toast])
+
+  return null
+}
+```
+
+## Implementation
+
+### useToast Hook
+
+```typescript
+import { create } from 'zustand'
+
+type Toast = {
+  id: string
+  title: string
+  description?: string
+  variant?: 'default' | 'success' | 'destructive' | 'warning'
+  duration?: number
+  action?: React.ReactNode
+}
+
+type ToastStore = {
+  toasts: Toast[]
+  toast: (toast: Omit<Toast, 'id'>) => { id: string }
+  dismiss: (id: string) => void
+}
+
+export const useToast = create<ToastStore>((set) => ({
+  toasts: [],
+  toast: (toast) => {
+    const id = Math.random().toString(36).substr(2, 9)
+    set((state) => ({
+      toasts: [...state.toasts, { ...toast, id }],
+    }))
+
+    if (toast.duration !== Infinity) {
+      setTimeout(() => {
+        set((state) => ({
+          toasts: state.toasts.filter((t) => t.id !== id),
+        }))
+      }, toast.duration || 5000)
+    }
+
+    return { id }
+  },
+  dismiss: (id) => {
+    set((state) => ({
+      toasts: state.toasts.filter((t) => t.id !== id),
+    }))
+  },
+}))
+```
+
+### Toaster Component
+
+```tsx
+'use client'
+
+import { useToast } from '@/hooks/use-toast'
+import { Toast } from '@/components/ui/toast'
+import { AnimatePresence, motion } from 'framer-motion'
+
+export function Toaster() {
+  const { toasts, dismiss } = useToast()
+
+  return (
+    <div className="fixed bottom-0 right-0 z-50 p-4 space-y-2">
+      <AnimatePresence>
+        {toasts.map((toast) => (
+          <motion.div
+            key={toast.id}
+            initial={{ opacity: 0, y: 50, scale: 0.3 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+          >
+            <Toast {...toast} onClose={() => dismiss(toast.id)} />
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  )
+}
+```
+
+### Add to Layout
+
+```tsx
+// app/layout.tsx
+import { Toaster } from '@/components/ui/toaster'
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {children}
+        <Toaster />
+      </body>
+    </html>
+  )
+}
+```
+
+## Positioning
+
+```tsx
+// Top right
+<div className="fixed top-4 right-4 z-50">
+  <Toaster />
+</div>
+
+// Top center
+<div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+  <Toaster />
+</div>
+
+// Bottom left
+<div className="fixed bottom-4 left-4 z-50">
+  <Toaster />
+</div>
+```
+
+## Best Practices
+
+1. **Keep messages brief** - 1-2 sentences maximum
+2. **Use appropriate variants** - Match severity to message type
+3. **Provide actions when needed** - Undo, retry, view details
+4. **Set appropriate duration** - 3-5 seconds for info, longer for errors
+5. **Don't overuse** - Too many toasts are annoying
+6. **Stack properly** - Show multiple toasts in order
+7. **Respect reduced motion** - Disable animations if preferred
+
+## Accessibility
+
+```tsx
+<div
+  role="status"
+  aria-live="polite"
+  aria-atomic="true"
+>
+  <Toast {...props} />
+</div>
+
+// For errors
+<div
+  role="alert"
+  aria-live="assertive"
+  aria-atomic="true"
+>
+  <Toast variant="destructive" {...props} />
+</div>
+```
+
+## Testing
+
+```typescript
+import { renderHook, act } from '@testing-library/react'
+import { useToast } from '@/hooks/use-toast'
+
+describe('useToast', () => {
+  it('adds and removes toast', () => {
+    const { result } = renderHook(() => useToast())
+
+    act(() => {
+      result.current.toast({ title: 'Test' })
+    })
+
+    expect(result.current.toasts).toHaveLength(1)
+
+    act(() => {
+      result.current.dismiss(result.current.toasts[0].id)
+    })
+
+    expect(result.current.toasts).toHaveLength(0)
+  })
+})
+```
+
+## Related
+
+- [Alert Component](/docs/components/alert)
+- [Dialog Component](/docs/components/dialog)
+- [Notification Guide](/docs/guides/notifications)

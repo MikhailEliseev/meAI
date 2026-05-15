@@ -1,0 +1,384 @@
+---
+title: Input Component
+description: Text input component with validation and error states
+category: components
+order: 2
+---
+
+# Input Component
+
+A flexible input component with built-in validation and error handling.
+
+## Basic Usage
+
+```tsx
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+
+export function Example() {
+  return (
+    <div>
+      <Label htmlFor="email">Email</Label>
+      <Input id="email" type="email" placeholder="Enter your email" />
+    </div>
+  )
+}
+```
+
+## Input Types
+
+### Text
+
+```tsx
+<Input type="text" placeholder="Enter text" />
+```
+
+### Email
+
+```tsx
+<Input type="email" placeholder="email@example.com" />
+```
+
+### Password
+
+```tsx
+<Input type="password" placeholder="Enter password" />
+```
+
+### Number
+
+```tsx
+<Input type="number" min={0} max={100} />
+```
+
+### Search
+
+```tsx
+<Input type="search" placeholder="Search..." />
+```
+
+### URL
+
+```tsx
+<Input type="url" placeholder="https://example.com" />
+```
+
+### Tel
+
+```tsx
+<Input type="tel" placeholder="+1 (555) 000-0000" />
+```
+
+### Date
+
+```tsx
+<Input type="date" />
+```
+
+## With Icons
+
+### Icon Left
+
+```tsx
+<div className="relative">
+  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+  <Input className="pl-10" placeholder="Search..." />
+</div>
+```
+
+### Icon Right
+
+```tsx
+<div className="relative">
+  <Input className="pr-10" placeholder="Enter email" />
+  <Mail className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+</div>
+```
+
+### Clear Button
+
+```tsx
+function InputWithClear() {
+  const [value, setValue] = useState('')
+
+  return (
+    <div className="relative">
+      <Input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Type something..."
+      />
+      {value && (
+        <button
+          onClick={() => setValue('')}
+          className="absolute right-3 top-1/2 -translate-y-1/2"
+        >
+          <X className="h-4 w-4 text-muted-foreground" />
+        </button>
+      )}
+    </div>
+  )
+}
+```
+
+## Validation States
+
+### Error State
+
+```tsx
+<div>
+  <Label htmlFor="email">Email</Label>
+  <Input
+    id="email"
+    type="email"
+    aria-invalid="true"
+    className="border-destructive"
+  />
+  <p className="text-sm text-destructive">Invalid email address</p>
+</div>
+```
+
+### Success State
+
+```tsx
+<div>
+  <Label htmlFor="username">Username</Label>
+  <Input
+    id="username"
+    className="border-green-500"
+  />
+  <p className="text-sm text-green-600">Username is available</p>
+</div>
+```
+
+### With React Hook Form
+
+```tsx
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+
+const schema = z.object({
+  email: z.string().email('Invalid email address'),
+})
+
+function Form() {
+  const {
+    register,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(schema),
+  })
+
+  return (
+    <div>
+      <Label htmlFor="email">Email</Label>
+      <Input
+        id="email"
+        {...register('email')}
+        aria-invalid={errors.email ? 'true' : 'false'}
+      />
+      {errors.email && (
+        <p className="text-sm text-destructive">{errors.email.message}</p>
+      )}
+    </div>
+  )
+}
+```
+
+## Sizes
+
+```tsx
+<Input className="h-8 text-sm" placeholder="Small" />
+<Input placeholder="Default" />
+<Input className="h-12 text-lg" placeholder="Large" />
+```
+
+## Disabled State
+
+```tsx
+<Input disabled placeholder="Disabled input" />
+```
+
+## Read-Only State
+
+```tsx
+<Input readOnly value="Read-only value" />
+```
+
+## With Prefix/Suffix
+
+### Currency Input
+
+```tsx
+<div className="relative">
+  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+    $
+  </span>
+  <Input className="pl-7" type="number" placeholder="0.00" />
+</div>
+```
+
+### Domain Input
+
+```tsx
+<div className="flex items-center gap-2">
+  <Input placeholder="mysite" />
+  <span className="text-muted-foreground">.example.com</span>
+</div>
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `type` | `string` | `'text'` | Input type |
+| `placeholder` | `string` | - | Placeholder text |
+| `value` | `string` | - | Controlled value |
+| `defaultValue` | `string` | - | Uncontrolled default value |
+| `disabled` | `boolean` | `false` | Disable input |
+| `readOnly` | `boolean` | `false` | Make input read-only |
+| `required` | `boolean` | `false` | Mark as required |
+| `onChange` | `(e) => void` | - | Change handler |
+| `onBlur` | `(e) => void` | - | Blur handler |
+| `onFocus` | `(e) => void` | - | Focus handler |
+
+## Examples
+
+### Password with Toggle
+
+```tsx
+function PasswordInput() {
+  const [showPassword, setShowPassword] = useState(false)
+
+  return (
+    <div className="relative">
+      <Input
+        type={showPassword ? 'text' : 'password'}
+        placeholder="Enter password"
+      />
+      <button
+        type="button"
+        onClick={() => setShowPassword(!showPassword)}
+        className="absolute right-3 top-1/2 -translate-y-1/2"
+      >
+        {showPassword ? (
+          <EyeOff className="h-4 w-4" />
+        ) : (
+          <Eye className="h-4 w-4" />
+        )}
+      </button>
+    </div>
+  )
+}
+```
+
+### Debounced Search
+
+```tsx
+function SearchInput() {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      if (query) {
+        const data = await search(query)
+        setResults(data)
+      }
+    }, 300)
+
+    return () => clearTimeout(timeoutId)
+  }, [query])
+
+  return (
+    <div>
+      <Input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search..."
+      />
+      {results.length > 0 && (
+        <div className="mt-2">
+          {results.map((result) => (
+            <div key={result.id}>{result.title}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+```
+
+### Character Counter
+
+```tsx
+function TextareaWithCounter() {
+  const [value, setValue] = useState('')
+  const maxLength = 280
+
+  return (
+    <div>
+      <Input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        maxLength={maxLength}
+        placeholder="Type something..."
+      />
+      <p className="text-sm text-muted-foreground">
+        {value.length} / {maxLength}
+      </p>
+    </div>
+  )
+}
+```
+
+### Auto-resize Textarea
+
+```tsx
+function AutoResizeTextarea() {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const handleInput = () => {
+    const textarea = textareaRef.current
+    if (textarea) {
+      textarea.style.height = 'auto'
+      textarea.style.height = `${textarea.scrollHeight}px`
+    }
+  }
+
+  return (
+    <textarea
+      ref={textareaRef}
+      onInput={handleInput}
+      className="w-full resize-none"
+      placeholder="Type something..."
+    />
+  )
+}
+```
+
+## Accessibility
+
+- Always use `<Label>` with `htmlFor` attribute
+- Use `aria-invalid` for error states
+- Use `aria-describedby` to link error messages
+- Provide clear placeholder text
+- Support keyboard navigation
+- Proper focus states
+
+## Best Practices
+
+1. **Label everything** - Always provide a label for accessibility
+2. **Validate on blur** - Show errors after user leaves field
+3. **Clear error messages** - Be specific about what's wrong
+4. **Use appropriate types** - email, tel, url for better mobile keyboards
+5. **Disable during submission** - Prevent double submissions
+6. **Autocomplete attributes** - Help browsers autofill correctly
+
+## Related
+
+- [Form Components](/docs/components/forms)
+- [Label Component](/docs/components/label)
+- [Validation Guide](/docs/guides/validation)

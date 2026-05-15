@@ -1,0 +1,440 @@
+---
+title: Dialog Component
+description: Modal dialog component for overlays and confirmations
+category: components
+order: 5
+---
+
+# Dialog Component
+
+A modal dialog component for displaying content in an overlay.
+
+## Basic Usage
+
+```tsx
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+
+export function Example() {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button>Open Dialog</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Dialog Title</DialogTitle>
+          <DialogDescription>
+            Dialog description goes here
+          </DialogDescription>
+        </DialogHeader>
+        <div>Dialog content</div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+```
+
+## Controlled Dialog
+
+```tsx
+function ControlledDialog() {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button>Open</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Controlled Dialog</DialogTitle>
+        </DialogHeader>
+        <div>Content</div>
+        <DialogFooter>
+          <Button onClick={() => setIsOpen(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+```
+
+## Dialog Sizes
+
+```tsx
+// Small
+<DialogContent className="sm:max-w-[425px]">
+  <DialogHeader>
+    <DialogTitle>Small Dialog</DialogTitle>
+  </DialogHeader>
+</DialogContent>
+
+// Medium (default)
+<DialogContent className="sm:max-w-[600px]">
+  <DialogHeader>
+    <DialogTitle>Medium Dialog</DialogTitle>
+  </DialogHeader>
+</DialogContent>
+
+// Large
+<DialogContent className="sm:max-w-[800px]">
+  <DialogHeader>
+    <DialogTitle>Large Dialog</DialogTitle>
+  </DialogHeader>
+</DialogContent>
+
+// Full Width
+<DialogContent className="sm:max-w-[95vw]">
+  <DialogHeader>
+    <DialogTitle>Full Width Dialog</DialogTitle>
+  </DialogHeader>
+</DialogContent>
+```
+
+## Examples
+
+### Confirmation Dialog
+
+```tsx
+function DeleteConfirmation({ onConfirm }: { onConfirm: () => void }) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const handleConfirm = () => {
+    onConfirm()
+    setIsOpen(false)
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="destructive">Delete</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Are you sure?</DialogTitle>
+          <DialogDescription>
+            This action cannot be undone. This will permanently delete your
+            data.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={handleConfirm}>
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+```
+
+### Form Dialog
+
+```tsx
+function CreateProjectDialog() {
+  const [isOpen, setIsOpen] = useState(false)
+  const { register, handleSubmit, formState: { errors } } = useForm()
+
+  const onSubmit = async (data) => {
+    await createProject(data)
+    setIsOpen(false)
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button>Create Project</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create New Project</DialogTitle>
+          <DialogDescription>
+            Enter project details to get started
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <Label htmlFor="name">Project Name</Label>
+            <Input
+              id="name"
+              {...register('name', { required: true })}
+              placeholder="My Project"
+            />
+            {errors.name && (
+              <p className="text-sm text-destructive">Name is required</p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              {...register('description')}
+              placeholder="Project description"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Create</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+```
+
+### Loading Dialog
+
+```tsx
+function LoadingDialog({ isOpen }: { isOpen: boolean }) {
+  return (
+    <Dialog open={isOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Processing...</DialogTitle>
+          <DialogDescription>
+            Please wait while we process your request
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+```
+
+### Multi-Step Dialog
+
+```tsx
+function MultiStepDialog() {
+  const [isOpen, setIsOpen] = useState(false)
+  const [step, setStep] = useState(1)
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button>Start Wizard</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Step {step} of 3</DialogTitle>
+        </DialogHeader>
+        
+        {step === 1 && (
+          <div>
+            <p>Step 1 content</p>
+          </div>
+        )}
+        
+        {step === 2 && (
+          <div>
+            <p>Step 2 content</p>
+          </div>
+        )}
+        
+        {step === 3 && (
+          <div>
+            <p>Step 3 content</p>
+          </div>
+        )}
+        
+        <DialogFooter>
+          {step > 1 && (
+            <Button variant="outline" onClick={() => setStep(step - 1)}>
+              Back
+            </Button>
+          )}
+          {step < 3 ? (
+            <Button onClick={() => setStep(step + 1)}>Next</Button>
+          ) : (
+            <Button onClick={() => setIsOpen(false)}>Finish</Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+```
+
+### Image Preview Dialog
+
+```tsx
+function ImagePreviewDialog({ src, alt }: { src: string; alt: string }) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <button className="cursor-pointer">
+          <Image
+            src={src}
+            alt={alt}
+            width={200}
+            height={200}
+            className="rounded-lg"
+          />
+        </button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[90vw]">
+        <DialogHeader>
+          <DialogTitle>{alt}</DialogTitle>
+        </DialogHeader>
+        <div className="relative aspect-video">
+          <Image
+            src={src}
+            alt={alt}
+            fill
+            className="object-contain"
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+```
+
+### Scrollable Dialog
+
+```tsx
+<Dialog>
+  <DialogTrigger asChild>
+    <Button>View Terms</Button>
+  </DialogTrigger>
+  <DialogContent className="max-h-[80vh]">
+    <DialogHeader>
+      <DialogTitle>Terms and Conditions</DialogTitle>
+    </DialogHeader>
+    <div className="overflow-y-auto pr-4">
+      <p className="text-sm text-muted-foreground">
+        {/* Long content here */}
+      </p>
+    </div>
+    <DialogFooter>
+      <Button>Accept</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+### Alert Dialog
+
+```tsx
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+
+<AlertDialog>
+  <AlertDialogTrigger asChild>
+    <Button variant="destructive">Delete Account</Button>
+  </AlertDialogTrigger>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+      <AlertDialogDescription>
+        This action cannot be undone. This will permanently delete your
+        account and remove your data from our servers.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancel</AlertDialogCancel>
+      <AlertDialogAction onClick={handleDelete}>
+        Delete
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+```
+
+## Composition
+
+```tsx
+<Dialog>
+  {/* Trigger - Opens dialog */}
+  <DialogTrigger asChild>
+    <Button>Open</Button>
+  </DialogTrigger>
+  
+  {/* Content - Dialog overlay */}
+  <DialogContent>
+    
+    {/* Header - Title and description */}
+    <DialogHeader>
+      <DialogTitle>Title</DialogTitle>
+      <DialogDescription>Description</DialogDescription>
+    </DialogHeader>
+    
+    {/* Main content */}
+    <div>Content</div>
+    
+    {/* Footer - Actions */}
+    <DialogFooter>
+      <Button>Action</Button>
+    </DialogFooter>
+    
+  </DialogContent>
+</Dialog>
+```
+
+## Props
+
+### Dialog
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `open` | `boolean` | - | Controlled open state |
+| `onOpenChange` | `(open: boolean) => void` | - | Open state change handler |
+| `defaultOpen` | `boolean` | `false` | Uncontrolled default open state |
+
+### DialogContent
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `className` | `string` | - | Additional CSS classes |
+| `onEscapeKeyDown` | `(e: Event) => void` | - | Escape key handler |
+| `onPointerDownOutside` | `(e: Event) => void` | - | Outside click handler |
+
+## Accessibility
+
+- Traps focus within dialog
+- Closes on Escape key
+- Closes on backdrop click
+- Returns focus to trigger on close
+- ARIA attributes for screen readers
+- Proper heading hierarchy
+
+## Best Practices
+
+1. **Use for important actions** - Don't overuse dialogs for minor interactions
+2. **Clear actions** - Provide obvious ways to close or confirm
+3. **Avoid nested dialogs** - Don't open dialogs from within dialogs
+4. **Mobile-friendly** - Ensure dialogs work well on small screens
+5. **Loading states** - Show feedback during async operations
+6. **Keyboard navigation** - Support Tab, Escape, Enter keys
+
+## Related
+
+- [Alert Dialog](/docs/components/alert-dialog)
+- [Sheet Component](/docs/components/sheet)
+- [Popover Component](/docs/components/popover)

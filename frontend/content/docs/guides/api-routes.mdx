@@ -1,0 +1,551 @@
+---
+title: API Routes
+description: Building and securing API endpoints in Next.js
+category: guides
+order: 3
+---
+
+# API Routes
+
+Learn how to build robust API endpoints using Next.js App Router.
+
+## Route Handlers
+
+### Basic GET Route
+
+```typescript
+// app/api/metrics/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams
+  const projectId = searchParams.get('projectId')
+
+  if (!projectId) {
+    return NextResponse.json(
+      { error: 'projectId is required' },
+      { status: 400 }
+    )
+  }
+
+  const metrics = await fetchMetrics(projectId)
+
+  return NextResponse.json({ metrics })
+}
+```
+
+### POST Route with Validation
+
+```typescript
+// app/api/metrics/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+
+const metricSchema = z.object({
+  projectId: z.string().uuid(),
+  value: z.number().positive(),
+  timestamp: z.string().datetime(),
+})
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const validated = metricSchema.parse(body)
+
+    const metric = await createMetric(validated)
+
+    return NextResponse.json({ metric }, { status: 201 })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: error.errors },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+```
+
+### Dynamic Routes
+
+```typescript
+// app/api/projects/[id]/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const project = await fetchProject(params.id)
+
+  if (!project) {
+    return NextResponse.json(
+      { error: 'Project not found' },
+      { status: 404 }
+    )
+  }
+
+  return NextResponse.json({ project })
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const body = await request.json()
+  const project = await updateProject(params.id, body)
+
+  return NextResponse.json({ project })
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  await deleteProject(params.id)
+
+  return NextResponse.json({ success: true }, { status: 204 })
+}
+```
+
+## Authentication
+
+### Middleware Protection
+
+```typescript
+// middleware.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { verifyToken } from '@/lib/auth'
+
+export async function middleware(request: NextRequest) {
+  const token = request.cookies.get('token')?.value
+
+  if (!token) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    )
+  }
+
+  try {
+    const user = await verifyToken(token)
+    
+    // Add user to request headers
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-user-id', user.id)
+
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    })
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Invalid token' },
+      { status: 401 }
+    )
+  }
+}
+
+export const config = {
+  matcher: '/api/:path*',
+}
+```
+
+### Route-Level Auth
+
+```typescript
+// app/api/protected/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { getCurrentUser } from '@/lib/auth'
+
+export async function GET(request: NextRequest) {
+  const user = await getCurrentUser(request)
+
+  if (!user) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    )
+  }
+
+  const data = await fetchUserData(user.id)
+
+  return NextResponse.json({ data })
+}
+```
+
+## Error Handling
+
+### Centralized Error Handler
+
+```typescript
+// lib/api-error.ts
+export class ApiError extends Error {
+  constructor(
+    public statusCode: number,
+    message: string,
+    public details?: any
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
+export function handleApiError(error: unknown) {
+  console.error('API Error:', error)
+
+  if (error instanceof ApiError) {
+    return NextResponse.json(
+      { error: error.message, details: error.details },
+      { status: error.statusCode }
+    )
+  }
+
+  if (error instanceof z.ZodError) {
+    return NextResponse.json(
+      { error: 'Validation error', details: error.errors },
+      { status: 400 }
+    )
+  }
+
+  return NextResponse.json(
+    { error: 'Internal server error' },
+    { status: 500 }
+  )
+}
+```
+
+### Usage
+
+```typescript
+// app/api/metrics/route.ts
+import { handleApiError, ApiError } from '@/lib/api-error'
+
+export async function GET(request: NextRequest) {
+  try {
+    const projectId = request.nextUrl.searchParams.get('projectId')
+
+    if (!projectId) {
+      throw new ApiError(400, 'projectId is required')
+    }
+
+    const metrics = await fetchMetrics(projectId)
+
+    if (!metrics) {
+      throw new ApiError(404, 'Metrics not found')
+    }
+
+    return NextResponse.json({ metrics })
+  } catch (error) {
+    return handleApiError(error)
+  }
+}
+```
+
+## Rate Limiting
+
+### Upstash Rate Limiter
+
+```typescript
+// lib/rate-limit.ts
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(10, '10 s'),
+  analytics: true,
+})
+
+export async function checkRateLimit(identifier: string) {
+  const { success, limit, reset, remaining } = await ratelimit.limit(identifier)
+
+  return {
+    success,
+    limit,
+    reset,
+    remaining,
+  }
+}
+```
+
+### Apply Rate Limiting
+
+```typescript
+// app/api/metrics/route.ts
+import { checkRateLimit } from '@/lib/rate-limit'
+
+export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') ?? 'unknown'
+  const { success, limit, reset, remaining } = await checkRateLimit(ip)
+
+  if (!success) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      {
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': limit.toString(),
+          'X-RateLimit-Remaining': remaining.toString(),
+          'X-RateLimit-Reset': reset.toString(),
+        },
+      }
+    )
+  }
+
+  // Process request
+  const body = await request.json()
+  const metric = await createMetric(body)
+
+  return NextResponse.json({ metric }, { status: 201 })
+}
+```
+
+## CORS Configuration
+
+### Enable CORS
+
+```typescript
+// app/api/public/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function GET(request: NextRequest) {
+  const data = await fetchPublicData()
+
+  return NextResponse.json(
+    { data },
+    {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    }
+  )
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  })
+}
+```
+
+### CORS Middleware
+
+```typescript
+// lib/cors.ts
+import { NextResponse } from 'next/server'
+
+export function corsHeaders(origin?: string) {
+  return {
+    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400',
+  }
+}
+
+export function withCors(handler: Function) {
+  return async (request: Request, ...args: any[]) => {
+    // Handle preflight
+    if (request.method === 'OPTIONS') {
+      return new NextResponse(null, {
+        status: 200,
+        headers: corsHeaders(),
+      })
+    }
+
+    // Handle request
+    const response = await handler(request, ...args)
+
+    // Add CORS headers
+    Object.entries(corsHeaders()).forEach(([key, value]) => {
+      response.headers.set(key, value)
+    })
+
+    return response
+  }
+}
+```
+
+## Caching
+
+### Static Responses
+
+```typescript
+// app/api/config/route.ts
+export const dynamic = 'force-static'
+
+export async function GET() {
+  const config = {
+    apiVersion: '1.0.0',
+    features: ['realtime', 'analytics'],
+  }
+
+  return NextResponse.json({ config })
+}
+```
+
+### Revalidation
+
+```typescript
+// app/api/metrics/route.ts
+export const revalidate = 60 // Revalidate every 60 seconds
+
+export async function GET(request: NextRequest) {
+  const metrics = await fetchMetrics()
+
+  return NextResponse.json({ metrics })
+}
+```
+
+### Cache Headers
+
+```typescript
+// app/api/metrics/route.ts
+export async function GET(request: NextRequest) {
+  const metrics = await fetchMetrics()
+
+  return NextResponse.json(
+    { metrics },
+    {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+      },
+    }
+  )
+}
+```
+
+## Streaming Responses
+
+### Server-Sent Events
+
+```typescript
+// app/api/stream/route.ts
+export async function GET(request: NextRequest) {
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      for (let i = 0; i < 10; i++) {
+        const data = `data: ${JSON.stringify({ count: i })}\n\n`
+        controller.enqueue(encoder.encode(data))
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+      }
+      controller.close()
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  })
+}
+```
+
+### Streaming JSON
+
+```typescript
+// app/api/large-data/route.ts
+export async function GET(request: NextRequest) {
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      controller.enqueue(encoder.encode('['))
+
+      const items = await fetchLargeDataset()
+
+      for (let i = 0; i < items.length; i++) {
+        const json = JSON.stringify(items[i])
+        controller.enqueue(encoder.encode(json))
+
+        if (i < items.length - 1) {
+          controller.enqueue(encoder.encode(','))
+        }
+      }
+
+      controller.enqueue(encoder.encode(']'))
+      controller.close()
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+}
+```
+
+## Testing
+
+### API Route Tests
+
+```typescript
+import { describe, it, expect } from 'vitest'
+import { GET, POST } from '@/app/api/metrics/route'
+
+describe('/api/metrics', () => {
+  it('GET returns metrics', async () => {
+    const request = new Request('http://localhost/api/metrics?projectId=123')
+    const response = await GET(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data.metrics).toBeDefined()
+  })
+
+  it('POST creates metric', async () => {
+    const request = new Request('http://localhost/api/metrics', {
+      method: 'POST',
+      body: JSON.stringify({
+        projectId: '123',
+        value: 100,
+        timestamp: new Date().toISOString(),
+      }),
+    })
+
+    const response = await POST(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(201)
+    expect(data.metric).toBeDefined()
+  })
+})
+```
+
+## Best Practices
+
+1. **Validate input** - Always validate request data
+2. **Handle errors** - Use centralized error handling
+3. **Rate limit** - Protect against abuse
+4. **Authenticate** - Secure sensitive endpoints
+5. **Cache responses** - Improve performance
+6. **Use TypeScript** - Type-safe request/response
+7. **Log requests** - Monitor API usage
+8. **Version APIs** - Support multiple versions
+9. **Document endpoints** - Use OpenAPI/Swagger
+10. **Test thoroughly** - Unit and integration tests
+
+## Related
+
+- [Security Guide](/docs/guides/security)
+- [Testing Guide](/docs/guides/testing)
+- [Performance](/docs/guides/performance)

@@ -1,0 +1,438 @@
+---
+title: useDebounce Hook
+description: Custom hook for debouncing values and callbacks
+category: hooks
+order: 3
+---
+
+# useDebounce Hook
+
+Debounce values and callbacks to optimize performance and reduce unnecessary operations.
+
+## Basic Usage
+
+```tsx
+import { useDebounce } from '@/hooks/useDebounce'
+
+function SearchComponent() {
+  const [searchTerm, setSearchTerm] = useState('')
+  const debouncedSearchTerm = useDebounce(searchTerm, 500)
+
+  useEffect(() => {
+    if (debouncedSearchTerm) {
+      // API call only happens after user stops typing for 500ms
+      searchAPI(debouncedSearchTerm)
+    }
+  }, [debouncedSearchTerm])
+
+  return (
+    <Input
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      placeholder="Search..."
+    />
+  )
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `value` | `T` | Yes | Value to debounce |
+| `delay` | `number` | Yes | Delay in milliseconds |
+
+## Return Value
+
+Returns the debounced value of type `T`.
+
+## Examples
+
+### Search Input
+
+```tsx
+function SearchWithDebounce() {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [isSearching, setIsSearching] = useState(false)
+  const debouncedQuery = useDebounce(query, 300)
+
+  useEffect(() => {
+    const search = async () => {
+      if (!debouncedQuery) {
+        setResults([])
+        return
+      }
+
+      setIsSearching(true)
+      try {
+        const data = await searchAPI(debouncedQuery)
+        setResults(data)
+      } finally {
+        setIsSearching(false)
+      }
+    }
+
+    search()
+  }, [debouncedQuery])
+
+  return (
+    <div>
+      <div className="relative">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search..."
+        />
+        {isSearching && (
+          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin" />
+        )}
+      </div>
+      <div className="mt-4">
+        {results.map((result) => (
+          <div key={result.id}>{result.title}</div>
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+### Auto-Save Form
+
+```tsx
+function AutoSaveForm() {
+  const [formData, setFormData] = useState({ title: '', content: '' })
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const debouncedFormData = useDebounce(formData, 1000)
+
+  useEffect(() => {
+    const save = async () => {
+      if (debouncedFormData.title || debouncedFormData.content) {
+        await saveToAPI(debouncedFormData)
+        setLastSaved(new Date())
+      }
+    }
+
+    save()
+  }, [debouncedFormData])
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label htmlFor="title">Title</Label>
+        <Input
+          id="title"
+          value={formData.title}
+          onChange={(e) =>
+            setFormData({ ...formData, title: e.target.value })
+          }
+        />
+      </div>
+      <div>
+        <Label htmlFor="content">Content</Label>
+        <Textarea
+          id="content"
+          value={formData.content}
+          onChange={(e) =>
+            setFormData({ ...formData, content: e.target.value })
+          }
+        />
+      </div>
+      {lastSaved && (
+        <p className="text-sm text-muted-foreground">
+          Last saved: {lastSaved.toLocaleTimeString()}
+        </p>
+      )}
+    </div>
+  )
+}
+```
+
+### Window Resize Handler
+
+```tsx
+function ResponsiveComponent() {
+  const [windowSize, setWindowSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  })
+  const debouncedWindowSize = useDebounce(windowSize, 200)
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      })
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  useEffect(() => {
+    // Expensive operation only runs after resize stops
+    recalculateLayout(debouncedWindowSize)
+  }, [debouncedWindowSize])
+
+  return (
+    <div>
+      Window size: {debouncedWindowSize.width} x {debouncedWindowSize.height}
+    </div>
+  )
+}
+```
+
+### Filter Panel
+
+```tsx
+function FilterPanel() {
+  const [filters, setFilters] = useState({
+    minPrice: 0,
+    maxPrice: 1000,
+    category: '',
+    inStock: false,
+  })
+  const debouncedFilters = useDebounce(filters, 500)
+
+  useEffect(() => {
+    // API call only happens after user stops adjusting filters
+    fetchProducts(debouncedFilters)
+  }, [debouncedFilters])
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label>Price Range</Label>
+        <div className="flex gap-2">
+          <Input
+            type="number"
+            value={filters.minPrice}
+            onChange={(e) =>
+              setFilters({ ...filters, minPrice: Number(e.target.value) })
+            }
+          />
+          <Input
+            type="number"
+            value={filters.maxPrice}
+            onChange={(e) =>
+              setFilters({ ...filters, maxPrice: Number(e.target.value) })
+            }
+          />
+        </div>
+      </div>
+      <div>
+        <Label>Category</Label>
+        <Select
+          value={filters.category}
+          onValueChange={(value) =>
+            setFilters({ ...filters, category: value })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="electronics">Electronics</SelectItem>
+            <SelectItem value="clothing">Clothing</SelectItem>
+            <SelectItem value="books">Books</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="inStock"
+          checked={filters.inStock}
+          onCheckedChange={(checked) =>
+            setFilters({ ...filters, inStock: checked as boolean })
+          }
+        />
+        <Label htmlFor="inStock">In Stock Only</Label>
+      </div>
+    </div>
+  )
+}
+```
+
+### Validation Feedback
+
+```tsx
+function UsernameInput() {
+  const [username, setUsername] = useState('')
+  const [isAvailable, setIsAvailable] = useState<boolean | null>(null)
+  const [isChecking, setIsChecking] = useState(false)
+  const debouncedUsername = useDebounce(username, 500)
+
+  useEffect(() => {
+    const checkAvailability = async () => {
+      if (!debouncedUsername) {
+        setIsAvailable(null)
+        return
+      }
+
+      setIsChecking(true)
+      try {
+        const available = await checkUsernameAPI(debouncedUsername)
+        setIsAvailable(available)
+      } finally {
+        setIsChecking(false)
+      }
+    }
+
+    checkAvailability()
+  }, [debouncedUsername])
+
+  return (
+    <div>
+      <Label htmlFor="username">Username</Label>
+      <div className="relative">
+        <Input
+          id="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className={
+            isAvailable === false ? 'border-destructive' : 
+            isAvailable === true ? 'border-green-500' : ''
+          }
+        />
+        {isChecking && (
+          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin" />
+        )}
+      </div>
+      {isAvailable === false && (
+        <p className="text-sm text-destructive">Username is taken</p>
+      )}
+      {isAvailable === true && (
+        <p className="text-sm text-green-600">Username is available</p>
+      )}
+    </div>
+  )
+}
+```
+
+## Implementation
+
+```typescript
+import { useEffect, useState } from 'react'
+
+export function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
+```
+
+## Debounce Callback
+
+For debouncing callbacks instead of values:
+
+```typescript
+import { useCallback, useRef } from 'react'
+
+export function useDebouncedCallback<T extends (...args: any[]) => any>(
+  callback: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  const timeoutRef = useRef<NodeJS.Timeout>()
+
+  return useCallback(
+    (...args: Parameters<T>) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+
+      timeoutRef.current = setTimeout(() => {
+        callback(...args)
+      }, delay)
+    },
+    [callback, delay]
+  )
+}
+```
+
+### Usage
+
+```tsx
+function Component() {
+  const handleSearch = useDebouncedCallback((query: string) => {
+    searchAPI(query)
+  }, 500)
+
+  return (
+    <Input
+      onChange={(e) => handleSearch(e.target.value)}
+      placeholder="Search..."
+    />
+  )
+}
+```
+
+## Common Delays
+
+| Use Case | Recommended Delay |
+|----------|-------------------|
+| Search input | 300-500ms |
+| Auto-save | 1000-2000ms |
+| Window resize | 200-300ms |
+| Scroll events | 100-200ms |
+| Form validation | 500-1000ms |
+| API calls | 300-500ms |
+
+## Performance Tips
+
+1. **Choose appropriate delay** - Balance responsiveness vs. performance
+2. **Cancel on unmount** - Cleanup is handled automatically
+3. **Combine with useMemo** - Memoize expensive computations
+4. **Use for expensive operations** - API calls, complex calculations
+5. **Don't overuse** - Not needed for simple state updates
+
+## Comparison with Throttle
+
+| Feature | Debounce | Throttle |
+|---------|----------|----------|
+| Execution | After delay of inactivity | At regular intervals |
+| Use case | Search, auto-save | Scroll, resize |
+| Frequency | Once after pause | Multiple times |
+| Example | User stops typing | User scrolling |
+
+## Testing
+
+```typescript
+import { renderHook, act, waitFor } from '@testing-library/react'
+import { useDebounce } from '@/hooks/useDebounce'
+
+describe('useDebounce', () => {
+  it('debounces value', async () => {
+    const { result, rerender } = renderHook(
+      ({ value, delay }) => useDebounce(value, delay),
+      { initialProps: { value: 'initial', delay: 500 } }
+    )
+
+    expect(result.current).toBe('initial')
+
+    rerender({ value: 'updated', delay: 500 })
+    expect(result.current).toBe('initial')
+
+    await waitFor(() => expect(result.current).toBe('updated'), {
+      timeout: 600,
+    })
+  })
+})
+```
+
+## Related
+
+- [useThrottle Hook](/docs/hooks/use-throttle)
+- [Search Component](/docs/components/search)
+- [Performance Guide](/docs/guides/performance)

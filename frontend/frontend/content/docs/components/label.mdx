@@ -1,0 +1,325 @@
+---
+title: Label Component
+description: Accessible form labels with proper associations
+category: components
+order: 17
+---
+
+# Label Component
+
+Accessible form labels that properly associate with form controls.
+
+## Basic Usage
+
+```tsx
+import { Label } from '@/components/ui/label'
+
+function Example() {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="email">Email</Label>
+      <Input id="email" type="email" />
+    </div>
+  )
+}
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `htmlFor` | `string` | - | ID of associated form control |
+| `required` | `boolean` | `false` | Show required indicator |
+| `className` | `string` | - | Additional CSS classes |
+
+## Examples
+
+### With Input
+
+```tsx
+<div className="space-y-2">
+  <Label htmlFor="username">Username</Label>
+  <Input id="username" placeholder="Enter username" />
+</div>
+```
+
+### Required Field
+
+```tsx
+<Label htmlFor="email" required>
+  Email
+  <span className="text-destructive ml-1">*</span>
+</Label>
+```
+
+### With Helper Text
+
+```tsx
+<div className="space-y-2">
+  <Label htmlFor="password">Password</Label>
+  <Input id="password" type="password" />
+  <p className="text-sm text-muted-foreground">
+    Must be at least 8 characters
+  </p>
+</div>
+```
+
+### With Checkbox
+
+```tsx
+<div className="flex items-center space-x-2">
+  <Checkbox id="terms" />
+  <Label htmlFor="terms" className="cursor-pointer">
+    Accept terms and conditions
+  </Label>
+</div>
+```
+
+### With Radio
+
+```tsx
+<div className="space-y-2">
+  <Label>Notification Preferences</Label>
+  <div className="flex items-center space-x-2">
+    <RadioGroup defaultValue="email">
+      <div className="flex items-center space-x-2">
+        <RadioGroupItem value="email" id="email" />
+        <Label htmlFor="email" className="cursor-pointer">Email</Label>
+      </div>
+      <div className="flex items-center space-x-2">
+        <RadioGroupItem value="sms" id="sms" />
+        <Label htmlFor="sms" className="cursor-pointer">SMS</Label>
+      </div>
+    </RadioGroup>
+  </div>
+</div>
+```
+
+### With Switch
+
+```tsx
+<div className="flex items-center justify-between">
+  <div className="space-y-0.5">
+    <Label htmlFor="notifications">Push Notifications</Label>
+    <p className="text-sm text-muted-foreground">
+      Receive notifications on your device
+    </p>
+  </div>
+  <Switch id="notifications" />
+</div>
+```
+
+### Disabled Label
+
+```tsx
+<Label htmlFor="disabled" className="text-muted-foreground cursor-not-allowed">
+  Disabled Field
+</Label>
+<Input id="disabled" disabled />
+```
+
+### With Error
+
+```tsx
+function LabelWithError() {
+  const [error, setError] = useState('This field is required')
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="field" className={error ? 'text-destructive' : ''}>
+        Field Name
+      </Label>
+      <Input id="field" className={error ? 'border-destructive' : ''} />
+      {error && (
+        <p className="text-sm text-destructive">{error}</p>
+      )}
+    </div>
+  )
+}
+```
+
+### Inline Label
+
+```tsx
+<div className="flex items-center space-x-2">
+  <Label htmlFor="inline" className="whitespace-nowrap">
+    Amount:
+  </Label>
+  <Input id="inline" type="number" className="w-24" />
+</div>
+```
+
+### With Tooltip
+
+```tsx
+<div className="space-y-2">
+  <div className="flex items-center gap-2">
+    <Label htmlFor="api-key">API Key</Label>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <HelpCircle className="h-4 w-4 text-muted-foreground" />
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Your API key can be found in settings</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  </div>
+  <Input id="api-key" type="password" />
+</div>
+```
+
+### Form Grid Layout
+
+```tsx
+<form className="grid grid-cols-2 gap-4">
+  <div className="space-y-2">
+    <Label htmlFor="first-name">First Name</Label>
+    <Input id="first-name" />
+  </div>
+  <div className="space-y-2">
+    <Label htmlFor="last-name">Last Name</Label>
+    <Input id="last-name" />
+  </div>
+  <div className="col-span-2 space-y-2">
+    <Label htmlFor="email">Email</Label>
+    <Input id="email" type="email" />
+  </div>
+</form>
+```
+
+### With Badge
+
+```tsx
+<div className="space-y-2">
+  <div className="flex items-center gap-2">
+    <Label htmlFor="feature">Feature Name</Label>
+    <Badge variant="secondary">Beta</Badge>
+  </div>
+  <Input id="feature" />
+</div>
+```
+
+### Optional Field
+
+```tsx
+<Label htmlFor="phone">
+  Phone Number
+  <span className="text-muted-foreground ml-1">(optional)</span>
+</Label>
+```
+
+## Styling
+
+### Bold Label
+
+```tsx
+<Label htmlFor="field" className="font-bold">
+  Important Field
+</Label>
+```
+
+### Small Label
+
+```tsx
+<Label htmlFor="field" className="text-sm">
+  Small Label
+</Label>
+```
+
+### Uppercase Label
+
+```tsx
+<Label htmlFor="field" className="uppercase text-xs tracking-wide">
+  Field Name
+</Label>
+```
+
+## Best Practices
+
+1. **Always use htmlFor** - Associate labels with form controls
+2. **Clear text** - Use descriptive, concise label text
+3. **Required indicators** - Mark required fields clearly
+4. **Helper text** - Provide additional context when needed
+5. **Error states** - Style labels to match error states
+6. **Clickable** - Ensure labels are clickable for better UX
+
+## Accessibility
+
+```tsx
+<Label
+  htmlFor="field"
+  aria-label="Field name"
+  aria-required={true}
+>
+  Field Name
+</Label>
+```
+
+### Screen Reader Support
+
+```tsx
+<div className="space-y-2">
+  <Label htmlFor="search" className="sr-only">
+    Search
+  </Label>
+  <Input
+    id="search"
+    placeholder="Search..."
+    aria-label="Search"
+  />
+</div>
+```
+
+### ARIA Described By
+
+```tsx
+<div className="space-y-2">
+  <Label htmlFor="password">Password</Label>
+  <Input
+    id="password"
+    type="password"
+    aria-describedby="password-hint"
+  />
+  <p id="password-hint" className="text-sm text-muted-foreground">
+    Must be at least 8 characters
+  </p>
+</div>
+```
+
+## Testing
+
+```typescript
+import { render, screen } from '@testing-library/react'
+import { Label } from './label'
+
+describe('Label', () => {
+  it('renders with text', () => {
+    render(<Label htmlFor="test">Test Label</Label>)
+    expect(screen.getByText('Test Label')).toBeInTheDocument()
+  })
+
+  it('associates with input', () => {
+    render(
+      <>
+        <Label htmlFor="input">Label</Label>
+        <input id="input" />
+      </>
+    )
+    
+    const label = screen.getByText('Label')
+    const input = screen.getByRole('textbox')
+    
+    expect(label).toHaveAttribute('for', 'input')
+    expect(input).toHaveAttribute('id', 'input')
+  })
+})
+```
+
+## Related
+
+- [Input Component](/docs/components/input)
+- [Textarea Component](/docs/components/textarea)
+- [Form Component](/docs/components/form)
+- [Checkbox Component](/docs/components/checkbox)

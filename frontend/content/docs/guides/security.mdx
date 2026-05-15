@@ -1,0 +1,499 @@
+---
+title: Security Best Practices
+description: Security guidelines for building secure applications
+category: guides
+order: 1
+---
+
+# Security Best Practices
+
+Essential security practices for protecting your application and user data.
+
+## Authentication
+
+### Secure Password Storage
+
+Never store passwords in plain text:
+
+```typescript
+import bcrypt from 'bcrypt'
+
+// Hash password before storing
+const hashedPassword = await bcrypt.hash(password, 10)
+
+// Verify password
+const isValid = await bcrypt.compare(password, hashedPassword)
+```
+
+### Session Management
+
+Use secure session tokens:
+
+```typescript
+import { SignJWT, jwtVerify } from 'jose'
+
+// Create JWT token
+const token = await new SignJWT({ userId })
+  .setProtectedHeader({ alg: 'HS256' })
+  .setExpirationTime('24h')
+  .sign(secret)
+
+// Verify token
+const { payload } = await jwtVerify(token, secret)
+```
+
+### Multi-Factor Authentication
+
+Implement 2FA for sensitive operations:
+
+```typescript
+import speakeasy from 'speakeasy'
+
+// Generate secret
+const secret = speakeasy.generateSecret()
+
+// Verify token
+const isValid = speakeasy.totp.verify({
+  secret: secret.base32,
+  encoding: 'base32',
+  token: userToken,
+})
+```
+
+## Authorization
+
+### Row Level Security (RLS)
+
+Enable RLS in Supabase:
+
+```sql
+-- Enable RLS
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Users can only see their own projects
+CREATE POLICY "Users can view own projects"
+  ON projects
+  FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Policy: Users can only update their own projects
+CREATE POLICY "Users can update own projects"
+  ON projects
+  FOR UPDATE
+  USING (auth.uid() = user_id);
+```
+
+### Role-Based Access Control (RBAC)
+
+Implement role-based permissions:
+
+```typescript
+enum Role {
+  ADMIN = 'admin',
+  USER = 'user',
+  GUEST = 'guest',
+}
+
+const permissions = {
+  [Role.ADMIN]: ['read', 'write', 'delete'],
+  [Role.USER]: ['read', 'write'],
+  [Role.GUEST]: ['read'],
+}
+
+function hasPermission(role: Role, action: string): boolean {
+  return permissions[role]?.includes(action) ?? false
+}
+```
+
+### API Route Protection
+
+Protect API routes with middleware:
+
+```typescript
+import { NextRequest, NextResponse } from 'next/server'
+import { verifyAuth } from '@/lib/auth'
+
+export async function middleware(request: NextRequest) {
+  const token = request.cookies.get('token')?.value
+
+  if (!token) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  try {
+    await verifyAuth(token)
+    return NextResponse.next()
+  } catch (error) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+}
+
+export const config = {
+  matcher: '/api/:path*',
+}
+```
+
+## Input Validation
+
+### Server-Side Validation
+
+Always validate on the server:
+
+```typescript
+import { z } from 'zod'
+
+const userSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  age: z.number().min(18).max(120),
+})
+
+export async function POST(request: Request) {
+  const body = await request.json()
+
+  try {
+    const validated = userSchema.parse(body)
+    // Process validated data
+  } catch (error) {
+    return Response.json({ error: 'Invalid input' }, { status: 400 })
+  }
+}
+```
+
+### SQL Injection Prevention
+
+Use parameterized queries:
+
+```typescript
+// ❌ VULNERABLE
+const query = `SELECT * FROM users WHERE email = '${email}'`
+
+// ✅ SAFE
+const { data } = await supabase
+  .from('users')
+  .select('*')
+  .eq('email', email)
+```
+
+### XSS Prevention
+
+Sanitize user input:
+
+```typescript
+import DOMPurify from 'isomorphic-dompurify'
+
+// Sanitize HTML
+const clean = DOMPurify.sanitize(userInput)
+
+// In React, use dangerouslySetInnerHTML carefully
+<div dangerouslySetInnerHTML={{ __html: clean }} />
+```
+
+## Data Protection
+
+### Encryption at Rest
+
+Encrypt sensitive data:
+
+```typescript
+import crypto from 'crypto'
+
+const algorithm = 'aes-256-gcm'
+const key = crypto.randomBytes(32)
+const iv = crypto.randomBytes(16)
+
+// Encrypt
+function encrypt(text: string): string {
+  const cipher = crypto.createCipheriv(algorithm, key, iv)
+  let encrypted = cipher.update(text, 'utf8', 'hex')
+  encrypted += cipher.final('hex')
+  return encrypted
+}
+
+// Decrypt
+function decrypt(encrypted: string): string {
+  const decipher = crypto.createDecipheriv(algorithm, key, iv)
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+  decrypted += decipher.final('utf8')
+  return decrypted
+}
+```
+
+### Encryption in Transit
+
+Always use HTTPS:
+
+```typescript
+// next.config.js
+module.exports = {
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains',
+          },
+        ],
+      },
+    ]
+  },
+}
+```
+
+### Secure Environment Variables
+
+Never commit secrets:
+
+```bash
+# .env.local (gitignored)
+DATABASE_URL=postgresql://...
+API_KEY=sk-...
+JWT_SECRET=...
+
+# .env.example (committed)
+DATABASE_URL=postgresql://user:password@localhost:5432/db
+API_KEY=your-api-key
+JWT_SECRET=your-jwt-secret
+```
+
+## API Security
+
+### Rate Limiting
+
+Prevent abuse with rate limiting:
+
+```typescript
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(10, '10 s'),
+})
+
+export async function POST(request: Request) {
+  const ip = request.headers.get('x-forwarded-for') ?? 'unknown'
+  const { success } = await ratelimit.limit(ip)
+
+  if (!success) {
+    return Response.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
+  // Process request
+}
+```
+
+### CORS Configuration
+
+Configure CORS properly:
+
+```typescript
+// next.config.js
+module.exports = {
+  async headers() {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: 'https://yourdomain.com' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
+        ],
+      },
+    ]
+  },
+}
+```
+
+### API Key Management
+
+Rotate API keys regularly:
+
+```typescript
+interface ApiKey {
+  key: string
+  createdAt: Date
+  expiresAt: Date
+  lastUsed: Date
+}
+
+async function validateApiKey(key: string): Promise<boolean> {
+  const apiKey = await db.apiKey.findUnique({ where: { key } })
+
+  if (!apiKey) return false
+  if (apiKey.expiresAt < new Date()) return false
+
+  // Update last used
+  await db.apiKey.update({
+    where: { key },
+    data: { lastUsed: new Date() },
+  })
+
+  return true
+}
+```
+
+## Security Headers
+
+### Content Security Policy
+
+Prevent XSS with CSP:
+
+```typescript
+// next.config.js
+module.exports = {
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https:",
+              "font-src 'self' data:",
+              "connect-src 'self' https://api.yourdomain.com",
+            ].join('; '),
+          },
+        ],
+      },
+    ]
+  },
+}
+```
+
+### Other Security Headers
+
+```typescript
+const securityHeaders = [
+  { key: 'X-DNS-Prefetch-Control', value: 'on' },
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+]
+```
+
+## Logging and Monitoring
+
+### Audit Logs
+
+Track security-relevant events:
+
+```typescript
+interface AuditLog {
+  userId: string
+  action: string
+  resource: string
+  timestamp: Date
+  ip: string
+  userAgent: string
+}
+
+async function logAudit(log: AuditLog) {
+  await db.auditLog.create({ data: log })
+}
+
+// Usage
+await logAudit({
+  userId: user.id,
+  action: 'DELETE',
+  resource: 'project/123',
+  timestamp: new Date(),
+  ip: request.ip,
+  userAgent: request.headers.get('user-agent'),
+})
+```
+
+### Security Monitoring
+
+Monitor for suspicious activity:
+
+```typescript
+async function detectSuspiciousActivity(userId: string) {
+  const recentLogins = await db.loginAttempt.findMany({
+    where: {
+      userId,
+      createdAt: { gte: new Date(Date.now() - 3600000) }, // Last hour
+    },
+  })
+
+  // Alert if > 10 failed attempts
+  const failedAttempts = recentLogins.filter((l) => !l.success)
+  if (failedAttempts.length > 10) {
+    await sendSecurityAlert(userId, 'Multiple failed login attempts')
+  }
+}
+```
+
+## Dependency Security
+
+### Regular Updates
+
+Keep dependencies updated:
+
+```bash
+# Check for vulnerabilities
+npm audit
+
+# Fix vulnerabilities
+npm audit fix
+
+# Update dependencies
+npm update
+```
+
+### Dependency Scanning
+
+Use automated scanning:
+
+```yaml
+# .github/workflows/security.yml
+name: Security Scan
+on: [push, pull_request]
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - run: npm ci
+      - run: npm audit
+```
+
+## Checklist
+
+### Before Production
+
+- [ ] Enable HTTPS
+- [ ] Configure security headers
+- [ ] Enable RLS in database
+- [ ] Implement rate limiting
+- [ ] Set up audit logging
+- [ ] Configure CORS properly
+- [ ] Validate all inputs
+- [ ] Encrypt sensitive data
+- [ ] Use environment variables for secrets
+- [ ] Set up monitoring and alerts
+- [ ] Run security audit
+- [ ] Test authentication flows
+- [ ] Review API permissions
+- [ ] Enable 2FA for admin accounts
+- [ ] Set up backup and recovery
+
+## Resources
+
+- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
+- [Next.js Security](https://nextjs.org/docs/app/building-your-application/configuring/security)
+- [Supabase Security](https://supabase.com/docs/guides/auth/row-level-security)
+
+## Related
+
+- [Authentication](/docs/features/authentication)
+- [Configuration](/docs/getting-started/configuration)
+- [API Routes](/docs/guides/api-routes)

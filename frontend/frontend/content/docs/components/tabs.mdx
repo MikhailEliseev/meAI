@@ -1,0 +1,466 @@
+---
+title: Tabs Component
+description: Organize content into multiple panels with tab navigation
+category: components
+order: 10
+---
+
+# Tabs Component
+
+Organize content into multiple panels accessible through tab navigation.
+
+## Basic Usage
+
+```tsx
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+
+function Example() {
+  return (
+    <Tabs defaultValue="account">
+      <TabsList>
+        <TabsTrigger value="account">Account</TabsTrigger>
+        <TabsTrigger value="password">Password</TabsTrigger>
+      </TabsList>
+      <TabsContent value="account">
+        Account settings content
+      </TabsContent>
+      <TabsContent value="password">
+        Password settings content
+      </TabsContent>
+    </Tabs>
+  )
+}
+```
+
+## Props
+
+### Tabs
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `defaultValue` | `string` | - | Default active tab |
+| `value` | `string` | - | Controlled active tab |
+| `onValueChange` | `(value: string) => void` | - | Tab change callback |
+| `orientation` | `'horizontal' \| 'vertical'` | `'horizontal'` | Tab orientation |
+
+### TabsTrigger
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | - | Tab identifier |
+| `disabled` | `boolean` | `false` | Disable tab |
+
+## Examples
+
+### Controlled Tabs
+
+```tsx
+function ControlledTabs() {
+  const [activeTab, setActiveTab] = useState('overview')
+
+  return (
+    <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <TabsList>
+        <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        <TabsTrigger value="reports">Reports</TabsTrigger>
+      </TabsList>
+      <TabsContent value="overview">
+        <h2>Overview</h2>
+        <p>Dashboard overview content</p>
+      </TabsContent>
+      <TabsContent value="analytics">
+        <h2>Analytics</h2>
+        <p>Analytics data and charts</p>
+      </TabsContent>
+      <TabsContent value="reports">
+        <h2>Reports</h2>
+        <p>Generated reports</p>
+      </TabsContent>
+    </Tabs>
+  )
+}
+```
+
+### With Icons
+
+```tsx
+import { User, Settings, Bell, Shield } from 'lucide-react'
+
+function TabsWithIcons() {
+  return (
+    <Tabs defaultValue="profile">
+      <TabsList>
+        <TabsTrigger value="profile">
+          <User className="mr-2 h-4 w-4" />
+          Profile
+        </TabsTrigger>
+        <TabsTrigger value="settings">
+          <Settings className="mr-2 h-4 w-4" />
+          Settings
+        </TabsTrigger>
+        <TabsTrigger value="notifications">
+          <Bell className="mr-2 h-4 w-4" />
+          Notifications
+        </TabsTrigger>
+        <TabsTrigger value="security">
+          <Shield className="mr-2 h-4 w-4" />
+          Security
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="profile">Profile content</TabsContent>
+      <TabsContent value="settings">Settings content</TabsContent>
+      <TabsContent value="notifications">Notifications content</TabsContent>
+      <TabsContent value="security">Security content</TabsContent>
+    </Tabs>
+  )
+}
+```
+
+### With Badge
+
+```tsx
+import { Badge } from '@/components/ui/badge'
+
+function TabsWithBadge() {
+  return (
+    <Tabs defaultValue="all">
+      <TabsList>
+        <TabsTrigger value="all">
+          All
+          <Badge variant="secondary" className="ml-2">
+            12
+          </Badge>
+        </TabsTrigger>
+        <TabsTrigger value="active">
+          Active
+          <Badge variant="secondary" className="ml-2">
+            5
+          </Badge>
+        </TabsTrigger>
+        <TabsTrigger value="completed">
+          Completed
+          <Badge variant="secondary" className="ml-2">
+            7
+          </Badge>
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="all">All items</TabsContent>
+      <TabsContent value="active">Active items</TabsContent>
+      <TabsContent value="completed">Completed items</TabsContent>
+    </Tabs>
+  )
+}
+```
+
+### Vertical Tabs
+
+```tsx
+function VerticalTabs() {
+  return (
+    <Tabs defaultValue="general" orientation="vertical" className="flex gap-4">
+      <TabsList className="flex-col h-auto">
+        <TabsTrigger value="general" className="w-full justify-start">
+          General
+        </TabsTrigger>
+        <TabsTrigger value="security" className="w-full justify-start">
+          Security
+        </TabsTrigger>
+        <TabsTrigger value="notifications" className="w-full justify-start">
+          Notifications
+        </TabsTrigger>
+        <TabsTrigger value="billing" className="w-full justify-start">
+          Billing
+        </TabsTrigger>
+      </TabsList>
+      <div className="flex-1">
+        <TabsContent value="general">General settings</TabsContent>
+        <TabsContent value="security">Security settings</TabsContent>
+        <TabsContent value="notifications">Notification settings</TabsContent>
+        <TabsContent value="billing">Billing information</TabsContent>
+      </div>
+    </Tabs>
+  )
+}
+```
+
+### Disabled Tab
+
+```tsx
+<Tabs defaultValue="tab1">
+  <TabsList>
+    <TabsTrigger value="tab1">Available</TabsTrigger>
+    <TabsTrigger value="tab2" disabled>
+      Coming Soon
+    </TabsTrigger>
+    <TabsTrigger value="tab3">Available</TabsTrigger>
+  </TabsList>
+  <TabsContent value="tab1">Content 1</TabsContent>
+  <TabsContent value="tab3">Content 3</TabsContent>
+</Tabs>
+```
+
+### Tabs with Forms
+
+```tsx
+function TabsWithForms() {
+  return (
+    <Tabs defaultValue="login">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="login">Login</TabsTrigger>
+        <TabsTrigger value="register">Register</TabsTrigger>
+      </TabsList>
+      <TabsContent value="login">
+        <form className="space-y-4">
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" />
+          </div>
+          <div>
+            <Label htmlFor="password">Password</Label>
+            <Input id="password" type="password" />
+          </div>
+          <Button type="submit">Login</Button>
+        </form>
+      </TabsContent>
+      <TabsContent value="register">
+        <form className="space-y-4">
+          <div>
+            <Label htmlFor="name">Name</Label>
+            <Input id="name" />
+          </div>
+          <div>
+            <Label htmlFor="reg-email">Email</Label>
+            <Input id="reg-email" type="email" />
+          </div>
+          <div>
+            <Label htmlFor="reg-password">Password</Label>
+            <Input id="reg-password" type="password" />
+          </div>
+          <Button type="submit">Register</Button>
+        </form>
+      </TabsContent>
+    </Tabs>
+  )
+}
+```
+
+### Tabs with Loading State
+
+```tsx
+function TabsWithLoading() {
+  const [activeTab, setActiveTab] = useState('overview')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleTabChange = async (value: string) => {
+    setIsLoading(true)
+    setActiveTab(value)
+    // Simulate data loading
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    setIsLoading(false)
+  }
+
+  return (
+    <Tabs value={activeTab} onValueChange={handleTabChange}>
+      <TabsList>
+        <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsTrigger value="analytics">Analytics</TabsTrigger>
+      </TabsList>
+      <TabsContent value="overview">
+        {isLoading ? <Skeleton className="h-32 w-full" /> : <div>Overview content</div>}
+      </TabsContent>
+      <TabsContent value="analytics">
+        {isLoading ? <Skeleton className="h-32 w-full" /> : <div>Analytics content</div>}
+      </TabsContent>
+    </Tabs>
+  )
+}
+```
+
+### Scrollable Tabs
+
+```tsx
+function ScrollableTabs() {
+  const tabs = Array.from({ length: 10 }, (_, i) => ({
+    value: `tab${i + 1}`,
+    label: `Tab ${i + 1}`,
+  }))
+
+  return (
+    <Tabs defaultValue="tab1">
+      <div className="relative">
+        <TabsList className="overflow-x-auto whitespace-nowrap">
+          {tabs.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </div>
+      {tabs.map((tab) => (
+        <TabsContent key={tab.value} value={tab.value}>
+          Content for {tab.label}
+        </TabsContent>
+      ))}
+    </Tabs>
+  )
+}
+```
+
+### Tabs with URL Sync
+
+```tsx
+'use client'
+
+import { useSearchParams, useRouter } from 'next/navigation'
+
+function TabsWithURL() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const activeTab = searchParams.get('tab') || 'overview'
+
+  const handleTabChange = (value: string) => {
+    const params = new URLSearchParams(searchParams)
+    params.set('tab', value)
+    router.push(`?${params.toString()}`)
+  }
+
+  return (
+    <Tabs value={activeTab} onValueChange={handleTabChange}>
+      <TabsList>
+        <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        <TabsTrigger value="reports">Reports</TabsTrigger>
+      </TabsList>
+      <TabsContent value="overview">Overview content</TabsContent>
+      <TabsContent value="analytics">Analytics content</TabsContent>
+      <TabsContent value="reports">Reports content</TabsContent>
+    </Tabs>
+  )
+}
+```
+
+### Nested Tabs
+
+```tsx
+function NestedTabs() {
+  return (
+    <Tabs defaultValue="settings">
+      <TabsList>
+        <TabsTrigger value="settings">Settings</TabsTrigger>
+        <TabsTrigger value="advanced">Advanced</TabsTrigger>
+      </TabsList>
+      <TabsContent value="settings">
+        <Tabs defaultValue="general">
+          <TabsList>
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="privacy">Privacy</TabsTrigger>
+          </TabsList>
+          <TabsContent value="general">General settings</TabsContent>
+          <TabsContent value="privacy">Privacy settings</TabsContent>
+        </Tabs>
+      </TabsContent>
+      <TabsContent value="advanced">Advanced settings</TabsContent>
+    </Tabs>
+  )
+}
+```
+
+## Styling
+
+### Full Width Tabs
+
+```tsx
+<TabsList className="grid w-full grid-cols-3">
+  <TabsTrigger value="tab1">Tab 1</TabsTrigger>
+  <TabsTrigger value="tab2">Tab 2</TabsTrigger>
+  <TabsTrigger value="tab3">Tab 3</TabsTrigger>
+</TabsList>
+```
+
+### Underline Style
+
+```tsx
+<TabsList className="bg-transparent border-b">
+  <TabsTrigger 
+    value="tab1"
+    className="data-[state=active]:border-b-2 data-[state=active]:border-primary"
+  >
+    Tab 1
+  </TabsTrigger>
+  <TabsTrigger 
+    value="tab2"
+    className="data-[state=active]:border-b-2 data-[state=active]:border-primary"
+  >
+    Tab 2
+  </TabsTrigger>
+</TabsList>
+```
+
+## Best Practices
+
+1. **Limit tab count** - 3-7 tabs maximum for usability
+2. **Clear labels** - Use concise, descriptive tab names
+3. **Preserve state** - Keep tab content state when switching
+4. **Keyboard navigation** - Support arrow keys for tab switching
+5. **Mobile responsive** - Consider scrollable tabs on small screens
+6. **Default selection** - Always have a default active tab
+
+## Accessibility
+
+```tsx
+<Tabs defaultValue="tab1">
+  <TabsList aria-label="Settings navigation">
+    <TabsTrigger value="tab1">General</TabsTrigger>
+    <TabsTrigger value="tab2">Security</TabsTrigger>
+  </TabsList>
+  <TabsContent value="tab1" role="tabpanel">
+    General settings
+  </TabsContent>
+  <TabsContent value="tab2" role="tabpanel">
+    Security settings
+  </TabsContent>
+</Tabs>
+```
+
+## Keyboard Navigation
+
+- `Tab` - Move focus to active tab
+- `Arrow Left/Right` - Navigate between tabs (horizontal)
+- `Arrow Up/Down` - Navigate between tabs (vertical)
+- `Home` - Focus first tab
+- `End` - Focus last tab
+
+## Testing
+
+```typescript
+import { render, screen, fireEvent } from '@testing-library/react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'
+
+describe('Tabs', () => {
+  it('switches tabs on click', () => {
+    render(
+      <Tabs defaultValue="tab1">
+        <TabsList>
+          <TabsTrigger value="tab1">Tab 1</TabsTrigger>
+          <TabsTrigger value="tab2">Tab 2</TabsTrigger>
+        </TabsList>
+        <TabsContent value="tab1">Content 1</TabsContent>
+        <TabsContent value="tab2">Content 2</TabsContent>
+      </Tabs>
+    )
+
+    expect(screen.getByText('Content 1')).toBeVisible()
+    
+    fireEvent.click(screen.getByText('Tab 2'))
+    
+    expect(screen.getByText('Content 2')).toBeVisible()
+  })
+})
+```
+
+## Related
+
+- [Accordion Component](/docs/components/accordion)
+- [Navigation Guide](/docs/guides/navigation)
+- [Routing Guide](/docs/guides/routing)

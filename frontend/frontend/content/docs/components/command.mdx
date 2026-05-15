@@ -1,0 +1,614 @@
+---
+title: Command Component
+description: Command palette for keyboard-driven navigation
+category: components
+order: 23
+---
+
+# Command Component
+
+Fast, composable command menu for keyboard-driven navigation.
+
+## Basic Usage
+
+```tsx
+import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+
+function Example() {
+  return (
+    <Command>
+      <CommandInput placeholder="Type a command..." />
+      <CommandList>
+        <CommandEmpty>No results found.</CommandEmpty>
+        <CommandGroup heading="Suggestions">
+          <CommandItem>Calendar</CommandItem>
+          <CommandItem>Search Emoji</CommandItem>
+          <CommandItem>Calculator</CommandItem>
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  )
+}
+```
+
+## Props
+
+### Command
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | - | Controlled selected value |
+| `onValueChange` | `(value: string) => void` | - | Selection callback |
+| `filter` | `(value: string, search: string) => number` | - | Custom filter function |
+| `shouldFilter` | `boolean` | `true` | Enable filtering |
+
+### CommandItem
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | - | Item value |
+| `onSelect` | `(value: string) => void` | - | Selection callback |
+| `disabled` | `boolean` | `false` | Disable item |
+
+## Examples
+
+### Command Dialog (Cmd+K)
+
+```tsx
+function CommandDialogExample() {
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setOpen((open) => !open)
+      }
+    }
+
+    document.addEventListener('keydown', down)
+    return () => document.removeEventListener('keydown', down)
+  }, [])
+
+  return (
+    <>
+      <p className="text-sm text-muted-foreground">
+        Press{' '}
+        <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+          <span className="text-xs">⌘</span>K
+        </kbd>
+      </p>
+      <CommandDialog open={open} onOpenChange={setOpen}>
+        <CommandInput placeholder="Type a command or search..." />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandGroup heading="Suggestions">
+            <CommandItem>
+              <Calendar className="mr-2 h-4 w-4" />
+              <span>Calendar</span>
+            </CommandItem>
+            <CommandItem>
+              <Smile className="mr-2 h-4 w-4" />
+              <span>Search Emoji</span>
+            </CommandItem>
+            <CommandItem>
+              <Calculator className="mr-2 h-4 w-4" />
+              <span>Calculator</span>
+            </CommandItem>
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
+    </>
+  )
+}
+```
+
+### With Icons
+
+```tsx
+<Command>
+  <CommandInput placeholder="Search..." />
+  <CommandList>
+    <CommandEmpty>No results found.</CommandEmpty>
+    <CommandGroup heading="Actions">
+      <CommandItem>
+        <File className="mr-2 h-4 w-4" />
+        <span>New File</span>
+        <CommandShortcut>⌘N</CommandShortcut>
+      </CommandItem>
+      <CommandItem>
+        <FolderPlus className="mr-2 h-4 w-4" />
+        <span>New Folder</span>
+        <CommandShortcut>⌘⇧N</CommandShortcut>
+      </CommandItem>
+      <CommandItem>
+        <Upload className="mr-2 h-4 w-4" />
+        <span>Upload</span>
+        <CommandShortcut>⌘U</CommandShortcut>
+      </CommandItem>
+    </CommandGroup>
+  </CommandList>
+</Command>
+```
+
+### Multiple Groups
+
+```tsx
+<Command>
+  <CommandInput placeholder="Search..." />
+  <CommandList>
+    <CommandEmpty>No results found.</CommandEmpty>
+    <CommandGroup heading="Files">
+      <CommandItem>
+        <File className="mr-2 h-4 w-4" />
+        <span>Document.pdf</span>
+      </CommandItem>
+      <CommandItem>
+        <FileText className="mr-2 h-4 w-4" />
+        <span>Notes.txt</span>
+      </CommandItem>
+    </CommandGroup>
+    <CommandSeparator />
+    <CommandGroup heading="Settings">
+      <CommandItem>
+        <Settings className="mr-2 h-4 w-4" />
+        <span>Preferences</span>
+      </CommandItem>
+      <CommandItem>
+        <User className="mr-2 h-4 w-4" />
+        <span>Profile</span>
+      </CommandItem>
+    </CommandGroup>
+  </CommandList>
+</Command>
+```
+
+### With Navigation
+
+```tsx
+function CommandWithNavigation() {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+
+  const runCommand = (command: () => void) => {
+    setOpen(false)
+    command()
+  }
+
+  return (
+    <CommandDialog open={open} onOpenChange={setOpen}>
+      <CommandInput placeholder="Type a command or search..." />
+      <CommandList>
+        <CommandEmpty>No results found.</CommandEmpty>
+        <CommandGroup heading="Pages">
+          <CommandItem onSelect={() => runCommand(() => router.push('/'))}>
+            <Home className="mr-2 h-4 w-4" />
+            <span>Home</span>
+          </CommandItem>
+          <CommandItem onSelect={() => runCommand(() => router.push('/dashboard'))}>
+            <LayoutDashboard className="mr-2 h-4 w-4" />
+            <span>Dashboard</span>
+          </CommandItem>
+          <CommandItem onSelect={() => runCommand(() => router.push('/settings'))}>
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Settings</span>
+          </CommandItem>
+        </CommandGroup>
+      </CommandList>
+    </CommandDialog>
+  )
+}
+```
+
+### Search with Results
+
+```tsx
+function SearchCommand() {
+  const [search, setSearch] = useState('')
+  const [results, setResults] = useState<string[]>([])
+
+  useEffect(() => {
+    if (search) {
+      // Simulate API search
+      const filtered = ['Result 1', 'Result 2', 'Result 3'].filter((item) =>
+        item.toLowerCase().includes(search.toLowerCase())
+      )
+      setResults(filtered)
+    } else {
+      setResults([])
+    }
+  }, [search])
+
+  return (
+    <Command shouldFilter={false}>
+      <CommandInput
+        placeholder="Search..."
+        value={search}
+        onValueChange={setSearch}
+      />
+      <CommandList>
+        {results.length === 0 && search && (
+          <CommandEmpty>No results found.</CommandEmpty>
+        )}
+        {results.length > 0 && (
+          <CommandGroup heading="Results">
+            {results.map((result) => (
+              <CommandItem key={result}>{result}</CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+      </CommandList>
+    </Command>
+  )
+}
+```
+
+### Theme Switcher
+
+```tsx
+function ThemeSwitcher() {
+  const { setTheme } = useTheme()
+  const [open, setOpen] = useState(false)
+
+  return (
+    <CommandDialog open={open} onOpenChange={setOpen}>
+      <CommandInput placeholder="Change theme..." />
+      <CommandList>
+        <CommandEmpty>No theme found.</CommandEmpty>
+        <CommandGroup heading="Theme">
+          <CommandItem onSelect={() => setTheme('light')}>
+            <Sun className="mr-2 h-4 w-4" />
+            <span>Light</span>
+          </CommandItem>
+          <CommandItem onSelect={() => setTheme('dark')}>
+            <Moon className="mr-2 h-4 w-4" />
+            <span>Dark</span>
+          </CommandItem>
+          <CommandItem onSelect={() => setTheme('system')}>
+            <Laptop className="mr-2 h-4 w-4" />
+            <span>System</span>
+          </CommandItem>
+        </CommandGroup>
+      </CommandList>
+    </CommandDialog>
+  )
+}
+```
+
+### Recent Items
+
+```tsx
+function RecentCommand() {
+  const [recent, setRecent] = useState([
+    'Document.pdf',
+    'Presentation.pptx',
+    'Spreadsheet.xlsx',
+  ])
+
+  const addRecent = (item: string) => {
+    setRecent((prev) => [item, ...prev.filter((i) => i !== item)].slice(0, 5))
+  }
+
+  return (
+    <Command>
+      <CommandInput placeholder="Search files..." />
+      <CommandList>
+        <CommandEmpty>No files found.</CommandEmpty>
+        {recent.length > 0 && (
+          <>
+            <CommandGroup heading="Recent">
+              {recent.map((item) => (
+                <CommandItem key={item} onSelect={() => addRecent(item)}>
+                  <Clock className="mr-2 h-4 w-4" />
+                  <span>{item}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
+        <CommandGroup heading="All Files">
+          <CommandItem onSelect={() => addRecent('New File.txt')}>
+            <File className="mr-2 h-4 w-4" />
+            <span>New File.txt</span>
+          </CommandItem>
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  )
+}
+```
+
+### With Loading State
+
+```tsx
+function LoadingCommand() {
+  const [loading, setLoading] = useState(false)
+  const [results, setResults] = useState<string[]>([])
+
+  const search = async (query: string) => {
+    setLoading(true)
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    setResults(['Result 1', 'Result 2'])
+    setLoading(false)
+  }
+
+  return (
+    <Command>
+      <CommandInput
+        placeholder="Search..."
+        onValueChange={(value) => value && search(value)}
+      />
+      <CommandList>
+        {loading && (
+          <div className="p-4 text-sm text-center">
+            <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+          </div>
+        )}
+        {!loading && results.length === 0 && (
+          <CommandEmpty>No results found.</CommandEmpty>
+        )}
+        {!loading && results.length > 0 && (
+          <CommandGroup heading="Results">
+            {results.map((result) => (
+              <CommandItem key={result}>{result}</CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+      </CommandList>
+    </Command>
+  )
+}
+```
+
+### Actions Menu
+
+```tsx
+function ActionsCommand() {
+  const [open, setOpen] = useState(false)
+
+  const actions = [
+    {
+      group: 'File',
+      items: [
+        { label: 'New File', icon: File, shortcut: '⌘N' },
+        { label: 'Open File', icon: FolderOpen, shortcut: '⌘O' },
+        { label: 'Save', icon: Save, shortcut: '⌘S' },
+      ],
+    },
+    {
+      group: 'Edit',
+      items: [
+        { label: 'Undo', icon: Undo, shortcut: '⌘Z' },
+        { label: 'Redo', icon: Redo, shortcut: '⌘⇧Z' },
+        { label: 'Cut', icon: Scissors, shortcut: '⌘X' },
+        { label: 'Copy', icon: Copy, shortcut: '⌘C' },
+        { label: 'Paste', icon: Clipboard, shortcut: '⌘V' },
+      ],
+    },
+  ]
+
+  return (
+    <CommandDialog open={open} onOpenChange={setOpen}>
+      <CommandInput placeholder="Type a command..." />
+      <CommandList>
+        <CommandEmpty>No results found.</CommandEmpty>
+        {actions.map((group, index) => (
+          <React.Fragment key={group.group}>
+            {index > 0 && <CommandSeparator />}
+            <CommandGroup heading={group.group}>
+              {group.items.map((item) => (
+                <CommandItem key={item.label}>
+                  <item.icon className="mr-2 h-4 w-4" />
+                  <span>{item.label}</span>
+                  <CommandShortcut>{item.shortcut}</CommandShortcut>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </React.Fragment>
+        ))}
+      </CommandList>
+    </CommandDialog>
+  )
+}
+```
+
+### Custom Filter
+
+```tsx
+function CustomFilterCommand() {
+  const customFilter = (value: string, search: string) => {
+    // Custom fuzzy search logic
+    const searchLower = search.toLowerCase()
+    const valueLower = value.toLowerCase()
+    
+    if (valueLower.includes(searchLower)) return 1
+    
+    // Check if all characters in search appear in order in value
+    let searchIndex = 0
+    for (let i = 0; i < valueLower.length && searchIndex < searchLower.length; i++) {
+      if (valueLower[i] === searchLower[searchIndex]) {
+        searchIndex++
+      }
+    }
+    
+    return searchIndex === searchLower.length ? 0.5 : 0
+  }
+
+  return (
+    <Command filter={customFilter}>
+      <CommandInput placeholder="Fuzzy search..." />
+      <CommandList>
+        <CommandEmpty>No results found.</CommandEmpty>
+        <CommandGroup heading="Items">
+          <CommandItem value="javascript">JavaScript</CommandItem>
+          <CommandItem value="typescript">TypeScript</CommandItem>
+          <CommandItem value="python">Python</CommandItem>
+          <CommandItem value="rust">Rust</CommandItem>
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  )
+}
+```
+
+### Nested Commands
+
+```tsx
+function NestedCommand() {
+  const [page, setPage] = useState<'main' | 'settings'>('main')
+
+  return (
+    <Command>
+      <CommandInput placeholder="Type a command..." />
+      <CommandList>
+        <CommandEmpty>No results found.</CommandEmpty>
+        {page === 'main' && (
+          <>
+            <CommandGroup heading="Actions">
+              <CommandItem>
+                <File className="mr-2 h-4 w-4" />
+                <span>New File</span>
+              </CommandItem>
+              <CommandItem onSelect={() => setPage('settings')}>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+                <ChevronRight className="ml-auto h-4 w-4" />
+              </CommandItem>
+            </CommandGroup>
+          </>
+        )}
+        {page === 'settings' && (
+          <>
+            <CommandGroup heading="Settings">
+              <CommandItem onSelect={() => setPage('main')}>
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                <span>Back</span>
+              </CommandItem>
+              <CommandItem>
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </CommandItem>
+              <CommandItem>
+                <Bell className="mr-2 h-4 w-4" />
+                <span>Notifications</span>
+              </CommandItem>
+            </CommandGroup>
+          </>
+        )}
+      </CommandList>
+    </Command>
+  )
+}
+```
+
+## Styling
+
+### Custom Height
+
+```tsx
+<CommandList className="max-h-[300px]">
+  {/* Items */}
+</CommandList>
+```
+
+### Compact Mode
+
+```tsx
+<Command className="rounded-lg border shadow-md">
+  <CommandInput className="h-9" />
+  <CommandList className="max-h-[200px]">
+    <CommandItem className="text-sm">Item</CommandItem>
+  </CommandList>
+</Command>
+```
+
+## Best Practices
+
+1. **Keyboard shortcuts** - Show shortcuts for common actions
+2. **Recent items** - Display recently used items first
+3. **Clear groups** - Organize items into logical groups
+4. **Fast search** - Optimize for quick filtering
+5. **Empty states** - Show helpful message when no results
+6. **Icons** - Use icons for better scannability
+
+## Accessibility
+
+```tsx
+<Command>
+  <CommandInput
+    aria-label="Search commands"
+    placeholder="Type a command..."
+  />
+  <CommandList role="listbox">
+    <CommandItem role="option">Item</CommandItem>
+  </CommandList>
+</Command>
+```
+
+## Keyboard Navigation
+
+- `⌘K` or `Ctrl+K` - Open command palette
+- `Arrow Up/Down` - Navigate items
+- `Enter` - Select item
+- `Escape` - Close dialog
+- `Backspace` - Clear search or go back
+
+## Testing
+
+```typescript
+import { render, screen, fireEvent } from '@testing-library/react'
+import { Command, CommandInput, CommandList, CommandItem } from './command'
+
+describe('Command', () => {
+  it('filters items', () => {
+    render(
+      <Command>
+        <CommandInput />
+        <CommandList>
+          <CommandItem>Apple</CommandItem>
+          <CommandItem>Banana</CommandItem>
+        </CommandList>
+      </Command>
+    )
+
+    const input = screen.getByRole('combobox')
+    fireEvent.change(input, { target: { value: 'app' } })
+
+    expect(screen.getByText('Apple')).toBeVisible()
+    expect(screen.queryByText('Banana')).not.toBeInTheDocument()
+  })
+
+  it('selects item on enter', () => {
+    const handleSelect = jest.fn()
+    render(
+      <Command>
+        <CommandInput />
+        <CommandList>
+          <CommandItem onSelect={handleSelect}>Item</CommandItem>
+        </CommandList>
+      </Command>
+    )
+
+    const item = screen.getByText('Item')
+    fireEvent.click(item)
+
+    expect(handleSelect).toHaveBeenCalled()
+  })
+})
+```
+
+## Related
+
+- [Dialog Component](/docs/components/dialog)
+- [Combobox Component](/docs/components/combobox)
+- [Search Component](/docs/components/search)

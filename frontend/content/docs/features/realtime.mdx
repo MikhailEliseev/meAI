@@ -1,0 +1,450 @@
+---
+title: Real-Time Features
+description: WebSocket-based real-time updates for live data synchronization
+category: features
+order: 1
+---
+
+# Real-Time Features
+
+Enable real-time data synchronization across your application with WebSocket connections.
+
+## Overview
+
+Real-time features provide instant updates when data changes, without polling or manual refresh. Built on Supabase Realtime, our implementation offers:
+
+- **Instant updates** - Changes appear immediately across all connected clients
+- **Automatic reconnection** - Handles network interruptions gracefully
+- **Filtered subscriptions** - Subscribe only to relevant data
+- **Type-safe** - Full TypeScript support
+
+## Quick Start
+
+```tsx
+import { useRealtime } from '@/hooks/useRealtime'
+
+function LiveDashboard() {
+  const { status } = useRealtime({
+    table: 'metrics',
+    onInsert: (payload) => {
+      console.log('New metric:', payload.new)
+    },
+  })
+
+  return <div>Status: {status}</div>
+}
+```
+
+## Use Cases
+
+### Live Dashboards
+
+Update metrics in real-time without page refresh:
+
+```tsx
+function MetricsDashboard() {
+  const [metrics, setMetrics] = useState<Metric[]>([])
+
+  useRealtime({
+    table: 'metrics',
+    filter: 'project_id=eq.123',
+    onInsert: (payload) => {
+      setMetrics((prev) => [...prev, payload.new])
+    },
+  })
+
+  return <MetricsChart data={metrics} />
+}
+```
+
+### Collaborative Editing
+
+Show live updates from other users:
+
+```tsx
+function CollaborativeEditor() {
+  useRealtime({
+    table: 'documents',
+    filter: 'document_id=eq.456',
+    onUpdate: (payload) => {
+      if (payload.new.updated_by !== currentUserId) {
+        showNotification(`${payload.new.updated_by} made changes`)
+      }
+    },
+  })
+
+  return <Editor />
+}
+```
+
+### Notifications
+
+Real-time notification system:
+
+```tsx
+function NotificationCenter() {
+  useRealtime({
+    table: 'notifications',
+    filter: `user_id=eq.${userId}`,
+    onInsert: (payload) => {
+      toast.info(payload.new.message)
+    },
+  })
+
+  return <NotificationList />
+}
+```
+
+### Team Activity
+
+Show team member activity in real-time:
+
+```tsx
+function TeamActivity() {
+  const [activities, setActivities] = useState<Activity[]>([])
+
+  useRealtime({
+    table: 'activities',
+    filter: `team_id=eq.${teamId}`,
+    onInsert: (payload) => {
+      setActivities((prev) => [payload.new, ...prev].slice(0, 10))
+    },
+  })
+
+  return <ActivityFeed activities={activities} />
+}
+```
+
+## Architecture
+
+### Connection Flow
+
+```
+Client
+  ↓
+useRealtime Hook
+  ↓
+Supabase Realtime Client
+  ↓
+WebSocket Connection
+  ↓
+Supabase Server
+  ↓
+PostgreSQL LISTEN/NOTIFY
+```
+
+### Event Types
+
+- **INSERT** - New row created
+- **UPDATE** - Existing row modified
+- **DELETE** - Row removed
+
+### Filtering
+
+Filter subscriptions at the database level:
+
+```tsx
+// Only metrics for project 123
+filter: 'project_id=eq.123'
+
+// Only high-value metrics
+filter: 'value=gt.1000'
+
+// Multiple conditions
+filter: 'project_id=eq.123&value=gt.1000'
+```
+
+## Configuration
+
+### Enable Realtime in Supabase
+
+1. Go to Database → Replication
+2. Enable replication for tables
+3. Select tables to replicate
+
+### Environment Variables
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+### Client Setup
+
+```typescript
+import { createClient } from '@supabase/supabase-js'
+
+export const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    realtime: {
+      params: {
+        eventsPerSecond: 10, // Rate limit
+      },
+    },
+  }
+)
+```
+
+## Performance
+
+### Optimization Tips
+
+1. **Filter at source** - Use filter parameter to reduce bandwidth
+2. **Debounce updates** - Prevent UI thrashing with debouncing
+3. **Limit subscriptions** - Only subscribe to necessary tables
+4. **Batch updates** - Group multiple updates together
+
+### Example: Debounced Updates
+
+```tsx
+function DebouncedRealtime() {
+  const [metrics, setMetrics] = useState<Metric[]>([])
+  const [pendingUpdates, setPendingUpdates] = useState<Metric[]>([])
+
+  // Debounce state updates
+  useEffect(() => {
+    if (pendingUpdates.length === 0) return
+
+    const timeoutId = setTimeout(() => {
+      setMetrics((prev) => [...prev, ...pendingUpdates])
+      setPendingUpdates([])
+    }, 300)
+
+    return () => clearTimeout(timeoutId)
+  }, [pendingUpdates])
+
+  useRealtime({
+    table: 'metrics',
+    onInsert: (payload) => {
+      setPendingUpdates((prev) => [...prev, payload.new])
+    },
+  })
+
+  return <MetricsChart data={metrics} />
+}
+```
+
+## Error Handling
+
+### Connection Errors
+
+```tsx
+function RealtimeWithErrorHandling() {
+  const { status, error, reconnect } = useRealtime({
+    table: 'metrics',
+    onInsert: (payload) => {
+      console.log('New metric:', payload.new)
+    },
+  })
+
+  if (status === 'error') {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Connection Error</AlertTitle>
+        <AlertDescription>
+          {error?.message}
+          <Button onClick={reconnect}>Retry</Button>
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  return <div>Connected</div>
+}
+```
+
+### Automatic Reconnection
+
+The hook automatically reconnects on:
+- Network interruption
+- WebSocket timeout
+- Server restart
+
+### Manual Reconnection
+
+```tsx
+const { reconnect } = useRealtime({
+  table: 'metrics',
+  onInsert: handleInsert,
+})
+
+// Manually trigger reconnection
+<Button onClick={reconnect}>Reconnect</Button>
+```
+
+## Security
+
+### Row Level Security (RLS)
+
+Enable RLS to control access:
+
+```sql
+-- Enable RLS
+ALTER TABLE metrics ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Users can only see their own metrics
+CREATE POLICY "Users can view own metrics"
+  ON metrics
+  FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Policy: Users can insert their own metrics
+CREATE POLICY "Users can insert own metrics"
+  ON metrics
+  FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+```
+
+### Authentication
+
+Realtime respects Supabase authentication:
+
+```tsx
+import { supabase } from '@/lib/supabase'
+
+// Sign in
+await supabase.auth.signInWithPassword({
+  email: 'user@example.com',
+  password: 'password',
+})
+
+// Now realtime subscriptions use authenticated user
+useRealtime({
+  table: 'metrics', // Only sees metrics allowed by RLS
+  onInsert: handleInsert,
+})
+```
+
+## Testing
+
+### Mock Realtime in Tests
+
+```typescript
+import { vi } from 'vitest'
+
+vi.mock('@/hooks/useRealtime', () => ({
+  useRealtime: vi.fn(() => ({
+    status: 'connected',
+    error: null,
+    reconnect: vi.fn(),
+  })),
+}))
+```
+
+### Simulate Events
+
+```typescript
+import { renderHook } from '@testing-library/react'
+import { useRealtime } from '@/hooks/useRealtime'
+
+test('handles insert events', () => {
+  const onInsert = vi.fn()
+
+  renderHook(() =>
+    useRealtime({
+      table: 'metrics',
+      onInsert,
+    })
+  )
+
+  // Simulate insert event
+  const payload = {
+    eventType: 'INSERT',
+    new: { id: '123', value: 100 },
+    old: {},
+  }
+
+  // Trigger callback
+  onInsert(payload)
+
+  expect(onInsert).toHaveBeenCalledWith(payload)
+})
+```
+
+## Monitoring
+
+### Connection Status
+
+```tsx
+import { ConnectionStatus } from '@/components/dashboard/ConnectionStatus'
+
+function Dashboard() {
+  const { status } = useRealtime({
+    table: 'metrics',
+    onInsert: handleInsert,
+  })
+
+  return (
+    <div>
+      <ConnectionStatus status={status} />
+      <MetricsDashboard />
+    </div>
+  )
+}
+```
+
+### Metrics
+
+Track realtime performance:
+
+```typescript
+const { status } = useRealtime({
+  table: 'metrics',
+  onInsert: (payload) => {
+    // Track event latency
+    const latency = Date.now() - new Date(payload.new.created_at).getTime()
+    console.log('Event latency:', latency, 'ms')
+  },
+})
+```
+
+## Troubleshooting
+
+### Connection Issues
+
+**Problem:** Connection keeps dropping
+
+**Solutions:**
+- Check network stability
+- Verify Supabase project status
+- Increase reconnection timeout
+- Check browser console for errors
+
+### Not Receiving Updates
+
+**Problem:** Subscriptions not receiving events
+
+**Solutions:**
+- Verify table name is correct
+- Check filter expression syntax
+- Ensure Realtime is enabled in Supabase
+- Verify RLS policies allow access
+
+### High Latency
+
+**Problem:** Updates are slow
+
+**Solutions:**
+- Check network latency
+- Reduce subscription scope with filters
+- Optimize database queries
+- Consider geographic proximity to Supabase region
+
+## Best Practices
+
+1. **Filter aggressively** - Only subscribe to data you need
+2. **Handle errors** - Always implement error handling
+3. **Debounce updates** - Prevent UI thrashing
+4. **Clean up** - Hook handles cleanup automatically
+5. **Test thoroughly** - Mock realtime in tests
+6. **Monitor performance** - Track connection status and latency
+7. **Secure with RLS** - Always enable Row Level Security
+
+## Related
+
+- [useRealtime Hook](/docs/hooks/use-realtime)
+- [ConnectionStatus Component](/docs/components/connection-status)
+- [MetricsDashboard Component](/docs/components/dashboard)
+- [Security Guide](/docs/guides/security)

@@ -1,0 +1,643 @@
+---
+title: Animations Guide
+description: Creating smooth animations with Framer Motion and CSS
+category: guides
+order: 8
+---
+
+# Animations Guide
+
+Learn how to create smooth, performant animations in your Next.js application.
+
+## Framer Motion
+
+### Installation
+
+```bash
+npm install framer-motion
+```
+
+### Basic Animation
+
+```tsx
+import { motion } from 'framer-motion'
+
+function Component() {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      Fade in content
+    </motion.div>
+  )
+}
+```
+
+### Variants
+
+```tsx
+const variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+}
+
+function Component() {
+  return (
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={variants}
+      transition={{ duration: 0.5 }}
+    >
+      Content
+    </motion.div>
+  )
+}
+```
+
+### Stagger Children
+
+```tsx
+const container = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+}
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+}
+
+function List({ items }: { items: string[] }) {
+  return (
+    <motion.ul
+      variants={container}
+      initial="hidden"
+      animate="visible"
+    >
+      {items.map((item, index) => (
+        <motion.li key={index} variants={item}>
+          {item}
+        </motion.li>
+      ))}
+    </motion.ul>
+  )
+}
+```
+
+## Common Animations
+
+### Fade In
+
+```tsx
+<motion.div
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  transition={{ duration: 0.3 }}
+>
+  Content
+</motion.div>
+```
+
+### Slide In
+
+```tsx
+// From bottom
+<motion.div
+  initial={{ opacity: 0, y: 50 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5 }}
+>
+  Content
+</motion.div>
+
+// From left
+<motion.div
+  initial={{ opacity: 0, x: -50 }}
+  animate={{ opacity: 1, x: 0 }}
+  transition={{ duration: 0.5 }}
+>
+  Content
+</motion.div>
+```
+
+### Scale
+
+```tsx
+<motion.div
+  initial={{ scale: 0.8, opacity: 0 }}
+  animate={{ scale: 1, opacity: 1 }}
+  transition={{ duration: 0.3 }}
+>
+  Content
+</motion.div>
+```
+
+### Rotate
+
+```tsx
+<motion.div
+  animate={{ rotate: 360 }}
+  transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+>
+  <Loader2 className="h-4 w-4" />
+</motion.div>
+```
+
+## Page Transitions
+
+### Layout Animation
+
+```tsx
+// app/layout.tsx
+import { AnimatePresence } from 'framer-motion'
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html>
+      <body>
+        <AnimatePresence mode="wait">
+          {children}
+        </AnimatePresence>
+      </body>
+    </html>
+  )
+}
+```
+
+### Page Component
+
+```tsx
+// app/page.tsx
+'use client'
+
+import { motion } from 'framer-motion'
+
+export default function Page() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+    >
+      <h1>Page Content</h1>
+    </motion.div>
+  )
+}
+```
+
+## Interactive Animations
+
+### Hover
+
+```tsx
+<motion.button
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.95 }}
+  className="px-4 py-2 bg-primary text-primary-foreground rounded"
+>
+  Hover me
+</motion.button>
+```
+
+### Drag
+
+```tsx
+<motion.div
+  drag
+  dragConstraints={{ left: 0, right: 300, top: 0, bottom: 300 }}
+  className="w-20 h-20 bg-primary rounded cursor-grab active:cursor-grabbing"
+/>
+```
+
+### Scroll-Triggered
+
+```tsx
+import { useScroll, useTransform } from 'framer-motion'
+
+function ParallaxSection() {
+  const { scrollYProgress } = useScroll()
+  const y = useTransform(scrollYProgress, [0, 1], [0, -100])
+
+  return (
+    <motion.div style={{ y }}>
+      <h2>Parallax Content</h2>
+    </motion.div>
+  )
+}
+```
+
+## Component Animations
+
+### Modal
+
+```tsx
+function Modal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/50"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="fixed inset-0 flex items-center justify-center p-4"
+          >
+            <div className="bg-background rounded-lg p-6 max-w-md w-full">
+              <h2>Modal Content</h2>
+              <Button onClick={onClose}>Close</Button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  )
+}
+```
+
+### Dropdown
+
+```tsx
+function Dropdown({ isOpen }: { isOpen: boolean }) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+          className="absolute top-full mt-2 bg-background border rounded-lg shadow-lg"
+        >
+          <div className="p-2">
+            <button className="w-full text-left px-3 py-2 hover:bg-accent rounded">
+              Option 1
+            </button>
+            <button className="w-full text-left px-3 py-2 hover:bg-accent rounded">
+              Option 2
+            </button>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+```
+
+### Toast Notification
+
+```tsx
+function Toast({ message, onClose }: { message: string; onClose: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 50, scale: 0.3 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+      className="fixed bottom-4 right-4 bg-background border rounded-lg shadow-lg p-4"
+    >
+      <p>{message}</p>
+      <Button onClick={onClose} size="sm">
+        Dismiss
+      </Button>
+    </motion.div>
+  )
+}
+```
+
+### Skeleton Loader
+
+```tsx
+function SkeletonCard() {
+  return (
+    <div className="border rounded-lg p-4">
+      <motion.div
+        animate={{
+          opacity: [0.5, 1, 0.5],
+        }}
+        transition={{
+          duration: 1.5,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+        className="space-y-3"
+      >
+        <div className="h-4 bg-muted rounded w-3/4" />
+        <div className="h-4 bg-muted rounded w-1/2" />
+        <div className="h-20 bg-muted rounded" />
+      </motion.div>
+    </div>
+  )
+}
+```
+
+## CSS Animations
+
+### Tailwind Animations
+
+```tsx
+// Spin
+<div className="animate-spin">
+  <Loader2 className="h-4 w-4" />
+</div>
+
+// Pulse
+<div className="animate-pulse bg-muted h-4 rounded" />
+
+// Bounce
+<div className="animate-bounce">↓</div>
+
+// Ping
+<div className="relative">
+  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+  <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
+</div>
+```
+
+### Custom Keyframes
+
+```css
+/* app/globals.css */
+@keyframes slideInFromBottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-slide-in {
+  animation: slideInFromBottom 0.5s ease-out;
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.3s ease-out;
+}
+```
+
+```tsx
+<div className="animate-slide-in">
+  Content slides in from bottom
+</div>
+```
+
+## Performance
+
+### Use transform and opacity
+
+```tsx
+// ✅ Good - GPU accelerated
+<motion.div
+  animate={{ x: 100, opacity: 0.5 }}
+/>
+
+// ❌ Bad - Triggers layout
+<motion.div
+  animate={{ left: 100, visibility: 'hidden' }}
+/>
+```
+
+### Reduce Motion
+
+```tsx
+import { useReducedMotion } from 'framer-motion'
+
+function Component() {
+  const shouldReduceMotion = useReducedMotion()
+
+  return (
+    <motion.div
+      animate={{ x: shouldReduceMotion ? 0 : 100 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.5 }}
+    >
+      Content
+    </motion.div>
+  )
+}
+```
+
+### Layout Animations
+
+```tsx
+// Animate layout changes
+<motion.div layout>
+  {isExpanded && <p>Additional content</p>}
+</motion.div>
+
+// Animate shared layouts
+<motion.div layoutId="card">
+  <Card />
+</motion.div>
+```
+
+## Easing Functions
+
+```tsx
+// Built-in easings
+<motion.div
+  animate={{ x: 100 }}
+  transition={{ ease: 'easeInOut' }}
+/>
+
+// Custom cubic bezier
+<motion.div
+  animate={{ x: 100 }}
+  transition={{ ease: [0.17, 0.67, 0.83, 0.67] }}
+/>
+
+// Spring physics
+<motion.div
+  animate={{ x: 100 }}
+  transition={{ type: 'spring', stiffness: 100, damping: 10 }}
+/>
+```
+
+## Gesture Animations
+
+### Tap
+
+```tsx
+<motion.button
+  whileTap={{ scale: 0.95 }}
+  className="px-4 py-2 bg-primary rounded"
+>
+  Tap me
+</motion.button>
+```
+
+### Hover
+
+```tsx
+<motion.div
+  whileHover={{ scale: 1.05, rotate: 5 }}
+  className="p-4 bg-card rounded"
+>
+  Hover me
+</motion.div>
+```
+
+### Focus
+
+```tsx
+<motion.input
+  whileFocus={{ scale: 1.02 }}
+  className="px-3 py-2 border rounded"
+/>
+```
+
+## Scroll Animations
+
+### Scroll Progress
+
+```tsx
+import { useScroll } from 'framer-motion'
+
+function ScrollProgress() {
+  const { scrollYProgress } = useScroll()
+
+  return (
+    <motion.div
+      style={{ scaleX: scrollYProgress }}
+      className="fixed top-0 left-0 right-0 h-1 bg-primary origin-left"
+    />
+  )
+}
+```
+
+### Scroll-Triggered Animation
+
+```tsx
+import { useInView } from 'framer-motion'
+import { useRef } from 'react'
+
+function Section() {
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true })
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 50 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+      transition={{ duration: 0.5 }}
+    >
+      Content appears when scrolled into view
+    </motion.div>
+  )
+}
+```
+
+## Best Practices
+
+1. **Use transform and opacity** - GPU accelerated properties
+2. **Respect reduced motion** - Check user preferences
+3. **Keep animations short** - 200-500ms for most interactions
+4. **Use appropriate easing** - Match animation to context
+5. **Avoid layout thrashing** - Batch DOM reads/writes
+6. **Test on low-end devices** - Ensure smooth performance
+7. **Use AnimatePresence** - For exit animations
+8. **Limit simultaneous animations** - Too many can overwhelm
+
+## Animation Timing
+
+| Duration | Use Case |
+|----------|----------|
+| 100-200ms | Micro-interactions (hover, focus) |
+| 200-300ms | UI feedback (button press, toggle) |
+| 300-500ms | Component transitions (modal, dropdown) |
+| 500-800ms | Page transitions |
+| 800ms+ | Attention-grabbing animations |
+
+## Accessibility
+
+### Reduced Motion
+
+```tsx
+// CSS
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+// React
+const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
+
+<motion.div
+  animate={{ x: prefersReducedMotion ? 0 : 100 }}
+  transition={{ duration: prefersReducedMotion ? 0 : 0.5 }}
+>
+  Content
+</motion.div>
+```
+
+### Focus Management
+
+```tsx
+<motion.button
+  whileFocus={{ scale: 1.05 }}
+  className="focus:ring-2 focus:ring-primary"
+>
+  Accessible button
+</motion.button>
+```
+
+## Testing
+
+```typescript
+import { render } from '@testing-library/react'
+import { motion } from 'framer-motion'
+
+describe('Animation', () => {
+  it('animates on mount', async () => {
+    const { container } = render(
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        data-testid="animated"
+      >
+        Content
+      </motion.div>
+    )
+
+    const element = container.querySelector('[data-testid="animated"]')
+    expect(element).toBeInTheDocument()
+  })
+})
+```
+
+## Related
+
+- [Framer Motion Docs](https://www.framer.com/motion/)
+- [Performance Guide](/docs/guides/performance)
+- [Accessibility Guide](/docs/guides/accessibility)
