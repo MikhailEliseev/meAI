@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import { WebSocketProvider } from "@/components/dashboard/WebSocketProvider";
 
 export default async function DashboardLayout({
   children,
@@ -22,7 +23,9 @@ export default async function DashboardLayout({
         <DashboardHeader user={session.user} />
 
         <main className="py-6 px-4 sm:px-6 lg:px-8">
-          {children}
+          <WebSocketProvider>
+            {children}
+          </WebSocketProvider>
         </main>
       </div>
     </div>

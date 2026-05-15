@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { LinearIssue, IssuesResponse } from "@/types/linear";
+import { useWebSocket, WebSocketMessage } from "./useWebSocket";
 
 interface UseIssuesResult {
   issues: LinearIssue[];
@@ -38,6 +39,30 @@ export function useIssues(projectId?: string): UseIssuesResult {
       setLoading(false);
     }
   };
+
+  // Handle WebSocket messages for real-time updates
+  const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
+    if (message.type === 'task.update') {
+      setIssues((prev) => {
+        const index = prev.findIndex((issue) => issue.id === message.data.id);
+        if (index !== -1) {
+          const updated = [...prev];
+          updated[index] = { ...updated[index], ...message.data };
+          return updated;
+        }
+        return prev;
+      });
+    } else if (message.type === 'task.create') {
+      // Add new task if it belongs to current project
+      if (message.data.project?.id === projectId) {
+        setIssues((prev) => [message.data, ...prev]);
+      }
+    }
+  }, [projectId]);
+
+  useWebSocket({
+    onMessage: handleWebSocketMessage,
+  });
 
   useEffect(() => {
     fetchIssues();

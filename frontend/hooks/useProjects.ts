@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { LinearProject, ProjectsResponse } from "@/types/linear";
+import { useWebSocket, WebSocketMessage } from "./useWebSocket";
 
 interface UseProjectsResult {
   projects: LinearProject[];
@@ -37,6 +38,25 @@ export function useProjects(teamId?: string): UseProjectsResult {
       setLoading(false);
     }
   };
+
+  // Handle WebSocket messages for real-time updates
+  const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
+    if (message.type === 'project.update') {
+      setProjects((prev) => {
+        const index = prev.findIndex((p) => p.id === message.data.id);
+        if (index !== -1) {
+          const updated = [...prev];
+          updated[index] = { ...updated[index], ...message.data };
+          return updated;
+        }
+        return prev;
+      });
+    }
+  }, []);
+
+  useWebSocket({
+    onMessage: handleWebSocketMessage,
+  });
 
   useEffect(() => {
     fetchProjects();
