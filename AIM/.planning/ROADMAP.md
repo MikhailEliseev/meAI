@@ -452,3 +452,76 @@ Deploy AIM Testing Infrastructure to production environment with monitoring, hea
 ## Change Log
 
 - **2026-05-14:** Initial roadmap (retroactive for Phase 1-3, planned for Phase 4-6)
+
+---
+
+## Phase 8: Multi-tenant Frontend Platform 🆕
+
+**Status:** PLANNED  
+**Time:** 12-16 hours (estimated)  
+**Deliverables:** Full-stack multi-tenant SaaS platform
+
+### Goal
+Build complete frontend platform with landing page, client dashboards, and admin panel. Implement multi-tenant architecture with role-based access control.
+
+### Architecture
+```
+iamaim.ru/                    → Landing page (Next.js SSG)
+iamaim.ru/app/                → Client dashboard (auth required)
+iamaim.ru/admin/              → Admin panel (super-admin only)
+iamaim.ru/api/                → API endpoints (FastAPI backend)
+```
+
+### Deliverables
+- [ ] Landing page (Next.js)
+  - Hero section with value proposition
+  - Features showcase
+  - Pricing plans
+  - Contact form
+  - SEO optimization
+  
+- [ ] Authentication system
+  - JWT-based auth
+  - Role-based access control (RBAC)
+  - Multi-tenant user management
+  - Session management
+  
+- [ ] Client dashboard
+  - Project/campaign overview
+  - Analytics and reports
+  - Workflow execution
+  - Settings and profile
+  
+- [ ] Admin panel
+  - User management
+  - Tenant management
+  - System monitoring
+  - Configuration
+  
+- [ ] Multi-tenant backend
+  - Tenant isolation (tenant_id in all tables)
+  - RBAC middleware
+  - API endpoints for frontend
+  - WebSocket for real-time updates
+
+### Tech Stack
+- **Frontend:** Next.js 14+, React 18+, TypeScript, Tailwind CSS
+- **Backend:** FastAPI (existing), SQLAlchemy multi-tenant
+- **Auth:** JWT tokens, httpOnly cookies
+- **State:** React Query, Zustand
+- **UI:** shadcn/ui, Radix UI
+
+### Success Metrics
+- [ ] Landing page loads < 2s
+- [ ] Authentication flow works end-to-end
+- [ ] Client can create and manage projects
+- [ ] Admin can manage multiple tenants
+- [ ] All roles have correct permissions
+- [ ] Real-time updates work via WebSocket
+
+### Dependencies
+- ✅ Phase 7: Production deployment complete
+- ✅ Backend API operational
+- [ ] DNS configured for iamaim.ru
+- [ ] SSL certificates installed
+
