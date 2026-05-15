@@ -28,21 +28,44 @@ class LinearClient:
             "Authorization": api_key,
             "Content-Type": "application/json",
         }
+        self.client = httpx.Client(timeout=30.0)
 
     def _query(self, query: str, variables: Optional[dict] = None) -> dict[str, Any]:
-        """Execute GraphQL query."""
+        """Execute GraphQL query (sync)."""
         payload = {"query": query}
         if variables:
             payload["variables"] = variables
 
-        response = httpx.post(
+        response = self.client.post(
             self.base_url,
             headers=self.headers,
             json=payload,
-            timeout=30.0,
         )
         response.raise_for_status()
         return response.json()
+
+    async def _execute_query(self, query: str, variables: Optional[dict] = None) -> dict[str, Any]:
+        """Execute GraphQL query (async)."""
+        payload = {"query": query}
+        if variables:
+            payload["variables"] = variables
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                self.base_url,
+                headers=self.headers,
+                json=payload,
+            )
+            response.raise_for_status()
+            result = response.json()
+            if "errors" in result:
+                raise Exception(f"GraphQL errors: {result['errors']}")
+            return result.get("data", {})
+
+    async def close(self):
+        """Close HTTP client."""
+        if hasattr(self, 'client'):
+            self.client.close()
 
     def list_issues(self, limit: int = 50) -> list[dict]:
         """List all issues."""
@@ -94,9 +117,12 @@ class LinearClient:
         title: str,
         description: str = "",
         team_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        state_id: Optional[str] = None,
         priority: int = 0,
-    ) -> dict:
-        """Create new issue."""
+        label_ids: Optional[list[str]] = None,
+    ) -> str:
+        """Create new issue and return issue ID."""
         if not team_id:
             # Get first team
             teams = self.list_teams()
@@ -117,16 +143,24 @@ class LinearClient:
             }
         }
         """
-        variables = {
-            "input": {
-                "teamId": team_id,
-                "title": title,
-                "description": description,
-                "priority": priority,
-            }
+        input_data = {
+            "teamId": team_id,
+            "title": title,
+            "description": description,
+            "priority": priority,
         }
+
+        if project_id:
+            input_data["projectId"] = project_id
+        if state_id:
+            input_data["stateId"] = state_id
+        if label_ids:
+            input_data["labelIds"] = label_ids
+
+        variables = {"input": input_data}
         result = self._query(query, variables)
-        return result["data"]["issueCreate"]["issue"]
+        issue = result["data"]["issueCreate"]["issue"]
+        return issue["id"]
 
     def update_issue(
         self,
