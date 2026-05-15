@@ -21,6 +21,7 @@ if str(aim_root) not in sys.path:
     sys.path.insert(0, str(aim_root))
 
 from AIM.src.aim.subagents.keyword_research_agent import KeywordResearchAgent
+from AIM.src.aim.subagents.seo.ci_research_agent import CIResearchAgent
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,8 @@ class SEOOrchestrator(Agent):
         return [
             "keyword_analysis",
             "content_optimization",
-            "technical_audit"
+            "technical_audit",
+            "competitor_intelligence"
         ]
 
     async def execute_seo_analysis(
@@ -99,6 +101,8 @@ class SEOOrchestrator(Agent):
                 results = await self._execute_content_optimization(task_data, progress_callback)
             elif analysis_type == "technical":
                 results = await self._execute_technical_audit(task_data, progress_callback)
+            elif analysis_type == "competitor_intelligence":
+                results = await self._execute_competitor_intelligence(task_data, progress_callback)
             else:
                 results = {"error": f"Unknown analysis type: {analysis_type}"}
 
@@ -276,6 +280,82 @@ class SEOOrchestrator(Agent):
             "score": 80,
             "status": "completed"
         }
+
+    async def _execute_competitor_intelligence(
+        self,
+        task_data: Dict[str, Any],
+        progress_callback: Optional[Callable] = None
+    ) -> Dict[str, Any]:
+        """Execute competitor intelligence analysis using CIResearchAgent"""
+
+        industry = task_data.get("industry", "")
+        target_url = task_data.get("target", "")
+
+        if not industry:
+            return {
+                "status": "error",
+                "error": "'industry' is required for competitor intelligence"
+            }
+
+        # Progress update
+        if progress_callback:
+            await progress_callback(1, "in_progress", "Initializing competitor intelligence research")
+
+        # Create CIResearchAgent
+        ci_agent = CIResearchAgent(
+            agent_id=f"ci-research-{task_data.get('task_id', 'unknown')}",
+            database_url=self.db.database_url if hasattr(self.db, 'database_url') else "sqlite+aiosqlite:///:memory:",
+        )
+
+        # Prepare task for agent
+        agent_task = Task(
+            task_id=task_data.get("task_id", "unknown"),
+            subtask_id=f"ci-{task_data.get('task_id', 'unknown')}",
+            parent_task_id=task_data.get("task_id", "unknown"),
+            action="research_competitors",
+            description="Competitor intelligence research task",
+            priority=1,
+            status=TaskStatus.RECEIVED,
+            created_at=datetime.now(timezone.utc),
+            received_at=datetime.now(timezone.utc),
+            data={
+                "industry": industry,
+                "target_url": target_url,
+                "max_competitors": task_data.get("max_competitors", 5),
+                "research_depth": task_data.get("research_depth", "standard"),
+                "api_keys": task_data.get("api_keys", {}),
+            },
+        )
+
+        # Progress update
+        if progress_callback:
+            await progress_callback(2, "in_progress", "Researching competitors")
+
+        # Execute competitor intelligence research
+        result = await ci_agent.execute_task(agent_task)
+
+        # Progress update
+        if progress_callback:
+            await progress_callback(3, "completed", "Competitor intelligence research complete")
+
+        # Return results
+        if result.status == "success":
+            benchmark_data = result.result.get("benchmark_report", {})
+            return {
+                "industry": industry,
+                "target_url": target_url,
+                "competitors_analyzed": len(benchmark_data.get("competitor_profiles", [])),
+                "growth_laws": benchmark_data.get("growth_laws", []),
+                "copy_patterns": benchmark_data.get("do_copy", []),
+                "ignore_patterns": benchmark_data.get("do_ignore", []),
+                "roadmap": benchmark_data.get("sequencing_roadmap", []),
+                "status": "completed"
+            }
+        else:
+            return {
+                "status": "error",
+                "error": result.error or "Competitor intelligence research failed"
+            }
 
     async def execute_task(self, task: Task) -> TaskResult:
         """Execute task (required by Agent base class)"""
