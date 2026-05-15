@@ -1,0 +1,531 @@
+---
+title: useLocalStorage Hook
+description: Custom hook for persisting state in localStorage
+category: hooks
+order: 4
+---
+
+# useLocalStorage Hook
+
+Persist state in browser localStorage with automatic serialization and synchronization.
+
+## Basic Usage
+
+```tsx
+import { useLocalStorage } from '@/hooks/useLocalStorage'
+
+function ThemeToggle() {
+  const [theme, setTheme] = useLocalStorage('theme', 'light')
+
+  return (
+    <Button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
+      Current theme: {theme}
+    </Button>
+  )
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `key` | `string` | Yes | localStorage key |
+| `initialValue` | `T` | Yes | Default value if key doesn't exist |
+
+## Return Value
+
+Returns a tuple `[value, setValue]` similar to `useState`:
+
+| Index | Type | Description |
+|-------|------|-------------|
+| `0` | `T` | Current value |
+| `1` | `(value: T \| ((val: T) => T)) => void` | Setter function |
+
+## Examples
+
+### User Preferences
+
+```tsx
+function UserPreferences() {
+  const [preferences, setPreferences] = useLocalStorage('preferences', {
+    notifications: true,
+    emailUpdates: false,
+    theme: 'light',
+    language: 'en',
+  })
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <Label htmlFor="notifications">Notifications</Label>
+        <Switch
+          id="notifications"
+          checked={preferences.notifications}
+          onCheckedChange={(checked) =>
+            setPreferences({ ...preferences, notifications: checked })
+          }
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label htmlFor="emailUpdates">Email Updates</Label>
+        <Switch
+          id="emailUpdates"
+          checked={preferences.emailUpdates}
+          onCheckedChange={(checked) =>
+            setPreferences({ ...preferences, emailUpdates: checked })
+          }
+        />
+      </div>
+      <div>
+        <Label htmlFor="theme">Theme</Label>
+        <Select
+          value={preferences.theme}
+          onValueChange={(theme) =>
+            setPreferences({ ...preferences, theme })
+          }
+        >
+          <SelectTrigger id="theme">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="light">Light</SelectItem>
+            <SelectItem value="dark">Dark</SelectItem>
+            <SelectItem value="system">System</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  )
+}
+```
+
+### Shopping Cart
+
+```tsx
+interface CartItem {
+  id: string
+  name: string
+  price: number
+  quantity: number
+}
+
+function ShoppingCart() {
+  const [cart, setCart] = useLocalStorage<CartItem[]>('cart', [])
+
+  const addToCart = (item: CartItem) => {
+    setCart((prevCart) => {
+      const existingItem = prevCart.find((i) => i.id === item.id)
+      if (existingItem) {
+        return prevCart.map((i) =>
+          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+        )
+      }
+      return [...prevCart, { ...item, quantity: 1 }]
+    })
+  }
+
+  const removeFromCart = (id: string) => {
+    setCart((prevCart) => prevCart.filter((item) => item.id !== id))
+  }
+
+  const updateQuantity = (id: string, quantity: number) => {
+    setCart((prevCart) =>
+      prevCart.map((item) =>
+        item.id === id ? { ...item, quantity } : item
+      )
+    )
+  }
+
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+
+  return (
+    <div>
+      <h2>Shopping Cart ({cart.length} items)</h2>
+      {cart.map((item) => (
+        <div key={item.id} className="flex items-center justify-between">
+          <div>
+            <p>{item.name}</p>
+            <p className="text-sm text-muted-foreground">
+              ${item.price} x {item.quantity}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Input
+              type="number"
+              value={item.quantity}
+              onChange={(e) => updateQuantity(item.id, Number(e.target.value))}
+              className="w-20"
+            />
+            <Button
+              variant="destructive"
+              size="icon"
+              onClick={() => removeFromCart(item.id)}
+            >
+              <Trash className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      ))}
+      <div className="mt-4">
+        <p className="text-lg font-bold">Total: ${total.toFixed(2)}</p>
+      </div>
+    </div>
+  )
+}
+```
+
+### Form Draft
+
+```tsx
+function DraftForm() {
+  const [draft, setDraft] = useLocalStorage('form-draft', {
+    title: '',
+    content: '',
+    tags: [],
+  })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await submitForm(draft)
+    // Clear draft after successful submission
+    setDraft({ title: '', content: '', tags: [] })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="title">Title</Label>
+        <Input
+          id="title"
+          value={draft.title}
+          onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="content">Content</Label>
+        <Textarea
+          id="content"
+          value={draft.content}
+          onChange={(e) => setDraft({ ...draft, content: e.target.value })}
+        />
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Draft saved automatically
+      </p>
+      <Button type="submit">Submit</Button>
+    </form>
+  )
+}
+```
+
+### Recent Searches
+
+```tsx
+function SearchWithHistory() {
+  const [query, setQuery] = useState('')
+  const [recentSearches, setRecentSearches] = useLocalStorage<string[]>(
+    'recent-searches',
+    []
+  )
+
+  const handleSearch = (searchQuery: string) => {
+    // Add to recent searches (max 10)
+    setRecentSearches((prev) => {
+      const filtered = prev.filter((q) => q !== searchQuery)
+      return [searchQuery, ...filtered].slice(0, 10)
+    })
+    // Perform search
+    performSearch(searchQuery)
+  }
+
+  const clearHistory = () => {
+    setRecentSearches([])
+  }
+
+  return (
+    <div>
+      <div className="relative">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleSearch(query)
+            }
+          }}
+          placeholder="Search..."
+        />
+      </div>
+      {recentSearches.length > 0 && (
+        <div className="mt-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">Recent Searches</h3>
+            <Button variant="ghost" size="sm" onClick={clearHistory}>
+              Clear
+            </Button>
+          </div>
+          <div className="mt-2 space-y-1">
+            {recentSearches.map((search, index) => (
+              <button
+                key={index}
+                onClick={() => handleSearch(search)}
+                className="block w-full text-left text-sm hover:bg-accent px-2 py-1 rounded"
+              >
+                {search}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+```
+
+### Sidebar State
+
+```tsx
+function Layout() {
+  const [isSidebarOpen, setIsSidebarOpen] = useLocalStorage(
+    'sidebar-open',
+    true
+  )
+
+  return (
+    <div className="flex">
+      {isSidebarOpen && (
+        <aside className="w-64 border-r">
+          <Sidebar />
+        </aside>
+      )}
+      <main className="flex-1">
+        <Button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+          {isSidebarOpen ? <ChevronLeft /> : <ChevronRight />}
+        </Button>
+        <Content />
+      </main>
+    </div>
+  )
+}
+```
+
+### Table Preferences
+
+```tsx
+function DataTable() {
+  const [tablePrefs, setTablePrefs] = useLocalStorage('table-prefs', {
+    pageSize: 10,
+    sortBy: 'name',
+    sortOrder: 'asc' as 'asc' | 'desc',
+    visibleColumns: ['name', 'email', 'role', 'status'],
+  })
+
+  return (
+    <div>
+      <div className="mb-4 flex gap-2">
+        <Select
+          value={String(tablePrefs.pageSize)}
+          onValueChange={(value) =>
+            setTablePrefs({ ...tablePrefs, pageSize: Number(value) })
+          }
+        >
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="10">10 rows</SelectItem>
+            <SelectItem value="25">25 rows</SelectItem>
+            <SelectItem value="50">50 rows</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Table pageSize={tablePrefs.pageSize} sortBy={tablePrefs.sortBy} />
+    </div>
+  )
+}
+```
+
+## Implementation
+
+```typescript
+import { useState, useEffect } from 'react'
+
+export function useLocalStorage<T>(
+  key: string,
+  initialValue: T
+): [T, (value: T | ((val: T) => T)) => void] {
+  // Get initial value from localStorage or use initialValue
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    if (typeof window === 'undefined') {
+      return initialValue
+    }
+
+    try {
+      const item = window.localStorage.getItem(key)
+      return item ? JSON.parse(item) : initialValue
+    } catch (error) {
+      console.error(`Error reading localStorage key "${key}":`, error)
+      return initialValue
+    }
+  })
+
+  // Update localStorage when value changes
+  const setValue = (value: T | ((val: T) => T)) => {
+    try {
+      const valueToStore =
+        value instanceof Function ? value(storedValue) : value
+      setStoredValue(valueToStore)
+      
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(key, JSON.stringify(valueToStore))
+      }
+    } catch (error) {
+      console.error(`Error setting localStorage key "${key}":`, error)
+    }
+  }
+
+  // Sync across tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === key && e.newValue) {
+        try {
+          setStoredValue(JSON.parse(e.newValue))
+        } catch (error) {
+          console.error(`Error parsing localStorage key "${key}":`, error)
+        }
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [key])
+
+  return [storedValue, setValue]
+}
+```
+
+## SSR Considerations
+
+For Next.js and SSR:
+
+```typescript
+export function useLocalStorage<T>(key: string, initialValue: T) {
+  const [storedValue, setStoredValue] = useState<T>(initialValue)
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  useEffect(() => {
+    // Only run on client
+    if (typeof window !== 'undefined') {
+      try {
+        const item = window.localStorage.getItem(key)
+        if (item) {
+          setStoredValue(JSON.parse(item))
+        }
+      } catch (error) {
+        console.error(error)
+      }
+      setIsInitialized(true)
+    }
+  }, [key])
+
+  const setValue = (value: T | ((val: T) => T)) => {
+    try {
+      const valueToStore =
+        value instanceof Function ? value(storedValue) : value
+      setStoredValue(valueToStore)
+      
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(key, JSON.stringify(valueToStore))
+      }
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  return [storedValue, setValue, isInitialized] as const
+}
+```
+
+## Error Handling
+
+```typescript
+export function useLocalStorage<T>(key: string, initialValue: T) {
+  const [error, setError] = useState<Error | null>(null)
+  
+  const setValue = (value: T | ((val: T) => T)) => {
+    try {
+      setError(null)
+      const valueToStore =
+        value instanceof Function ? value(storedValue) : value
+      
+      // Check storage quota
+      const serialized = JSON.stringify(valueToStore)
+      if (serialized.length > 5 * 1024 * 1024) {
+        throw new Error('Value exceeds localStorage quota (5MB)')
+      }
+      
+      setStoredValue(valueToStore)
+      window.localStorage.setItem(key, serialized)
+    } catch (error) {
+      setError(error as Error)
+      console.error(`Error setting localStorage key "${key}":`, error)
+    }
+  }
+
+  return [storedValue, setValue, error] as const
+}
+```
+
+## Best Practices
+
+1. **Use meaningful keys** - Prefix with app name to avoid conflicts
+2. **Handle errors** - localStorage can fail (quota, privacy mode)
+3. **Validate data** - Check data structure when reading
+4. **Limit size** - localStorage has ~5-10MB limit
+5. **Sync across tabs** - Listen to storage events
+6. **SSR-safe** - Check for window object
+7. **Clear old data** - Remove unused keys periodically
+
+## Storage Limits
+
+| Browser | Limit |
+|---------|-------|
+| Chrome | 10MB |
+| Firefox | 10MB |
+| Safari | 5MB |
+| Edge | 10MB |
+| Mobile | 2.5-5MB |
+
+## Testing
+
+```typescript
+import { renderHook, act } from '@testing-library/react'
+import { useLocalStorage } from '@/hooks/useLocalStorage'
+
+describe('useLocalStorage', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it('stores and retrieves value', () => {
+    const { result } = renderHook(() =>
+      useLocalStorage('test-key', 'initial')
+    )
+
+    expect(result.current[0]).toBe('initial')
+
+    act(() => {
+      result.current[1]('updated')
+    })
+
+    expect(result.current[0]).toBe('updated')
+    expect(localStorage.getItem('test-key')).toBe('"updated"')
+  })
+})
+```
+
+## Related
+
+- [useSessionStorage Hook](/docs/hooks/use-session-storage)
+- [State Management Guide](/docs/guides/state-management)
+- [Performance Guide](/docs/guides/performance)

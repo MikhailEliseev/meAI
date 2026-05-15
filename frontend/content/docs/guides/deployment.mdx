@@ -1,0 +1,621 @@
+---
+title: Deployment Guide
+description: Deploy your Next.js application to production
+category: guides
+order: 4
+---
+
+# Deployment Guide
+
+Learn how to deploy your Next.js application to various platforms.
+
+## Vercel Deployment
+
+### Quick Deploy
+
+The easiest way to deploy Next.js:
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel
+
+# Deploy to production
+vercel --prod
+```
+
+### GitHub Integration
+
+1. Push code to GitHub
+2. Import project in Vercel dashboard
+3. Configure environment variables
+4. Deploy automatically on push
+
+### Environment Variables
+
+Add in Vercel dashboard or CLI:
+
+```bash
+vercel env add DATABASE_URL
+vercel env add NEXTAUTH_SECRET
+vercel env add SUPABASE_URL
+```
+
+### Custom Domain
+
+```bash
+# Add domain
+vercel domains add yourdomain.com
+
+# Configure DNS
+# Add CNAME record: www -> cname.vercel-dns.com
+# Add A record: @ -> 76.76.21.21
+```
+
+## Docker Deployment
+
+### Dockerfile
+
+```dockerfile
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+ENV NEXT_TELEMETRY_DISABLED 1
+
+RUN npm run build
+
+# Production image, copy all the files and run next
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+
+# Set the correct permission for prerender cache
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
+
+# Automatically leverage output traces to reduce image size
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+
+CMD ["node", "server.js"]
+```
+
+### Docker Compose
+
+```yaml
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - SUPABASE_URL=${SUPABASE_URL}
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=myapp
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+```
+
+### Build and Run
+
+```bash
+# Build image
+docker build -t myapp .
+
+# Run container
+docker run -p 3000:3000 myapp
+
+# With docker-compose
+docker-compose up -d
+```
+
+## AWS Deployment
+
+### Elastic Beanstalk
+
+```bash
+# Install EB CLI
+pip install awsebcli
+
+# Initialize
+eb init
+
+# Create environment
+eb create production
+
+# Deploy
+eb deploy
+
+# Open in browser
+eb open
+```
+
+### ECS with Fargate
+
+```yaml
+# task-definition.json
+{
+  "family": "myapp",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "containerDefinitions": [
+    {
+      "name": "myapp",
+      "image": "myapp:latest",
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## CI/CD Pipeline
+
+### GitHub Actions
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+```
+
+### GitLab CI
+
+```yaml
+# .gitlab-ci.yml
+stages:
+  - test
+  - build
+  - deploy
+
+test:
+  stage: test
+  image: node:18
+  script:
+    - npm ci
+    - npm test
+
+build:
+  stage: build
+  image: node:18
+  script:
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - .next/
+      - public/
+
+deploy:
+  stage: deploy
+  image: node:18
+  script:
+    - npm i -g vercel
+    - vercel --token $VERCEL_TOKEN --prod
+  only:
+    - main
+```
+
+## Environment Configuration
+
+### Production Environment
+
+```bash
+# .env.production
+NODE_ENV=production
+NEXT_PUBLIC_APP_URL=https://yourdomain.com
+DATABASE_URL=postgresql://...
+NEXTAUTH_SECRET=...
+SUPABASE_URL=https://...
+```
+
+### Staging Environment
+
+```bash
+# .env.staging
+NODE_ENV=production
+NEXT_PUBLIC_APP_URL=https://staging.yourdomain.com
+DATABASE_URL=postgresql://...
+NEXTAUTH_SECRET=...
+SUPABASE_URL=https://...
+```
+
+## Database Migration
+
+### Run Migrations
+
+```bash
+# Before deployment
+npm run db:migrate
+
+# Or in CI/CD
+- name: Run migrations
+  run: npm run db:migrate
+  env:
+    DATABASE_URL: ${{ secrets.DATABASE_URL }}
+```
+
+### Prisma Migrations
+
+```bash
+# Generate migration
+npx prisma migrate dev --name add_users
+
+# Deploy to production
+npx prisma migrate deploy
+```
+
+### Supabase Migrations
+
+```bash
+# Create migration
+supabase migration new add_users
+
+# Apply migration
+supabase db push
+```
+
+## Health Checks
+
+### Health Check Endpoint
+
+```typescript
+// app/api/health/route.ts
+import { NextResponse } from 'next/server'
+
+export async function GET() {
+  try {
+    // Check database
+    await db.$queryRaw`SELECT 1`
+
+    // Check external services
+    const supabaseHealth = await checkSupabase()
+
+    return NextResponse.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      services: {
+        database: 'up',
+        supabase: supabaseHealth ? 'up' : 'down',
+      },
+    })
+  } catch (error) {
+    return NextResponse.json(
+      {
+        status: 'unhealthy',
+        error: error.message,
+      },
+      { status: 503 }
+    )
+  }
+}
+```
+
+### Monitoring
+
+```typescript
+// lib/monitoring.ts
+import * as Sentry from '@sentry/nextjs'
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV,
+  tracesSampleRate: 1.0,
+})
+
+export function captureError(error: Error, context?: any) {
+  Sentry.captureException(error, { extra: context })
+}
+```
+
+## Performance Optimization
+
+### Build Optimization
+
+```javascript
+// next.config.js
+module.exports = {
+  // Enable SWC minification
+  swcMinify: true,
+
+  // Compress images
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60,
+  },
+
+  // Enable compression
+  compress: true,
+
+  // Analyze bundle
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.optimization.splitChunks = {
+        chunks: 'all',
+        cacheGroups: {
+          default: false,
+          vendors: false,
+          commons: {
+            name: 'commons',
+            chunks: 'all',
+            minChunks: 2,
+          },
+        },
+      }
+    }
+    return config
+  },
+}
+```
+
+### CDN Configuration
+
+```javascript
+// next.config.js
+module.exports = {
+  assetPrefix: process.env.CDN_URL,
+  images: {
+    domains: ['cdn.yourdomain.com'],
+  },
+}
+```
+
+## Security Checklist
+
+Before deploying to production:
+
+- [ ] Enable HTTPS
+- [ ] Configure security headers
+- [ ] Set up CORS properly
+- [ ] Enable rate limiting
+- [ ] Validate all inputs
+- [ ] Use environment variables for secrets
+- [ ] Enable database RLS
+- [ ] Set up monitoring and alerts
+- [ ] Configure backup strategy
+- [ ] Test disaster recovery
+- [ ] Review API permissions
+- [ ] Enable 2FA for admin accounts
+- [ ] Set up audit logging
+- [ ] Configure firewall rules
+- [ ] Review third-party dependencies
+
+## Rollback Strategy
+
+### Vercel Rollback
+
+```bash
+# List deployments
+vercel ls
+
+# Rollback to previous deployment
+vercel rollback [deployment-url]
+```
+
+### Docker Rollback
+
+```bash
+# Tag previous version
+docker tag myapp:latest myapp:previous
+
+# Deploy new version
+docker tag myapp:v2 myapp:latest
+
+# Rollback if needed
+docker tag myapp:previous myapp:latest
+docker-compose up -d
+```
+
+### Database Rollback
+
+```bash
+# Prisma rollback
+npx prisma migrate resolve --rolled-back [migration-name]
+
+# Supabase rollback
+supabase db reset
+```
+
+## Monitoring and Logging
+
+### Application Monitoring
+
+```typescript
+// lib/analytics.ts
+import { Analytics } from '@vercel/analytics'
+
+export function trackEvent(name: string, properties?: any) {
+  Analytics.track(name, properties)
+}
+
+export function trackError(error: Error) {
+  Analytics.track('error', {
+    message: error.message,
+    stack: error.stack,
+  })
+}
+```
+
+### Log Aggregation
+
+```typescript
+// lib/logger.ts
+import pino from 'pino'
+
+export const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  transport:
+    process.env.NODE_ENV === 'development'
+      ? { target: 'pino-pretty' }
+      : undefined,
+})
+
+// Usage
+logger.info({ userId: '123' }, 'User logged in')
+logger.error({ error }, 'Failed to fetch data')
+```
+
+## Cost Optimization
+
+### Vercel Pricing
+
+- **Hobby**: Free (100GB bandwidth, 100 builds/month)
+- **Pro**: $20/month (1TB bandwidth, unlimited builds)
+- **Enterprise**: Custom pricing
+
+### AWS Cost Optimization
+
+- Use Fargate Spot for non-critical workloads
+- Enable auto-scaling
+- Use CloudFront CDN
+- Optimize image sizes
+- Enable compression
+
+### Database Optimization
+
+- Use connection pooling
+- Enable query caching
+- Optimize indexes
+- Archive old data
+- Use read replicas
+
+## Troubleshooting
+
+### Build Failures
+
+```bash
+# Clear cache
+rm -rf .next node_modules
+npm install
+npm run build
+
+# Check logs
+vercel logs [deployment-url]
+```
+
+### Runtime Errors
+
+```bash
+# Check application logs
+vercel logs --follow
+
+# Check database logs
+supabase logs
+
+# Check system metrics
+vercel inspect [deployment-url]
+```
+
+### Performance Issues
+
+```bash
+# Analyze bundle size
+npm run analyze
+
+# Check lighthouse score
+lighthouse https://yourdomain.com
+
+# Profile application
+npm run build && npm start
+```
+
+## Related
+
+- [Security Guide](/docs/guides/security)
+- [Performance](/docs/guides/performance)
+- [Configuration](/docs/getting-started/configuration)

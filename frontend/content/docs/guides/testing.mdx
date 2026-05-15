@@ -1,0 +1,544 @@
+---
+title: Testing Guide
+description: Comprehensive testing strategies for React applications
+category: guides
+order: 2
+---
+
+# Testing Guide
+
+Learn how to write effective tests for your React application using Vitest and Testing Library.
+
+## Testing Stack
+
+Our testing stack includes:
+
+- **Vitest** - Fast unit test framework
+- **React Testing Library** - Component testing
+- **MSW** - API mocking
+- **Playwright** - E2E testing
+
+## Unit Testing
+
+### Component Tests
+
+Test components in isolation:
+
+```typescript
+import { render, screen } from '@testing-library/react'
+import { describe, it, expect } from 'vitest'
+import { Button } from '@/components/ui/button'
+
+describe('Button', () => {
+  it('renders with text', () => {
+    render(<Button>Click me</Button>)
+    expect(screen.getByText('Click me')).toBeInTheDocument()
+  })
+
+  it('calls onClick when clicked', async () => {
+    const onClick = vi.fn()
+    render(<Button onClick={onClick}>Click me</Button>)
+    
+    await userEvent.click(screen.getByText('Click me'))
+    expect(onClick).toHaveBeenCalledOnce()
+  })
+
+  it('is disabled when disabled prop is true', () => {
+    render(<Button disabled>Click me</Button>)
+    expect(screen.getByText('Click me')).toBeDisabled()
+  })
+})
+```
+
+### Hook Tests
+
+Test custom hooks:
+
+```typescript
+import { renderHook, waitFor } from '@testing-library/react'
+import { describe, it, expect } from 'vitest'
+import { useMetrics } from '@/hooks/useMetrics'
+
+describe('useMetrics', () => {
+  it('fetches metrics on mount', async () => {
+    const { result } = renderHook(() =>
+      useMetrics({ projectId: '123', metricType: 'traffic' })
+    )
+
+    expect(result.current.isLoading).toBe(true)
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    expect(result.current.data).toHaveLength(10)
+  })
+
+  it('refetches when projectId changes', async () => {
+    const { result, rerender } = renderHook(
+      ({ projectId }) => useMetrics({ projectId, metricType: 'traffic' }),
+      { initialProps: { projectId: '123' } }
+    )
+
+    await waitFor(() => {
+      expect(result.current.data).toHaveLength(10)
+    })
+
+    rerender({ projectId: '456' })
+
+    await waitFor(() => {
+      expect(result.current.data).toHaveLength(5)
+    })
+  })
+})
+```
+
+### Utility Tests
+
+Test utility functions:
+
+```typescript
+import { describe, it, expect } from 'vitest'
+import { formatDate, calculatePercentage } from '@/lib/utils'
+
+describe('formatDate', () => {
+  it('formats date correctly', () => {
+    const date = new Date('2024-01-01T00:00:00Z')
+    expect(formatDate(date)).toBe('Jan 1, 2024')
+  })
+
+  it('handles invalid dates', () => {
+    expect(formatDate(new Date('invalid'))).toBe('Invalid Date')
+  })
+})
+
+describe('calculatePercentage', () => {
+  it('calculates percentage correctly', () => {
+    expect(calculatePercentage(50, 100)).toBe(50)
+    expect(calculatePercentage(1, 3)).toBeCloseTo(33.33, 2)
+  })
+
+  it('handles division by zero', () => {
+    expect(calculatePercentage(10, 0)).toBe(0)
+  })
+})
+```
+
+## Integration Testing
+
+### API Route Tests
+
+Test API routes:
+
+```typescript
+import { describe, it, expect, beforeEach } from 'vitest'
+import { GET, POST } from '@/app/api/metrics/route'
+
+describe('/api/metrics', () => {
+  beforeEach(() => {
+    // Reset database or mocks
+  })
+
+  it('GET returns metrics', async () => {
+    const request = new Request('http://localhost/api/metrics?projectId=123')
+    const response = await GET(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data.metrics).toHaveLength(10)
+  })
+
+  it('POST creates metric', async () => {
+    const request = new Request('http://localhost/api/metrics', {
+      method: 'POST',
+      body: JSON.stringify({
+        projectId: '123',
+        value: 100,
+        timestamp: new Date().toISOString(),
+      }),
+    })
+
+    const response = await POST(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(201)
+    expect(data.metric.value).toBe(100)
+  })
+
+  it('POST validates input', async () => {
+    const request = new Request('http://localhost/api/metrics', {
+      method: 'POST',
+      body: JSON.stringify({ invalid: 'data' }),
+    })
+
+    const response = await POST(request)
+
+    expect(response.status).toBe(400)
+  })
+})
+```
+
+### Database Tests
+
+Test database operations:
+
+```typescript
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+)
+
+describe('Database', () => {
+  beforeEach(async () => {
+    // Clean up test data
+    await supabase.from('metrics').delete().neq('id', '')
+  })
+
+  afterEach(async () => {
+    // Clean up after tests
+    await supabase.from('metrics').delete().neq('id', '')
+  })
+
+  it('inserts metric', async () => {
+    const { data, error } = await supabase
+      .from('metrics')
+      .insert({
+        project_id: '123',
+        value: 100,
+        timestamp: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    expect(error).toBeNull()
+    expect(data.value).toBe(100)
+  })
+
+  it('queries metrics by project', async () => {
+    // Insert test data
+    await supabase.from('metrics').insert([
+      { project_id: '123', value: 100 },
+      { project_id: '123', value: 200 },
+      { project_id: '456', value: 300 },
+    ])
+
+    const { data } = await supabase
+      .from('metrics')
+      .select('*')
+      .eq('project_id', '123')
+
+    expect(data).toHaveLength(2)
+  })
+})
+```
+
+## Mocking
+
+### API Mocking with MSW
+
+Mock API requests:
+
+```typescript
+import { http, HttpResponse } from 'msw'
+import { setupServer } from 'msw/node'
+import { beforeAll, afterEach, afterAll } from 'vitest'
+
+const server = setupServer(
+  http.get('/api/metrics', () => {
+    return HttpResponse.json({
+      metrics: [
+        { id: '1', value: 100 },
+        { id: '2', value: 200 },
+      ],
+    })
+  }),
+
+  http.post('/api/metrics', async ({ request }) => {
+    const body = await request.json()
+    return HttpResponse.json(
+      { metric: { id: '3', ...body } },
+      { status: 201 }
+    )
+  })
+)
+
+beforeAll(() => server.listen())
+afterEach(() => server.resetHandlers())
+afterAll(() => server.close())
+```
+
+### Supabase Mocking
+
+Mock Supabase client:
+
+```typescript
+import { vi } from 'vitest'
+
+vi.mock('@/lib/supabase', () => ({
+  supabase: {
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          data: [{ id: '1', value: 100 }],
+          error: null,
+        })),
+      })),
+      insert: vi.fn(() => ({
+        select: vi.fn(() => ({
+          single: vi.fn(() => ({
+            data: { id: '1', value: 100 },
+            error: null,
+          })),
+        })),
+      })),
+    })),
+  },
+}))
+```
+
+### Realtime Mocking
+
+Mock WebSocket connections:
+
+```typescript
+import { vi } from 'vitest'
+
+vi.mock('@/hooks/useRealtime', () => ({
+  useRealtime: vi.fn(() => ({
+    status: 'connected',
+    error: null,
+    reconnect: vi.fn(),
+  })),
+}))
+```
+
+## E2E Testing
+
+### Playwright Tests
+
+Test complete user flows:
+
+```typescript
+import { test, expect } from '@playwright/test'
+
+test.describe('Dashboard', () => {
+  test('displays metrics', async ({ page }) => {
+    await page.goto('/dashboard')
+
+    // Wait for metrics to load
+    await expect(page.getByText('Website Traffic')).toBeVisible()
+    await expect(page.getByRole('img', { name: 'Chart' })).toBeVisible()
+  })
+
+  test('filters by date range', async ({ page }) => {
+    await page.goto('/dashboard')
+
+    // Open date picker
+    await page.getByRole('button', { name: 'Date Range' }).click()
+
+    // Select last 7 days
+    await page.getByText('Last 7 days').click()
+
+    // Verify metrics updated
+    await expect(page.getByText('7 days')).toBeVisible()
+  })
+
+  test('searches documentation', async ({ page }) => {
+    await page.goto('/docs')
+
+    // Open search with Cmd+K
+    await page.keyboard.press('Meta+K')
+
+    // Type query
+    await page.getByPlaceholder('Search documentation...').fill('metrics')
+
+    // Select first result
+    await page.keyboard.press('Enter')
+
+    // Verify navigation
+    await expect(page).toHaveURL(/\/docs\/.*metrics/)
+  })
+})
+```
+
+## Test Coverage
+
+### Generate Coverage Report
+
+```bash
+# Run tests with coverage
+npm run test:coverage
+
+# View coverage report
+open coverage/index.html
+```
+
+### Coverage Thresholds
+
+Configure in `vitest.config.ts`:
+
+```typescript
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 80,
+        statements: 80,
+      },
+    },
+  },
+})
+```
+
+## Best Practices
+
+### 1. Test Behavior, Not Implementation
+
+```typescript
+// ❌ BAD - Testing implementation details
+expect(component.state.count).toBe(1)
+
+// ✅ GOOD - Testing behavior
+expect(screen.getByText('Count: 1')).toBeInTheDocument()
+```
+
+### 2. Use Descriptive Test Names
+
+```typescript
+// ❌ BAD
+it('works', () => {})
+
+// ✅ GOOD
+it('displays error message when API request fails', () => {})
+```
+
+### 3. Arrange-Act-Assert Pattern
+
+```typescript
+it('increments counter when button clicked', async () => {
+  // Arrange
+  render(<Counter />)
+  const button = screen.getByRole('button', { name: 'Increment' })
+
+  // Act
+  await userEvent.click(button)
+
+  // Assert
+  expect(screen.getByText('Count: 1')).toBeInTheDocument()
+})
+```
+
+### 4. Test Edge Cases
+
+```typescript
+describe('calculatePercentage', () => {
+  it('handles normal values', () => {
+    expect(calculatePercentage(50, 100)).toBe(50)
+  })
+
+  it('handles zero denominator', () => {
+    expect(calculatePercentage(10, 0)).toBe(0)
+  })
+
+  it('handles negative values', () => {
+    expect(calculatePercentage(-10, 100)).toBe(-10)
+  })
+
+  it('handles decimal values', () => {
+    expect(calculatePercentage(1, 3)).toBeCloseTo(33.33, 2)
+  })
+})
+```
+
+### 5. Keep Tests Independent
+
+```typescript
+// ❌ BAD - Tests depend on each other
+let counter = 0
+
+it('increments counter', () => {
+  counter++
+  expect(counter).toBe(1)
+})
+
+it('increments counter again', () => {
+  counter++
+  expect(counter).toBe(2) // Fails if first test doesn't run
+})
+
+// ✅ GOOD - Tests are independent
+it('increments counter', () => {
+  let counter = 0
+  counter++
+  expect(counter).toBe(1)
+})
+
+it('increments counter again', () => {
+  let counter = 0
+  counter++
+  expect(counter).toBe(1)
+})
+```
+
+## Continuous Integration
+
+### GitHub Actions
+
+```yaml
+name: Tests
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - run: npm ci
+      - run: npm run test:coverage
+      - uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/lcov.info
+```
+
+## Debugging Tests
+
+### Run Single Test
+
+```bash
+# Run single test file
+npm test -- metrics.test.ts
+
+# Run single test case
+npm test -- -t "displays metrics"
+```
+
+### Debug in VS Code
+
+Add to `.vscode/launch.json`:
+
+```json
+{
+  "type": "node",
+  "request": "launch",
+  "name": "Debug Tests",
+  "runtimeExecutable": "npm",
+  "runtimeArgs": ["run", "test:debug"],
+  "console": "integratedTerminal"
+}
+```
+
+## Related
+
+- [Component Documentation](/docs/components/dashboard)
+- [API Routes](/docs/guides/api-routes)
+- [Performance](/docs/guides/performance)

@@ -1,0 +1,412 @@
+---
+title: useMetrics Hook
+description: Custom hook for fetching and managing metrics data
+category: hooks
+order: 2
+---
+
+# useMetrics Hook
+
+Fetch and manage metrics data with automatic caching and real-time updates.
+
+## Basic Usage
+
+```tsx
+import { useMetrics } from '@/hooks/useMetrics'
+
+function MetricsDashboard() {
+  const { data, isLoading, error, refetch } = useMetrics({
+    projectId: 'project-123',
+    metricType: 'traffic',
+  })
+
+  if (isLoading) return <Skeleton />
+  if (error) return <ErrorMessage error={error} />
+
+  return <MetricsChart data={data} />
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `projectId` | `string` | Yes | Project ID to filter metrics |
+| `metricType` | `MetricType` | Yes | Type of metric to fetch |
+| `dateRange` | `[Date, Date]` | No | Date range filter |
+| `interval` | `'hour' \| 'day' \| 'week' \| 'month'` | No | Data aggregation interval |
+| `enabled` | `boolean` | No | Enable/disable query (default: `true`) |
+
+## Return Value
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `data` | `Metric[]` | Array of metrics |
+| `isLoading` | `boolean` | Loading state |
+| `error` | `Error \| null` | Error object |
+| `refetch` | `() => void` | Manual refetch function |
+| `isRefetching` | `boolean` | Refetching state |
+
+## Metric Types
+
+```typescript
+type MetricType = 'traffic' | 'conversions' | 'revenue' | 'engagement'
+
+interface Metric {
+  id: string
+  projectId: string
+  type: MetricType
+  value: number
+  timestamp: string
+  metadata?: Record<string, any>
+}
+```
+
+## Examples
+
+### With Date Range
+
+```tsx
+function MetricsWithDateRange() {
+  const [dateRange, setDateRange] = useState<[Date, Date]>([
+    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+    new Date(),
+  ])
+
+  const { data, isLoading } = useMetrics({
+    projectId: 'project-123',
+    metricType: 'traffic',
+    dateRange,
+  })
+
+  return (
+    <>
+      <DateRangePicker value={dateRange} onChange={setDateRange} />
+      {isLoading ? <Skeleton /> : <MetricsChart data={data} />}
+    </>
+  )
+}
+```
+
+### With Interval
+
+```tsx
+function AggregatedMetrics() {
+  const { data } = useMetrics({
+    projectId: 'project-123',
+    metricType: 'traffic',
+    interval: 'day', // Aggregate by day
+  })
+
+  return <MetricsChart data={data} />
+}
+```
+
+### Conditional Fetching
+
+```tsx
+function ConditionalMetrics({ enabled }: { enabled: boolean }) {
+  const { data, isLoading } = useMetrics({
+    projectId: 'project-123',
+    metricType: 'traffic',
+    enabled, // Only fetch when enabled
+  })
+
+  if (!enabled) return <div>Metrics disabled</div>
+  if (isLoading) return <Skeleton />
+
+  return <MetricsChart data={data} />
+}
+```
+
+### Manual Refetch
+
+```tsx
+function MetricsWithRefresh() {
+  const { data, refetch, isRefetching } = useMetrics({
+    projectId: 'project-123',
+    metricType: 'traffic',
+  })
+
+  return (
+    <>
+      <Button onClick={() => refetch()} disabled={isRefetching}>
+        {isRefetching ? 'Refreshing...' : 'Refresh'}
+      </Button>
+      <MetricsChart data={data} />
+    </>
+  )
+}
+```
+
+### Multiple Metrics
+
+```tsx
+function MultipleMetrics() {
+  const traffic = useMetrics({
+    projectId: 'project-123',
+    metricType: 'traffic',
+  })
+
+  const conversions = useMetrics({
+    projectId: 'project-123',
+    metricType: 'conversions',
+  })
+
+  const revenue = useMetrics({
+    projectId: 'project-123',
+    metricType: 'revenue',
+  })
+
+  return (
+    <div className="grid gap-4 md:grid-cols-3">
+      <MetricCard title="Traffic" data={traffic.data} isLoading={traffic.isLoading} />
+      <MetricCard title="Conversions" data={conversions.data} isLoading={conversions.isLoading} />
+      <MetricCard title="Revenue" data={revenue.data} isLoading={revenue.isLoading} />
+    </div>
+  )
+}
+```
+
+## Real-Time Updates
+
+Combine with `useRealtime` for live updates:
+
+```tsx
+function LiveMetrics() {
+  const { data, refetch } = useMetrics({
+    projectId: 'project-123',
+    metricType: 'traffic',
+  })
+
+  useRealtime({
+    table: 'metrics',
+    filter: 'project_id=eq.project-123',
+    onInsert: () => {
+      refetch() // Refetch when new metric inserted
+    },
+  })
+
+  return <MetricsChart data={data} />
+}
+```
+
+## Error Handling
+
+```tsx
+function MetricsWithErrorHandling() {
+  const { data, error, refetch } = useMetrics({
+    projectId: 'project-123',
+    metricType: 'traffic',
+  })
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Error loading metrics</AlertTitle>
+        <AlertDescription>
+          {error.message}
+          <Button onClick={() => refetch()}>Retry</Button>
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  return <MetricsChart data={data} />
+}
+```
+
+## Caching
+
+The hook uses TanStack Query for caching:
+
+```typescript
+// Default cache configuration
+{
+  staleTime: 60000, // 1 minute
+  cacheTime: 300000, // 5 minutes
+  refetchOnWindowFocus: true,
+  refetchOnReconnect: true,
+}
+```
+
+### Custom Cache Configuration
+
+```tsx
+import { useMetrics } from '@/hooks/useMetrics'
+import { useQueryClient } from '@tanstack/react-query'
+
+function MetricsWithCustomCache() {
+  const queryClient = useQueryClient()
+
+  const { data } = useMetrics({
+    projectId: 'project-123',
+    metricType: 'traffic',
+  })
+
+  // Invalidate cache manually
+  const invalidateCache = () => {
+    queryClient.invalidateQueries(['metrics', 'project-123', 'traffic'])
+  }
+
+  return (
+    <>
+      <Button onClick={invalidateCache}>Clear Cache</Button>
+      <MetricsChart data={data} />
+    </>
+  )
+}
+```
+
+## Optimistic Updates
+
+```tsx
+function MetricsWithOptimisticUpdate() {
+  const queryClient = useQueryClient()
+  const { data } = useMetrics({
+    projectId: 'project-123',
+    metricType: 'traffic',
+  })
+
+  const addMetric = async (newMetric: Metric) => {
+    // Optimistically update cache
+    queryClient.setQueryData(
+      ['metrics', 'project-123', 'traffic'],
+      (old: Metric[] = []) => [...old, newMetric]
+    )
+
+    try {
+      await createMetric(newMetric)
+    } catch (error) {
+      // Rollback on error
+      queryClient.invalidateQueries(['metrics', 'project-123', 'traffic'])
+    }
+  }
+
+  return <MetricsChart data={data} onAdd={addMetric} />
+}
+```
+
+## Pagination
+
+```tsx
+function PaginatedMetrics() {
+  const [page, setPage] = useState(1)
+  const limit = 10
+
+  const { data, isLoading } = useMetrics({
+    projectId: 'project-123',
+    metricType: 'traffic',
+    pagination: { page, limit },
+  })
+
+  return (
+    <>
+      <MetricsTable data={data} />
+      <Pagination
+        page={page}
+        totalPages={Math.ceil((data?.total || 0) / limit)}
+        onPageChange={setPage}
+      />
+    </>
+  )
+}
+```
+
+## Infinite Scroll
+
+```tsx
+import { useInfiniteQuery } from '@tanstack/react-query'
+
+function InfiniteMetrics() {
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['metrics', 'project-123', 'traffic'],
+    queryFn: ({ pageParam = 0 }) =>
+      fetchMetrics({
+        projectId: 'project-123',
+        metricType: 'traffic',
+        cursor: pageParam,
+      }),
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+  })
+
+  return (
+    <>
+      {data?.pages.map((page) => (
+        <MetricsTable key={page.cursor} data={page.metrics} />
+      ))}
+      {hasNextPage && (
+        <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+          {isFetchingNextPage ? 'Loading...' : 'Load More'}
+        </Button>
+      )}
+    </>
+  )
+}
+```
+
+## Performance Tips
+
+1. **Use staleTime** - Reduce unnecessary refetches
+2. **Enable caching** - Reuse data across components
+3. **Debounce filters** - Avoid excessive API calls
+4. **Paginate data** - Load data in chunks
+5. **Prefetch data** - Load data before needed
+
+## Testing
+
+```typescript
+import { renderHook, waitFor } from '@testing-library/react'
+import { useMetrics } from '@/hooks/useMetrics'
+
+describe('useMetrics', () => {
+  it('fetches metrics', async () => {
+    const { result } = renderHook(() =>
+      useMetrics({
+        projectId: 'project-123',
+        metricType: 'traffic',
+      })
+    )
+
+    expect(result.current.isLoading).toBe(true)
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    expect(result.current.data).toHaveLength(10)
+  })
+
+  it('refetches on projectId change', async () => {
+    const { result, rerender } = renderHook(
+      ({ projectId }) =>
+        useMetrics({
+          projectId,
+          metricType: 'traffic',
+        }),
+      { initialProps: { projectId: 'project-123' } }
+    )
+
+    await waitFor(() => {
+      expect(result.current.data).toHaveLength(10)
+    })
+
+    rerender({ projectId: 'project-456' })
+
+    await waitFor(() => {
+      expect(result.current.data).toHaveLength(5)
+    })
+  })
+})
+```
+
+## Related
+
+- [useRealtime Hook](/docs/hooks/use-realtime)
+- [MetricsDashboard Component](/docs/components/dashboard)
+- [Real-Time Features](/docs/features/realtime)

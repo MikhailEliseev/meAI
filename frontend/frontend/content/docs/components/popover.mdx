@@ -1,0 +1,672 @@
+---
+title: Popover Component
+description: Floating content container triggered by user interaction
+category: components
+order: 22
+---
+
+# Popover Component
+
+Display floating content that appears on user interaction.
+
+## Basic Usage
+
+```tsx
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+
+function Example() {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline">Open</Button>
+      </PopoverTrigger>
+      <PopoverContent>
+        <p>Popover content goes here</p>
+      </PopoverContent>
+    </Popover>
+  )
+}
+```
+
+## Props
+
+### Popover
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `open` | `boolean` | - | Controlled open state |
+| `defaultOpen` | `boolean` | `false` | Default open state |
+| `onOpenChange` | `(open: boolean) => void` | - | Open state callback |
+| `modal` | `boolean` | `false` | Modal behavior |
+
+### PopoverContent
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `side` | `'top' \| 'right' \| 'bottom' \| 'left'` | `'bottom'` | Popover position |
+| `align` | `'start' \| 'center' \| 'end'` | `'center'` | Popover alignment |
+| `sideOffset` | `number` | `4` | Distance from trigger |
+| `alignOffset` | `number` | `0` | Alignment offset |
+
+## Examples
+
+### Controlled Popover
+
+```tsx
+function ControlledPopover() {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline">
+          {open ? 'Close' : 'Open'}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent>
+        <div className="space-y-2">
+          <h4 className="font-semibold">Controlled Popover</h4>
+          <p className="text-sm text-muted-foreground">
+            This popover is controlled by state
+          </p>
+          <Button onClick={() => setOpen(false)} size="sm">
+            Close
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+```
+
+### Different Positions
+
+```tsx
+<div className="flex gap-4">
+  <Popover>
+    <PopoverTrigger asChild>
+      <Button>Top</Button>
+    </PopoverTrigger>
+    <PopoverContent side="top">
+      <p>Top popover</p>
+    </PopoverContent>
+  </Popover>
+
+  <Popover>
+    <PopoverTrigger asChild>
+      <Button>Right</Button>
+    </PopoverTrigger>
+    <PopoverContent side="right">
+      <p>Right popover</p>
+    </PopoverContent>
+  </Popover>
+
+  <Popover>
+    <PopoverTrigger asChild>
+      <Button>Bottom</Button>
+    </PopoverTrigger>
+    <PopoverContent side="bottom">
+      <p>Bottom popover</p>
+    </PopoverContent>
+  </Popover>
+
+  <Popover>
+    <PopoverTrigger asChild>
+      <Button>Left</Button>
+    </PopoverTrigger>
+    <PopoverContent side="left">
+      <p>Left popover</p>
+    </PopoverContent>
+  </Popover>
+</div>
+```
+
+### With Form
+
+```tsx
+function PopoverForm() {
+  const [open, setOpen] = useState(false)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setOpen(false)
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline">Add Item</Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <h4 className="font-semibold">Add New Item</h4>
+            <p className="text-sm text-muted-foreground">
+              Enter the details below
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="name">Name</Label>
+            <Input id="name" placeholder="Item name" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea id="description" placeholder="Item description" />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit">Save</Button>
+          </div>
+        </form>
+      </PopoverContent>
+    </Popover>
+  )
+}
+```
+
+### Date Picker Popover
+
+```tsx
+function DatePickerPopover() {
+  const [date, setDate] = useState<Date>()
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-[240px] justify-start text-left">
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {date ? format(date, 'PPP') : 'Pick a date'}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={setDate}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
+  )
+}
+```
+
+### Color Picker Popover
+
+```tsx
+function ColorPickerPopover() {
+  const [color, setColor] = useState('#000000')
+
+  const colors = [
+    '#000000', '#ffffff', '#ef4444', '#f97316', '#f59e0b',
+    '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6',
+    '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
+  ]
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-[200px] justify-start">
+          <div
+            className="h-4 w-4 rounded mr-2"
+            style={{ backgroundColor: color }}
+          />
+          {color}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64">
+        <div className="space-y-2">
+          <h4 className="font-semibold">Pick a color</h4>
+          <div className="grid grid-cols-5 gap-2">
+            {colors.map((c) => (
+              <button
+                key={c}
+                className="h-8 w-8 rounded border-2 hover:scale-110 transition-transform"
+                style={{
+                  backgroundColor: c,
+                  borderColor: color === c ? '#000' : 'transparent',
+                }}
+                onClick={() => setColor(c)}
+              />
+            ))}
+          </div>
+          <Input
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+            placeholder="#000000"
+          />
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+```
+
+### Share Popover
+
+```tsx
+function SharePopover() {
+  const [copied, setCopied] = useState(false)
+  const url = 'https://example.com/share'
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline">
+          <Share2 className="mr-2 h-4 w-4" />
+          Share
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h4 className="font-semibold">Share this page</h4>
+            <p className="text-sm text-muted-foreground">
+              Anyone with the link can view this page
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Input value={url} readOnly />
+            <Button onClick={copyToClipboard} size="sm">
+              {copied ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="flex-1">
+              <Twitter className="mr-2 h-4 w-4" />
+              Twitter
+            </Button>
+            <Button variant="outline" size="sm" className="flex-1">
+              <Facebook className="mr-2 h-4 w-4" />
+              Facebook
+            </Button>
+            <Button variant="outline" size="sm" className="flex-1">
+              <Linkedin className="mr-2 h-4 w-4" />
+              LinkedIn
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+```
+
+### Settings Popover
+
+```tsx
+function SettingsPopover() {
+  const [settings, setSettings] = useState({
+    notifications: true,
+    autoSave: false,
+    darkMode: true,
+  })
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <Settings className="h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80">
+        <div className="space-y-4">
+          <h4 className="font-semibold">Settings</h4>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="notifications">Notifications</Label>
+              <Switch
+                id="notifications"
+                checked={settings.notifications}
+                onCheckedChange={(checked) =>
+                  setSettings({ ...settings, notifications: checked })
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="autoSave">Auto-save</Label>
+              <Switch
+                id="autoSave"
+                checked={settings.autoSave}
+                onCheckedChange={(checked) =>
+                  setSettings({ ...settings, autoSave: checked })
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="darkMode">Dark Mode</Label>
+              <Switch
+                id="darkMode"
+                checked={settings.darkMode}
+                onCheckedChange={(checked) =>
+                  setSettings({ ...settings, darkMode: checked })
+                }
+              />
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+```
+
+### User Menu Popover
+
+```tsx
+function UserMenuPopover() {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+          <Avatar>
+            <AvatarImage src="/avatar.jpg" />
+            <AvatarFallback>JD</AvatarFallback>
+          </Avatar>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56" align="end">
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium">John Doe</p>
+            <p className="text-xs text-muted-foreground">john@example.com</p>
+          </div>
+          <Separator />
+          <div className="space-y-1">
+            <Button variant="ghost" className="w-full justify-start" size="sm">
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </Button>
+            <Button variant="ghost" className="w-full justify-start" size="sm">
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </Button>
+            <Button variant="ghost" className="w-full justify-start" size="sm">
+              <CreditCard className="mr-2 h-4 w-4" />
+              Billing
+            </Button>
+          </div>
+          <Separator />
+          <Button variant="ghost" className="w-full justify-start" size="sm">
+            <LogOut className="mr-2 h-4 w-4" />
+            Log out
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+```
+
+### Filter Popover
+
+```tsx
+function FilterPopover() {
+  const [filters, setFilters] = useState({
+    status: [] as string[],
+    priority: [] as string[],
+  })
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline">
+          <Filter className="mr-2 h-4 w-4" />
+          Filters
+          {(filters.status.length + filters.priority.length > 0) && (
+            <Badge variant="secondary" className="ml-2">
+              {filters.status.length + filters.priority.length}
+            </Badge>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h4 className="font-semibold">Status</h4>
+            <div className="space-y-2">
+              {['Active', 'Pending', 'Completed'].map((status) => (
+                <div key={status} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={status}
+                    checked={filters.status.includes(status)}
+                    onCheckedChange={(checked) => {
+                      setFilters({
+                        ...filters,
+                        status: checked
+                          ? [...filters.status, status]
+                          : filters.status.filter((s) => s !== status),
+                      })
+                    }}
+                  />
+                  <Label htmlFor={status}>{status}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+          <Separator />
+          <div className="space-y-2">
+            <h4 className="font-semibold">Priority</h4>
+            <div className="space-y-2">
+              {['High', 'Medium', 'Low'].map((priority) => (
+                <div key={priority} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={priority}
+                    checked={filters.priority.includes(priority)}
+                    onCheckedChange={(checked) => {
+                      setFilters({
+                        ...filters,
+                        priority: checked
+                          ? [...filters.priority, priority]
+                          : filters.priority.filter((p) => p !== priority),
+                      })
+                    }}
+                  />
+                  <Label htmlFor={priority}>{priority}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setFilters({ status: [], priority: [] })}
+            >
+              Clear
+            </Button>
+            <Button size="sm">Apply</Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+```
+
+### Emoji Picker Popover
+
+```tsx
+function EmojiPickerPopover() {
+  const [selected, setSelected] = useState('😀')
+
+  const emojis = [
+    '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂',
+    '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩',
+    '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪',
+  ]
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="icon">
+          {selected}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64">
+        <div className="grid grid-cols-8 gap-1">
+          {emojis.map((emoji) => (
+            <button
+              key={emoji}
+              className="text-2xl hover:bg-accent rounded p-1"
+              onClick={() => setSelected(emoji)}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+```
+
+### Nested Popovers
+
+```tsx
+function NestedPopovers() {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline">Open Menu</Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56">
+        <div className="space-y-2">
+          <Button variant="ghost" className="w-full justify-start">
+            Option 1
+          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" className="w-full justify-between">
+                More Options
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent side="right" className="w-56">
+              <div className="space-y-2">
+                <Button variant="ghost" className="w-full justify-start">
+                  Sub Option 1
+                </Button>
+                <Button variant="ghost" className="w-full justify-start">
+                  Sub Option 2
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button variant="ghost" className="w-full justify-start">
+            Option 3
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+```
+
+## Styling
+
+### Custom Width
+
+```tsx
+<PopoverContent className="w-96">
+  <p>Wide popover content</p>
+</PopoverContent>
+```
+
+### No Padding
+
+```tsx
+<PopoverContent className="p-0">
+  <div className="p-4">Custom padding</div>
+</PopoverContent>
+```
+
+## Best Practices
+
+1. **Keep focused** - Popovers should have a single purpose
+2. **Close on action** - Close after user completes action
+3. **Avoid nesting** - Minimize nested popovers
+4. **Mobile friendly** - Consider drawer on mobile
+5. **Keyboard accessible** - Support Escape to close
+6. **Clear trigger** - Make trigger obvious
+
+## Accessibility
+
+```tsx
+<Popover>
+  <PopoverTrigger
+    asChild
+    aria-label="Open menu"
+  >
+    <Button>Menu</Button>
+  </PopoverTrigger>
+  <PopoverContent role="dialog" aria-label="Menu options">
+    <p>Content</p>
+  </PopoverContent>
+</Popover>
+```
+
+## Keyboard Navigation
+
+- `Escape` - Close popover
+- `Tab` - Navigate through focusable elements
+- `Shift + Tab` - Navigate backwards
+
+## Testing
+
+```typescript
+import { render, screen, fireEvent } from '@testing-library/react'
+import { Popover, PopoverTrigger, PopoverContent } from './popover'
+
+describe('Popover', () => {
+  it('opens on click', () => {
+    render(
+      <Popover>
+        <PopoverTrigger>Open</PopoverTrigger>
+        <PopoverContent>Content</PopoverContent>
+      </Popover>
+    )
+
+    fireEvent.click(screen.getByText('Open'))
+    expect(screen.getByText('Content')).toBeVisible()
+  })
+
+  it('closes on escape', () => {
+    render(
+      <Popover defaultOpen>
+        <PopoverTrigger>Open</PopoverTrigger>
+        <PopoverContent>Content</PopoverContent>
+      </Popover>
+    )
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByText('Content')).not.toBeInTheDocument()
+  })
+})
+```
+
+## Related
+
+- [Tooltip Component](/docs/components/tooltip)
+- [Dialog Component](/docs/components/dialog)
+- [Dropdown Menu Component](/docs/components/dropdown-menu)

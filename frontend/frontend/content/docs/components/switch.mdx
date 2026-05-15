@@ -1,0 +1,491 @@
+---
+title: Switch Component
+description: Toggle between on and off states
+category: components
+order: 15
+---
+
+# Switch Component
+
+Toggle control for binary on/off states.
+
+## Basic Usage
+
+```tsx
+import { Switch } from '@/components/ui/switch'
+
+function Example() {
+  return <Switch />
+}
+```
+
+## Controlled Switch
+
+```tsx
+function ControlledSwitch() {
+  const [enabled, setEnabled] = useState(false)
+
+  return (
+    <Switch checked={enabled} onCheckedChange={setEnabled} />
+  )
+}
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `checked` | `boolean` | - | Controlled checked state |
+| `defaultChecked` | `boolean` | `false` | Default checked state |
+| `onCheckedChange` | `(checked: boolean) => void` | - | Change callback |
+| `disabled` | `boolean` | `false` | Disable switch |
+| `required` | `boolean` | `false` | Required field |
+| `name` | `string` | - | Form field name |
+
+## Examples
+
+### With Label
+
+```tsx
+function SwitchWithLabel() {
+  return (
+    <div className="flex items-center space-x-2">
+      <Switch id="airplane-mode" />
+      <Label htmlFor="airplane-mode">Airplane Mode</Label>
+    </div>
+  )
+}
+```
+
+### Settings Form
+
+```tsx
+function SettingsForm() {
+  const [settings, setSettings] = useState({
+    notifications: true,
+    emailUpdates: false,
+    darkMode: true,
+  })
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label htmlFor="notifications">Notifications</Label>
+          <p className="text-sm text-muted-foreground">
+            Receive push notifications
+          </p>
+        </div>
+        <Switch
+          id="notifications"
+          checked={settings.notifications}
+          onCheckedChange={(checked) =>
+            setSettings({ ...settings, notifications: checked })
+          }
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label htmlFor="email">Email Updates</Label>
+          <p className="text-sm text-muted-foreground">
+            Receive email notifications
+          </p>
+        </div>
+        <Switch
+          id="email"
+          checked={settings.emailUpdates}
+          onCheckedChange={(checked) =>
+            setSettings({ ...settings, emailUpdates: checked })
+          }
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label htmlFor="dark-mode">Dark Mode</Label>
+          <p className="text-sm text-muted-foreground">
+            Use dark theme
+          </p>
+        </div>
+        <Switch
+          id="dark-mode"
+          checked={settings.darkMode}
+          onCheckedChange={(checked) =>
+            setSettings({ ...settings, darkMode: checked })
+          }
+        />
+      </div>
+    </div>
+  )
+}
+```
+
+### Disabled Switch
+
+```tsx
+<div className="flex items-center space-x-2">
+  <Switch id="disabled" disabled />
+  <Label htmlFor="disabled" className="text-muted-foreground">
+    Disabled
+  </Label>
+</div>
+```
+
+### With Form
+
+```tsx
+function FormWithSwitch() {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const formData = new FormData(e.target as HTMLFormElement)
+    const acceptTerms = formData.get('terms') === 'on'
+    console.log({ acceptTerms })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="flex items-center space-x-2">
+        <Switch id="terms" name="terms" required />
+        <Label htmlFor="terms">
+          I accept the terms and conditions
+        </Label>
+      </div>
+      <Button type="submit">Submit</Button>
+    </form>
+  )
+}
+```
+
+### Feature Flags
+
+```tsx
+function FeatureFlags() {
+  const [features, setFeatures] = useState({
+    betaFeatures: false,
+    analytics: true,
+    autoSave: true,
+  })
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Feature Flags</CardTitle>
+        <CardDescription>
+          Enable or disable experimental features
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label>Beta Features</Label>
+            <p className="text-sm text-muted-foreground">
+              Access experimental features
+            </p>
+          </div>
+          <Switch
+            checked={features.betaFeatures}
+            onCheckedChange={(checked) =>
+              setFeatures({ ...features, betaFeatures: checked })
+            }
+          />
+        </div>
+
+        <Separator />
+
+        <div className="flex items-center justify-between">
+          <div>
+            <Label>Analytics</Label>
+            <p className="text-sm text-muted-foreground">
+              Help us improve the product
+            </p>
+          </div>
+          <Switch
+            checked={features.analytics}
+            onCheckedChange={(checked) =>
+              setFeatures({ ...features, analytics: checked })
+            }
+          />
+        </div>
+
+        <Separator />
+
+        <div className="flex items-center justify-between">
+          <div>
+            <Label>Auto-save</Label>
+            <p className="text-sm text-muted-foreground">
+              Automatically save changes
+            </p>
+          </div>
+          <Switch
+            checked={features.autoSave}
+            onCheckedChange={(checked) =>
+              setFeatures({ ...features, autoSave: checked })
+            }
+          />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+### With Toast Notification
+
+```tsx
+function SwitchWithToast() {
+  const { toast } = useToast()
+
+  const handleChange = (checked: boolean) => {
+    toast({
+      title: checked ? 'Enabled' : 'Disabled',
+      description: `Notifications have been ${checked ? 'enabled' : 'disabled'}.`,
+    })
+  }
+
+  return (
+    <div className="flex items-center space-x-2">
+      <Switch id="notifications" onCheckedChange={handleChange} />
+      <Label htmlFor="notifications">Notifications</Label>
+    </div>
+  )
+}
+```
+
+### Async Switch
+
+```tsx
+function AsyncSwitch() {
+  const [enabled, setEnabled] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleChange = async (checked: boolean) => {
+    setIsLoading(true)
+    try {
+      await updateSetting(checked)
+      setEnabled(checked)
+    } catch (error) {
+      console.error('Failed to update setting')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center space-x-2">
+      <Switch
+        checked={enabled}
+        onCheckedChange={handleChange}
+        disabled={isLoading}
+      />
+      <Label>
+        {isLoading ? 'Updating...' : 'Feature enabled'}
+      </Label>
+    </div>
+  )
+}
+```
+
+### Confirmation Dialog
+
+```tsx
+function SwitchWithConfirmation() {
+  const [enabled, setEnabled] = useState(false)
+  const [showDialog, setShowDialog] = useState(false)
+  const [pendingValue, setPendingValue] = useState(false)
+
+  const handleChange = (checked: boolean) => {
+    if (checked) {
+      setPendingValue(checked)
+      setShowDialog(true)
+    } else {
+      setEnabled(checked)
+    }
+  }
+
+  const handleConfirm = () => {
+    setEnabled(pendingValue)
+    setShowDialog(false)
+  }
+
+  return (
+    <>
+      <div className="flex items-center space-x-2">
+        <Switch checked={enabled} onCheckedChange={handleChange} />
+        <Label>Enable dangerous feature</Label>
+      </div>
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you sure?</DialogTitle>
+            <DialogDescription>
+              This will enable a potentially dangerous feature.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirm}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+```
+
+### Group of Switches
+
+```tsx
+function SwitchGroup() {
+  const [permissions, setPermissions] = useState({
+    read: true,
+    write: false,
+    delete: false,
+  })
+
+  return (
+    <div className="space-y-4">
+      <h3 className="font-semibold">Permissions</h3>
+      <div className="space-y-2">
+        {Object.entries(permissions).map(([key, value]) => (
+          <div key={key} className="flex items-center space-x-2">
+            <Switch
+              id={key}
+              checked={value}
+              onCheckedChange={(checked) =>
+                setPermissions({ ...permissions, [key]: checked })
+              }
+            />
+            <Label htmlFor={key} className="capitalize">
+              {key}
+            </Label>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+### With Badge
+
+```tsx
+function SwitchWithBadge() {
+  const [enabled, setEnabled] = useState(false)
+
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <Label>Premium Feature</Label>
+        <Badge variant="secondary">Pro</Badge>
+      </div>
+      <Switch checked={enabled} onCheckedChange={setEnabled} />
+    </div>
+  )
+}
+```
+
+## Sizes
+
+```tsx
+// Small
+<Switch className="scale-75" />
+
+// Default
+<Switch />
+
+// Large
+<Switch className="scale-125" />
+```
+
+## Styling
+
+### Custom Colors
+
+```tsx
+<Switch className="data-[state=checked]:bg-green-500" />
+<Switch className="data-[state=checked]:bg-purple-500" />
+```
+
+### With Icons
+
+```tsx
+function SwitchWithIcons() {
+  const [enabled, setEnabled] = useState(false)
+
+  return (
+    <div className="flex items-center space-x-2">
+      <Switch checked={enabled} onCheckedChange={setEnabled} />
+      {enabled ? (
+        <Check className="h-4 w-4 text-green-500" />
+      ) : (
+        <X className="h-4 w-4 text-muted-foreground" />
+      )}
+      <Label>Feature</Label>
+    </div>
+  )
+}
+```
+
+## Best Practices
+
+1. **Clear labels** - Always provide descriptive labels
+2. **Immediate feedback** - Changes should take effect immediately
+3. **Confirmation for critical actions** - Use dialogs for dangerous operations
+4. **Loading states** - Show loading for async operations
+5. **Accessible** - Use proper ARIA attributes and keyboard support
+6. **Consistent placement** - Keep switches in predictable locations
+
+## Accessibility
+
+```tsx
+<Switch
+  id="feature"
+  aria-label="Enable feature"
+  aria-describedby="feature-description"
+/>
+<p id="feature-description" className="text-sm text-muted-foreground">
+  This will enable the feature
+</p>
+```
+
+## Keyboard Navigation
+
+- `Space` - Toggle switch
+- `Enter` - Toggle switch (when focused)
+- `Tab` - Move focus to next element
+
+## Testing
+
+```typescript
+import { render, screen, fireEvent } from '@testing-library/react'
+import { Switch } from './switch'
+
+describe('Switch', () => {
+  it('toggles on click', () => {
+    const handleChange = jest.fn()
+    render(<Switch onCheckedChange={handleChange} />)
+
+    const switchElement = screen.getByRole('switch')
+    fireEvent.click(switchElement)
+
+    expect(handleChange).toHaveBeenCalledWith(true)
+  })
+
+  it('can be disabled', () => {
+    render(<Switch disabled />)
+    
+    const switchElement = screen.getByRole('switch')
+    expect(switchElement).toBeDisabled()
+  })
+})
+```
+
+## Related
+
+- [Checkbox Component](/docs/components/checkbox)
+- [Radio Group Component](/docs/components/radio-group)
+- [Toggle Component](/docs/components/toggle)

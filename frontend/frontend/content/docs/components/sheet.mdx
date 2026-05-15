@@ -1,0 +1,690 @@
+---
+title: Sheet Component
+description: Slide-out panel from screen edge
+category: components
+order: 29
+---
+
+# Sheet Component
+
+Slide-out panel that appears from the edge of the screen, commonly used for mobile navigation or side panels.
+
+## Basic Usage
+
+```tsx
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
+
+function Example() {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="outline">Open</Button>
+      </SheetTrigger>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Sheet Title</SheetTitle>
+          <SheetDescription>
+            Sheet description goes here
+          </SheetDescription>
+        </SheetHeader>
+        <div className="py-4">
+          <p>Sheet content</p>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+```
+
+## Props
+
+### Sheet
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `open` | `boolean` | - | Controlled open state |
+| `defaultOpen` | `boolean` | `false` | Default open state |
+| `onOpenChange` | `(open: boolean) => void` | - | Open state callback |
+
+### SheetContent
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `side` | `'top' \| 'right' \| 'bottom' \| 'left'` | `'right'` | Side to slide from |
+| `className` | `string` | - | Additional classes |
+
+## Examples
+
+### Different Sides
+
+```tsx
+function SheetSides() {
+  return (
+    <div className="flex gap-4">
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="outline">Top</Button>
+        </SheetTrigger>
+        <SheetContent side="top">
+          <SheetHeader>
+            <SheetTitle>Top Sheet</SheetTitle>
+          </SheetHeader>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="outline">Right</Button>
+        </SheetTrigger>
+        <SheetContent side="right">
+          <SheetHeader>
+            <SheetTitle>Right Sheet</SheetTitle>
+          </SheetHeader>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="outline">Bottom</Button>
+        </SheetTrigger>
+        <SheetContent side="bottom">
+          <SheetHeader>
+            <SheetTitle>Bottom Sheet</SheetTitle>
+          </SheetHeader>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="outline">Left</Button>
+        </SheetTrigger>
+        <SheetContent side="left">
+          <SheetHeader>
+            <SheetTitle>Left Sheet</SheetTitle>
+          </SheetHeader>
+        </SheetContent>
+      </Sheet>
+    </div>
+  )
+}
+```
+
+### Mobile Navigation
+
+```tsx
+function MobileNav() {
+  const [open, setOpen] = useState(false)
+
+  const navItems = [
+    { label: 'Home', href: '/' },
+    { label: 'About', href: '/about' },
+    { label: 'Services', href: '/services' },
+    { label: 'Contact', href: '/contact' },
+  ]
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="md:hidden">
+          <Menu className="h-5 w-5" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-[300px]">
+        <SheetHeader>
+          <SheetTitle>Navigation</SheetTitle>
+        </SheetHeader>
+        <nav className="flex flex-col gap-4 mt-8">
+          {navItems.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className="text-lg font-medium hover:text-primary transition-colors"
+              onClick={() => setOpen(false)}
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
+      </SheetContent>
+    </Sheet>
+  )
+}
+```
+
+### Filter Panel
+
+```tsx
+function FilterSheet() {
+  const [priceRange, setPriceRange] = useState([0, 1000])
+  const [categories, setCategories] = useState<string[]>([])
+
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="outline">
+          <Filter className="mr-2 h-4 w-4" />
+          Filters
+        </Button>
+      </SheetTrigger>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Filters</SheetTitle>
+          <SheetDescription>
+            Refine your search results
+          </SheetDescription>
+        </SheetHeader>
+        <div className="space-y-6 py-6">
+          <div className="space-y-2">
+            <Label>Price Range</Label>
+            <Slider
+              value={priceRange}
+              onValueChange={setPriceRange}
+              max={1000}
+              step={10}
+            />
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>${priceRange[0]}</span>
+              <span>${priceRange[1]}</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Categories</Label>
+            {['Electronics', 'Clothing', 'Books', 'Home'].map((category) => (
+              <div key={category} className="flex items-center space-x-2">
+                <Checkbox
+                  id={category}
+                  checked={categories.includes(category)}
+                  onCheckedChange={(checked) => {
+                    setCategories(
+                      checked
+                        ? [...categories, category]
+                        : categories.filter((c) => c !== category)
+                    )
+                  }}
+                />
+                <Label htmlFor={category}>{category}</Label>
+              </div>
+            ))}
+          </div>
+        </div>
+        <SheetFooter>
+          <Button variant="outline" onClick={() => {
+            setPriceRange([0, 1000])
+            setCategories([])
+          }}>
+            Clear
+          </Button>
+          <Button>Apply Filters</Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  )
+}
+```
+
+### Shopping Cart
+
+```tsx
+function CartSheet() {
+  const [items, setItems] = useState([
+    { id: 1, name: 'Product 1', price: 29.99, quantity: 1 },
+    { id: 2, name: 'Product 2', price: 49.99, quantity: 2 },
+  ])
+
+  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="outline" size="icon" className="relative">
+          <ShoppingCart className="h-5 w-5" />
+          <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0">
+            {items.length}
+          </Badge>
+        </Button>
+      </SheetTrigger>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Shopping Cart</SheetTitle>
+          <SheetDescription>
+            {items.length} items in your cart
+          </SheetDescription>
+        </SheetHeader>
+        <div className="flex-1 overflow-auto py-6">
+          <div className="space-y-4">
+            {items.map((item) => (
+              <div key={item.id} className="flex items-center gap-4">
+                <div className="h-16 w-16 bg-muted rounded" />
+                <div className="flex-1">
+                  <p className="font-medium">{item.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    ${item.price} × {item.quantity}
+                  </p>
+                </div>
+                <Button variant="ghost" size="icon">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+        <SheetFooter className="flex-col gap-4">
+          <div className="flex justify-between text-lg font-semibold">
+            <span>Total</span>
+            <span>${total.toFixed(2)}</span>
+          </div>
+          <Button className="w-full">Checkout</Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  )
+}
+```
+
+### Settings Panel
+
+```tsx
+function SettingsSheet() {
+  const [settings, setSettings] = useState({
+    notifications: true,
+    darkMode: false,
+    autoSave: true,
+  })
+
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <Settings className="h-5 w-5" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Settings</SheetTitle>
+          <SheetDescription>
+            Manage your preferences
+          </SheetDescription>
+        </SheetHeader>
+        <div className="space-y-6 py-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Notifications</Label>
+              <p className="text-sm text-muted-foreground">
+                Receive email notifications
+              </p>
+            </div>
+            <Switch
+              checked={settings.notifications}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, notifications: checked })
+              }
+            />
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Dark Mode</Label>
+              <p className="text-sm text-muted-foreground">
+                Use dark theme
+              </p>
+            </div>
+            <Switch
+              checked={settings.darkMode}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, darkMode: checked })
+              }
+            />
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Auto-save</Label>
+              <p className="text-sm text-muted-foreground">
+                Automatically save changes
+              </p>
+            </div>
+            <Switch
+              checked={settings.autoSave}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, autoSave: checked })
+              }
+            />
+          </div>
+        </div>
+        <SheetFooter>
+          <Button>Save Changes</Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  )
+}
+```
+
+### User Profile
+
+```tsx
+function ProfileSheet() {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+          <Avatar>
+            <AvatarImage src="/avatar.jpg" />
+            <AvatarFallback>JD</AvatarFallback>
+          </Avatar>
+        </Button>
+      </SheetTrigger>
+      <SheetContent>
+        <SheetHeader>
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16">
+              <AvatarImage src="/avatar.jpg" />
+              <AvatarFallback>JD</AvatarFallback>
+            </Avatar>
+            <div>
+              <SheetTitle>John Doe</SheetTitle>
+              <SheetDescription>john@example.com</SheetDescription>
+            </div>
+          </div>
+        </SheetHeader>
+        <div className="space-y-4 py-6">
+          <Button variant="ghost" className="w-full justify-start">
+            <User className="mr-2 h-4 w-4" />
+            Profile
+          </Button>
+          <Button variant="ghost" className="w-full justify-start">
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </Button>
+          <Button variant="ghost" className="w-full justify-start">
+            <CreditCard className="mr-2 h-4 w-4" />
+            Billing
+          </Button>
+          <Separator />
+          <Button variant="ghost" className="w-full justify-start text-destructive">
+            <LogOut className="mr-2 h-4 w-4" />
+            Log out
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+```
+
+### Notification Panel
+
+```tsx
+function NotificationSheet() {
+  const notifications = [
+    { id: 1, title: 'New message', time: '5 min ago', unread: true },
+    { id: 2, title: 'Update available', time: '1 hour ago', unread: true },
+    { id: 3, title: 'Task completed', time: '2 hours ago', unread: false },
+  ]
+
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative">
+          <Bell className="h-5 w-5" />
+          <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0">
+            2
+          </Badge>
+        </Button>
+      </SheetTrigger>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Notifications</SheetTitle>
+          <SheetDescription>
+            You have 2 unread notifications
+          </SheetDescription>
+        </SheetHeader>
+        <div className="space-y-4 py-6">
+          {notifications.map((notification) => (
+            <div
+              key={notification.id}
+              className={`p-4 rounded-lg border ${
+                notification.unread ? 'bg-muted/50' : ''
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <p className="font-medium">{notification.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {notification.time}
+                  </p>
+                </div>
+                {notification.unread && (
+                  <div className="h-2 w-2 rounded-full bg-primary" />
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        <SheetFooter>
+          <Button variant="outline" className="w-full">
+            Mark all as read
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  )
+}
+```
+
+### Form Sheet
+
+```tsx
+function FormSheet() {
+  const [open, setOpen] = useState(false)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setOpen(false)
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button>Add Item</Button>
+      </SheetTrigger>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Add New Item</SheetTitle>
+          <SheetDescription>
+            Fill in the details below
+          </SheetDescription>
+        </SheetHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-6">
+          <div className="space-y-2">
+            <Label htmlFor="name">Name</Label>
+            <Input id="name" placeholder="Item name" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea id="description" placeholder="Item description" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="category">Category</Label>
+            <Select>
+              <SelectTrigger id="category">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="electronics">Electronics</SelectItem>
+                <SelectItem value="clothing">Clothing</SelectItem>
+                <SelectItem value="books">Books</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <SheetFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Save</Button>
+          </SheetFooter>
+        </form>
+      </SheetContent>
+    </Sheet>
+  )
+}
+```
+
+### Search Sheet
+
+```tsx
+function SearchSheet() {
+  const [search, setSearch] = useState('')
+  const [results, setResults] = useState<string[]>([])
+
+  useEffect(() => {
+    if (search) {
+      // Simulate search
+      setResults(['Result 1', 'Result 2', 'Result 3'])
+    } else {
+      setResults([])
+    }
+  }, [search])
+
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="outline">
+          <Search className="mr-2 h-4 w-4" />
+          Search
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="top" className="h-[400px]">
+        <SheetHeader>
+          <SheetTitle>Search</SheetTitle>
+        </SheetHeader>
+        <div className="space-y-4 py-6">
+          <Input
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+          {results.length > 0 && (
+            <div className="space-y-2">
+              {results.map((result, i) => (
+                <div
+                  key={i}
+                  className="p-3 hover:bg-accent rounded-lg cursor-pointer"
+                >
+                  {result}
+                </div>
+              ))}
+            </div>
+          )}
+          {search && results.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              No results found
+            </p>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+```
+
+### Custom Width
+
+```tsx
+<Sheet>
+  <SheetTrigger asChild>
+    <Button>Open Wide Sheet</Button>
+  </SheetTrigger>
+  <SheetContent className="w-[400px] sm:w-[540px]">
+    <SheetHeader>
+      <SheetTitle>Wide Sheet</SheetTitle>
+    </SheetHeader>
+  </SheetContent>
+</Sheet>
+```
+
+## Best Practices
+
+1. **Mobile first** - Sheets work great on mobile
+2. **Clear close** - Always provide a way to close
+3. **Appropriate side** - Choose side based on content
+4. **Scrollable content** - Handle overflow properly
+5. **Focus management** - Trap focus within sheet
+6. **Backdrop** - Use backdrop to indicate modal state
+
+## Accessibility
+
+```tsx
+<Sheet>
+  <SheetTrigger
+    asChild
+    aria-label="Open navigation"
+  >
+    <Button>Menu</Button>
+  </SheetTrigger>
+  <SheetContent
+    role="dialog"
+    aria-labelledby="sheet-title"
+    aria-describedby="sheet-description"
+  >
+    <SheetHeader>
+      <SheetTitle id="sheet-title">Navigation</SheetTitle>
+      <SheetDescription id="sheet-description">
+        Main navigation menu
+      </SheetDescription>
+    </SheetHeader>
+  </SheetContent>
+</Sheet>
+```
+
+## Keyboard Navigation
+
+- `Escape` - Close sheet
+- `Tab` - Navigate through focusable elements
+- Focus is trapped within sheet when open
+
+## Testing
+
+```typescript
+import { render, screen, fireEvent } from '@testing-library/react'
+import { Sheet, SheetTrigger, SheetContent } from './sheet'
+
+describe('Sheet', () => {
+  it('opens on trigger click', () => {
+    render(
+      <Sheet>
+        <SheetTrigger>Open</SheetTrigger>
+        <SheetContent>Content</SheetContent>
+      </Sheet>
+    )
+
+    fireEvent.click(screen.getByText('Open'))
+    expect(screen.getByText('Content')).toBeVisible()
+  })
+
+  it('closes on escape', () => {
+    render(
+      <Sheet defaultOpen>
+        <SheetContent>Content</SheetContent>
+      </Sheet>
+    )
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByText('Content')).not.toBeInTheDocument()
+  })
+})
+```
+
+## Related
+
+- [Dialog Component](/docs/components/dialog)
+- [Drawer Component](/docs/components/drawer)
+- [Popover Component](/docs/components/popover)

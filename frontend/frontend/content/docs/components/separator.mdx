@@ -1,0 +1,407 @@
+---
+title: Separator Component
+description: Visually divide content sections
+category: components
+order: 14
+---
+
+# Separator Component
+
+Visually separate or divide content sections with horizontal or vertical lines.
+
+## Basic Usage
+
+```tsx
+import { Separator } from '@/components/ui/separator'
+
+function Example() {
+  return (
+    <div>
+      <p>Content above</p>
+      <Separator />
+      <p>Content below</p>
+    </div>
+  )
+}
+```
+
+## Orientation
+
+```tsx
+// Horizontal (default)
+<Separator orientation="horizontal" />
+
+// Vertical
+<div className="flex h-20 items-center">
+  <span>Left</span>
+  <Separator orientation="vertical" className="mx-4" />
+  <span>Right</span>
+</div>
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `orientation` | `'horizontal' \| 'vertical'` | `'horizontal'` | Separator direction |
+| `decorative` | `boolean` | `true` | Whether separator is decorative |
+| `className` | `string` | - | Additional CSS classes |
+
+## Examples
+
+### Section Divider
+
+```tsx
+function SectionDivider() {
+  return (
+    <div className="space-y-6">
+      <section>
+        <h2 className="text-2xl font-bold">Section 1</h2>
+        <p>Content for section 1</p>
+      </section>
+      
+      <Separator />
+      
+      <section>
+        <h2 className="text-2xl font-bold">Section 2</h2>
+        <p>Content for section 2</p>
+      </section>
+    </div>
+  )
+}
+```
+
+### With Text
+
+```tsx
+function SeparatorWithText() {
+  return (
+    <div className="relative">
+      <Separator />
+      <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2 text-sm text-muted-foreground">
+        OR
+      </span>
+    </div>
+  )
+}
+```
+
+### Navigation Separator
+
+```tsx
+function Navigation() {
+  return (
+    <nav className="flex items-center gap-4">
+      <Link href="/">Home</Link>
+      <Separator orientation="vertical" className="h-4" />
+      <Link href="/about">About</Link>
+      <Separator orientation="vertical" className="h-4" />
+      <Link href="/contact">Contact</Link>
+    </nav>
+  )
+}
+```
+
+### Card Separator
+
+```tsx
+function CardWithSeparator() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>User Profile</CardTitle>
+      </CardHeader>
+      <Separator />
+      <CardContent className="pt-6">
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm font-medium">Name</p>
+            <p className="text-sm text-muted-foreground">John Doe</p>
+          </div>
+          <Separator />
+          <div>
+            <p className="text-sm font-medium">Email</p>
+            <p className="text-sm text-muted-foreground">john@example.com</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+### List Separator
+
+```tsx
+function ListWithSeparators() {
+  const items = ['Item 1', 'Item 2', 'Item 3', 'Item 4']
+
+  return (
+    <div>
+      {items.map((item, index) => (
+        <div key={index}>
+          <div className="py-4">{item}</div>
+          {index < items.length - 1 && <Separator />}
+        </div>
+      ))}
+    </div>
+  )
+}
+```
+
+### Sidebar Separator
+
+```tsx
+function Sidebar() {
+  return (
+    <aside className="w-64 border-r p-4">
+      <div className="space-y-4">
+        <div>
+          <h3 className="font-semibold mb-2">Navigation</h3>
+          <nav className="space-y-1">
+            <Link href="/">Dashboard</Link>
+            <Link href="/projects">Projects</Link>
+          </nav>
+        </div>
+        
+        <Separator />
+        
+        <div>
+          <h3 className="font-semibold mb-2">Settings</h3>
+          <nav className="space-y-1">
+            <Link href="/profile">Profile</Link>
+            <Link href="/preferences">Preferences</Link>
+          </nav>
+        </div>
+      </div>
+    </aside>
+  )
+}
+```
+
+### Form Section Separator
+
+```tsx
+function FormWithSeparators() {
+  return (
+    <form className="space-y-6">
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Personal Information</h3>
+        <Input placeholder="Name" />
+        <Input placeholder="Email" />
+      </div>
+      
+      <Separator />
+      
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Address</h3>
+        <Input placeholder="Street" />
+        <Input placeholder="City" />
+      </div>
+      
+      <Separator />
+      
+      <Button type="submit">Submit</Button>
+    </form>
+  )
+}
+```
+
+### Breadcrumb Separator
+
+```tsx
+function Breadcrumbs() {
+  return (
+    <nav className="flex items-center gap-2 text-sm">
+      <Link href="/">Home</Link>
+      <Separator orientation="vertical" className="h-4" />
+      <Link href="/products">Products</Link>
+      <Separator orientation="vertical" className="h-4" />
+      <span className="text-muted-foreground">Current Page</span>
+    </nav>
+  )
+}
+```
+
+### Toolbar Separator
+
+```tsx
+function Toolbar() {
+  return (
+    <div className="flex items-center gap-2 p-2 border rounded-lg">
+      <Button variant="ghost" size="icon">
+        <Bold className="h-4 w-4" />
+      </Button>
+      <Button variant="ghost" size="icon">
+        <Italic className="h-4 w-4" />
+      </Button>
+      
+      <Separator orientation="vertical" className="h-6" />
+      
+      <Button variant="ghost" size="icon">
+        <AlignLeft className="h-4 w-4" />
+      </Button>
+      <Button variant="ghost" size="icon">
+        <AlignCenter className="h-4 w-4" />
+      </Button>
+      
+      <Separator orientation="vertical" className="h-6" />
+      
+      <Button variant="ghost" size="icon">
+        <Link className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
+```
+
+### Gradient Separator
+
+```tsx
+<div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+```
+
+### Dashed Separator
+
+```tsx
+<Separator className="border-dashed" />
+```
+
+### Dotted Separator
+
+```tsx
+<Separator className="border-dotted" />
+```
+
+### Thick Separator
+
+```tsx
+<Separator className="h-1" />
+```
+
+### Colored Separator
+
+```tsx
+<Separator className="bg-primary" />
+<Separator className="bg-destructive" />
+<Separator className="bg-green-500" />
+```
+
+### Separator with Icon
+
+```tsx
+function SeparatorWithIcon() {
+  return (
+    <div className="relative">
+      <Separator />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2">
+        <Star className="h-4 w-4 text-muted-foreground" />
+      </div>
+    </div>
+  )
+}
+```
+
+### Animated Separator
+
+```tsx
+import { motion } from 'framer-motion'
+
+function AnimatedSeparator() {
+  return (
+    <motion.div
+      initial={{ scaleX: 0 }}
+      animate={{ scaleX: 1 }}
+      transition={{ duration: 0.5 }}
+      className="h-px bg-border origin-left"
+    />
+  )
+}
+```
+
+### Responsive Separator
+
+```tsx
+// Horizontal on mobile, vertical on desktop
+<Separator className="md:hidden" />
+<Separator orientation="vertical" className="hidden md:block h-20" />
+```
+
+## Spacing
+
+```tsx
+// With margin
+<Separator className="my-4" />
+<Separator className="my-6" />
+<Separator className="my-8" />
+
+// With padding
+<div className="py-4">
+  <Separator />
+</div>
+```
+
+## Best Practices
+
+1. **Use sparingly** - Too many separators create visual clutter
+2. **Consistent spacing** - Maintain uniform spacing around separators
+3. **Semantic grouping** - Use to separate logical content sections
+4. **Consider alternatives** - Sometimes whitespace is better than a line
+5. **Accessibility** - Use `decorative={false}` for meaningful separators
+
+## Accessibility
+
+```tsx
+// Decorative separator (default)
+<Separator decorative />
+
+// Semantic separator
+<Separator decorative={false} aria-label="Section divider" />
+```
+
+## Styling
+
+### Custom Styles
+
+```tsx
+<Separator className="bg-gradient-to-r from-blue-500 to-purple-500 h-0.5" />
+```
+
+### With Shadow
+
+```tsx
+<Separator className="shadow-sm" />
+```
+
+### Inset Separator
+
+```tsx
+<Separator className="mx-4" />
+```
+
+## Testing
+
+```typescript
+import { render } from '@testing-library/react'
+import { Separator } from './separator'
+
+describe('Separator', () => {
+  it('renders horizontal separator', () => {
+    const { container } = render(<Separator />)
+    const separator = container.querySelector('[data-orientation="horizontal"]')
+    expect(separator).toBeInTheDocument()
+  })
+
+  it('renders vertical separator', () => {
+    const { container } = render(<Separator orientation="vertical" />)
+    const separator = container.querySelector('[data-orientation="vertical"]')
+    expect(separator).toBeInTheDocument()
+  })
+})
+```
+
+## Related
+
+- [Divider Pattern](/docs/patterns/divider)
+- [Layout Guide](/docs/guides/layout)
+- [Spacing Guide](/docs/guides/spacing)
