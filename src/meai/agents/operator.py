@@ -18,6 +18,20 @@ from meai.events.event_bus import EventBus, Message
 from meai.memory.obsidian import ObsidianVault
 from meai.storage.database import Database
 
+# Linear integration (optional)
+try:
+    import sys
+    from pathlib import Path
+    # Add scripts directory to path for LinearClient import
+    scripts_path = Path(__file__).parent.parent.parent.parent / "scripts"
+    if str(scripts_path) not in sys.path:
+        sys.path.insert(0, str(scripts_path))
+    from linear_cli import LinearClient
+    LINEAR_AVAILABLE = True
+except ImportError:
+    LINEAR_AVAILABLE = False
+    LinearClient = None
+
 
 class TaskStatus(str, Enum):
     """Task execution status"""
@@ -173,14 +187,20 @@ class MagisterCoordinator:
         Steps:
         1. Identify Magister from capability
         2. Create magister_task message
-        3. Publish to Event Bus with high priority
-        4. Magister will receive and delegate to Subagents
+        3. Include Linear task ID if available
+        4. Publish to Event Bus with high priority
+        5. Magister will receive and delegate to Subagents
         """
         # Get Magister for this capability
         magister_id = self.capability_to_magister.get(
             subtask.action,
             "seo-magister-1"  # Default fallback
         )
+
+        # Get Linear task ID if available
+        linear_task_id = None
+        if hasattr(subtask, 'data') and subtask.data:
+            linear_task_id = subtask.data.get("linear_task_id")
 
         # Create message for Magister
         message = Message(
@@ -197,6 +217,7 @@ class MagisterCoordinator:
                 "dependencies": subtask.dependencies,
                 "deadline": None,  # Can add deadline logic later
                 "data": subtask.data if hasattr(subtask, 'data') else {},  # Pass task data
+                "linear_task_id": linear_task_id,  # Pass Linear task ID to Magister
             },
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
@@ -253,17 +274,39 @@ class Operator:
         "intelligence-magister-1": ["research_market", "analyze_trends", "monitor_competitors", "identify_opportunities", "strategic_insights"],
     }
 
-    def __init__(self, database_url: str, vault_path: str = "./obsidian"):
+    def __init__(
+        self,
+        database_url: str,
+        vault_path: str = "./obsidian",
+        linear_client: "LinearClient | None" = None,
+        linear_enabled: bool = False,
+    ):
         """Initialize Operator
 
         Args:
             database_url: Database connection URL
             vault_path: Path to Obsidian vault root
+            linear_client: Optional LinearClient for task tracking
+            linear_enabled: Enable Linear integration
         """
         self.db = Database(database_url)
         self.vault = ObsidianVault(vault_path)
         self.event_bus = EventBus(database_url)
         self.agent_id = "operator"
+
+        # Linear integration
+        self.linear_client = linear_client
+        self.linear_enabled = linear_enabled and linear_client is not None
+
+        # Map Magister types to Linear teams
+        self.magister_to_team = {
+            "seo-magister-1": "SEO",
+            "content-magister-1": "CNT",
+            "ads-magister-1": "ADS",
+            "social-magister-1": "CNT",  # Social content goes to Content team
+            "analytics-magister-1": "ANL",
+            "intelligence-magister-1": "DEV",  # Intelligence research goes to Dev team
+        }
 
         # Active tasks tracking
         self.active_tasks: dict[str, Task] = {}
@@ -901,14 +944,19 @@ class Operator:
         Steps:
         1. Update subtask status
         2. Store in database
-        3. Delegate to Magister via MagisterCoordinator
-        4. Write to vault
+        3. Create Linear task (if enabled)
+        4. Delegate to Magister via MagisterCoordinator
+        5. Write to vault
         """
         # Update status
         subtask.status = TaskStatus.DELEGATED
 
         # Store subtask in database
         await self._store_subtask(subtask)
+
+        # Create Linear task if enabled
+        if self.linear_enabled:
+            await self._create_linear_task(subtask)
 
         # Delegate to Magister (not directly to agent!)
         await self.magister_coordinator.delegate_to_magister(subtask)
@@ -1122,6 +1170,21 @@ P{subtask.priority}
             result=payload["result"],
             completed_at=payload.get("completed_at"),
         )
+
+        # Update Linear task status if enabled
+        if self.linear_enabled:
+            await self._update_linear_task_status(
+                payload["subtask_id"],
+                payload["status"],
+            )
+
+            # Add completion comment if successful
+            if payload["status"] == "completed":
+                result_summary = payload.get("result", {}).get("summary", "Task completed")
+                await self._add_linear_comment(
+                    payload["subtask_id"],
+                    f"✅ Completed by {message.from_agent}\n\n{result_summary}",
+                )
 
         # Check if failed and should retry
         if payload["status"] == "failed":
@@ -2142,3 +2205,211 @@ Retry logic will be triggered automatically.
             "avg_duration_seconds": avg_duration,
             "total_duration_seconds": total_duration,
         }
+
+    # Linear Integration Helper Methods
+
+    async def _create_linear_task(self, subtask: Subtask) -> str | None:
+        """Create Linear task for subtask
+
+        Args:
+            subtask: Subtask to create Linear task for
+
+        Returns:
+            Linear issue ID or None if failed
+        """
+        if not self.linear_client:
+            return None
+
+        try:
+            # Get team ID for this Magister
+            team_key = self.magister_to_team.get(subtask.agent_id, "DEV")
+
+            # Get team ID from Linear
+            teams = self.linear_client.list_teams()
+            team_id = None
+            for team in teams:
+                if team.get("key") == team_key:
+                    team_id = team.get("id")
+                    break
+
+            if not team_id:
+                return None
+
+            # Get project ID (AIM Development project)
+            project_id = "cfde805b-64a9-4351-b7e3-61de2b21a8e3"
+
+            # Get "Todo" state ID
+            states = self.linear_client.list_states(team_id)
+            todo_state_id = None
+            for state in states:
+                if state.get("name") == "Todo":
+                    todo_state_id = state.get("id")
+                    break
+
+            if not todo_state_id:
+                return None
+
+            # Create issue
+            issue_id = self.linear_client.create_issue(
+                title=f"{subtask.action.replace('_', ' ').title()}",
+                description=subtask.description,
+                team_id=team_id,
+                project_id=project_id,
+                state_id=todo_state_id,
+                priority=subtask.priority,
+            )
+
+            # Store Linear task ID in subtask metadata
+            if not hasattr(subtask, 'data') or subtask.data is None:
+                subtask.data = {}
+            subtask.data["linear_task_id"] = issue_id
+
+            # Update subtask in database with Linear ID
+            await self._store_subtask(subtask)
+
+            return issue_id
+
+        except Exception as e:
+            # Log error but don't fail delegation
+            await self._log_linear_error("create_task", subtask.subtask_id, str(e))
+            return None
+
+    async def _update_linear_task_status(
+        self,
+        subtask_id: str,
+        status: str,
+    ) -> bool:
+        """Update Linear task status
+
+        Args:
+            subtask_id: Subtask ID
+            status: New status ("in_progress", "completed", "failed")
+
+        Returns:
+            True if updated successfully
+        """
+        if not self.linear_client:
+            return False
+
+        try:
+            # Get subtask with Linear task ID
+            subtask = await self._get_subtask(subtask_id)
+            if not subtask:
+                return False
+
+            linear_task_id = subtask.get("data", {}).get("linear_task_id")
+            if not linear_task_id:
+                return False
+
+            # Map status to Linear state
+            state_mapping = {
+                "in_progress": "In Progress",
+                "completed": "Done",
+                "failed": "Canceled",
+            }
+            state_name = state_mapping.get(status, "Todo")
+
+            # Get team ID from agent_id
+            agent_id = subtask.get("agent_id", "")
+            team_key = self.magister_to_team.get(agent_id, "DEV")
+
+            teams = self.linear_client.list_teams()
+            team_id = None
+            for team in teams:
+                if team.get("key") == team_key:
+                    team_id = team.get("id")
+                    break
+
+            if not team_id:
+                return False
+
+            # Get state ID
+            states = self.linear_client.list_states(team_id)
+            state_id = None
+            for state in states:
+                if state.get("name") == state_name:
+                    state_id = state.get("id")
+                    break
+
+            if not state_id:
+                return False
+
+            # Update issue
+            self.linear_client.update_issue(linear_task_id, state_id=state_id)
+            return True
+
+        except Exception as e:
+            await self._log_linear_error("update_status", subtask_id, str(e))
+            return False
+
+    async def _add_linear_comment(
+        self,
+        subtask_id: str,
+        comment: str,
+    ) -> bool:
+        """Add comment to Linear task
+
+        Args:
+            subtask_id: Subtask ID
+            comment: Comment text
+
+        Returns:
+            True if added successfully
+        """
+        if not self.linear_client:
+            return False
+
+        try:
+            # Get subtask with Linear task ID
+            subtask = await self._get_subtask(subtask_id)
+            if not subtask:
+                return False
+
+            linear_task_id = subtask.get("data", {}).get("linear_task_id")
+            if not linear_task_id:
+                return False
+
+            # Add comment
+            self.linear_client.add_comment(linear_task_id, comment)
+            return True
+
+        except Exception as e:
+            await self._log_linear_error("add_comment", subtask_id, str(e))
+            return False
+
+    async def _log_linear_error(
+        self,
+        operation: str,
+        subtask_id: str,
+        error: str,
+    ) -> None:
+        """Log Linear integration error
+
+        Args:
+            operation: Operation that failed
+            subtask_id: Subtask ID
+            error: Error message
+        """
+        log_content = f"""---
+operation: {operation}
+subtask_id: {subtask_id}
+error: {error}
+logged_at: {datetime.now(timezone.utc).isoformat()}
+---
+
+# Linear Integration Error
+
+## Operation
+{operation}
+
+## Subtask
+{subtask_id}
+
+## Error
+{error}
+"""
+
+        await self.vault.write_file(
+            f"operator/linear-errors/{subtask_id}-{operation}.md",
+            log_content,
+        )
