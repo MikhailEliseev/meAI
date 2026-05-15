@@ -67,9 +67,11 @@ Expected:
 
 ---
 
-## Projects (0)
+## Projects (1)
 
-*No projects yet. Will be populated after first benchmark ingest.*
+- [[dental-clinics]] — 2 competitors, 2 copy patterns
+
+*First benchmark ingested! Will be populated after first benchmark ingest.*
 
 Expected industries:
 - [[dental-clinics]] — Dental clinics benchmark
