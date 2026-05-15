@@ -238,49 +238,61 @@ Next: Phase 8 - Multi-Tenant Frontend
 
 ---
 
-**Last Updated:** 2026-05-15 14:05 GMT+3  
-**Status:** Linear hierarchy reorganized ✅
+**Last Updated:** 2026-05-15 14:21 GMT+3  
+**Status:** Team-per-Client structure implemented ✅
 
 ---
 
 ## Completed Actions
 
-**Linear Structure Reorganization:**
-- ✅ Created CLI team for all client projects
-- ✅ Updated `create_client_project.py` to use CLI team
-- ✅ All service tasks now in CLI team with proper naming
-- ✅ Task format: `[Client Name] Service: Task Name`
-- ✅ Tested with "Test Clinic" project - 4 tasks created successfully
-- ✅ Documentation created: `docs/LINEAR_CLIENT_HIERARCHY.md`
+**Linear Structure Reorganization (Team-per-Client):**
+- ✅ Updated `create_client_project.py` to create dedicated team per client
+- ✅ Team naming: `Client Name (Project N)` with auto-generated keys
+- ✅ Project naming: Service package without client prefix
+- ✅ Task naming: `Service: Task Name` without client prefix
+- ✅ All workflow methods updated to use client's team
+- ✅ Documentation updated: `docs/LINEAR_CLIENT_HIERARCHY.md`
 
 **New Hierarchy:**
 ```
 Teams:
 ├── DEV: AIM Development (internal)
 ├── MKT: AIM Marketing (internal)
-└── CLI: Client Projects (all client work)
-    └── Client A
-        └── Project: Full Service
-            ├── [Client A] SEO: Tasks
-            ├── [Client A] Content: Tasks
-            └── [Client A] Ads: Tasks
+├── Client A (Project 1) — dedicated team
+│   └── Project: Full Service
+│       ├── SEO: Keyword Research
+│       ├── Content: Strategy Development
+│       └── Ads: Yandex Direct Setup
+└── Client A (Project 2) — dedicated team for second project
+    └── Project: SEO Campaign
+        └── SEO: Tasks
 ```
 
-**Old service teams (SEO, CNT, ADS, ANL):**
-- Remain in Linear (can't be archived via API)
-- Not used for new client projects
-- All new clients go to CLI team
+**Key Changes:**
+- Each client project gets its own team
+- Team key generated from client name (3 letters or initials)
+- Project number in team name for multiple projects
+- Clean task names without client prefixes
+- Full isolation between client projects
 
 ---
 
 ## Files Changed
 
 **Modified (2):**
-1. `scripts/create_client_project.py` - Updated to use CLI team
-2. `scripts/reorganize_linear_structure.py` - Created CLI team
+1. `scripts/create_client_project.py` - Implemented Team-per-Client approach
+   - Added `_create_client_team()` method with team key generation
+   - Updated `create_client_project()` to create team first
+   - Updated `_create_main_project()` to remove client prefixes
+   - Updated all workflow methods to use client's team
+   - Removed client name prefixes from all task titles
+2. `docs/LINEAR_CLIENT_HIERARCHY.md` - Complete rewrite for Team-per-Client
 
-**Created (1):**
-3. `docs/LINEAR_CLIENT_HIERARCHY.md` - Complete hierarchy documentation
+**Changes Summary:**
+- Team creation with auto-generated keys (3 letters or initials)
+- Project numbering support for multiple projects per client
+- Clean task names: `Service: Task` instead of `[Client] Service: Task`
+- Full documentation of new structure with examples
 
 ---
 
