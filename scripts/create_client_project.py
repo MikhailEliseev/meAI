@@ -109,16 +109,8 @@ class ClientProjectCreator:
         }
 
     def _get_primary_team(self, services: list[str]) -> str:
-        """Determine primary team based on services."""
-        # Priority: SEO > Content > Ads
-        if "seo" in services:
-            return "SEO"
-        elif "content" in services:
-            return "CNT"
-        elif "ads" in services:
-            return "ADS"
-        else:
-            return "DEV"  # Default
+        """Determine primary team - always CLI for client projects."""
+        return "CLI"  # All client projects go to CLI team
 
     def _create_main_project(
         self, client_name: str, team_key: str, budget: int, timeline_weeks: int
@@ -180,14 +172,14 @@ class ClientProjectCreator:
         self, client_name: str, project_id: str, budget: int, timeline_weeks: int
     ) -> list[dict]:
         """Create SEO workflow tasks."""
-        team = self.teams["SEO"]
-        todo_state = self.states["SEO"]["Todo"]["id"]
+        team = self.teams["CLI"]  # Use CLI team for all client projects
+        todo_state = self.states["CLI"]["Todo"]["id"]
 
         tasks = []
 
         # Phase 1: Research (Week 1-2)
         task1 = self.client.create_issue(
-            title=f"[{client_name}] Keyword Research",
+            title=f"[{client_name}] SEO: Keyword Research",
             description=f"""
 # Keyword Research
 
@@ -201,6 +193,7 @@ class ClientProjectCreator:
 
 **Timeline:** Week 1-2
 **Budget:** {budget * 0.15:,.0f} ₽ (15% of total)
+**Service:** SEO
 """,
             team_id=team["id"],
             state_id=todo_state,
@@ -210,7 +203,7 @@ class ClientProjectCreator:
 
         # Phase 2: Competitor Analysis (Week 2-3)
         task2 = self.client.create_issue(
-            title=f"[{client_name}] Competitor Analysis",
+            title=f"[{client_name}] SEO: Competitor Analysis",
             description=f"""
 # Competitor Analysis
 
@@ -224,6 +217,7 @@ class ClientProjectCreator:
 
 **Timeline:** Week 2-3
 **Budget:** {budget * 0.15:,.0f} ₽ (15% of total)
+**Service:** SEO
 """,
             team_id=team["id"],
             state_id=todo_state,
@@ -235,7 +229,7 @@ class ClientProjectCreator:
 
         # Phase 3: On-Page Optimization (Week 3-6)
         task3 = self.client.create_issue(
-            title=f"[{client_name}] On-Page SEO Optimization",
+            title=f"[{client_name}] SEO: On-Page Optimization",
             description=f"""
 # On-Page SEO Optimization
 
@@ -251,6 +245,7 @@ class ClientProjectCreator:
 
 **Timeline:** Week 3-6
 **Budget:** {budget * 0.35:,.0f} ₽ (35% of total)
+**Service:** SEO
 """,
             team_id=team["id"],
             state_id=todo_state,
@@ -262,7 +257,7 @@ class ClientProjectCreator:
 
         # Phase 4: Link Building (Week 6-12)
         task4 = self.client.create_issue(
-            title=f"[{client_name}] Link Building Campaign",
+            title=f"[{client_name}] SEO: Link Building Campaign",
             description=f"""
 # Link Building Campaign
 
@@ -276,6 +271,7 @@ class ClientProjectCreator:
 
 **Timeline:** Week 6-12
 **Budget:** {budget * 0.35:,.0f} ₽ (35% of total)
+**Service:** SEO
 """,
             team_id=team["id"],
             state_id=todo_state,
@@ -291,14 +287,14 @@ class ClientProjectCreator:
         self, client_name: str, project_id: str, budget: int, timeline_weeks: int
     ) -> list[dict]:
         """Create Content workflow tasks."""
-        team = self.teams["CNT"]
-        todo_state = self.states["CNT"]["Todo"]["id"]
+        team = self.teams["CLI"]  # Use CLI team for all client projects
+        todo_state = self.states["CLI"]["Todo"]["id"]
 
         tasks = []
 
         # Phase 1: Content Strategy (Week 1-2)
         task1 = self.client.create_issue(
-            title=f"[{client_name}] Content Strategy",
+            title=f"[{client_name}] Content: Strategy Development",
             description=f"""
 # Content Strategy
 
@@ -312,6 +308,7 @@ class ClientProjectCreator:
 
 **Timeline:** Week 1-2
 **Budget:** {budget * 0.20:,.0f} ₽ (20% of total)
+**Service:** Content
 """,
             team_id=team["id"],
             state_id=todo_state,
@@ -321,7 +318,7 @@ class ClientProjectCreator:
 
         # Phase 2: Blog Content (Week 2-8)
         task2 = self.client.create_issue(
-            title=f"[{client_name}] Blog Content Creation",
+            title=f"[{client_name}] Content: Blog Creation",
             description=f"""
 # Blog Content Creation
 
@@ -335,6 +332,7 @@ class ClientProjectCreator:
 
 **Timeline:** Week 2-8
 **Budget:** {budget * 0.40:,.0f} ₽ (40% of total)
+**Service:** Content
 """,
             team_id=team["id"],
             state_id=todo_state,
@@ -344,7 +342,7 @@ class ClientProjectCreator:
 
         # Phase 3: Social Media (Week 2-12)
         task3 = self.client.create_issue(
-            title=f"[{client_name}] Social Media Content",
+            title=f"[{client_name}] Content: Social Media",
             description=f"""
 # Social Media Content
 
@@ -358,6 +356,7 @@ class ClientProjectCreator:
 
 **Timeline:** Week 2-12
 **Budget:** {budget * 0.25:,.0f} ₽ (25% of total)
+**Service:** Content
 """,
             team_id=team["id"],
             state_id=todo_state,
@@ -367,7 +366,7 @@ class ClientProjectCreator:
 
         # Phase 4: Email Marketing (Week 4-12)
         task4 = self.client.create_issue(
-            title=f"[{client_name}] Email Marketing",
+            title=f"[{client_name}] Content: Email Marketing",
             description=f"""
 # Email Marketing
 
@@ -381,6 +380,7 @@ class ClientProjectCreator:
 
 **Timeline:** Week 4-12
 **Budget:** {budget * 0.15:,.0f} ₽ (15% of total)
+**Service:** Content
 """,
             team_id=team["id"],
             state_id=todo_state,
@@ -394,14 +394,14 @@ class ClientProjectCreator:
         self, client_name: str, project_id: str, budget: int, timeline_weeks: int
     ) -> list[dict]:
         """Create Ads workflow tasks."""
-        team = self.teams["ADS"]
-        todo_state = self.states["ADS"]["Todo"]["id"]
+        team = self.teams["CLI"]  # Use CLI team for all client projects
+        todo_state = self.states["CLI"]["Todo"]["id"]
 
         tasks = []
 
         # Phase 1: Campaign Setup (Week 1-2)
         task1 = self.client.create_issue(
-            title=f"[{client_name}] Yandex Direct Setup",
+            title=f"[{client_name}] Ads: Yandex Direct Setup",
             description=f"""
 # Yandex Direct Campaign Setup
 
@@ -416,6 +416,7 @@ class ClientProjectCreator:
 
 **Timeline:** Week 1-2
 **Budget:** {budget * 0.20:,.0f} ₽ (20% of total)
+**Service:** Ads
 """,
             team_id=team["id"],
             state_id=todo_state,
@@ -425,7 +426,7 @@ class ClientProjectCreator:
 
         # Phase 2: Optimization (Week 2-6)
         task2 = self.client.create_issue(
-            title=f"[{client_name}] Campaign Optimization",
+            title=f"[{client_name}] Ads: Campaign Optimization",
             description=f"""
 # Campaign Optimization
 
@@ -440,6 +441,7 @@ class ClientProjectCreator:
 
 **Timeline:** Week 2-6
 **Budget:** {budget * 0.30:,.0f} ₽ (30% of total)
+**Service:** Ads
 """,
             team_id=team["id"],
             state_id=todo_state,
@@ -449,7 +451,7 @@ class ClientProjectCreator:
 
         # Phase 3: Scaling (Week 6-12)
         task3 = self.client.create_issue(
-            title=f"[{client_name}] Campaign Scaling",
+            title=f"[{client_name}] Ads: Campaign Scaling",
             description=f"""
 # Campaign Scaling
 
@@ -463,6 +465,7 @@ class ClientProjectCreator:
 
 **Timeline:** Week 6-12
 **Budget:** {budget * 0.50:,.0f} ₽ (50% of total)
+**Service:** Ads
 """,
             team_id=team["id"],
             state_id=todo_state,
@@ -507,13 +510,20 @@ def main():
         sys.exit(1)
 
     # Initialize Linear client
-    try:
-        linear_client = LinearClient()
-    except Exception as e:
-        print(f"❌ Failed to initialize Linear client: {e}")
+    import os
+
+    api_key = os.getenv("LINEAR_API_KEY")
+    if not api_key:
+        print("❌ LINEAR_API_KEY environment variable not set")
         print("\nMake sure LINEAR_API_KEY is set in:")
         print("  - Environment variable")
-        print("  - Or ~/.config/claude-code/settings.json")
+        print("  - Or ~/.claude/settings.json")
+        sys.exit(1)
+
+    try:
+        linear_client = LinearClient(api_key)
+    except Exception as e:
+        print(f"❌ Failed to initialize Linear client: {e}")
         sys.exit(1)
 
     # Create client project
