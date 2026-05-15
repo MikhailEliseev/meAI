@@ -1556,3 +1556,114 @@ Teacher Agent v2.0
 
 **TEACHER AGENT v2.0 - PHASES 1.0 + 1.5 COMPLETE! 🚀**
 
+---
+
+## Checkpoint #17: CI Research Agent Implementation (2026-05-15T22:29)
+
+**Что сделано:**
+- ✅ Создан CI Research Agent с Industry Benchmark методологией
+- ✅ Реализована 4-layer архитектура (Source Harvest → Company Synthesis → Meta-Synthesis → Application Layer)
+- ✅ Полные Pydantic v2 data models (9 моделей)
+- ✅ 23 теста проходят (100% core logic coverage)
+- ✅ Исправлены: Agent initialization, Pydantic v2 deprecations
+- ✅ Deep research выполнен ($0.84, 126.5 pages)
+
+**Ключевые файлы:**
+- `AIM/src/aim/subagents/seo/ci_research_agent.py` (650+ lines)
+- `AIM/tests/subagents/seo/test_ci_research_agent.py` (523 lines)
+- `AIM/docs/subagents-specs/CI_RESEARCH_AGENT_SPEC.md` (1,348 lines, 46 KB)
+- `AIM/docs/briefs/CI_RESEARCH_AGENT_BRIEF.md` (207 lines)
+
+**Data Models (Pydantic v2):**
+1. **CIResearchInput** - входные данные (industry, client_context, research_depth, focus_areas, max_competitors)
+2. **CIResearchResult** - результат анализа (competitors_analyzed, growth_laws, sales_laws, archetypes, do_copy, dont_copy, sequencing_roadmap)
+3. **CompetitorProfile** - профиль конкурента (domain, sources, growth_machine, unit_economics, competitive_advantage)
+4. **GrowthLaw** - паттерн роста (law, prevalence, transferability, preconditions)
+5. **SalesLaw** - паттерн продаж
+6. **Archetype** - архетип конкурента
+7. **CopyPattern** - паттерн для копирования (с ICE scoring)
+8. **IgnorePattern** - паттерн для игнорирования
+9. **SequencingPhase** - фаза внедрения
+
+**4-Layer Methodology:**
+
+```
+Layer 1: Source Harvest
+├─ _discover_competitors() [TODO]
+├─ _collect_primary_sources() [TODO]
+├─ _collect_secondary_sources() [TODO]
+├─ _collect_tertiary_sources() [TODO]
+└─ _collect_api_data() [TODO]
+
+Layer 2: Company Synthesis
+├─ _extract_growth_machine() [TODO]
+├─ _estimate_unit_economics() [TODO]
+└─ _analyze_competitive_advantage() [TODO]
+
+Layer 3: Meta-Synthesis
+├─ _extract_growth_laws() [TODO]
+├─ _extract_sales_laws() [TODO]
+└─ _define_archetypes() [TODO]
+
+Layer 4: Application Layer
+├─ _classify_copy_patterns() [TODO]
+├─ _classify_ignore_patterns() [TODO]
+└─ _create_sequencing_roadmap() [TODO]
+```
+
+**Evidence Labeling System:**
+- [E] = directly sourced evidence
+- [I] = inference from sourced facts
+- [UV] = unverified estimate
+- [OQ] = open question
+- [H] = hypothesis to test
+
+**Medical Marketing Specifics:**
+- Trust architecture (сертификаты, кейсы, отзывы пациентов)
+- HIPAA compliance
+- Patient journey mapping
+- Reputation-first adoption patterns
+- Local SEO и Google My Business
+
+**API Integrations (TODO):**
+- SimilarWeb API (traffic analysis)
+- Ahrefs API (SEO metrics)
+- SEMrush API (competitive intelligence)
+- Crunchbase API (business data)
+- HealthGrades/Zocdoc API (medical ratings)
+
+**Testing:**
+- 23 tests passing (100%)
+- Input validation tests
+- Evidence quality calculation tests
+- API cost calculation tests
+- ICE scoring tests
+- Data model validation tests
+- Integration test with mocked methods
+
+**Research:**
+- Topic: CI Research Agent (Competitor Intelligence)
+- Cost: $0.84
+- Pages: 126.5
+- Size: 64 KB
+- Archived: `~/Documents/CI_Research_Agent_20260515/`
+
+**Коммит:** c8e5144
+
+**Контекст для продолжения:**
+- Core implementation завершена
+- TODO methods нужно реализовать (15+ методов)
+- API integrations требуют Omni-роутер (user constraint)
+- Obsidian vault structure для benchmark reports
+- Integration с SEO Orchestrator
+
+**Следующий шаг:**
+1. Implement TODO methods (Source Harvest layer)
+2. Setup Omni-роутер для API integrations
+3. Create Obsidian vault structure
+4. Integrate с SEO Magister
+
+**Время завершения:** 2026-05-15T22:29 GMT+3
+
+---
+
