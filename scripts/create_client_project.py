@@ -49,6 +49,7 @@ class ClientProjectCreator:
         services: list[str],
         budget: int,
         timeline_weeks: int = 12,
+        project_number: int = 1,
     ) -> dict:
         """
         Create complete client project structure.
@@ -58,30 +59,35 @@ class ClientProjectCreator:
             services: List of services (seo, content, ads)
             budget: Total budget in rubles
             timeline_weeks: Project duration in weeks
+            project_number: Project number for this client (default: 1)
 
         Returns:
             Project details with created tasks
         """
         print(f"\n{'=' * 80}")
-        print(f"Creating Client Project: {client_name}")
+        print(f"Creating Client Team & Project: {client_name}")
         print(f"{'=' * 80}\n")
 
-        # Determine primary team based on services
-        primary_team = self._get_primary_team(services)
-        print(f"Primary team: {primary_team}")
+        # Step 1: Create dedicated team for this client
+        team_id, team_key = self._create_client_team(client_name, project_number)
+        print(f"✅ Team created: {team_key}\n")
 
-        # Create main project
+        # Reload teams and states to include new team
+        self.teams = self._load_teams()
+        self._load_all_states()
+
+        # Step 2: Create main project in client's team
         project_id = self._create_main_project(
-            client_name, primary_team, budget, timeline_weeks
+            client_name, team_key, budget, timeline_weeks, services
         )
         print(f"✅ Project created: {project_id}\n")
 
-        # Create workflow tasks for each service
+        # Step 3: Create workflow tasks for each service
         created_tasks = {}
         for service in services:
             print(f"Creating {service.upper()} workflow...")
             tasks = self._create_service_workflow(
-                client_name, service, project_id, budget, timeline_weeks
+                client_name, service, project_id, budget, timeline_weeks, team_key
             )
             created_tasks[service] = tasks
             print(f"✅ {len(tasks)} tasks created for {service}\n")
@@ -108,28 +114,102 @@ class ClientProjectCreator:
             "total_tasks": total_tasks,
         }
 
+    def _create_client_team(
+        self, client_name: str, project_number: int = 1
+    ) -> tuple[str, str]:
+        """
+        Create dedicated team for client.
+
+        Args:
+            client_name: Client company name
+            project_number: Project number (default: 1)
+
+        Returns:
+            Tuple of (team_id, team_key)
+        """
+        # Generate team key from client name
+        # Remove special chars, take first 3 letters, add project number
+        clean_name = "".join(c for c in client_name if c.isalnum() or c.isspace())
+        words = clean_name.split()
+
+        if len(words) == 1:
+            # Single word: take first 3 letters
+            team_key = words[0][:3].upper()
+        else:
+            # Multiple words: take first letter of each word (max 3)
+            team_key = "".join(w[0].upper() for w in words[:3])
+
+        # Add project number if > 1
+        if project_number > 1:
+            team_key = f"{team_key}{project_number}"
+
+        # Team name format: "Client Name (Project 1)"
+        team_name = f"{client_name} (Project {project_number})"
+
+        print(f"Creating team: {team_name} (key: {team_key})")
+
+        # Create team via GraphQL
+        mutation = """
+        mutation CreateTeam($name: String!, $key: String!) {
+          teamCreate(input: {
+            name: $name
+            key: $key
+          }) {
+            success
+            team {
+              id
+              key
+              name
+            }
+          }
+        }
+        """
+
+        result = self.client._query(mutation, {"name": team_name, "key": team_key})
+
+        if not result["data"]["teamCreate"]["success"]:
+            raise Exception(f"Failed to create team: {team_name}")
+
+        team = result["data"]["teamCreate"]["team"]
+        return team["id"], team["key"]
+
     def _get_primary_team(self, services: list[str]) -> str:
-        """Determine primary team - always CLI for client projects."""
-        return "CLI"  # All client projects go to CLI team
+        """Deprecated - now we create team per client."""
+        return "CLI"  # Not used anymore
 
     def _create_main_project(
-        self, client_name: str, team_key: str, budget: int, timeline_weeks: int
+        self,
+        client_name: str,
+        team_key: str,
+        budget: int,
+        timeline_weeks: int,
+        services: list[str],
     ) -> str:
         """Create main client project."""
         team = self.teams[team_key]
 
+        # Determine project name based on services
+        if len(services) == 3:
+            project_name = "Full Service"
+        elif len(services) == 1:
+            service_names = {"seo": "SEO Campaign", "content": "Content Marketing", "ads": "Ads Campaign"}
+            project_name = service_names.get(services[0], "Marketing Project")
+        else:
+            # Multiple services
+            service_str = " + ".join(s.upper() for s in services)
+            project_name = f"{service_str} Campaign"
+
         # Project description
+        services_list = "\n".join(f"- {s.upper()} Campaign" for s in services)
         description = f"""
-# {client_name} - Full Service Marketing
+# {client_name} - {project_name}
 
 **Budget:** {budget:,} ₽
 **Timeline:** {timeline_weeks} weeks
 **Status:** Active
 
 ## Services
-- SEO Campaign
-- Content Creation
-- Ads Management
+{services_list}
 
 ## Goals
 - Increase organic traffic
@@ -155,6 +235,7 @@ class ClientProjectCreator:
         project_id: str,
         budget: int,
         timeline_weeks: int,
+        team_key: str,
     ) -> list[dict]:
         """Create workflow tasks for a service."""
         workflows = {
@@ -166,20 +247,20 @@ class ClientProjectCreator:
         if service not in workflows:
             raise ValueError(f"Unknown service: {service}")
 
-        return workflows[service](client_name, project_id, budget, timeline_weeks)
+        return workflows[service](client_name, project_id, budget, timeline_weeks, team_key)
 
     def _create_seo_workflow(
-        self, client_name: str, project_id: str, budget: int, timeline_weeks: int
+        self, client_name: str, project_id: str, budget: int, timeline_weeks: int, team_key: str
     ) -> list[dict]:
         """Create SEO workflow tasks."""
-        team = self.teams["CLI"]  # Use CLI team for all client projects
-        todo_state = self.states["CLI"]["Todo"]["id"]
+        team = self.teams[team_key]
+        todo_state = self.states[team_key]["Todo"]["id"]
 
         tasks = []
 
         # Phase 1: Research (Week 1-2)
         task1 = self.client.create_issue(
-            title=f"[{client_name}] SEO: Keyword Research",
+            title="SEO: Keyword Research",
             description=f"""
 # Keyword Research
 
@@ -203,7 +284,7 @@ class ClientProjectCreator:
 
         # Phase 2: Competitor Analysis (Week 2-3)
         task2 = self.client.create_issue(
-            title=f"[{client_name}] SEO: Competitor Analysis",
+            title="SEO: Competitor Analysis",
             description=f"""
 # Competitor Analysis
 
@@ -229,7 +310,7 @@ class ClientProjectCreator:
 
         # Phase 3: On-Page Optimization (Week 3-6)
         task3 = self.client.create_issue(
-            title=f"[{client_name}] SEO: On-Page Optimization",
+            title="SEO: On-Page Optimization",
             description=f"""
 # On-Page SEO Optimization
 
@@ -257,7 +338,7 @@ class ClientProjectCreator:
 
         # Phase 4: Link Building (Week 6-12)
         task4 = self.client.create_issue(
-            title=f"[{client_name}] SEO: Link Building Campaign",
+            title="SEO: Link Building Campaign",
             description=f"""
 # Link Building Campaign
 
@@ -284,17 +365,17 @@ class ClientProjectCreator:
         return tasks
 
     def _create_content_workflow(
-        self, client_name: str, project_id: str, budget: int, timeline_weeks: int
+        self, client_name: str, project_id: str, budget: int, timeline_weeks: int, team_key: str
     ) -> list[dict]:
         """Create Content workflow tasks."""
-        team = self.teams["CLI"]  # Use CLI team for all client projects
-        todo_state = self.states["CLI"]["Todo"]["id"]
+        team = self.teams[team_key]
+        todo_state = self.states[team_key]["Todo"]["id"]
 
         tasks = []
 
         # Phase 1: Content Strategy (Week 1-2)
         task1 = self.client.create_issue(
-            title=f"[{client_name}] Content: Strategy Development",
+            title="Content: Strategy Development",
             description=f"""
 # Content Strategy
 
@@ -318,7 +399,7 @@ class ClientProjectCreator:
 
         # Phase 2: Blog Content (Week 2-8)
         task2 = self.client.create_issue(
-            title=f"[{client_name}] Content: Blog Creation",
+            title="Content: Blog Creation",
             description=f"""
 # Blog Content Creation
 
@@ -342,7 +423,7 @@ class ClientProjectCreator:
 
         # Phase 3: Social Media (Week 2-12)
         task3 = self.client.create_issue(
-            title=f"[{client_name}] Content: Social Media",
+            title="Content: Social Media",
             description=f"""
 # Social Media Content
 
@@ -366,7 +447,7 @@ class ClientProjectCreator:
 
         # Phase 4: Email Marketing (Week 4-12)
         task4 = self.client.create_issue(
-            title=f"[{client_name}] Content: Email Marketing",
+            title="Content: Email Marketing",
             description=f"""
 # Email Marketing
 
@@ -391,17 +472,17 @@ class ClientProjectCreator:
         return tasks
 
     def _create_ads_workflow(
-        self, client_name: str, project_id: str, budget: int, timeline_weeks: int
+        self, client_name: str, project_id: str, budget: int, timeline_weeks: int, team_key: str
     ) -> list[dict]:
         """Create Ads workflow tasks."""
-        team = self.teams["CLI"]  # Use CLI team for all client projects
-        todo_state = self.states["CLI"]["Todo"]["id"]
+        team = self.teams[team_key]
+        todo_state = self.states[team_key]["Todo"]["id"]
 
         tasks = []
 
         # Phase 1: Campaign Setup (Week 1-2)
         task1 = self.client.create_issue(
-            title=f"[{client_name}] Ads: Yandex Direct Setup",
+            title="Ads: Yandex Direct Setup",
             description=f"""
 # Yandex Direct Campaign Setup
 
@@ -426,7 +507,7 @@ class ClientProjectCreator:
 
         # Phase 2: Optimization (Week 2-6)
         task2 = self.client.create_issue(
-            title=f"[{client_name}] Ads: Campaign Optimization",
+            title="Ads: Campaign Optimization",
             description=f"""
 # Campaign Optimization
 
@@ -451,7 +532,7 @@ class ClientProjectCreator:
 
         # Phase 3: Scaling (Week 6-12)
         task3 = self.client.create_issue(
-            title=f"[{client_name}] Ads: Campaign Scaling",
+            title="Ads: Campaign Scaling",
             description=f"""
 # Campaign Scaling
 
