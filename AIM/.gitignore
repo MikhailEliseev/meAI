@@ -58,3 +58,4 @@ obsidian/.obsidian/
 tmp/
 temp/
 *.tmp
+.env.production
