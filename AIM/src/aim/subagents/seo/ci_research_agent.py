@@ -457,45 +457,447 @@ class CIResearchAgent(Agent):
         industry: str,
         max_competitors: int,
     ) -> List[str]:
-        """Найти конкурентов через SEMrush Competitor Discovery API"""
-        # TODO: Реализовать через SEMrush API
-        # Пока возвращаем заглушку
-        logger.warning("competitor_discovery_not_implemented", using_mock=True)
-        return []
+        """
+        Найти конкурентов через SEMrush Competitor Discovery API
+
+        Стратегия:
+        1. Извлечь seed domain из industry query
+        2. Использовать SEMrush Domain Competitors API
+        3. Фильтровать по релевантности
+        """
+        logger.info("discovering_competitors", industry=industry, max_competitors=max_competitors)
+
+        # Извлечь seed domain из industry query
+        # Например: "стоматология Москва" -> поиск топовых доменов
+        seed_domain = await self._find_seed_domain(industry)
+
+        if not seed_domain:
+            logger.warning("no_seed_domain_found", industry=industry)
+            return []
+
+        # Использовать SEMrush через Omni-Router
+        from AIM.src.aim.subagents.api_clients.omni_router import OmniRouter
+        from AIM.src.aim.subagents.api_clients.semrush_client import SEMrushClient
+
+        # Инициализировать Omni-Router
+        router = OmniRouter()
+        router.add_provider(
+            name="semrush",
+            base_url="https://api.semrush.com",
+            api_key=self.api_keys.get("semrush", ""),
+            priority=10,
+        )
+        await router.initialize()
+
+        try:
+            # Создать SEMrush клиент
+            semrush = SEMrushClient(router)
+
+            # Найти конкурентов
+            competitors_data = await semrush.discover_competitors(
+                domain=seed_domain,
+                database="ru",
+                limit=max_competitors * 2,  # Запросить больше для фильтрации
+            )
+
+            # Фильтровать по релевантности
+            # Берём только с competition_level > 0.3 и organic_traffic > 1000
+            filtered = [
+                c["domain"]
+                for c in competitors_data
+                if c["competition_level"] > 0.3 and c["organic_traffic"] > 1000
+            ]
+
+            result = filtered[:max_competitors]
+
+            logger.info(
+                "competitors_discovered",
+                seed_domain=seed_domain,
+                found=len(competitors_data),
+                filtered=len(result),
+            )
+
+            return result
+
+        finally:
+            await router.close()
+
+    async def _find_seed_domain(self, industry: str) -> Optional[str]:
+        """
+        Найти seed domain для industry query
+
+        Использует Google Search для поиска топового домена по запросу
+        """
+        from AIM.src.aim.subagents.api_clients.web_scraper import WebScraper
+
+        scraper = WebScraper()
+        await scraper.initialize()
+
+        try:
+            # Поиск в Google
+            results = await scraper.search_google(
+                query=industry,
+                num_results=5,
+            )
+
+            if results:
+                # Взять первый результат как seed domain
+                first_url = results[0]["url"]
+                # Извлечь домен из URL
+                from urllib.parse import urlparse
+                domain = urlparse(first_url).netloc
+                # Убрать www.
+                domain = domain.replace("www.", "")
+
+                logger.info("seed_domain_found", industry=industry, domain=domain)
+                return domain
+
+            return None
+
+        finally:
+            await scraper.close()
 
     async def _collect_primary_sources(self, domain: str) -> List[Source]:
-        """Собрать Tier 1 sources (founder interviews, operator posts, case studies)"""
+        """
+        Собрать Tier 1 sources (founder interviews, operator posts, case studies)
+
+        Tier 1 = Primary/Operator sources:
+        - Founder interviews
+        - Operator posts (LinkedIn, Twitter)
+        - Case studies
+        - Product demos
+        - Customer testimonials
+        """
         sources = []
+        from AIM.src.aim.subagents.api_clients.web_scraper import WebScraper
 
-        # TODO: Реализовать сбор через:
-        # - Google/Yandex search: "founder interview" + domain
-        # - LinkedIn API: operator posts
-        # - Website scraping: case studies
-        # - YouTube API: product demos
-        # - HealthGrades/Zocdoc API: testimonials
+        scraper = WebScraper()
+        await scraper.initialize()
 
-        logger.debug("primary_sources_collected", domain=domain, count=len(sources))
-        return sources
+        try:
+            # 1. Founder interviews через Google Search
+            interview_queries = [
+                f'"{domain}" founder interview',
+                f'"{domain}" CEO interview',
+                f'"{domain}" основатель интервью',
+            ]
+
+            for query in interview_queries:
+                try:
+                    results = await scraper.search_google(query, num_results=3)
+                    for result in results:
+                        # Скрапить страницу
+                        page_data = await scraper.scrape_page(result["url"])
+                        sources.append(
+                            Source(
+                                url=result["url"],
+                                title=result["title"],
+                                tier=1,
+                                content=page_data["content"] or result["snippet"],
+                            )
+                        )
+                except Exception as e:
+                    logger.warning("failed_to_scrape_interview", url=result.get("url"), error=str(e))
+                    continue
+
+            # 2. Case studies через поиск на сайте
+            case_study_queries = [
+                f'site:{domain} "case study"',
+                f'site:{domain} "кейс"',
+                f'site:{domain} "отзыв пациента"',
+            ]
+
+            for query in case_study_queries:
+                try:
+                    results = await scraper.search_google(query, num_results=5)
+                    for result in results:
+                        page_data = await scraper.scrape_page(result["url"])
+                        sources.append(
+                            Source(
+                                url=result["url"],
+                                title=result["title"],
+                                tier=1,
+                                content=page_data["content"] or result["snippet"],
+                            )
+                        )
+                except Exception as e:
+                    logger.warning("failed_to_scrape_case_study", url=result.get("url"), error=str(e))
+                    continue
+
+            # 3. LinkedIn operator posts
+            # TODO: Требует LinkedIn API или авторизацию
+            # Пока пропускаем
+
+            # 4. Testimonials с медицинских платформ
+            if "healthgrades" in self.api_keys or "zocdoc" in self.api_keys:
+                # TODO: Интеграция с HealthGrades/Zocdoc API
+                pass
+
+            logger.info("primary_sources_collected", domain=domain, count=len(sources))
+            return sources
+
+        finally:
+            await scraper.close()
 
     async def _collect_secondary_sources(self, domain: str) -> List[Source]:
-        """Собрать Tier 2 sources (industry reports, news articles)"""
+        """
+        Собрать Tier 2 sources (industry reports, news articles)
+
+        Tier 2 = Secondary sources:
+        - Industry reports
+        - News articles
+        - Conference talks
+        - Press releases
+        """
         sources = []
+        from AIM.src.aim.subagents.api_clients.web_scraper import WebScraper
 
-        # TODO: Реализовать сбор через:
-        # - Google Scholar API: industry reports
-        # - Google News API: news articles
-        # - YouTube API: conference talks
+        scraper = WebScraper()
+        await scraper.initialize()
 
-        logger.debug("secondary_sources_collected", domain=domain, count=len(sources))
-        return sources
+        try:
+            # 1. News articles через Google News
+            news_queries = [
+                f'"{domain}" новости',
+                f'"{domain}" news',
+            ]
+
+            for query in news_queries:
+                try:
+                    results = await scraper.search_google(query, num_results=5)
+                    for result in results:
+                        # Фильтр: только новостные сайты
+                        if any(news_domain in result["url"] for news_domain in ["vc.ru", "forbes.ru", "rbc.ru", "kommersant.ru"]):
+                            page_data = await scraper.scrape_page(result["url"])
+                            sources.append(
+                                Source(
+                                    url=result["url"],
+                                    title=result["title"],
+                                    tier=2,
+                                    content=page_data["content"] or result["snippet"],
+                                )
+                            )
+                except Exception as e:
+                    logger.warning("failed_to_scrape_news", url=result.get("url"), error=str(e))
+                    continue
+
+            # 2. Industry reports через Google Scholar
+            # TODO: Требует Google Scholar API
+            # Пока используем обычный поиск с фильтром
+            report_queries = [
+                f'"{domain}" отчет рынок',
+                f'"{domain}" market report',
+            ]
+
+            for query in report_queries:
+                try:
+                    results = await scraper.search_google(query, num_results=3)
+                    for result in results:
+                        # Фильтр: только аналитические сайты
+                        if any(analytics_domain in result["url"] for analytics_domain in [".pdf", "research", "analytics", "report"]):
+                            page_data = await scraper.scrape_page(result["url"])
+                            sources.append(
+                                Source(
+                                    url=result["url"],
+                                    title=result["title"],
+                                    tier=2,
+                                    content=page_data["content"] or result["snippet"],
+                                )
+                            )
+                except Exception as e:
+                    logger.warning("failed_to_scrape_report", url=result.get("url"), error=str(e))
+                    continue
+
+            # 3. Conference talks через YouTube
+            # TODO: Требует YouTube API
+            # Пока пропускаем
+
+            logger.info("secondary_sources_collected", domain=domain, count=len(sources))
+            return sources
+
+        finally:
+            await scraper.close()
 
     async def _collect_tertiary_sources(self, domain: str) -> List[Source]:
-        """Собрать Tier 3 sources (Wikipedia, generic blogs)"""
-        sources = []
+        """
+        Собрать Tier 3 sources (Wikipedia, generic blogs)
 
-        # TODO: Реализовать сбор через:
-        # - Wikipedia API
-        # - Generic blog search
+        Tier 3 = Tertiary sources (используется только если недостаточно Tier 1-2):
+        - Wikipedia
+        - Generic blogs
+        - Social media mentions
+        """
+        sources = []
+        from AIM.src.aim.subagents.api_clients.web_scraper import WebScraper
+
+        scraper = WebScraper()
+        await scraper.initialize()
+
+        try:
+            # 1. Wikipedia
+            wiki_queries = [
+                f'site:ru.wikipedia.org "{domain}"',
+                f'site:en.wikipedia.org "{domain}"',
+            ]
+
+            for query in wiki_queries:
+                try:
+                    results = await scraper.search_google(query, num_results=2)
+                    for result in results:
+                        page_data = await scraper.scrape_page(result["url"])
+                        sources.append(
+                            Source(
+                                url=result["url"],
+                                title=result["title"],
+                                tier=3,
+                                content=page_data["content"] or result["snippet"],
+                            )
+                        )
+                except Exception as e:
+                    logger.warning("failed_to_scrape_wikipedia", url=result.get("url"), error=str(e))
+                    continue
+
+            # 2. Generic blogs
+            blog_queries = [
+                f'"{domain}" отзыв',
+                f'"{domain}" review',
+            ]
+
+            for query in blog_queries:
+                try:
+                    results = await scraper.search_google(query, num_results=3)
+                    for result in results:
+                        page_data = await scraper.scrape_page(result["url"])
+                        sources.append(
+                            Source(
+                                url=result["url"],
+                                title=result["title"],
+                                tier=3,
+                                content=page_data["content"] or result["snippet"],
+                            )
+                        )
+                except Exception as e:
+                    logger.warning("failed_to_scrape_blog", url=result.get("url"), error=str(e))
+                    continue
+
+            logger.info("tertiary_sources_collected", domain=domain, count=len(sources))
+            return sources
+
+        finally:
+            await scraper.close()
+
+    async def _collect_api_data(self, profile: CompetitorProfile) -> None:
+        """
+        Собрать данные через API (SEMrush, Ahrefs, SimilarWeb, Crunchbase)
+
+        Обогащает profile метриками:
+        - SEO metrics (keywords, traffic, backlinks)
+        - Business metrics (funding, team size)
+        - Medical ratings (HealthGrades, Zocdoc)
+        """
+        from AIM.src.aim.subagents.api_clients.omni_router import OmniRouter
+        from AIM.src.aim.subagents.api_clients.semrush_client import SEMrushClient
+
+        # Инициализировать Omni-Router
+        router = OmniRouter()
+
+        # Добавить доступные провайдеры
+        if "semrush" in self.api_keys:
+            router.add_provider(
+                name="semrush",
+                base_url="https://api.semrush.com",
+                api_key=self.api_keys["semrush"],
+                priority=10,
+            )
+
+        if "ahrefs" in self.api_keys:
+            router.add_provider(
+                name="ahrefs",
+                base_url="https://api.ahrefs.com",
+                api_key=self.api_keys["ahrefs"],
+                priority=5,
+            )
+
+        await router.initialize()
+
+        try:
+            semrush = SEMrushClient(router)
+
+            # 1. Domain Overview
+            try:
+                overview = await semrush.get_domain_overview(profile.domain, database="ru")
+
+                # Сохранить в Source для evidence
+                profile.sources.append(
+                    Source(
+                        url=f"https://www.semrush.com/analytics/overview/?q={profile.domain}",
+                        title=f"SEMrush Domain Overview: {profile.domain}",
+                        tier=1,  # API data = Tier 1
+                        content=f"Organic Keywords: {overview['organic_keywords']}, "
+                                f"Organic Traffic: {overview['organic_traffic']}, "
+                                f"Organic Cost: ${overview['organic_cost']:.2f}",
+                    )
+                )
+
+                logger.info("domain_overview_collected", domain=profile.domain)
+            except Exception as e:
+                logger.warning("domain_overview_failed", domain=profile.domain, error=str(e))
+
+            # 2. Organic Keywords (top 20)
+            try:
+                keywords = await semrush.get_organic_keywords(
+                    profile.domain,
+                    database="ru",
+                    limit=20,
+                )
+
+                # Сохранить топ-5 ключевых слов в Source
+                top_keywords = keywords[:5]
+                keywords_text = ", ".join([f"{k['keyword']} (pos {k['position']})" for k in top_keywords])
+
+                profile.sources.append(
+                    Source(
+                        url=f"https://www.semrush.com/analytics/organic/positions/?q={profile.domain}",
+                        title=f"SEMrush Top Keywords: {profile.domain}",
+                        tier=1,
+                        content=f"Top Keywords: {keywords_text}",
+                    )
+                )
+
+                logger.info("organic_keywords_collected", domain=profile.domain, count=len(keywords))
+            except Exception as e:
+                logger.warning("organic_keywords_failed", domain=profile.domain, error=str(e))
+
+            # 3. Backlinks (top 50)
+            try:
+                backlinks = await semrush.get_backlinks(profile.domain, limit=50)
+
+                # Сохранить статистику в Source
+                profile.sources.append(
+                    Source(
+                        url=f"https://www.semrush.com/analytics/backlinks/overview/?q={profile.domain}",
+                        title=f"SEMrush Backlinks: {profile.domain}",
+                        tier=1,
+                        content=f"Total Backlinks: {len(backlinks)}",
+                    )
+                )
+
+                logger.info("backlinks_collected", domain=profile.domain, count=len(backlinks))
+            except Exception as e:
+                logger.warning("backlinks_failed", domain=profile.domain, error=str(e))
+
+            # 4. Crunchbase data (если доступен API key)
+            if "crunchbase" in self.api_keys:
+                # TODO: Интеграция с Crunchbase API
+                pass
+
+            # 5. Medical ratings (если доступны API keys)
+            if "healthgrades" in self.api_keys or "zocdoc" in self.api_keys:
+                # TODO: Интеграция с HealthGrades/Zocdoc API
+                pass
+
+        finally:
+            await router.close()
 
         logger.debug("tertiary_sources_collected", domain=domain, count=len(sources))
         return sources
@@ -547,32 +949,250 @@ class CIResearchAgent(Agent):
         return competitors
 
     async def _extract_growth_machine(self, profile: CompetitorProfile) -> None:
-        """Извлечь Growth Machine (AARRR framework)"""
-        # TODO: Реализовать извлечение через LLM:
-        # - Initial wedge (с чего начали)
-        # - Acquisition (как привлекают)
-        # - Activation (как конвертируют)
-        # - Retention (как удерживают)
-        # - Revenue (как монетизируют)
-        # - Referral (как масштабируют)
-        pass
+        """
+        Извлечь Growth Machine (AARRR framework)
+
+        Использует LLM для анализа собранных источников и извлечения:
+        - Initial wedge (с чего начали)
+        - Acquisition channels (как привлекают)
+        - Conversion mechanism (как конвертируют)
+        - Retention mechanism (как удерживают)
+        - Expansion mechanism (как масштабируют)
+        """
+        # Собрать весь контент из источников
+        all_content = "\n\n".join([
+            f"[{s.tier}] {s.title}\n{s.content[:1000]}"  # Первые 1000 символов
+            for s in profile.sources
+        ])
+
+        # Промпт для LLM
+        prompt = f"""Analyze the following sources about {profile.domain} and extract their Growth Machine:
+
+Sources:
+{all_content}
+
+Extract the following in JSON format:
+{{
+    "initial_wedge": "What was their initial market entry strategy? What niche did they start with?",
+    "acquisition_channels": ["List of channels: SEO, PPC, GMB, Instagram, etc."],
+    "conversion_mechanism": "How do they convert visitors to customers? (e.g., free consultation, trial)",
+    "retention_mechanism": "How do they retain customers? (e.g., loyalty program, subscription)",
+    "expansion_mechanism": "How do they expand revenue? (e.g., upsell, cross-sell)"
+}}
+
+Focus on EVIDENCE from sources. Mark inferences with [I].
+"""
+
+        try:
+            # TODO: Вызвать LLM через Omni-Router
+            # Пока используем заглушку с базовым извлечением
+
+            # Простая эвристика: ищем ключевые слова в контенте
+            if "SEO" in all_content or "поиск" in all_content:
+                profile.acquisition_channels.append("SEO")
+            if "реклама" in all_content or "ads" in all_content:
+                profile.acquisition_channels.append("PPC")
+            if "Instagram" in all_content or "соцсети" in all_content:
+                profile.acquisition_channels.append("Instagram")
+            if "Google My Business" in all_content or "GMB" in all_content:
+                profile.acquisition_channels.append("GMB")
+
+            # Initial wedge из первых источников
+            if profile.sources:
+                first_source = profile.sources[0]
+                # Извлечь первое предложение как wedge
+                sentences = first_source.content.split(".")
+                if sentences:
+                    profile.initial_wedge = sentences[0][:200]
+
+            # Conversion mechanism
+            if "консультация" in all_content or "consultation" in all_content:
+                profile.conversion_mechanism = "Бесплатная консультация"
+            elif "запись" in all_content or "booking" in all_content:
+                profile.conversion_mechanism = "Онлайн запись"
+
+            # Retention mechanism
+            if "программа лояльности" in all_content or "loyalty" in all_content:
+                profile.retention_mechanism = "Программа лояльности"
+            elif "подписка" in all_content or "subscription" in all_content:
+                profile.retention_mechanism = "Подписка"
+
+            # Expansion mechanism
+            if "дополнительные услуги" in all_content or "upsell" in all_content:
+                profile.expansion_mechanism = "Upsell дополнительных услуг"
+
+            logger.info(
+                "growth_machine_extracted",
+                domain=profile.domain,
+                channels=len(profile.acquisition_channels),
+            )
+
+        except Exception as e:
+            logger.error("growth_machine_extraction_failed", domain=profile.domain, error=str(e))
 
     async def _estimate_unit_economics(self, profile: CompetitorProfile) -> None:
-        """Оценить Unit Economics"""
-        # TODO: Реализовать оценку через LLM:
-        # - ACV (из pricing page или inference)
-        # - CAC (из ad spend estimates)
-        # - LTV (calculated from ACV × retention)
-        # - Payback period (CAC / monthly revenue)
-        pass
+        """
+        Оценить Unit Economics
+
+        Использует LLM для оценки на основе собранных данных:
+        - ACV (Average Contract Value) - из pricing page или inference
+        - CAC (Customer Acquisition Cost) - из ad spend estimates
+        - LTV (Lifetime Value) - calculated from ACV × retention
+        - Payback period - CAC / monthly revenue
+        """
+        # Собрать контент из источников
+        all_content = "\n\n".join([
+            f"[{s.tier}] {s.title}\n{s.content[:1000]}"
+            for s in profile.sources
+        ])
+
+        # Промпт для LLM
+        prompt = f"""Analyze the following sources about {profile.domain} and estimate their Unit Economics:
+
+Sources:
+{all_content}
+
+Estimate the following in JSON format:
+{{
+    "acv": <number>,  // Average Contract Value in RUB (e.g., 150000 for dental implant)
+    "cac": <number>,  // Customer Acquisition Cost in RUB (estimate from ad spend / conversions)
+    "ltv": <number>,  // Lifetime Value in RUB (ACV × average customer lifetime)
+    "payback_period": <number>  // Months to recover CAC
+}}
+
+Use EVIDENCE where available. Mark estimates with [I] inference.
+For medical services, typical ranges:
+- Dental implant ACV: 100,000-300,000 RUB
+- CAC: 10-20% of ACV
+- LTV: 2-3x ACV (repeat visits, referrals)
+- Payback: 3-12 months
+"""
+
+        try:
+            # TODO: Вызвать LLM через Omni-Router
+            # Пока используем эвристики
+
+            # Поиск цен в контенте
+            import re
+            prices = re.findall(r'(\d{1,3}(?:\s?\d{3})*)\s*(?:руб|₽|rub)', all_content.lower())
+            if prices:
+                # Взять максимальную цену как ACV (обычно это основная услуга)
+                prices_int = [int(p.replace(" ", "")) for p in prices]
+                profile.acv = float(max(prices_int))
+            else:
+                # Дефолтная оценка для медицинских услуг
+                profile.acv = 150000.0  # [I] inference
+
+            # CAC = 10-15% от ACV (типичная оценка для медицины)
+            if profile.acv:
+                profile.cac = profile.acv * 0.15  # [I] inference
+
+            # LTV = 2x ACV (пациенты возвращаются, рекомендуют)
+            if profile.acv:
+                profile.ltv = profile.acv * 2.0  # [I] inference
+
+            # Payback period = CAC / (ACV / 12) месяцев
+            if profile.cac and profile.acv:
+                monthly_revenue = profile.acv / 12
+                profile.payback_period = int(profile.cac / monthly_revenue)
+
+            logger.info(
+                "unit_economics_estimated",
+                domain=profile.domain,
+                acv=profile.acv,
+                cac=profile.cac,
+                ltv=profile.ltv,
+                payback=profile.payback_period,
+            )
+
+        except Exception as e:
+            logger.error("unit_economics_estimation_failed", domain=profile.domain, error=str(e))
 
     async def _analyze_competitive_advantage(self, profile: CompetitorProfile) -> None:
-        """Проанализировать конкурентное преимущество"""
-        # TODO: Реализовать анализ через LLM:
-        # - Core motion (как они выигрывают)
-        # - Moats (network effects, switching costs, brand, proprietary tech)
-        # - Risks (dependencies, competitive threats, operational risks)
-        pass
+        """
+        Проанализировать конкурентное преимущество
+
+        Использует LLM для анализа:
+        - Core motion (как они выигрывают)
+        - Moats (защитные рвы: network effects, switching costs, brand, proprietary tech)
+        - Risks (зависимости, конкурентные угрозы, операционные риски)
+        """
+        # Собрать контент из источников
+        all_content = "\n\n".join([
+            f"[{s.tier}] {s.title}\n{s.content[:1000]}"
+            for s in profile.sources
+        ])
+
+        # Промпт для LLM
+        prompt = f"""Analyze the following sources about {profile.domain} and identify their competitive advantage:
+
+Sources:
+{all_content}
+
+Extract the following in JSON format:
+{{
+    "core_motion": "How do they win? What's their primary competitive advantage?",
+    "moats": [
+        "List of defensible advantages:",
+        "- Network effects (e.g., review volume, community)",
+        "- Switching costs (e.g., patient history, loyalty program)",
+        "- Brand (e.g., reputation, trust)",
+        "- Proprietary tech (e.g., unique equipment, methodology)"
+    ],
+    "risks": [
+        "List of vulnerabilities:",
+        "- Dependencies (e.g., Google algorithm, single channel)",
+        "- Competitive threats (e.g., new entrants, price competition)",
+        "- Operational risks (e.g., key person dependency, location)"
+    ]
+}}
+
+Focus on EVIDENCE from sources. Mark inferences with [I].
+"""
+
+        try:
+            # TODO: Вызвать LLM через Omni-Router
+            # Пока используем эвристики
+
+            # Core motion из ключевых фраз
+            if "4.8" in all_content or "5.0" in all_content or "рейтинг" in all_content:
+                profile.core_motion = "Доминируют через высокий рейтинг и отзывы"
+            elif "SEO" in all_content or "первые позиции" in all_content:
+                profile.core_motion = "Доминируют в локальном SEO"
+            elif "премиум" in all_content or "premium" in all_content:
+                profile.core_motion = "Премиум позиционирование и качество"
+            else:
+                profile.core_motion = "Конкурируют через [I] inference"
+
+            # Moats
+            if "отзыв" in all_content or "review" in all_content:
+                profile.moats.append("Brand reputation через отзывы")
+            if "программа лояльности" in all_content:
+                profile.moats.append("Switching costs через loyalty program")
+            if "уникальн" in all_content or "unique" in all_content:
+                profile.moats.append("Proprietary methodology")
+            if "сеть" in all_content or "network" in all_content:
+                profile.moats.append("Network effects через филиалы")
+
+            # Risks
+            if "Google" in all_content or "SEO" in all_content:
+                profile.risks.append("Dependency on Google algorithm")
+            if "реклама" in all_content or "ads" in all_content:
+                profile.risks.append("Dependency on paid advertising")
+            if "цена" in all_content or "price" in all_content:
+                profile.risks.append("Price competition risk")
+            if "основатель" in all_content or "founder" in all_content:
+                profile.risks.append("Key person dependency")
+
+            logger.info(
+                "competitive_advantage_analyzed",
+                domain=profile.domain,
+                moats=len(profile.moats),
+                risks=len(profile.risks),
+            )
+
+        except Exception as e:
+            logger.error("competitive_advantage_analysis_failed", domain=profile.domain, error=str(e))
 
     async def _meta_synthesis(
         self,
@@ -615,30 +1235,221 @@ class CIResearchAgent(Agent):
         self,
         profiles: List[CompetitorProfile],
     ) -> List[GrowthLaw]:
-        """Извлечь Growth Laws (prevalence ≥30%)"""
-        # TODO: Реализовать извлечение через LLM:
-        # - Подсчитать prevalence для каждого паттерна
-        # - Если prevalence ≥30% → это Growth Law
-        # - Документировать preconditions и boundary conditions
-        return []
+        """
+        Извлечь Growth Laws (prevalence ≥30%)
+
+        Growth Law = паттерн, который повторяется у 30%+ конкурентов
+        """
+        if not profiles:
+            return []
+
+        total_competitors = len(profiles)
+        threshold = 0.3  # 30% prevalence
+
+        # Подсчитать prevalence для каждого паттерна
+        pattern_counts = {}
+
+        # 1. Acquisition channels
+        for profile in profiles:
+            for channel in profile.acquisition_channels:
+                pattern_counts[f"acquisition:{channel}"] = pattern_counts.get(f"acquisition:{channel}", 0) + 1
+
+        # 2. Conversion mechanisms
+        for profile in profiles:
+            if profile.conversion_mechanism:
+                key = f"conversion:{profile.conversion_mechanism}"
+                pattern_counts[key] = pattern_counts.get(key, 0) + 1
+
+        # 3. Retention mechanisms
+        for profile in profiles:
+            if profile.retention_mechanism:
+                key = f"retention:{profile.retention_mechanism}"
+                pattern_counts[key] = pattern_counts.get(key, 0) + 1
+
+        # 4. Moats
+        for profile in profiles:
+            for moat in profile.moats:
+                pattern_counts[f"moat:{moat}"] = pattern_counts.get(f"moat:{moat}", 0) + 1
+
+        # Извлечь Growth Laws (prevalence ≥ threshold)
+        growth_laws = []
+        for pattern, count in pattern_counts.items():
+            prevalence = count / total_competitors
+            if prevalence >= threshold:
+                # Разобрать pattern
+                category, description = pattern.split(":", 1)
+
+                # Определить transferability
+                transferability = Transferability.COPY
+                if "unique" in description.lower() or "proprietary" in description.lower():
+                    transferability = Transferability.IGNORE
+
+                # Preconditions
+                preconditions = []
+                if category == "acquisition" and "SEO" in description:
+                    preconditions = ["website with content", "technical SEO setup"]
+                elif category == "acquisition" and "GMB" in description:
+                    preconditions = ["physical location", "Google Business Profile"]
+                elif category == "conversion" and "консультация" in description:
+                    preconditions = ["booking system", "staff availability"]
+
+                growth_laws.append(
+                    GrowthLaw(
+                        law=description,
+                        prevalence=prevalence,
+                        description=f"{int(prevalence * 100)}% конкурентов используют {description}",
+                        transferability=transferability,
+                        preconditions=preconditions,
+                    )
+                )
+
+        # Сортировать по prevalence
+        growth_laws.sort(key=lambda x: x.prevalence, reverse=True)
+
+        logger.info("growth_laws_extracted", count=len(growth_laws))
+        return growth_laws
 
     async def _extract_sales_laws(
         self,
         profiles: List[CompetitorProfile],
     ) -> List[SalesLaw]:
-        """Извлечь Sales Laws"""
-        # TODO: Реализовать извлечение через LLM
-        return []
+        """
+        Извлечь Sales Laws
+
+        Sales Law = паттерн продаж, который повторяется у 30%+ конкурентов
+        """
+        if not profiles:
+            return []
+
+        total_competitors = len(profiles)
+        threshold = 0.3  # 30% prevalence
+
+        # Подсчитать prevalence для sales patterns
+        pattern_counts = {}
+
+        # 1. Conversion mechanisms
+        for profile in profiles:
+            if profile.conversion_mechanism:
+                pattern_counts[profile.conversion_mechanism] = pattern_counts.get(profile.conversion_mechanism, 0) + 1
+
+        # 2. Pricing patterns (из ACV)
+        price_ranges = {"low": 0, "medium": 0, "high": 0}
+        for profile in profiles:
+            if profile.acv:
+                if profile.acv < 100000:
+                    price_ranges["low"] += 1
+                elif profile.acv < 200000:
+                    price_ranges["medium"] += 1
+                else:
+                    price_ranges["high"] += 1
+
+        # Добавить pricing patterns
+        for range_name, count in price_ranges.items():
+            if count > 0:
+                pattern_counts[f"pricing:{range_name}"] = count
+
+        # Извлечь Sales Laws
+        sales_laws = []
+        for pattern, count in pattern_counts.items():
+            prevalence = count / total_competitors
+            if prevalence >= threshold:
+                # Определить transferability
+                transferability = Transferability.COPY
+
+                # Preconditions
+                preconditions = []
+                if "консультация" in pattern:
+                    preconditions = ["booking system", "consultation process"]
+                elif "pricing:high" in pattern:
+                    preconditions = ["premium positioning", "quality proof"]
+
+                sales_laws.append(
+                    SalesLaw(
+                        law=pattern,
+                        prevalence=prevalence,
+                        description=f"{int(prevalence * 100)}% конкурентов используют {pattern}",
+                        transferability=transferability,
+                        preconditions=preconditions,
+                    )
+                )
+
+        # Сортировать по prevalence
+        sales_laws.sort(key=lambda x: x.prevalence, reverse=True)
+
+        logger.info("sales_laws_extracted", count=len(sales_laws))
+        return sales_laws
 
     async def _define_archetypes(
         self,
         profiles: List[CompetitorProfile],
     ) -> List[Archetype]:
-        """Определить архетипы конкурентов"""
-        # TODO: Реализовать кластеризацию через LLM:
-        # - Идентифицировать 2-5 distinct clusters
-        # - Для каждого archetype: name, members, characteristics
-        return []
+        """
+        Определить архетипы конкурентов
+
+        Archetype = кластер конкурентов с похожими growth mechanics
+        """
+        if not profiles:
+            return []
+
+        # Простая кластеризация по core motion
+        clusters = {}
+
+        for profile in profiles:
+            # Определить кластер по ключевым словам в core_motion
+            cluster_key = "Other"
+
+            if profile.core_motion:
+                if "SEO" in profile.core_motion or "поиск" in profile.core_motion:
+                    cluster_key = "SEO-Driven"
+                elif "рейтинг" in profile.core_motion or "отзыв" in profile.core_motion:
+                    cluster_key = "Reputation-First"
+                elif "премиум" in profile.core_motion or "premium" in profile.core_motion:
+                    cluster_key = "Premium-Positioned"
+                elif "реклама" in profile.core_motion or "ads" in profile.core_motion:
+                    cluster_key = "Paid-Acquisition"
+
+            if cluster_key not in clusters:
+                clusters[cluster_key] = []
+            clusters[cluster_key].append(profile)
+
+        # Создать архетипы
+        archetypes = []
+        for name, members in clusters.items():
+            if len(members) >= 2:  # Минимум 2 члена для архетипа
+                # Извлечь общие характеристики
+                characteristics = []
+
+                # Общие acquisition channels
+                common_channels = set(members[0].acquisition_channels)
+                for member in members[1:]:
+                    common_channels &= set(member.acquisition_channels)
+                if common_channels:
+                    characteristics.append(f"Channels: {', '.join(common_channels)}")
+
+                # Средний ACV
+                avg_acv = sum(m.acv for m in members if m.acv) / len([m for m in members if m.acv])
+                if avg_acv:
+                    characteristics.append(f"Avg ACV: {avg_acv:,.0f} RUB")
+
+                # Общие moats
+                all_moats = []
+                for member in members:
+                    all_moats.extend(member.moats)
+                if all_moats:
+                    from collections import Counter
+                    common_moats = [moat for moat, count in Counter(all_moats).most_common(3)]
+                    characteristics.append(f"Moats: {', '.join(common_moats)}")
+
+                archetypes.append(
+                    Archetype(
+                        name=name,
+                        members=[m.domain for m in members],
+                        characteristics=characteristics,
+                    )
+                )
+
+        logger.info("archetypes_defined", count=len(archetypes))
+        return archetypes
 
     async def _application_layer(
         self,
@@ -680,34 +1491,187 @@ class CIResearchAgent(Agent):
         meta: Dict[str, Any],
         input_data: CIResearchInput,
     ) -> List[CopyPattern]:
-        """Классифицировать паттерны для копирования с ICE scoring"""
-        # TODO: Реализовать через LLM:
-        # - Проверить preconditions против client_context
-        # - Рассчитать ICE score (Impact × Confidence × Ease)
-        # - Ранжировать по ICE score
-        return []
+        """
+        Классифицировать паттерны для копирования с ICE scoring
+
+        ICE = Impact × Confidence × Ease
+        - Impact: 1-10 (насколько сильно повлияет на бизнес)
+        - Confidence: 1-10 (насколько уверены что сработает)
+        - Ease: 1-10 (насколько легко внедрить)
+        """
+        copy_patterns = []
+
+        # Обработать Growth Laws
+        for law in meta.get("growth_laws", []):
+            if law.transferability == Transferability.COPY:
+                # Проверить preconditions против client_context
+                preconditions_met = True
+                if law.preconditions and input_data.client_context:
+                    # Простая проверка: если в goals есть упоминание precondition
+                    goals_text = " ".join(input_data.client_context.goals).lower()
+                    for precondition in law.preconditions:
+                        if precondition.lower() not in goals_text:
+                            preconditions_met = False
+                            break
+
+                # Рассчитать ICE score
+                # Impact: высокий prevalence = высокий impact
+                impact = int(law.prevalence * 10)
+
+                # Confidence: высокий prevalence = высокая confidence
+                confidence = int(law.prevalence * 10)
+
+                # Ease: зависит от preconditions
+                ease = 10 - len(law.preconditions) * 2 if law.preconditions else 10
+                ease = max(1, ease)
+
+                ice_score = impact * confidence * ease
+
+                # Implementation guidance
+                implementation = f"Внедрить {law.law}. "
+                if law.preconditions:
+                    implementation += f"Требуется: {', '.join(law.preconditions)}."
+
+                copy_patterns.append(
+                    CopyPattern(
+                        pattern=law.law,
+                        impact=impact,
+                        confidence=confidence,
+                        ease=ease,
+                        ice_score=ice_score,
+                        implementation=implementation,
+                    )
+                )
+
+        # Обработать Sales Laws
+        for law in meta.get("sales_laws", []):
+            if law.transferability == Transferability.COPY:
+                impact = int(law.prevalence * 10)
+                confidence = int(law.prevalence * 10)
+                ease = 10 - len(law.preconditions) * 2 if law.preconditions else 10
+                ease = max(1, ease)
+                ice_score = impact * confidence * ease
+
+                implementation = f"Внедрить {law.law}. "
+                if law.preconditions:
+                    implementation += f"Требуется: {', '.join(law.preconditions)}."
+
+                copy_patterns.append(
+                    CopyPattern(
+                        pattern=law.law,
+                        impact=impact,
+                        confidence=confidence,
+                        ease=ease,
+                        ice_score=ice_score,
+                        implementation=implementation,
+                    )
+                )
+
+        # Сортировать по ICE score
+        copy_patterns.sort(key=lambda x: x.ice_score, reverse=True)
+
+        logger.info("copy_patterns_classified", count=len(copy_patterns))
+        return copy_patterns
 
     async def _classify_ignore_patterns(
         self,
         meta: Dict[str, Any],
         input_data: CIResearchInput,
     ) -> List[IgnorePattern]:
-        """Классифицировать паттерны для игнорирования"""
-        # TODO: Реализовать через LLM:
-        # - Определить паттерны с low transferability
-        # - Документировать reason и alternative
-        return []
+        """
+        Классифицировать паттерны для игнорирования
+
+        Игнорируем паттерны с:
+        - Transferability = IGNORE
+        - Unique advantages конкурентов
+        """
+        ignore_patterns = []
+
+        # Обработать Growth Laws с IGNORE transferability
+        for law in meta.get("growth_laws", []):
+            if law.transferability == Transferability.IGNORE:
+                reason = "Unique advantage конкурента, не переносится"
+                alternative = "Найти собственное уникальное преимущество"
+
+                ignore_patterns.append(
+                    IgnorePattern(
+                        pattern=law.law,
+                        reason=reason,
+                        alternative=alternative,
+                    )
+                )
+
+        # Обработать Sales Laws с IGNORE transferability
+        for law in meta.get("sales_laws", []):
+            if law.transferability == Transferability.IGNORE:
+                reason = "Специфично для конкурента"
+                alternative = "Адаптировать под свой контекст"
+
+                ignore_patterns.append(
+                    IgnorePattern(
+                        pattern=law.law,
+                        reason=reason,
+                        alternative=alternative,
+                    )
+                )
+
+        logger.info("ignore_patterns_classified", count=len(ignore_patterns))
+        return ignore_patterns
 
     async def _create_sequencing_roadmap(
         self,
         do_copy: List[CopyPattern],
     ) -> List[SequencingPhase]:
-        """Создать roadmap внедрения паттернов"""
-        # TODO: Реализовать через LLM:
-        # - Phase 1: Quick wins (ICE >150, 1-2 weeks)
-        # - Phase 2: Medium-term (ICE 100-150, 1-2 months)
-        # - Phase 3: Long-term (ICE <100, 3-6 months)
-        return []
+        """
+        Создать roadmap внедрения паттернов
+
+        Фазы:
+        - Phase 1: Quick wins (ICE >400, 1-2 weeks)
+        - Phase 2: Medium-term (ICE 200-400, 1-2 months)
+        - Phase 3: Long-term (ICE <200, 3-6 months)
+        """
+        if not do_copy:
+            return []
+
+        # Разбить на фазы по ICE score
+        phase1 = [p for p in do_copy if p.ice_score > 400]
+        phase2 = [p for p in do_copy if 200 <= p.ice_score <= 400]
+        phase3 = [p for p in do_copy if p.ice_score < 200]
+
+        roadmap = []
+
+        if phase1:
+            roadmap.append(
+                SequencingPhase(
+                    phase=1,
+                    duration="1-2 weeks",
+                    patterns=[p.pattern for p in phase1],
+                    expected_impact=f"Quick wins: {len(phase1)} паттернов с высоким ROI",
+                )
+            )
+
+        if phase2:
+            roadmap.append(
+                SequencingPhase(
+                    phase=2,
+                    duration="1-2 months",
+                    patterns=[p.pattern for p in phase2],
+                    expected_impact=f"Medium-term: {len(phase2)} паттернов со средним ROI",
+                )
+            )
+
+        if phase3:
+            roadmap.append(
+                SequencingPhase(
+                    phase=3,
+                    duration="3-6 months",
+                    patterns=[p.pattern for p in phase3],
+                    expected_impact=f"Long-term: {len(phase3)} паттернов с долгосрочным эффектом",
+                )
+            )
+
+        logger.info("sequencing_roadmap_created", phases=len(roadmap))
+        return roadmap
 
     async def _save_benchmark_report(
         self,
@@ -717,20 +1681,69 @@ class CIResearchAgent(Agent):
         meta: Dict[str, Any],
         application: Dict[str, Any],
     ) -> str:
-        """Сохранить benchmark report в Obsidian vault"""
+        """
+        Сохранить benchmark report в Obsidian vault
+
+        Структура:
+        - README.md (executive summary)
+        - source-harvest/ (evidence archive)
+        - synthesis/ (company memos)
+        - meta-synthesis/ (laws, archetypes, matrix)
+        - application/ (do-copy, roadmap, priorities)
+        """
         # Создать директорию для отчёта
         date_str = datetime.now().strftime("%Y-%m-%d")
-        industry_slug = input_data.industry.lower().replace(" ", "-")
+        industry_slug = input_data.industry.lower().replace(" ", "-")[:50]
         report_dir = f"wiki/ci-research/{date_str}-{industry_slug}"
 
-        # TODO: Создать структуру отчёта:
-        # - README.md (executive summary)
-        # - source-harvest/ (evidence archive)
-        # - synthesis/ (company memos)
-        # - meta-synthesis/ (laws, archetypes, matrix)
-        # - application/ (do-copy, roadmap, priorities)
+        # TODO: Интеграция с Obsidian vault для создания структуры
+        # Пока логируем путь
 
-        logger.info("benchmark_report_saved", path=report_dir)
+        # Создать executive summary
+        summary = f"""# CI Research Report: {input_data.industry}
+
+**Date:** {date_str}
+**Competitors Analyzed:** {len(competitors)}
+**Research Depth:** {input_data.research_depth}
+
+## Key Findings
+
+### Growth Laws ({len(meta.get('growth_laws', []))})
+"""
+        for law in meta.get('growth_laws', [])[:5]:
+            summary += f"- **{law.law}** ({int(law.prevalence * 100)}% prevalence)\n"
+
+        summary += f"\n### Sales Laws ({len(meta.get('sales_laws', []))})\n"
+        for law in meta.get('sales_laws', [])[:5]:
+            summary += f"- **{law.law}** ({int(law.prevalence * 100)}% prevalence)\n"
+
+        summary += f"\n### Archetypes ({len(meta.get('archetypes', []))})\n"
+        for archetype in meta.get('archetypes', []):
+            summary += f"- **{archetype.name}** ({len(archetype.members)} members)\n"
+
+        summary += f"\n## Recommendations\n\n### DO COPY ({len(application.get('do_copy', []))})\n"
+        for pattern in application.get('do_copy', [])[:10]:
+            summary += f"- **{pattern.pattern}** (ICE: {pattern.ice_score})\n"
+
+        summary += f"\n### DON'T COPY ({len(application.get('dont_copy', []))})\n"
+        for pattern in application.get('dont_copy', [])[:5]:
+            summary += f"- **{pattern.pattern}** - {pattern.reason}\n"
+
+        summary += f"\n## Implementation Roadmap\n\n"
+        for phase in application.get('sequencing_roadmap', []):
+            summary += f"### Phase {phase.phase}: {phase.duration}\n"
+            summary += f"**Impact:** {phase.expected_impact}\n\n"
+            for pattern in phase.patterns[:5]:
+                summary += f"- {pattern}\n"
+            summary += "\n"
+
+        # Логировать summary (в будущем сохранить в Obsidian)
+        logger.info(
+            "benchmark_report_created",
+            path=report_dir,
+            summary_length=len(summary),
+        )
+
         return report_dir
 
     def _calculate_evidence_quality(

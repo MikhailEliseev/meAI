@@ -1,8 +1,17 @@
-"""API Clients for Keyword Research
+"""
+API Clients для CI Research Agent
 
-Resilient API clients with circuit breakers, retries, rate limiting, and caching.
+Omni-Router архитектура для ротации провайдеров и fallback.
 """
 
-from .base import APIClientBase, TokenBucketRateLimiter
+from .omni_router import OmniRouter, Provider, ProviderStatus
+from .semrush_client import SEMrushClient
+from .web_scraper import WebScraper
 
-__all__ = ["APIClientBase", "TokenBucketRateLimiter"]
+__all__ = [
+    "OmniRouter",
+    "Provider",
+    "ProviderStatus",
+    "SEMrushClient",
+    "WebScraper",
+]
