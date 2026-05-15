@@ -1,0 +1,19 @@
+#!/bin/bash
+# Linear CLI wrapper with API key from settings
+
+# Get API key from Claude Code settings using Python JSON parser
+LINEAR_API_KEY=$(python3 -c "
+import json
+with open('$HOME/.claude/settings.json') as f:
+    config = json.load(f)
+    print(config.get('mcpServers', {}).get('linear', {}).get('env', {}).get('LINEAR_API_KEY', ''))
+")
+
+if [ -z "$LINEAR_API_KEY" ]; then
+    echo "Error: LINEAR_API_KEY not found in ~/.claude/settings.json"
+    exit 1
+fi
+
+# Run Linear CLI with API key
+export LINEAR_API_KEY
+python3 "$(dirname "$0")/linear_cli.py" "$@"
