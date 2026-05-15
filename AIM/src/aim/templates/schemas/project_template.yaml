@@ -1,0 +1,137 @@
+# Project Template Schema
+# Variables: client_name, industry, start_date, team_id
+
+project:
+  name: "{{ client_name }} - Marketing Campaign"
+  description: "AI-powered marketing campaign for {{ client_name }} in {{ industry }} industry"
+  state: "planned"
+  team_id: "{{ team_id }}"
+
+milestones:
+  - name: "Phase 1: Research & Strategy"
+    description: "Market research, competitor analysis, and strategy development"
+    duration_weeks: 2
+
+  - name: "Phase 2: Content & SEO"
+    description: "Content creation, SEO optimization, and technical improvements"
+    duration_weeks: 4
+
+  - name: "Phase 3: Launch & Optimization"
+    description: "Campaign launch, monitoring, and continuous optimization"
+    duration_weeks: 6
+
+labels:
+  - name: "priority:high"
+    color: "#FF0000"
+
+  - name: "priority:medium"
+    color: "#FFA500"
+
+  - name: "priority:low"
+    color: "#00FF00"
+
+  - name: "type:seo"
+    color: "#0000FF"
+
+  - name: "type:content"
+    color: "#800080"
+
+  - name: "type:ads"
+    color: "#FF1493"
+
+  - name: "status:blocked"
+    color: "#808080"
+
+tasks:
+  # Phase 1: Research & Strategy
+  - title: "Competitor Analysis"
+    description: "Analyze top 5 competitors in {{ industry }}"
+    milestone: 0
+    priority: 1
+    labels: ["priority:high", "type:seo"]
+
+  - title: "Keyword Research"
+    description: "Identify target keywords for {{ client_name }}"
+    milestone: 0
+    priority: 1
+    labels: ["priority:high", "type:seo"]
+
+  - title: "Content Strategy"
+    description: "Develop content plan and editorial calendar"
+    milestone: 0
+    priority: 2
+    labels: ["priority:medium", "type:content"]
+
+  - title: "Technical SEO Audit"
+    description: "Audit website technical SEO issues"
+    milestone: 0
+    priority: 1
+    labels: ["priority:high", "type:seo"]
+
+  # Phase 2: Content & SEO
+  - title: "On-Page SEO Optimization"
+    description: "Optimize meta tags, headers, and content structure"
+    milestone: 1
+    priority: 1
+    labels: ["priority:high", "type:seo"]
+
+  - title: "Content Creation - Blog Posts"
+    description: "Create 10 SEO-optimized blog posts"
+    milestone: 1
+    priority: 2
+    labels: ["priority:medium", "type:content"]
+
+  - title: "Landing Page Optimization"
+    description: "Optimize landing pages for conversions"
+    milestone: 1
+    priority: 1
+    labels: ["priority:high", "type:content"]
+
+  - title: "Schema Markup Implementation"
+    description: "Add structured data for better SERP visibility"
+    milestone: 1
+    priority: 2
+    labels: ["priority:medium", "type:seo"]
+
+  - title: "Internal Linking Strategy"
+    description: "Implement internal linking structure"
+    milestone: 1
+    priority: 3
+    labels: ["priority:low", "type:seo"]
+
+  # Phase 3: Launch & Optimization
+  - title: "Campaign Launch"
+    description: "Launch marketing campaign across all channels"
+    milestone: 2
+    priority: 1
+    labels: ["priority:high", "type:ads"]
+
+  - title: "Performance Monitoring Setup"
+    description: "Set up analytics and tracking dashboards"
+    milestone: 2
+    priority: 1
+    labels: ["priority:high", "type:ads"]
+
+  - title: "A/B Testing - Ad Copy"
+    description: "Test different ad copy variations"
+    milestone: 2
+    priority: 2
+    labels: ["priority:medium", "type:ads"]
+
+  - title: "Conversion Rate Optimization"
+    description: "Optimize conversion funnels based on data"
+    milestone: 2
+    priority: 1
+    labels: ["priority:high", "type:ads"]
+
+  - title: "Weekly Performance Reports"
+    description: "Generate and send weekly performance reports"
+    milestone: 2
+    priority: 2
+    labels: ["priority:medium", "type:ads"]
+
+  - title: "Budget Optimization"
+    description: "Optimize ad spend based on performance"
+    milestone: 2
+    priority: 1
+    labels: ["priority:high", "type:ads"]
