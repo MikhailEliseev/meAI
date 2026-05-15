@@ -11,7 +11,7 @@ This is the production-ready version integrating Phase 3 trained subagents.
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 import structlog
 
@@ -27,6 +27,7 @@ from AIM.src.aim.subagents.seo.schema_generator import (
     SchemaGenerator,
     SchemaReport,
 )
+from AIM.src.aim.magisters.linear_mixin import LinearMixin
 
 
 @dataclass
@@ -56,7 +57,7 @@ class SEOWorkflowReport:
     errors: list[str]
 
 
-class SEOMagisterV2:
+class SEOMagisterV2(LinearMixin):
     """
     SEO Magister V2 - Production-ready SEO workflow orchestrator.
 
@@ -68,12 +69,24 @@ class SEOMagisterV2:
     Each phase uses results from previous phases for context-aware optimization.
     """
 
-    def __init__(self):
-        """Initialize SEO Magister V2."""
+    def __init__(
+        self,
+        linear_client: Optional[Any] = None,
+        linear_enabled: bool = False,
+    ):
+        """Initialize SEO Magister V2.
+
+        Args:
+            linear_client: Optional LinearClient for task tracking
+            linear_enabled: Enable Linear integration
+        """
         self.logger = structlog.get_logger()
         self.keyword_agent = KeywordResearchAgent()
         self.onpage_agent = OnPageOptimizer()
         self.schema_agent = SchemaGenerator()
+
+        # Setup Linear integration
+        self.setup_linear(linear_client, linear_enabled)
 
     async def execute_workflow(
         self,
@@ -96,8 +109,13 @@ class SEOMagisterV2:
         start_time = datetime.now()
         errors = []
 
+        # Update Linear status to in_progress
+        self.update_linear_status("in_progress")
+        self.add_linear_progress_update("SEO Workflow", "started", f"Analyzing {url}")
+
         # Phase 1: Keyword Research
         self.logger.info("phase_1_start", phase="keyword_research")
+        self.add_linear_progress_update("Phase 1: Keyword Research", "in_progress")
         try:
             keyword_report = await self.keyword_agent.research(
                 seed_keyword=seed_keyword,
@@ -111,9 +129,15 @@ class SEOMagisterV2:
                 if keyword_report.top_opportunities
                 else None,
             )
+            self.add_linear_progress_update(
+                "Phase 1: Keyword Research",
+                "completed",
+                f"Found {len(keyword_report.keywords)} keywords",
+            )
         except Exception as e:
             self.logger.error("phase_1_failed", error=str(e))
             errors.append(f"Keyword Research failed: {str(e)}")
+            self.add_linear_progress_update("Phase 1: Keyword Research", "failed", str(e))
             # Create empty report to continue workflow
             keyword_report = KeywordResearchResult(
                 seed_keyword=seed_keyword,
@@ -132,6 +156,7 @@ class SEOMagisterV2:
 
         # Phase 2: On-Page Optimization
         self.logger.info("phase_2_start", phase="on_page_optimization")
+        self.add_linear_progress_update("Phase 2: On-Page Optimization", "in_progress")
         try:
             # Use top keyword from research as target
             target_keyword = (
@@ -150,9 +175,15 @@ class SEOMagisterV2:
                 overall_score=onpage_report.overall_score,
                 priority_issues=len(onpage_report.priority_issues),
             )
+            self.add_linear_progress_update(
+                "Phase 2: On-Page Optimization",
+                "completed",
+                f"Score: {onpage_report.overall_score}/100, {len(onpage_report.priority_issues)} priority issues",
+            )
         except Exception as e:
             self.logger.error("phase_2_failed", error=str(e))
             errors.append(f"On-Page Optimization failed: {str(e)}")
+            self.add_linear_progress_update("Phase 2: On-Page Optimization", "failed", str(e))
             # Create empty report to continue workflow
             from AIM.src.aim.subagents.seo.onpage_optimizer import (
                 TitleTagAnalysis,
@@ -244,6 +275,7 @@ class SEOMagisterV2:
 
         # Phase 3: Schema Markup
         self.logger.info("phase_3_start", phase="schema_markup")
+        self.add_linear_progress_update("Phase 3: Schema Markup", "in_progress")
         try:
             schema_report = await self.schema_agent.analyze_page(
                 url=url,
@@ -254,9 +286,15 @@ class SEOMagisterV2:
                 schemas_found=len(schema_report.schemas),
                 missing_schemas=len(schema_report.missing_schemas),
             )
+            self.add_linear_progress_update(
+                "Phase 3: Schema Markup",
+                "completed",
+                f"Found {len(schema_report.schemas)} schemas, {len(schema_report.missing_schemas)} missing",
+            )
         except Exception as e:
             self.logger.error("phase_3_failed", error=str(e))
             errors.append(f"Schema Markup failed: {str(e)}")
+            self.add_linear_progress_update("Phase 3: Schema Markup", "failed", str(e))
             # Create empty report to continue workflow
             schema_report = SchemaReport(
                 url=url,
@@ -310,6 +348,33 @@ class SEOMagisterV2:
             workflow_status=workflow_status,
             duration=duration,
         )
+
+        # Update Linear with final status
+        if workflow_status == "success":
+            self.update_linear_status("completed")
+            self.add_linear_comment(
+                f"✅ **SEO Workflow Completed**\n\n"
+                f"**Overall Score:** {overall_score:.1f}/100\n"
+                f"**Duration:** {duration:.1f}s\n"
+                f"**Impact:** {estimated_impact}\n\n"
+                f"**Top Priority Actions:**\n" +
+                "\n".join(f"- {action}" for action in priority_actions[:3])
+            )
+        elif workflow_status == "partial":
+            self.update_linear_status("completed")
+            self.add_linear_comment(
+                f"⚠️ **SEO Workflow Partially Completed**\n\n"
+                f"**Overall Score:** {overall_score:.1f}/100\n"
+                f"**Errors:** {len(errors)}\n\n" +
+                "\n".join(f"- {error}" for error in errors)
+            )
+        else:
+            self.update_linear_status("failed")
+            self.add_linear_comment(
+                f"❌ **SEO Workflow Failed**\n\n"
+                f"**Errors:** {len(errors)}\n\n" +
+                "\n".join(f"- {error}" for error in errors)
+            )
 
         return report
 

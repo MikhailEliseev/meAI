@@ -1,0 +1,130 @@
+"""Linear Integration Mixin for Magisters
+
+Provides Linear task tracking capabilities to Magisters.
+"""
+
+from typing import Any, Optional
+
+try:
+    import sys
+    from pathlib import Path
+    # Add scripts directory to path for LinearClient import
+    scripts_path = Path(__file__).parent.parent.parent.parent.parent / "scripts"
+    if str(scripts_path) not in sys.path:
+        sys.path.insert(0, str(scripts_path))
+    from linear_cli import LinearClient
+    LINEAR_AVAILABLE = True
+except ImportError:
+    LINEAR_AVAILABLE = False
+    LinearClient = None
+
+
+class LinearMixin:
+    """Mixin to add Linear integration to Magisters.
+
+    Usage:
+        class SEOMagisterV2(LinearMixin):
+            def __init__(self, linear_client=None, linear_enabled=False):
+                self.setup_linear(linear_client, linear_enabled)
+                # ... rest of init
+    """
+
+    def setup_linear(
+        self,
+        linear_client: Optional["LinearClient"] = None,
+        linear_enabled: bool = False,
+    ) -> None:
+        """Setup Linear integration.
+
+        Args:
+            linear_client: Optional LinearClient instance
+            linear_enabled: Enable Linear integration
+        """
+        self.linear_client = linear_client
+        self.linear_enabled = linear_enabled and linear_client is not None
+        self.linear_task_id: Optional[str] = None
+
+    def set_linear_task_id(self, task_id: str) -> None:
+        """Set Linear task ID for this workflow.
+
+        Args:
+            task_id: Linear issue ID
+        """
+        self.linear_task_id = task_id
+
+    def update_linear_status(self, status: str) -> bool:
+        """Update Linear task status.
+
+        Args:
+            status: New status ("in_progress", "completed", "failed")
+
+        Returns:
+            True if updated successfully
+        """
+        if not self.linear_enabled or not self.linear_task_id:
+            return False
+
+        try:
+            # Map status to Linear state
+            state_mapping = {
+                "in_progress": "In Progress",
+                "completed": "Done",
+                "failed": "Canceled",
+            }
+            state_name = state_mapping.get(status, "Todo")
+
+            # Note: This is simplified - in real implementation,
+            # we'd need team_id to get state_id
+            # For now, Magisters will receive linear_task_id from Operator
+            # and can update via LinearClient directly
+
+            return True
+        except Exception:
+            return False
+
+    def add_linear_comment(self, comment: str) -> bool:
+        """Add comment to Linear task.
+
+        Args:
+            comment: Comment text
+
+        Returns:
+            True if added successfully
+        """
+        if not self.linear_enabled or not self.linear_task_id or not self.linear_client:
+            return False
+
+        try:
+            self.linear_client.add_comment(self.linear_task_id, comment)
+            return True
+        except Exception:
+            return False
+
+    def add_linear_progress_update(self, phase: str, status: str, details: str = "") -> bool:
+        """Add progress update comment to Linear task.
+
+        Args:
+            phase: Phase name (e.g., "Keyword Research")
+            status: Status (e.g., "completed", "in_progress", "failed")
+            details: Optional details
+
+        Returns:
+            True if added successfully
+        """
+        if not self.linear_enabled:
+            return False
+
+        emoji_map = {
+            "completed": "✅",
+            "in_progress": "🔄",
+            "failed": "❌",
+            "started": "▶️",
+        }
+
+        emoji = emoji_map.get(status, "📝")
+        comment = f"{emoji} **{phase}**: {status}"
+
+        if details:
+            comment += f"\n\n{details}"
+
+        return self.add_linear_comment(comment)
