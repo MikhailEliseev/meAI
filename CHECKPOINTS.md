@@ -1780,3 +1780,55 @@ SEO Orchestrator
 
 **Коммит:** 968b99a
 
+
+---
+
+## Checkpoint #20: Obsidian Vault Structure (2026-05-15)
+
+**Что сделано:**
+- ✅ Создана полная структура vault для CI Research Agent
+- ✅ LLM Wiki pattern (raw/ → wiki/ → decisions/)
+- ✅ 8 категорий wiki (concepts, technologies, strategies, agents, workflows, projects, sources, connections)
+- ✅ SCHEMA.md с полным описанием паттерна
+- ✅ wiki/index.md (content-oriented каталог)
+- ✅ wiki/log.md (chronological операционная история)
+- ✅ Ingest script для автоматической обработки benchmark reports
+
+**Ключевые файлы:**
+- `AIM/obsidian/ci-research/SCHEMA.md` (8,468 bytes)
+- `AIM/obsidian/ci-research/wiki/index.md` (2,277 bytes)
+- `AIM/obsidian/ci-research/wiki/log.md` (1,457 bytes)
+- `scripts/ingest_ci_benchmark.py` (350 lines)
+
+**Vault Structure:**
+```
+ci-research/
+├── raw/                          # Слой 1: Исходные данные
+│   └── benchmarks/               # Benchmark reports
+├── wiki/                         # Слой 2: Структурированное знание
+│   ├── index.md                  # Каталог
+│   ├── log.md                    # Операционная история
+│   └── [8 категорий]             # concepts, technologies, strategies, etc.
+└── decisions/                    # Слой 3: Стратегические решения
+```
+
+**Операции:**
+1. **Ingest** (raw/ → wiki/) — обработка benchmark reports
+2. **Query** (вопрос → wiki/ → ответ) — поиск и синтез
+3. **Lint** (проверка здоровья) — противоречия, orphans, gaps
+
+**Ingest Script Usage:**
+```bash
+python scripts/ingest_ci_benchmark.py <benchmark_report.json> --industry "dental clinics"
+```
+
+**Контекст для продолжения:**
+- Vault структура готова к использованию
+- Все Priority P0 и P1 задачи завершены
+- CI Research Agent полностью интегрирован (Agent → Orchestrator → Vault)
+- Следующий шаг: End-to-end тест (запуск CI Research → Ingest → Проверка vault)
+
+**Следующий шаг:** Протестировать полный workflow: CI Research Agent → Benchmark Report → Ingest Script → Vault
+
+**Коммит:** 016d840
+
