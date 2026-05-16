@@ -61,7 +61,15 @@ class LinearClient:
             api_url: Linear GraphQL endpoint
             timeout: Request timeout in seconds
             max_retries: Max retry attempts on failure
+
+        Raises:
+            ValueError: If api_key is empty
         """
+        if not api_key:
+            raise ValueError("LINEAR_API_KEY is required")
+
+        self.api_key = api_key
+        self.base_url = api_url
         self.api_url = api_url
         self.headers = {
             "Authorization": api_key,
@@ -69,7 +77,7 @@ class LinearClient:
         }
         self.timeout = timeout
         self.max_retries = max_retries
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -83,6 +91,12 @@ class LinearClient:
         """Async context manager exit."""
         if self._client:
             await self._client.aclose()
+
+    async def close(self):
+        """Close the HTTP client."""
+        if self._client:
+            await self._client.aclose()
+            self._client = None
 
     async def _execute_query(
         self,
@@ -517,17 +531,14 @@ class LinearClient:
             updated_at=node["updatedAt"],
         )
 
-    async def get_issue(self, issue_id: str) -> LinearIssue:
+    async def get_issue(self, issue_id: str) -> LinearIssue | None:
         """Fetch single issue by ID
 
         Args:
             issue_id: Issue ID
 
         Returns:
-            Issue
-
-        Raises:
-            ValueError: If issue not found
+            Issue or None if not found
         """
         query = """
         query GetIssue($id: String!) {
@@ -570,7 +581,7 @@ class LinearClient:
         node = data.get("issue")
 
         if not node:
-            raise ValueError(f"Issue {issue_id} not found")
+            return None
 
         return LinearIssue(
             id=node["id"],
