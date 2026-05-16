@@ -16,11 +16,11 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from AIM.src.aim.ai.lead_scoring.schemas import LeadScore
-from AIM.src.aim.integrations.linear.client import LinearClient
-from AIM.src.aim.integrations.linear.schemas import LinearIssue, LinearTask
+from aim.ai.lead_scoring.schemas import LeadScore
+from aim.integrations.linear.client import LinearClient
+from aim.integrations.linear.schemas import LinearIssue, LinearTask
 from aim.models.lead import Lead
-from AIM.src.aim.utils.encryption import get_encryptor
+from aim.utils.encryption import get_encryptor
 
 
 class LinearService:
@@ -140,7 +140,7 @@ class LinearService:
             task_id: Task ID
             status: New status (backlog, in_progress, completed, canceled)
         """
-        from AIM.src.aim.models.linear_task import LinearTask as LinearTaskModel
+        from aim.models.linear_task import LinearTask as LinearTaskModel
 
         stmt = select(LinearTaskModel).where(LinearTaskModel.id == task_id)
         result = await self.db.execute(stmt)
@@ -160,7 +160,7 @@ class LinearService:
         Args:
             linear_issue_id: Linear issue ID
         """
-        from AIM.src.aim.models.linear_task import LinearTask as LinearTaskModel
+        from aim.models.linear_task import LinearTask as LinearTaskModel
 
         # Fetch issue from Linear
         issue = await self.client.get_issue(linear_issue_id)

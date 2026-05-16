@@ -1,6 +1,6 @@
 """CI Swarm - Competitive Intelligence agents."""
 
-from AIM.src.aim.agents.ci_swarm.hh_agent import Competitor, HHAgent, Vacancy, VacancyChange
+from aim.agents.ci_swarm.hh_agent import Competitor, HHAgent, Vacancy, VacancyChange
 
 __all__ = [
     "Competitor",

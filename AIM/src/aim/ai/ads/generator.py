@@ -10,7 +10,7 @@ import asyncio
 from typing import Any, List, Dict
 from datetime import datetime, timezone
 
-from AIM.src.aim.ai.ads.schemas import (
+from aim.ai.ads.schemas import (
     AdCopyResult,
     AdCopyVariant,
     ComplianceCheck,

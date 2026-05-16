@@ -4,7 +4,7 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from AIM.src.aim.teacher.code_analyzer import CodeAnalyzer
+from aim.teacher.code_analyzer import CodeAnalyzer
 
 
 class GapSeverity(Enum):

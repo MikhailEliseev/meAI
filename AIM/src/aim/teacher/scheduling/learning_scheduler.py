@@ -12,7 +12,7 @@ from typing import Any
 
 import structlog
 
-from AIM.src.aim.teacher.scheduling.system_auditor import (
+from aim.teacher.scheduling.system_auditor import (
     SystemAuditReport,
     SubagentHealth,
     Priority,

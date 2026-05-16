@@ -16,8 +16,8 @@ from typing import Any
 
 import numpy as np
 
-from AIM.src.aim.ai.lead_scoring.feature_extractor import LeadFeatureExtractor
-from AIM.src.aim.ai.lead_scoring.schemas import LeadScore
+from aim.ai.lead_scoring.feature_extractor import LeadFeatureExtractor
+from aim.ai.lead_scoring.schemas import LeadScore
 from aim.models.lead import Lead
 
 

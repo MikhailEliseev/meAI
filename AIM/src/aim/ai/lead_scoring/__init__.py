@@ -10,9 +10,9 @@ Components:
 Part of: Phase 11 Sprint 2 - Task 2.2
 """
 
-from AIM.src.aim.ai.lead_scoring.feature_extractor import LeadFeatureExtractor
-from AIM.src.aim.ai.lead_scoring.schemas import LeadScore
-from AIM.src.aim.ai.lead_scoring.scoring_service import LeadScoringService
+from aim.ai.lead_scoring.feature_extractor import LeadFeatureExtractor
+from aim.ai.lead_scoring.schemas import LeadScore
+from aim.ai.lead_scoring.scoring_service import LeadScoringService
 
 __all__ = [
     "LeadFeatureExtractor",

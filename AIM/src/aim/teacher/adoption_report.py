@@ -14,8 +14,8 @@ from pathlib import Path
 
 import structlog
 
-from AIM.src.aim.teacher.skills.skill_selector import Skill
-from AIM.src.aim.teacher.adoption.full_adopter import AdoptionResult
+from aim.teacher.skills.skill_selector import Skill
+from aim.teacher.adoption.full_adopter import AdoptionResult
 
 logger = structlog.get_logger()
 

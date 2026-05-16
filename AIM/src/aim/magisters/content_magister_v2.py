@@ -15,15 +15,15 @@ from typing import Any
 
 import structlog
 
-from AIM.src.aim.subagents.content.content_brief_generator import (
+from aim.subagents.content.content_brief_generator import (
     ContentBriefGenerator,
     ContentBrief,
 )
-from AIM.src.aim.subagents.content.content_quality_checker import (
+from aim.subagents.content.content_quality_checker import (
     ContentQualityChecker,
     ContentQualityReport,
 )
-from AIM.src.aim.subagents.content.content_calendar_manager import (
+from aim.subagents.content.content_calendar_manager import (
     ContentCalendarManager,
     ContentCalendarReport,
 )
@@ -170,7 +170,7 @@ class ContentMagisterV2:
             self.logger.error("phase_3_failed", error=str(e))
             errors.append(f"Calendar Planning failed: {str(e)}")
             # Create empty calendar report to continue workflow
-            from AIM.src.aim.subagents.content.content_calendar_manager import (
+            from aim.subagents.content.content_calendar_manager import (
                 CalendarMetrics,
             )
 

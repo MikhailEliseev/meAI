@@ -4,18 +4,18 @@
 from pathlib import Path
 import structlog
 
-from AIM.src.aim.teacher.audit_report import AuditReportGenerator, AuditResult
-from AIM.src.aim.teacher.code_analyzer import CodeAnalyzer
-from AIM.src.aim.teacher.gap_detector import GapDetector, GapSeverity
-from AIM.src.aim.teacher.github_finder import GitHubFinder
-from AIM.src.aim.teacher.reference_repos import get_reference_repos
-from AIM.src.aim.teacher.repo_cloner import RepoCloner
-from AIM.src.aim.teacher.subagent_inventory import SubagentInventory
-from AIM.src.aim.teacher.upgrade_applier import UpgradeApplier
-from AIM.src.aim.teacher.skills.skill_selector import SkillSelector, Skill
-from AIM.src.aim.teacher.skills.skill_comparator import SkillComparator, ComparisonResult
-from AIM.src.aim.teacher.adoption.full_adopter import FullAdopter, AdoptionResult
-from AIM.src.aim.teacher.adoption_report import AdoptionReportGenerator
+from aim.teacher.audit_report import AuditReportGenerator, AuditResult
+from aim.teacher.code_analyzer import CodeAnalyzer
+from aim.teacher.gap_detector import GapDetector, GapSeverity
+from aim.teacher.github_finder import GitHubFinder
+from aim.teacher.reference_repos import get_reference_repos
+from aim.teacher.repo_cloner import RepoCloner
+from aim.teacher.subagent_inventory import SubagentInventory
+from aim.teacher.upgrade_applier import UpgradeApplier
+from aim.teacher.skills.skill_selector import SkillSelector, Skill
+from aim.teacher.skills.skill_comparator import SkillComparator, ComparisonResult
+from aim.teacher.adoption.full_adopter import FullAdopter, AdoptionResult
+from aim.teacher.adoption_report import AdoptionReportGenerator
 
 
 class TeacherAgent:

@@ -5,7 +5,7 @@ import ast
 import re
 from typing import Any
 
-from AIM.src.aim.teacher.pattern_extractor import ExtractedPattern
+from aim.teacher.pattern_extractor import ExtractedPattern
 
 
 class CodeGenerator:

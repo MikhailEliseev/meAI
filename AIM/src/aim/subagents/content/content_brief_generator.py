@@ -16,10 +16,10 @@ from typing import Any
 
 import structlog
 
-from AIM.src.aim.subagents.competitive_intel.agents.ci_content_improved import (
+from aim.subagents.competitive_intel.agents.ci_content_improved import (
     CIContentAgentImproved,
 )
-from AIM.src.aim.subagents.seo.keyword_research_agent import KeywordResearchAgent
+from aim.subagents.seo.keyword_research_agent import KeywordResearchAgent
 
 
 @dataclass

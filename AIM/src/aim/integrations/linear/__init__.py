@@ -10,8 +10,8 @@ Components:
 Part of: Phase 11 Sprint 2 - Task 2.3
 """
 
-from AIM.src.aim.integrations.linear.client import LinearClient
-from AIM.src.aim.integrations.linear.schemas import (
+from aim.integrations.linear.client import LinearClient
+from aim.integrations.linear.schemas import (
     LinearIssue,
     LinearLabel,
     LinearProject,
@@ -20,7 +20,7 @@ from AIM.src.aim.integrations.linear.schemas import (
     LinearUser,
     LinearWorkflowState,
 )
-from AIM.src.aim.integrations.linear.service import LinearService
+from aim.integrations.linear.service import LinearService
 
 __all__ = [
     "LinearClient",

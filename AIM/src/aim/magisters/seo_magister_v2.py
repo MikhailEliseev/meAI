@@ -15,19 +15,19 @@ from typing import Any, Optional
 
 import structlog
 
-from AIM.src.aim.subagents.seo.keyword_research_agent import (
+from aim.subagents.seo.keyword_research_agent import (
     KeywordResearchAgent,
     KeywordResearchResult,
 )
-from AIM.src.aim.subagents.seo.onpage_optimizer import (
+from aim.subagents.seo.onpage_optimizer import (
     OnPageOptimizer,
     OnPageReport,
 )
-from AIM.src.aim.subagents.seo.schema_generator import (
+from aim.subagents.seo.schema_generator import (
     SchemaGenerator,
     SchemaReport,
 )
-from AIM.src.aim.magisters.linear_mixin import LinearMixin
+from aim.magisters.linear_mixin import LinearMixin
 
 
 @dataclass
@@ -185,7 +185,7 @@ class SEOMagisterV2(LinearMixin):
             errors.append(f"On-Page Optimization failed: {str(e)}")
             self.add_linear_progress_update("Phase 2: On-Page Optimization", "failed", str(e))
             # Create empty report to continue workflow
-            from AIM.src.aim.subagents.seo.onpage_optimizer import (
+            from aim.subagents.seo.onpage_optimizer import (
                 TitleTagAnalysis,
                 MetaDescriptionAnalysis,
                 HeaderStructure,

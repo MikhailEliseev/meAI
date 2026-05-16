@@ -14,12 +14,12 @@ from typing import Any, Optional
 
 import structlog
 
-from AIM.src.aim.subagents.api_clients.ga4_client import (
+from aim.subagents.api_clients.ga4_client import (
     GA4Client,
     GA4Credentials,
     GA4TrafficData,
 )
-from AIM.src.aim.subagents.api_clients.yandex_metrica_client import (
+from aim.subagents.api_clients.yandex_metrica_client import (
     YandexMetricaClient,
     YandexMetricaCredentials,
     YandexMetricaTrafficData,

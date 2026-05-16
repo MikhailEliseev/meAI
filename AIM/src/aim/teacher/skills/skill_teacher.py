@@ -21,10 +21,10 @@ import subprocess
 
 import structlog
 
-from AIM.src.aim.teacher.skills.skill_comparator import SkillComparator
-from AIM.src.aim.teacher.skills.skill_extractor import SkillExtractor
-from AIM.src.aim.teacher.skills.skill_selector import Skill, SkillSelector
-from AIM.src.aim.teacher.skills.skill_applier import SkillApplier
+from aim.teacher.skills.skill_comparator import SkillComparator
+from aim.teacher.skills.skill_extractor import SkillExtractor
+from aim.teacher.skills.skill_selector import Skill, SkillSelector
+from aim.teacher.skills.skill_applier import SkillApplier
 
 logger = structlog.get_logger()
 
