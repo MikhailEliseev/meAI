@@ -5,7 +5,7 @@ import {
   type EmailSequence,
   type LeadScore,
 } from "@/lib/email-sequences";
-import { sendTemplateEmail } from "@/lib/sendgrid-templates";
+import { scheduleEmailSequence } from "@/lib/email-queue";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,7 +27,8 @@ interface SendSequenceRequest {
 interface SendSequenceResponse {
   success: boolean;
   sequenceId: string;
-  emailsSent: number;
+  jobIds: string[];
+  emailsScheduled: number;
   nextEmailAt?: string;
   error?: string;
 }
@@ -35,7 +36,7 @@ interface SendSequenceResponse {
 /**
  * POST /api/email/send-sequence
  *
- * Trigger email sequence for a lead based on their tier
+ * Schedule email sequence for a lead based on their tier
  */
 export async function POST(request: NextRequest): Promise<NextResponse<SendSequenceResponse>> {
   try {
@@ -47,7 +48,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<SendSeque
         {
           success: false,
           sequenceId: "",
-          emailsSent: 0,
+          jobIds: [],
+          emailsScheduled: 0,
           error: "Missing required fields",
         },
         { status: 400 }
@@ -66,54 +68,20 @@ export async function POST(request: NextRequest): Promise<NextResponse<SendSeque
       body.score
     );
 
-    // Send first email immediately
-    const firstStep = sequence.steps[startStep];
-    if (!firstStep) {
-      return NextResponse.json(
-        {
-          success: false,
-          sequenceId: sequence.id,
-          emailsSent: 0,
-          error: "Invalid start step",
-        },
-        { status: 400 }
-      );
-    }
-
-    const result = await sendTemplateEmail({
-      to: body.email,
-      templateId: firstStep.templateId,
-      dynamicTemplateData: templateData,
-    });
-
-    if (!result.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          sequenceId: sequence.id,
-          emailsSent: 0,
-          error: result.error || "Failed to send email",
-        },
-        { status: 500 }
-      );
-    }
-
-    // Schedule remaining emails
-    // TODO: Implement email scheduling (Phase 2.4)
-    // For now, we only send the first email
-    // Future: Use a job queue (BullMQ, Inngest, etc.) to schedule delayed emails
-
-    // Calculate next email time
-    const nextStep = sequence.steps[startStep + 1];
-    const nextEmailAt = nextStep
-      ? new Date(Date.now() + nextStep.delayMinutes * 60 * 1000).toISOString()
-      : undefined;
+    // Schedule email sequence
+    const { jobIds, nextEmailAt } = await scheduleEmailSequence(
+      sequence,
+      body.email,
+      templateData,
+      startStep
+    );
 
     return NextResponse.json({
       success: true,
       sequenceId: sequence.id,
-      emailsSent: 1,
-      nextEmailAt,
+      jobIds,
+      emailsScheduled: jobIds.length,
+      nextEmailAt: nextEmailAt?.toISOString(),
     });
   } catch (error) {
     console.error("[Email Sequence] Error:", error);
@@ -121,7 +89,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<SendSeque
       {
         success: false,
         sequenceId: "",
-        emailsSent: 0,
+        jobIds: [],
+        emailsScheduled: 0,
         error: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
