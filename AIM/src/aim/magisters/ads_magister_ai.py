@@ -161,7 +161,6 @@ class AdsMagisterAI(AdsMagister):
                 "warnings": result.compliance.warnings,
             },
             "generation_cost": result.generation_cost,
-            "generated_at": result.generated_at.isoformat(),
         }
 
     async def optimize_budget(
@@ -268,10 +267,6 @@ class AdsMagisterAI(AdsMagister):
                 "type": alert.type,
                 "severity": alert.severity,
                 "description": alert.description,
-                "metric_name": alert.metric_name,
-                "current_value": alert.current_value,
-                "expected_value": alert.expected_value,
-                "deviation_pct": alert.deviation_pct,
                 "recommended_action": alert.recommended_action,
                 "detected_at": alert.detected_at.isoformat(),
             }
@@ -348,6 +343,3 @@ class AdsMagisterAI(AdsMagister):
         await self.budget_optimizer.close()
         await self.anomaly_detector.close()
         await self.forecaster.close()
-
-        # Close base magister
-        await super().close()
