@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добро пожаловать в AIM Agency</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #0066cc;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        h1 {
+            color: #0066cc;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .value-prop {
+            background-color: #e6f2ff;
+            padding: 25px;
+            border-radius: 6px;
+            margin: 25px 0;
+        }
+        .benefits {
+            margin: 25px 0;
+        }
+        .benefit-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .benefit-item:last-child {
+            border-bottom: none;
+        }
+        .benefit-icon {
+            display: inline-block;
+            width: 30px;
+            font-size: 20px;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #0066cc;
+            color: #ffffff;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        @media only screen and (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">AIM Agency</div>
+            <p style="color: #666; margin: 0;">AI-первое маркетинговое агентство для медицинских клиник</p>
+        </div>
+
+        <h1>Добро пожаловать, {{ name }}!</h1>
+
+        <p>Спасибо за интерес к нашим услугам. Мы специализируемся на продвижении медицинских клиник и помогаем привлекать пациентов через современные маркетинговые каналы.</p>
+
+        <div class="value-prop">
+            <h3 style="margin-top: 0; color: #0066cc;">Почему клиники выбирают AIM Agency?</h3>
+            <p style="margin-bottom: 0;">Мы используем AI-технологии для анализа рынка, конкурентов и создания персонализированных стратегий продвижения. Это позволяет нам достигать результатов быстрее и эффективнее традиционных агентств.</p>
+        </div>
+
+        {{ ai_content }}
+
+        <div class="benefits">
+            <h3 style="color: #0066cc;">Что мы предлагаем для {{ specialty }}:</h3>
+
+            <div class="benefit-item">
+                <span class="benefit-icon">🎯</span>
+                <strong>SEO-продвижение</strong><br>
+                <span style="color: #666;">Выход в топ-3 Яндекса и Google по ключевым запросам вашей специализации</span>
+            </div>
+
+            <div class="benefit-item">
+                <span class="benefit-icon">✍️</span>
+                <strong>Контент-маркетинг</strong><br>
+                <span style="color: #666;">Экспертные статьи, кейсы и материалы, которые привлекают пациентов</span>
+            </div>
+
+            <div class="benefit-item">
+                <span class="benefit-icon">📱</span>
+                <strong>Таргетированная реклама</strong><br>
+                <span style="color: #666;">Яндекс.Директ, VK Реклама с точным таргетингом на вашу аудиторию</span>
+            </div>
+
+            <div class="benefit-item">
+                <span class="benefit-icon">📊</span>
+                <strong>Аналитика и отчётность</strong><br>
+                <span style="color: #666;">Прозрачные метрики: стоимость лида, конверсия, ROI</span>
+            </div>
+        </div>
+
+        <center>
+            <a href="{{ consultation_url }}" class="cta-button">Получить бесплатную консультацию</a>
+        </center>
+
+        <p style="margin-top: 30px;">В следующем письме я расскажу, как мы помогли клинике {{ specialty }} увеличить поток пациентов на 150% за 3 месяца.</p>
+
+        <p>С уважением,<br>
+        <strong>{{ manager_name }}</strong><br>
+        {{ manager_phone }}</p>
+
+        <div class="footer">
+            <p>AIM Agency - AI-первое маркетинговое агентство</p>
+            <p>Специализируемся на продвижении медицинских клиник</p>
+            <p style="margin-top: 15px;">
+                <a href="{{ unsubscribe_url }}" style="color: #666;">Отписаться от рассылки</a>
+            </p>
+            <p style="margin-top: 10px; font-size: 11px;">
+                Это письмо отправлено в соответствии с ФЗ-152 "О персональных данных".<br>
+                Вы получили это письмо, потому что оставили заявку на нашем сайте.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

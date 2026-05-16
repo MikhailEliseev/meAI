@@ -4,7 +4,8 @@ AIM Models Package
 Data models for AIM Agency.
 """
 
-from AIM.src.aim.models.analytics_models import (
+from aim.storage.models import Base
+from aim.models.analytics_models import (
     DomainMetrics,
     AggregatedMetrics,
     Correlation,
@@ -12,10 +13,15 @@ from AIM.src.aim.models.analytics_models import (
     CrossDomainMetrics,
     AnalyticsAlert,
 )
-from AIM.src.aim.models.lead import Lead
-from AIM.src.aim.models.linear_task import LinearTask
+from aim.models.lead import Lead
+from aim.models.linear_task import LinearTask
+from aim.models.email_workflow import EmailWorkflow
+from aim.models.scheduled_email import ScheduledEmail
+from aim.models.email_event import EmailEvent
+from aim.models.email_template import EmailTemplate
 
 __all__ = [
+    "Base",
     "DomainMetrics",
     "AggregatedMetrics",
     "Correlation",
@@ -24,4 +30,8 @@ __all__ = [
     "AnalyticsAlert",
     "Lead",
     "LinearTask",
+    "EmailWorkflow",
+    "ScheduledEmail",
+    "EmailEvent",
+    "EmailTemplate",
 ]

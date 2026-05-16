@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Еженедельный дайджест для медицинских клиник</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #0066cc;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        .digest-date {
+            color: #666;
+            font-size: 14px;
+        }
+        h1 {
+            color: #0066cc;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .article {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #0066cc;
+        }
+        .article-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        .article-meta {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .read-more {
+            color: #0066cc;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .tip-box {
+            background-color: #fff9e6;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+        }
+        .stats {
+            background-color: #e6f2ff;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .stat-item {
+            display: inline-block;
+            margin: 0 15px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0066cc;
+        }
+        .cta-soft {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #0066cc;
+            color: #ffffff;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        @media only screen and (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 20px;
+            }
+            .stat-item {
+                display: block;
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">AIM Agency</div>
+            <p style="color: #666; margin: 5px 0 0 0;">Еженедельный дайджест для медицинских клиник</p>
+            <p class="digest-date">{{ digest_date }}</p>
+        </div>
+
+        <h1>📰 Главное за неделю</h1>
+
+        <p>Здравствуйте, {{ name }}!</p>
+
+        <p>Каждую неделю мы собираем для вас самые важные новости, тренды и советы по маркетингу медицинских клиник.</p>
+
+        {{ ai_digest_intro }}
+
+        <div class="article">
+            <div class="article-title">📈 Тренд недели: {{ trend_title }}</div>
+            <div class="article-meta">{{ specialty }} • {{ trend_category }}</div>
+            <p>{{ trend_summary }}</p>
+            <a href="{{ trend_url }}" class="read-more">Читать полностью →</a>
+        </div>
+
+        <div class="tip-box">
+            <h3 style="margin-top: 0; color: #ffc107;">💡 Совет недели</h3>
+            <p style="margin-bottom: 0;">{{ weekly_tip }}</p>
+        </div>
+
+        <div class="article">
+            <div class="article-title">📊 Кейс недели: {{ case_title }}</div>
+            <div class="article-meta">{{ case_specialty }} • {{ case_result }}</div>
+            <p>{{ case_summary }}</p>
+            <a href="{{ case_url }}" class="read-more">Читать кейс →</a>
+        </div>
+
+        <div class="stats">
+            <h3 style="margin-top: 0; color: #0066cc;">Статистика рынка</h3>
+            <div class="stat-item">
+                <div class="stat-value">{{ market_stat_1_value }}</div>
+                <div style="font-size: 12px; color: #666;">{{ market_stat_1_label }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ market_stat_2_value }}</div>
+                <div style="font-size: 12px; color: #666;">{{ market_stat_2_label }}</div>
+            </div>
+        </div>
+
+        <div class="article">
+            <div class="article-title">🎓 Образовательный материал: {{ education_title }}</div>
+            <div class="article-meta">Маркетинг • {{ education_category }}</div>
+            <p>{{ education_summary }}</p>
+            <a href="{{ education_url }}" class="read-more">Изучить →</a>
+        </div>
+
+        {{ ai_digest_content }}
+
+        <div class="cta-soft">
+            <h3 style="margin-top: 0; color: #0066cc;">Хотите персональную консультацию?</h3>
+            <p>Мы можем провести бесплатный аудит вашего маркетинга и показать точки роста.</p>
+            <a href="{{ consultation_url }}" class="cta-button">Получить консультацию</a>
+        </div>
+
+        <p style="margin-top: 30px;">Следующий дайджест выйдет через неделю. Если есть темы, которые вас интересуют, напишите мне — включу их в следующий выпуск.</p>
+
+        <p>С уважением,<br>
+        <strong>{{ manager_name }}</strong><br>
+        AIM Agency</p>
+
+        <div class="footer">
+            <p>AIM Agency - AI-первое маркетинговое агентство</p>
+            <p>Специализируемся на продвижении медицинских клиник</p>
+            <p style="margin-top: 15px;">
+                <a href="{{ unsubscribe_url }}" style="color: #666;">Отписаться от рассылки</a>
+            </p>
+            <p style="margin-top: 10px; font-size: 11px;">
+                Это письмо отправлено в соответствии с ФЗ-152 "О персональных данных".<br>
+                Вы получили это письмо, потому что оставили заявку на нашем сайте.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

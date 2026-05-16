@@ -19,7 +19,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
-from AIM.src.aim.models.lead import Lead
+from aim.models.lead import Lead
 from AIM.src.aim.schemas.lead import MedicalSpecialty
 
 

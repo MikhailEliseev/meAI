@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from AIM.src.aim.ai.lead_scoring.schemas import LeadScore
 from AIM.src.aim.integrations.linear.client import LinearClient
 from AIM.src.aim.integrations.linear.schemas import LinearIssue, LinearTask
-from AIM.src.aim.models.lead import Lead
+from aim.models.lead import Lead
 from AIM.src.aim.utils.encryption import get_encryptor
 
 
