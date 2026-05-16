@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { paymentAPI, PaymentRequest } from "@/lib/api/payment";
 
 interface PaymentFormProps {
   amount: number;
@@ -120,23 +121,28 @@ export function PaymentForm({
     setLoading(true);
 
     try {
-      // STUB: Mock payment processing
-      console.log("[Payment] Processing payment:", {
+      // Create payment request
+      const request: PaymentRequest = {
         amount,
-        description,
-        customerEmail,
-        cardNumber: cardNumber.slice(-4),
-      });
+        currency: "RUB",
+        payment_method: "card",
+        customer_name: cardholderName,
+        customer_email: customerEmail,
+        card_number: cardNumber.replace(/\s/g, ""),
+        card_expiry: expiryDate,
+        card_cvv: cvv,
+        metadata: {
+          description,
+        },
+      };
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Process payment via API
+      const response = await paymentAPI.createPayment(request);
 
-      // Mock success
-      const paymentId = `STUB-${Date.now()}`;
-      console.log("[Payment] Payment successful:", paymentId);
+      console.log("[Payment] Payment successful:", response.payment_id);
 
       if (onSuccess) {
-        onSuccess(paymentId);
+        onSuccess(response.payment_id);
       }
     } catch (error) {
       console.error("[Payment] Error:", error);
@@ -331,9 +337,9 @@ export function PaymentForm({
       {/* STUB Notice */}
       <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-200">
         <p className="text-sm text-yellow-800">
-          ⚠️ <strong>STUB:</strong> Это заглушка для разработки. Реальная
-          интеграция с ЮKassa будет в Phase 12. Любые данные карты будут
-          приняты.
+          ⚠️ <strong>STUB:</strong> Используется Helcim stub для разработки.
+          Реальная интеграция с ЮKassa будет в Phase 12. Платежи обрабатываются
+          через backend API, но всегда возвращают успех.
         </p>
       </div>
     </motion.form>
