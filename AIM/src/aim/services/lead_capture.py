@@ -336,11 +336,41 @@ class LeadCaptureService:
             This runs in background. Errors are logged but don't fail capture.
         """
         try:
-            # TODO: Implement async processing
-            # 1. AI Lead Scoring (Task 2.2)
-            # 2. Create Linear task (Task 2.3)
-            # 3. Send email automation (Task 2.4)
-            pass
+            # 1. Load lead from database
+            stmt = select(LeadModel).where(LeadModel.id == lead_id)
+            result = await self.db.execute(stmt)
+            lead = result.scalar_one_or_none()
+
+            if not lead:
+                print(f"[ERROR] Lead {lead_id} not found for processing")
+                return
+
+            # 2. Score lead (Task 2.2)
+            from AIM.src.aim.ai.lead_scoring.scoring_service import LeadScoringService
+
+            scoring_service = LeadScoringService(model_path=None)  # Rule-based for MVP
+            score_result = await scoring_service.score_lead(
+                lead=lead,
+                metadata={
+                    "user_agent": lead.user_agent,
+                    "utm_campaign": lead.utm_campaign,
+                    "session_duration": 0,  # TODO: Track from frontend
+                },
+            )
+
+            # 3. Update lead with score
+            lead.score = score_result.score
+            lead.tier = score_result.tier
+            lead.processed = True
+            await self.db.commit()
+
+            print(
+                f"[INFO] Lead {lead_id} scored: {score_result.score} ({score_result.tier})"
+            )
+
+            # 4. Create Linear task (Task 2.3 - TODO)
+            # 5. Send email automation (Task 2.4 - TODO)
+
         except Exception as e:
             # Log error but don't fail (capture already succeeded)
             print(f"[ERROR] Lead processing failed for {lead_id}: {e}")
