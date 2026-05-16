@@ -27,7 +27,7 @@ const config: Config = {
     '!**/.next/**',
   ],
   transformIgnorePatterns: [
-    'node_modules/(?!(bullmq|msgpackr|ioredis)/)',
+    'node_modules/(?!(bullmq|msgpackr|ioredis|uuid)/)',
   ],
 }
 

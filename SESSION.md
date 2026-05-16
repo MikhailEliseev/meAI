@@ -857,6 +857,128 @@ REDIS_PORT=6379
 
 ---
 
+---
+
+#### Task 3.1: Payment Integration (ЮKassa stub) ✅ COMPLETED (6 hours)
+**Date:** 2026-05-16 11:53 GMT+3
+
+**Created:**
+- ЮKassa API client stub (Russian payment processor)
+- Invoice generator with Russian VAT calculation
+- Payment webhook handler
+- Payment form with card validation (Luhn algorithm)
+- Payment history with invoice display
+- Billing page with two-column layout
+- 69 test cases (all passing)
+
+**Files Created (12 files, 2,500+ lines):**
+- `frontend/lib/payment/yukassa-client.ts` (350 lines) - ЮKassa API client stub
+- `frontend/lib/payment/invoice-generator.ts` (300 lines) - Invoice generation with VAT
+- `frontend/app/api/webhooks/yukassa/route.ts` (120 lines) - Webhook handler
+- `frontend/app/api/payment/create/route.ts` (150 lines) - Payment creation API
+- `frontend/components/payment/PaymentForm.tsx` (400 lines) - Payment form with validation
+- `frontend/components/payment/PaymentHistory.tsx` (350 lines) - Invoice history
+- `frontend/app/(dashboard)/billing/page.tsx` (50 lines) - Billing page
+- `frontend/__tests__/lib/payment/yukassa-client.test.ts` (200 lines) - 15 tests
+- `frontend/__tests__/lib/payment/invoice-generator.test.ts` (250 lines) - 15 tests
+- `frontend/__tests__/components/payment/PaymentForm.test.tsx` (350 lines) - 20 tests
+- `frontend/__tests__/components/payment/PaymentHistory.test.tsx` (300 lines) - 19 tests
+- `frontend/jest.setup.ts` - Added uuid mock
+
+**Files Modified:**
+- `frontend/jest.config.ts` - Added uuid to transformIgnorePatterns
+- `frontend/package.json` - Added uuid dependency
+
+**ЮKassa Client Features:**
+- Payment creation with confirmation URL
+- Payment capture (auto or manual)
+- Payment cancellation
+- Refund creation
+- Recurring payments (subscriptions)
+- Webhook signature verification
+- All methods return mock data with delays (300-500ms)
+- Extensive STUB notices for Phase 12 real integration
+
+**Invoice Generator Features:**
+- Russian invoice format: AIM-YYYY-NNN (e.g., AIM-2026-001)
+- VAT calculation: 0%, 10%, 20%
+- Invoice totals: subtotal, VAT amount, total
+- Russian formatting: formatCurrency (150 000 ₽), formatDate (16 мая 2026 г.)
+- Invoice status: draft, sent, paid, overdue, canceled
+- Payment methods: bank_card, bank_transfer, cash
+- Customer data: name, email, phone, INN
+
+**Payment Form Features:**
+- Card number validation (Luhn algorithm)
+- Real-time formatting: card number (1234 5678 9012 3456), expiry (MM/YY)
+- CVV validation (3-4 digits)
+- Cardholder name (uppercase)
+- Field-level validation with error messages
+- Loading state during payment
+- Security notice (PCI DSS, ЮKassa)
+- STUB notice for development
+
+**Payment History Features:**
+- Invoice list with filters (all, paid, pending, overdue)
+- Status badges with color coding
+- Invoice details: items, totals, dates
+- Actions: Download PDF, Pay (for pending)
+- Paid date display for completed invoices
+- Empty state for no invoices
+- Framer Motion animations
+
+**Webhook Handler:**
+- Handles three event types:
+  - payment.succeeded - Update invoice status to paid
+  - payment.canceled - Update invoice status to canceled
+  - refund.succeeded - Process refund
+- Signature verification
+- TODO: Phase 2.3 email notifications, Phase 7.5 Linear updates
+
+**Payment API:**
+- POST /api/payment/create - Create payment and invoice
+- GET /api/payment/create - Return pricing plans (Starter, Professional, Enterprise)
+
+**Pricing Plans:**
+- Starter: 150K RUB/month (180K with VAT)
+- Professional: 250K RUB/month (300K with VAT) - Recommended
+- Enterprise: 500K RUB/month (600K with VAT)
+
+**Tests:** 69/69 passing ✅
+- ЮKassa client: 15 tests (payment creation, capture, cancel, refund, recurring)
+- Invoice generator: 15 tests (generation, VAT, totals, formatting, status updates)
+- PaymentForm: 20 tests (rendering, formatting, validation, submission)
+- PaymentHistory: 19 tests (rendering, filters, display, actions, empty state)
+
+**Russian Market Adaptation:**
+- ЮKassa instead of Stripe/Helcim (works in Russia)
+- Russian invoice format with VAT 20%
+- Russian currency formatting (₽)
+- Russian date formatting (16 мая 2026 г.)
+- INN field for legal entities
+- Russian payment methods
+
+**Dependencies Added:**
+- `uuid` - Invoice ID generation
+- `@types/uuid` - TypeScript types
+
+**Integration:**
+- Billing page at `/billing` (dashboard route)
+- Two-column layout: payment form + payment history
+- Mock customer email (TODO: get from session in Phase 7.5)
+- Non-blocking payment processing (2s delay)
+
+**TODO (Phase 12):**
+- Real ЮKassa API integration (replace stubs)
+- PDF invoice generation
+- Email invoice delivery
+- Payment receipt generation
+- Subscription management
+- Payment retry logic
+- 3D Secure support
+
+---
+
 ## Summary
 
 **Progress:** 11/19 tasks completed (57.9%)  
