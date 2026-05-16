@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from aim.storage.models import Base
+from aim.database import Base
 
 # Add project root to Python path
 project_root = Path(__file__).parent.parent.parent
