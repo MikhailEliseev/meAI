@@ -20,6 +20,7 @@ from aim.models.scheduled_email import ScheduledEmail
 from aim.models.email_event import EmailEvent
 from aim.models.email_template import EmailTemplate
 from aim.models.payment import Payment
+from aim.models.document import Document
 
 __all__ = [
     "Base",
@@ -36,4 +37,5 @@ __all__ = [
     "EmailEvent",
     "EmailTemplate",
     "Payment",
+    "Document",
 ]

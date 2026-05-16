@@ -15,12 +15,14 @@ class APISettings(BaseSettings):
     Attributes:
         semrush_api_key: SEMrush API key (required)
         ahrefs_api_key: Ahrefs API key (optional, fallback)
+        anthropic_api_key: Anthropic API key for AI extraction
         max_cost_usd: Maximum API cost per request in USD
         min_keywords: Minimum keywords to return
         min_volume: Minimum search volume filter
         cache_ttl: Cache TTL in seconds
         rate_limit_capacity: Rate limiter bucket capacity
         rate_limit_refill: Rate limiter refill rate (requests/sec)
+        upload_dir: Directory for uploaded documents
     """
 
     model_config = SettingsConfigDict(
@@ -40,6 +42,17 @@ class APISettings(BaseSettings):
         None,
         description="Ahrefs API key (optional fallback)",
         min_length=10,
+    )
+    anthropic_api_key: str = Field(
+        ...,
+        description="Anthropic API key for AI document extraction",
+        min_length=10,
+    )
+
+    # File upload settings
+    upload_dir: str = Field(
+        default="./uploads",
+        description="Directory for uploaded documents",
     )
 
     # Budget and limits

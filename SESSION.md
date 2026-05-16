@@ -1804,3 +1804,162 @@ Display result to user
 - Full frontend-backend integration working
 - Ready for Task 3.3 (AI Document Processing)
 
+
+---
+
+## Phase 11: Client Acquisition - Sprint 3 Task 3.3 Complete ✅
+
+**Date:** 2026-05-17 01:14 GMT+3  
+**Status:** ✅ Task 3.3 Complete (AI Document Processing)  
+**Duration:** ~4 hours
+
+---
+
+### Phase 11 Sprint 3 - Task 3.3: AI Document Processing ✅ COMPLETED
+
+**Implementation:**
+Implemented complete AI-powered document processing pipeline with OCR, AI extraction, validation, and API endpoints.
+
+**Components Created:**
+
+1. **Document Model** (`AIM/src/aim/models/document.py`, 90 lines):
+   - SQLAlchemy async model for clinic onboarding documents
+   - Document types: license, inn, ogrn, contract
+   - Processing status: pending → processing → completed/failed
+   - Validation status: valid, invalid, needs_review
+   - OCR text storage, extracted data (JSON), confidence scores
+   - Audit trail: uploaded_at, processed_at, created_by, ip_address
+   - Indexes: lead_id, document_type, status, uploaded_at
+
+2. **Document Schemas** (`AIM/src/aim/schemas/document.py`, 117 lines):
+   - Pydantic v2 models for API validation
+   - ExtractedData: license info, clinic details, legal entity data (INN, OGRN, KPP), director info
+   - Field validators: INN (10/12 digits), OGRN (13/15 digits), KPP (9 digits)
+   - ValidationResult: is_valid, confidence_score, errors, warnings
+   - Request/response models: DocumentUploadRequest, DocumentUploadResponse, DocumentStatusResponse, DocumentListResponse
+
+3. **OCR Service** (`AIM/src/aim/services/documents/ocr_service.py`, 248 lines):
+   - Tesseract OCR with Russian language support
+   - Image preprocessing: grayscale → contrast (2.0x) → sharpen → median filter
+   - PDF support: converts pages to images, processes each page
+   - Text cleaning: removes extra whitespace, empty lines
+   - Confidence scoring: average, min, max per word
+   - Supported formats: JPEG, PNG, TIFF, PDF
+
+4. **AI Extractor** (`AIM/src/aim/services/documents/ai_extractor.py`, 267 lines):
+   - Claude API integration for structured data extraction
+   - Document-specific prompts (Russian language):
+     - License: номер лицензии, дата выдачи, орган, клиника, ИНН, ОГРН, директор
+     - INN: ИНН, название организации, адрес, КПП, ОГРН, директор
+     - OGRN: ОГРН, название организации, адрес, ИНН, КПП, директор
+     - Contract: название клиники, адрес, ИНН, ОГРН, директор, должность
+   - JSON output parsing with error handling
+   - Confidence calculation: field completeness + required fields presence
+
+5. **Validator Service** (`AIM/src/aim/services/documents/validator.py`, 250 lines):
+   - Russian legal entity validation:
+     - INN checksum (10 digits: 1 checksum, 12 digits: 2 checksums)
+     - OGRN checksum (13 digits: mod 11, 15 digits: mod 13)
+     - KPP format (9 digits: tax authority + reason code + sequential)
+     - License number format (ЛО-XX-XX-XXXXXX)
+   - Required fields validation per document type
+   - Cross-field consistency checks (INN 10 → OGRN 13, INN 12 → OGRN 15)
+   - Confidence warnings (< 0.5: low, < 0.7: medium)
+
+6. **Document Processor** (`AIM/src/aim/services/documents/processor.py`, 200 lines):
+   - Complete processing pipeline orchestration:
+     1. OCR: Extract text from image/PDF
+     2. AI Extraction: Parse structured data from text
+     3. Validation: Verify data integrity and checksums
+     4. Storage: Save to database with status
+   - Reprocessing support for failed documents
+   - Processing statistics: fields extracted, errors count, processing time
+   - Error handling: creates failed status on exceptions
+
+7. **API Endpoints** (`AIM/src/aim/api/documents.py`, 350 lines):
+   - POST /api/documents/upload: Upload and process document
+     - File validation: type (PDF, JPEG, PNG, TIFF), size (max 10 MB)
+     - Lead validation: checks lead exists
+     - Async processing: OCR → AI → Validation
+     - Returns: document_id, status, message
+   - GET /api/documents/{document_id}: Get processing status
+     - Returns: status, extracted_data, validation_result
+   - GET /api/documents/lead/{lead_id}: List all documents for lead
+     - Optional filter by document_type
+     - Returns: list of documents with extracted data
+   - POST /api/documents/{document_id}/reprocess: Reprocess failed document
+
+8. **Settings Update** (`AIM/src/aim/config/settings.py`):
+   - Added anthropic_api_key: Anthropic API key for AI extraction
+   - Added upload_dir: Directory for uploaded documents (default: ./uploads)
+
+9. **Database Migration** (`AIM/alembic/versions/003_documents_table.py`):
+   - Created documents table with 17 fields
+   - Indexes: lead_id, document_type, status, uploaded_at
+   - JSON fields: extracted_data, validation_errors
+
+10. **Tests** (`AIM/tests/services/test_document_processing.py`, 536 lines):
+    - OCR Service: 4 tests (initialization, image extraction, PDF extraction, file not found)
+    - AI Extractor: 4 tests (initialization, license extraction, unsupported type, invalid JSON)
+    - Validator: 14 tests (INN valid/invalid, OGRN valid/invalid, KPP valid/invalid, license valid/invalid, extracted data validation, consistency checks)
+    - Document Processor: 6 tests (success, file not found, OCR failure, reprocessing, stats)
+    - **All 28 tests for processing services**
+
+11. **API Tests** (`AIM/tests/api/test_documents.py`, 350 lines):
+    - Upload: 5 tests (success, invalid type, lead not found, invalid file type, file too large)
+    - Status: 2 tests (success, not found)
+    - List: 3 tests (success, with filter, lead not found)
+    - Reprocess: 3 tests (success, not found, failure)
+    - **All 13 tests for API endpoints**
+
+**Key Features:**
+- Russian language OCR (Tesseract with rus model)
+- AI-powered data extraction (Claude API with Russian prompts)
+- Russian legal entity validation (INN, OGRN, KPP checksums)
+- Medical license format validation (ЛО-XX-XX-XXXXXX)
+- Image preprocessing for better OCR accuracy
+- PDF support with page-by-page processing
+- Confidence scoring and validation
+- Complete API for document upload and management
+- Reprocessing support for failed documents
+
+**Test Coverage:**
+```
+✅ 28/28 Document processing tests
+✅ 13/13 API endpoint tests
+✅ 41/41 total tests passing
+```
+
+**Files Changed (13 files, ~2,780 lines):**
+- New: `AIM/src/aim/models/document.py` (90 lines)
+- New: `AIM/src/aim/schemas/document.py` (117 lines)
+- New: `AIM/src/aim/services/documents/ocr_service.py` (248 lines)
+- New: `AIM/src/aim/services/documents/ai_extractor.py` (267 lines)
+- New: `AIM/src/aim/services/documents/validator.py` (250 lines)
+- New: `AIM/src/aim/services/documents/processor.py` (200 lines)
+- New: `AIM/src/aim/api/documents.py` (350 lines)
+- New: `AIM/tests/services/test_document_processing.py` (536 lines)
+- New: `AIM/tests/api/test_documents.py` (350 lines)
+- New: `AIM/alembic/versions/003_documents_table.py` (60 lines)
+- Modified: `AIM/src/aim/models/__init__.py` (added Document export)
+- Modified: `AIM/src/aim/config/settings.py` (added anthropic_api_key, upload_dir)
+- New: `AIM/src/aim/services/documents/__init__.py`
+
+**Dependencies Added:**
+```
+pytesseract>=0.3.10        # OCR engine
+pdf2image>=1.16.0          # PDF to image conversion
+Pillow>=10.0.0             # Image processing
+anthropic>=0.18.0          # Claude API client
+```
+
+**Russian Market Adaptations:**
+- Russian language OCR (Tesseract rus model)
+- Russian legal entity identifiers (ИНН, ОГРН, КПП)
+- Russian medical license format (ЛО-XX-XX-XXXXXX)
+- Russian prompts for AI extraction
+- Validation algorithms for Russian checksums
+
+**Next Steps:**
+- Task 3.4: Onboarding Workflow (14h) - Orchestrate complete onboarding flow
+
