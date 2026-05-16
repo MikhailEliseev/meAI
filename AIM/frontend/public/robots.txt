@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Disallow admin and API routes
+Disallow: /api/
+Disallow: /admin/
+
+# Sitemap
+Sitemap: https://iamaim.ru/sitemap.xml
+
+# Yandex-specific
+Host: iamaim.ru
