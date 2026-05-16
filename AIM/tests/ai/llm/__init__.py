@@ -1,1 +1,1 @@
-"""Tests for LLM module."""
+"""LLM Orchestrator tests."""

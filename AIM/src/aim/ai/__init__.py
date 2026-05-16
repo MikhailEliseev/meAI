@@ -1,11 +1,8 @@
-"""AI Enhancement Layer for AIM Agency.
+"""
+AI Enhancement Module
 
-This module provides AI capabilities across all agency operations:
-- LLM integration for content generation and analysis
-- AI-powered SEO recommendations
-- Automated ad copy optimization
-- Predictive analytics for campaigns
-- Smart bidding strategies
+Provides LLM integration, AI-powered SEO, ad copy generation,
+predictive analytics, and smart bidding capabilities.
 """
 
 __version__ = "0.1.0"

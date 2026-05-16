@@ -1,1 +1,1 @@
-"""Tests for AI Enhancement Layer."""
+"""AI Enhancement tests."""
