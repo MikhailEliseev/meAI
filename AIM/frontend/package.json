@@ -12,6 +12,7 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.96.0",
     "@hookform/resolvers": "^3.3.0",
     "@sendgrid/mail": "^8.1.6",
     "bullmq": "^5.76.8",
