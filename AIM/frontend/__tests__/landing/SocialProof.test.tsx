@@ -179,7 +179,7 @@ describe("Awards", () => {
     render(<Awards />);
 
     // Icons are rendered as text emojis
-    const container = screen.getByRole("region", { name: /awards-heading/i });
+    const container = screen.getByRole("region", { name: "Награды и сертификации" });
     expect(container).toBeInTheDocument();
   });
 });

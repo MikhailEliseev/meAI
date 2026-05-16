@@ -262,7 +262,7 @@ describe("FAQ", () => {
   it("has proper ARIA labels", () => {
     render(<FAQ />);
 
-    const section = screen.getByRole("region", { name: /faq-heading/i });
+    const section = screen.getByRole("region", { name: "Часто задаваемые вопросы" });
     expect(section).toBeInTheDocument();
 
     const searchInput = screen.getByLabelText(/Поиск по вопросам/i);

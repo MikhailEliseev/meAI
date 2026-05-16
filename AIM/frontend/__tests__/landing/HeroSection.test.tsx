@@ -86,7 +86,7 @@ describe("HeroSection", () => {
   it("has proper ARIA labels", () => {
     render(<HeroSection />);
 
-    const section = screen.getByRole("region", { name: /hero-heading/i });
+    const section = screen.getByRole("region", { name: "AI-маркетинг для медицинских клиник" });
     expect(section).toBeInTheDocument();
   });
 
