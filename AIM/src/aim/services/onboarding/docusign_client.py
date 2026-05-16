@@ -1,68 +1,69 @@
 """
 DocuSign API Client
 
-Handles electronic signature workflows for HIPAA BAA (Business Associate Agreement).
-
-Features:
-- Send BAA for signature
-- Track signature status
-- Download signed documents
-- Webhook handling for status updates
-- Audit trail
+Handles BAA (Business Associate Agreement) signature workflow.
 """
 
-from typing import Optional, Dict, Any, List
-from datetime import datetime, timedelta
-import httpx
+from typing import Dict, Any, Optional
+from datetime import datetime
 import structlog
-from pydantic import BaseModel
+import httpx
 
 logger = structlog.get_logger()
 
 
-class DocuSignConfig(BaseModel):
-    """DocuSign configuration"""
-    account_id: str
-    integration_key: str
-    user_id: str
-    private_key: str
-    base_url: str = "https://demo.docusign.net/restapi"  # Use demo for testing
-    oauth_base_url: str = "https://account-d.docusign.com"
-
-
-class EnvelopeStatus(BaseModel):
-    """Envelope status"""
-    envelope_id: str
-    status: str  # sent, delivered, completed, declined, voided
-    sent_at: Optional[datetime] = None
-    delivered_at: Optional[datetime] = None
-    signed_at: Optional[datetime] = None
-    declined_at: Optional[datetime] = None
-    decline_reason: Optional[str] = None
-
-
 class DocuSignClient:
     """
-    DocuSign API client for BAA signature workflow
-
-    Handles sending BAA documents for electronic signature and tracking status.
+    DocuSign API client for BAA signatures
+    
+    Features:
+    - Send BAA for e-signature
+    - Track signature status
+    - Download signed documents
+    - Webhook notifications
     """
 
-    def __init__(self, config: DocuSignConfig):
-        self.config = config
-        self.access_token: Optional[str] = None
-        self.token_expires_at: Optional[datetime] = None
+    def __init__(
+        self,
+        account_id: str,
+        integration_key: str,
+        user_id: str,
+        private_key: str,
+        base_url: str = "https://demo.docusign.net/restapi",
+    ):
+        """
+        Initialize DocuSign client
+        
+        Args:
+            account_id: DocuSign account ID
+            integration_key: OAuth integration key
+            user_id: DocuSign user ID
+            private_key: RSA private key for JWT
+            base_url: API base URL (demo or production)
+        """
+        self.account_id = account_id
+        self.integration_key = integration_key
+        self.user_id = user_id
+        self.private_key = private_key
+        self.base_url = base_url
+        self.logger = logger.bind(service="docusign_client")
+        self._access_token: Optional[str] = None
+        self._token_expires_at: Optional[datetime] = None
 
     async def _get_access_token(self) -> str:
         """Get JWT access token"""
-        if self.access_token and self.token_expires_at:
-            if datetime.utcnow() < self.token_expires_at:
-                return self.access_token
+        # Check if token is still valid
+        if (
+            self._access_token
+            and self._token_expires_at
+            and datetime.utcnow() < self._token_expires_at
+        ):
+            return self._access_token
 
-        # Request JWT token
+        # Request new token via JWT
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{self.config.oauth_base_url}/oauth/token",
+                "https://account-d.docusign.com/oauth/token",
                 data={
                     "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
                     "assertion": self._create_jwt_assertion(),
@@ -71,50 +72,57 @@ class DocuSignClient:
             response.raise_for_status()
             data = response.json()
 
-            self.access_token = data["access_token"]
+            self._access_token = data["access_token"]
             # Token expires in 1 hour, refresh 5 minutes early
-            self.token_expires_at = datetime.utcnow() + timedelta(seconds=data["expires_in"] - 300)
+            self._token_expires_at = datetime.utcnow() + timedelta(seconds=data["expires_in"] - 300)
 
-            logger.info("docusign_token_refreshed")
-
-            return self.access_token
+            self.logger.info("access_token_refreshed")
+            return self._access_token
 
     def _create_jwt_assertion(self) -> str:
         """Create JWT assertion for authentication"""
-        # TODO: Implement JWT creation with private key
-        # For now, return placeholder
-        return "jwt_assertion_placeholder"
+        import jwt
+        from datetime import timedelta
+
+        now = datetime.utcnow()
+        payload = {
+            "iss": self.integration_key,
+            "sub": self.user_id,
+            "aud": "account-d.docusign.com",
+            "iat": now,
+            "exp": now + timedelta(hours=1),
+            "scope": "signature impersonation",
+        }
+
+        return jwt.encode(payload, self.private_key, algorithm="RS256")
 
     async def send_baa(
         self,
-        recipient_email: str,
-        recipient_name: str,
+        client_email: str,
+        client_name: str,
         practice_name: str,
-        template_id: Optional[str] = None,
-    ) -> str:
+    ) -> Dict[str, Any]:
         """
-        Send BAA document for signature
-
+        Send BAA for signature
+        
         Args:
-            recipient_email: Recipient email address
-            recipient_name: Recipient full name
+            client_email: Client email address
+            client_name: Client full name
             practice_name: Practice/clinic name
-            template_id: DocuSign template ID (optional)
-
+        
         Returns:
-            Envelope ID
+            Envelope data with envelope_id and status_url
         """
         token = await self._get_access_token()
 
-        # Create envelope definition
+        # Create envelope with BAA template
         envelope_definition = {
-            "emailSubject": f"HIPAA Business Associate Agreement - {practice_name}",
-            "status": "sent",
-            "templateId": template_id or "default-baa-template",
+            "emailSubject": f"Business Associate Agreement - {practice_name}",
+            "templateId": "baa_template_id",  # Pre-configured BAA template
             "templateRoles": [
                 {
-                    "email": recipient_email,
-                    "name": recipient_name,
+                    "email": client_email,
+                    "name": client_name,
                     "roleName": "Client",
                     "tabs": {
                         "textTabs": [
@@ -123,19 +131,23 @@ class DocuSignClient:
                                 "value": practice_name,
                             },
                             {
+                                "tabLabel": "client_name",
+                                "value": client_name,
+                            },
+                            {
                                 "tabLabel": "date",
                                 "value": datetime.utcnow().strftime("%Y-%m-%d"),
                             },
                         ],
                     },
-                }
+                },
             ],
+            "status": "sent",
         }
 
-        # Send envelope
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{self.config.base_url}/v2.1/accounts/{self.config.account_id}/envelopes",
+                f"{self.base_url}/v2.1/accounts/{self.account_id}/envelopes",
                 headers={
                     "Authorization": f"Bearer {token}",
                     "Content-Type": "application/json",
@@ -145,206 +157,123 @@ class DocuSignClient:
             response.raise_for_status()
             data = response.json()
 
-            envelope_id = data["envelopeId"]
-
-            logger.info(
+            self.logger.info(
                 "baa_sent",
-                envelope_id=envelope_id,
-                recipient_email=recipient_email,
-                practice_name=practice_name,
+                envelope_id=data["envelopeId"],
+                client_email=client_email,
             )
 
-            return envelope_id
+            return {
+                "envelope_id": data["envelopeId"],
+                "status": data["status"],
+                "status_url": f"https://iamaim.ru/api/docusign/status/{data['envelopeId']}",
+            }
 
-    async def get_envelope_status(self, envelope_id: str) -> EnvelopeStatus:
-        """Get envelope status"""
+    async def get_envelope_status(
+        self,
+        envelope_id: str,
+    ) -> Dict[str, Any]:
+        """
+        Get envelope signature status
+        
+        Args:
+            envelope_id: DocuSign envelope ID
+        
+        Returns:
+            Status data with signed status and recipients
+        """
         token = await self._get_access_token()
 
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{self.config.base_url}/v2.1/accounts/{self.config.account_id}/envelopes/{envelope_id}",
+                f"{self.base_url}/v2.1/accounts/{self.account_id}/envelopes/{envelope_id}",
                 headers={"Authorization": f"Bearer {token}"},
             )
             response.raise_for_status()
             data = response.json()
 
-            return EnvelopeStatus(
-                envelope_id=envelope_id,
-                status=data["status"],
-                sent_at=self._parse_datetime(data.get("sentDateTime")),
-                delivered_at=self._parse_datetime(data.get("deliveredDateTime")),
-                signed_at=self._parse_datetime(data.get("completedDateTime")),
-                declined_at=self._parse_datetime(data.get("declinedDateTime")),
-                decline_reason=data.get("declineReason"),
-            )
+            return {
+                "envelope_id": envelope_id,
+                "status": data["status"],
+                "completed": data["status"] == "completed",
+                "sent_at": data.get("sentDateTime"),
+                "completed_at": data.get("completedDateTime"),
+            }
 
     async def download_signed_document(
         self,
         envelope_id: str,
-        document_id: str = "combined",
-    ) -> bytes:
-        """Download signed document"""
+        output_path: str,
+    ) -> str:
+        """
+        Download signed BAA document
+        
+        Args:
+            envelope_id: DocuSign envelope ID
+            output_path: Local file path to save PDF
+        
+        Returns:
+            Path to downloaded file
+        """
         token = await self._get_access_token()
 
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{self.config.base_url}/v2.1/accounts/{self.config.account_id}/envelopes/{envelope_id}/documents/{document_id}",
+                f"{self.base_url}/v2.1/accounts/{self.account_id}/envelopes/{envelope_id}/documents/combined",
                 headers={"Authorization": f"Bearer {token}"},
             )
             response.raise_for_status()
 
-            logger.info(
+            # Save PDF
+            with open(output_path, "wb") as f:
+                f.write(response.content)
+
+            self.logger.info(
                 "document_downloaded",
                 envelope_id=envelope_id,
-                document_id=document_id,
+                output_path=output_path,
             )
 
-            return response.content
+            return output_path
 
-    async def get_audit_trail(self, envelope_id: str) -> bytes:
-        """Get audit trail (certificate of completion)"""
-        token = await self._get_access_token()
-
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{self.config.base_url}/v2.1/accounts/{self.config.account_id}/envelopes/{envelope_id}/documents/certificate",
-                headers={"Authorization": f"Bearer {token}"},
-            )
-            response.raise_for_status()
-
-            return response.content
-
-    async def void_envelope(
+    async def handle_webhook(
         self,
-        envelope_id: str,
-        reason: str,
-    ) -> None:
-        """Void an envelope"""
-        token = await self._get_access_token()
+        webhook_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Handle DocuSign webhook notification
+        
+        Args:
+            webhook_data: Webhook payload from DocuSign
+        
+        Returns:
+            Processed event data
+        """
+        event = webhook_data.get("event")
+        envelope_id = webhook_data.get("data", {}).get("envelopeId")
 
-        async with httpx.AsyncClient() as client:
-            response = await client.put(
-                f"{self.config.base_url}/v2.1/accounts/{self.config.account_id}/envelopes/{envelope_id}",
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "status": "voided",
-                    "voidedReason": reason,
-                },
-            )
-            response.raise_for_status()
-
-            logger.info(
-                "envelope_voided",
-                envelope_id=envelope_id,
-                reason=reason,
-            )
-
-    async def resend_envelope(self, envelope_id: str) -> None:
-        """Resend envelope notification"""
-        token = await self._get_access_token()
-
-        async with httpx.AsyncClient() as client:
-            response = await client.put(
-                f"{self.config.base_url}/v2.1/accounts/{self.config.account_id}/envelopes/{envelope_id}",
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                },
-                json={"resendEnvelope": "true"},
-            )
-            response.raise_for_status()
-
-            logger.info("envelope_resent", envelope_id=envelope_id)
-
-    def _parse_datetime(self, dt_str: Optional[str]) -> Optional[datetime]:
-        """Parse DocuSign datetime string"""
-        if not dt_str:
-            return None
-
-        try:
-            return datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
-        except Exception:
-            return None
-
-
-class DocuSignWebhookHandler:
-    """
-    Handle DocuSign webhook events
-
-    Processes status updates from DocuSign Connect.
-    """
-
-    def __init__(self, workflow_service):
-        self.workflow = workflow_service
-
-    async def handle_webhook(self, payload: Dict[str, Any]) -> None:
-        """Handle DocuSign webhook event"""
-        event_type = payload.get("event")
-        envelope_id = payload.get("envelopeId")
-
-        logger.info(
-            "docusign_webhook_received",
-            event_type=event_type,
+        self.logger.info(
+            "webhook_received",
+            event=event,
             envelope_id=envelope_id,
         )
 
-        # Map DocuSign events to onboarding events
-        if event_type == "envelope-completed":
-            # BAA signed
-            await self._handle_baa_signed(envelope_id, payload)
+        # Map DocuSign events to our workflow events
+        event_mapping = {
+            "envelope-sent": "baa_sent",
+            "envelope-delivered": "baa_delivered",
+            "envelope-completed": "baa_signed",
+            "envelope-declined": "baa_declined",
+            "envelope-voided": "baa_voided",
+        }
 
-        elif event_type == "envelope-declined":
-            # BAA declined
-            await self._handle_baa_declined(envelope_id, payload)
+        workflow_event = event_mapping.get(event)
 
-        elif event_type == "envelope-voided":
-            # BAA voided
-            logger.info("baa_voided", envelope_id=envelope_id)
+        return {
+            "envelope_id": envelope_id,
+            "docusign_event": event,
+            "workflow_event": workflow_event,
+            "timestamp": webhook_data.get("generatedDateTime"),
+        }
 
-    async def _handle_baa_signed(
-        self,
-        envelope_id: str,
-        payload: Dict[str, Any],
-    ) -> None:
-        """Handle BAA signed event"""
-        # Find onboarding session by envelope ID
-        # TODO: Query database for session with this envelope_id
-        session_id = "placeholder"  # Get from database
-
-        # Trigger BAA signed event
-        from aim.services.onboarding.workflow import OnboardingEvent
-
-        await self.workflow.handle_event(
-            session_id,
-            OnboardingEvent.BAA_SIGNED,
-            {
-                "baa_signed_at": datetime.utcnow().isoformat(),
-                "baa_envelope_id": envelope_id,
-            },
-        )
-
-    async def _handle_baa_declined(
-        self,
-        envelope_id: str,
-        payload: Dict[str, Any],
-    ) -> None:
-        """Handle BAA declined event"""
-        decline_reason = payload.get("declineReason", "No reason provided")
-
-        # Find onboarding session
-        session_id = "placeholder"
-
-        # Trigger BAA declined event
-        from aim.services.onboarding.workflow import OnboardingEvent
-
-        await self.workflow.handle_event(
-            session_id,
-            OnboardingEvent.BAA_DECLINED,
-            {
-                "baa_declined_at": datetime.utcnow().isoformat(),
-                "decline_reason": decline_reason,
-            },
-        )
+from datetime import timedelta
