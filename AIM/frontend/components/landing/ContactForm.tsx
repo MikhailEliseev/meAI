@@ -130,6 +130,37 @@ export function ContactForm({ className }: ContactFormProps) {
         throw new Error(error.message || "Ошибка отправки формы");
       }
 
+      // Calculate lead score (async, non-blocking)
+      fetch("/api/lead-score", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+          clinicName: data.clinicName,
+          specialty: data.specialty,
+          message: data.message,
+          // TODO: Add enrichment data in Phase 2.2
+          // clinicSize, location, currentMarketingSpend, etc.
+        }),
+      })
+        .then((res) => res.json())
+        .then((score) => {
+          console.log("[Lead Score]", score);
+          // Track lead tier in analytics
+          if (typeof window !== "undefined" && (window as any).ym) {
+            (window as any).ym(
+              process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID,
+              "reachGoal",
+              `lead_${score.tier}`
+            );
+          }
+        })
+        .catch((err) => console.error("[Lead Score Error]", err));
+
       // Success
       setSubmissionState("success");
       clearDraft();
