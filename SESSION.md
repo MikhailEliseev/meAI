@@ -595,3 +595,73 @@
 - `NEXT_PUBLIC_YANDEX_METRIKA_ID` - Yandex.Metrika ID
 
 ---
+
+#### Task 2.3: Email Automation ✅ COMPLETED (3 hours)
+**Date:** 2026-05-16 11:27 GMT+3
+
+**Created:**
+- Email sequence definitions for Hot/Warm/Cold leads
+- SendGrid Dynamic Templates integration
+- API endpoint for triggering sequences
+- Template data builder with personalization
+- 25 test cases (all passing)
+
+**Files Created (4 files, 850+ lines):**
+- `frontend/lib/email-sequences.ts` (270 lines) - Sequence definitions
+- `frontend/lib/sendgrid-templates.ts` (200 lines) - SendGrid integration
+- `frontend/app/api/email/send-sequence/route.ts` (120 lines) - API endpoint
+- `frontend/__tests__/lib/email-sequences.test.ts` (260 lines) - Tests
+
+**Email Sequences:**
+
+**Hot Lead Sequence (3 steps, 2 hours total):**
+1. Welcome email (immediate) - "Ваша заявка получена! Звоним через 15 минут"
+2. Case study (1 hour) - "Как {{similarClinic}} увеличила поток пациентов на {{growthPercent}}%"
+3. Meeting invite (2 hours) - "Готовы обсудить стратегию для {{clinicName}}?"
+
+**Warm Lead Sequence (5 steps, 7 days total):**
+1. Welcome (immediate) - "Как AI увеличивает поток пациентов на 30%+"
+2. Education (1 day) - "5 ошибок медицинского маркетинга"
+3. Case study (3 days) - "Кейс: от 50 до 200 пациентов в месяц"
+4. ROI calculator (5 days) - "Рассчитайте ROI за 2 минуты"
+5. Meeting invite (7 days) - "Бесплатная консультация (осталось 3 слота)"
+
+**Cold Lead Sequence (6 steps, 30 days total):**
+1. Welcome (immediate) - "Спасибо за интерес к AI-маркетингу"
+2. Education Week 1 (7 days) - "Основы медицинского маркетинга в 2026"
+3. Education Week 2 (14 days) - "Как AI меняет привлечение пациентов"
+4. Education Week 3 (21 days) - "SEO для медицинских клиник"
+5. Education Week 4 (28 days) - "Яндекс.Директ для клиник"
+6. Re-engagement (30 days) - "Специальное предложение на аудит"
+
+**Integration:**
+- Integrated with ContactForm (triggers after lead scoring)
+- Non-blocking async execution (doesn't fail form submission)
+- SendGrid Dynamic Templates with personalization
+- Template data includes: name, clinic, specialty, score, recommendations
+
+**Template Variables:**
+- `{{name}}` - Lead name
+- `{{clinicName}}` - Clinic name
+- `{{specialty}}` - Medical specialty
+- `{{score}}` - Lead score (0-100)
+- `{{tier}}` - Lead tier (hot/warm/cold)
+- `{{similarClinic}}` - Similar clinic for case study
+- `{{growthPercent}}` - Growth percentage for case study
+- `{{calendarLink}}` - Meeting booking link
+- `{{roiCalculatorLink}}` - ROI calculator link
+- `{{unsubscribeLink}}` - Unsubscribe link
+
+**Tests:** 25/25 passing ✅
+
+**Dependencies Added:**
+- `@sendgrid/mail` - SendGrid Node.js library
+
+**TODO (Phase 2.4):**
+- Implement email scheduling (job queue: BullMQ, Inngest)
+- Track sequence status (which emails sent, opened, clicked)
+- A/B testing for email content
+- Unsubscribe handling
+
+---
+

@@ -185,6 +185,34 @@ export function ContactForm({ className }: ContactFormProps) {
               }
             })
             .catch((err) => console.error("[Linear] Error:", err));
+
+          // Trigger email sequence (async, non-blocking)
+          fetch("/api/email/send-sequence", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name: data.name,
+              email: data.email,
+              clinicName: data.clinicName,
+              specialty: data.specialty,
+              score,
+            }),
+          })
+            .then((res) => res.json())
+            .then((result) => {
+              if (result.success) {
+                console.log("[Email Sequence] Started:", result.sequenceId);
+                console.log("[Email Sequence] Emails sent:", result.emailsSent);
+                if (result.nextEmailAt) {
+                  console.log("[Email Sequence] Next email at:", result.nextEmailAt);
+                }
+              } else {
+                console.warn("[Email Sequence] Failed:", result.error);
+              }
+            })
+            .catch((err) => console.error("[Email Sequence] Error:", err));
         })
         .catch((err) => console.error("[Lead Score Error]", err));
 
