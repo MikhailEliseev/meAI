@@ -1,11 +1,11 @@
 # Session: 2026-05-16
 
 ## Phase 10: AI Enhancement - Tasks 1.1-2.3 Complete ✅
-## Phase 11: Client Acquisition - Sprint 1 Complete ✅, Sprint 2 Task 2.1 Complete ✅
+## Phase 11: Client Acquisition - Sprint 2 Tasks 2.1-2.2 Complete ✅, Task 2.3 In Progress ⏳
 
-**Date:** 2026-05-16 19:53 GMT+3 (Phase 10) → 2026-05-16 20:27 GMT+3 (Phase 11 Task 2.1)  
-**Status:** ✅ Phase 11 Sprint 1 Complete + Task 2.1 Complete  
-**Duration:** ~14 hours
+**Date:** 2026-05-16 19:53 GMT+3 (Phase 10) → 2026-05-16 21:36 GMT+3 (Phase 11 Task 2.3 fixes)  
+**Status:** ✅ Tasks 2.1-2.2 Complete, ⏳ Task 2.3 ~70% Complete  
+**Duration:** ~15 hours
 
 ---
 
@@ -936,4 +936,54 @@ LeadScore(
 - `a8d8687` - feat(phase-11): implement Task 2.1 - Lead Capture Service
 - `b6c951d` - docs: update SESSION.md with Task 2.1 completion
 - `89897c4` - feat(phase-11): implement Task 2.2 - AI Lead Scoring
+
+
+---
+
+## Session Recovery: 2026-05-16 21:37 GMT+3
+
+**Problem:** Тесты упали из-за нехватки места на диске. После очистки диска обнаружились недостающие зависимости и проблемы с импортами.
+
+**Fixed:**
+
+1. **Missing Dependencies (installed):**
+   - pydantic-settings, playwright, trafilatura
+   - aiocache, langchain-openai, sentence-transformers
+   - reportlab, pillow, sendgrid, apscheduler
+   - google-analytics-data
+
+2. **LinearTask Model Import:**
+   - Fixed: `from AIM.src.aim.models.base import Base` → `from AIM.src.aim.database import Base`
+   - Added LinearTask and Lead to `models/__init__.py` exports
+   - SQLAlchemy relationship now resolves correctly
+
+3. **LinearProject Schema:**
+   - Added `LinearProject` Pydantic model to `linear/schemas.py`
+   - Updated `linear/client.py` and `linear/__init__.py` to export LinearProject
+   - Fixed import errors in tests
+
+**Test Results:**
+- ✅ 77/77 tests passing (Lead Capture + AI Lead Scoring)
+- All Phase 11 Sprint 2 tests green
+
+**Commit:**
+- `ce5e352` - fix(phase-11): fix LinearTask model import and add LinearProject schema
+
+**Files Changed:**
+- `AIM/src/aim/models/linear_task.py` (fixed Base import)
+- `AIM/src/aim/models/__init__.py` (added Lead, LinearTask exports)
+- `AIM/src/aim/integrations/linear/schemas.py` (added LinearProject)
+- `AIM/src/aim/integrations/linear/client.py` (import LinearProject)
+- `AIM/src/aim/integrations/linear/__init__.py` (export LinearProject)
+
+**Next Steps:**
+- Task 2.3: Linear Integration - write integration tests, E2E test
+- Task 2.4: Email Automation (10h)
+- Task 2.5: Analytics Dashboard (10h)
+
+**Current Status:**
+- Phase 11 Sprint 2: 28h/60h complete (47%)
+- Task 2.1: Lead Capture ✅
+- Task 2.2: AI Lead Scoring ✅
+- Task 2.3: Linear Integration ⏳ (~70% - code complete, tests needed)
 
