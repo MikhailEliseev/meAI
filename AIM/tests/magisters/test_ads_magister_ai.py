@@ -90,8 +90,8 @@ class TestAdsMagisterAI:
                 violations=[],
                 warnings=["Рекомендуется добавить лицензию клиники"],
             ),
+            template_used="dental_implants_urgency",
             generation_cost=0.14,
-            generated_at=datetime.now(timezone.utc),
         )
 
         magister.ad_copy_generator.generate = AsyncMock(return_value=mock_result)
@@ -157,10 +157,6 @@ class TestAdsMagisterAI:
                 type="performance_drop",
                 severity="high",
                 description="CTR dropped by 45% compared to baseline",
-                metric_name="ctr",
-                current_value=1.2,
-                expected_value=2.2,
-                deviation_pct=45.5,
                 recommended_action="Review ad copy and targeting settings",
                 detected_at=datetime.now(timezone.utc),
             ),
@@ -168,10 +164,6 @@ class TestAdsMagisterAI:
                 type="budget_overspend",
                 severity="medium",
                 description="Budget variance: 25% over plan",
-                metric_name="cost",
-                current_value=1250.0,
-                expected_value=1000.0,
-                deviation_pct=25.0,
                 recommended_action="Reduce bids or pause low-performing campaigns",
                 detected_at=datetime.now(timezone.utc),
             ),
@@ -207,8 +199,6 @@ class TestAdsMagisterAI:
         assert len(result) == 2
         assert result[0]["type"] == "performance_drop"
         assert result[0]["severity"] == "high"
-        assert result[0]["metric_name"] == "ctr"
-        assert result[0]["deviation_pct"] == 45.5
         assert result[1]["type"] == "budget_overspend"
         assert result[1]["severity"] == "medium"
 
@@ -260,6 +250,7 @@ class TestAdsMagisterAI:
                     description="Лучшие импланты в городе!",
                     cta="Записаться",
                     emotional_trigger="urgency",
+                    compliance_score=45.0,
                     predicted_ctr=2.5,
                 ),
             ],
@@ -272,8 +263,8 @@ class TestAdsMagisterAI:
                 ],
                 warnings=[],
             ),
+            template_used="dental_implants_urgency",
             generation_cost=0.14,
-            generated_at=datetime.now(timezone.utc),
         )
 
         magister.ad_copy_generator.generate = AsyncMock(return_value=mock_result)
@@ -396,8 +387,8 @@ class TestAdsMagisterAI:
                 platform="yandex_direct",
                 variants=[],
                 compliance=ComplianceCheck(score=90.0, passed=True, violations=[], warnings=[]),
+                template_used="dental_implants_urgency",
                 generation_cost=0.14,
-                generated_at=datetime.now(timezone.utc),
             )
         )
 
