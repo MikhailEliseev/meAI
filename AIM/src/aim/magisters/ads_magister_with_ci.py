@@ -7,8 +7,8 @@ Ads Magister with CI Integration
 from typing import Any, Dict, List
 from datetime import datetime
 
-from AIM.src.aim.magisters.ads_magister import AdsMagister
-from AIM.src.aim.integration.ci_magisters_integration import CIMagisterIntegration
+from aim.magisters.ads_magister import AdsMagister
+from aim.integration.ci_magisters_integration import CIMagisterIntegration
 
 
 class AdsMagisterWithCI(AdsMagister):

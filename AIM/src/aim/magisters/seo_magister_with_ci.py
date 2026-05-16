@@ -7,8 +7,8 @@ SEO Magister with CI Integration
 from typing import Any, Dict, List
 from datetime import datetime
 
-from AIM.src.aim.magisters.seo_magister import SEOMagister
-from AIM.src.aim.integration.ci_magisters_integration import CIMagisterIntegration
+from aim.magisters.seo_magister import SEOMagister
+from aim.integration.ci_magisters_integration import CIMagisterIntegration
 
 
 class SEOMagisterWithCI(SEOMagister):

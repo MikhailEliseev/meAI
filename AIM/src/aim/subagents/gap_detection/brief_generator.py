@@ -18,8 +18,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from AIM.src.aim.subagents.gap_detection.architecture_planner import ContentPage
-from AIM.src.aim.subagents.schemas.content_gap import (
+from aim.subagents.gap_detection.architecture_planner import ContentPage
+from aim.subagents.schemas.content_gap import (
     ContentGap,
     IntentType,
 )

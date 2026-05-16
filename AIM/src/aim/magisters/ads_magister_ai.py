@@ -13,12 +13,12 @@ from typing import Any, Dict, List
 from datetime import datetime, timezone
 import structlog
 
-from AIM.src.aim.magisters.ads_magister import AdsMagister
-from AIM.src.aim.ai.ads.generator import AdCopyGenerator
-from AIM.src.aim.ai.analytics.budget_optimizer import BudgetOptimizer
-from AIM.src.aim.ai.analytics.anomaly_detector import AnomalyDetector
-from AIM.src.aim.ai.analytics.forecaster import PerformanceForecaster
-from AIM.src.aim.ai.llm.client import LLMClient
+from aim.magisters.ads_magister import AdsMagister
+from aim.ai.ads.generator import AdCopyGenerator
+from aim.ai.analytics.budget_optimizer import BudgetOptimizer
+from aim.ai.analytics.anomaly_detector import AnomalyDetector
+from aim.ai.analytics.forecaster import PerformanceForecaster
+from aim.ai.llm.client import LLMClient
 
 logger = structlog.get_logger(__name__)
 
@@ -299,7 +299,7 @@ class AdsMagisterAI(AdsMagister):
         )
 
         # Create forecast request
-        from AIM.src.aim.ai.analytics.schemas import ForecastRequest
+        from aim.ai.analytics.schemas import ForecastRequest
 
         request = ForecastRequest(
             metric=metric,

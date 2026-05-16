@@ -15,15 +15,15 @@ from typing import Any
 
 import structlog
 
-from AIM.src.aim.subagents.ads.ad_copy_generator import (
+from aim.subagents.ads.ad_copy_generator import (
     AdCopyGenerator,
     AdCopySet,
 )
-from AIM.src.aim.subagents.ads.landing_page_analyzer import (
+from aim.subagents.ads.landing_page_analyzer import (
     LandingPageAnalyzer,
     LandingPageReport,
 )
-from AIM.src.aim.subagents.ads.bid_strategy_optimizer import (
+from aim.subagents.ads.bid_strategy_optimizer import (
     BidStrategyOptimizer,
     BidOptimizationReport,
 )
@@ -123,7 +123,7 @@ class AdsMagisterV2:
             self.logger.error("phase_1_failed", error=str(e))
             errors.append(f"Ad Copy Generation failed: {str(e)}")
             # Create empty ad copy set to continue workflow
-            from AIM.src.aim.subagents.ads.ad_copy_generator import (
+            from aim.subagents.ads.ad_copy_generator import (
                 AdCopySet,
             )
 

@@ -14,7 +14,7 @@ from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTEN
 from prometheus_fastapi_instrumentator import Instrumentator
 
 # Structured logging
-from AIM.src.aim.config.logging import configure_logging, get_logger
+from aim.config.logging import configure_logging, get_logger
 
 # Configure logging
 environment = os.getenv("ENVIRONMENT", "production")

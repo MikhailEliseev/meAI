@@ -9,7 +9,7 @@ Detects three types of content gaps:
 from datetime import datetime, timezone
 from typing import Any
 
-from AIM.src.aim.subagents.schemas.content_gap import (
+from aim.subagents.schemas.content_gap import (
     ContentGap,
     GapSeverity,
     GapType,

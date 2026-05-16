@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from aim.models.lead import Lead
-from AIM.src.aim.schemas.lead import MedicalSpecialty
+from aim.schemas.lead import MedicalSpecialty
 
 
 class LeadFeatureExtractor:

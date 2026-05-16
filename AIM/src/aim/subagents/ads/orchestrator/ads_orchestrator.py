@@ -19,10 +19,10 @@ aim_path = Path(__file__).parent.parent.parent.parent
 if str(aim_path) not in sys.path:
     sys.path.insert(0, str(aim_path))
 
-from AIM.src.aim.subagents.ads.services.campaign_service import CampaignService
-from AIM.src.aim.subagents.ads.services.content_optimizer import ContentOptimizer
-from AIM.src.aim.subagents.ads.services.analytics_service import AnalyticsService
-from AIM.src.aim.subagents.ads.config.settings import AdsSettings
+from aim.subagents.ads.services.campaign_service import CampaignService
+from aim.subagents.ads.services.content_optimizer import ContentOptimizer
+from aim.subagents.ads.services.analytics_service import AnalyticsService
+from aim.subagents.ads.config.settings import AdsSettings
 
 logger = logging.getLogger(__name__)
 

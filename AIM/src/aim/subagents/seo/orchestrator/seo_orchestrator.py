@@ -20,8 +20,8 @@ aim_root = Path(__file__).parent.parent.parent.parent.parent
 if str(aim_root) not in sys.path:
     sys.path.insert(0, str(aim_root))
 
-from AIM.src.aim.subagents.keyword_research_agent import KeywordResearchAgent
-from AIM.src.aim.subagents.seo.ci_research_agent import CIResearchAgent
+from aim.subagents.keyword_research_agent import KeywordResearchAgent
+from aim.subagents.seo.ci_research_agent import CIResearchAgent
 
 logger = logging.getLogger(__name__)
 

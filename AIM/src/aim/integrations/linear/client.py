@@ -14,7 +14,7 @@ from typing import Any
 
 import httpx
 
-from AIM.src.aim.integrations.linear.schemas import (
+from aim.integrations.linear.schemas import (
     LinearCreateIssueInput,
     LinearIssue,
     LinearLabel,

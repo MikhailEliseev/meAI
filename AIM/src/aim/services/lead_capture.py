@@ -28,13 +28,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from aim.models.lead import Lead as LeadModel
-from AIM.src.aim.schemas.lead import (
+from aim.schemas.lead import (
     LeadCaptureRequest,
     LeadCaptureResponse,
     LeadRecord,
     LeadSource,
 )
-from AIM.src.aim.utils.encryption import get_encryptor
+from aim.utils.encryption import get_encryptor
 
 
 class RateLimitExceeded(Exception):
@@ -346,7 +346,7 @@ class LeadCaptureService:
                 return
 
             # 2. Score lead (Task 2.2)
-            from AIM.src.aim.ai.lead_scoring.scoring_service import LeadScoringService
+            from aim.ai.lead_scoring.scoring_service import LeadScoringService
 
             scoring_service = LeadScoringService(model_path=None)  # Rule-based for MVP
             score_result = await scoring_service.score_lead(

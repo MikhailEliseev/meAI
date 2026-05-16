@@ -7,8 +7,8 @@ Content Magister with CI Integration
 from typing import Any, Dict, List
 from datetime import datetime
 
-from AIM.src.aim.magisters.content_magister import ContentMagister
-from AIM.src.aim.integration.ci_magisters_integration import CIMagisterIntegration
+from aim.magisters.content_magister import ContentMagister
+from aim.integration.ci_magisters_integration import CIMagisterIntegration
 
 
 class ContentMagisterWithCI(ContentMagister):

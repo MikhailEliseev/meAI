@@ -17,7 +17,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from AIM.src.aim.subagents.schemas.content_gap import (
+from aim.subagents.schemas.content_gap import (
     ContentCluster,
     ContentGap,
     GapSeverity,

@@ -16,10 +16,10 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from AIM.src.aim.teacher.skills.skill_selector import Skill
+from aim.teacher.skills.skill_selector import Skill
 
 if TYPE_CHECKING:
-    from AIM.src.aim.teacher.skills.skill_applier import TargetContext
+    from aim.teacher.skills.skill_applier import TargetContext
 
 logger = structlog.get_logger()
 

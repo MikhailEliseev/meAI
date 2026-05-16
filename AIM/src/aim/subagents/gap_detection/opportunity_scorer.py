@@ -5,7 +5,7 @@ Calculates opportunity scores and assigns priority tiers to content gaps.
 
 from typing import Any
 
-from AIM.src.aim.subagents.schemas.content_gap import ContentGap
+from aim.subagents.schemas.content_gap import ContentGap
 
 
 class OpportunityScorer:

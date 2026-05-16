@@ -15,19 +15,19 @@ from pathlib import Path
 
 import structlog
 
-from AIM.src.aim.teacher.architecture.component_relation_analyzer import (
+from aim.teacher.architecture.component_relation_analyzer import (
     ComponentRelationAnalyzer,
     ComponentRelations,
 )
-from AIM.src.aim.teacher.architecture.design_pattern_detector import (
+from aim.teacher.architecture.design_pattern_detector import (
     DesignPatternDetector,
     DesignPatterns,
 )
-from AIM.src.aim.teacher.architecture.file_structure_analyzer import (
+from aim.teacher.architecture.file_structure_analyzer import (
     FileStructure,
     FileStructureAnalyzer,
 )
-from AIM.src.aim.teacher.architecture.test_coverage_analyzer import (
+from aim.teacher.architecture.test_coverage_analyzer import (
     TestCoverage,
     TestCoverageAnalyzer,
 )

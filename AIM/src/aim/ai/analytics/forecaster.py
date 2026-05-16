@@ -11,7 +11,7 @@ import numpy as np
 from typing import List, Dict, Any
 from datetime import datetime, timedelta, timezone
 
-from AIM.src.aim.ai.analytics.schemas import ForecastRequest, ForecastResponse
+from aim.ai.analytics.schemas import ForecastRequest, ForecastResponse
 
 
 class PerformanceForecaster:

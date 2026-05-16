@@ -14,7 +14,7 @@ from typing import Any, Optional
 
 import structlog
 
-from AIM.src.aim.subagents.api_clients.ga4_client import GA4Client, GA4Credentials
+from aim.subagents.api_clients.ga4_client import GA4Client, GA4Credentials
 
 
 @dataclass

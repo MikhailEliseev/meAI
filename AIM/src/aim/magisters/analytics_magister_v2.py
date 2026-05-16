@@ -15,15 +15,15 @@ from typing import Any
 
 import structlog
 
-from AIM.src.aim.subagents.analytics.traffic_analyzer import (
+from aim.subagents.analytics.traffic_analyzer import (
     TrafficAnalyzer,
     TrafficReport,
 )
-from AIM.src.aim.subagents.analytics.conversion_tracker import (
+from aim.subagents.analytics.conversion_tracker import (
     ConversionTracker,
     ConversionReport,
 )
-from AIM.src.aim.subagents.analytics.report_generator import (
+from aim.subagents.analytics.report_generator import (
     ReportGenerator,
     MarketingReport,
 )
@@ -119,7 +119,7 @@ class AnalyticsMagisterV2:
             self.logger.error("phase_1_failed", error=str(e))
             errors.append(f"Traffic Analysis failed: {str(e)}")
             # Create empty traffic report to continue workflow
-            from AIM.src.aim.subagents.analytics.traffic_analyzer import (
+            from aim.subagents.analytics.traffic_analyzer import (
                 TrafficReport,
                 UserBehavior,
                 BounceAnalysis,
@@ -178,7 +178,7 @@ class AnalyticsMagisterV2:
             self.logger.error("phase_2_failed", error=str(e))
             errors.append(f"Conversion Tracking failed: {str(e)}")
             # Create empty conversion report to continue workflow
-            from AIM.src.aim.subagents.analytics.conversion_tracker import (
+            from aim.subagents.analytics.conversion_tracker import (
                 ConversionReport,
                 RevenueMetrics,
                 ROIMetrics,
@@ -240,7 +240,7 @@ class AnalyticsMagisterV2:
             self.logger.error("phase_3_failed", error=str(e))
             errors.append(f"Report Generation failed: {str(e)}")
             # Create empty marketing report to continue workflow
-            from AIM.src.aim.subagents.analytics.report_generator import (
+            from aim.subagents.analytics.report_generator import (
                 MarketingReport,
                 ReportMetrics,
             )

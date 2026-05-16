@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from AIM.src.aim.teacher.gap_detector import Gap, GapSeverity
+from aim.teacher.gap_detector import Gap, GapSeverity
 
 
 @dataclass

@@ -19,19 +19,19 @@ from typing import Any
 
 import structlog
 
-from AIM.src.aim.teacher.skills.skill_comparator import (
+from aim.teacher.skills.skill_comparator import (
     ComparisonResult,
     SkillComparator,
 )
-from AIM.src.aim.teacher.skills.skill_extractor import (
+from aim.teacher.skills.skill_extractor import (
     ExtractedImplementation,
     SkillExtractor,
 )
-from AIM.src.aim.teacher.skills.skill_selector import (
+from aim.teacher.skills.skill_selector import (
     SelectionCriteria,
     SkillSelector,
 )
-from AIM.src.aim.teacher.skills.skill_teacher import (
+from aim.teacher.skills.skill_teacher import (
     SkillTeacher,
     TeachingResult,
 )
