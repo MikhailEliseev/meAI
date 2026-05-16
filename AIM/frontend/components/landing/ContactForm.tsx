@@ -150,6 +150,7 @@ export function ContactForm({ className }: ContactFormProps) {
         .then((res) => res.json())
         .then((score) => {
           console.log("[Lead Score]", score);
+
           // Track lead tier in analytics
           if (typeof window !== "undefined" && (window as any).ym) {
             (window as any).ym(
@@ -158,6 +159,32 @@ export function ContactForm({ className }: ContactFormProps) {
               `lead_${score.tier}`
             );
           }
+
+          // Create Linear issue (async, non-blocking)
+          fetch("/api/linear/create-lead", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name: data.name,
+              phone: data.phone,
+              email: data.email,
+              clinicName: data.clinicName,
+              specialty: data.specialty,
+              message: data.message,
+              score,
+            }),
+          })
+            .then((res) => res.json())
+            .then((result) => {
+              if (result.success) {
+                console.log("[Linear] Issue created:", result.issue);
+              } else {
+                console.warn("[Linear] Failed to create issue:", result.error);
+              }
+            })
+            .catch((err) => console.error("[Linear] Error:", err));
         })
         .catch((err) => console.error("[Lead Score Error]", err));
 
