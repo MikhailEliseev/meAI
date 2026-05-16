@@ -286,7 +286,7 @@ describe("ContactForm", () => {
   it("has proper ARIA labels", () => {
     render(<ContactForm />);
 
-    const section = screen.getByRole("region", { name: /contact-heading/i });
+    const section = screen.getByRole("region", { name: "Получите бесплатную консультацию" });
     expect(section).toBeInTheDocument();
   });
 

@@ -106,7 +106,7 @@ describe("ProcessSteps", () => {
   it("renders step icons", () => {
     render(<ProcessSteps />);
 
-    const section = screen.getByRole("region", { name: /process-heading/i });
+    const section = screen.getByRole("region", { name: "Как мы работаем" });
     expect(section).toBeInTheDocument();
     // Icons are rendered as text emojis (🎯, 📊, 🚀)
   });
@@ -121,7 +121,7 @@ describe("ProcessSteps", () => {
   it("has proper ARIA labels", () => {
     render(<ProcessSteps />);
 
-    const section = screen.getByRole("region", { name: /process-heading/i });
+    const section = screen.getByRole("region", { name: "Как мы работаем" });
     expect(section).toBeInTheDocument();
   });
 });
