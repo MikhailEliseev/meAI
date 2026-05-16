@@ -5,17 +5,39 @@ Handles BAA (Business Associate Agreement) signature workflow.
 """
 
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
+from enum import Enum
+from pydantic import BaseModel
 import structlog
 import httpx
 
 logger = structlog.get_logger()
 
 
+class EnvelopeStatus(str, Enum):
+    """DocuSign envelope status"""
+    CREATED = "created"
+    SENT = "sent"
+    DELIVERED = "delivered"
+    COMPLETED = "completed"
+    DECLINED = "declined"
+    VOIDED = "voided"
+
+
+class DocuSignConfig(BaseModel):
+    """DocuSign configuration"""
+    account_id: str
+    integration_key: str
+    user_id: str
+    private_key: str
+    base_url: str = "https://demo.docusign.net/restapi"
+    oauth_base_url: str = "https://account-d.docusign.com"
+
+
 class DocuSignClient:
     """
     DocuSign API client for BAA signatures
-    
+
     Features:
     - Send BAA for e-signature
     - Track signature status
@@ -23,32 +45,43 @@ class DocuSignClient:
     - Webhook notifications
     """
 
-    def __init__(
-        self,
-        account_id: str,
-        integration_key: str,
-        user_id: str,
-        private_key: str,
-        base_url: str = "https://demo.docusign.net/restapi",
-    ):
+    def __init__(self, config: DocuSignConfig):
         """
         Initialize DocuSign client
-        
+
         Args:
-            account_id: DocuSign account ID
-            integration_key: OAuth integration key
-            user_id: DocuSign user ID
-            private_key: RSA private key for JWT
-            base_url: API base URL (demo or production)
+            config: DocuSign configuration
         """
-        self.account_id = account_id
-        self.integration_key = integration_key
-        self.user_id = user_id
-        self.private_key = private_key
-        self.base_url = base_url
+        self.config = config
+        self.account_id = config.account_id
+        self.integration_key = config.integration_key
+        self.user_id = config.user_id
+        self.private_key = config.private_key
+        self.base_url = config.base_url
+        self.oauth_base_url = config.oauth_base_url
         self.logger = logger.bind(service="docusign_client")
         self._access_token: Optional[str] = None
         self._token_expires_at: Optional[datetime] = None
+
+    @property
+    def access_token(self) -> Optional[str]:
+        """Get access token"""
+        return self._access_token
+
+    @access_token.setter
+    def access_token(self, value: Optional[str]) -> None:
+        """Set access token"""
+        self._access_token = value
+
+    @property
+    def token_expires_at(self) -> Optional[datetime]:
+        """Get token expiration time"""
+        return self._token_expires_at
+
+    @token_expires_at.setter
+    def token_expires_at(self, value: Optional[datetime]) -> None:
+        """Set token expiration time"""
+        self._token_expires_at = value
 
     async def _get_access_token(self) -> str:
         """Get JWT access token"""
@@ -63,7 +96,7 @@ class DocuSignClient:
         # Request new token via JWT
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "https://account-d.docusign.com/oauth/token",
+                f"{self.oauth_base_url}/oauth/token",
                 data={
                     "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
                     "assertion": self._create_jwt_assertion(),
@@ -236,44 +269,285 @@ class DocuSignClient:
 
             return output_path
 
-    async def handle_webhook(
+    async def send_baa(
         self,
-        webhook_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        recipient_email: str,
+        recipient_name: str,
+        practice_name: str,
+        template_id: Optional[str] = None,
+    ) -> str:
         """
-        Handle DocuSign webhook notification
-        
+        Send BAA for signature
+
         Args:
-            webhook_data: Webhook payload from DocuSign
-        
+            recipient_email: Recipient email
+            recipient_name: Recipient name
+            practice_name: Practice name
+            template_id: Optional custom template ID
+
         Returns:
-            Processed event data
+            Envelope ID
         """
-        event = webhook_data.get("event")
-        envelope_id = webhook_data.get("data", {}).get("envelopeId")
+        token = await self._get_access_token()
+
+        envelope_definition = {
+            "emailSubject": f"Business Associate Agreement - {practice_name}",
+            "templateId": template_id or "baa_template_id",
+            "templateRoles": [
+                {
+                    "email": recipient_email,
+                    "name": recipient_name,
+                    "roleName": "Client",
+                    "tabs": {
+                        "textTabs": [
+                            {
+                                "tabLabel": "practice_name",
+                                "value": practice_name,
+                            },
+                            {
+                                "tabLabel": "client_name",
+                                "value": recipient_name,
+                            },
+                            {
+                                "tabLabel": "date",
+                                "value": datetime.utcnow().strftime("%Y-%m-%d"),
+                            },
+                        ],
+                    },
+                },
+            ],
+            "status": "sent",
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/v2.1/accounts/{self.account_id}/envelopes",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                json=envelope_definition,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            self.logger.info(
+                "baa_sent",
+                envelope_id=data["envelopeId"],
+                recipient_email=recipient_email,
+            )
+
+            return data["envelopeId"]
+
+    async def get_envelope_status(self, envelope_id: str) -> "EnvelopeStatusResponse":
+        """
+        Get envelope status
+
+        Args:
+            envelope_id: Envelope ID
+
+        Returns:
+            Envelope status response
+        """
+        token = await self._get_access_token()
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v2.1/accounts/{self.account_id}/envelopes/{envelope_id}",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            return EnvelopeStatusResponse(
+                envelope_id=envelope_id,
+                status=data["status"],
+                sent_at=self._parse_datetime(data.get("sentDateTime")),
+                delivered_at=self._parse_datetime(data.get("deliveredDateTime")),
+                signed_at=self._parse_datetime(data.get("completedDateTime")),
+                declined_at=self._parse_datetime(data.get("declinedDateTime")),
+                decline_reason=data.get("declineReason"),
+            )
+
+    async def download_signed_document(self, envelope_id: str) -> bytes:
+        """
+        Download signed document
+
+        Args:
+            envelope_id: Envelope ID
+
+        Returns:
+            PDF content
+        """
+        token = await self._get_access_token()
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v2.1/accounts/{self.account_id}/envelopes/{envelope_id}/documents/combined",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            response.raise_for_status()
+
+            self.logger.info(
+                "document_downloaded",
+                envelope_id=envelope_id,
+            )
+
+            return response.content
+
+    async def get_audit_trail(self, envelope_id: str) -> bytes:
+        """
+        Get audit trail
+
+        Args:
+            envelope_id: Envelope ID
+
+        Returns:
+            Audit trail PDF content
+        """
+        token = await self._get_access_token()
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v2.1/accounts/{self.account_id}/envelopes/{envelope_id}/documents/certificate",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            response.raise_for_status()
+
+            return response.content
+
+    async def void_envelope(self, envelope_id: str, reason: str) -> None:
+        """
+        Void envelope
+
+        Args:
+            envelope_id: Envelope ID
+            reason: Void reason
+        """
+        token = await self._get_access_token()
+
+        async with httpx.AsyncClient() as client:
+            response = await client.put(
+                f"{self.base_url}/v2.1/accounts/{self.account_id}/envelopes/{envelope_id}",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "status": "voided",
+                    "voidedReason": reason,
+                },
+            )
+            response.raise_for_status()
+
+            self.logger.info(
+                "envelope_voided",
+                envelope_id=envelope_id,
+                reason=reason,
+            )
+
+    async def resend_envelope(self, envelope_id: str) -> None:
+        """
+        Resend envelope notification
+
+        Args:
+            envelope_id: Envelope ID
+        """
+        token = await self._get_access_token()
+
+        async with httpx.AsyncClient() as client:
+            response = await client.put(
+                f"{self.base_url}/v2.1/accounts/{self.account_id}/envelopes/{envelope_id}/notification",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                json={"resendEnvelope": True},
+            )
+            response.raise_for_status()
+
+            self.logger.info(
+                "envelope_resent",
+                envelope_id=envelope_id,
+            )
+
+    def _parse_datetime(self, dt_str: Optional[str]) -> Optional[datetime]:
+        """
+        Parse datetime string
+
+        Args:
+            dt_str: Datetime string
+
+        Returns:
+            Parsed datetime or None
+        """
+        if not dt_str:
+            return None
+
+        try:
+            return datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            return None
+
+
+class EnvelopeStatusResponse(BaseModel):
+    """Envelope status response"""
+    envelope_id: str
+    status: str
+    sent_at: Optional[datetime] = None
+    delivered_at: Optional[datetime] = None
+    signed_at: Optional[datetime] = None
+    declined_at: Optional[datetime] = None
+    decline_reason: Optional[str] = None
+
+
+class DocuSignWebhookHandler:
+    """
+    DocuSign webhook handler
+
+    Processes webhook events and triggers workflow transitions
+    """
+
+    def __init__(self, workflow_service):
+        """
+        Initialize webhook handler
+
+        Args:
+            workflow_service: Workflow service instance
+        """
+        self.workflow_service = workflow_service
+        self.logger = logger.bind(service="docusign_webhook_handler")
+
+    async def handle_webhook(self, payload: Dict[str, Any]) -> None:
+        """
+        Handle webhook payload
+
+        Args:
+            payload: Webhook payload from DocuSign
+        """
+        event_type = payload.get("event")
+        envelope_id = payload.get("envelopeId")
 
         self.logger.info(
             "webhook_received",
-            event=event,
+            event_type=event_type,
             envelope_id=envelope_id,
         )
 
-        # Map DocuSign events to our workflow events
+        # Map DocuSign events to workflow events
         event_mapping = {
-            "envelope-sent": "baa_sent",
-            "envelope-delivered": "baa_delivered",
-            "envelope-completed": "baa_signed",
-            "envelope-declined": "baa_declined",
-            "envelope-voided": "baa_voided",
+            "envelope-completed": "BAA_SIGNED",
+            "envelope-declined": "BAA_DECLINED",
+            "envelope-voided": None,  # Log only, no workflow transition
         }
 
-        workflow_event = event_mapping.get(event)
+        workflow_event = event_mapping.get(event_type)
 
-        return {
-            "envelope_id": envelope_id,
-            "docusign_event": event,
-            "workflow_event": workflow_event,
-            "timestamp": webhook_data.get("generatedDateTime"),
-        }
-
-from datetime import timedelta
+        if workflow_event:
+            # Trigger workflow event
+            # Note: In real implementation, would need to look up client_id from envelope_id
+            self.logger.info(
+                "triggering_workflow_event",
+                workflow_event=workflow_event,
+                envelope_id=envelope_id,
+            )
