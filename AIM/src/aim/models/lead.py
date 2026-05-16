@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, Float, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from AIM.src.aim.database import Base
 
@@ -117,6 +117,11 @@ class Lead(Base):
     tier: Mapped[Optional[str]] = mapped_column(
         String(20), nullable=True
     )  # Hot/Warm/Cold
+
+    # Relationships
+    linear_tasks: Mapped[list["LinearTask"]] = relationship(
+        "LinearTask", back_populates="lead", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return (

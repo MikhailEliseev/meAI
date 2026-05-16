@@ -1,53 +1,50 @@
-"""Linear GraphQL API client.
+"""Linear GraphQL API client for lead management
 
-Based on research from github-project-llm-management pattern.
-Implements GraphQL-based project sync for automated project creation.
+Implements GraphQL API for:
+- Creating issues (tasks) for Hot/Warm leads
+- Managing workflow states
+- Assigning tasks to sales team
+- Syncing task status
+
+Part of: Phase 11 Sprint 2 - Task 2.3
 """
 
 import asyncio
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 import httpx
-from pydantic import BaseModel, ConfigDict, Field
 
-
-class LinearProject(BaseModel):
-    """Linear project model."""
-    model_config = ConfigDict(populate_by_name=True)
-
-    id: str
-    name: str
-    description: Optional[str] = None
-    state: str
-    progress: float = 0.0
-    team_id: str = Field(alias="teamId")
-
-
-class LinearIssue(BaseModel):
-    """Linear issue (task) model."""
-    model_config = ConfigDict(populate_by_name=True)
-
-    id: str
-    title: str
-    description: Optional[str] = None
-    state: str
-    priority: int = 0
-    project_id: Optional[str] = Field(None, alias="projectId")
-    assignee_id: Optional[str] = Field(None, alias="assigneeId")
+from AIM.src.aim.integrations.linear.schemas import (
+    LinearCreateIssueInput,
+    LinearIssue,
+    LinearLabel,
+    LinearProject,
+    LinearTeam,
+    LinearUpdateIssueInput,
+    LinearUser,
+    LinearWorkflowState,
+)
 
 
 class LinearClient:
-    """Linear GraphQL API client.
+    """Linear GraphQL API client for lead management
 
-    Provides CRUD operations for projects and issues.
-    Implements retry logic and error handling.
+    Provides operations for:
+    - Creating issues (tasks) for leads
+    - Managing workflow states
+    - Assigning tasks to team members
+    - Fetching teams, users, labels
 
     Example:
-        client = LinearClient(api_key="lin_api_...")
-        project = await client.create_project(
-            name="Client SEO Audit",
-            team_id="team-123",
-            description="Automated project from template"
-        )
+        async with LinearClient(api_key="lin_api_...") as client:
+            issue = await client.create_issue(
+                team_id="team_abc123",
+                title="[Hot] Plastic Surgery Lead - Score 87",
+                description="Lead details...",
+                priority=1,
+                label_ids=["label_hot123"],
+                assignee_id="user_abc123",
+            )
     """
 
     def __init__(
@@ -90,8 +87,8 @@ class LinearClient:
     async def _execute_query(
         self,
         query: str,
-        variables: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        variables: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Execute GraphQL query with retry logic.
 
         Args:
@@ -138,288 +135,169 @@ class LinearClient:
 
         raise last_error or RuntimeError("Query failed after retries")
 
-    async def get_projects(
-        self,
-        team_id: Optional[str] = None,
-        limit: int = 50,
-    ) -> List[LinearProject]:
-        """Fetch projects.
-
-        Args:
-            team_id: Filter by team ID (optional)
-            limit: Max projects to return
+    async def list_teams(self) -> list[LinearTeam]:
+        """Fetch all teams
 
         Returns:
-            List of projects
+            List of teams
         """
         query = """
-        query GetProjects($teamId: String, $first: Int) {
-          projects(
-            filter: { team: { id: { eq: $teamId } } }
-            first: $first
-          ) {
+        query ListTeams {
+          teams {
             nodes {
               id
               name
+              key
               description
-              state
-              progress
-              team { id }
             }
           }
         }
         """
 
-        variables = {"first": limit}
-        if team_id:
-            variables["teamId"] = team_id
-
-        data = await self._execute_query(query, variables)
-        nodes = data.get("projects", {}).get("nodes", [])
+        data = await self._execute_query(query)
+        nodes = data.get("teams", {}).get("nodes", [])
 
         return [
-            LinearProject(
+            LinearTeam(
                 id=node["id"],
                 name=node["name"],
+                key=node["key"],
                 description=node.get("description"),
-                state=node["state"],
-                progress=node.get("progress", 0.0),
-                teamId=node["team"]["id"],
             )
             for node in nodes
         ]
 
-    async def get_project(self, project_id: str) -> Optional[LinearProject]:
-        """Fetch single project by ID.
+    async def list_workflow_states(self, team_id: str) -> list[LinearWorkflowState]:
+        """Fetch workflow states for team
 
         Args:
-            project_id: Project ID
-
-        Returns:
-            Project or None if not found
-        """
-        query = """
-        query GetProject($id: String!) {
-          project(id: $id) {
-            id
-            name
-            description
-            state
-            progress
-            team { id }
-          }
-        }
-        """
-
-        data = await self._execute_query(query, {"id": project_id})
-        node = data.get("project")
-
-        if not node:
-            return None
-
-        return LinearProject(
-            id=node["id"],
-            name=node["name"],
-            description=node.get("description"),
-            state=node["state"],
-            progress=node.get("progress", 0.0),
-            teamId=node["team"]["id"],
-        )
-    async def create_project(
-        self,
-        name: str,
-        team_id: str,
-        description: Optional[str] = None,
-        state: str = "planned",
-    ) -> LinearProject:
-        """Create new project.
-
-        Args:
-            name: Project name
             team_id: Team ID
-            description: Project description (optional)
-            state: Project state (planned, started, completed, canceled)
 
         Returns:
-            Created project
+            List of workflow states
         """
         query = """
-        mutation CreateProject($input: ProjectCreateInput!) {
-          projectCreate(input: $input) {
-            success
-            project {
-              id
-              name
-              description
-              state
-              progress
-              team { id }
+        query ListWorkflowStates($teamId: String!) {
+          team(id: $teamId) {
+            states {
+              nodes {
+                id
+                name
+                type
+                color
+                position
+              }
             }
           }
         }
         """
 
-        variables = {
-            "input": {
-                "name": name,
-                "teamId": team_id,
-                "state": state,
-            }
-        }
-        if description:
-            variables["input"]["description"] = description
-
-        data = await self._execute_query(query, variables)
-        result = data.get("projectCreate", {})
-
-        if not result.get("success"):
-            raise ValueError("Failed to create project")
-
-        node = result.get("project")
-        return LinearProject(
-            id=node["id"],
-            name=node["name"],
-            description=node.get("description"),
-            state=node["state"],
-            progress=node.get("progress", 0.0),
-            teamId=node["team"]["id"],
-        )
-
-    async def update_project(
-        self,
-        project_id: str,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        state: Optional[str] = None,
-        progress: Optional[float] = None,
-    ) -> LinearProject:
-        """Update existing project.
-
-        Args:
-            project_id: Project ID
-            name: New name (optional)
-            description: New description (optional)
-            state: New state (optional)
-            progress: New progress 0.0-1.0 (optional)
-
-        Returns:
-            Updated project
-        """
-        query = """
-        mutation UpdateProject($id: String!, $input: ProjectUpdateInput!) {
-          projectUpdate(id: $id, input: $input) {
-            success
-            project {
-              id
-              name
-              description
-              state
-              progress
-              team { id }
-            }
-          }
-        }
-        """
-
-        update_input = {}
-        if name is not None:
-            update_input["name"] = name
-        if description is not None:
-            update_input["description"] = description
-        if state is not None:
-            update_input["state"] = state
-        if progress is not None:
-            update_input["progress"] = progress
-
-        variables = {"id": project_id, "input": update_input}
-
-        data = await self._execute_query(query, variables)
-        result = data.get("projectUpdate", {})
-
-        if not result.get("success"):
-            raise ValueError("Failed to update project")
-
-        node = result.get("project")
-        return LinearProject(
-            id=node["id"],
-            name=node["name"],
-            description=node.get("description"),
-            state=node["state"],
-            progress=node.get("progress", 0.0),
-            teamId=node["team"]["id"],
-        )
-
-    async def get_issues(
-        self,
-        project_id: Optional[str] = None,
-        limit: int = 50,
-    ) -> List[LinearIssue]:
-        """Fetch issues (tasks).
-
-        Args:
-            project_id: Filter by project ID (optional)
-            limit: Max issues to return
-
-        Returns:
-            List of issues
-        """
-        query = """
-        query GetIssues($projectId: String, $first: Int) {
-          issues(
-            filter: { project: { id: { eq: $projectId } } }
-            first: $first
-          ) {
-            nodes {
-              id
-              title
-              description
-              state { name }
-              priority
-              project { id }
-              assignee { id }
-            }
-          }
-        }
-        """
-
-        variables = {"first": limit}
-        if project_id:
-            variables["projectId"] = project_id
-
-        data = await self._execute_query(query, variables)
-        nodes = data.get("issues", {}).get("nodes", [])
+        data = await self._execute_query(query, {"teamId": team_id})
+        nodes = data.get("team", {}).get("states", {}).get("nodes", [])
 
         return [
-            LinearIssue(
+            LinearWorkflowState(
                 id=node["id"],
-                title=node["title"],
+                name=node["name"],
+                type=node["type"],
+                color=node.get("color"),
+                position=node.get("position"),
+            )
+            for node in nodes
+        ]
+
+    async def list_users(self) -> list[LinearUser]:
+        """Fetch all active users
+
+        Returns:
+            List of users
+        """
+        query = """
+        query ListUsers {
+          users {
+            nodes {
+              id
+              name
+              email
+              avatarUrl
+              active
+            }
+          }
+        }
+        """
+
+        data = await self._execute_query(query)
+        nodes = data.get("users", {}).get("nodes", [])
+
+        return [
+            LinearUser(
+                id=node["id"],
+                name=node["name"],
+                email=node["email"],
+                avatar_url=node.get("avatarUrl"),
+                active=node.get("active", True),
+            )
+            for node in nodes
+            if node.get("active", True)
+        ]
+
+    async def list_labels(self, team_id: str) -> list[LinearLabel]:
+        """Fetch labels for team
+
+        Args:
+            team_id: Team ID
+
+        Returns:
+            List of labels
+        """
+        query = """
+        query ListLabels($teamId: String!) {
+          team(id: $teamId) {
+            labels {
+              nodes {
+                id
+                name
+                color
+                description
+              }
+            }
+          }
+        }
+        """
+
+        data = await self._execute_query(query, {"teamId": team_id})
+        nodes = data.get("team", {}).get("labels", {}).get("nodes", [])
+
+        return [
+            LinearLabel(
+                id=node["id"],
+                name=node["name"],
+                color=node["color"],
                 description=node.get("description"),
-                state=node["state"]["name"],
-                priority=node.get("priority", 0),
-                projectId=node.get("project", {}).get("id") if node.get("project") else None,
-                assigneeId=node.get("assignee", {}).get("id") if node.get("assignee") else None,
             )
             for node in nodes
         ]
 
     async def create_issue(
         self,
-        title: str,
         team_id: str,
-        description: Optional[str] = None,
-        project_id: Optional[str] = None,
+        title: str,
+        description: str | None = None,
         priority: int = 0,
-        assignee_id: Optional[str] = None,
+        label_ids: list[str] | None = None,
+        assignee_id: str | None = None,
+        state_id: str | None = None,
     ) -> LinearIssue:
-        """Create new issue (task).
+        """Create new issue (task)
 
         Args:
-            title: Issue title
             team_id: Team ID
-            description: Issue description (optional)
-            project_id: Project ID (optional)
-            priority: Priority 0-4 (0=none, 1=urgent, 2=high, 3=medium, 4=low)
-            assignee_id: Assignee user ID (optional)
+            title: Issue title
+            description: Issue description (markdown)
+            priority: Priority (0=none, 1=urgent, 2=high, 3=medium, 4=low)
+            label_ids: List of label IDs
+            assignee_id: Assignee user ID
+            state_id: Initial workflow state ID
 
         Returns:
             Created issue
@@ -430,44 +308,302 @@ class LinearClient:
             success
             issue {
               id
+              identifier
               title
               description
-              state { name }
               priority
-              project { id }
-              assignee { id }
+              url
+              createdAt
+              updatedAt
+              state {
+                id
+                name
+                type
+                color
+                position
+              }
+              assignee {
+                id
+                name
+                email
+                avatarUrl
+                active
+              }
+              labels {
+                nodes {
+                  id
+                  name
+                  color
+                  description
+                }
+              }
             }
           }
         }
         """
 
-        variables = {
-            "input": {
-                "title": title,
-                "teamId": team_id,
-                "priority": priority,
-            }
+        input_data: dict[str, Any] = {
+            "teamId": team_id,
+            "title": title,
+            "priority": priority,
         }
-        if description:
-            variables["input"]["description"] = description
-        if project_id:
-            variables["input"]["projectId"] = project_id
-        if assignee_id:
-            variables["input"]["assigneeId"] = assignee_id
 
-        data = await self._execute_query(query, variables)
+        if description:
+            input_data["description"] = description
+        if label_ids:
+            input_data["labelIds"] = label_ids
+        if assignee_id:
+            input_data["assigneeId"] = assignee_id
+        if state_id:
+            input_data["stateId"] = state_id
+
+        data = await self._execute_query(query, {"input": input_data})
         result = data.get("issueCreate", {})
 
         if not result.get("success"):
             raise ValueError("Failed to create issue")
 
-        node = result.get("issue")
+        node = result["issue"]
         return LinearIssue(
             id=node["id"],
+            identifier=node["identifier"],
             title=node["title"],
             description=node.get("description"),
-            state=node["state"]["name"],
-            priority=node.get("priority", 0),
-            projectId=node.get("project", {}).get("id") if node.get("project") else None,
-            assigneeId=node.get("assignee", {}).get("id") if node.get("assignee") else None,
+            priority=node["priority"],
+            state=LinearWorkflowState(
+                id=node["state"]["id"],
+                name=node["state"]["name"],
+                type=node["state"]["type"],
+                color=node["state"].get("color"),
+                position=node["state"].get("position"),
+            ),
+            assignee=LinearUser(
+                id=node["assignee"]["id"],
+                name=node["assignee"]["name"],
+                email=node["assignee"]["email"],
+                avatar_url=node["assignee"].get("avatarUrl"),
+                active=node["assignee"].get("active", True),
+            )
+            if node.get("assignee")
+            else None,
+            labels=[
+                LinearLabel(
+                    id=label["id"],
+                    name=label["name"],
+                    color=label["color"],
+                    description=label.get("description"),
+                )
+                for label in node.get("labels", {}).get("nodes", [])
+            ],
+            url=node["url"],
+            created_at=node["createdAt"],
+            updated_at=node["updatedAt"],
+        )
+
+    async def update_issue(
+        self,
+        issue_id: str,
+        state_id: str | None = None,
+        assignee_id: str | None = None,
+        priority: int | None = None,
+        title: str | None = None,
+        description: str | None = None,
+    ) -> LinearIssue:
+        """Update existing issue
+
+        Args:
+            issue_id: Issue ID
+            state_id: New workflow state ID
+            assignee_id: New assignee user ID
+            priority: New priority
+            title: New title
+            description: New description
+
+        Returns:
+            Updated issue
+        """
+        query = """
+        mutation UpdateIssue($id: String!, $input: IssueUpdateInput!) {
+          issueUpdate(id: $id, input: $input) {
+            success
+            issue {
+              id
+              identifier
+              title
+              description
+              priority
+              url
+              createdAt
+              updatedAt
+              state {
+                id
+                name
+                type
+                color
+                position
+              }
+              assignee {
+                id
+                name
+                email
+                avatarUrl
+                active
+              }
+              labels {
+                nodes {
+                  id
+                  name
+                  color
+                  description
+                }
+              }
+            }
+          }
+        }
+        """
+
+        input_data: dict[str, Any] = {}
+        if state_id is not None:
+            input_data["stateId"] = state_id
+        if assignee_id is not None:
+            input_data["assigneeId"] = assignee_id
+        if priority is not None:
+            input_data["priority"] = priority
+        if title is not None:
+            input_data["title"] = title
+        if description is not None:
+            input_data["description"] = description
+
+        data = await self._execute_query(query, {"id": issue_id, "input": input_data})
+        result = data.get("issueUpdate", {})
+
+        if not result.get("success"):
+            raise ValueError("Failed to update issue")
+
+        node = result["issue"]
+        return LinearIssue(
+            id=node["id"],
+            identifier=node["identifier"],
+            title=node["title"],
+            description=node.get("description"),
+            priority=node["priority"],
+            state=LinearWorkflowState(
+                id=node["state"]["id"],
+                name=node["state"]["name"],
+                type=node["state"]["type"],
+                color=node["state"].get("color"),
+                position=node["state"].get("position"),
+            ),
+            assignee=LinearUser(
+                id=node["assignee"]["id"],
+                name=node["assignee"]["name"],
+                email=node["assignee"]["email"],
+                avatar_url=node["assignee"].get("avatarUrl"),
+                active=node["assignee"].get("active", True),
+            )
+            if node.get("assignee")
+            else None,
+            labels=[
+                LinearLabel(
+                    id=label["id"],
+                    name=label["name"],
+                    color=label["color"],
+                    description=label.get("description"),
+                )
+                for label in node.get("labels", {}).get("nodes", [])
+            ],
+            url=node["url"],
+            created_at=node["createdAt"],
+            updated_at=node["updatedAt"],
+        )
+
+    async def get_issue(self, issue_id: str) -> LinearIssue:
+        """Fetch single issue by ID
+
+        Args:
+            issue_id: Issue ID
+
+        Returns:
+            Issue
+
+        Raises:
+            ValueError: If issue not found
+        """
+        query = """
+        query GetIssue($id: String!) {
+          issue(id: $id) {
+            id
+            identifier
+            title
+            description
+            priority
+            url
+            createdAt
+            updatedAt
+            state {
+              id
+              name
+              type
+              color
+              position
+            }
+            assignee {
+              id
+              name
+              email
+              avatarUrl
+              active
+            }
+            labels {
+              nodes {
+                id
+                name
+                color
+                description
+              }
+            }
+          }
+        }
+        """
+
+        data = await self._execute_query(query, {"id": issue_id})
+        node = data.get("issue")
+
+        if not node:
+            raise ValueError(f"Issue {issue_id} not found")
+
+        return LinearIssue(
+            id=node["id"],
+            identifier=node["identifier"],
+            title=node["title"],
+            description=node.get("description"),
+            priority=node["priority"],
+            state=LinearWorkflowState(
+                id=node["state"]["id"],
+                name=node["state"]["name"],
+                type=node["state"]["type"],
+                color=node["state"].get("color"),
+                position=node["state"].get("position"),
+            ),
+            assignee=LinearUser(
+                id=node["assignee"]["id"],
+                name=node["assignee"]["name"],
+                email=node["assignee"]["email"],
+                avatar_url=node["assignee"].get("avatarUrl"),
+                active=node["assignee"].get("active", True),
+            )
+            if node.get("assignee")
+            else None,
+            labels=[
+                LinearLabel(
+                    id=label["id"],
+                    name=label["name"],
+                    color=label["color"],
+                    description=label.get("description"),
+                )
+                for label in node.get("labels", {}).get("nodes", [])
+            ],
+            url=node["url"],
+            created_at=node["createdAt"],
+            updated_at=node["updatedAt"],
         )

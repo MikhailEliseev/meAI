@@ -1,4 +1,4 @@
-"""Settings for API Clients
+"""Settings for API Clients and Integrations
 
 Environment variable configuration with validation for API keys and defaults.
 """

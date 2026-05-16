@@ -12,6 +12,8 @@ from AIM.src.aim.models.analytics_models import (
     CrossDomainMetrics,
     AnalyticsAlert,
 )
+from AIM.src.aim.models.lead import Lead
+from AIM.src.aim.models.linear_task import LinearTask
 
 __all__ = [
     "DomainMetrics",
@@ -20,4 +22,6 @@ __all__ = [
     "StrategicInsight",
     "CrossDomainMetrics",
     "AnalyticsAlert",
+    "Lead",
+    "LinearTask",
 ]
