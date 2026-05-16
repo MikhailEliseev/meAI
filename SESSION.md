@@ -665,3 +665,108 @@
 
 ---
 
+
+#### Task 2.4: Lead Nurturing ✅ COMPLETED (4 hours)
+**Date:** 2026-05-16 11:32 GMT+3
+
+**Created:**
+- Email queue system with BullMQ and Redis
+- Email scheduling with delayed jobs
+- Sequence management (pause, resume, unsubscribe)
+- Email tracking (opened, clicked)
+- Queue statistics and monitoring
+- 7 test cases (all passing)
+
+**Files Created (6 files, 950+ lines):**
+- `frontend/lib/email-queue.ts` (350 lines) - BullMQ queue system
+- `frontend/app/api/email/manage-sequence/route.ts` (120 lines) - Pause/resume/unsubscribe
+- `frontend/app/api/email/track/route.ts` (100 lines) - Email tracking
+- `frontend/app/api/email/queue-stats/route.ts` (70 lines) - Queue statistics
+- `frontend/__tests__/lib/email-queue.test.ts` (150 lines) - Tests
+- `frontend/.env.example` - Added Redis config
+
+**Files Modified:**
+- `frontend/app/api/email/send-sequence/route.ts` - Updated to use queue
+- `frontend/jest.config.ts` - Added transformIgnorePatterns for BullMQ
+
+**Email Queue Features:**
+
+**1. Scheduling System:**
+- BullMQ job queue with Redis persistence
+- Delayed job execution (minutes to days)
+- Automatic retry with exponential backoff (3 attempts, 1 min delay)
+- Job cleanup (completed: 24h, failed: 7 days)
+- Concurrent processing (5 emails at once)
+
+**2. Sequence Management:**
+- `scheduleEmailSequence()` - Schedule all emails in sequence
+- `pauseEmailSequence()` - Pause sequence for a lead
+- `resumeEmailSequence()` - Resume from specific step
+- `handleUnsubscribe()` - Remove all pending emails
+
+**3. Email Tracking:**
+- Open tracking (1x1 transparent pixel)
+- Click tracking (POST endpoint)
+- Event logging (sent, opened, clicked)
+
+**4. Queue Monitoring:**
+- Real-time statistics (waiting, active, completed, failed, delayed)
+- Job cleanup API
+- Worker event handlers (completed, failed, error)
+
+**API Endpoints:**
+
+**POST /api/email/send-sequence**
+- Schedule email sequence for a lead
+- Returns: jobIds, emailsScheduled, nextEmailAt
+
+**POST /api/email/manage-sequence**
+- Actions: pause, resume, unsubscribe
+- Pause: Remove pending jobs for lead+sequence
+- Resume: Schedule remaining emails from current step
+- Unsubscribe: Remove all pending jobs for lead
+
+**GET /api/email/manage-sequence?email=X&sequenceId=Y**
+- Get sequence status for a lead
+- Returns: currentStep, emailsSent, emailsOpened, emailsClicked, status
+
+**GET /api/email/track?event=open&email=X&sequenceId=Y&stepId=Z**
+- Track email open (returns 1x1 pixel)
+
+**POST /api/email/track**
+- Track email click
+- Body: { event: "click", leadEmail, sequenceId, stepId, url }
+
+**GET /api/email/queue-stats**
+- Get queue statistics
+- Returns: waiting, active, completed, failed, delayed, total
+
+**POST /api/email/queue-stats**
+- Cleanup old jobs
+- Body: { action: "cleanup" }
+
+**Dependencies Added:**
+- `bullmq` - Job queue system
+- `ioredis` - Redis client
+
+**Environment Variables:**
+```bash
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+**Tests:** 7/7 passing ✅
+
+**Integration:**
+- ContactForm triggers email sequence after lead scoring
+- Sequences scheduled with correct delays (immediate → hours → days)
+- Non-blocking execution (doesn't fail form submission)
+
+**TODO (Phase 2.5):**
+- Database schema for sequence status tracking
+- A/B testing for email content
+- Email analytics dashboard
+- Unsubscribe page UI
+
+---
+
