@@ -62,17 +62,18 @@ async def test_get_access_token_success(docusign_client):
     mock_response.raise_for_status = MagicMock()
 
     with patch("httpx.AsyncClient") as mock_client:
-        mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-            return_value=mock_response
-        )
+        with patch.object(docusign_client, "_create_jwt_assertion", return_value="mock-jwt"):
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
+                return_value=mock_response
+            )
 
-        # Act
-        token = await docusign_client._get_access_token()
+            # Act
+            token = await docusign_client._get_access_token()
 
-        # Assert
-        assert token == "test-token"
-        assert docusign_client.access_token == "test-token"
-        assert docusign_client.token_expires_at is not None
+            # Assert
+            assert token == "test-token"
+            assert docusign_client.access_token == "test-token"
+            assert docusign_client.token_expires_at is not None
 
 
 @pytest.mark.asyncio
@@ -107,21 +108,22 @@ async def test_send_baa_success(docusign_client):
     mock_envelope_response.raise_for_status = MagicMock()
 
     with patch("httpx.AsyncClient") as mock_client:
-        mock_instance = mock_client.return_value.__aenter__.return_value
-        mock_instance.post = AsyncMock(
-            side_effect=[mock_token_response, mock_envelope_response]
-        )
+        with patch.object(docusign_client, "_create_jwt_assertion", return_value="mock-jwt"):
+            mock_instance = mock_client.return_value.__aenter__.return_value
+            mock_instance.post = AsyncMock(
+                side_effect=[mock_token_response, mock_envelope_response]
+            )
 
-        # Act
-        envelope_id = await docusign_client.send_baa(
-            recipient_email="test@example.com",
-            recipient_name="Dr. Test",
-            practice_name="Test Clinic",
-        )
+            # Act
+            envelope_id = await docusign_client.send_baa(
+                recipient_email="test@example.com",
+                recipient_name="Dr. Test",
+                practice_name="Test Clinic",
+            )
 
-        # Assert
-        assert envelope_id == "envelope-123"
-        assert mock_instance.post.call_count == 2
+            # Assert
+            assert envelope_id == "envelope-123"
+            assert mock_instance.post.call_count == 2
 
 
 @pytest.mark.asyncio
@@ -142,21 +144,22 @@ async def test_send_baa_with_template(docusign_client):
     mock_envelope_response.raise_for_status = MagicMock()
 
     with patch("httpx.AsyncClient") as mock_client:
-        mock_instance = mock_client.return_value.__aenter__.return_value
-        mock_instance.post = AsyncMock(
-            side_effect=[mock_token_response, mock_envelope_response]
-        )
+        with patch.object(docusign_client, "_create_jwt_assertion", return_value="mock-jwt"):
+            mock_instance = mock_client.return_value.__aenter__.return_value
+            mock_instance.post = AsyncMock(
+                side_effect=[mock_token_response, mock_envelope_response]
+            )
 
-        # Act
-        envelope_id = await docusign_client.send_baa(
-            recipient_email="test@example.com",
-            recipient_name="Dr. Test",
-            practice_name="Test Clinic",
-            template_id="custom-template",
-        )
+            # Act
+            envelope_id = await docusign_client.send_baa(
+                recipient_email="test@example.com",
+                recipient_name="Dr. Test",
+                practice_name="Test Clinic",
+                template_id="custom-template",
+            )
 
-        # Assert
-        assert envelope_id == "envelope-456"
+            # Assert
+            assert envelope_id == "envelope-456"
 
 
 @pytest.mark.asyncio
@@ -424,15 +427,16 @@ async def test_send_baa_api_error(docusign_client):
     )
 
     with patch("httpx.AsyncClient") as mock_client:
-        mock_instance = mock_client.return_value.__aenter__.return_value
-        mock_instance.post = AsyncMock(
-            side_effect=[mock_token_response, mock_envelope_response]
-        )
-
-        # Act & Assert
-        with pytest.raises(httpx.HTTPStatusError):
-            await docusign_client.send_baa(
-                recipient_email="test@example.com",
-                recipient_name="Dr. Test",
-                practice_name="Test Clinic",
+        with patch.object(docusign_client, "_create_jwt_assertion", return_value="mock-jwt"):
+            mock_instance = mock_client.return_value.__aenter__.return_value
+            mock_instance.post = AsyncMock(
+                side_effect=[mock_token_response, mock_envelope_response]
             )
+
+            # Act & Assert
+            with pytest.raises(httpx.HTTPStatusError):
+                await docusign_client.send_baa(
+                    recipient_email="test@example.com",
+                    recipient_name="Dr. Test",
+                    practice_name="Test Clinic",
+                )
