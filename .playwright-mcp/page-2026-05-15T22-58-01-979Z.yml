@@ -1,0 +1,13 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e7]: rocket_launch
+      - heading "Welcome" [level=1] [ref=e8]
+      - paragraph [ref=e9]: Let's get your OmniRoute instance configured
+    - generic [ref=e11]:
+      - paragraph [ref=e12]: Run the onboarding wizard to set up your password and connect your first AI provider.
+      - button "Start Onboarding" [ref=e13] [cursor=pointer]
+    - paragraph [ref=e14]: OmniRoute — Unified AI API Proxy
+  - alert [ref=e15]

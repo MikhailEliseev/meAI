@@ -1,0 +1,21 @@
+[    -469ms] [ERROR] Error: Couldn't get stack or message from error hint
+    at getErrorIdFromHint (chrome://resources/perplexity/libs/sentry.js:42:18)
+    at #onBeforeSend (chrome://resources/perplexity/libs/sentry.js:246:29)
+    at chrome://resources/perplexity/npm/@sentry/browser.js:1:72485
+    at chrome://resources/perplexity/npm/@sentry/browser.js:1:72783
+    at Array.<anonymous> (chrome://resources/perplexity/npm/@sentry/browser.js:1:17626)
+    at chrome://resources/perplexity/npm/@sentry/browser.js:1:18340
+    at Array.forEach (<anonymous>)
+    at $e._executeHandlers (chrome://resources/perplexity/npm/@sentry/browser.js:1:18290)
+    at chrome://resources/perplexity/npm/@sentry/browser.js:1:17710
+    at new $e (chrome://resources/perplexity/npm/@sentry/browser.js:1:17499)
+    at $e.then (chrome://resources/perplexity/npm/@sentry/browser.js:1:17572)
+    at Ro._processEvent (chrome://resources/perplexity/npm/@sentry/browser.js:1:72187)
+    at Ro._captureEvent (chrome://resources/perplexity/npm/@sentry/browser.js:1:71577)
+    at Ro.captureEvent (chrome://resources/perplexity/npm/@sentry/browser.js:1:67899)
+    at fe.captureEvent (chrome://resources/perplexity/npm/@sentry/browser.js:1:14537)
+    at zt (chrome://resources/perplexity/npm/@sentry/browser.js:1:32125)
+    at chrome://resources/perplexity/npm/@sentry/browser.js:1:93873
+    at mn (chrome://resources/perplexity/npm/@sentry/browser.js:1:35381)
+    at Sn.C.onunhandledrejection (chrome://resources/perplexity/npm/@sentry/browser.js:1:35894) @ chrome://resources/perplexity/npm/@sentry/browser.js:0
+[       9ms] The play() request was interrupted by a call to pause(). https://goo.gl/LdLk22
