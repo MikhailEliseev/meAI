@@ -1,507 +1,409 @@
 """
-Tests for Onboarding Workflow Automation
-
-Tests state machine transitions, automatic actions, and error handling.
+Tests for Onboarding Workflow
 """
 
 import pytest
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
-from sqlalchemy.ext.asyncio import AsyncSession
+from unittest.mock import Mock, AsyncMock, patch
 
 from aim.services.onboarding.workflow import (
     OnboardingWorkflow,
-    OnboardingStage,
+    OnboardingState,
     OnboardingEvent,
-    OnboardingData,
+    OnboardingSession,
+    TRANSITIONS,
 )
-from aim.models.onboarding import OnboardingSession
 
 
 @pytest.fixture
-def mock_db():
-    """Mock database session"""
-    db = AsyncMock(spec=AsyncSession)
-    db.add = MagicMock()
-    db.commit = AsyncMock()
-    db.refresh = AsyncMock()
-    db.execute = AsyncMock()
-    return db
+def mock_services():
+    """Create mock services"""
+    return {
+        "document_processor": AsyncMock(),
+        "docusign_client": AsyncMock(),
+        "payment_service": AsyncMock(),
+        "linear_client": AsyncMock(),
+        "email_service": AsyncMock(),
+        "calendar_service": AsyncMock(),
+    }
 
 
 @pytest.fixture
-def mock_docusign():
-    """Mock DocuSign client"""
-    client = AsyncMock()
-    client.send_baa = AsyncMock(return_value="envelope-123")
-    client.get_envelope_status = AsyncMock()
-    return client
+def workflow(mock_services):
+    """Create workflow instance"""
+    return OnboardingWorkflow(**mock_services)
 
 
 @pytest.fixture
-def mock_linear():
-    """Mock Linear service"""
-    service = AsyncMock()
-    service.create_project_from_template = AsyncMock(
-        return_value={
-            "id": "project-123",
-            "team_id": "team-123",
+def sample_session():
+    """Sample onboarding session"""
+    return OnboardingSession(
+        session_id="onb_client123_1234567890",
+        client_id="client123",
+        state=OnboardingState.LEAD_CAPTURED,
+        lead_score=85,
+        metadata={
+            "email": "doctor@dental.com",
+            "name": "Dr. Smith",
+            "practice_name": "Smile Dental",
+            "package_name": "Growth Package",
+            "package_price": 5000,
+        },
+    )
+
+
+class TestOnboardingWorkflow:
+    """Test onboarding workflow"""
+
+    @pytest.mark.asyncio
+    async def test_start_onboarding_hot_lead(self, workflow, mock_services):
+        """Test starting onboarding for hot lead (score >= 80)"""
+        session = await workflow.start_onboarding(
+            client_id="client123",
+            lead_score=85,
+        )
+
+        assert session.client_id == "client123"
+        assert session.lead_score == 85
+        # Hot lead should auto-trigger document request
+        assert session.state == OnboardingState.DOCUMENTS_REQUESTED
+        mock_services["email_service"].send_template.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_start_onboarding_cold_lead(self, workflow):
+        """Test starting onboarding for cold lead (score < 80)"""
+        session = await workflow.start_onboarding(
+            client_id="client456",
+            lead_score=50,
+        )
+
+        assert session.client_id == "client456"
+        assert session.lead_score == 50
+        # Cold lead stays in LEAD_CAPTURED
+        assert session.state == OnboardingState.LEAD_CAPTURED
+
+    @pytest.mark.asyncio
+    async def test_state_transitions_validation(self, workflow, sample_session):
+        """Test state transition validation"""
+        # Valid transition
+        sample_session.state = OnboardingState.DOCUMENTS_REQUESTED
+        await workflow.handle_event(sample_session, OnboardingEvent.DOCUMENTS_UPLOADED)
+        # Should not raise
+
+        # Invalid transition
+        sample_session.state = OnboardingState.LEAD_CAPTURED
+        with pytest.raises(ValueError, match="not allowed"):
+            await workflow.handle_event(sample_session, OnboardingEvent.BAA_SIGNED)
+
+    @pytest.mark.asyncio
+    async def test_request_documents(self, workflow, sample_session, mock_services):
+        """Test document request"""
+        sample_session.state = OnboardingState.LEAD_CAPTURED
+        session = await workflow.handle_event(
+            sample_session,
+            OnboardingEvent.LEAD_SCORED,
+        )
+
+        assert session.state == OnboardingState.DOCUMENTS_REQUESTED
+        mock_services["email_service"].send_template.assert_called_once_with(
+            to="doctor@dental.com",
+            template="document_request",
+            data={
+                "client_name": "Dr. Smith",
+                "upload_link": f"https://iamaim.ru/onboarding/{session.session_id}/upload",
+                "required_documents": [
+                    "Practice information",
+                    "Analytics access",
+                    "Advertising accounts",
+                ],
+            },
+        )
+
+    @pytest.mark.asyncio
+    async def test_process_documents_approved(self, workflow, sample_session, mock_services):
+        """Test document processing with approved validation"""
+        sample_session.state = OnboardingState.DOCUMENTS_REQUESTED
+        sample_session.documents = [
+            {"id": "doc1", "path": "/tmp/doc1.pdf"},
+            {"id": "doc2", "path": "/tmp/doc2.pdf"},
+        ]
+
+        # Mock approved validation
+        mock_services["document_processor"].process_document.return_value = {
+            "document_id": "doc1",
+            "extraction": {"practice_name": "Smile Dental"},
+            "validation": {
+                "status": "approved",
+                "requires_review": False,
+            },
         }
-    )
-    return service
 
+        session = await workflow.handle_event(
+            sample_session,
+            OnboardingEvent.DOCUMENTS_UPLOADED,
+        )
 
-@pytest.fixture
-def mock_email():
-    """Mock email service"""
-    service = AsyncMock()
-    service.send_welcome_email = AsyncMock()
-    return service
+        # Should auto-progress to BAA_SENT
+        assert session.state == OnboardingState.BAA_SENT
+        assert mock_services["document_processor"].process_document.call_count == 2
+        mock_services["docusign_client"].send_baa.assert_called_once()
 
+    @pytest.mark.asyncio
+    async def test_process_documents_needs_review(self, workflow, sample_session, mock_services):
+        """Test document processing with review needed"""
+        sample_session.state = OnboardingState.DOCUMENTS_REQUESTED
+        sample_session.documents = [
+            {"id": "doc1", "path": "/tmp/doc1.pdf"},
+        ]
 
-@pytest.fixture
-def mock_document_processor():
-    """Mock document processor"""
-    processor = AsyncMock()
-    processor.process_document = AsyncMock(
-        return_value={
-            "practice_name": "Test Clinic",
-            "inn": "1234567890",
+        # Mock review needed
+        mock_services["document_processor"].process_document.return_value = {
+            "document_id": "doc1",
+            "extraction": {"practice_name": None},
+            "validation": {
+                "status": "review",
+                "requires_review": True,
+            },
         }
-    )
-    return processor
 
-
-@pytest.fixture
-def workflow(mock_db, mock_docusign, mock_linear, mock_email, mock_document_processor):
-    """Create workflow instance with mocked dependencies"""
-    return OnboardingWorkflow(
-        db=mock_db,
-        docusign_client=mock_docusign,
-        linear_service=mock_linear,
-        email_service=mock_email,
-        document_processor=mock_document_processor,
-    )
-
-
-@pytest.mark.asyncio
-async def test_create_session(workflow, mock_db):
-    """Test creating new onboarding session"""
-    # Arrange
-    client_id = "client-123"
-    practice_name = "Test Clinic"
-    contact_name = "Dr. Smith"
-    contact_email = "smith@test.com"
-    contact_phone = "+1234567890"
-
-    # Act
-    session = await workflow.create_session(
-        client_id=client_id,
-        practice_name=practice_name,
-        contact_name=contact_name,
-        contact_email=contact_email,
-        contact_phone=contact_phone,
-    )
-
-    # Assert
-    assert session.client_id == client_id
-    assert session.stage == OnboardingStage.CREATED
-    assert session.data["practice_name"] == practice_name
-    assert session.data["contact_name"] == contact_name
-    assert session.data["contact_email"] == contact_email
-    assert session.data["contact_phone"] == contact_phone
-    mock_db.add.assert_called_once()
-    mock_db.commit.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_documents_uploaded_transition(workflow, mock_db):
-    """Test transition from CREATED to DOCUMENTS_UPLOADED"""
-    # Arrange
-    session = OnboardingSession(
-        id="session-123",
-        client_id="client-123",
-        stage=OnboardingStage.CREATED,
-        data={
-            "practice_name": "Test Clinic",
-            "contact_name": "Dr. Smith",
-            "contact_email": "smith@test.com",
-        },
-        history=[],
-    )
-
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = session
-    mock_db.execute.return_value = mock_result
-
-    # Mock _trigger_next_action to prevent automatic transitions
-    with patch.object(workflow, '_trigger_next_action', new_callable=AsyncMock):
-        # Act
-        result = await workflow.handle_event(
-            session_id="session-123",
-            event=OnboardingEvent.DOCUMENTS_UPLOADED,
-            event_data={"document_ids": ["doc-1", "doc-2"]},
+        session = await workflow.handle_event(
+            sample_session,
+            OnboardingEvent.DOCUMENTS_UPLOADED,
         )
 
-        # Assert
-        assert result.stage == OnboardingStage.DOCUMENTS_UPLOADED
-        assert "document_ids" in result.data
-        assert len(result.history) == 1
-        assert result.history[0]["event"] == OnboardingEvent.DOCUMENTS_UPLOADED
-        mock_db.commit.assert_called()
+        # Should stay in DOCUMENTS_UPLOADED
+        assert session.state == OnboardingState.DOCUMENTS_UPLOADED
+        mock_services["document_processor"].create_review_item.assert_called_once()
 
+    @pytest.mark.asyncio
+    async def test_send_baa(self, workflow, sample_session, mock_services):
+        """Test BAA sending via DocuSign"""
+        sample_session.state = OnboardingState.DOCUMENTS_PROCESSED
 
-@pytest.mark.asyncio
-async def test_invalid_transition(workflow, mock_db):
-    """Test that invalid transitions are rejected"""
-    # Arrange
-    session = OnboardingSession(
-        id="session-123",
-        client_id="client-123",
-        stage=OnboardingStage.CREATED,
-        data={},
-        history=[],
-    )
+        mock_services["docusign_client"].send_baa.return_value = {
+            "envelope_id": "env123",
+            "status": "sent",
+        }
 
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = session
-    mock_db.execute.return_value = mock_result
-
-    # Act
-    result = await workflow.handle_event(
-        session_id="session-123",
-        event=OnboardingEvent.BAA_SIGNED,  # Invalid from CREATED
-    )
-
-    # Assert
-    assert result.stage == OnboardingStage.CREATED  # Stage unchanged
-    assert len(result.history) == 0  # No history entry
-
-
-@pytest.mark.asyncio
-async def test_process_documents_success(workflow, mock_db, mock_document_processor):
-    """Test successful document processing"""
-    # Arrange
-    session = OnboardingSession(
-        id="session-123",
-        client_id="client-123",
-        stage=OnboardingStage.DOCUMENTS_UPLOADED,
-        data={"document_ids": ["doc-1", "doc-2"]},
-        history=[],
-    )
-
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = session
-    mock_db.execute.return_value = mock_result
-
-    # Act
-    await workflow._process_documents(session)
-
-    # Assert
-    # Should trigger PROCESSING_COMPLETE event
-    assert mock_db.commit.called
-
-
-@pytest.mark.asyncio
-async def test_process_documents_no_documents(workflow, mock_db):
-    """Test document processing with no documents"""
-    # Arrange
-    session = OnboardingSession(
-        id="session-123",
-        client_id="client-123",
-        stage=OnboardingStage.DOCUMENTS_UPLOADED,
-        data={},  # No document_ids
-        history=[],
-    )
-
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = session
-    mock_db.execute.return_value = mock_result
-
-    # Act
-    await workflow._process_documents(session)
-
-    # Assert
-    # Should trigger PROCESSING_FAILED event
-    assert mock_db.commit.called
-
-
-@pytest.mark.asyncio
-async def test_send_baa(workflow, mock_db, mock_docusign):
-    """Test sending BAA via DocuSign"""
-    # Arrange
-    session = OnboardingSession(
-        id="session-123",
-        client_id="client-123",
-        stage=OnboardingStage.DOCUMENTS_PROCESSED,
-        data={
-            "practice_name": "Test Clinic",
-            "contact_name": "Dr. Smith",
-            "contact_email": "smith@test.com",
-        },
-        history=[],
-    )
-
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = session
-    mock_db.execute.return_value = mock_result
-
-    # Act
-    await workflow._send_baa(session)
-
-    # Assert
-    mock_docusign.send_baa.assert_called_once_with(
-        recipient_email="smith@test.com",
-        recipient_name="Dr. Smith",
-        practice_name="Test Clinic",
-    )
-    assert mock_db.commit.called
-
-
-@pytest.mark.asyncio
-async def test_create_project(workflow, mock_db, mock_linear):
-    """Test creating Linear project"""
-    # Arrange
-    session = OnboardingSession(
-        id="session-123",
-        client_id="client-123",
-        stage=OnboardingStage.BAA_SIGNED,
-        data={
-            "practice_name": "Test Clinic",
-            "contact_email": "smith@test.com",
-            "specialty": "Dentistry",
-        },
-        history=[],
-    )
-
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = session
-    mock_db.execute.return_value = mock_result
-
-    # Act
-    await workflow._create_project(session)
-
-    # Assert
-    mock_linear.create_project_from_template.assert_called_once()
-    call_kwargs = mock_linear.create_project_from_template.call_args.kwargs
-    assert call_kwargs["practice_name"] == "Test Clinic"
-    assert call_kwargs["contact_email"] == "smith@test.com"
-    assert call_kwargs["specialty"] == "Dentistry"
-    assert mock_db.commit.called
-
-
-@pytest.mark.asyncio
-async def test_send_welcome_email(workflow, mock_db, mock_email):
-    """Test sending welcome email"""
-    # Arrange
-    session = OnboardingSession(
-        id="session-123",
-        client_id="client-123",
-        stage=OnboardingStage.PROJECT_CREATED,
-        data={
-            "practice_name": "Test Clinic",
-            "contact_name": "Dr. Smith",
-            "contact_email": "smith@test.com",
-            "linear_project_id": "project-123",
-        },
-        history=[],
-    )
-
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = session
-    mock_db.execute.return_value = mock_result
-
-    # Act
-    await workflow._send_welcome_email(session)
-
-    # Assert
-    mock_email.send_welcome_email.assert_called_once()
-    call_kwargs = mock_email.send_welcome_email.call_args.kwargs
-    assert call_kwargs["to_email"] == "smith@test.com"
-    assert call_kwargs["to_name"] == "Dr. Smith"
-    assert call_kwargs["practice_name"] == "Test Clinic"
-    assert "project-123" in call_kwargs["project_url"]
-    assert mock_db.commit.called
-
-
-@pytest.mark.asyncio
-async def test_schedule_kickoff(workflow, mock_db):
-    """Test scheduling kickoff call"""
-    # Arrange
-    session = OnboardingSession(
-        id="session-123",
-        client_id="client-123",
-        stage=OnboardingStage.WELCOME_SENT,
-        data={},
-        history=[],
-    )
-
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = session
-    mock_db.execute.return_value = mock_result
-
-    # Act
-    await workflow._schedule_kickoff(session)
-
-    # Assert
-    assert mock_db.commit.called
-    # Should have kickoff_call_url and kickoff_call_scheduled_at in data
-
-
-@pytest.mark.asyncio
-async def test_full_workflow_happy_path(workflow, mock_db, mock_docusign, mock_linear, mock_email):
-    """Test complete workflow from start to finish"""
-    # Arrange
-    session = OnboardingSession(
-        id="session-123",
-        client_id="client-123",
-        stage=OnboardingStage.CREATED,
-        data={
-            "practice_name": "Test Clinic",
-            "contact_name": "Dr. Smith",
-            "contact_email": "smith@test.com",
-        },
-        history=[],
-    )
-
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = session
-    mock_db.execute.return_value = mock_result
-
-    # Mock _trigger_next_action to prevent automatic transitions
-    with patch.object(workflow, '_trigger_next_action', new_callable=AsyncMock):
-        # Act & Assert - Step 1: Documents uploaded
-        await workflow.handle_event(
-            session_id="session-123",
-            event=OnboardingEvent.DOCUMENTS_UPLOADED,
-            event_data={"document_ids": ["doc-1"]},
+        session = await workflow.handle_event(
+            sample_session,
+            OnboardingEvent.DOCUMENTS_VALIDATED,
         )
-        assert session.stage == OnboardingStage.DOCUMENTS_UPLOADED
 
-        # Step 2: Processing complete
-        await workflow.handle_event(
-            session_id="session-123",
-            event=OnboardingEvent.PROCESSING_COMPLETE,
+        assert session.state == OnboardingState.BAA_SENT
+        assert session.baa_envelope_id == "env123"
+        mock_services["docusign_client"].send_baa.assert_called_once_with(
+            client_email="doctor@dental.com",
+            client_name="Dr. Smith",
+            practice_name="Smile Dental",
         )
-        assert session.stage == OnboardingStage.DOCUMENTS_PROCESSED
 
-        # Step 3: BAA sent
-        await workflow.handle_event(
-            session_id="session-123",
-            event=OnboardingEvent.BAA_SENT,
+    @pytest.mark.asyncio
+    async def test_initiate_payment(self, workflow, sample_session, mock_services):
+        """Test payment initiation via Helcim"""
+        sample_session.state = OnboardingState.BAA_SIGNED
+
+        mock_services["payment_service"].create_payment_intent.return_value = {
+            "id": "pi_123",
+            "payment_url": "https://helcim.com/pay/pi_123",
+        }
+
+        session = await workflow.handle_event(
+            sample_session,
+            OnboardingEvent.BAA_SIGNED,
         )
-        assert session.stage == OnboardingStage.BAA_SENT
 
-        # Step 4: BAA signed
-        await workflow.handle_event(
-            session_id="session-123",
-            event=OnboardingEvent.BAA_SIGNED,
+        assert session.state == OnboardingState.PAYMENT_PENDING
+        assert session.payment_intent_id == "pi_123"
+        mock_services["payment_service"].create_payment_intent.assert_called_once_with(
+            amount=5000,
+            currency="USD",
+            customer_email="doctor@dental.com",
+            description="AIM Agency - Growth Package",
         )
-        assert session.stage == OnboardingStage.BAA_SIGNED
+        mock_services["email_service"].send_template.assert_called_once()
 
-        # Step 5: Project created
-        await workflow.handle_event(
-            session_id="session-123",
-            event=OnboardingEvent.PROJECT_CREATED,
+    @pytest.mark.asyncio
+    async def test_payment_failure(self, workflow, sample_session, mock_services):
+        """Test payment failure handling"""
+        sample_session.state = OnboardingState.PAYMENT_PENDING
+
+        session = await workflow.handle_event(
+            sample_session,
+            OnboardingEvent.PAYMENT_FAILED,
         )
-        assert session.stage == OnboardingStage.PROJECT_CREATED
 
-        # Step 6: Welcome sent
-        await workflow.handle_event(
-            session_id="session-123",
-            event=OnboardingEvent.WELCOME_SENT,
+        # Should stay in PAYMENT_PENDING
+        assert session.state == OnboardingState.PAYMENT_PENDING
+        mock_services["email_service"].send_template.assert_called_once_with(
+            to="doctor@dental.com",
+            template="payment_failed",
+            data={
+                "client_name": "Dr. Smith",
+                "retry_link": f"https://iamaim.ru/onboarding/{session.session_id}/payment",
+            },
         )
-        assert session.stage == OnboardingStage.WELCOME_SENT
 
-        # Step 7: Kickoff scheduled
-        await workflow.handle_event(
-            session_id="session-123",
-            event=OnboardingEvent.KICKOFF_SCHEDULED,
+    @pytest.mark.asyncio
+    async def test_create_project(self, workflow, sample_session, mock_services):
+        """Test Linear project creation"""
+        sample_session.state = OnboardingState.PAYMENT_COMPLETED
+
+        mock_services["linear_client"].create_project_from_template.return_value = {
+            "id": "proj_123",
+            "name": "Smile Dental - Launch",
+        }
+        
+        # Mock calendar for auto-trigger chain
+        mock_services["calendar_service"].find_available_slots.return_value = [
+            datetime.utcnow() + timedelta(days=2),
+        ]
+        mock_services["calendar_service"].create_meeting.return_value = {
+            "id": "meeting_123",
+        }
+
+        session = await workflow.handle_event(
+            sample_session,
+            OnboardingEvent.PAYMENT_COMPLETED,
         )
-        assert session.stage == OnboardingStage.KICKOFF_SCHEDULED
 
+        # Should auto-progress to ONBOARDING_COMPLETE (via PROJECT_CREATED -> WELCOME_SENT -> KICKOFF_SCHEDULED)
+        assert session.state == OnboardingState.ONBOARDING_COMPLETE
+        assert session.linear_project_id == "proj_123"
+        mock_services["linear_client"].create_project_from_template.assert_called_once_with(
+            template_id="phase_7_5_template",
+            project_name="Smile Dental - Launch",
+            client_id="client123",
+            metadata=None,
+        )
 
-@pytest.mark.asyncio
-async def test_workflow_failure_path(workflow, mock_db):
-    """Test workflow failure scenarios"""
-    # Arrange
-    session = OnboardingSession(
-        id="session-123",
-        client_id="client-123",
-        stage=OnboardingStage.DOCUMENTS_UPLOADED,
-        data={},
-        history=[],
-    )
+    @pytest.mark.asyncio
+    async def test_send_welcome_email(self, workflow, sample_session, mock_services):
+        """Test welcome email sending"""
+        sample_session.state = OnboardingState.PROJECT_CREATED
+        sample_session.linear_project_id = "proj_123"
 
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = session
-    mock_db.execute.return_value = mock_result
+        # Mock calendar for auto-trigger
+        mock_services["calendar_service"].find_available_slots.return_value = [
+            datetime.utcnow() + timedelta(days=2),
+        ]
+        mock_services["calendar_service"].create_meeting.return_value = {
+            "id": "meeting_123",
+        }
 
-    # Act - Processing failed
-    await workflow.handle_event(
-        session_id="session-123",
-        event=OnboardingEvent.PROCESSING_FAILED,
-        event_data={"error": "Invalid document format"},
-    )
+        session = await workflow.handle_event(
+            sample_session,
+            OnboardingEvent.PROJECT_CREATED,
+        )
 
-    # Assert
-    assert session.stage == OnboardingStage.FAILED
-    assert "error" in session.data
+        # Should auto-progress to ONBOARDING_COMPLETE (via WELCOME_SENT -> KICKOFF_SCHEDULED)
+        assert session.state == OnboardingState.ONBOARDING_COMPLETE
+        # Welcome email should be sent
+        assert any(
+            call[1].get("template") == "welcome_sequence"
+            for call in mock_services["email_service"].send_template.call_args_list
+        )
 
+    @pytest.mark.asyncio
+    async def test_schedule_kickoff(self, workflow, sample_session, mock_services):
+        """Test kickoff call scheduling"""
+        sample_session.state = OnboardingState.WELCOME_SENT
 
-@pytest.mark.asyncio
-async def test_get_session(workflow, mock_db):
-    """Test retrieving session by ID"""
-    # Arrange
-    expected_session = OnboardingSession(
-        id="session-123",
-        client_id="client-123",
-        stage=OnboardingStage.CREATED,
-        data={},
-        history=[],
-    )
+        mock_services["calendar_service"].find_available_slots.return_value = [
+            datetime.utcnow() + timedelta(days=2),
+        ]
+        mock_services["calendar_service"].create_meeting.return_value = {
+            "id": "meeting_123",
+            "start_time": datetime.utcnow() + timedelta(days=2),
+        }
 
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = expected_session
-    mock_db.execute.return_value = mock_result
+        # Trigger via WELCOME_SENT event (auto-triggers kickoff scheduling)
+        session = await workflow.handle_event(
+            sample_session,
+            OnboardingEvent.WELCOME_SENT,
+        )
 
-    # Act
-    session = await workflow.get_session("session-123")
+        # Should complete onboarding
+        assert session.state == OnboardingState.ONBOARDING_COMPLETE
+        assert session.kickoff_meeting_id == "meeting_123"
+        mock_services["calendar_service"].find_available_slots.assert_called_once()
+        mock_services["calendar_service"].create_meeting.assert_called_once()
+        mock_services["email_service"].send_calendar_invite.assert_called_once()
 
-    # Assert
-    assert session == expected_session
-    mock_db.execute.assert_called_once()
+    @pytest.mark.asyncio
+    async def test_schedule_kickoff_no_slots(self, workflow, sample_session, mock_services):
+        """Test kickoff scheduling with no available slots"""
+        sample_session.state = OnboardingState.WELCOME_SENT
 
+        mock_services["calendar_service"].find_available_slots.return_value = []
 
-@pytest.mark.asyncio
-async def test_get_client_sessions(workflow, mock_db):
-    """Test retrieving all sessions for a client"""
-    # Arrange
-    expected_sessions = [
-        OnboardingSession(
-            id="session-1",
-            client_id="client-123",
-            stage=OnboardingStage.COMPLETED,
-            data={},
-            history=[],
-        ),
-        OnboardingSession(
-            id="session-2",
-            client_id="client-123",
-            stage=OnboardingStage.CREATED,
-            data={},
-            history=[],
-        ),
-    ]
+        # Trigger via WELCOME_SENT event
+        session = await workflow.handle_event(
+            sample_session,
+            OnboardingEvent.WELCOME_SENT,
+        )
 
-    mock_result = MagicMock()
-    mock_result.scalars.return_value.all.return_value = expected_sessions
-    mock_db.execute.return_value = mock_result
+        # Should stay in WELCOME_SENT (no slots available)
+        assert session.state == OnboardingState.WELCOME_SENT
+        assert session.kickoff_meeting_id is None
 
-    # Act
-    sessions = await workflow.get_client_sessions("client-123")
+    @pytest.mark.asyncio
+    async def test_full_workflow_happy_path(self, workflow, mock_services):
+        """Test complete workflow from start to finish"""
+        # Mock all services
+        mock_services["document_processor"].process_document.return_value = {
+            "document_id": "doc1",
+            "extraction": {"practice_name": "Smile Dental"},
+            "validation": {"status": "approved", "requires_review": False},
+        }
+        mock_services["docusign_client"].send_baa.return_value = {
+            "envelope_id": "env123",
+            "status": "sent",
+        }
+        mock_services["payment_service"].create_payment_intent.return_value = {
+            "id": "pi_123",
+            "payment_url": "https://helcim.com/pay/pi_123",
+        }
+        mock_services["linear_client"].create_project_from_template.return_value = {
+            "id": "proj_123",
+        }
+        mock_services["calendar_service"].find_available_slots.return_value = [
+            datetime.utcnow() + timedelta(days=2),
+        ]
+        mock_services["calendar_service"].create_meeting.return_value = {
+            "id": "meeting_123",
+        }
 
-    # Assert
-    assert len(sessions) == 2
-    assert sessions == expected_sessions
-    mock_db.execute.assert_called_once()
+        # Start onboarding
+        session = await workflow.start_onboarding(
+            client_id="client123",
+            lead_score=85,
+        )
+        session.metadata = {
+            "email": "doctor@dental.com",
+            "name": "Dr. Smith",
+            "practice_name": "Smile Dental",
+            "package_price": 5000,
+        }
+
+        # Upload documents
+        session.documents = [{"id": "doc1", "path": "/tmp/doc1.pdf"}]
+        session = await workflow.handle_event(session, OnboardingEvent.DOCUMENTS_UPLOADED)
+
+        # BAA signed (auto-progressed to BAA_SENT after documents)
+        session = await workflow.handle_event(session, OnboardingEvent.BAA_SIGNED)
+
+        # Payment completed (now in PAYMENT_PENDING)
+        session = await workflow.handle_event(session, OnboardingEvent.PAYMENT_COMPLETED)
+
+        # Should reach ONBOARDING_COMPLETE
+        assert session.state == OnboardingState.ONBOARDING_COMPLETE
+        assert session.baa_envelope_id == "env123"
+        assert session.payment_intent_id == "pi_123"
+        assert session.linear_project_id == "proj_123"
+        assert session.kickoff_meeting_id == "meeting_123"
+
+    def test_transitions_completeness(self):
+        """Test that all states have transition rules"""
+        for state in OnboardingState:
+            assert state in TRANSITIONS, f"Missing transition rules for {state}"

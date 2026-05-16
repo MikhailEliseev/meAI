@@ -1,445 +1,509 @@
 """
 Onboarding Workflow Automation
 
-State machine for automated client onboarding:
-1. Document Upload → 2. AI Processing → 3. BAA Signature →
-4. Project Setup → 5. Welcome Email → 6. Kickoff Scheduling
-
-Features:
-- State persistence (PostgreSQL)
-- Event-driven transitions
-- Automatic retries
-- Audit logging
-- 30-day checkpoint automation
+State machine for automated client onboarding with HIPAA compliance.
 """
 
+from typing import Dict, Any, Optional, List
 from enum import Enum
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
 import structlog
 
-from aim.models.onboarding import OnboardingSession, OnboardingState
-from aim.services.onboarding.docusign_client import DocuSignClient
-from aim.services.linear_leads import LinearLeadsService
-from aim.services.lead_email_automation import LeadEmailAutomation
-from aim.services.document_processing.nlp_extractor import DocumentProcessor
+from pydantic import BaseModel, Field
 
 logger = structlog.get_logger()
 
 
-class OnboardingStage(str, Enum):
-    """Onboarding workflow stages"""
-    CREATED = "created"
+class OnboardingState(str, Enum):
+    """Onboarding workflow states"""
+    LEAD_CAPTURED = "lead_captured"
+    DOCUMENTS_REQUESTED = "documents_requested"
     DOCUMENTS_UPLOADED = "documents_uploaded"
     DOCUMENTS_PROCESSED = "documents_processed"
     BAA_SENT = "baa_sent"
     BAA_SIGNED = "baa_signed"
+    PAYMENT_PENDING = "payment_pending"
+    PAYMENT_COMPLETED = "payment_completed"
     PROJECT_CREATED = "project_created"
     WELCOME_SENT = "welcome_sent"
     KICKOFF_SCHEDULED = "kickoff_scheduled"
-    COMPLETED = "completed"
+    ONBOARDING_COMPLETE = "onboarding_complete"
     FAILED = "failed"
 
 
 class OnboardingEvent(str, Enum):
-    """Events that trigger state transitions"""
+    """Onboarding workflow events"""
+    LEAD_SCORED = "lead_scored"
     DOCUMENTS_UPLOADED = "documents_uploaded"
-    PROCESSING_COMPLETE = "processing_complete"
-    PROCESSING_FAILED = "processing_failed"
+    DOCUMENTS_VALIDATED = "documents_validated"
+    DOCUMENTS_REJECTED = "documents_rejected"
     BAA_SENT = "baa_sent"
     BAA_SIGNED = "baa_signed"
-    BAA_DECLINED = "baa_declined"
+    PAYMENT_INITIATED = "payment_initiated"
+    PAYMENT_COMPLETED = "payment_completed"
+    PAYMENT_FAILED = "payment_failed"
     PROJECT_CREATED = "project_created"
     WELCOME_SENT = "welcome_sent"
     KICKOFF_SCHEDULED = "kickoff_scheduled"
-    RETRY = "retry"
 
 
-class OnboardingData(BaseModel):
-    """Data extracted during onboarding"""
+class OnboardingSession(BaseModel):
+    """Onboarding session data"""
+    session_id: str
     client_id: str
-    practice_name: str
-    contact_name: str
-    contact_email: str
-    contact_phone: str
-    specialty: Optional[str] = None
-    practice_size: Optional[str] = None
-    location: Optional[str] = None
-
-    # Extracted from documents
-    analytics_access: Optional[Dict[str, Any]] = None
-    ad_accounts: Optional[Dict[str, Any]] = None
-    current_marketing: Optional[Dict[str, Any]] = None
-
-    # BAA
+    state: OnboardingState
+    lead_score: Optional[int] = None
+    documents: List[Dict[str, Any]] = Field(default_factory=list)
     baa_envelope_id: Optional[str] = None
-    baa_signed_at: Optional[datetime] = None
-
-    # Project
+    payment_intent_id: Optional[str] = None
     linear_project_id: Optional[str] = None
-    linear_team_id: Optional[str] = None
+    kickoff_meeting_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
-    # Scheduling
-    kickoff_call_url: Optional[str] = None
-    kickoff_call_scheduled_at: Optional[datetime] = None
+
+# State transition rules
+TRANSITIONS: Dict[OnboardingState, List[OnboardingEvent]] = {
+    OnboardingState.LEAD_CAPTURED: [
+        OnboardingEvent.LEAD_SCORED,
+    ],
+    OnboardingState.DOCUMENTS_REQUESTED: [
+        OnboardingEvent.DOCUMENTS_UPLOADED,
+    ],
+    OnboardingState.DOCUMENTS_UPLOADED: [
+        OnboardingEvent.DOCUMENTS_VALIDATED,
+        OnboardingEvent.DOCUMENTS_REJECTED,
+    ],
+    OnboardingState.DOCUMENTS_PROCESSED: [
+        OnboardingEvent.DOCUMENTS_VALIDATED,
+    ],
+    OnboardingState.BAA_SENT: [
+        OnboardingEvent.BAA_SIGNED,
+    ],
+    OnboardingState.BAA_SIGNED: [
+        OnboardingEvent.BAA_SIGNED,
+    ],
+    OnboardingState.PAYMENT_PENDING: [
+        OnboardingEvent.PAYMENT_COMPLETED,
+        OnboardingEvent.PAYMENT_FAILED,
+    ],
+    OnboardingState.PAYMENT_COMPLETED: [
+        OnboardingEvent.PAYMENT_COMPLETED,
+    ],
+    OnboardingState.PROJECT_CREATED: [
+        OnboardingEvent.PROJECT_CREATED,
+    ],
+    OnboardingState.WELCOME_SENT: [
+        OnboardingEvent.WELCOME_SENT,
+    ],
+    OnboardingState.KICKOFF_SCHEDULED: [
+        OnboardingEvent.KICKOFF_SCHEDULED,
+    ],
+    OnboardingState.ONBOARDING_COMPLETE: [],
+    OnboardingState.FAILED: [],
+}
 
 
 class OnboardingWorkflow:
     """
-    Automated onboarding workflow state machine
-
-    Manages client onboarding from document upload to project kickoff.
+    Automated onboarding workflow with state machine
+    
+    Handles:
+    - Document collection and validation
+    - BAA signature via DocuSign
+    - Payment processing via Helcim
+    - Linear project creation
+    - Welcome email sequence
+    - Kickoff call scheduling
     """
 
     def __init__(
         self,
-        db: AsyncSession,
-        docusign_client: DocuSignClient,
-        linear_service: LinearLeadsService,
-        email_service: LeadEmailAutomation,
-        document_processor: DocumentProcessor,
+        document_processor,
+        docusign_client,
+        payment_service,
+        linear_client,
+        email_service,
+        calendar_service,
     ):
-        self.db = db
-        self.docusign = docusign_client
-        self.linear = linear_service
-        self.email = email_service
+        """
+        Initialize workflow
+        
+        Args:
+            document_processor: Document processing service
+            docusign_client: DocuSign API client
+            payment_service: Helcim payment service
+            linear_client: Linear API client
+            email_service: SendGrid email service
+            calendar_service: Calendar scheduling service
+        """
         self.document_processor = document_processor
+        self.docusign = docusign_client
+        self.payment = payment_service
+        self.linear = linear_client
+        self.email = email_service
+        self.calendar = calendar_service
+        self.logger = logger.bind(service="onboarding_workflow")
 
-        # State transition map
-        self.transitions = {
-            OnboardingStage.CREATED: {
-                OnboardingEvent.DOCUMENTS_UPLOADED: OnboardingStage.DOCUMENTS_UPLOADED,
-            },
-            OnboardingStage.DOCUMENTS_UPLOADED: {
-                OnboardingEvent.PROCESSING_COMPLETE: OnboardingStage.DOCUMENTS_PROCESSED,
-                OnboardingEvent.PROCESSING_FAILED: OnboardingStage.FAILED,
-            },
-            OnboardingStage.DOCUMENTS_PROCESSED: {
-                OnboardingEvent.BAA_SENT: OnboardingStage.BAA_SENT,
-            },
-            OnboardingStage.BAA_SENT: {
-                OnboardingEvent.BAA_SIGNED: OnboardingStage.BAA_SIGNED,
-                OnboardingEvent.BAA_DECLINED: OnboardingStage.FAILED,
-            },
-            OnboardingStage.BAA_SIGNED: {
-                OnboardingEvent.PROJECT_CREATED: OnboardingStage.PROJECT_CREATED,
-            },
-            OnboardingStage.PROJECT_CREATED: {
-                OnboardingEvent.WELCOME_SENT: OnboardingStage.WELCOME_SENT,
-            },
-            OnboardingStage.WELCOME_SENT: {
-                OnboardingEvent.KICKOFF_SCHEDULED: OnboardingStage.KICKOFF_SCHEDULED,
-            },
-            OnboardingStage.KICKOFF_SCHEDULED: {
-                OnboardingEvent.RETRY: OnboardingStage.COMPLETED,
-            },
-        }
-
-    async def create_session(
+    async def start_onboarding(
         self,
         client_id: str,
-        practice_name: str,
-        contact_name: str,
-        contact_email: str,
-        contact_phone: str,
+        lead_score: int,
     ) -> OnboardingSession:
-        """Create new onboarding session"""
+        """
+        Start onboarding workflow
+        
+        Args:
+            client_id: Client ID
+            lead_score: Lead qualification score (0-100)
+        
+        Returns:
+            Onboarding session
+        """
         session = OnboardingSession(
+            session_id=f"onb_{client_id}_{int(datetime.utcnow().timestamp())}",
             client_id=client_id,
-            stage=OnboardingStage.CREATED,
-            data={
-                "practice_name": practice_name,
-                "contact_name": contact_name,
-                "contact_email": contact_email,
-                "contact_phone": contact_phone,
-            },
-            created_at=datetime.utcnow(),
+            state=OnboardingState.LEAD_CAPTURED,
+            lead_score=lead_score,
         )
 
-        self.db.add(session)
-        await self.db.commit()
-        await self.db.refresh(session)
-
-        logger.info(
-            "onboarding_session_created",
-            session_id=session.id,
+        self.logger.info(
+            "onboarding_started",
+            session_id=session.session_id,
             client_id=client_id,
+            lead_score=lead_score,
         )
+
+        # Auto-trigger for hot leads (score >= 80)
+        if lead_score >= 80:
+            await self.handle_event(session, OnboardingEvent.LEAD_SCORED)
 
         return session
 
     async def handle_event(
         self,
-        session_id: str,
+        session: OnboardingSession,
         event: OnboardingEvent,
-        event_data: Optional[Dict[str, Any]] = None,
     ) -> OnboardingSession:
-        """Handle onboarding event and transition state"""
-        # Load session
-        result = await self.db.execute(
-            select(OnboardingSession).where(OnboardingSession.id == session_id)
-        )
-        session = result.scalar_one_or_none()
-
-        if not session:
-            raise ValueError(f"Onboarding session {session_id} not found")
-
-        current_stage = OnboardingStage(session.stage)
-
-        # Check if transition is valid
-        if event not in self.transitions.get(current_stage, {}):
-            logger.warning(
-                "invalid_transition",
-                session_id=session_id,
-                current_stage=current_stage,
-                event_type=event,
+        """
+        Handle workflow event
+        
+        Args:
+            session: Current session
+            event: Event to handle
+        
+        Returns:
+            Updated session
+        
+        Raises:
+            ValueError: If transition is not allowed
+        """
+        # Validate transition
+        allowed_events = TRANSITIONS.get(session.state, [])
+        if event not in allowed_events:
+            raise ValueError(
+                f"Event {event} not allowed in state {session.state}"
             )
-            return session
 
-        # Get next stage
-        next_stage = self.transitions[current_stage][event]
-
-        # Update session
-        session.stage = next_stage
-        session.updated_at = datetime.utcnow()
-
-        if event_data:
-            session.data.update(event_data)
-
-        # Add to history
-        if not session.history:
-            session.history = []
-
-        session.history.append({
-            "stage": next_stage,
-            "event": event,
-            "timestamp": datetime.utcnow().isoformat(),
-            "data": event_data,
-        })
-
-        await self.db.commit()
-        await self.db.refresh(session)
-
-        logger.info(
-            "onboarding_transition",
-            session_id=session_id,
-            from_stage=current_stage,
-            to_stage=next_stage,
-            event_type=event,
+        self.logger.info(
+            "handling_event",
+            session_id=session.session_id,
+            state=session.state,
+            workflow_event=event,
         )
 
-        # Trigger next action
-        await self._trigger_next_action(session)
+        # Execute state transition
+        if event == OnboardingEvent.LEAD_SCORED:
+            session = await self._request_documents(session)
+        elif event == OnboardingEvent.DOCUMENTS_UPLOADED:
+            session = await self._process_documents(session)
+        elif event == OnboardingEvent.DOCUMENTS_VALIDATED:
+            session = await self._send_baa(session)
+        elif event == OnboardingEvent.DOCUMENTS_REJECTED:
+            session = await self._reject_documents(session)
+        elif event == OnboardingEvent.BAA_SIGNED:
+            session = await self._initiate_payment(session)
+        elif event == OnboardingEvent.PAYMENT_COMPLETED:
+            session = await self._create_project(session)
+        elif event == OnboardingEvent.PAYMENT_FAILED:
+            session = await self._handle_payment_failure(session)
+        elif event == OnboardingEvent.PROJECT_CREATED:
+            session = await self._send_welcome_email(session)
+        elif event == OnboardingEvent.WELCOME_SENT:
+            session = await self._schedule_kickoff(session)
+        elif event == OnboardingEvent.KICKOFF_SCHEDULED:
+            session.state = OnboardingState.ONBOARDING_COMPLETE
+            session.updated_at = datetime.utcnow()
+            return session  # Don't update timestamp twice
+
+        session.updated_at = datetime.utcnow()
+        return session
+
+    async def _request_documents(
+        self,
+        session: OnboardingSession,
+    ) -> OnboardingSession:
+        """Request documents from client"""
+        # Send email with secure upload link
+        await self.email.send_template(
+            to=session.metadata.get("email"),
+            template="document_request",
+            data={
+                "client_name": session.metadata.get("name"),
+                "upload_link": f"https://iamaim.ru/onboarding/{session.session_id}/upload",
+                "required_documents": [
+                    "Practice information",
+                    "Analytics access",
+                    "Advertising accounts",
+                ],
+            },
+        )
+
+        session.state = OnboardingState.DOCUMENTS_REQUESTED
+        self.logger.info(
+            "documents_requested",
+            session_id=session.session_id,
+        )
+        return session
+
+    async def _process_documents(
+        self,
+        session: OnboardingSession,
+    ) -> OnboardingSession:
+        """Process uploaded documents"""
+        # Extract and validate data
+        results = []
+        for doc in session.documents:
+            result = await self.document_processor.process_document(
+                document_id=doc["id"],
+                file_path=doc["path"],
+            )
+            results.append(result)
+
+        # Check if validation passed
+        all_approved = all(
+            r["validation"]["status"] == "approved"
+            for r in results
+        )
+
+        if all_approved:
+            session.state = OnboardingState.DOCUMENTS_PROCESSED
+            session.metadata["extraction_results"] = results
+            self.logger.info(
+                "documents_validated",
+                session_id=session.session_id,
+            )
+            # Auto-trigger BAA
+            return await self.handle_event(session, OnboardingEvent.DOCUMENTS_VALIDATED)
+        else:
+            # Create review queue items
+            for result in results:
+                if result["validation"]["requires_review"]:
+                    await self.document_processor.create_review_item(
+                        document_id=result["document_id"],
+                        extraction_result=result["extraction"],
+                        validation_result=result["validation"],
+                    )
+            
+            session.state = OnboardingState.DOCUMENTS_UPLOADED
+            self.logger.warning(
+                "documents_need_review",
+                session_id=session.session_id,
+            )
 
         return session
 
-    async def _trigger_next_action(self, session: OnboardingSession) -> None:
-        """Trigger automatic action based on current stage"""
-        stage = OnboardingStage(session.stage)
+    async def _reject_documents(
+        self,
+        session: OnboardingSession,
+    ) -> OnboardingSession:
+        """Handle document rejection"""
+        await self.email.send_template(
+            to=session.metadata.get("email"),
+            template="document_rejection",
+            data={
+                "client_name": session.metadata.get("name"),
+                "issues": session.metadata.get("validation_issues", []),
+                "reupload_link": f"https://iamaim.ru/onboarding/{session.session_id}/upload",
+            },
+        )
 
-        if stage == OnboardingStage.DOCUMENTS_UPLOADED:
-            # Process documents
-            await self._process_documents(session)
+        session.state = OnboardingState.DOCUMENTS_REQUESTED
+        return session
 
-        elif stage == OnboardingStage.DOCUMENTS_PROCESSED:
-            # Send BAA
-            await self._send_baa(session)
-
-        elif stage == OnboardingStage.BAA_SIGNED:
-            # Create Linear project
-            await self._create_project(session)
-
-        elif stage == OnboardingStage.PROJECT_CREATED:
-            # Send welcome email
-            await self._send_welcome_email(session)
-
-        elif stage == OnboardingStage.WELCOME_SENT:
-            # Schedule kickoff call
-            await self._schedule_kickoff(session)
-
-        elif stage == OnboardingStage.KICKOFF_SCHEDULED:
-            # Mark as completed
-            await self.handle_event(
-                session.id,
-                OnboardingEvent.RETRY,
-            )
-
-    async def _process_documents(self, session: OnboardingSession) -> None:
-        """Process uploaded documents with AI"""
-        try:
-            # Get document IDs from session data
-            document_ids = session.data.get("document_ids", [])
-
-            if not document_ids:
-                logger.warning(
-                    "no_documents_to_process",
-                    session_id=session.id,
-                )
-                await self.handle_event(
-                    session.id,
-                    OnboardingEvent.PROCESSING_FAILED,
-                    {"error": "No documents uploaded"},
-                )
-                return
-
-            # Process each document
-            extracted_data = {}
-
-            for doc_id in document_ids:
-                # TODO: Load document from storage
-                # result = await self.document_processor.process_document(doc_id)
-                # extracted_data[doc_id] = result
-                pass
-
-            # Update session with extracted data
-            await self.handle_event(
-                session.id,
-                OnboardingEvent.PROCESSING_COMPLETE,
-                {
-                    "extracted_data": extracted_data,
-                    "processed_at": datetime.utcnow().isoformat(),
-                },
-            )
-
-        except Exception as e:
-            logger.error(
-                "document_processing_failed",
-                session_id=session.id,
-                error=str(e),
-            )
-            await self.handle_event(
-                session.id,
-                OnboardingEvent.PROCESSING_FAILED,
-                {"error": str(e)},
-            )
-
-    async def _send_baa(self, session: OnboardingSession) -> None:
+    async def _send_baa(
+        self,
+        session: OnboardingSession,
+    ) -> OnboardingSession:
         """Send BAA for signature via DocuSign"""
-        try:
-            data = session.data
+        envelope = await self.docusign.send_baa(
+            client_email=session.metadata.get("email"),
+            client_name=session.metadata.get("name"),
+            practice_name=session.metadata.get("practice_name"),
+        )
 
-            # Create DocuSign envelope
-            envelope_id = await self.docusign.send_baa(
-                recipient_email=data["contact_email"],
-                recipient_name=data["contact_name"],
-                practice_name=data["practice_name"],
-            )
+        session.baa_envelope_id = envelope["envelope_id"]
+        session.state = OnboardingState.BAA_SENT
+        
+        self.logger.info(
+            "baa_sent",
+            session_id=session.session_id,
+            envelope_id=envelope["envelope_id"],
+        )
+        return session
 
-            await self.handle_event(
-                session.id,
-                OnboardingEvent.BAA_SENT,
-                {
-                    "baa_envelope_id": envelope_id,
-                    "baa_sent_at": datetime.utcnow().isoformat(),
-                },
-            )
+    async def _initiate_payment(
+        self,
+        session: OnboardingSession,
+    ) -> OnboardingSession:
+        """Initiate payment via Helcim"""
+        payment_intent = await self.payment.create_payment_intent(
+            amount=session.metadata.get("package_price", 5000),
+            currency="USD",
+            customer_email=session.metadata.get("email"),
+            description=f"AIM Agency - {session.metadata.get('package_name')}",
+        )
 
-        except Exception as e:
-            logger.error(
-                "baa_send_failed",
-                session_id=session.id,
-                error=str(e),
-            )
+        session.payment_intent_id = payment_intent["id"]
+        session.state = OnboardingState.PAYMENT_PENDING
 
-    async def _create_project(self, session: OnboardingSession) -> None:
-        """Create Linear project from template"""
-        try:
-            data = session.data
+        # Send payment link
+        await self.email.send_template(
+            to=session.metadata.get("email"),
+            template="payment_request",
+            data={
+                "client_name": session.metadata.get("name"),
+                "amount": session.metadata.get("package_price"),
+                "payment_link": payment_intent["payment_url"],
+            },
+        )
 
-            # Create project in Linear
-            project = await self.linear.create_project_from_template(
-                practice_name=data["practice_name"],
-                contact_email=data["contact_email"],
-                specialty=data.get("specialty"),
-                template_id="onboarding-template",  # Phase 7.5 template
-            )
+        self.logger.info(
+            "payment_initiated",
+            session_id=session.session_id,
+            payment_intent_id=payment_intent["id"],
+        )
+        return session
 
-            await self.handle_event(
-                session.id,
-                OnboardingEvent.PROJECT_CREATED,
-                {
-                    "linear_project_id": project["id"],
-                    "linear_team_id": project["team_id"],
-                    "project_created_at": datetime.utcnow().isoformat(),
-                },
-            )
+    async def _handle_payment_failure(
+        self,
+        session: OnboardingSession,
+    ) -> OnboardingSession:
+        """Handle payment failure"""
+        await self.email.send_template(
+            to=session.metadata.get("email"),
+            template="payment_failed",
+            data={
+                "client_name": session.metadata.get("name"),
+                "retry_link": f"https://iamaim.ru/onboarding/{session.session_id}/payment",
+            },
+        )
 
-        except Exception as e:
-            logger.error(
-                "project_creation_failed",
-                session_id=session.id,
-                error=str(e),
-            )
+        session.state = OnboardingState.PAYMENT_PENDING
+        return session
 
-    async def _send_welcome_email(self, session: OnboardingSession) -> None:
+    async def _create_project(
+        self,
+        session: OnboardingSession,
+    ) -> OnboardingSession:
+        """Create Linear project from Phase 7.5 template"""
+        project = await self.linear.create_project_from_template(
+            template_id="phase_7_5_template",
+            project_name=f"{session.metadata.get('practice_name')} - Launch",
+            client_id=session.client_id,
+            metadata=session.metadata.get("extraction_results"),
+        )
+
+        session.linear_project_id = project["id"]
+        session.state = OnboardingState.PROJECT_CREATED
+
+        self.logger.info(
+            "project_created",
+            session_id=session.session_id,
+            project_id=project["id"],
+        )
+        
+        # Auto-trigger welcome email
+        return await self.handle_event(session, OnboardingEvent.PROJECT_CREATED)
+
+    async def _send_welcome_email(
+        self,
+        session: OnboardingSession,
+    ) -> OnboardingSession:
         """Send welcome email sequence"""
-        try:
-            data = session.data
+        await self.email.send_template(
+            to=session.metadata.get("email"),
+            template="welcome_sequence",
+            data={
+                "client_name": session.metadata.get("name"),
+                "project_link": f"https://linear.app/aim/project/{session.linear_project_id}",
+                "team_intro": "Your dedicated team: SEO Specialist, Content Writer, Ads Manager",
+                "next_steps": [
+                    "Review project timeline",
+                    "Schedule kickoff call",
+                    "Complete onboarding checklist",
+                ],
+            },
+        )
 
-            # Send welcome email
-            await self.email.send_welcome_email(
-                to_email=data["contact_email"],
-                to_name=data["contact_name"],
-                practice_name=data["practice_name"],
-                project_url=f"https://app.iamaim.ru/projects/{data.get('linear_project_id')}",
-            )
+        session.state = OnboardingState.WELCOME_SENT
+        
+        self.logger.info(
+            "welcome_sent",
+            session_id=session.session_id,
+        )
+        
+        # Auto-trigger kickoff scheduling
+        return await self.handle_event(session, OnboardingEvent.WELCOME_SENT)
 
-            await self.handle_event(
-                session.id,
-                OnboardingEvent.WELCOME_SENT,
-                {
-                    "welcome_sent_at": datetime.utcnow().isoformat(),
-                },
-            )
-
-        except Exception as e:
-            logger.error(
-                "welcome_email_failed",
-                session_id=session.id,
-                error=str(e),
-            )
-
-    async def _schedule_kickoff(self, session: OnboardingSession) -> None:
+    async def _schedule_kickoff(
+        self,
+        session: OnboardingSession,
+    ) -> OnboardingSession:
         """Schedule kickoff call"""
-        try:
-            data = session.data
+        # Find available slot (next 7 days, business hours)
+        available_slots = await self.calendar.find_available_slots(
+            start_date=datetime.utcnow(),
+            end_date=datetime.utcnow() + timedelta(days=7),
+            duration_minutes=60,
+        )
 
-            # TODO: Integrate with scheduling service (Calendly, Cal.com)
-            # For now, just create a placeholder
-            kickoff_url = f"https://calendly.com/iamaim/kickoff?client={session.client_id}"
-            kickoff_time = datetime.utcnow() + timedelta(hours=48)
-
-            await self.handle_event(
-                session.id,
-                OnboardingEvent.KICKOFF_SCHEDULED,
-                {
-                    "kickoff_call_url": kickoff_url,
-                    "kickoff_call_scheduled_at": kickoff_time.isoformat(),
-                },
+        if available_slots:
+            # Book first available slot
+            meeting = await self.calendar.create_meeting(
+                title=f"Kickoff Call - {session.metadata.get('practice_name')}",
+                attendees=[
+                    session.metadata.get("email"),
+                    "team@iamaim.ru",
+                ],
+                start_time=available_slots[0],
+                duration_minutes=60,
+                description="Project kickoff and strategy alignment",
             )
 
-        except Exception as e:
-            logger.error(
-                "kickoff_scheduling_failed",
-                session_id=session.id,
-                error=str(e),
+            session.kickoff_meeting_id = meeting["id"]
+            session.state = OnboardingState.KICKOFF_SCHEDULED
+
+            # Send calendar invite
+            await self.email.send_calendar_invite(
+                to=session.metadata.get("email"),
+                meeting=meeting,
             )
 
-    async def get_session(self, session_id: str) -> Optional[OnboardingSession]:
-        """Get onboarding session by ID"""
-        result = await self.db.execute(
-            select(OnboardingSession).where(OnboardingSession.id == session_id)
-        )
-        return result.scalar_one_or_none()
+            self.logger.info(
+                "kickoff_scheduled",
+                session_id=session.session_id,
+                meeting_id=meeting["id"],
+                meeting_time=available_slots[0],
+            )
+            
+            # Complete onboarding
+            return await self.handle_event(session, OnboardingEvent.KICKOFF_SCHEDULED)
+        else:
+            self.logger.warning(
+                "no_available_slots",
+                session_id=session.session_id,
+            )
 
-    async def get_client_sessions(self, client_id: str) -> List[OnboardingSession]:
-        """Get all onboarding sessions for a client"""
-        result = await self.db.execute(
-            select(OnboardingSession)
-            .where(OnboardingSession.client_id == client_id)
-            .order_by(OnboardingSession.created_at.desc())
-        )
-        return result.scalars().all()
+        return session
