@@ -1,0 +1,139 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: complete-journey.spec.ts >> Performance and Accessibility >> should have proper heading hierarchy
+- Location: e2e/complete-journey.spec.ts:265:7
+
+# Error details
+
+```
+Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/
+Call log:
+  - navigating to "http://localhost:3000/", waiting until "load"
+
+```
+
+# Test source
+
+```ts
+  166 |     await page.goto('/billing');
+  167 | 
+  168 |     // Verify payment history shows invoice
+  169 |     await expect(page.locator('text=AIM-2026-')).toBeVisible();
+  170 |     await expect(page.locator('text=Оплачено')).toBeVisible();
+  171 | 
+  172 |     // ============================================
+  173 |     // SUCCESS: Full journey completed
+  174 |     // ============================================
+  175 |     console.log('✅ Complete user journey test passed!');
+  176 |   });
+  177 | 
+  178 |   test('should handle errors gracefully throughout the journey', async ({ page }) => {
+  179 |     // ============================================
+  180 |     // Test error handling at each step
+  181 |     // ============================================
+  182 | 
+  183 |     // STEP 1: Invalid contact form submission
+  184 |     await page.goto('/');
+  185 |     await page.locator('text=Оставьте заявку').scrollIntoViewIfNeeded();
+  186 |     await page.click('button[type="submit"]');
+  187 |     await expect(page.locator('text=Обязательное поле')).toBeVisible();
+  188 | 
+  189 |     // STEP 2: Invalid payment card
+  190 |     await page.goto('/billing');
+  191 |     await page.click('button:has-text("Выбрать Starter")');
+  192 |     await page.fill('input[placeholder="1234 5678 9012 3456"]', '1234567890123456');
+  193 |     await page.blur('input[placeholder="1234 5678 9012 3456"]');
+  194 |     await expect(page.locator('text=Неверный номер карты')).toBeVisible();
+  195 | 
+  196 |     // STEP 3: Invalid file upload
+  197 |     await page.goto('/onboarding');
+  198 |     const invalidFile = path.join(__dirname, 'fixtures/test-image.jpg');
+  199 |     const fileInput = page.locator('input[type="file"]').first();
+  200 |     await fileInput.setInputFiles(invalidFile);
+  201 |     await expect(page.locator('text=Неверный формат файла')).toBeVisible({ timeout: 3000 });
+  202 | 
+  203 |     // STEP 4: Corrupted file processing
+  204 |     const corruptedFile = path.join(__dirname, 'fixtures/corrupted.pdf');
+  205 |     await fileInput.setInputFiles(corruptedFile);
+  206 |     await expect(page.locator('text=Ошибка обработки')).toBeVisible({ timeout: 10000 });
+  207 | 
+  208 |     console.log('✅ Error handling test passed!');
+  209 |   });
+  210 | 
+  211 |   test('should maintain state across page reloads', async ({ page }) => {
+  212 |     // ============================================
+  213 |     // Test state persistence
+  214 |     // ============================================
+  215 | 
+  216 |     // Fill contact form partially
+  217 |     await page.goto('/');
+  218 |     await page.locator('text=Оставьте заявку').scrollIntoViewIfNeeded();
+  219 |     await page.fill('input[name="name"]', 'Иван Петров');
+  220 |     await page.fill('input[name="email"]', 'ivan@dentaplus.ru');
+  221 |     await page.waitForTimeout(2000); // Wait for auto-save
+  222 | 
+  223 |     // Reload page
+  224 |     await page.reload();
+  225 |     await page.locator('text=Оставьте заявку').scrollIntoViewIfNeeded();
+  226 | 
+  227 |     // Verify draft restored
+  228 |     await expect(page.locator('input[name="name"]')).toHaveValue('Иван Петров');
+  229 |     await expect(page.locator('input[name="email"]')).toHaveValue('ivan@dentaplus.ru');
+  230 | 
+  231 |     console.log('✅ State persistence test passed!');
+  232 |   });
+  233 | });
+  234 | 
+  235 | test.describe('Performance and Accessibility', () => {
+  236 |   test('should load landing page within 3 seconds', async ({ page }) => {
+  237 |     const startTime = Date.now();
+  238 |     await page.goto('/');
+  239 |     const loadTime = Date.now() - startTime;
+  240 | 
+  241 |     // Verify page loaded
+  242 |     await expect(page.locator('h1')).toBeVisible();
+  243 | 
+  244 |     // Check load time
+  245 |     expect(loadTime).toBeLessThan(3000);
+  246 |     console.log(`✅ Landing page loaded in ${loadTime}ms`);
+  247 |   });
+  248 | 
+  249 |   test('should have accessible form labels', async ({ page }) => {
+  250 |     await page.goto('/');
+  251 |     await page.locator('text=Оставьте заявку').scrollIntoViewIfNeeded();
+  252 | 
+  253 |     // Check for accessible labels
+  254 |     const nameInput = page.locator('input[name="name"]');
+  255 |     const nameLabel = await nameInput.getAttribute('aria-label');
+  256 |     expect(nameLabel).toBeTruthy();
+  257 | 
+  258 |     const emailInput = page.locator('input[name="email"]');
+  259 |     const emailLabel = await emailInput.getAttribute('aria-label');
+  260 |     expect(emailLabel).toBeTruthy();
+  261 | 
+  262 |     console.log('✅ Accessibility test passed!');
+  263 |   });
+  264 | 
+  265 |   test('should have proper heading hierarchy', async ({ page }) => {
+> 266 |     await page.goto('/');
+      |                ^ Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/
+  267 | 
+  268 |     // Check h1 exists and is unique
+  269 |     const h1Count = await page.locator('h1').count();
+  270 |     expect(h1Count).toBe(1);
+  271 | 
+  272 |     // Check h2 headings exist
+  273 |     const h2Count = await page.locator('h2').count();
+  274 |     expect(h2Count).toBeGreaterThan(0);
+  275 | 
+  276 |     console.log('✅ Heading hierarchy test passed!');
+  277 |   });
+  278 | });
+  279 | 
+```
