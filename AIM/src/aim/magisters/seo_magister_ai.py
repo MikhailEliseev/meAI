@@ -48,9 +48,20 @@ class SEOMagisterAI(SEOMagister):
             timeout: Maximum time for analysis in seconds
             spacy_model: spaCy model for entity extraction
             serp_engine: SERP engine (google or yandex)
-            **kwargs: Additional arguments for base SEOMagister
+            **kwargs: Additional arguments (magister_id, database_url, vault_path, etc.)
         """
+        # Extract parameters that base SEOMagister doesn't accept
+        self.magister_id = kwargs.pop('magister_id', 'seo-magister-ai')
+        self.database_url = kwargs.pop('database_url', None)
+        self.vault_path = kwargs.pop('vault_path', None)
+        self.event_bus = kwargs.pop('event_bus', None)
+        self.vault = kwargs.pop('vault', None)
+
+        # Initialize base SEOMagister with only supported parameters
         super().__init__(timeout=timeout, **kwargs)
+
+        # Store LLM client
+        self.llm_client = llm_client
 
         # AI SEO Analyzer
         self.ai_analyzer = SEOAnalyzer(
@@ -353,4 +364,5 @@ class SEOMagisterAI(SEOMagister):
 
     async def close(self):
         """Close AI analyzer resources"""
+        await self.llm_client.close()
         await self.ai_analyzer.close()
