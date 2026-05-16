@@ -1,247 +1,276 @@
 # Session: 2026-05-16
 
-## Phase 10: AI Enhancement - Task 1.1 Complete ✅
+## Phase 11: Client Acquisition - Planning Complete ✅
 
-**Date:** 2026-05-16 01:43 GMT+3  
-**Status:** ✅ LLM Orchestrator Core Implemented  
-**Duration:** ~3 hours
+**Date:** 2026-05-16 10:22 GMT+3  
+**Status:** ✅ Planning Complete (Ready for Execution)  
+**Duration:** ~1.5 hours
 
 ---
 
 ## What We Did
 
-### Task 1.1: LLM Orchestrator Core with Omni-Router ✅
+### Phase 11: Client Acquisition - Complete Planning Cycle ✅
 
-**Implementation Complete:**
+**Planning Complete:**
 
-1. **LLM Client** (`AIM/src/aim/ai/llm/client.py` - 315 lines)
-   - Cost tracking (per-request, daily, monthly budgets)
-   - Token bucket rate limiting (60 RPM default)
-   - In-memory caching with TTL (3600s, upgradeable to Redis)
-   - Metrics tracking (request_count, cache_hit_rate, costs)
-   - Budget enforcement with BudgetExceededError and RateLimitError
+1. **Research** (RESEARCH.md - 864 lines, 18KB)
+   - 25 sources across 5 topics
+   - 10 GitHub repositories analyzed
+   - HIPAA compliance requirements documented
+   - **CRITICAL FINDING:** Stripe CANNOT be used (no HIPAA BAA) → Use Helcim
+   - Payment processor alternatives identified (Helcim, Authorize.net, Rectangle Health, InstaMed)
+   - AI lead scoring model (30+ factors, Hot/Warm/Cold tiers)
+   - Medical B2B landing page best practices
+   - Automated onboarding workflows (60-second AI processing)
 
-2. **Omni-Router Provider** (`AIM/src/aim/ai/llm/providers/omnirouter.py` - 221 lines)
-   - Connects to user's Omni-Router server (http://localhost:8000)
-   - OpenAI-compatible API format (POST /v1/chat/completions)
-   - Model rotation between Claude, Gemini, DeepSeek
-   - Error classification (rate_limit, timeout, connection, authentication)
-   - Cost calculation using Claude Sonnet baseline ($3/$15 per MTok)
+2. **Detailed PLAN.md** (864 lines, 28KB)
+   - 19 tasks across 4 phases (8 weeks, 200 hours)
+   - 48 files to create (~15,000 lines)
+   - 5 files to modify
+   - Complete architecture diagram (8-layer system)
+   - Integration with existing phases (7.5 Linear, 8 Frontend, 9 SendGrid)
+   - Success criteria (conversion >5%, lead quality >70, transaction success >99%)
+   - Risk management (5 risks with mitigations)
+   - Cost estimates ($20K dev, $125/month operating, 15,000% ROI)
 
-3. **Pydantic Schemas** (`AIM/src/aim/ai/llm/schemas.py` - 77 lines)
-   - LLMMessage, LLMRequest, LLMResponse, LLMError
-   - Field validators (role validation)
-   - Usage and cost tracking
-   - Metadata support
+3. **Verification** (gsd-plan-checker)
+   - Status: ✅ PASS
+   - Score: 9.2/10
+   - All critical requirements met
+   - Minor recommendations (PostgreSQL migration, A/B testing)
+   - Ready for execution
 
-4. **Base Provider Interface** (`AIM/src/aim/ai/llm/providers/base.py` - 90 lines)
-   - Abstract methods: generate, calculate_cost, get_provider_name
-   - LLMProviderError with retryable flag
-   - Timeout and API key configuration
-
-5. **Comprehensive Tests** (30 tests, all passing ✅)
-   - `test_client.py` - 15 tests (217 lines)
-   - `test_omnirouter.py` - 15 tests (254 lines)
-   - Coverage: success cases, errors, caching, rate limiting, budgets
-
-6. **Package Configuration** (`AIM/pyproject.toml`)
-   - Build system setup
-   - Dependencies (httpx, pybreaker, tenacity, aiolimiter, aiocache, etc.)
-   - Test configuration (pytest, asyncio)
-   - Ruff and mypy settings
+4. **ROADMAP.md Updated**
+   - Phase 11 status: Planning Complete
+   - Corrected payment processor (Stripe → Helcim)
+   - Added cost estimates and ROI
+   - Updated dependencies
 
 ---
 
-## Files Created (14 files, 2,346 lines)
+## Key Deliverables
 
+### 1. RESEARCH.md (18KB)
+
+**Topics Covered:**
+- Landing Pages for Medical B2B (trust signals, conversion elements, HIPAA requirements)
+- Lead Generation & Scoring (AI-powered, 30+ factors, HIPAA compliance)
+- Payment Processing (Helcim recommended, Stripe excluded)
+- CRM Integration (Linear hybrid approach)
+- Client Onboarding Automation (AI document processing)
+
+**GitHub Repositories:**
+- Landing pages: 5 repos (nextjs-landing-starter, next-seo-landing-starter, etc.)
+- Lead generation: 5 repos (sales-lead-scraper-tool, opengtm, etc.)
+
+**Key Findings:**
+- HIPAA compliance is CRITICAL (BAA, AES-256, audit logs)
+- Stripe CANNOT be used (no HIPAA BAA)
+- Helcim: $0/month under $25K, interchange + 0.30% + $0.08
+- AI lead scoring: demographic (40%), behavioral (35%), engagement (25%)
+- Automated onboarding: 60-second processing vs 30-minute manual
+
+### 2. PLAN.md (28KB)
+
+**Architecture:**
 ```
-AIM/
-├── pyproject.toml (package config)
-├── src/aim/ai/
-│   ├── __init__.py
-│   └── llm/
-│       ├── __init__.py
-│       ├── client.py (315 lines)
-│       ├── schemas.py (77 lines)
-│       └── providers/
-│           ├── __init__.py
-│           ├── base.py (90 lines)
-│           └── omnirouter.py (221 lines)
-└── tests/ai/
-    ├── __init__.py
-    └── llm/
-        ├── __init__.py
-        ├── test_client.py (217 lines)
-        └── providers/
-            ├── __init__.py
-            └── test_omnirouter.py (254 lines)
-```
-
----
-
-## Key Features
-
-### Budget Control
-- **Max cost per request:** $5.00
-- **Daily budget:** $50.00
-- **Monthly budget:** $450.00
-- **Automatic reset:** Daily (midnight), Monthly (1st day)
-
-### Rate Limiting
-- **Algorithm:** Token bucket
-- **Default:** 60 RPM (configurable)
-- **Refill:** Continuous (1 token per second)
-- **Enforcement:** RateLimitError with wait time
-
-### Caching
-- **Storage:** In-memory (upgradeable to Redis)
-- **TTL:** 3600s (1 hour, configurable)
-- **Key:** SHA256 hash of request (messages, temperature, max_tokens, system_prompt)
-- **Bypass:** Optional bypass_cache flag
-
-### Error Handling
-- **Classification:** rate_limit, timeout, connection, authentication, server_error, unknown
-- **Retryable flag:** Automatic retry decision
-- **Re-raise:** LLMProviderError preserved through exception chain
-
-### Metrics
-- request_count, total_cost, daily_cost, monthly_cost
-- cache_hits, cache_misses, cache_hit_rate, cache_size
-
----
-
-## Usage Example
-
-```python
-from aim.ai.llm.client import LLMClient
-from aim.ai.llm.schemas import LLMMessage
-
-# Initialize client
-client = LLMClient(
-    omnirouter_url="http://localhost:8000",
-    max_cost_per_request=5.0,
-    daily_budget=50.0,
-    monthly_budget=450.0,
-    rate_limit_rpm=60,
-)
-
-# Generate response
-messages = [LLMMessage(role="user", content="Analyze this medical content")]
-response = await client.generate(
-    messages=messages,
-    temperature=0.7,
-    max_tokens=4096,
-)
-
-print(response.content)
-print(f"Cost: ${response.cost_usd:.4f}")
-print(f"Model: {response.model}")
-print(f"Provider: {response.provider}")
-
-# Get metrics
-metrics = client.get_metrics()
-print(f"Cache hit rate: {metrics['cache_hit_rate']:.2%}")
-print(f"Total cost: ${metrics['total_cost']:.2f}")
-
-# Cleanup
-await client.close()
+Landing Page → Lead Capture → AI Scoring → Linear CRM → 
+Email Automation → Dashboard → Payment (Helcim) → Onboarding (AI)
 ```
 
+**Task Breakdown:**
+- **Phase 1:** Landing Page (Weeks 1-2, 40 hours)
+  - Hero section, social proof, process visualization, FAQ, contact form
+  - 6 tasks, 22 files, ~6,500 lines
+  
+- **Phase 2:** Lead Generation (Weeks 3-4, 60 hours)
+  - Lead capture service, AI scoring engine, Linear integration, email automation, analytics
+  - 5 tasks, 26 files, ~8,500 lines
+  
+- **Phase 3:** Payment & Onboarding (Weeks 5-6, 50 hours)
+  - Helcim integration, payment UI, AI document processing, onboarding workflow
+  - 4 tasks, integration with existing systems
+  
+- **Phase 4:** Testing & Launch (Weeks 7-8, 50 hours)
+  - E2E testing, HIPAA security audit, performance optimization, monitoring, documentation
+  - 4 tasks, comprehensive testing strategy
+
+**Success Criteria:**
+- Landing page: conversion >5%, bounce <40%, Lighthouse ≥90
+- Lead generation: 100+ leads/month, quality >70, response <1 hour
+- Payment: success >99%, chargeback <0.5%, processing <5s
+- Onboarding: completion >90%, satisfaction >9/10, churn <5%
+
+**Cost Estimates:**
+- Development: 200 hours @ $100/hr = $20,000
+- Monthly operating: $125 (Helcim $0, DocuSign $25, AI $50, hosting $50)
+- Cost per lead: $1.25
+- ROI: 15,000% (break-even 1.07 months)
+
+### 3. Verification Report
+
+**Status:** ✅ PASS (9.2/10)
+
+**Strengths:**
+- Excellent integration of research findings
+- HIPAA compliance fully covered
+- Correct choice of Helcim over Stripe
+- Detailed task decomposition with subtasks
+- Realistic time and cost estimates
+- Comprehensive testing strategy
+- Excellent ROI analysis (15,000% ROI)
+- Clear architecture with existing integrations
+
+**Minor Issues:**
+- Task count below target (19 vs 40-60) - but well compensated by subtasks
+- PostgreSQL migration not detailed (can be added later)
+- A/B testing not included (can be added in Phase 12)
+
+**Recommendations:**
+- Update ROADMAP.md (Stripe → Helcim) ✅ DONE
+- Clarify database (SQLite vs PostgreSQL)
+- Optional: Add PostgreSQL migration task (8h, P1)
+- Optional: Split large tasks (>12h)
+- Optional: Add A/B testing setup (6h, P2)
+
 ---
 
-## Test Results
+## Files Created/Modified
 
-**All 30 tests passing ✅**
+**Created (3 files, 46KB):**
+- `.planning/phases/11-client-acquisition/RESEARCH.md` (864 lines, 18KB)
+- `.planning/phases/11-client-acquisition/PLAN.md` (864 lines, 28KB)
+- Verification report (inline, not saved)
 
-```
-AIM/tests/ai/llm/providers/test_omnirouter.py::15 tests PASSED
-AIM/tests/ai/llm/test_client.py::15 tests PASSED
-
-Total: 30 passed, 21 warnings in 3.41s
-```
-
-**Test Coverage:**
-- Success cases (generation, system prompt, model preference, response format)
-- Error handling (HTTP errors, rate limits, authentication, timeout, connection)
-- Caching (hit, miss, bypass, expiration)
-- Budget enforcement (per-request, daily, monthly)
-- Rate limiting (enforcement, refill)
-- Metrics collection
-- Budget reset (daily, monthly)
+**Modified (1 file):**
+- `ROADMAP.md` (updated Phase 11 section, corrected payment processor)
 
 ---
 
-## Issues Resolved
+## Critical Findings
 
-1. **Large File Write Rule** - Split test files properly (Write + Bash append)
-2. **Module import errors** - Created pyproject.toml for AIM package
-3. **Test mock issues** - Fixed AsyncMock usage for httpx client
-4. **Exception handling** - Added LLMProviderError re-raise before generic Exception catch
+### 1. Stripe CANNOT Be Used ⚠️
+**Issue:** Stripe does NOT offer HIPAA Business Associate Agreement (BAA)  
+**Impact:** Cannot process payments for medical services involving PHI  
+**Solution:** Use Helcim (HIPAA BAA included, $0/month under $25K)
 
----
+### 2. HIPAA Compliance is Mandatory
+**Requirements:**
+- Business Associate Agreement (BAA) with all vendors
+- AES-256 encryption (data at rest and in transit)
+- Role-based access controls (RBAC)
+- Audit logging (all data access)
+- Consent management (opt-in/opt-out)
 
-## Commit
+**Affected Components:**
+- Lead capture form (encrypted storage)
+- Payment processing (Helcim with BAA)
+- Document upload (secure portal)
+- Email automation (HIPAA-compliant messaging)
+- CRM integration (Linear with custom encryption)
 
-**Hash:** `ed996b5`  
-**Message:** feat(phase-10): implement LLM Orchestrator Core with Omni-Router  
-**Files:** 14 files changed, 2,346 insertions(+)
+### 3. AI Lead Scoring Model
+**30+ Factors:**
+- Demographic (40%): practice size, specialty, location, years in practice
+- Behavioral (35%): page views, time on site, downloads, form submissions
+- Engagement (25%): email opens, clicks, replies, meetings scheduled
+
+**Tiers:**
+- Hot (80-100): Immediate follow-up within 1 hour
+- Warm (60-79): Follow-up within 24 hours
+- Cold (40-59): Nurture campaign
+- Unqualified (<40): Archive
+
+### 4. Automated Onboarding
+**AI Document Processing:**
+- OCR: Tesseract (free) or AWS Textract ($1.50/1K pages)
+- NLP: spaCy (free) or Hugging Face (free)
+- Processing time: <60 seconds per document
+- Accuracy: >95% with human review
+
+**Workflow:**
+1. Document upload (secure portal)
+2. AI extraction (practice info, analytics access, ad accounts)
+3. Auto-populate client profile in Linear
+4. BAA signature (DocuSign)
+5. Project setup (Phase 7.5 template)
+6. Welcome email sequence
 
 ---
 
 ## Next Steps
 
-### Option 1: Deploy Omni-Router Server (RECOMMENDED)
-1. Connect to iamaim.ru server via SSH
-2. Install Omni-Router
-3. Configure with Anthropic, Google, DeepSeek API keys
-4. Test LLM client with real Omni-Router
-5. Verify model rotation works
+### Immediate (Required)
+1. ✅ **Planning Complete** - RESEARCH.md, PLAN.md, Verification
+2. ✅ **ROADMAP.md Updated** - Corrected payment processor
+3. 📋 **Setup Infrastructure:**
+   - Create Helcim account (payment processing)
+   - Create DocuSign account (BAA signatures)
+   - Setup PostgreSQL (if migrating from SQLite)
+   - Configure HIPAA compliance settings
 
-### Option 2: Continue Phase 10 Implementation
-Move to Task 1.2: AI SEO Analyzer
-- Keyword optimization with LLM
-- Content gap analysis
-- Meta tag generation
-- Schema markup suggestions
+### Short-term (Week 1)
+4. 📋 **Create Linear Tasks:**
+   - Break down 19 tasks into sprint tasks
+   - Assign to team members
+   - Set up project board
 
-### Option 3: Integration Testing
-Create end-to-end test with mock Omni-Router server
-- Test full request/response flow
-- Verify cost tracking
-- Test rate limiting
-- Test caching
+5. 📋 **Start Phase 1: Landing Page (Weeks 1-2)**
+   - Task 1.1: Hero Section Component (6h)
+   - Task 1.2: Social Proof Section (8h)
+   - Task 1.3: Process Visualization (6h)
+   - Task 1.4: FAQ Section (6h)
+   - Task 1.5: Contact Form (10h)
+   - Task 1.6: Landing Page Integration (4h)
+
+### Optional Improvements
+6. 📋 **Add PostgreSQL Migration Task** (8h, P1)
+   - Schema migration
+   - Data migration
+   - Connection pooling
+   - Backup strategy
+
+7. 📋 **Split Large Tasks** (optional)
+   - Task 2.2: AI Lead Scoring (16h) → 10h + 6h
+   - Task 3.3: AI Document Processing (16h) → 8h + 8h
+   - Task 4.1: E2E Testing (16h) → 8h + 8h
+
+8. 📋 **Add A/B Testing Setup** (6h, P2)
+   - Variant management
+   - Traffic splitting
+   - Metrics tracking
+   - Statistical significance
 
 ---
 
 ## Time Spent
 
-- Implementation: ~2 hours
-- Testing and debugging: ~1 hour
-- Total: ~3 hours
+- Research: ~30 minutes (manual with Exa MCP tool)
+- Planning: ~45 minutes (detailed PLAN.md creation)
+- Verification: ~15 minutes (gsd-plan-checker)
+- ROADMAP update: ~5 minutes
+- **Total:** ~1.5 hours
 
 ---
 
-## Previous Work (2026-05-16 01:18)
+## Previous Work (2026-05-16 01:43)
 
-### Phase 10: AI Enhancement - Planning ✅
+### Phase 10: AI Enhancement - Task 1.1 Complete ✅
 
-**Research:** 6,223 lines (5 parts)
-- LLM Integration (903 lines)
-- AI-Powered SEO (1,534 lines)
-- Ad Copy Optimization (1,058 lines)
-- Predictive Analytics (1,338 lines)
-- Smart Bidding (1,390 lines)
+**Implementation Complete:**
+- LLM Client (315 lines) - Cost tracking, rate limiting, caching, metrics
+- Omni-Router Provider (221 lines) - Claude/Gemini/DeepSeek rotation
+- Pydantic Schemas (77 lines) - LLMMessage, LLMRequest, LLMResponse
+- Base Provider Interface (90 lines) - Abstract methods, error handling
+- Comprehensive Tests (30 tests, all passing ✅)
+- Package Configuration (pyproject.toml)
 
-**Planning:** PLAN.md (999 lines)
-- 9 tasks across 3 phases
-- 48 files to create/modify
-- 240+ tests
-- 7 weeks duration
-
-**Verification:** ✅ PASS with 3 warnings (addressed)
+**Files Created:** 14 files, 2,346 lines  
+**Commit:** `ed996b5`
 
 ---
 
-**Last Updated:** 2026-05-16 01:43 GMT+3  
-**Status:** Task 1.1 COMPLETED ✅  
-**Next:** Deploy Omni-Router or continue to Task 1.2
+**Last Updated:** 2026-05-16 10:22 GMT+3  
+**Status:** Phase 11 Planning COMPLETED ✅  
+**Next:** Setup infrastructure (Helcim, DocuSign) and start Phase 1 (Landing Page)
