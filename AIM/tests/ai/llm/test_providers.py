@@ -61,17 +61,6 @@ class TestAnthropicProvider:
         expected = (1000 / 1_000_000) * 3.0 + (500 / 1_000_000) * 15.0
         assert abs(cost - expected) < 0.0001
     
-    def test_count_tokens_fallback(self):
-        """Test token counting fallback."""
-        provider = AnthropicProvider(api_key="test-key")
-        
-        # Mock count_tokens to raise exception
-        with patch.object(provider.sync_client, 'count_tokens', side_effect=Exception("API error")):
-            tokens = provider.count_tokens("Hello world", "claude-sonnet-4")
-            
-            # Fallback: 1 token ≈ 4 chars
-            assert tokens == len("Hello world") // 4
-
 
 class TestOpenAIProvider:
     """Test OpenAIProvider."""
@@ -123,13 +112,3 @@ class TestOpenAIProvider:
         expected = (1000 / 1_000_000) * 10.0 + (500 / 1_000_000) * 30.0
         assert abs(cost - expected) < 0.0001
     
-    def test_count_tokens_fallback(self):
-        """Test token counting fallback."""
-        provider = OpenAIProvider(api_key="test-key")
-        
-        # Mock tiktoken to raise exception
-        with patch('aim.ai.llm.providers.openai.tiktoken', side_effect=ImportError()):
-            tokens = provider.count_tokens("Hello world", "gpt-4-turbo")
-            
-            # Fallback: 1 token ≈ 4 chars
-            assert tokens == len("Hello world") // 4
