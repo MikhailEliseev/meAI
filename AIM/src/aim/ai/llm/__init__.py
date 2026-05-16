@@ -1,14 +1,11 @@
-"""LLM Orchestrator for AIM Agency.
+"""
+LLM Orchestrator Module
 
-Provides unified interface to multiple LLM providers with:
-- Model rotation (Claude, Gemini, DeepSeek via Omni-Router)
-- Cost tracking and budget control
-- Rate limiting and caching
-- Structured output with Pydantic
-- Automatic fallback on provider failure
+Provides unified interface for LLM providers (Anthropic Claude, OpenAI GPT-4)
+with automatic failover, caching, cost tracking, and rate limiting.
 """
 
-from aim.ai.llm.client import LLMClient
-from aim.ai.llm.schemas import LLMRequest, LLMResponse
+from .client import LLMClient
+from .schemas import LLMRequest, LLMResponse, LLMProvider
 
-__all__ = ["LLMClient", "LLMRequest", "LLMResponse"]
+__all__ = ["LLMClient", "LLMRequest", "LLMResponse", "LLMProvider"]

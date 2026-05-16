@@ -1,6 +1,11 @@
-"""LLM providers for Omni-Router integration."""
+"""
+LLM Provider Implementations
 
-from aim.ai.llm.providers.base import BaseLLMProvider, LLMProviderError
-from aim.ai.llm.providers.omnirouter import OmniRouterProvider
+Concrete implementations for Anthropic Claude and OpenAI GPT-4.
+"""
 
-__all__ = ["BaseLLMProvider", "LLMProviderError", "OmniRouterProvider"]
+from .base import BaseLLMProvider
+from .anthropic import AnthropicProvider
+from .openai import OpenAIProvider
+
+__all__ = ["BaseLLMProvider", "AnthropicProvider", "OpenAIProvider"]
