@@ -10,7 +10,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from AIM.src.aim.database import Base
+from aim.storage.models import Base
 
 
 class LinearTask(Base):

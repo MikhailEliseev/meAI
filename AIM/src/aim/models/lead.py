@@ -19,7 +19,7 @@ from typing import Optional
 from sqlalchemy import Boolean, DateTime, Float, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from AIM.src.aim.database import Base
+from aim.storage.models import Base
 
 
 class Lead(Base):
@@ -122,6 +122,9 @@ class Lead(Base):
     linear_tasks: Mapped[list["LinearTask"]] = relationship(
         "LinearTask", back_populates="lead", cascade="all, delete-orphan"
     )
+    email_workflows: Mapped[list["EmailWorkflow"]] = relationship(
+        "EmailWorkflow", back_populates="lead", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return (
@@ -140,3 +143,53 @@ class Lead(Base):
             Hex-encoded SHA-256 hash
         """
         return hashlib.sha256(email.encode()).hexdigest()
+
+    def decrypt_field(self, field_name: str) -> Optional[str]:
+        """Decrypt a single encrypted field
+
+        Args:
+            field_name: Name of field to decrypt (without _encrypted suffix)
+
+        Returns:
+            Decrypted value or None if field is empty
+
+        Raises:
+            ValueError: If field doesn't exist or isn't encrypted
+        """
+        from aim.utils.encryption import FieldEncryption
+
+        encrypted_field = f"{field_name}_encrypted"
+        if not hasattr(self, encrypted_field):
+            raise ValueError(f"Field {field_name} is not an encrypted field")
+
+        encrypted_value = getattr(self, encrypted_field)
+        if not encrypted_value:
+            return None
+
+        encryptor = FieldEncryption()
+        return encryptor.decrypt(encrypted_value)
+
+    @property
+    def name(self) -> Optional[str]:
+        """Decrypt and return name"""
+        return self.decrypt_field("name")
+
+    @property
+    def phone(self) -> Optional[str]:
+        """Decrypt and return phone"""
+        return self.decrypt_field("phone")
+
+    @property
+    def email(self) -> Optional[str]:
+        """Decrypt and return email"""
+        return self.decrypt_field("email")
+
+    @property
+    def clinic_name(self) -> Optional[str]:
+        """Decrypt and return clinic_name"""
+        return self.decrypt_field("clinic_name")
+
+    @property
+    def message(self) -> Optional[str]:
+        """Decrypt and return message"""
+        return self.decrypt_field("message")

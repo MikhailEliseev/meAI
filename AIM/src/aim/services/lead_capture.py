@@ -27,7 +27,7 @@ from fastapi import HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from AIM.src.aim.models.lead import Lead as LeadModel
+from aim.models.lead import Lead as LeadModel
 from AIM.src.aim.schemas.lead import (
     LeadCaptureRequest,
     LeadCaptureResponse,

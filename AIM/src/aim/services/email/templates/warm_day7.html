@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Специальное предложение для {{ specialty }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #0066cc;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        h1 {
+            color: #0066cc;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .offer-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        .offer-title {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .offer-subtitle {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+        .urgency {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 6px;
+        }
+        .package {
+            background-color: #f8f9fa;
+            padding: 25px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border: 2px solid #e0e0e0;
+        }
+        .package-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .package-item:last-child {
+            border-bottom: none;
+        }
+        .checkmark {
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .price {
+            text-align: center;
+            margin: 25px 0;
+        }
+        .price-old {
+            font-size: 24px;
+            color: #999;
+            text-decoration: line-through;
+        }
+        .price-new {
+            font-size: 36px;
+            font-weight: bold;
+            color: #0066cc;
+            margin: 10px 0;
+        }
+        .price-save {
+            font-size: 18px;
+            color: #28a745;
+            font-weight: bold;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #28a745;
+            color: #ffffff;
+            padding: 18px 40px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 18px;
+            margin: 20px 0;
+        }
+        .guarantee {
+            background-color: #e6f7ff;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        @media only screen and (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">AIM Agency</div>
+            <p style="color: #666; margin: 0;">AI-первое маркетинговое агентство для медицинских клиник</p>
+        </div>
+
+        <h1>Специальное предложение для {{ specialty }}</h1>
+
+        <p>Здравствуйте, {{ name }}!</p>
+
+        <p>За последнюю неделю вы узнали о нашем подходе к продвижению медицинских клиник и увидели реальные результаты наших клиентов.</p>
+
+        <p>Сегодня у меня для вас <strong>специальное предложение</strong>, которое действует только до конца этой недели.</p>
+
+        <div class="offer-box">
+            <div class="offer-title">Пакет "Старт" для {{ specialty }}</div>
+            <div class="offer-subtitle">Комплексное продвижение на 3 месяца</div>
+        </div>
+
+        {{ ai_offer }}
+
+        <div class="urgency">
+            <p style="margin: 0;"><strong>⏰ Предложение действует до {{ offer_deadline }}</strong></p>
+            <p style="margin: 10px 0 0 0;">Мы принимаем только 3 новых клиента в месяц, чтобы гарантировать качество работы. На этот месяц осталось 1 место.</p>
+        </div>
+
+        <h3 style="color: #0066cc;">Что входит в пакет "Старт":</h3>
+
+        <div class="package">
+            <div class="package-item">
+                <span class="checkmark">✓</span>
+                <strong>Глубокий аудит</strong> — анализ конкурентов, целевой аудитории, текущего маркетинга
+            </div>
+            <div class="package-item">
+                <span class="checkmark">✓</span>
+                <strong>SEO-продвижение</strong> — оптимизация сайта, работа с ключевыми запросами
+            </div>
+            <div class="package-item">
+                <span class="checkmark">✓</span>
+                <strong>Контент-маркетинг</strong> — 12 экспертных статей для привлечения пациентов
+            </div>
+            <div class="package-item">
+                <span class="checkmark">✓</span>
+                <strong>Таргетированная реклама</strong> — настройка и ведение Яндекс.Директ и VK Реклама
+            </div>
+            <div class="package-item">
+                <span class="checkmark">✓</span>
+                <strong>Аналитика</strong> — еженедельные отчёты с метриками и рекомендациями
+            </div>
+            <div class="package-item">
+                <span class="checkmark">✓</span>
+                <strong>Персональный менеджер</strong> — на связи 24/7 для решения любых вопросов
+            </div>
+        </div>
+
+        <div class="price">
+            <div class="price-old">150 000 ₽/мес</div>
+            <div class="price-new">99 000 ₽/мес</div>
+            <div class="price-save">Экономия 51 000 ₽ за 3 месяца</div>
+        </div>
+
+        <center>
+            <a href="{{ consultation_url }}" class="cta-button">Забронировать место</a>
+        </center>
+
+        <div class="guarantee">
+            <p style="margin: 0;"><strong>🛡️ Гарантия результата</strong></p>
+            <p style="margin: 10px 0 0 0;">Если за первые 2 месяца мы не увеличим поток пациентов минимум на 30%, мы вернём 100% оплаты и продолжим работать бесплатно до достижения результата.</p>
+        </div>
+
+        <p><strong>Почему стоит начать сейчас?</strong></p>
+
+        <ul>
+            <li>Сезонность: весна и лето — лучшее время для запуска маркетинга в медицине</li>
+            <li>Конкуренция: пока ваши конкуренты думают, вы уже получаете пациентов</li>
+            <li>Скидка: специальная цена действует только до {{ offer_deadline }}</li>
+        </ul>
+
+        <p>Чтобы забронировать место, просто нажмите кнопку выше или позвоните мне напрямую: <strong>{{ manager_phone }}</strong></p>
+
+        <p>Жду вашего решения!</p>
+
+        <p>С уважением,<br>
+        <strong>{{ manager_name }}</strong><br>
+        {{ manager_phone }}</p>
+
+        <div class="footer">
+            <p>AIM Agency - AI-первое маркетинговое агентство</p>
+            <p>Специализируемся на продвижении медицинских клиник</p>
+            <p style="margin-top: 15px;">
+                <a href="{{ unsubscribe_url }}" style="color: #666;">Отписаться от рассылки</a>
+            </p>
+            <p style="margin-top: 10px; font-size: 11px;">
+                Это письмо отправлено в соответствии с ФЗ-152 "О персональных данных".<br>
+                Вы получили это письмо, потому что оставили заявку на нашем сайте.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
