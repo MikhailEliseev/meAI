@@ -539,7 +539,6 @@ class TestCreateIssue:
             title="New Task",
             team_id="team1",
             description="Test task",
-            project_id="proj1",
             priority=2,
             assignee_id="user1",
         )
