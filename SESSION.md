@@ -1654,3 +1654,153 @@ Message (every 5s): {
 - Install dependencies
 - Start Task 3.1: Payment Integration (stub)
 
+
+---
+
+## Phase 11: Client Acquisition - Sprint 3 Task 3.2 Complete ✅
+
+**Date:** 2026-05-17 00:52 GMT+3  
+**Status:** ✅ Task 3.2 Complete (Payment UI)  
+**Duration:** ~1 hour
+
+---
+
+## What We Did
+
+### Phase 11 Sprint 3 - Task 3.2: Payment UI ✅ COMPLETED
+
+**Implementation:**
+Created frontend payment components and API client to integrate with backend Payment Service from Task 3.1.
+
+**Components Created:**
+
+1. **Payment API Client** (`AIM/frontend/lib/api/payment.ts`, 142 lines):
+   - TypeScript client for Payment Service integration
+   - Interfaces matching backend Pydantic schemas:
+     - `PaymentRequest` - payment creation data
+     - `PaymentResponse` - payment result
+     - `PaymentStatusResponse` - status query result
+     - `RefundRequest` - refund request data
+     - `RefundResponse` - refund result
+   - PaymentAPI class with methods:
+     - `createPayment()` - POST /api/payments/create
+     - `getPaymentStatus()` - GET /api/payments/{id}/status
+     - `refundPayment()` - POST /api/payments/{id}/refund
+   - Singleton instance: `export const paymentAPI = new PaymentAPI();`
+   - Error handling with detailed messages
+
+2. **PaymentStatus Component** (`AIM/frontend/components/payment/PaymentStatus.tsx`, 245 lines):
+   - Displays payment results (success/failure/refunded)
+   - Success state:
+     - Green checkmark icon
+     - Transaction details (ID, amount, card info)
+     - Download receipt button
+     - Return to dashboard button
+   - Failed state:
+     - Red X icon
+     - Error message and code
+     - Return to dashboard button
+   - Refunded state:
+     - Yellow return icon
+     - Refund details
+   - Loading state with spinner
+   - Error state with user-friendly messages
+   - Automatic status fetching on mount
+   - Russian localization
+
+3. **PaymentForm Updates** (`AIM/frontend/components/payment/PaymentForm.tsx`):
+   - Integrated with real Payment API client
+   - Replaced stub implementation with API calls
+   - Payment request construction:
+     - Collects card data (number, expiry, CVV, name)
+     - Validates with Luhn algorithm
+     - Sends to backend via `paymentAPI.createPayment()`
+   - Updated stub notice (Helcim stub → ЮKassa in Phase 12)
+   - Maintains all validation and formatting logic
+   - Error handling with user feedback
+
+4. **Component Tests** (`AIM/frontend/__tests__/components/payment/`):
+   - `PaymentForm.test.tsx` - Already exists (23 tests)
+   - `PaymentStatus.test.tsx` - New (18 tests):
+     - Loading state rendering
+     - Success state with transaction details
+     - Failed state with error messages
+     - Refunded state display
+     - Error handling
+     - Navigation to dashboard
+     - API integration verification
+     - Download receipt button (success only)
+
+**Key Features:**
+- Full TypeScript type safety (frontend ↔ backend)
+- Real API integration (no frontend stubs)
+- Russian localization (all UI text in Russian)
+- Responsive design with Tailwind CSS
+- Loading states and error handling
+- Payment status polling
+- Receipt download functionality
+- Navigation integration (Next.js router)
+
+**Test Coverage:**
+```
+✅ 23 PaymentForm tests (existing)
+✅ 18 PaymentStatus tests (new)
+✅ 41 total frontend payment tests
+```
+
+**Files Changed (4 files, ~600 lines):**
+- New: `AIM/frontend/lib/api/payment.ts` (142 lines)
+- New: `AIM/frontend/components/payment/PaymentStatus.tsx` (245 lines)
+- Modified: `AIM/frontend/components/payment/PaymentForm.tsx` (updated API integration)
+- New: `AIM/frontend/__tests__/components/payment/PaymentStatus.test.tsx` (195 lines)
+
+**Integration Flow:**
+```
+User fills PaymentForm
+  ↓
+PaymentForm.handleSubmit()
+  ↓
+paymentAPI.createPayment(request)
+  ↓
+POST /api/payments/create (backend)
+  ↓
+PaymentService.create_payment()
+  ↓
+HelcimClient.process_payment() [STUB]
+  ↓
+Payment stored in DB (encrypted)
+  ↓
+PaymentResponse returned
+  ↓
+PaymentForm.onSuccess(payment_id)
+  ↓
+Navigate to PaymentStatus
+  ↓
+PaymentStatus fetches status
+  ↓
+Display result to user
+```
+
+**Russian Market Adaptations:**
+- All UI text in Russian
+- RUB currency formatting
+- Russian card support (Visa, Mastercard, Mir)
+- ЮKassa branding in security notice
+- Stub notice explains Phase 12 replacement
+
+**Next Steps:**
+- Task 3.3: AI Document Processing (16h)
+- Task 3.4: Onboarding Workflow (14h)
+
+---
+
+## Summary
+
+**Task 3.2 Complete ✅**
+- Payment API client created
+- PaymentStatus component implemented
+- PaymentForm integrated with real API
+- 18 new tests added (41 total payment tests)
+- Full frontend-backend integration working
+- Ready for Task 3.3 (AI Document Processing)
+
