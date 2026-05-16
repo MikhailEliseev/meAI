@@ -1511,6 +1511,52 @@ Message (every 5s): {
 - Manager info: Михаил Елисеев, me@iamaim.ru
 
 **Next Steps:**
-- Plan Phase 11 Sprint 3 (Week 5-6)
-- Or review and optimize Sprint 2 deliverables
+- ✅ Plan Phase 11 Sprint 3 (Week 5-6) - COMPLETED
+- ⏳ Start Sprint 3 Task 3.1: Payment Integration (stub)
+
+---
+
+## Phase 11 Sprint 3: Payment & Onboarding - Planning Complete ✅
+
+**Date:** 2026-05-17 00:28 GMT+3  
+**Status:** ✅ Planning Complete  
+**Duration:** ~5 minutes
+
+**Plan Created:**
+- `PHASE_11_SPRINT_3_PLAN.md` (400+ lines)
+- 4 tasks defined (54 hours total)
+- 80 tests planned
+- 30 files to create (~5,500 lines)
+
+**Sprint Overview:**
+- **Duration:** Weeks 5-6 (54 hours with stubs)
+- **Approach:** Stub Implementation (Helcim, DocuSign)
+- **Adaptation:** +4 hours for Russian market (5% overhead)
+
+**Tasks:**
+1. Task 3.1: Payment Integration (stub) - 16h, 20 tests
+2. Task 3.2: Payment UI - 8h, 15 tests
+3. Task 3.3: AI Document Processing - 16h, 25 tests
+4. Task 3.4: Onboarding Workflow (stub) - 14h, 20 tests
+
+**Key Decisions:**
+- ✅ Stub implementation for payment (Helcim → ЮKassa in Phase 12)
+- ✅ Stub implementation for signatures (DocuSign → Контур.Диадок in Phase 12)
+- ✅ Russian OCR with Tesseract rus model
+- ✅ AI document extraction with Claude
+- ✅ Currency: RUB, Russian cards (Visa, Mastercard, Mir)
+
+**Dependencies to Install:**
+- pytesseract>=0.3.10 (OCR)
+- pdf2image>=1.16.0 (PDF processing)
+- tesseract-ocr (system package + Russian language model)
+
+**Phase 12 Replacement Plan:**
+- Payment: Replace Helcim stub with ЮKassa (14h)
+- Signature: Replace DocuSign stub with Контур.Диадок (12h)
+- Total: 26 hours
+
+**Next Action:**
+- Install dependencies
+- Start Task 3.1: Payment Integration (stub)
 
