@@ -3,16 +3,30 @@
 import os
 import sys
 from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from aim.database import Base
+from aim.main import app
 
 # Add project root to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
+
+# Import all models to register them with Base.metadata
+from aim.models.lead import Lead  # noqa: F401
+from aim.models.linear_task import LinearTask  # noqa: F401
+from aim.models.email_workflow import EmailWorkflow  # noqa: F401
+from aim.models.scheduled_email import ScheduledEmail  # noqa: F401
+from aim.models.email_event import EmailEvent  # noqa: F401
+from aim.models.email_template import EmailTemplate  # noqa: F401
+from aim.models.payment import Payment  # noqa: F401
+from aim.models.document import Document  # noqa: F401
+from aim.models.onboarding import Onboarding  # noqa: F401
 
 
 @pytest.fixture(scope="session")
@@ -52,3 +66,36 @@ async def db_session(encryption_key):
 
     # Cleanup
     await engine.dispose()
+
+
+@pytest.fixture
+async def db(db_session):
+    """Alias for db_session to match test expectations."""
+    return db_session
+
+
+@pytest.fixture
+async def client(db, encryption_key):
+    """Create async HTTP client for API testing."""
+    from aim.database import get_db
+
+    # Override get_db dependency to use test database
+    async def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+    # Clean up
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def mock_recaptcha():
+    """Mock reCAPTCHA verification for tests."""
+    with patch("aim.services.lead_capture.LeadCaptureService._verify_recaptcha") as mock:
+        mock.return_value = AsyncMock(return_value=None)
+        yield mock

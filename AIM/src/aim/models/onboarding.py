@@ -66,8 +66,8 @@ class Onboarding(Base):
     # Failure tracking
     failure_reason: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
-    # Metadata
-    metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # Extra data
+    extra_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     def __repr__(self) -> str:
         return (
@@ -101,11 +101,11 @@ class Onboarding(Base):
         """Get list of uploaded document types.
 
         Returns:
-            List of document types (from metadata)
+            List of document types (from extra_data)
         """
-        if not self.metadata:
+        if not self.extra_data:
             return []
-        return self.metadata.get("document_types", [])
+        return self.extra_data.get("document_types", [])
 
     def is_documents_complete(self) -> bool:
         """Check if all required documents uploaded.

@@ -213,7 +213,17 @@ async def metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
-# API Routes (placeholder for future implementation)
+# Import API routers
+from aim.api.leads import router as leads_router
+from aim.api.onboarding import router as onboarding_router
+from aim.api.analytics import router as analytics_router
+
+# Include API routers
+app.include_router(leads_router)
+app.include_router(onboarding_router)
+app.include_router(analytics_router)
+
+# API Routes
 @app.get("/api/v1/status")
 async def api_status():
     """API status endpoint"""
@@ -224,7 +234,10 @@ async def api_status():
             "health": "/health",
             "ready": "/ready",
             "metrics": "/metrics",
-            "docs": "/docs"
+            "docs": "/docs",
+            "leads": "/api/leads",
+            "onboarding": "/api/onboarding",
+            "analytics": "/api/analytics"
         }
     }
 

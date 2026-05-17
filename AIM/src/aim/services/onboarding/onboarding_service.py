@@ -178,13 +178,13 @@ class OnboardingService:
         # Update onboarding
         onboarding.add_document(document.id)
 
-        # Update document types in metadata
-        if not onboarding.metadata:
-            onboarding.metadata = {}
-        doc_types = onboarding.metadata.get("document_types", [])
+        # Update document types in extra_data
+        if not onboarding.extra_data:
+            onboarding.extra_data = {}
+        doc_types = onboarding.extra_data.get("document_types", [])
         if document_type not in doc_types:
             doc_types.append(document_type)
-        onboarding.metadata["document_types"] = doc_types
+        onboarding.extra_data["document_types"] = doc_types
 
         # Update progress
         onboarding.progress = onboarding.calculate_progress()
