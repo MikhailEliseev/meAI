@@ -8,7 +8,6 @@ from typing import Any, Optional
 try:
     import sys
     from pathlib import Path
-    # Add scripts directory to path for LinearClient import
     scripts_path = Path(__file__).parent.parent.parent.parent.parent / "scripts"
     if str(scripts_path) not in sys.path:
         sys.path.insert(0, str(scripts_path))
@@ -26,7 +25,6 @@ class LinearMixin:
         class SEOMagisterV2(LinearMixin):
             def __init__(self, linear_client=None, linear_enabled=False):
                 self.setup_linear(linear_client, linear_enabled)
-                # ... rest of init
     """
 
     def setup_linear(
@@ -34,50 +32,61 @@ class LinearMixin:
         linear_client: Optional["LinearClient"] = None,
         linear_enabled: bool = False,
     ) -> None:
-        """Setup Linear integration.
-
-        Args:
-            linear_client: Optional LinearClient instance
-            linear_enabled: Enable Linear integration
-        """
         self.linear_client = linear_client
         self.linear_enabled = linear_enabled and linear_client is not None
         self.linear_task_id: Optional[str] = None
+        self.linear_team_id: Optional[str] = None
 
-    def set_linear_task_id(self, task_id: str) -> None:
-        """Set Linear task ID for this workflow.
-
-        Args:
-            task_id: Linear issue ID
-        """
+    def set_linear_task_id(self, task_id: str, team_id: str | None = None) -> None:
         self.linear_task_id = task_id
+        if team_id:
+            self.linear_team_id = team_id
+
+    def sync_linear_from_message(self, payload: dict) -> None:
+        """Extract Linear info from Operator's delegation message."""
+        if not self.linear_enabled:
+            return
+        task_id = payload.get("linear_task_id")
+        team_id = payload.get("linear_team_id")
+        if task_id:
+            self.set_linear_task_id(task_id, team_id)
 
     def update_linear_status(self, status: str) -> bool:
-        """Update Linear task status.
+        """Update Linear task status via API.
 
         Args:
-            status: New status ("in_progress", "completed", "failed")
+            status: "in_progress", "completed", or "failed"
 
         Returns:
             True if updated successfully
         """
         if not self.linear_enabled or not self.linear_task_id:
             return False
+        if not self.linear_client:
+            return False
 
         try:
-            # Map status to Linear state
-            state_mapping = {
+            state_name = {
                 "in_progress": "In Progress",
                 "completed": "Done",
                 "failed": "Canceled",
-            }
-            state_name = state_mapping.get(status, "Todo")
+            }.get(status, "Todo")
 
-            # Note: This is simplified - in real implementation,
-            # we'd need team_id to get state_id
-            # For now, Magisters will receive linear_task_id from Operator
-            # and can update via LinearClient directly
+            team_id = self.linear_team_id
+            if not team_id:
+                return False
 
+            states = self.linear_client.list_states(team_id)
+            state_id = None
+            for s in states:
+                if s.get("name") == state_name:
+                    state_id = s.get("id")
+                    break
+
+            if not state_id:
+                return False
+
+            self.linear_client.update_issue(self.linear_task_id, state_id=state_id)
             return True
         except Exception:
             return False

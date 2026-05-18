@@ -250,13 +250,28 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 13-01: Landing page implementation (from Phase 11 Sprint 1)
-- [ ] 13-02: Marketing campaigns launch + analytics
+- [x] 13-01: Landing page implementation (from Phase 11 Sprint 1)
+- [ ] 13-02: Marketing campaigns launch + analytics (deferred — post-MVP)
+
+### Phase 14: Final Integration — Operability & Client Dashboard
+**Goal**: Закрыть оставшиеся gaps: LinearMixin на всех Magisters, клиентский веб-дашборд
+**Depends on**: Phase 13
+**Success Criteria** (what must be TRUE):
+  1. LinearMixin работает на всех Magisters (SEO, Content, Ads, Analytics)
+  2. update_linear_status() реально вызывает LinearClient API (не no-op)
+  3. Клиентский веб-дашборд: layout + /dashboard/tasks + /api/dashboard/progress
+  4. Убраны все hardcoded mock-данные из billing/contracts/onboarding
+  5. Навигация между страницами дашборда работает
+**Plans**: 2 plans
+
+Plans:
+- [ ] 14-01: Finish LinearMixin → all Magisters + fix update_linear_status()
+- [ ] 14-02: Client web dashboard (layout, tasks page, progress API, de-mock)
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13
+Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13 → 14
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -273,6 +288,7 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 10. AI Enhancement | v2.0 | 5/5 | Complete | 2026-05-16 |
 | 11. Client Acquisition | v2.1 | 3/4 | Complete | 2026-05-18 |
 | 12. Production Deployment | v3.0 | 3/3 | Complete | 2026-05-18 |
-| 13. Landing Page | v3.0 | 0/2 | Not started | - |
+| 13. Landing Page | v3.0 | 1/2 | In progress | 2026-05-18 |
+| 14. Final Integration | v3.0 | 0/2 | Planned | - |
 
-**Overall:** 29/31 plans complete (94%)
+**Overall:** 30/33 plans complete (91%)

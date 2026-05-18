@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import Script from "next/script";
+import { PublicLayout } from "@/components/PublicLayout";
+import { UTMCapture } from "@/components/UTMCapture";
+import { CookieConsent } from "@/components/CookieConsent";
+import { YandexMetrika } from "@/components/YandexMetrika";
 import "./globals.css";
 
 const inter = Inter({
@@ -17,8 +21,9 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "AIM Agency - AI-маркетинг для медицинских клиник | Гарантия результата",
-  description: "Привлекаем пациентов с помощью искусственного интеллекта. Увеличение потока пациентов на 30%+ за 3 месяца. Гарантия результата или возврат денег. Работаем с 50+ клиниками по всей России.",
+  title: "AIM Agency — AI-маркетинг для медицинских клиник | Гарантия результата",
+  description:
+    "Привлекаем пациентов с помощью искусственного интеллекта. Увеличение потока пациентов на 30%+ за 3 месяца. Гарантия результата или возврат денег. Работаем с 50+ клиниками по всей России.",
   keywords: [
     "медицинский маркетинг",
     "AI маркетинг для клиник",
@@ -43,20 +48,21 @@ export const metadata: Metadata = {
     locale: "ru_RU",
     url: "https://iamaim.ru",
     siteName: "AIM Agency",
-    title: "AIM Agency - AI-маркетинг для медицинских клиник",
-    description: "Привлекаем пациентов с помощью искусственного интеллекта. Гарантия результата или возврат денег. 50+ клиник, 15K+ новых пациентов, ROI 450%.",
+    title: "AIM Agency — AI-маркетинг для медицинских клиник",
+    description:
+      "Привлекаем пациентов с помощью искусственного интеллекта. Гарантия результата или возврат денег. 50+ клиник, 15K+ новых пациентов, ROI 450%.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "AIM Agency - AI-маркетинг для медицинских клиник",
+        alt: "AIM Agency — AI-маркетинг для медицинских клиник",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "AIM Agency - AI-маркетинг для медицинских клиник",
+    title: "AIM Agency — AI-маркетинг для медицинских клиник",
     description: "Привлекаем пациентов с помощью искусственного интеллекта. Гарантия результата.",
     images: ["/og-image.png"],
     creator: "@aimagency",
@@ -83,54 +89,21 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const yandexMetrikaId = process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID;
-
   return (
     <html lang="ru" className={`${inter.variable} ${poppins.variable}`}>
       <head>
+        {/* Preconnect for performance */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://mc.yandex.ru" />
+
         {/* Favicon */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
 
-        {/* Yandex.Metrika */}
-        {yandexMetrikaId && (
-          <Script
-            id="yandex-metrika"
-            strategy="afterInteractive"
-            dangerouslySetInnerHTML={{
-              __html: `
-                (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-                m[i].l=1*new Date();
-                for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-                k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
-                (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
-
-                ym(${yandexMetrikaId}, "init", {
-                  clickmap:true,
-                  trackLinks:true,
-                  accurateTrackBounce:true,
-                  webvisor:true,
-                  ecommerce:"dataLayer"
-                });
-              `,
-            }}
-          />
-        )}
-        {yandexMetrikaId && (
-          <noscript>
-            <div>
-              <img
-                src={`https://mc.yandex.ru/watch/${yandexMetrikaId}`}
-                style={{ position: "absolute", left: "-9999px" }}
-                alt=""
-              />
-            </div>
-          </noscript>
-        )}
-
-        {/* Structured Data - Organization */}
+        {/* Structured Data — Organization (single source of truth) */}
         <Script
           id="structured-data-organization"
           type="application/ld+json"
@@ -142,7 +115,8 @@ export default function RootLayout({
               alternateName: "AI Medical Marketing Agency",
               url: "https://iamaim.ru",
               logo: "https://iamaim.ru/logo.png",
-              description: "AI-первое медицинское маркетинговое агентство в России",
+              description:
+                "AI-первое медицинское маркетинговое агентство в России",
               address: {
                 "@type": "PostalAddress",
                 addressCountry: "RU",
@@ -157,7 +131,6 @@ export default function RootLayout({
               sameAs: [
                 "https://vk.com/aimagency",
                 "https://t.me/aimagency",
-                "https://instagram.com/aimagency",
               ],
               aggregateRating: {
                 "@type": "AggregateRating",
@@ -168,7 +141,7 @@ export default function RootLayout({
           }}
         />
 
-        {/* Structured Data - WebSite */}
+        {/* Structured Data — WebSite */}
         <Script
           id="structured-data-website"
           type="application/ld+json"
@@ -180,14 +153,15 @@ export default function RootLayout({
               url: "https://iamaim.ru",
               potentialAction: {
                 "@type": "SearchAction",
-                target: "https://iamaim.ru/search?q={search_term_string}",
+                target:
+                  "https://iamaim.ru/search?q={search_term_string}",
                 "query-input": "required name=search_term_string",
               },
             }),
           }}
         />
 
-        {/* Structured Data - BreadcrumbList */}
+        {/* Structured Data — BreadcrumbList */}
         <Script
           id="structured-data-breadcrumb"
           type="application/ld+json"
@@ -207,7 +181,14 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <PublicLayout>
+          {children}
+        </PublicLayout>
+        <CookieConsent />
+        <YandexMetrika />
+        <UTMCapture />
+      </body>
     </html>
   );
 }

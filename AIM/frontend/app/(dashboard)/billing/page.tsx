@@ -1,14 +1,39 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { PaymentForm } from "@/components/payment/PaymentForm";
 import { PaymentHistory } from "@/components/payment/PaymentHistory";
 
-export const metadata = {
-  title: "Биллинг | AIM Agency",
-  description: "Управление платежами и счетами",
-};
+export const dynamic = "force-dynamic";
 
 export default function BillingPage() {
-  // TODO: Get customer email from session (Phase 7.5 auth)
-  const customerEmail = "ivan@dentaplus.ru";
+  const [customerEmail, setCustomerEmail] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const res = await fetch("/api/dashboard/progress");
+        if (res.ok) {
+          // TODO: Get actual email from auth session / profile API (Phase 7.5)
+          setCustomerEmail("client@iamaim.ru");
+        }
+      } catch {
+        // fallback
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProfile();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin h-10 w-10 border-4 border-primary-600 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
