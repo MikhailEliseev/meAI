@@ -11,7 +11,7 @@ This is the production-ready version integrating Phase 3 trained subagents.
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 import structlog
 
@@ -27,6 +27,7 @@ from aim.subagents.analytics.report_generator import (
     ReportGenerator,
     MarketingReport,
 )
+from aim.magisters.linear_mixin import LinearMixin
 
 
 @dataclass
@@ -56,7 +57,7 @@ class AnalyticsWorkflowReport:
     errors: list[str]
 
 
-class AnalyticsMagisterV2:
+class AnalyticsMagisterV2(LinearMixin):
     """
     Analytics Magister V2 - Production-ready analytics workflow orchestrator.
 
@@ -68,12 +69,24 @@ class AnalyticsMagisterV2:
     Each phase uses results from previous phases for context-aware reporting.
     """
 
-    def __init__(self):
-        """Initialize Analytics Magister V2."""
+    def __init__(
+        self,
+        linear_client: Optional[Any] = None,
+        linear_enabled: bool = False,
+    ):
+        """Initialize Analytics Magister V2.
+
+        Args:
+            linear_client: Optional LinearClient for task tracking
+            linear_enabled: Enable Linear integration
+        """
         self.logger = structlog.get_logger()
         self.traffic_analyzer = TrafficAnalyzer()
         self.conversion_tracker = ConversionTracker()
         self.report_generator = ReportGenerator()
+
+        # Setup Linear integration
+        self.setup_linear(linear_client, linear_enabled)
 
     async def execute_workflow(
         self,
@@ -102,8 +115,13 @@ class AnalyticsMagisterV2:
         start_time = datetime.now()
         errors = []
 
+        # Update Linear status
+        self.update_linear_status("in_progress")
+        self.add_linear_progress_update("Analytics Workflow", "started", f"Period: {start_date} to {end_date}")
+
         # Phase 1: Traffic Analysis
         self.logger.info("phase_1_start", phase="traffic_analysis")
+        self.add_linear_progress_update("Phase 1: Traffic Analysis", "in_progress")
         try:
             traffic_report = await self.traffic_analyzer.analyze(
                 start_date=start_date,
@@ -115,9 +133,14 @@ class AnalyticsMagisterV2:
                 total_sessions=traffic_report.total_sessions,
                 total_users=traffic_report.total_users,
             )
+            self.add_linear_progress_update(
+                "Phase 1: Traffic Analysis", "completed",
+                f"Sessions: {traffic_report.total_sessions}, Users: {traffic_report.total_users}",
+            )
         except Exception as e:
             self.logger.error("phase_1_failed", error=str(e))
             errors.append(f"Traffic Analysis failed: {str(e)}")
+            self.add_linear_progress_update("Phase 1: Traffic Analysis", "failed", str(e))
             # Create empty traffic report to continue workflow
             from aim.subagents.analytics.traffic_analyzer import (
                 TrafficReport,
@@ -163,6 +186,7 @@ class AnalyticsMagisterV2:
 
         # Phase 2: Conversion Tracking
         self.logger.info("phase_2_start", phase="conversion_tracking")
+        self.add_linear_progress_update("Phase 2: Conversion Tracking", "in_progress")
         try:
             conversion_report = await self.conversion_tracker.track(
                 start_date=start_date,
@@ -174,9 +198,14 @@ class AnalyticsMagisterV2:
                 total_conversions=conversion_report.total_conversions,
                 total_revenue=conversion_report.revenue_metrics.total_revenue,
             )
+            self.add_linear_progress_update(
+                "Phase 2: Conversion Tracking", "completed",
+                f"Conversions: {conversion_report.total_conversions}, Revenue: {conversion_report.revenue_metrics.total_revenue}",
+            )
         except Exception as e:
             self.logger.error("phase_2_failed", error=str(e))
             errors.append(f"Conversion Tracking failed: {str(e)}")
+            self.add_linear_progress_update("Phase 2: Conversion Tracking", "failed", str(e))
             # Create empty conversion report to continue workflow
             from aim.subagents.analytics.conversion_tracker import (
                 ConversionReport,
@@ -215,6 +244,7 @@ class AnalyticsMagisterV2:
 
         # Phase 3: Report Generation
         self.logger.info("phase_3_start", phase="report_generation")
+        self.add_linear_progress_update("Phase 3: Report Generation", "in_progress")
         try:
             # Prepare data for report generator
             report_data = {
@@ -236,9 +266,14 @@ class AnalyticsMagisterV2:
                 "phase_3_complete",
                 report_id=marketing_report.report_id,
             )
+            self.add_linear_progress_update(
+                "Phase 3: Report Generation", "completed",
+                f"Report ID: {marketing_report.report_id}",
+            )
         except Exception as e:
             self.logger.error("phase_3_failed", error=str(e))
             errors.append(f"Report Generation failed: {str(e)}")
+            self.add_linear_progress_update("Phase 3: Report Generation", "failed", str(e))
             # Create empty marketing report to continue workflow
             from aim.subagents.analytics.report_generator import (
                 MarketingReport,
@@ -305,6 +340,17 @@ class AnalyticsMagisterV2:
             estimated_impact=estimated_impact,
             workflow_status=workflow_status,
             errors=errors,
+        )
+
+        # Final Linear status update
+        self.update_linear_status(workflow_status)
+        self.add_linear_comment(
+            f"✅ **Analytics Workflow Completed**\n\n"
+            f"**Overall Score:** {overall_score:.1f}/100\n"
+            f"**Duration:** {duration:.1f}s\n"
+            f"**Impact:** {estimated_impact}\n\n"
+            f"**Top Priority Actions:**\n" +
+            "\n".join(f"- {action}" for action in priority_actions[:3])
         )
 
         self.logger.info(

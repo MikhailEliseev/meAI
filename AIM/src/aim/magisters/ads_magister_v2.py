@@ -11,7 +11,7 @@ This is the production-ready version integrating Phase 3 trained subagents.
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 import structlog
 
@@ -27,6 +27,7 @@ from aim.subagents.ads.bid_strategy_optimizer import (
     BidStrategyOptimizer,
     BidOptimizationReport,
 )
+from aim.magisters.linear_mixin import LinearMixin
 
 
 @dataclass
@@ -56,7 +57,7 @@ class AdsWorkflowReport:
     errors: list[str]
 
 
-class AdsMagisterV2:
+class AdsMagisterV2(LinearMixin):
     """
     Ads Magister V2 - Production-ready ads workflow orchestrator.
 
@@ -68,12 +69,24 @@ class AdsMagisterV2:
     Each phase uses results from previous phases for context-aware optimization.
     """
 
-    def __init__(self):
-        """Initialize Ads Magister V2."""
+    def __init__(
+        self,
+        linear_client: Optional[Any] = None,
+        linear_enabled: bool = False,
+    ):
+        """Initialize Ads Magister V2.
+
+        Args:
+            linear_client: Optional LinearClient for task tracking
+            linear_enabled: Enable Linear integration
+        """
         self.logger = structlog.get_logger()
         self.ad_copy_generator = AdCopyGenerator()
         self.landing_page_analyzer = LandingPageAnalyzer()
         self.bid_optimizer = BidStrategyOptimizer()
+
+        # Setup Linear integration
+        self.setup_linear(linear_client, linear_enabled)
 
     async def execute_workflow(
         self,
@@ -104,8 +117,13 @@ class AdsMagisterV2:
         start_time = datetime.now()
         errors = []
 
+        # Update Linear status
+        self.update_linear_status("in_progress")
+        self.add_linear_progress_update("Ads Workflow", "started", f"Campaign: {campaign_name}")
+
         # Phase 1: Ad Copy Generation
         self.logger.info("phase_1_start", phase="ad_copy_generation")
+        self.add_linear_progress_update("Phase 1: Ad Copy", "in_progress")
         try:
             ad_copy = await self.ad_copy_generator.generate(
                 target_keyword=target_keyword,
@@ -119,9 +137,14 @@ class AdsMagisterV2:
                 yandex_variants=len(ad_copy.yandex_variants),
                 google_variants=len(ad_copy.google_variants),
             )
+            self.add_linear_progress_update(
+                "Phase 1: Ad Copy", "completed",
+                f"Variants: {ad_copy.total_variants} (Yandex: {len(ad_copy.yandex_variants)}, Google: {len(ad_copy.google_variants)})",
+            )
         except Exception as e:
             self.logger.error("phase_1_failed", error=str(e))
             errors.append(f"Ad Copy Generation failed: {str(e)}")
+            self.add_linear_progress_update("Phase 1: Ad Copy", "failed", str(e))
             # Create empty ad copy set to continue workflow
             from aim.subagents.ads.ad_copy_generator import (
                 AdCopySet,
@@ -146,6 +169,7 @@ class AdsMagisterV2:
         landing_page_report = None
         if landing_page_url:
             self.logger.info("phase_2_start", phase="landing_page_analysis")
+            self.add_linear_progress_update("Phase 2: Landing Page", "in_progress")
             try:
                 # Use first ad variant headline for relevance check
                 ad_headline = (
@@ -162,9 +186,14 @@ class AdsMagisterV2:
                     overall_score=landing_page_report.overall_quality_score,
                     rating=landing_page_report.quality_rating,
                 )
+                self.add_linear_progress_update(
+                    "Phase 2: Landing Page", "completed",
+                    f"Score: {landing_page_report.overall_quality_score}, Rating: {landing_page_report.quality_rating}",
+                )
             except Exception as e:
                 self.logger.error("phase_2_failed", error=str(e))
                 errors.append(f"Landing Page Analysis failed: {str(e)}")
+                self.add_linear_progress_update("Phase 2: Landing Page", "failed", str(e))
         else:
             self.logger.info("phase_2_skipped", reason="no_landing_page_url")
 
@@ -172,6 +201,7 @@ class AdsMagisterV2:
         bid_optimization_report = None
         if campaign_id:
             self.logger.info("phase_3_start", phase="bid_optimization")
+            self.add_linear_progress_update("Phase 3: Bid Optimization", "in_progress")
             try:
                 bid_optimization_report = await self.bid_optimizer.optimize(
                     campaign_id=campaign_id,
@@ -182,9 +212,14 @@ class AdsMagisterV2:
                     "phase_3_complete",
                     optimization_score=bid_optimization_report.optimization_score,
                 )
+                self.add_linear_progress_update(
+                    "Phase 3: Bid Optimization", "completed",
+                    f"Score: {bid_optimization_report.optimization_score}",
+                )
             except Exception as e:
                 self.logger.error("phase_3_failed", error=str(e))
                 errors.append(f"Bid Optimization failed: {str(e)}")
+                self.add_linear_progress_update("Phase 3: Bid Optimization", "failed", str(e))
         else:
             self.logger.info("phase_3_skipped", reason="no_campaign_id")
 
@@ -223,6 +258,17 @@ class AdsMagisterV2:
             estimated_impact=estimated_impact,
             workflow_status=workflow_status,
             errors=errors,
+        )
+
+        # Final Linear status update
+        self.update_linear_status(workflow_status)
+        self.add_linear_comment(
+            f"✅ **Ads Workflow Completed**\n\n"
+            f"**Overall Score:** {overall_score:.1f}/100\n"
+            f"**Duration:** {duration:.1f}s\n"
+            f"**Impact:** {estimated_impact}\n\n"
+            f"**Top Priority Actions:**\n" +
+            "\n".join(f"- {action}" for action in priority_actions[:3])
         )
 
         self.logger.info(

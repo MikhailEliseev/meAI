@@ -11,7 +11,7 @@ This is the production-ready version integrating Phase 3 trained subagents.
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 import structlog
 
@@ -27,6 +27,7 @@ from aim.subagents.content.content_calendar_manager import (
     ContentCalendarManager,
     ContentCalendarReport,
 )
+from aim.magisters.linear_mixin import LinearMixin
 
 
 @dataclass
@@ -56,7 +57,7 @@ class ContentWorkflowReport:
     errors: list[str]
 
 
-class ContentMagisterV2:
+class ContentMagisterV2(LinearMixin):
     """
     Content Magister V2 - Production-ready content workflow orchestrator.
 
@@ -68,12 +69,24 @@ class ContentMagisterV2:
     Each phase uses results from previous phases for context-aware planning.
     """
 
-    def __init__(self):
-        """Initialize Content Magister V2."""
+    def __init__(
+        self,
+        linear_client: Optional[Any] = None,
+        linear_enabled: bool = False,
+    ):
+        """Initialize Content Magister V2.
+
+        Args:
+            linear_client: Optional LinearClient for task tracking
+            linear_enabled: Enable Linear integration
+        """
         self.logger = structlog.get_logger()
         self.brief_generator = ContentBriefGenerator()
         self.quality_checker = ContentQualityChecker()
         self.calendar_manager = ContentCalendarManager()
+
+        # Setup Linear integration
+        self.setup_linear(linear_client, linear_enabled)
 
     async def execute_workflow(
         self,
@@ -98,8 +111,13 @@ class ContentMagisterV2:
         start_time = datetime.now()
         errors = []
 
+        # Update Linear status
+        self.update_linear_status("in_progress")
+        self.add_linear_progress_update("Content Workflow", "started", f"Topic: {topic}")
+
         # Phase 1: Content Brief Generation
         self.logger.info("phase_1_start", phase="content_brief")
+        self.add_linear_progress_update("Phase 1: Content Brief", "in_progress")
         try:
             brief = await self.brief_generator.generate(
                 target_keyword=target_keyword or topic,
@@ -110,9 +128,14 @@ class ContentMagisterV2:
                 word_count=brief.recommended_word_count,
                 topics=brief.total_topics,
             )
+            self.add_linear_progress_update(
+                "Phase 1: Content Brief", "completed",
+                f"Word count: {brief.recommended_word_count}, Topics: {brief.total_topics}",
+            )
         except Exception as e:
             self.logger.error("phase_1_failed", error=str(e))
             errors.append(f"Content Brief Generation failed: {str(e)}")
+            self.add_linear_progress_update("Phase 1: Content Brief", "failed", str(e))
             # Create empty brief to continue workflow
             brief = ContentBrief(
                 target_keyword=target_keyword or topic,
@@ -139,9 +162,10 @@ class ContentMagisterV2:
         quality_report = None
         if content_text:
             self.logger.info("phase_2_start", phase="quality_check")
+            self.add_linear_progress_update("Phase 2: Quality Check", "in_progress")
             try:
                 quality_report = await self.quality_checker.check(
-                    url="",  # No URL for generated content
+                    url="",
                     content=content_text,
                     target_keyword=target_keyword or brief.target_keyword,
                 )
@@ -150,14 +174,20 @@ class ContentMagisterV2:
                     overall_score=quality_report.overall_quality_score,
                     grade=quality_report.quality_grade,
                 )
+                self.add_linear_progress_update(
+                    "Phase 2: Quality Check", "completed",
+                    f"Score: {quality_report.overall_quality_score}, Grade: {quality_report.quality_grade}",
+                )
             except Exception as e:
                 self.logger.error("phase_2_failed", error=str(e))
                 errors.append(f"Quality Check failed: {str(e)}")
+                self.add_linear_progress_update("Phase 2: Quality Check", "failed", str(e))
         else:
             self.logger.info("phase_2_skipped", reason="no_content_provided")
 
         # Phase 3: Calendar Planning
         self.logger.info("phase_3_start", phase="calendar_planning")
+        self.add_linear_progress_update("Phase 3: Calendar Planning", "in_progress")
         try:
             calendar_report = await self.calendar_manager.get_calendar(
                 period="month",
@@ -166,9 +196,14 @@ class ContentMagisterV2:
                 "phase_3_complete",
                 scheduled_items=len(calendar_report.calendar_items),
             )
+            self.add_linear_progress_update(
+                "Phase 3: Calendar Planning", "completed",
+                f"Scheduled: {len(calendar_report.calendar_items)} items",
+            )
         except Exception as e:
             self.logger.error("phase_3_failed", error=str(e))
             errors.append(f"Calendar Planning failed: {str(e)}")
+            self.add_linear_progress_update("Phase 3: Calendar Planning", "failed", str(e))
             # Create empty calendar report to continue workflow
             from aim.subagents.content.content_calendar_manager import (
                 CalendarMetrics,
@@ -227,6 +262,16 @@ class ContentMagisterV2:
             estimated_effort=estimated_effort,
             workflow_status=workflow_status,
             errors=errors,
+        )
+
+        # Final Linear status update
+        self.update_linear_status(workflow_status)
+        self.add_linear_comment(
+            f"✅ **Content Workflow Completed**\n\n"
+            f"**Overall Score:** {overall_score:.1f}/100\n"
+            f"**Duration:** {duration:.1f}s\n\n"
+            f"**Top Priority Actions:**\n" +
+            "\n".join(f"- {action}" for action in priority_actions[:3])
         )
 
         self.logger.info(

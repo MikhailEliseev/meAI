@@ -197,10 +197,12 @@ class MagisterCoordinator:
             "seo-magister-1"  # Default fallback
         )
 
-        # Get Linear task ID if available
+        # Get Linear task info if available
         linear_task_id = None
+        linear_team_id = None
         if hasattr(subtask, 'data') and subtask.data:
             linear_task_id = subtask.data.get("linear_task_id")
+            linear_team_id = subtask.data.get("linear_team_id")
 
         # Create message for Magister
         message = Message(
@@ -211,13 +213,14 @@ class MagisterCoordinator:
             payload={
                 "subtask_id": subtask.subtask_id,
                 "parent_task_id": subtask.parent_task_id,
-                "operator_task_id": subtask.parent_task_id,  # For result tracking
+                "operator_task_id": subtask.parent_task_id,
                 "action": subtask.action,
                 "description": subtask.description,
                 "dependencies": subtask.dependencies,
-                "deadline": None,  # Can add deadline logic later
-                "data": subtask.data if hasattr(subtask, 'data') else {},  # Pass task data
-                "linear_task_id": linear_task_id,  # Pass Linear task ID to Magister
+                "deadline": None,
+                "data": subtask.data if hasattr(subtask, 'data') else {},
+                "linear_task_id": linear_task_id,
+                "linear_team_id": linear_team_id,
             },
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
@@ -2259,10 +2262,11 @@ Retry logic will be triggered automatically.
                 priority=subtask.priority,
             )
 
-            # Store Linear task ID in subtask metadata
+            # Store Linear task ID and team ID in subtask metadata
             if not hasattr(subtask, 'data') or subtask.data is None:
                 subtask.data = {}
             subtask.data["linear_task_id"] = issue_id
+            subtask.data["linear_team_id"] = team_id
 
             # Update subtask in database with Linear ID
             await self._store_subtask(subtask)

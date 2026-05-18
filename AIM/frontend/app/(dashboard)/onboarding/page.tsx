@@ -301,13 +301,14 @@ export default function OnboardingPage() {
                 />
               </svg>
               <h2 className="font-heading text-2xl font-bold text-gray-900 mb-2">
-                Check Your Email
+                Проверьте почту
               </h2>
               <p className="text-gray-600 mb-4">
-                We've sent a HIPAA BAA to <strong>{session.data.contact_email}</strong>
+                Мы отправили согласие на обработку данных (ФЗ-152) на{" "}
+                <strong>{session.data.contact_email}</strong>
               </p>
               <p className="text-sm text-gray-500">
-                Please sign the document to continue. This is required for HIPAA compliance.
+                Пожалуйста, подпишите документ для продолжения. Это требование ФЗ-152 «О персональных данных».
               </p>
             </div>
           )}
