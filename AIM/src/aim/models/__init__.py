@@ -21,6 +21,7 @@ from aim.models.email_event import EmailEvent
 from aim.models.email_template import EmailTemplate
 from aim.models.payment import Payment
 from aim.models.document import Document
+from aim.models.fz152_audit import FZ152AuditLog
 
 __all__ = [
     "Base",
@@ -38,4 +39,5 @@ __all__ = [
     "EmailTemplate",
     "Payment",
     "Document",
+    "FZ152AuditLog",
 ]

@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from aim.database import get_db
+from aim.middleware.cache import cache
 from aim.schemas.analytics import (
     AnalyticsExportRequest,
     AnalyticsExportResponse,
@@ -25,7 +26,7 @@ from aim.schemas.analytics import (
 from aim.services.analytics import AnalyticsService
 from aim.services.analytics.report_generator import ReportGenerator
 
-router = APIRouter(prefix="/analytics", tags=["analytics"])
+router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
 
 def get_analytics_service(db: AsyncSession = Depends(get_db)) -> AnalyticsService:
@@ -66,19 +67,33 @@ async def get_lead_analytics(
                 detail="tier must be one of: hot, warm, cold",
             )
 
+        # Check cache (30s TTL)
+        cached = cache.get("analytics:leads", {
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "tier": tier,
+        })
+        if cached is not None:
+            return cached
+
         metrics = await service.get_lead_metrics(
             start_date=start_date,
             end_date=end_date,
             tier=tier,
         )
+        cache.set("analytics:leads", {
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "tier": tier,
+        }, metrics)
         return metrics
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to get lead metrics: {str(e)}",
+            detail="Failed to get lead metrics",
         )
 
 
@@ -115,19 +130,33 @@ async def get_email_analytics(
                 detail="tier must be one of: hot, warm, cold",
             )
 
+        # Check cache (30s TTL)
+        cached = cache.get("analytics:emails", {
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "tier": tier,
+        })
+        if cached is not None:
+            return cached
+
         metrics = await service.get_email_metrics(
             start_date=start_date,
             end_date=end_date,
             tier=tier,
         )
+        cache.set("analytics:emails", {
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "tier": tier,
+        }, metrics)
         return metrics
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to get email metrics: {str(e)}",
+            detail="Failed to get email metrics",
         )
 
 
@@ -155,18 +184,30 @@ async def get_conversion_funnel(
                 detail="end_date must be after start_date",
             )
 
+        # Check cache (30s TTL)
+        cached = cache.get("analytics:funnel", {
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+        })
+        if cached is not None:
+            return cached
+
         funnel = await service.get_conversion_funnel(
             start_date=start_date,
             end_date=end_date,
         )
+        cache.set("analytics:funnel", {
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+        }, funnel)
         return funnel
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to get conversion funnel: {str(e)}",
+            detail="Failed to get conversion funnel",
         )
 
 
@@ -187,7 +228,7 @@ async def get_realtime_stats(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to get real-time stats: {str(e)}",
+            detail="Failed to get real-time stats",
         )
 
 
@@ -279,7 +320,7 @@ async def export_report(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to export report: {str(e)}",
+            detail="Failed to export report",
         )
 
 

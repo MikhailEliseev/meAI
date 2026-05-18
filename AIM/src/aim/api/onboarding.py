@@ -6,6 +6,8 @@ Part of: Phase 11 Sprint 3 - Task 3.4
 """
 
 import logging
+import os
+import tempfile
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
@@ -26,7 +28,13 @@ from aim.schemas.onboarding import (
     OnboardingProgressResponse,
     OnboardingNextStep,
 )
+from aim.services.documents.ai_extractor import AIExtractor
+from aim.services.documents.ocr_service import OCRService
+from aim.services.documents.processor import DocumentProcessor
+from aim.services.documents.validator import DocumentValidator
 from aim.services.onboarding.onboarding_service import OnboardingService
+from aim.services.payment.yookassa_client import YooKassaClient
+from aim.services.payment.payment_service import PaymentService
 
 logger = logging.getLogger(__name__)
 
@@ -34,33 +42,34 @@ router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 
 
 def get_onboarding_service(db: AsyncSession = Depends(get_db)) -> OnboardingService:
-    """Dependency to get OnboardingService instance."""
-    return OnboardingService(db)
+    """Dependency to get OnboardingService instance with full dependency chain."""
+    ocr = OCRService()
+    extractor = AIExtractor(api_key=os.getenv("ANTHROPIC_API_KEY", "test-key"))
+    validator = DocumentValidator()
+    doc_processor = DocumentProcessor(ocr, extractor, validator)
+
+    yookassa = YooKassaClient(
+        account_id=os.getenv("YOOKASSA_SHOP_ID", ""),
+        secret_key=os.getenv("YOOKASSA_SECRET_KEY", ""),
+        test_mode=os.getenv("ENVIRONMENT", "development") != "production",
+    )
+    payment = PaymentService(db_session=db, yookassa_client=yookassa)
+
+    return OnboardingService(document_processor=doc_processor, payment_service=payment)
 
 
 @router.post("/start", response_model=OnboardingStartResponse, status_code=status.HTTP_201_CREATED)
 async def start_onboarding(
     request: OnboardingStartRequest,
+    db: AsyncSession = Depends(get_db),
     service: OnboardingService = Depends(get_onboarding_service),
 ) -> OnboardingStartResponse:
     """Start onboarding workflow for a lead.
 
     Creates an Onboarding record in DOCUMENTS_PENDING state.
-
-    Args:
-        request: Start request with lead_id
-        service: OnboardingService instance
-
-    Returns:
-        OnboardingStartResponse with onboarding_id and initial state
-
-    Raises:
-        HTTPException 404: Lead not found
-        HTTPException 409: Onboarding already exists for lead
-        HTTPException 500: Internal server error
     """
     try:
-        onboarding = await service.start_onboarding(request.lead_id)
+        onboarding = await service.start_onboarding(request.lead_id, db)
 
         return OnboardingStartResponse(
             onboarding_id=onboarding.id,
@@ -96,23 +105,12 @@ async def start_onboarding(
 @router.get("/{onboarding_id}/status", response_model=OnboardingStatusResponse)
 async def get_onboarding_status(
     onboarding_id: str,
+    db: AsyncSession = Depends(get_db),
     service: OnboardingService = Depends(get_onboarding_service),
 ) -> OnboardingStatusResponse:
-    """Get onboarding status with progress and next steps.
-
-    Args:
-        onboarding_id: Onboarding ID
-        service: OnboardingService instance
-
-    Returns:
-        OnboardingStatusResponse with current state and next steps
-
-    Raises:
-        HTTPException 404: Onboarding not found
-        HTTPException 500: Internal server error
-    """
+    """Get onboarding status with progress and next steps."""
     try:
-        status_data = await service.get_onboarding_status(onboarding_id)
+        status_data = await service.get_onboarding_status(onboarding_id, db)
 
         return OnboardingStatusResponse(**status_data)
     except ValueError as e:
@@ -136,27 +134,13 @@ async def get_onboarding_status(
 async def upload_onboarding_document(
     onboarding_id: str,
     document_type: str,
+    db: AsyncSession = Depends(get_db),
     file: UploadFile = File(...),
     service: OnboardingService = Depends(get_onboarding_service),
 ) -> OnboardingDocumentUploadResponse:
     """Upload document during onboarding.
 
     Validates document type, uploads file, processes with OCR and AI extraction.
-
-    Args:
-        onboarding_id: Onboarding ID
-        document_type: Document type (license, inn, ogrn, contract)
-        file: Uploaded file
-        service: OnboardingService instance
-
-    Returns:
-        OnboardingDocumentUploadResponse with document_id and updated state
-
-    Raises:
-        HTTPException 400: Invalid document type or file
-        HTTPException 404: Onboarding not found
-        HTTPException 409: Invalid state transition
-        HTTPException 500: Internal server error
     """
     # Validate document type
     valid_types = ["license", "inn", "ogrn", "contract"]
@@ -175,26 +159,26 @@ async def upload_onboarding_document(
         )
 
     try:
-        # Read file content
-        file_content = await file.read()
+        # Save uploaded file to temp location
+        suffix = os.path.splitext(file.filename or "document")[1] or ".pdf"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(await file.read())
+            file_path = tmp.name
 
         # Upload document
-        document = await service.upload_document(
+        onboarding, document = await service.upload_document(
             onboarding_id=onboarding_id,
             document_type=document_type,
-            file_content=file_content,
-            filename=file.filename or "document",
+            file_path=file_path,
+            db=db,
         )
-
-        # Get updated onboarding
-        status_data = await service.get_onboarding_status(onboarding_id)
 
         return OnboardingDocumentUploadResponse(
             onboarding_id=onboarding_id,
             document_id=document.id,
             document_type=document_type,
-            state=status_data["state"],
-            progress=status_data["progress"],
+            state=onboarding.state,
+            progress=onboarding.progress,
             message=f"Документ '{document_type}' загружен и обрабатывается.",
         )
     except ValueError as e:
@@ -225,41 +209,26 @@ async def upload_onboarding_document(
 async def process_onboarding_payment(
     onboarding_id: str,
     request: OnboardingPaymentRequest,
+    db: AsyncSession = Depends(get_db),
     service: OnboardingService = Depends(get_onboarding_service),
 ) -> OnboardingPaymentResponse:
     """Process onboarding payment.
 
     Validates documents are complete, processes payment via PaymentService.
-
-    Args:
-        onboarding_id: Onboarding ID
-        request: Payment request with amount and payment details
-        service: OnboardingService instance
-
-    Returns:
-        OnboardingPaymentResponse with payment_id and updated state
-
-    Raises:
-        HTTPException 400: Invalid payment data or documents not validated
-        HTTPException 404: Onboarding not found
-        HTTPException 409: Invalid state transition
-        HTTPException 500: Internal server error
     """
     try:
-        payment = await service.process_payment(
+        onboarding, payment = await service.process_payment(
             onboarding_id=onboarding_id,
             payment_data=request.model_dump(),
+            db=db,
         )
-
-        # Get updated onboarding
-        status_data = await service.get_onboarding_status(onboarding_id)
 
         return OnboardingPaymentResponse(
             onboarding_id=onboarding_id,
             payment_id=payment.id,
             payment_status=payment.status,
-            state=status_data["state"],
-            progress=status_data["progress"],
+            state=onboarding.state,
+            progress=onboarding.progress,
             message="Платёж обрабатывается.",
         )
     except ValueError as e:
@@ -289,26 +258,15 @@ async def process_onboarding_payment(
 @router.post("/{onboarding_id}/complete", response_model=OnboardingCompleteResponse)
 async def complete_onboarding(
     onboarding_id: str,
+    db: AsyncSession = Depends(get_db),
     service: OnboardingService = Depends(get_onboarding_service),
 ) -> OnboardingCompleteResponse:
     """Complete onboarding workflow.
 
     Validates payment is completed, transitions to ONBOARDING_COMPLETE state.
-
-    Args:
-        onboarding_id: Onboarding ID
-        service: OnboardingService instance
-
-    Returns:
-        OnboardingCompleteResponse with completion timestamp
-
-    Raises:
-        HTTPException 404: Onboarding not found
-        HTTPException 409: Invalid state transition or payment not completed
-        HTTPException 500: Internal server error
     """
     try:
-        onboarding = await service.complete_onboarding(onboarding_id)
+        onboarding = await service.complete_onboarding(onboarding_id, db)
 
         return OnboardingCompleteResponse(
             onboarding_id=onboarding.id,
@@ -341,29 +299,18 @@ async def complete_onboarding(
 async def retry_onboarding_step(
     onboarding_id: str,
     request: OnboardingRetryRequest,
+    db: AsyncSession = Depends(get_db),
     service: OnboardingService = Depends(get_onboarding_service),
 ) -> OnboardingRetryResponse:
     """Retry failed onboarding step.
 
     Resets onboarding to appropriate state for retry.
-
-    Args:
-        onboarding_id: Onboarding ID
-        request: Retry request with step to retry
-        service: OnboardingService instance
-
-    Returns:
-        OnboardingRetryResponse with updated state
-
-    Raises:
-        HTTPException 404: Onboarding not found
-        HTTPException 409: Invalid state for retry
-        HTTPException 500: Internal server error
     """
     try:
         onboarding = await service.retry_failed_step(
             onboarding_id=onboarding_id,
             step=request.step,
+            db=db,
         )
 
         return OnboardingRetryResponse(
@@ -395,24 +342,15 @@ async def retry_onboarding_step(
 @router.get("/lead/{lead_id}", response_model=OnboardingStatusResponse)
 async def get_onboarding_by_lead(
     lead_id: str,
+    db: AsyncSession = Depends(get_db),
     service: OnboardingService = Depends(get_onboarding_service),
 ) -> OnboardingStatusResponse:
-    """Get onboarding for a lead.
-
-    Args:
-        lead_id: Lead ID
-        service: OnboardingService instance
-
-    Returns:
-        OnboardingStatusResponse with current state and next steps
-
-    Raises:
-        HTTPException 404: Onboarding not found for lead
-        HTTPException 500: Internal server error
-    """
+    """Get onboarding for a lead."""
     try:
-        onboarding = await service.get_onboarding_by_lead(lead_id)
-        status_data = await service.get_onboarding_status(onboarding.id)
+        onboarding = await service.get_onboarding_by_lead(lead_id, db)
+        if not onboarding:
+            raise ValueError(f"Onboarding not found for lead: {lead_id}")
+        status_data = await service.get_onboarding_status(onboarding.id, db)
 
         return OnboardingStatusResponse(**status_data)
     except ValueError as e:

@@ -27,6 +27,7 @@ from aim.models.email_template import EmailTemplate  # noqa: F401
 from aim.models.payment import Payment  # noqa: F401
 from aim.models.document import Document  # noqa: F401
 from aim.models.onboarding import Onboarding  # noqa: F401
+from aim.models.fz152_audit import FZ152AuditLog  # noqa: F401
 
 
 @pytest.fixture(scope="session")
@@ -93,9 +94,50 @@ async def client(db, encryption_key):
     app.dependency_overrides.clear()
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def mock_recaptcha():
-    """Mock reCAPTCHA verification for tests."""
+    """Mock reCAPTCHA verification for all tests automatically."""
     with patch("aim.services.lead_capture.LeadCaptureService._verify_recaptcha") as mock:
         mock.return_value = AsyncMock(return_value=None)
         yield mock
+
+
+@pytest.fixture(autouse=True)
+def clear_rate_limits():
+    """Clear rate limit cache between tests to prevent cross-test contamination."""
+    from aim.services.lead_capture import LeadCaptureService
+    LeadCaptureService._rate_limit_cache.clear()
+    yield
+    LeadCaptureService._rate_limit_cache.clear()
+
+
+@pytest.fixture(autouse=True)
+def mock_document_processing():
+    """Mock document processing pipeline for all tests.
+
+    Replaces OCR + AI extraction + validation with a fast pass-through
+    that marks documents as completed/valid without real processing.
+    Individual tests can override this mock for failure cases.
+    """
+    from datetime import datetime as dt
+
+    async def mock_process_document(self, document, file_path, db):
+        document.status = "completed"
+        document.validation_status = "valid"
+        document.ocr_text = "Mock OCR text for testing"
+        document.extracted_data = {
+            "clinic_name": "Test Clinic",
+            "inn": "1234567890",
+            "ogrn": "1234567890123",
+            "license_number": "LO-77-01-123456",
+        }
+        document.confidence_score = 0.95
+        document.processed_at = dt.utcnow()
+        await db.commit()
+        return document
+
+    with patch(
+        "aim.services.documents.processor.DocumentProcessor.process_document",
+        mock_process_document,
+    ):
+        yield

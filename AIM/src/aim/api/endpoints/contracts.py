@@ -133,7 +133,7 @@ async def generate_contract(
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Contract generation failed: {str(e)}",
+            detail="Contract generation failed",
         )
 
 
@@ -171,7 +171,7 @@ async def get_contract_status(document_id: str) -> ContractStatusResponse:
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Status check failed: {str(e)}",
+            detail="Contract status check failed",
         )
 
 
@@ -202,7 +202,7 @@ async def resend_signature_notification(document_id: str) -> Dict[str, str]:
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Resend failed: {str(e)}",
+            detail="Resend notification failed",
         )
 
 
@@ -236,7 +236,7 @@ async def cancel_signature_request(
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Cancellation failed: {str(e)}",
+            detail="Contract cancellation failed",
         )
 
 

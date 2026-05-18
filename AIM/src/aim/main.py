@@ -4,6 +4,9 @@ AIM Agency API - FastAPI Application
 Production-ready API with health checks, metrics, and monitoring.
 """
 
+import asyncio
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, status, Request
 from fastapi.responses import JSONResponse, Response
 from datetime import datetime
@@ -22,14 +25,59 @@ log_level = os.getenv("LOG_LEVEL", "INFO")
 configure_logging(environment=environment, log_level=log_level)
 logger = get_logger("aim.api")
 
+# Sentry error tracking
+sentry_dsn = os.getenv("SENTRY_DSN", "")
+if sentry_dsn:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+    sentry_sdk.init(
+        dsn=sentry_dsn,
+        environment=environment,
+        traces_sample_rate=0.1 if environment == "production" else 1.0,
+        integrations=[
+            FastApiIntegration(transaction_style="endpoint"),
+            SqlalchemyIntegration(),
+        ],
+        send_default_pii=False,
+    )
+    logger.info("sentry_initialized", environment=environment)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Run Alembic migrations on startup (production mode only)."""
+    if os.getenv("AUTO_MIGRATE", "false").lower() == "true":
+        from alembic.config import Config
+        from alembic import command
+
+        await asyncio.to_thread(
+            lambda: command.upgrade(Config("alembic/alembic.ini"), "head")
+        )
+        logger.info("alembic_migrations_applied")
+
+    # Ensure ФЗ-152 partitions exist
+    from aim.services.retention.partition_manager import PartitionManager
+    from aim.database import async_session_maker
+    pm = PartitionManager(async_session_maker)
+    await pm.ensure_partitions()
+    logger.info("fz152_partitions_ensured")
+
+    yield
+
+
 # Create FastAPI application
 app = FastAPI(
     title="AIM Agency API",
     description="AI-first medical marketing agency automation platform",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan,
 )
+
+# Query profiling middleware
+from aim.middleware.profiling import QueryProfilingMiddleware
+app.add_middleware(QueryProfilingMiddleware)
 
 # Custom Prometheus metrics
 api_requests_total = Counter(
@@ -61,6 +109,14 @@ api_cost_usd_total = Counter(
     "aim_api_cost_usd_total",
     "Total API costs in USD",
     ["provider"]
+)
+
+# Business metrics — imported from single source of truth
+from aim.metrics import (
+    leads_captured_total,
+    leads_scored_total,
+    leads_by_tier,
+    rate_limit_hits_total,
 )
 
 # Instrument FastAPI with Prometheus
@@ -217,11 +273,36 @@ async def metrics():
 from aim.api.leads import router as leads_router
 from aim.api.onboarding import router as onboarding_router
 from aim.api.analytics import router as analytics_router
+from aim.api.email import router as email_router
+from aim.api.webhooks import router as webhooks_router
+from aim.api.gdpr import router as gdpr_router
 
 # Include API routers
 app.include_router(leads_router)
 app.include_router(onboarding_router)
 app.include_router(analytics_router)
+app.include_router(email_router)
+app.include_router(webhooks_router)
+app.include_router(gdpr_router)
+
+# Performance stats endpoint
+@app.get("/api/performance/stats")
+async def performance_stats():
+    """Return query profiling statistics and cache info."""
+    from aim.middleware.profiling import get_profiler
+    from aim.middleware.cache import cache as response_cache
+    return {
+        "query_profiler": get_profiler().stats,
+        "cache_entries": response_cache.size,
+    }
+
+
+@app.post("/api/performance/cache/clear")
+async def clear_analytics_cache():
+    """Clear analytics response cache. Useful after data imports."""
+    from aim.middleware.cache import cache as response_cache
+    count = response_cache.invalidate("analytics:")
+    return {"cleared": count}
 
 # API Routes
 @app.get("/api/v1/status")
@@ -237,7 +318,8 @@ async def api_status():
             "docs": "/docs",
             "leads": "/api/leads",
             "onboarding": "/api/onboarding",
-            "analytics": "/api/analytics"
+            "analytics": "/api/analytics",
+            "email": "/api/email"
         }
     }
 

@@ -56,250 +56,76 @@ Uses `meai` framework from `../src/meai/`:
 
 ## Status
 
-✅ **Phase 6: Testing Infrastructure Complete** (2026-05-15)
+✅ **Phase 11: Client Acquisition — Complete** (2026-05-18)
 
-**Test Coverage:**
-- **Total Tests:** 122 (174% of 70+ target)
-- **Pass Rate:** 98.4% (120/122 passing, 2 skipped)
-- **Coverage Breakdown:**
-  - Unit Tests: 82 (67%)
-  - Integration Tests: 12 (10%)
-  - E2E Tests: 21 (17%)
-  - Skipped: 7 (6%)
-- **Time Investment:** 9.59 hours (vs 17 estimated, 43% time saved)
+### Sprint 4: Production Hardening ✅
 
-**CI/CD:**
-- ✅ GitHub Actions workflow (Python 3.11, 3.12)
-- ✅ Coverage reporting with codecov
-- ✅ Automated testing on push/PR
+| Task | Status | Artifacts |
+|------|--------|-----------|
+| 4.1 E2E Testing | ✅ Complete | 77 tests, 2 skipped |
+| 4.2 Security Audit | ✅ Complete | [SECURITY.md](SECURITY.md) |
+| 4.3 Performance Optimization | ✅ Complete | DB indexes, query profiling, response cache |
+| 4.4 Monitoring & Alerting | ✅ Complete | Prometheus rules, Grafana, Sentry, RUNBOOK |
+| 4.5 Documentation | ✅ Complete | Deployment guide, API docs |
 
-**Documentation:**
-- ✅ Test Architecture Guide
-- ✅ Contributing Guidelines
-- ✅ API Integration Guide
-- ✅ Troubleshooting Guide
+### Core Features (Phase 11)
 
----
+**Lead Capture:**
+- AES-256-GCM field encryption (name, phone, email, clinic)
+- ФЗ-152 consent tracking with audit log
+- reCAPTCHA v3 verification
+- Rate limiting (10 req/min per IP)
+- Duplicate detection
+- UTM tracking
 
-✅ **Phase 4: Complete System Validated** (2026-05-04)
+**AI Lead Scoring:**
+- Rule-based + ML scoring (30+ factors)
+- Hot/Warm/Cold tier classification
+- Real-time scoring on capture
 
-**Magisters (ALL PRODUCTION READY):**
-- ✅ **SEO Magister** (`src/aim/magisters/seo_magister.py`) - **PRODUCTION READY** ⭐
-  - Real identify_subagents() with 5 action types
-  - Real aggregate_results() with keyword analysis
-  - Obsidian logging
-  - 3 tests passing
-  
-- ✅ **Content Magister** (`src/aim/magisters/content_magister.py`) - **PRODUCTION READY** ⭐
-  - Real identify_subagents() with 5 action types
-  - Real aggregate_results() with content quality analysis
-  - Obsidian logging
-  - 3 tests passing
-  
-- ✅ **Ads Magister** (`src/aim/magisters/ads_magister.py`) - **PRODUCTION READY** ⭐
-  - Real identify_subagents() with 5 action types
-  - Real aggregate_results() with advertising metrics (CTR, CPC, CPA)
-  - Obsidian logging
-  - Ready for subagents
+**Onboarding Workflow:**
+- Document upload & AI validation
+- Payment integration (ЮKassa stub)
+- Email automation (SendGrid)
+- Linear task creation
 
-**Subagents (PRODUCTION READY):**
-- ✅ **Keyword Research Agent** (`src/aim/subagents/keyword_research_agent.py`) - **PRODUCTION READY** ⭐
-  - Medical specialty detection (5 specialties)
-  - Keyword expansion (4 modifier types)
-  - Search volume estimation
-  - Keyword difficulty scoring (0-100)
-  - CPC estimation with specialty multipliers
-  - Intent detection (4 types)
-  - Priority scoring algorithm
-  - Actionable recommendations
-  - 3 tests passing
+**Email Automation:**
+- Tier-based workflow engine
+- 15-min response guarantee
+- Template-based personalization
 
-- ✅ **Content Writer Agent** (`src/aim/subagents/content_writer_agent.py`) - **PRODUCTION READY** ⭐
-  - Content structure generation (4 content types)
-  - Medical specialty detection
-  - Quality, readability, SEO scoring
-  - Section generation with titles and key points
-  - Actionable recommendations
-  - 3 tests passing
+### Monitoring Stack
 
-- ✅ **Ads Campaign Creator Agent** (`src/aim/subagents/ads_campaign_creator_agent.py`) - **PRODUCTION READY** ⭐
-  - Campaign structure generation (Google Ads, Yandex Direct)
-  - Ad groups by intent (informational, commercial, transactional)
-  - Ad copy generation with medical compliance
-  - Budget allocation logic
-  - Performance predictions (impressions, clicks, conversions, CTR, CPA)
-  - Platform-specific optimizations
-  - 3 tests passing
+| Component | Port | Endpoint |
+|-----------|------|----------|
+| AIM API | 8000 | `/health`, `/ready`, `/metrics` |
+| Prometheus | 9090 | `/-/healthy` |
+| Grafana | 3000 | `/api/health` |
+| Sentry | — | Error tracking (SENTRY_DSN) |
 
-**Tests (ALL PASSING):**
-- ✅ SEO Magister tests (`tests/test_seo_magister_real.py`) - 3/3 passing
-- ✅ Content Magister tests (`tests/test_content_magister.py`) - 3/3 passing
-- ✅ Content Writer Agent tests (`tests/test_content_writer_agent.py`) - 3/3 passing
-- ✅ Content integration test (`tests/test_content_integration.py`) - 1/1 passing
-- ✅ Ads Campaign Creator Agent tests (`tests/test_ads_campaign_creator_agent.py`) - 3/3 passing
-- ✅ Ads integration test (`tests/test_ads_integration.py`) - 1/1 passing
-- ✅ Complete system test (`tests/test_complete_system.py`) - 3/3 passing
+### Test Suite
 
-**Total: 17 tests, all passing ✅**
-
-**What We Have:**
-- ✅ Architecture validated (Operator → Magisters → Subagents)
-- ✅ All 3 Magisters with real coordination logic
-- ✅ 3 production-ready Subagents with real business logic
-- ✅ Pattern successfully replicated across all domains
-- ✅ Complete system tested end-to-end
-- ✅ Parallel domain execution validated
-- ✅ ~2400+ lines of production code (no mocks!)
-
-**Real Workflow Validated:**
-```
-SEO Domain:
-  SEO Magister → Keyword Research Agent
-  Result: 20 keywords, 1 opportunity, 4 insights
-
-Content Domain:
-  Content Magister → Content Writer Agent
-  Result: 1600 words, Quality 100/100, SEO 100/100
-
-Ads Domain:
-  Ads Magister → Campaign Creator Agent
-  Result: 3 ad groups, 10,000 RUB budget, performance predictions
-
-All domains working in parallel ✅
-```
-
-**Next Steps:**
-1. Add more Subagents (Technical SEO, Content Editor, Budget Optimizer, etc.)
-2. Integrate with Operator through Event Bus
-3. Deploy first real client workflow (all 3 domains together)
-4. Add monitoring and analytics
-
-🚀 Complete system production ready with 3 domains!
+- **E2E Tests:** 77 passing, 2 skipped
+- **Security Tests:** ФЗ-152 compliance, encryption, rate limiting, input validation
+- **Performance:** DB indexes, query profiling (>100ms threshold), 30s response cache
 
 ---
 
-## CI Business Report System
-
-**Status:** ✅ **PRODUCTION READY** (2026-05-06)
-
-Система бизнес-ориентированного конкурентного анализа для медицинских клиник.
-
-### Features
-
-**17 Business Detectors:**
-- **Technology Stack (10):** CMS, Analytics, Call Tracking, Live Chat, Messengers, Booking, Payment, CDN, Hosting, A/B Testing
-- **Marketing Intelligence (7):** Retargeting, Email Marketing, CRM, Quiz/Lead Magnets, Social Proof, Geo-Targeting, Promo Mechanics
-
-**Business Report Generator:**
-- PDF + HTML reports
-- Overall score (0-100)
-- Marketing maturity level
-- Strengths & Weaknesses analysis
-- Actionable opportunities
-
-**Security:**
-- XSS prevention (html.escape)
-- BeautifulSoup for HTML parsing
-- Per-detector error handling
-- Graceful degradation
-
-### Quick Start
-
-```python
-from aim.subagents.competitive_intel.agents.ci_deep_analyzer import CIDeepAnalyzer
-from aim.subagents.competitive_intel.agents.business_report import BusinessReportGenerator
-
-# 1. Analyze competitor
-analyzer = CIDeepAnalyzer(
-    agent_id="ci_analyzer",
-    database_url="sqlite:///aim.db",
-    vault_path="./obsidian"
-)
-
-task = Task(
-    subtask_id="analyze_competitor",
-    action="deep_analysis",
-    payload={
-        "competitors": [
-            {"name": "Competitor Clinic", "url": "https://competitor.ru"}
-        ]
-    }
-)
-
-result = await analyzer.execute_task(task)
-
-# 2. Generate business report
-report_gen = BusinessReportGenerator(result.result)
-
-# HTML report
-report_gen.generate_html("reports/competitor_report.html")
-
-# PDF report (requires WeasyPrint)
-report_gen.generate_pdf("reports/competitor_report.pdf")
-```
-
-### Installation
+## Quick Start
 
 ```bash
-# Core dependencies
-pip install aiohttp beautifulsoup4 lxml
+cd AIM
+source ../venv/bin/activate
 
-# Optional: PDF generation
-pip install weasyprint
+# Run all E2E tests
+pytest tests/e2e/ -v
+
+# Start dev server
+uvicorn aim.main:app --reload --port 8000
+
+# API docs
+open http://localhost:8000/docs
 ```
-
-### Architecture
-
-```
-CI System/
-├── ci_deep_analyzer.py      # 17 detectors + analysis engine
-├── business_report.py        # PDF + HTML report generator
-└── ci_orchestrator.py        # Orchestration layer
-```
-
-### Testing
-
-```bash
-# Unit tests
-pytest AIM/tests/test_detectors_sprint1.py  # 10 detectors
-pytest AIM/tests/test_detectors_sprint2.py  # 7 detectors
-pytest AIM/tests/test_business_report.py    # Report generator
-
-# Integration test
-python AIM/tests/integration_test.py
-```
-
-### Performance
-
-- **Detection Accuracy:** 85-90% (after Sprint 4 fixes)
-- **Analysis Speed:** ~30 pages in 2-3 minutes
-- **Report Generation:** <1 second (HTML), ~2 seconds (PDF)
-
-### Documentation
-
-- Technical Spec: `docs/superflow/specs/technical-spec-v1.1.md`
-- Implementation Plan: `docs/superflow/plans/implementation-plan.md`
-- Sprint Reviews: `docs/superflow/sprint1-review.md`
-- Charter: `docs/superflow/CHARTER.md`
-
-### Development Stats
-
-- **Total Code:** +1850 lines
-- **Total Tests:** +850 lines
-- **Development Time:** 2h 7min (vs 8-10h estimated)
-- **Sprints:** 5 (all complete)
-- **PRs:** 4 (all merged)
-
-### Known Issues
-
-- Issue 3: Hardcoded business context (deferred, low priority)
-
-### Future Enhancements
-
-- Move business context to config/i18n system
-- Add more detectors (SEO tools, Security tools)
-- Real-time monitoring dashboard
-- Competitive benchmarking
 
 ---
 
@@ -308,23 +134,25 @@ python AIM/tests/integration_test.py
 ## Documentation
 
 ### Getting Started
-- [Contributing Guidelines](CONTRIBUTING.md) - Development setup, code style, git workflow
-- [Test Architecture](docs/TEST_ARCHITECTURE.md) - Testing philosophy, test pyramid, fixtures
-- [Troubleshooting Guide](docs/TROUBLESHOOTING.md) - Common issues and solutions
+- [Contributing Guidelines](CONTRIBUTING.md) — Dev setup, code style, git workflow
+- [Test Architecture](docs/TEST_ARCHITECTURE.md) — Testing philosophy, test pyramid, fixtures
+- [Troubleshooting Guide](docs/TROUBLESHOOTING.md) — Common issues and solutions
+
+### Deployment & Operations
+- [Deployment Guide](deploy/DEPLOYMENT.md) — Docker Compose, SSL, monitoring setup
+- [Runbook](deploy/RUNBOOK.md) — Alert response procedures
+- [Production Setup](docs/PRODUCTION_SETUP.md) — Environment configuration
+- [Disaster Recovery](docs/DISASTER_RECOVERY.md) — Recovery procedures
+- [Rollback Procedures](docs/ROLLBACK_PROCEDURES.md) — Safe rollback methods
+
+### Security
+- [Security Audit Report](SECURITY.md) — ФЗ-152 compliance, vulnerability assessment
+- [Prometheus Alerts](deploy/prometheus-alerts.yml) — 9 alerting rules
 
 ### API Integration
-- [API Integration Guide](docs/API_INTEGRATION.md) - All 6 API integrations with setup and examples
-  - SEMrush (keyword research)
-  - Ahrefs (backlink analysis)
-  - Google Analytics 4 (traffic, conversions)
-  - Yandex Metrica (Russian market)
-  - PageSpeed Insights (performance)
-  - Yandex Direct (ads management)
-
-### Development
-- [Production Setup](docs/PRODUCTION_SETUP.md) - Deployment guide
-- [Session Recovery](../SESSION.md) - Current work status
+- [API Integration Guide](docs/API_INTEGRATION.md) — All 6 API integrations with setup
+  - SEMrush, Ahrefs, GA4, Yandex Metrica, PageSpeed Insights, Yandex Direct
 
 ---
 
-**Last Updated:** 2026-05-15
+**Last Updated:** 2026-05-18

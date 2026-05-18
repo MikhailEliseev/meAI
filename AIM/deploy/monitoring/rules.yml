@@ -1,0 +1,80 @@
+# Prometheus Alerting Rules — PostgreSQL + Payments
+# Merged into prometheus alongside deploy/prometheus-alerts.yml
+
+groups:
+  - name: aim_postgresql
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL exporter cannot reach the database."
+          runbook: "Check postgres container status: docker ps | grep postgres. Check logs: docker logs aim-postgres."
+
+      - alert: HighConnectionCount
+        expr: pg_stat_activity_count / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "PostgreSQL connection count > 80%"
+          description: "{{ $value | humanizePercentage }} of max_connections used."
+          runbook: "Check for connection leaks. Review pool_size (20) and max_overflow (10)."
+
+      - alert: LowCacheHitRatio
+        expr: rate(pg_stat_database_blks_hit[5m]) / (rate(pg_stat_database_blks_hit[5m]) + rate(pg_stat_database_blks_read[5m])) < 0.9
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Low PostgreSQL cache hit ratio"
+          description: "Buffer cache hit ratio below 90%. Consider increasing shared_buffers."
+
+      - alert: HighRollbackRate
+        expr: rate(pg_stat_database_xact_rollback[5m]) / rate(pg_stat_database_xact_commit[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High PostgreSQL rollback rate"
+          description: "Rollback ratio exceeds 5%."
+
+      - alert: DiskSpaceLow
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.2
+        for: 5m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: "Low disk space"
+          description: "Less than 20% free disk space on root."
+
+  - name: aim_payments
+    rules:
+      - alert: PaymentFailureRate
+        expr: rate(aim_payment_failures_total[5m]) / rate(aim_payments_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: payment
+        annotations:
+          summary: "Payment failure rate > 5%"
+          description: "{{ $value | humanizePercentage }} of payments failing."
+          runbook: "Check YooKassa status at https://status.yookassa.ru. Check webhook logs. Verify YOOKASSA_SECRET_KEY is valid."
+
+      - alert: YooKassaWebhookMissing
+        expr: rate(aim_yookassa_webhooks_total[30m]) == 0 and rate(aim_payments_total[30m]) > 0
+        for: 30m
+        labels:
+          severity: warning
+          component: payment
+        annotations:
+          summary: "No YooKassa webhooks received"
+          description: "Payments initiated but no webhooks in 30min. Check webhook endpoint accessibility from YooKassa IPs."

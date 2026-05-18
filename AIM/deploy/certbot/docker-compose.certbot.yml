@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  certbot:
+    image: certbot/certbot:latest
+    container_name: aim-certbot
+    volumes:
+      - ../ssl:/etc/letsencrypt
+      - ./certbot-logs:/var/log/letsencrypt
+    entrypoint: |
+      /bin/sh -c 'certbot certonly --standalone
+      --preferred-challenges http
+      -d iamaim.ru -d www.iamaim.ru
+      --email admin@iamaim.ru
+      --agree-tos --non-interactive
+      --keep-until-expiring
+      --post-hook "docker exec aim-nginx nginx -s reload"'

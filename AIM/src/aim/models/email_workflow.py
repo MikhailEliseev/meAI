@@ -5,10 +5,10 @@ Tracks multi-step email sequences for leads based on their tier (Hot/Warm/Cold).
 Part of: Phase 11 Sprint 2 - Task 2.4
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -39,13 +39,18 @@ class EmailWorkflow(Base):
     __tablename__ = "email_workflows"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    lead_id = Column(String(50), ForeignKey("leads.id"), nullable=False)
-    tier = Column(String(10), nullable=False)  # hot, warm, cold
-    status = Column(String(20), nullable=False, default="active")  # active, paused, completed, cancelled
+    lead_id = Column(String(50), ForeignKey("leads.id"), nullable=False, index=True)
+    tier = Column(String(10), nullable=False, index=True)  # hot, warm, cold
+    status = Column(String(20), nullable=False, default="active", index=True)
     current_step = Column(Integer, nullable=False, default=0)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
+
+    __table_args__ = (
+        Index("idx_workflow_lead_tier", "lead_id", "tier"),
+        Index("idx_workflow_status_created", "status", "created_at"),
+    )
 
     # Relationships
     lead = relationship("Lead", back_populates="email_workflows")

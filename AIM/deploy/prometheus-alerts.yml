@@ -1,0 +1,130 @@
+# Prometheus Alerting Rules — AIM Agency
+
+groups:
+  - name: aim_critical
+    rules:
+      # ============================================================
+      # Service Health
+      # ============================================================
+
+      - alert: ServiceDown
+        expr: up{job="aim-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "AIM API is down"
+          description: "Service has been unreachable for 2 minutes."
+          runbook: "Check `systemctl status aim-api`, view logs with `journalctl -u aim-api -n 100`"
+
+      - alert: HighErrorRate
+        expr: rate(aim_api_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "High error rate: {{ $value | humanizePercentage }}"
+          description: "Error rate exceeds 5% over 5 minutes."
+          runbook: "Check Sentry for error details, check DB connectivity, check Redis"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(aim_api_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "P95 latency > 2s"
+          description: "95th percentile request latency is {{ $value }}s."
+
+      # ============================================================
+      # Database
+      # ============================================================
+
+      - alert: DatabaseDown
+        expr: aim_ready_database_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database is unreachable"
+          runbook: "Check SQLite file permissions, disk space (`df -h`), or PostgreSQL connectivity"
+
+      - alert: SlowQueries
+        expr: rate(aim_slow_queries_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Slow queries detected (>100ms)"
+          description: "{{ $value }} slow queries per second. Check /api/performance/stats"
+
+      # ============================================================
+      # Business Metrics
+      # ============================================================
+
+      - alert: NoLeadsCaptured
+        expr: rate(aim_leads_captured_total[1h]) == 0
+        for: 2h
+        labels:
+          severity: warning
+          component: business
+        annotations:
+          summary: "No leads captured in last hour"
+          description: "Lead capture pipeline may be broken or traffic dropped to zero."
+          runbook: "Test lead capture endpoint manually, check reCAPTCHA status, check frontend form"
+
+      - alert: LowHotLeadRatio
+        expr: |
+          rate(aim_leads_scored_total{tier="hot"}[1h]) /
+          rate(aim_leads_scored_total[1h]) < 0.1
+        for: 4h
+        labels:
+          severity: info
+          component: business
+        annotations:
+          summary: "Low Hot lead ratio (<10%)"
+          description: "Only {{ $value | humanizePercentage }} of leads are Hot tier."
+
+      # ============================================================
+      # Rate Limiting
+      # ============================================================
+
+      - alert: RateLimitSpike
+        expr: rate(aim_rate_limit_hits_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "Rate limit hits spiking"
+          description: "{{ $value }} rate limit hits/sec. Possible abuse or misconfigured client."
+          runbook: "Check IPs being rate-limited, review access logs, adjust limits if needed"
+
+      # ============================================================
+      # System Resources
+      # ============================================================
+
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes{job="aim-api"} / 1024 / 1024 / 1024 > 2
+        for: 10m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "High memory usage: {{ $value }}GB"
+          description: "Process RSS exceeds 2GB. Check for memory leaks."
+
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total{job="aim-api"}[5m]) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "High CPU: {{ $value }}%"
+          description: "Process CPU exceeds 80%."

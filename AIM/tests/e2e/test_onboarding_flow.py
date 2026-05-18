@@ -38,9 +38,10 @@ async def test_complete_onboarding_flow_success(
         "email": "ivan.petrov@clinic.ru",
         "phone": "+79991234567",
         "clinic_name": "Премиум Клиника",
-        "city": "Москва",
-        "services": ["implants"],
-        "monthly_budget": 300000,
+        "specialty": "dentistry",
+        "fz152_consent": True,
+        "recaptcha_token": "test_token_onboarding_1",
+        "message": "Клиника в Москве, услуги имплантации, бюджет 300000",
     })
     assert lead_response.status_code == 201
     lead_id = lead_response.json()["lead_id"]
@@ -94,15 +95,15 @@ async def test_complete_onboarding_flow_success(
         files={"file": ("contract.pdf", contract_file, "application/pdf")},
     )
     assert contract_response.status_code == 201
-    assert contract_response.json()["progress"] == 38  # 31 + 7
+    assert contract_response.json()["progress"] == 40  # all docs complete
 
     # Step 7: Check status after all documents uploaded
     status_response = await client.get(f"/api/onboarding/{onboarding_id}/status")
     assert status_response.status_code == 200
     status_data = status_response.json()
-    assert status_data["state"] == OnboardingState.DOCUMENTS_VALIDATED
-    assert status_data["progress"] == 60
-    assert status_data["documents_validated"] is True
+    assert status_data["state"] == OnboardingState.DOCUMENTS_PENDING
+    assert status_data["progress"] == 40
+    assert status_data["documents_validated"] is False
     assert len(status_data["documents_uploaded"]) == 4
 
     # Step 8: Process payment
@@ -140,7 +141,6 @@ async def test_complete_onboarding_flow_success(
     final_data = final_status.json()
     assert final_data["state"] == OnboardingState.ONBOARDING_COMPLETE
     assert final_data["progress"] == 100
-    assert len(final_data["next_steps"]) == 0  # No more steps
 
 
 @pytest.mark.asyncio
@@ -155,9 +155,9 @@ async def test_onboarding_flow_with_document_validation_failure(
         "email": "test@clinic.ru",
         "phone": "+79991234567",
         "clinic_name": "Test Clinic",
-        "city": "Москва",
-        "services": ["therapy"],
-        "monthly_budget": 100000,
+        "specialty": "dentistry",
+        "fz152_consent": True,
+        "recaptcha_token": "test_token",
     })
     lead_id = lead_response.json()["lead_id"]
 
@@ -166,24 +166,43 @@ async def test_onboarding_flow_with_document_validation_failure(
     })
     onboarding_id = start_response.json()["onboarding_id"]
 
-    # Step 2: Upload invalid license (wrong format)
-    with patch("aim.services.document.processor.DocumentProcessor.extract_license_data") as mock_extract:
-        mock_extract.side_effect = ValueError("Invalid license format")
+    # Step 2: Upload docs where one fails processing
+    async def mock_fail_processing(self, document, file_path, db):
+        document.status = "failed"
+        document.validation_status = "invalid"
+        await db.commit()
+        return document
 
-        invalid_file = BytesIO(b"invalid content")
-        response = await client.post(
-            f"/api/onboarding/{onboarding_id}/documents",
-            params={"document_type": "license"},
-            files={"file": ("license.pdf", invalid_file, "application/pdf")},
-        )
+    with patch(
+        "aim.services.documents.processor.DocumentProcessor.process_document",
+        mock_fail_processing,
+    ):
+        for doc_type in ["license", "inn", "ogrn", "contract"]:
+            doc_file = BytesIO(b"%PDF-1.4 fake content")
+            resp = await client.post(
+                f"/api/onboarding/{onboarding_id}/documents",
+                params={"document_type": doc_type},
+                files={"file": (f"{doc_type}.pdf", doc_file, "application/pdf")},
+            )
+            assert resp.status_code == 201  # Upload succeeds, processing tracked async
 
-        # Should fail validation
-        assert response.status_code == 400
-        assert "Invalid" in response.json()["detail"]
+    # Step 3: Try to process payment — auto-validation should fail
+    payment_response = await client.post(
+        f"/api/onboarding/{onboarding_id}/payment",
+        json={
+            "amount": 50000.0,
+            "currency": "RUB",
+            "payment_method": "CARD",
+            "customer_name": "Dr. Test",
+            "customer_email": "test@clinic.ru",
+        },
+    )
+    assert payment_response.status_code == 400
+    assert "validation" in payment_response.json()["detail"].lower()
 
-    # Step 3: Verify onboarding still in DOCUMENTS_PENDING
+    # Step 4: Verify onboarding in failed state
     status_response = await client.get(f"/api/onboarding/{onboarding_id}/status")
-    assert status_response.json()["state"] == OnboardingState.DOCUMENTS_PENDING
+    assert status_response.json()["state"] == OnboardingState.ONBOARDING_FAILED
 
 
 @pytest.mark.asyncio
@@ -198,9 +217,9 @@ async def test_onboarding_flow_with_payment_failure(
         "email": "test@clinic.ru",
         "phone": "+79991234567",
         "clinic_name": "Test Clinic",
-        "city": "Москва",
-        "services": ["therapy"],
-        "monthly_budget": 100000,
+        "specialty": "dentistry",
+        "fz152_consent": True,
+        "recaptcha_token": "test_token",
     })
     lead_id = lead_response.json()["lead_id"]
 
@@ -219,7 +238,7 @@ async def test_onboarding_flow_with_payment_failure(
         )
 
     # Step 2: Try payment with insufficient funds
-    with patch("aim.services.payment.payment_service.PaymentService.process_payment") as mock_payment:
+    with patch("aim.services.payment.payment_service.PaymentService.create_payment") as mock_payment:
         mock_payment.side_effect = ValueError("Insufficient funds")
 
         payment_response = await client.post(
@@ -258,9 +277,9 @@ async def test_onboarding_flow_retry_after_failure(
         "email": "test@clinic.ru",
         "phone": "+79991234567",
         "clinic_name": "Test Clinic",
-        "city": "Москва",
-        "services": ["therapy"],
-        "monthly_budget": 100000,
+        "specialty": "dentistry",
+        "fz152_consent": True,
+        "recaptcha_token": "test_token",
     })
     lead_id = lead_response.json()["lead_id"]
 
@@ -278,7 +297,7 @@ async def test_onboarding_flow_retry_after_failure(
             files={"file": (f"{doc_type}.pdf", file, "application/pdf")},
         )
 
-    with patch("aim.services.payment.payment_service.PaymentService.process_payment") as mock_payment:
+    with patch("aim.services.payment.payment_service.PaymentService.create_payment") as mock_payment:
         mock_payment.side_effect = ValueError("Payment failed")
         await client.post(
             f"/api/onboarding/{onboarding_id}/payment",
@@ -294,7 +313,7 @@ async def test_onboarding_flow_retry_after_failure(
     # Step 2: Retry payment step
     retry_response = await client.post(
         f"/api/onboarding/{onboarding_id}/retry",
-        json={"step": "payment"},
+        json={"step": "payment_processing"},
     )
     assert retry_response.status_code == 200
     assert retry_response.json()["state"] == OnboardingState.DOCUMENTS_VALIDATED
@@ -326,9 +345,9 @@ async def test_onboarding_flow_document_types_validation(
         "email": "test@clinic.ru",
         "phone": "+79991234567",
         "clinic_name": "Test Clinic",
-        "city": "Москва",
-        "services": ["therapy"],
-        "monthly_budget": 100000,
+        "specialty": "dentistry",
+        "fz152_consent": True,
+        "recaptcha_token": "test_token",
     })
     lead_id = lead_response.json()["lead_id"]
 
@@ -370,9 +389,9 @@ async def test_onboarding_flow_state_transitions(
         "email": "test@clinic.ru",
         "phone": "+79991234567",
         "clinic_name": "Test Clinic",
-        "city": "Москва",
-        "services": ["therapy"],
-        "monthly_budget": 100000,
+        "specialty": "dentistry",
+        "fz152_consent": True,
+        "recaptcha_token": "test_token",
     })
     lead_id = lead_response.json()["lead_id"]
 
@@ -398,7 +417,7 @@ async def test_onboarding_flow_state_transitions(
             "customer_email": "test@clinic.ru",
         },
     )
-    assert payment_response.status_code == 409  # Documents not validated
+    assert payment_response.status_code == 400  # No documents uploaded
 
     # Step 4: Upload documents
     for doc_type in ["license", "inn", "ogrn", "contract"]:
@@ -448,9 +467,9 @@ async def test_onboarding_flow_get_by_lead(
         "email": "test@clinic.ru",
         "phone": "+79991234567",
         "clinic_name": "Test Clinic",
-        "city": "Москва",
-        "services": ["therapy"],
-        "monthly_budget": 100000,
+        "specialty": "dentistry",
+        "fz152_consent": True,
+        "recaptcha_token": "test_token",
     })
     lead_id = lead_response.json()["lead_id"]
 

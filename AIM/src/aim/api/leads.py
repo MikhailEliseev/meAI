@@ -57,18 +57,13 @@ async def capture_lead(
         # Get client IP
         client_ip = http_request.client.host if http_request.client else "unknown"
 
-        # Capture lead
+        # Capture lead (returns LeadCaptureResponse with tier/score)
         result = await service.capture_lead(
             request=request,
             client_ip=client_ip,
         )
 
-        return LeadCaptureResponse(
-            lead_id=result["lead_id"],
-            tier=result["tier"],
-            score=result["score"],
-            message="Лид успешно создан",
-        )
+        return result
     except RateLimitExceeded as e:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,

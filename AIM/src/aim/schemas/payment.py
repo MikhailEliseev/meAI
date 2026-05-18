@@ -107,6 +107,7 @@ class PaymentResponse(BaseModel):
     amount: float
     currency: str
     external_transaction_id: Optional[str] = None
+    confirmation_url: Optional[str] = None
     created_at: datetime
     message: str = "Payment initiated successfully"
 
