@@ -6,7 +6,7 @@ Part of: Phase 11 Sprint 2 - Task 2.5
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import func, select, and_, case
@@ -469,10 +469,10 @@ class AnalyticsService:
             RealTimeStats with today's counts
         """
         # Today's date range
-        today_start = datetime.utcnow().replace(
+        today_start = datetime.now(timezone.utc).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
-        today_end = datetime.utcnow()
+        today_end = datetime.now(timezone.utc)
 
         # Leads today
         leads_today_query = select(func.count(Lead.id)).where(

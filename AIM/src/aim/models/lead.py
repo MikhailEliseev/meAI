@@ -16,7 +16,7 @@ import hashlib
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Float, String, Text
+from sqlalchemy import Boolean, DateTime, Float, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from aim.storage.models import Base
@@ -117,6 +117,16 @@ class Lead(Base):
     tier: Mapped[Optional[str]] = mapped_column(
         String(20), nullable=True
     )  # Hot/Warm/Cold
+
+    # Performance indexes for common query patterns
+    __table_args__ = (
+        Index("idx_leads_created_at", "created_at"),
+        Index("idx_leads_tier", "tier"),
+        Index("idx_leads_processed", "processed"),
+        Index("idx_leads_specialty_created", "specialty", "created_at"),
+        Index("idx_leads_source_created", "source", "created_at"),
+        Index("idx_leads_tier_processed", "tier", "processed"),
+    )
 
     # Relationships
     linear_tasks: Mapped[list["LinearTask"]] = relationship(

@@ -28,6 +28,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from aim.models.lead import Lead as LeadModel
+from aim.middleware.cache import cache
+from aim.metrics import leads_captured_total, leads_scored_total, rate_limit_hits_total
 from aim.schemas.lead import (
     LeadCaptureRequest,
     LeadCaptureResponse,
@@ -61,6 +63,9 @@ class LeadCaptureService:
     - Duplicate detection
     """
 
+    # Class-level rate limit cache (shared across all instances)
+    _rate_limit_cache: dict[str, list[float]] = {}
+
     def __init__(
         self,
         db_session: AsyncSession,
@@ -81,9 +86,6 @@ class LeadCaptureService:
         self.rate_limit = rate_limit_per_minute
         self.recaptcha_min_score = recaptcha_min_score
         self.encryptor = get_encryptor()
-
-        # In-memory rate limiting (production: use Redis)
-        self._rate_limit_cache: dict[str, list[float]] = {}
 
     async def capture_lead(
         self,
@@ -164,6 +166,14 @@ class LeadCaptureService:
         await self.db.commit()
         await self.db.refresh(lead_record)
 
+        # Emit business metrics
+        leads_captured_total.labels(
+            source=request.source.value, specialty=request.specialty.value
+        ).inc()
+
+        # Invalidate analytics cache (new data available)
+        cache.invalidate("analytics:")
+
         # 8. Audit log
         await self._audit_log(
             lead_id=lead_id,
@@ -176,14 +186,16 @@ class LeadCaptureService:
             },
         )
 
-        # 9. Trigger async processing (lead scoring, Linear, email)
-        asyncio.create_task(self._process_lead_async(lead_id))
+        # 9. Process lead synchronously to get score/tier for immediate response
+        scoring_result = await self._process_lead_async(lead_id)
 
         return LeadCaptureResponse(
             success=True,
             lead_id=lead_id,
             message="Спасибо за обращение! Мы свяжемся с вами в течение 15 минут.",
             estimated_response_time="15 минут",
+            tier=scoring_result.get("tier"),
+            score=scoring_result.get("score"),
         )
 
     async def _check_rate_limit(self, ip: str) -> None:
@@ -195,26 +207,26 @@ class LeadCaptureService:
         Raises:
             RateLimitExceeded: If rate limit exceeded
         """
+        cache = self.__class__._rate_limit_cache
         now = datetime.now(timezone.utc).timestamp()
         minute_ago = now - 60
 
         # Get recent requests for this IP
-        if ip not in self._rate_limit_cache:
-            self._rate_limit_cache[ip] = []
+        if ip not in cache:
+            cache[ip] = []
 
         # Remove old requests (older than 1 minute)
-        self._rate_limit_cache[ip] = [
-            ts for ts in self._rate_limit_cache[ip] if ts > minute_ago
-        ]
+        cache[ip] = [ts for ts in cache[ip] if ts > minute_ago]
 
         # Check limit
-        if len(self._rate_limit_cache[ip]) >= self.rate_limit:
+        if len(cache[ip]) >= self.rate_limit:
+            rate_limit_hits_total.labels(endpoint="lead_capture").inc()
             raise RateLimitExceeded(
                 f"Rate limit exceeded: {self.rate_limit} requests per minute"
             )
 
         # Add current request
-        self._rate_limit_cache[ip].append(now)
+        cache[ip].append(now)
 
     async def _verify_recaptcha(self, token: str, ip: str) -> None:
         """Verify reCAPTCHA v3 token
@@ -310,21 +322,38 @@ class LeadCaptureService:
     async def _audit_log(
         self, lead_id: str, action: str, ip: str, details: dict
     ) -> None:
-        """Log audit event for ФЗ-152 compliance
+        """Log audit event for ФЗ-152 compliance.
 
-        Args:
-            lead_id: Lead ID
-            action: Action performed
-            ip: Client IP
-            details: Additional details
+        Writes immutable audit record to database for regulatory defense.
+        Also logs via structlog for operational visibility.
         """
-        # TODO: Implement audit logging to separate table
-        # For now, just log to console (production: use structured logging)
-        print(
-            f"[AUDIT] {datetime.now(timezone.utc).isoformat()} | "
-            f"Lead: {lead_id} | Action: {action} | IP: {ip} | "
-            f"Details: {details}"
-        )
+        import logging
+        logger = logging.getLogger("aim.fz152")
+
+        try:
+            from aim.models.fz152_audit import FZ152AuditLog
+
+            audit_entry = FZ152AuditLog(
+                lead_id=lead_id,
+                action=action,
+                ip_address=ip,
+                details=details,
+                agent="lead_capture",
+            )
+            self.db.add(audit_entry)
+            await self.db.commit()
+
+            logger.info(
+                "fz152_audit",
+                extra={
+                    "lead_id": lead_id,
+                    "action": action,
+                    "ip": ip,
+                    "details": details,
+                },
+            )
+        except Exception as e:
+            logger.error(f"Failed to write audit log: {e}", exc_info=True)
 
     async def _process_lead_async(self, lead_id: str) -> None:
         """Process lead asynchronously (scoring, Linear, email)
@@ -360,17 +389,36 @@ class LeadCaptureService:
 
             # 3. Update lead with score
             lead.score = score_result.score
-            lead.tier = score_result.tier
+            lead.tier = score_result.tier.lower()
             lead.processed = True
             await self.db.commit()
+
+            # Emit scoring metric
+            leads_scored_total.labels(tier=score_result.tier.lower()).inc()
 
             print(
                 f"[INFO] Lead {lead_id} scored: {score_result.score} ({score_result.tier})"
             )
 
-            # 4. Create Linear task (Task 2.3 - TODO)
-            # 5. Send email automation (Task 2.4 - TODO)
+            # 4. Create email workflow and schedule emails
+            from aim.services.email.workflow_engine import WorkflowEngine
+
+            workflow_engine = WorkflowEngine(self.db)
+            await workflow_engine.trigger_workflow(
+                lead_id=lead.id,
+                tier=score_result.tier.lower(),
+                start_immediately=True,
+            )
+
+            # 5. Create Linear task (Task 2.3 - TODO)
+
+            # Return score and tier for immediate response
+            return {
+                "score": score_result.score,
+                "tier": score_result.tier.lower(),
+            }
 
         except Exception as e:
             # Log error but don't fail (capture already succeeded)
             print(f"[ERROR] Lead processing failed for {lead_id}: {e}")
+            return {"score": None, "tier": None}

@@ -1,8 +1,9 @@
 """Payment Service
 
 Orchestrates payment processing with encryption and audit logging.
+Uses YooKassa for real payment processing (redirect flow).
 
-Part of: Phase 11 Sprint 3 - Task 3.1
+Part of: Phase 12 - Production Deployment
 """
 
 import logging
@@ -23,7 +24,7 @@ from aim.schemas.payment import (
     RefundRequest,
     RefundResponse,
 )
-from aim.services.payment.helcim_client import HelcimClient
+from aim.services.payment.yookassa_client import YooKassaClient
 from aim.utils.encryption import FieldEncryption
 
 logger = logging.getLogger(__name__)
@@ -34,26 +35,26 @@ class PaymentService:
 
     Handles payment lifecycle:
     1. Encrypt customer data (ФЗ-152 compliance)
-    2. Process payment via Helcim (stub)
-    3. Store transaction record
+    2. Create payment via YooKassa → get redirect URL
+    3. User pays on YooKassa page → webhook updates status
     4. Track status and refunds
     """
 
     def __init__(
         self,
         db_session: AsyncSession,
-        helcim_client: HelcimClient,
+        yookassa_client: YooKassaClient,
         encryption: Optional[FieldEncryption] = None,
     ):
         """Initialize payment service.
 
         Args:
             db_session: Database session
-            helcim_client: Helcim payment client (stub)
+            yookassa_client: YooKassa payment client
             encryption: Field encryption utility
         """
         self.db = db_session
-        self.helcim = helcim_client
+        self.yookassa = yookassa_client
         self.encryption = encryption or FieldEncryption()
 
     async def create_payment(
@@ -62,7 +63,11 @@ class PaymentService:
         client_ip: Optional[str] = None,
         user_agent: Optional[str] = None,
     ) -> PaymentResponse:
-        """Create and process a payment.
+        """Create a payment via YooKassa redirect flow.
+
+        YooKassa handles card data on its own page.
+        We create the payment, get a confirmation_url, and redirect the user.
+        Webhook updates the status when payment completes.
 
         Args:
             request: Payment request data
@@ -70,12 +75,11 @@ class PaymentService:
             user_agent: Client user agent (for audit)
 
         Returns:
-            Payment response with transaction ID
+            PaymentResponse with confirmation_url for redirect
 
         Raises:
-            ValueError: If payment processing fails
+            ValueError: If payment creation fails
         """
-        # Generate payment ID
         payment_id = self._generate_payment_id()
 
         logger.info(
@@ -83,25 +87,27 @@ class PaymentService:
         )
 
         try:
-            # Process payment via Helcim (stub)
-            helcim_response = await self.helcim.process_payment(
+            yookassa_response = await self.yookassa.create_payment(
                 amount=request.amount,
                 currency=request.currency,
-                card_number=request.card_number or "",
-                card_expiry=request.card_expiry or "",
-                card_cvv=request.card_cvv or "",
-                customer_name=request.customer_name,
+                description=f"Clinic onboarding payment",
                 customer_email=request.customer_email,
+                customer_name=request.customer_name,
                 customer_phone=request.customer_phone,
                 metadata=request.metadata,
             )
 
-            # Create payment record
+            confirmation_url = (
+                yookassa_response.get("confirmation", {}).get("confirmation_url")
+                if yookassa_response.get("confirmation")
+                else None
+            )
+
             payment = Payment(
                 id=payment_id,
                 amount=request.amount,
                 currency=request.currency,
-                status=PaymentStatus.COMPLETED.value,  # Stub always succeeds
+                status=PaymentStatus.PENDING.value,
                 payment_method=request.payment_method.value,
                 customer_name_encrypted=self.encryption.encrypt(request.customer_name),
                 customer_email_encrypted=self.encryption.encrypt(request.customer_email),
@@ -110,12 +116,9 @@ class PaymentService:
                     if request.customer_phone
                     else None
                 ),
-                card_last4=helcim_response.get("card_last4"),
-                card_brand=helcim_response.get("card_brand"),
-                external_transaction_id=helcim_response.get("transaction_id"),
+                external_transaction_id=yookassa_response.get("id"),
                 lead_id=request.lead_id,
                 payment_metadata=request.metadata,
-                completed_at=datetime.utcnow(),
                 ip_address=client_ip,
                 user_agent=user_agent,
             )
@@ -125,24 +128,25 @@ class PaymentService:
             await self.db.refresh(payment)
 
             logger.info(
-                f"Payment created successfully - id={payment_id}, "
-                f"external_id={payment.external_transaction_id}"
+                f"Payment created - id={payment_id}, "
+                f"yookassa_id={payment.external_transaction_id}, "
+                f"status=pending"
             )
 
             return PaymentResponse(
                 payment_id=payment.id,
-                status=PaymentStatus.COMPLETED,
+                status=PaymentStatus.PENDING,
                 amount=payment.amount,
                 currency=payment.currency,
                 external_transaction_id=payment.external_transaction_id,
+                confirmation_url=confirmation_url,
                 created_at=payment.created_at,
-                message="Payment processed successfully",
+                message="Payment created. Redirect user to confirmation_url.",
             )
 
         except Exception as e:
-            logger.error(f"Payment processing failed - id={payment_id}: {e}")
+            logger.error(f"Payment creation failed - id={payment_id}: {e}")
 
-            # Create failed payment record
             payment = Payment(
                 id=payment_id,
                 amount=request.amount,
@@ -165,10 +169,13 @@ class PaymentService:
             self.db.add(payment)
             await self.db.commit()
 
-            raise ValueError(f"Payment processing failed: {e}")
+            raise ValueError(f"Payment creation failed: {e}")
 
     async def get_payment_status(self, payment_id: str) -> PaymentStatusResponse:
         """Get payment status.
+
+        For PENDING payments, checks YooKassa for the latest status
+        and updates the DB record.
 
         Args:
             payment_id: Payment ID
@@ -181,12 +188,32 @@ class PaymentService:
         """
         logger.info(f"Getting payment status - id={payment_id}")
 
-        # Get payment from database
         result = await self.db.execute(select(Payment).where(Payment.id == payment_id))
         payment = result.scalar_one_or_none()
 
         if not payment:
             raise ValueError(f"Payment not found: {payment_id}")
+
+        # For PENDING payments, sync with YooKassa
+        if payment.status == PaymentStatus.PENDING.value and payment.external_transaction_id:
+            try:
+                yookassa_status = await self.yookassa.check_payment_status(
+                    payment.external_transaction_id
+                )
+                yk_status = yookassa_status.get("status", "")
+
+                if yk_status == "succeeded":
+                    payment.status = PaymentStatus.COMPLETED.value
+                    payment.completed_at = datetime.utcnow()
+                elif yk_status == "canceled":
+                    payment.status = PaymentStatus.FAILED.value
+                    payment.error_message = "Payment canceled on YooKassa side"
+                elif yk_status == "waiting_for_capture":
+                    payment.status = PaymentStatus.PROCESSING.value
+
+                await self.db.commit()
+            except Exception as e:
+                logger.warning(f"Failed to sync YooKassa status: {e}")
 
         return PaymentStatusResponse(
             payment_id=payment.id,
@@ -240,15 +267,14 @@ class PaymentService:
                 f"Refund amount ({refund_amount}) exceeds payment amount ({payment.amount})"
             )
 
-        # Process refund via Helcim (stub)
+        # Process refund via YooKassa
         try:
-            helcim_response = await self.helcim.refund_payment(
-                transaction_id=payment.external_transaction_id or "",
+            await self.yookassa.refund_payment(
+                payment_id=payment.external_transaction_id or "",
                 amount=refund_amount,
                 reason=request.reason,
             )
 
-            # Update payment record
             payment.status = PaymentStatus.REFUNDED.value
             payment.refunded_amount = refund_amount
             payment.refund_reason = request.reason
@@ -257,7 +283,7 @@ class PaymentService:
             await self.db.commit()
 
             logger.info(
-                f"Refund processed successfully - payment_id={request.payment_id}, "
+                f"Refund processed - payment_id={request.payment_id}, "
                 f"amount={refund_amount}"
             )
 
@@ -270,7 +296,7 @@ class PaymentService:
             )
 
         except Exception as e:
-            logger.error(f"Refund processing failed - payment_id={request.payment_id}: {e}")
+            logger.error(f"Refund failed - payment_id={request.payment_id}: {e}")
             raise ValueError(f"Refund processing failed: {e}")
 
     async def get_payment_record(self, payment_id: str) -> PaymentRecord:

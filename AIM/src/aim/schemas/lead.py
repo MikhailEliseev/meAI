@@ -148,6 +148,8 @@ class LeadCaptureResponse(BaseModel):
         default="15 минут",
         description="Estimated response time",
     )
+    tier: Optional[str] = Field(None, description="Lead tier (Hot/Warm/Cold)")
+    score: Optional[float] = Field(None, description="Lead score (0-100)")
 
 
 class LeadRecord(BaseModel):

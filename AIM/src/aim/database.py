@@ -1,9 +1,12 @@
 """Database configuration for AIM agency
 
-SQLAlchemy async setup with SQLite backend.
+SQLAlchemy async setup with SQLite development fallback and PostgreSQL production.
+Alembic manages schema migrations.
 
-Part of: Phase 11 - Client Acquisition (Task 2.1)
+Part of: Phase 12-02 — PostgreSQL migration
 """
+
+import os
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -11,15 +14,27 @@ from sqlalchemy.orm import sessionmaker
 # Import Base from storage.models (single source of truth)
 from aim.storage.models import Base
 
-# Database URL (SQLite for development, PostgreSQL for production)
-DATABASE_URL = "sqlite+aiosqlite:///./AIM/data/aim.db"
+# Database URL — PostgreSQL for production, SQLite fallback for local dev
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "sqlite+aiosqlite:///./AIM/data/aim.db",
+)
 
-# Create async engine
+# Create async engine with production pool config
+_is_pg = "postgresql" in DATABASE_URL or "asyncpg" in DATABASE_URL
 engine = create_async_engine(
     DATABASE_URL,
-    echo=False,  # Set to True for SQL query logging
+    echo=False,
     future=True,
+    pool_size=20 if _is_pg else 1,
+    max_overflow=10 if _is_pg else 0,
+    pool_pre_ping=True if _is_pg else False,
+    pool_recycle=3600 if _is_pg else -1,
 )
+
+# Attach query profiler to engine
+from aim.middleware.profiling import get_profiler
+get_profiler().attach(engine.sync_engine)
 
 # Create async session factory
 async_session_maker = sessionmaker(
@@ -42,6 +57,7 @@ def _import_models():
     from aim.models.payment import Payment  # noqa: F401
     from aim.models.document import Document  # noqa: F401
     from aim.models.onboarding import Onboarding  # noqa: F401
+    from aim.models.fz152_audit import FZ152AuditLog  # noqa: F401
 
 
 _import_models()

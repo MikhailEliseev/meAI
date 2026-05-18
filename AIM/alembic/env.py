@@ -19,8 +19,18 @@ from alembic import context
 aim_src = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(aim_src))
 
-# Import models
+# Import models — must register ALL models with Base.metadata for autogenerate
 from aim.storage.models import Base
+from aim.models.lead import Lead  # noqa: F401
+from aim.models.linear_task import LinearTask  # noqa: F401
+from aim.models.email_workflow import EmailWorkflow  # noqa: F401
+from aim.models.scheduled_email import ScheduledEmail  # noqa: F401
+from aim.models.email_event import EmailEvent  # noqa: F401
+from aim.models.email_template import EmailTemplate  # noqa: F401
+from aim.models.payment import Payment  # noqa: F401
+from aim.models.document import Document  # noqa: F401
+from aim.models.onboarding import Onboarding  # noqa: F401
+from aim.models.fz152_audit import FZ152AuditLog  # noqa: F401
 
 # Alembic Config object
 config = context.config

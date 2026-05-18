@@ -11,11 +11,13 @@ from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from aim.models.document import Document
 from aim.models.lead import Lead
 from aim.models.onboarding import Onboarding
 from aim.models.payment import Payment
+from aim.schemas.payment import PaymentRequest, PaymentStatus
 from aim.services.documents.processor import DocumentProcessor
 from aim.services.onboarding.state_machine import (
     OnboardingEvent,
@@ -177,14 +179,16 @@ class OnboardingService:
 
         # Update onboarding
         onboarding.add_document(document.id)
+        flag_modified(onboarding, "documents_uploaded")
 
         # Update document types in extra_data
         if not onboarding.extra_data:
             onboarding.extra_data = {}
-        doc_types = onboarding.extra_data.get("document_types", [])
+        doc_types = list(onboarding.extra_data.get("document_types", []))
         if document_type not in doc_types:
             doc_types.append(document_type)
         onboarding.extra_data["document_types"] = doc_types
+        flag_modified(onboarding, "extra_data")
 
         # Update progress
         onboarding.progress = onboarding.calculate_progress()
@@ -362,6 +366,14 @@ class OnboardingService:
         if not onboarding:
             raise ValueError(f"Onboarding not found: {onboarding_id}")
 
+        # Auto-validate documents if still in DOCUMENTS_PENDING
+        if onboarding.state == OnboardingState.DOCUMENTS_PENDING.value:
+            if not onboarding.is_documents_complete():
+                raise ValueError("Not all required documents uploaded")
+            onboarding = await self.validate_documents(onboarding_id, db)
+            if onboarding.state == OnboardingState.ONBOARDING_FAILED.value:
+                raise ValueError("Document validation failed")
+
         # Check state allows payment
         state_machine = OnboardingStateMachine(onboarding.state)
         if not state_machine.can_transition(OnboardingEvent.REQUEST_PAYMENT):
@@ -385,23 +397,26 @@ class OnboardingService:
             await db.commit()
 
             # Create payment
-            payment = await self.payment_service.create_payment(
-                lead_id=onboarding.lead_id,
+            payment_request = PaymentRequest(
                 amount=onboarding.onboarding_fee,
                 currency=payment_data.get("currency", "RUB"),
-                payment_method=payment_data["payment_method"],
-                card_number=payment_data.get("card_number"),
-                card_holder=payment_data.get("card_holder"),
-                card_expiry=payment_data.get("card_expiry"),
-                card_cvv=payment_data.get("card_cvv"),
+                payment_method=payment_data["payment_method"].lower(),
                 customer_name=payment_data["customer_name"],
                 customer_email=payment_data["customer_email"],
                 customer_phone=payment_data.get("customer_phone"),
-                db=db,
+                card_number=payment_data.get("card_number"),
+                card_expiry=payment_data.get("card_expiry"),
+                card_cvv=payment_data.get("card_cvv"),
+                lead_id=onboarding.lead_id,
+                metadata=payment_data.get("metadata"),
             )
+            payment_response = await self.payment_service.create_payment(
+                request=payment_request,
+            )
+            payment = await db.get(Payment, payment_response.payment_id)
 
             # Check payment status
-            if payment.status == "COMPLETED":
+            if payment.status == PaymentStatus.COMPLETED.value:
                 # Transition to payment completed
                 state_machine = OnboardingStateMachine(onboarding.state)
                 state_machine.transition(OnboardingEvent.COMPLETE_PAYMENT)

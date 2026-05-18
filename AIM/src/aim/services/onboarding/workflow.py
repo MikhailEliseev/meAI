@@ -1,7 +1,7 @@
 """
 Onboarding Workflow Automation
 
-State machine for automated client onboarding with HIPAA compliance.
+State machine for automated client onboarding with ФЗ-152 compliance.
 """
 
 from typing import Dict, Any, Optional, List
@@ -111,8 +111,8 @@ class OnboardingWorkflow:
     
     Handles:
     - Document collection and validation
-    - BAA signature via DocuSign
-    - Payment processing via Helcim
+    - BAA signature via Контур.Диадок
+    - Payment processing via ЮKassa
     - Linear project creation
     - Welcome email sequence
     - Kickoff call scheduling
@@ -121,7 +121,7 @@ class OnboardingWorkflow:
     def __init__(
         self,
         document_processor,
-        docusign_client,
+        kontour_client,
         payment_service,
         linear_client,
         email_service,
@@ -129,17 +129,17 @@ class OnboardingWorkflow:
     ):
         """
         Initialize workflow
-        
+
         Args:
             document_processor: Document processing service
-            docusign_client: DocuSign API client
-            payment_service: Helcim payment service
+            kontour_client: Контур.Диадок API client
+            payment_service: ЮKassa payment service
             linear_client: Linear API client
             email_service: SendGrid email service
             calendar_service: Calendar scheduling service
         """
         self.document_processor = document_processor
-        self.docusign = docusign_client
+        self.kontour = kontour_client
         self.payment = payment_service
         self.linear = linear_client
         self.email = email_service
@@ -336,20 +336,32 @@ class OnboardingWorkflow:
         self,
         session: OnboardingSession,
     ) -> OnboardingSession:
-        """Send BAA for signature via DocuSign"""
-        envelope = await self.docusign.send_baa(
-            client_email=session.metadata.get("email"),
-            client_name=session.metadata.get("name"),
-            practice_name=session.metadata.get("practice_name"),
+        """Send BAA for signature via Контур.Диадок"""
+        from aim.services.contracts.kontour_client import (
+            SignatureType,
+            get_signature_type_for_amount,
         )
 
-        session.baa_envelope_id = envelope["envelope_id"]
+        doc_path = session.metadata.get("baa_document_path", "")
+        recipient_inn = session.metadata.get("inn", "")
+        amount = session.metadata.get("package_price", 5000)
+
+        document_id = await self.kontour.send_for_signature(
+            document_path=doc_path,
+            recipient_email=session.metadata.get("email", ""),
+            recipient_name=session.metadata.get("name", ""),
+            recipient_inn=recipient_inn,
+            signature_type=get_signature_type_for_amount(amount),
+            message=f"Договор для {session.metadata.get('practice_name', '')}",
+        )
+
+        session.baa_envelope_id = document_id
         session.state = OnboardingState.BAA_SENT
-        
+
         self.logger.info(
             "baa_sent",
             session_id=session.session_id,
-            envelope_id=envelope["envelope_id"],
+            document_id=document_id,
         )
         return session
 
@@ -357,10 +369,10 @@ class OnboardingWorkflow:
         self,
         session: OnboardingSession,
     ) -> OnboardingSession:
-        """Initiate payment via Helcim"""
+        """Initiate payment via ЮKassa"""
         payment_intent = await self.payment.create_payment_intent(
             amount=session.metadata.get("package_price", 5000),
-            currency="USD",
+            currency="RUB",
             customer_email=session.metadata.get("email"),
             description=f"AIM Agency - {session.metadata.get('package_name')}",
         )

@@ -1,15 +1,21 @@
-"""Helcim Payment Processor Client (STUB)
+"""Helcim Payment Processor Client
 
-STUB IMPLEMENTATION for development.
-TODO: Replace with ЮKassa integration in Phase 12.
+DEPRECATED: Replaced by YooKassaClient (yookassa_client.py).
+Helcim is a US payment processor that does not operate in Russia.
+Kept for reference only. Use YooKassaClient for all payment processing.
+Will be removed in a future cleanup.
 
-This stub simulates Helcim API responses for development and testing.
-Always returns success responses with mock transaction IDs.
-
-Part of: Phase 11 Sprint 3 - Task 3.1
+Part of: Phase 11 Sprint 3 - Task 3.1 (DEPRECATED in Phase 12)
 """
 
 import logging
+import warnings
+
+warnings.warn(
+    "HelcimClient is deprecated. Use YooKassaClient instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 import uuid
 from datetime import datetime
 from typing import Optional

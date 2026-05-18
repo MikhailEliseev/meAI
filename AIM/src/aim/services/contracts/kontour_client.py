@@ -1,14 +1,20 @@
-"""
-Контур.Диадок API Client (STUB for Phase 12)
+"""Контур.Диадок API Client
 
-Russian e-signature service for contract signing.
-This is a STUB implementation for development. Real integration in Phase 12.
+Real REST API client for Russian e-signature service.
+Uses KontourAuth for OIDC token management and httpx for API calls.
+
+Part of: Phase 12-02 — Контур.Диадок integration
 """
 
-from typing import Dict, Any, Optional
-from datetime import datetime, timedelta
+import base64
+import os
 from enum import Enum
+from typing import Any, Optional
+
+import httpx
 import structlog
+
+from aim.services.contracts.kontour_auth import KontourAuth
 
 logger = structlog.get_logger()
 
@@ -24,33 +30,88 @@ class DocumentStatus(str, Enum):
 
 
 class SignatureType(str, Enum):
-    """Signature type"""
-    SIMPLE = "simple"  # Простая электронная подпись
-    ENHANCED = "enhanced"  # Усиленная неквалифицированная
-    QUALIFIED = "qualified"  # Усиленная квалифицированная
+    """Signature type per Russian law"""
+    SIMPLE = "simple"
+    ENHANCED = "enhanced"
+    QUALIFIED = "qualified"
+
+
+STATUS_MAP = {
+    "Draft": DocumentStatus.DRAFT,
+    "Sent": DocumentStatus.SENT,
+    "Delivered": DocumentStatus.DELIVERED,
+    "Signed": DocumentStatus.SIGNED,
+    "Declined": DocumentStatus.DECLINED,
+}
 
 
 class KontourClient:
-    """
-    Контур.Диадок API client for e-signatures
+    """Контур.Диадок API client for e-signatures.
 
-    STUB IMPLEMENTATION - Real integration in Phase 12
+    Uses KontourAuth for OIDC token lifecycle.
+    All methods perform real httpx API calls.
     """
 
     def __init__(
         self,
-        api_key: str,
-        organization_id: str,
+        client_id: str = "",
+        client_secret: str = "",
+        organization_inn: str = "",
         base_url: str = "https://diadoc-api.kontur.ru",
+        test_mode: bool = False,
     ):
-        self.api_key = api_key
-        self.organization_id = organization_id
-        self.base_url = base_url
-
-        logger.warning(
-            "kontour_client_stub",
-            message="Using STUB implementation. Real integration in Phase 12.",
+        self.client_id = client_id or os.getenv("KONTOUR_CLIENT_ID", "")
+        self.client_secret = client_secret or os.getenv("KONTOUR_CLIENT_SECRET", "")
+        if not self.client_id or not self.client_secret:
+            raise ValueError(
+                "KONTOUR_CLIENT_ID and KONTOUR_CLIENT_SECRET are required. "
+                "Set them in .env or pass directly."
+            )
+        self.auth = KontourAuth(
+            client_id=self.client_id,
+            client_secret=self.client_secret,
         )
+        self.organization_inn = organization_inn or os.getenv(
+            "KONTOUR_ORGANIZATION_INN", ""
+        )
+        self.base_url = base_url
+        self.test_mode = test_mode
+        self._box_id: str | None = None
+        self._client = httpx.AsyncClient(timeout=60.0)
+        logger.info("kontour_client_initialized", test_mode=test_mode)
+
+    async def _get_headers(self) -> dict:
+        token = await self.auth.get_token()
+        return {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+
+    async def _get_box_id(self) -> str:
+        """Lazy init — fetch box ID from GetMyOrganizations."""
+        if not self._box_id:
+            headers = await self._get_headers()
+            resp = await self._client.get(
+                f"{self.base_url}/GetMyOrganizations", headers=headers
+            )
+            resp.raise_for_status()
+            orgs = resp.json()
+            if self.organization_inn:
+                for org in orgs:
+                    if org.get("Inn") == self.organization_inn:
+                        self._box_id = org["BoxId"]
+                        break
+                if not self._box_id:
+                    raise ValueError(
+                        f"Organization with INN {self.organization_inn} not found"
+                    )
+            else:
+                self._box_id = orgs[0]["BoxId"]
+                logger.warning(
+                    "kontour_no_inn_using_first_org",
+                    org_name=orgs[0].get("Name", "unknown"),
+                )
+        return self._box_id
 
     async def send_for_signature(
         self,
@@ -61,338 +122,231 @@ class KontourClient:
         signature_type: SignatureType = SignatureType.ENHANCED,
         message: Optional[str] = None,
     ) -> str:
-        """
-        Send document for e-signature
+        """Send document for e-signature via PostMessage."""
+        box_id = await self._get_box_id()
 
-        STUB: Returns mock document ID with 500ms delay
+        # Find recipient by INN
+        headers = await self._get_headers()
+        recipient_resp = await self._client.get(
+            f"{self.base_url}/GetOrganizationsByInnKpp",
+            params={"inn": recipient_inn},
+            headers=headers,
+        )
+        recipient_resp.raise_for_status()
+        recipients = recipient_resp.json()
+        if not recipients:
+            raise ValueError(f"Recipient not found for INN: {recipient_inn}")
+        recipient_box_id = recipients[0]["BoxId"]
 
-        Args:
-            document_path: Path to PDF document
-            recipient_email: Recipient email
-            recipient_name: Recipient name
-            recipient_inn: Recipient INN
-            signature_type: Type of signature required
-            message: Optional message to recipient
+        # Read and encode document
+        with open(document_path, "rb") as f:
+            document_content = f.read()
 
-        Returns:
-            Document ID in Контур.Диадок
-        """
-        # STUB: Simulate API delay
-        import asyncio
-        await asyncio.sleep(0.5)
-
-        # STUB: Generate mock document ID with microseconds for uniqueness
-        document_id = f"STUB-DOC-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+        payload = {
+            "BoxId": box_id,
+            "Recipients": [{"BoxId": recipient_box_id}],
+            "Documents": [
+                {
+                    "FileName": os.path.basename(document_path),
+                    "Content": base64.b64encode(document_content).decode(),
+                    "TypeNamedId": "Nonformalized",
+                }
+            ],
+            "MessageText": message
+            or f"Договор на подписание для {recipient_name}",
+        }
+        resp = await self._client.post(
+            f"{self.base_url}/V3/PostMessage",
+            json=payload,
+            headers=headers,
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        document_id = result["EntityId"]
 
         logger.info(
-            "document_sent_for_signature_stub",
+            "document_sent_for_signature",
             document_id=document_id,
-            recipient_email=recipient_email,
+            recipient_inn=recipient_inn,
             signature_type=signature_type,
-            stub=True,
         )
-
-        # STUB: In real implementation, this would:
-        # 1. Upload document to Контур.Диадок
-        # 2. Create signature request
-        # 3. Send notification to recipient
-        # 4. Return real document ID
-
         return document_id
 
-    async def get_document_status(self, document_id: str) -> Dict[str, Any]:
-        """
-        Get document status
-
-        STUB: Returns mock status data
-
-        Args:
-            document_id: Document ID
-
-        Returns:
-            Document status information
-        """
-        # STUB: Simulate API delay
-        import asyncio
-        await asyncio.sleep(0.3)
-
-        # STUB: Mock status based on document age
-        # In real implementation, this would query Контур.Диадок API
-        status = DocumentStatus.SENT
-
-        if "SIGNED" in document_id:
-            status = DocumentStatus.SIGNED
-        elif "DECLINED" in document_id:
-            status = DocumentStatus.DECLINED
-
+    async def get_document_status(self, document_id: str) -> dict[str, Any]:
+        """Get document status via GetDocument."""
+        box_id = await self._get_box_id()
+        headers = await self._get_headers()
+        resp = await self._client.get(
+            f"{self.base_url}/V3/GetDocument",
+            params={
+                "boxId": box_id,
+                "messageId": document_id,
+                "entityId": document_id,
+            },
+            headers=headers,
+        )
+        resp.raise_for_status()
+        doc = resp.json()
+        diadoc_status = doc.get("Status", "Draft")
         return {
             "document_id": document_id,
-            "status": status,
-            "sent_at": datetime.now().isoformat(),
-            "delivered_at": (datetime.now() + timedelta(minutes=5)).isoformat() if status != DocumentStatus.DRAFT else None,
-            "signed_at": (datetime.now() + timedelta(hours=2)).isoformat() if status == DocumentStatus.SIGNED else None,
-            "declined_at": None,
-            "decline_reason": None,
-            "expires_at": (datetime.now() + timedelta(days=30)).isoformat(),
-            "stub": True,
+            "status": STATUS_MAP.get(diadoc_status, DocumentStatus.DRAFT),
+            "diadoc_status": diadoc_status,
+            "sent_at": doc.get("SentAt"),
+            "delivered_at": doc.get("DeliveredAt"),
+            "signed_at": doc.get("SignedAt"),
+            "expires_at": doc.get("ExpiresAt"),
         }
 
-    async def download_signed_document(
-        self,
-        document_id: str,
-    ) -> bytes:
-        """
-        Download signed document with signatures
-
-        STUB: Returns mock PDF bytes
-
-        Args:
-            document_id: Document ID
-
-        Returns:
-            Signed document bytes
-        """
-        # STUB: Simulate API delay
-        import asyncio
-        await asyncio.sleep(0.5)
-
-        logger.info(
-            "signed_document_downloaded_stub",
-            document_id=document_id,
-            stub=True,
+    async def download_signed_document(self, document_id: str) -> bytes:
+        """Download signed document via GetEntityContent."""
+        box_id = await self._get_box_id()
+        headers = await self._get_headers()
+        resp = await self._client.get(
+            f"{self.base_url}/V4/GetEntityContent",
+            params={
+                "boxId": box_id,
+                "messageId": document_id,
+                "entityId": document_id,
+            },
+            headers=headers,
         )
+        resp.raise_for_status()
+        return resp.content
 
-        # STUB: Return mock PDF bytes
-        # In real implementation, this would download from Контур.Диадок
-        return b"%PDF-1.4 STUB SIGNED DOCUMENT"
-
-    async def get_signature_certificate(
-        self,
-        document_id: str,
-    ) -> bytes:
-        """
-        Get signature certificate (proof of signing)
-
-        STUB: Returns mock certificate bytes
-
-        Args:
-            document_id: Document ID
-
-        Returns:
-            Certificate bytes (PDF)
-        """
-        # STUB: Simulate API delay
-        import asyncio
-        await asyncio.sleep(0.3)
-
-        logger.info(
-            "signature_certificate_downloaded_stub",
-            document_id=document_id,
-            stub=True,
+    async def get_signature_certificate(self, document_id: str) -> bytes:
+        """Get signature certificate (proof of signing) via GetSignatureInfo."""
+        box_id = await self._get_box_id()
+        headers = await self._get_headers()
+        resp = await self._client.get(
+            f"{self.base_url}/GetSignatureInfo",
+            params={
+                "boxId": box_id,
+                "messageId": document_id,
+                "entityId": document_id,
+            },
+            headers=headers,
         )
-
-        # STUB: Return mock certificate
-        return b"%PDF-1.4 STUB SIGNATURE CERTIFICATE"
+        resp.raise_for_status()
+        return resp.content
 
     async def cancel_signature_request(
-        self,
-        document_id: str,
-        reason: str,
+        self, document_id: str, reason: str
     ) -> None:
-        """
-        Cancel signature request
-
-        STUB: Logs cancellation
-
-        Args:
-            document_id: Document ID
-            reason: Cancellation reason
-        """
-        # STUB: Simulate API delay
-        import asyncio
-        await asyncio.sleep(0.3)
-
+        """Cancel a signature request."""
+        box_id = await self._get_box_id()
+        headers = await self._get_headers()
+        resp = await self._client.post(
+            f"{self.base_url}/CancelSignatureRequest",
+            json={
+                "BoxId": box_id,
+                "MessageId": document_id,
+                "Reason": reason,
+            },
+            headers=headers,
+        )
+        resp.raise_for_status()
         logger.info(
-            "signature_request_cancelled_stub",
+            "signature_request_cancelled",
             document_id=document_id,
             reason=reason,
-            stub=True,
         )
 
-    async def resend_notification(
-        self,
-        document_id: str,
-    ) -> None:
-        """
-        Resend notification to recipient
-
-        STUB: Logs resend
-
-        Args:
-            document_id: Document ID
-        """
-        # STUB: Simulate API delay
-        import asyncio
-        await asyncio.sleep(0.3)
-
-        logger.info(
-            "notification_resent_stub",
-            document_id=document_id,
-            stub=True,
+    async def resend_notification(self, document_id: str) -> None:
+        """Resend notification to recipient."""
+        box_id = await self._get_box_id()
+        headers = await self._get_headers()
+        resp = await self._client.post(
+            f"{self.base_url}/ResendNotification",
+            json={"BoxId": box_id, "MessageId": document_id},
+            headers=headers,
         )
+        resp.raise_for_status()
+        logger.info("notification_resent", document_id=document_id)
 
-    async def get_organization_info(self) -> Dict[str, Any]:
-        """
-        Get organization information from Контур.Диадок
-
-        STUB: Returns mock organization data
-
-        Returns:
-            Organization information
-        """
-        # STUB: Simulate API delay
-        import asyncio
-        await asyncio.sleep(0.3)
-
+    async def get_organization_info(self) -> dict[str, Any]:
+        """Get organization information from GetMyOrganizations."""
+        headers = await self._get_headers()
+        resp = await self._client.get(
+            f"{self.base_url}/GetMyOrganizations", headers=headers
+        )
+        resp.raise_for_status()
+        orgs = resp.json()
+        if not orgs:
+            raise ValueError("No organizations found")
+        target_inn = self.organization_inn
+        target = None
+        if target_inn:
+            for org in orgs:
+                if org.get("Inn") == target_inn:
+                    target = org
+                    break
+        if not target:
+            target = orgs[0]
         return {
-            "organization_id": self.organization_id,
-            "name": "ООО \"АИМ Маркетинг\"",
-            "inn": "7701234567",
-            "kpp": "770101001",
-            "ogrn": "1234567890123",
-            "address": "123456, г. Москва, ул. Примерная, д. 1, офис 100",
-            "certificate_valid_until": (datetime.now() + timedelta(days=365)).isoformat(),
-            "stub": True,
+            "organization_id": target.get("BoxId", ""),
+            "name": target.get("Name", ""),
+            "inn": target.get("Inn", ""),
+            "kpp": target.get("Kpp", ""),
+            "ogrn": target.get("Ogrn", ""),
+            "address": target.get("Address", ""),
+            "certificate_valid_until": target.get("CertificateValidUntil"),
         }
+
+    async def close(self) -> None:
+        """Close HTTP client and auth."""
+        await self._client.aclose()
+        await self.auth.close()
+
+
+# ── Webhook utilities (DEPRECATED) ──────────────────────────────────────────
+# Контур.Диадок uses POLLING (GetNewEvents V8), not webhooks.
+# KontourWebhookHandler is replaced by KontourPoller.
+# verify_webhook_signature is kept for backward compatibility with
+# the __init__.py export but is not used in new code.
 
 
 class KontourWebhookHandler:
-    """
-    Handle Контур.Диадок webhook events
+    """DEPRECATED. Replaced by KontourPoller (kontour_poller.py).
 
-    STUB: Processes mock webhook events
+    Контур.Диадок does NOT support webhooks — polling-based only.
+    This class is kept for backward compatibility but does nothing.
     """
 
-    def __init__(self, workflow_service):
+    def __init__(self, workflow_service=None):
         self.workflow = workflow_service
-
-    async def handle_webhook(self, payload: Dict[str, Any]) -> None:
-        """
-        Handle Контур.Диадок webhook event
-
-        STUB: Processes mock events
-
-        Args:
-            payload: Webhook payload
-        """
-        event_type = payload.get("event_type")
-        document_id = payload.get("document_id")
-
-        logger.info(
-            "kontour_webhook_received_stub",
-            event_type=event_type,
-            document_id=document_id,
-            stub=True,
-        )
-
-        # Map Контур.Диадок events to onboarding events
-        if event_type == "document.signed":
-            # Contract signed
-            await self._handle_contract_signed(document_id, payload)
-
-        elif event_type == "document.declined":
-            # Contract declined
-            await self._handle_contract_declined(document_id, payload)
-
-        elif event_type == "document.expired":
-            # Contract expired (not signed in time)
-            logger.warning(
-                "contract_expired_stub",
-                document_id=document_id,
-                stub=True,
-            )
-
-    async def _handle_contract_signed(
-        self,
-        document_id: str,
-        payload: Dict[str, Any],
-    ) -> None:
-        """Handle contract signed event"""
-        # STUB: In real implementation, this would:
-        # 1. Find onboarding session by document_id
-        # 2. Trigger CONTRACT_SIGNED event
-        # 3. Update session with signed document URL
-
-        logger.info(
-            "contract_signed_stub",
-            document_id=document_id,
-            stub=True,
-        )
-
-    async def _handle_contract_declined(
-        self,
-        document_id: str,
-        payload: Dict[str, Any],
-    ) -> None:
-        """Handle contract declined event"""
-        decline_reason = payload.get("decline_reason", "No reason provided")
-
         logger.warning(
-            "contract_declined_stub",
-            document_id=document_id,
-            reason=decline_reason,
-            stub=True,
+            "KontourWebhookHandler is deprecated. Use KontourPoller instead."
         )
 
+    async def handle_webhook(self, payload: dict[str, Any]) -> None:
+        """No-op. Контур.Диадок has no webhooks."""
+        logger.warning(
+            "kontour_webhook_deprecated",
+            message="Контур.Диадок uses polling, not webhooks. "
+            "This handler is a no-op.",
+        )
 
-# STUB: Helper functions for Phase 12 integration
 
 def verify_webhook_signature(
     payload: bytes,
     signature: str,
     secret: str,
 ) -> bool:
+    """DEPRECATED. Контур.Диадок has no webhooks (polling-based).
+
+    Kept for backward compatibility. Always returns True.
     """
-    Verify Контур.Диадок webhook signature
-
-    STUB: Always returns True
-
-    Args:
-        payload: Webhook payload bytes
-        signature: Signature from header
-        secret: Webhook secret
-
-    Returns:
-        True if signature is valid
-    """
-    # STUB: In real implementation, this would:
-    # 1. Calculate HMAC-SHA256 of payload with secret
-    # 2. Compare with provided signature
-    # 3. Return True if match
-
-    logger.warning(
-        "webhook_signature_verification_stub",
-        message="Signature verification skipped (STUB)",
-        stub=True,
-    )
-
     return True
 
 
 def get_signature_type_for_amount(amount: float) -> SignatureType:
-    """
-    Get required signature type based on contract amount
+    """Get required signature type based on contract amount.
 
     Russian law requirements:
     - < 100,000 RUB: Simple signature
     - 100,000 - 600,000 RUB: Enhanced unqualified
     - > 600,000 RUB: Qualified signature
-
-    Args:
-        amount: Contract amount in RUB
-
-    Returns:
-        Required signature type
     """
     if amount < 100_000:
         return SignatureType.SIMPLE

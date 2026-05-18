@@ -185,7 +185,7 @@ async def upload_document(
         return DocumentUploadResponse(
             document_id=document.id,
             status="failed",
-            message=f"Document uploaded but processing failed: {str(e)}",
+            message="Document uploaded but processing failed",
         )
 
 
@@ -370,5 +370,5 @@ async def reprocess_document(
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Reprocessing failed: {str(e)}",
+            detail="Document reprocessing failed",
         )

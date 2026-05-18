@@ -1,0 +1,19 @@
+[sshd]
+enabled = true
+maxretry = 5
+bantime = 600
+findtime = 600
+
+[nginx-http-auth]
+enabled = true
+filter = nginx-http-auth
+port = http,https
+maxretry = 5
+bantime = 600
+
+[nginx-botsearch]
+enabled = true
+filter = nginx-botsearch
+port = http,https
+maxretry = 5
+bantime = 600
