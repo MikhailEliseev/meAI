@@ -6,52 +6,48 @@
 **Status:** ✅ All 3 plans complete
 **Commit:** `f11de51` — feat(phase-12): complete production deployment
 
-### Plans Completed
-
-**12-01: ЮKassa Payment Integration**
-- yookassa_client.py (real API), webhooks handler
-- Payment amounts in RUB, Mir/Visa/Mastercard support
-- Helcim stub deprecated
-
-**12-02: Контур.Диадок + PostgreSQL**
-- OIDC Device Auth flow (kontour_auth.py)
-- GetNewEvents polling (kontour_poller.py)
-- KontourClient rewritten with real API calls (0 stubs)
-- DocuSignClient deleted
-- PostgreSQL migration with Alembic
-
-**12-03: Deploy + Monitoring**
-- 9-service Docker Compose (postgres, app, redis, nginx, prometheus, grafana, postgres-exporter, alertmanager, node-exporter)
-- Nginx: TLS 1.2+, HSTS, X-Frame-Options, CSP
-- PostgreSQL tuning (shared_buffers=512MB, SSD-optimized)
-- 7 Prometheus alert rules → Telegram
-- 4 business metrics (payments_total, payment_failures_total, yookassa_webhooks_total, signings_total)
-- ФЗ-152: PartitionManager (monthly partitions, 7-year retention)
-- GDPR: DELETE /api/gdpr/leads/{lead_id} (anonymize PII)
-- RUNBOOK.md: PostgreSQL + YooKassa scenarios
-- Sentry: send_default_pii=False
-
-### Files
-- 61 files changed, 4600 insertions, 2271 deletions
+See git log for full details.
 
 ---
 
-## Phase 13: Landing Page & Marketing — NEXT ⏳
+## Phase 13: Landing Page & Marketing — IN PROGRESS ⏳
 
+**Date resumed:** 2026-05-18 21:30 GMT+3
 **Goal:** Landing page (deferred from Phase 11 Sprint 1) + marketing launch
-**Depends on:** Phase 12 (complete)
-**Plans:**
-- [ ] 13-01: Landing page implementation
-- [ ] 13-02: Marketing campaigns launch + analytics
+
+### Landing Page Implementation (13-01) — IN PROGRESS
+
+**Components created:**
+- Header.tsx — fixed nav with mobile drawer, CTA
+- Footer.tsx — 4-column footer with social links
+- CookieConsent.tsx — ФЗ-152 GDPR-style cookie banner with 3 categories
+- UTMCapture.tsx — UTM parameter capture and persistence
+
+**Pages created:**
+- app/about/ — team, stats, history
+- app/blog/ — coming soon placeholder
+- app/case-studies/ — case studies grid with CaseStudies + Testimonials
+- app/contact/ — contact form
+- app/privacy-policy/ — full ФЗ-152 privacy policy (10 sections)
+- app/services/ — services grid with pricing
+- app/error.tsx — error boundary with reset
+- app/not-found.tsx — 404 page
+
+**Tests: 35/35 passing ✅**
+- lib/utm.test.ts (4 tests)
+- components/Footer.test.tsx (7 tests)
+- components/Header.test.tsx (5 tests)
+- components/CookieConsent.test.tsx (8 tests)
+- pages/landing-pages.test.tsx (11 tests)
+
+### Known issues (pre-existing, not Phase 13):
+- 9 test suites failing: e2e/* (playwright), landing/SocialProof, landing/FAQ, landing/ContactForm, payment/*
+- These are unrelated to Phase 13 components
 
 ---
 
-## Roadmap Progress
+## Next Steps
 
-| Phase | Status | Completed |
-|-------|--------|-----------|
-| 1-11 | Complete | 2026-05-18 |
-| 12. Production Deployment | Complete | 2026-05-18 |
-| 13. Landing Page | Not started | - |
-
-**Overall:** 29/31 plans complete (94%)
+- [ ] 13-01: Finish landing page — review + polish
+- [ ] 13-02: Marketing campaigns launch + analytics
+- [ ] Fix pre-existing test failures (ContactForm, SocialProof, FAQ)
