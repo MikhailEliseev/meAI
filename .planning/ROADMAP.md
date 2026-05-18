@@ -265,8 +265,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 14-01: Finish LinearMixin → all Magisters + fix update_linear_status()
-- [ ] 14-02: Client web dashboard (layout, tasks page, progress API, de-mock)
+- [x] 14-01: Finish LinearMixin → all Magisters + fix update_linear_status()
+- [x] 14-02: Client web dashboard (layout, tasks page, progress API, de-mock)
 
 ## Progress
 
@@ -289,6 +289,6 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 11. Client Acquisition | v2.1 | 3/4 | Complete | 2026-05-18 |
 | 12. Production Deployment | v3.0 | 3/3 | Complete | 2026-05-18 |
 | 13. Landing Page | v3.0 | 1/2 | In progress | 2026-05-18 |
-| 14. Final Integration | v3.0 | 0/2 | Planned | - |
+| 14. Final Integration | v3.0 | 2/2 | Complete | 2026-05-18 |
 
-**Overall:** 30/33 plans complete (91%)
+**Overall:** 32/33 plans complete (97%)
