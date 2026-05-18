@@ -7,6 +7,7 @@ import { FAQ } from "@/components/landing/FAQ";
 jest.mock("framer-motion", () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    span: ({ children, ...props }: any) => <span {...props}>{children}</span>,
   },
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }));
@@ -72,16 +73,16 @@ describe("FAQ", () => {
   it("renders category filter buttons", () => {
     render(<FAQ />);
 
-    expect(screen.getByRole("button", { name: /Все вопросы/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Безопасность/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Результаты/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Цены/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Все вопросы" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Безопасность" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Результаты" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Цены" })).toBeInTheDocument();
   });
 
   it("filters FAQs by category", async () => {
     render(<FAQ />);
 
-    const securityButton = screen.getByRole("button", { name: /Безопасность/i });
+    const securityButton = screen.getByRole("button", { name: "Безопасность" });
     fireEvent.click(securityButton);
 
     await waitFor(() => {
@@ -226,7 +227,7 @@ describe("FAQ", () => {
     render(<FAQ />);
 
     // Select security category
-    const securityButton = screen.getByRole("button", { name: /Безопасность/i });
+    const securityButton = screen.getByRole("button", { name: "Безопасность" });
     fireEvent.click(securityButton);
 
     // Search within security category
@@ -243,7 +244,7 @@ describe("FAQ", () => {
     render(<FAQ />);
 
     // Select security category
-    const securityButton = screen.getByRole("button", { name: /Безопасность/i });
+    const securityButton = screen.getByRole("button", { name: "Безопасность" });
     fireEvent.click(securityButton);
 
     await waitFor(() => {
@@ -251,7 +252,7 @@ describe("FAQ", () => {
     });
 
     // Click "Все вопросы"
-    const allButton = screen.getByRole("button", { name: /Все вопросы/i });
+    const allButton = screen.getByRole("button", { name: "Все вопросы" });
     fireEvent.click(allButton);
 
     await waitFor(() => {

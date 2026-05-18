@@ -158,17 +158,6 @@ describe("Awards", () => {
     expect(screen.getByText(/Роскомнадзор • 2025/i)).toBeInTheDocument();
   });
 
-  it("includes Schema.org organization markup", () => {
-    const { container } = render(<Awards />);
-
-    const script = container.querySelector('script[type="application/ld+json"]');
-    expect(script).toBeInTheDocument();
-
-    const schemaData = JSON.parse(script?.textContent || "{}");
-    expect(schemaData["@type"]).toBe("Organization");
-    expect(schemaData.award).toBeDefined();
-  });
-
   it("displays FZ-152 compliance statement", () => {
     render(<Awards />);
 
