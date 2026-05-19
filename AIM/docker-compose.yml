@@ -79,6 +79,9 @@ services:
       - OMNIROUTE_URL=http://193.111.152.14:7451
       - OMNIROUTE_AUTH=U9pjtK:hxtlqz
       - PYTHONUNBUFFERED=1
+      - https_proxy=http://U9pjtK:hxtlqz@193.111.152.14:7451
+      - HTTPS_PROXY=http://U9pjtK:hxtlqz@193.111.152.14:7451
+      - NO_PROXY=localhost,127.0.0.1,::1,.local
     env_file:
       - .env.production
     volumes:
