@@ -76,8 +76,8 @@ services:
       - "8000"
     environment:
       - HERMES_HOME=/opt/data
-      - OMNIROUTE_URL=http://193.111.152.14:7451
-      - OMNIROUTE_AUTH=U9pjtK:hxtlqz
+      - OMNIROUTE_URL=http://138.16.224.188:20128/v1
+      - OMNIROUTE_AUTH=sk-a10f604cd99e7a50-dd1d5a-56e30050
       - PYTHONUNBUFFERED=1
     env_file:
       - .env.production

@@ -29,14 +29,20 @@ logger = logging.getLogger(__name__)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
-# OmniRoute as HTTPS proxy for Telegram API (hosting blocks direct 443 to Telegram IPs)
-# NOT set globally — would break AI requests which use OmniRoute as AI gateway (HTTP), not proxy
+# Telegram proxy — separate from AI gateway (OmniRoute /v1 only does LLM API, not proxy)
+# Old OmniRoute at 193.111.152.14:7451 still acts as HTTP proxy for outbound 443
+# Hosting blocks direct 443 to Telegram IPs, so we proxy via this
+TELEGRAM_PROXY_URL = os.getenv("TELEGRAM_PROXY_URL", "http://193.111.152.14:7451")
+TELEGRAM_PROXY_AUTH = os.getenv("TELEGRAM_PROXY_AUTH", "U9pjtK:hxtlqz")
+
+
 def _get_proxy_url() -> str | None:
-    """Build proxy URL from OmniRoute config. Returns None if not configured."""
-    proxy_host = os.getenv("OMNIROUTE_URL", "").replace("http://", "").replace("/", "")
-    proxy_auth = os.getenv("OMNIROUTE_AUTH", "")
-    if proxy_host and proxy_auth:
-        return f"http://{proxy_auth}@{proxy_host}"
+    """Build Telegram proxy URL. Returns None if not configured."""
+    if TELEGRAM_PROXY_URL and TELEGRAM_PROXY_AUTH:
+        from urllib.parse import urlparse
+        parsed = urlparse(TELEGRAM_PROXY_URL)
+        host = parsed.netloc or parsed.path
+        return f"http://{TELEGRAM_PROXY_AUTH}@{host}"
     return None
 
 router = APIRouter(prefix="/telegram", tags=["telegram"])

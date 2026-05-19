@@ -24,7 +24,7 @@ from fastapi import (
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.config.settings import get_settings
+from aim.config.settings import get_api_settings
 from aim.database import get_db
 from aim.models.document import Document
 from aim.models.lead import Lead
@@ -53,11 +53,12 @@ def get_document_processor() -> DocumentProcessor:
     Returns:
         DocumentProcessor instance
     """
-    settings = get_settings()
+    settings = get_api_settings(skip_validation=True)
 
     ocr_service = OCRService(lang="rus")
     ai_extractor = AIExtractor(
-        api_key=settings.anthropic_api_key,
+        api_key=settings.omni_route_key,
+        base_url=settings.omni_route_url,
         model="claude-sonnet-4-20250514",
     )
     validator = DocumentValidator()
@@ -134,7 +135,7 @@ async def upload_document(
         )
 
     # Create upload directory
-    settings = get_settings()
+    settings = get_api_settings(skip_validation=True)
     upload_dir = Path(settings.upload_dir) / lead_id
     upload_dir.mkdir(parents=True, exist_ok=True)
 

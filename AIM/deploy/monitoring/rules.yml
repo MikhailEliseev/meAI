@@ -90,4 +90,4 @@ groups:
         annotations:
           summary: "Hermes Agent is DOWN"
           description: "Hermes container has been unreachable for more than 60 seconds. Web chat and Telegram gateway are non-functional."
-          runbook: "1. Check container: docker ps | grep hermes. 2. Check logs: docker logs aim-hermes --tail 100. 3. Check OmniRoute connectivity: docker exec aim-hermes curl -f http://193.111.152.14:7451/health. 4. Restart: docker-compose restart hermes."
+          runbook: "1. Check container: docker ps | grep hermes. 2. Check logs: docker logs aim-hermes --tail 100. 3. Check OmniRoute connectivity: docker exec aim-hermes curl -f http://138.16.224.188:20128/v1/models. 4. Restart: docker-compose restart hermes."

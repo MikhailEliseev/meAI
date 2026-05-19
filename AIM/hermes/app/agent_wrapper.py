@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 # Per-session locks to serialize concurrent requests (Pitfall 2)
 _session_locks: dict[str, asyncio.Lock] = {}
 
-OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "http://193.111.152.14:7451")
-OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "U9pjtK:hxtlqz")
+OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "http://138.16.224.188:20128/v1")
+OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "sk-a10f604cd99e7a50-dd1d5a-56e30050")
 DEFAULT_MODEL = os.getenv("HERMES_MODEL", "claude-sonnet-4-20250514")
 
 
@@ -70,9 +70,7 @@ async def run_agent(
 
     Per Pitfall 2: per-session asyncio.Lock prevents SQLite concurrency errors.
 
-    OmniRoute auth (Pitfall 1): tries provider="anthropic" with api_mode="anthropic_messages".
-    If that fails with auth error, caller should retry with provider="custom",
-    api_mode="openai_chat".
+    OmniRoute uses OpenAI-compatible API at /v1 — provider="custom" + api_mode="openai_chat".
     """
     from run_agent import AIAgent
 
@@ -85,8 +83,8 @@ async def run_agent(
             agent = AIAgent(
                 base_url=OMNIROUTE_URL,
                 api_key=OMNIROUTE_AUTH,
-                provider="anthropic",
-                api_mode="anthropic_messages",
+                provider="custom",
+                api_mode="openai_chat",
                 model=DEFAULT_MODEL,
                 session_id=session_id,
                 load_soul_identity=True,

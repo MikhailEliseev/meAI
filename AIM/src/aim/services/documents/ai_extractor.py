@@ -9,7 +9,7 @@ import json
 import logging
 from typing import Optional, Tuple
 
-from anthropic import AsyncAnthropic
+from openai import AsyncOpenAI
 
 from aim.schemas.document import ExtractedData
 
@@ -19,21 +19,27 @@ logger = logging.getLogger(__name__)
 class AIExtractor:
     """Service for extracting structured data from documents using AI.
 
-    Uses Claude to parse OCR text and extract:
+    Uses OmniRoute (OpenAI-compatible API) to parse OCR text and extract:
     - License information
     - Clinic details
     - Legal entity data (INN, OGRN, KPP)
     - Director information
     """
 
-    def __init__(self, api_key: str, model: str = "claude-sonnet-4-20250514"):
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str = "http://138.16.224.188:20128/v1",
+        model: str = "claude-sonnet-4-20250514",
+    ):
         """Initialize AI extractor.
 
         Args:
-            api_key: Anthropic API key
-            model: Claude model to use
+            api_key: OmniRoute API key
+            base_url: OmniRoute endpoint URL
+            model: Model to use
         """
-        self.client = AsyncAnthropic(api_key=api_key)
+        self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.model = model
 
     async def extract_from_text(
@@ -58,15 +64,15 @@ class AIExtractor:
         prompt = self._build_extraction_prompt(text, document_type)
 
         try:
-            # Call Claude API
-            response = await self.client.messages.create(
+            # Call OmniRoute API (OpenAI-compatible)
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 max_tokens=2000,
                 messages=[{"role": "user", "content": prompt}],
             )
 
             # Parse response
-            content = response.content[0].text
+            content = response.choices[0].message.content
             data_dict = json.loads(content)
 
             # Create ExtractedData object

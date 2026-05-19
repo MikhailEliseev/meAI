@@ -21,8 +21,7 @@ from tenacity import (
 from aiolimiter import AsyncLimiter
 
 from .providers.base import BaseLLMProvider
-from .providers.anthropic import AnthropicProvider
-from .providers.openai import OpenAIProvider
+from .providers.omni_route import OmniRouteProvider
 from .cost_tracker import CostTracker
 from .schemas import (
     LLMRequest,
@@ -49,8 +48,8 @@ class LLMClient:
     
     def __init__(
         self,
-        anthropic_api_key: str,
-        openai_api_key: Optional[str] = None,
+        omni_route_url: str,
+        omni_route_key: str,
         redis_url: str = "redis://localhost:6379",
         cache_ttl: int = 3600,
         rate_limit_capacity: int = 10,
@@ -61,10 +60,10 @@ class LLMClient:
     ):
         """
         Initialize LLM client.
-        
+
         Args:
-            anthropic_api_key: Anthropic API key (primary)
-            openai_api_key: OpenAI API key (fallback, optional)
+            omni_route_url: OmniRoute endpoint URL (e.g. http://138.16.224.188:20128/v1)
+            omni_route_key: OmniRoute API key
             redis_url: Redis connection URL
             cache_ttl: Cache TTL in seconds (default: 1 hour)
             rate_limit_capacity: Rate limiter capacity (requests)
@@ -73,16 +72,14 @@ class LLMClient:
             daily_budget: Daily budget limit in USD (None = no limit)
             monthly_budget: Monthly budget limit in USD (None = no limit)
         """
-        # Initialize providers
+        # Initialize single OmniRoute provider
+        omni = OmniRouteProvider(api_key=omni_route_key, base_url=omni_route_url)
         self.providers: Dict[LLMProvider, BaseLLMProvider] = {
-            LLMProvider.ANTHROPIC: AnthropicProvider(anthropic_api_key),
+            LLMProvider.OMNI_ROUTE: omni,
         }
-        
-        if openai_api_key:
-            self.providers[LLMProvider.OPENAI] = OpenAIProvider(openai_api_key)
-        
+
         # Primary provider
-        self.primary_provider = LLMProvider.ANTHROPIC
+        self.primary_provider = LLMProvider.OMNI_ROUTE
         
         # Redis cache
         self.redis_url = redis_url
@@ -213,108 +210,65 @@ class LLMClient:
         use_cache: bool = True,
     ) -> LLMResponse:
         """
-        Generate completion with Omni-Router.
-        
+        Generate completion via OmniRoute.
+
         Flow:
         1. Check cache (if enabled)
         2. Check budget limits
         3. Apply rate limiting
-        4. Try primary provider (Anthropic)
-        5. Fallback to secondary (OpenAI) on error
-        6. Cache response
-        7. Track costs
-        
+        4. Call OmniRoute provider
+        5. Cache response
+        6. Track costs
+
         Args:
             request: LLM request parameters
             use_cache: Whether to use caching (default: True)
-            
+
         Returns:
             LLM response with metadata
-            
+
         Raises:
-            LLMProviderError: If all providers fail
+            LLMProviderError: If generation fails
             LLMRateLimitError: If rate limit exceeded
             LLMBudgetExceededError: If budget exceeded
         """
-        # Generate cache key
         cache_key = self._generate_cache_key(request)
         request.cache_key = cache_key
-        
-        # Check cache
+
         if use_cache:
             cached = await self._get_cached_response(cache_key)
             if cached:
                 cached.cached = True
                 return cached
-        
-        # Estimate cost and check budget
-        primary = self.providers[self.primary_provider]
-        input_tokens = primary.count_tokens(
+
+        provider = self.providers[self.primary_provider]
+        input_tokens = provider.count_tokens(
             request.prompt + (request.system_prompt or ""),
             request.model,
         )
-        estimated_cost = primary.estimate_cost(
+        estimated_cost = provider.estimate_cost(
             input_tokens,
             request.max_tokens,
             request.model,
         )
         self.cost_tracker.check_budget(estimated_cost)
-        
-        # Apply rate limiting
+
         async with self.rate_limiter:
-            # Try primary provider with circuit breaker
-            try:
-                response = await self.circuit_breaker.call_async(
-                    self._generate_with_retry,
-                    primary,
-                    request,
-                )
-                
-                # Cache response
-                if use_cache:
-                    await self._cache_response(cache_key, response)
-                
-                # Track costs
-                self.cost_tracker.track_request(
-                    provider=response.provider,
-                    model=response.model,
-                    tokens_used=response.tokens_used,
-                    cost_usd=response.cost_usd,
-                    cached=False,
-                )
-                
-                return response
-                
-            except Exception as e:
-                # Try fallback provider if available
-                if LLMProvider.OPENAI in self.providers:
-                    fallback = self.providers[LLMProvider.OPENAI]
-                    
-                    try:
-                        response = await self._generate_with_retry(
-                            fallback,
-                            request,
-                        )
-                        
-                        # Cache response
-                        if use_cache:
-                            await self._cache_response(cache_key, response)
-                        
-                        # Track costs
-                        self.cost_tracker.track_request(
-                            provider=response.provider,
-                            model=response.model,
-                            tokens_used=response.tokens_used,
-                            cost_usd=response.cost_usd,
-                            cached=False,
-                        )
-                        
-                        return response
-                        
-                    except Exception as fallback_error:
-                        raise LLMProviderError(
-                            LLMProvider.OPENAI,
-                            f"All providers failed. Primary: {str(e)}, Fallback: {str(fallback_error)}"
-                        )
-                else:
-                    raise
+            response = await self.circuit_breaker.call_async(
+                self._generate_with_retry,
+                provider,
+                request,
+            )
+
+            if use_cache:
+                await self._cache_response(cache_key, response)
+
+            self.cost_tracker.track_request(
+                provider=response.provider,
+                model=response.model,
+                tokens_used=response.tokens_used,
+                cost_usd=response.cost_usd,
+                cached=False,
+            )
+
+            return response
