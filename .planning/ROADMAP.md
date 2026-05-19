@@ -268,10 +268,50 @@ Plans:
 - [x] 14-01: Finish LinearMixin → all Magisters + fix update_linear_status()
 - [x] 14-02: Client web dashboard (layout, tasks page, progress API, de-mock)
 
+### Phase 15: Hermes AIM Integration
+**Goal**: Интеграция Hermes Agent как фундамента для Operator-системы AIM — самообучаемый AI-оператор со знаниями всего агентства
+**Depends on**: Phase 14
+**Success Criteria** (what must be TRUE):
+  1. Hermes SOUL.md загружен со всеми знаниями AIM (агентство, услуги, цены, процессы, KPI, клиенты)
+  2. Кастомные Hermes tools работают (run_seo_audit, run_content_analysis, run_ads_report, show_project_status, collect_contact, show_all_leads)
+  3. Next.js /api/chat/send проксирует через Hermes (вместо прямого вызова DeepSeek)
+  4. Hermes настроен как Operator с 3 режимами (PRESALE, ACTIVE, ADMIN) и правильной identity
+  5. Hermes Telegram gateway настроен для клиентской коммуникации
+  6. Hermes systemd сервис исправлен и работает на продакшене
+  7. /tmp/leads persistence исправлен (Docker volume mount)
+**Plans**: 4 plans
+
+Plans:
+- [ ] 15-01: Hermes SOUL.md — personality, knowledge, tools documentation
+- [ ] 15-02: Custom Hermes tools — AIM agency operations
+- [ ] 15-03: Next.js ↔ Hermes proxy + Operator identity
+- [ ] 15-04: Production deploy — Telegram gateway + fixes
+
+### Phase 16: Hermes Knowledge Training
+**Goal**: Обучить Hermes всему, что умеет система AIM. Создать comprehensive SOUL.md, кодирующий полное знание — всех агентов и субагентов, как вести клиентов, как запускать агентство, WOW-данные, «3 числа», Token Economy, Lead Dossier, Omni-Channel Follow-up, Agent Orchestration, Российский рынок.
+**Requirements**: D-01..D-10 (from CONTEXT.md)
+**Depends on**: Phase 15
+**Success Criteria** (what must be TRUE):
+  1. SOUL.md содержит точные имена субагентов, проверенные по кодовой базе (не выдуманные)
+  2. Все 8 MCP tools задокументированы с точными I/O схемами из registry.register()
+  3. 3 режима работы (PRESALE/ACTIVE/ADMIN) описаны самодостаточно, без утечек между режимами
+  4. WOW-Data Strategy с 7 блоками аудита и принципом «3 числа»
+  5. Token Economy Tier 0/1/2 с правилами доступа по режимам
+  6. Lead Dossier (статусы, структура папок) и Omni-Channel Follow-up (последовательность каналов, дневные правила)
+  7. Agent Orchestration — как Hermes запускает Magisters через HTTP
+  8. Российский рынок: ФЗ-152, ЮKassa, Яндекс.Директ, Контур.Диадок, что НЕ работает в РФ
+  9. Все 10 knowledge domains (D-01..D-10) покрыты с grep-верифицируемыми проверками
+  10. Human checkpoint подтверждает точность и полноту SOUL.md
+**Plans**: 2 plans
+
+Plans:
+- [ ] 16-01-PLAN.md — SOUL.md: Write comprehensive all-sections file (Identity, Modes, Tools, Magisters, WOW Data, Token Economy, Lead System, Russian Market, Services, KPIs, Style)
+- [ ] 16-02-PLAN.md — SOUL.md: Validate (automated D-01..D-10 checks + human review checkpoint)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13 → 14
+Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -290,5 +330,7 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 12. Production Deployment | v3.0 | 3/3 | Complete | 2026-05-18 |
 | 13. Landing Page | v3.0 | 1/2 | In progress | 2026-05-18 |
 | 14. Final Integration | v3.0 | 2/2 | Complete | 2026-05-18 |
+| 15. Hermes AIM Integration | v4.0 | 4/4 | Complete | 2026-05-19 |
+| 16. Hermes Knowledge Training | v4.1 | 0/2 | Planned | 2026-05-19 |
 
-**Overall:** 32/33 plans complete (97%)
+**Overall:** 38/41 plans complete (93%)
