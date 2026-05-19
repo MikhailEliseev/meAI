@@ -7,10 +7,8 @@ Per D-30: Standard RED metrics (Rate, Errors, Duration) via prometheus-client.
 """
 
 import logging
-import os
 import sys
 import time
-from contextlib import asynccontextmanager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -35,26 +33,35 @@ _metrics = {
     "request_start_time": {},  # request_id -> timestamp
 }
 MAX_LATENCY_SAMPLES = 100
+_polling_started = False
 
-
-# ── Lifespan ──────────────────────────────────────────────────────────
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Register AIM tools and start Telegram polling at startup."""
-    from app.tools import register_all_tools
-    register_all_tools()
-    start_polling()
-    logger.info("Hermes FastAPI started — tools registered, Telegram polling active")
-    yield
-    await stop_polling()
-    logger.info("Hermes FastAPI shutting down")
-
+# ── App ──────────────────────────────────────────────────────────────
+# NOTE: app must be created BEFORE @app.on_event("startup") decorator
 
 app = FastAPI(
     title="Hermes AIM Operator",
     version="0.1.0",
-    lifespan=lifespan,
 )
+
+
+# ── Lifespan ──────────────────────────────────────────────────────────
+@app.on_event("startup")
+async def on_startup():
+    """Register tools + start Telegram polling after uvicorn is fully started.
+
+    Using the (deprecated) on_event("startup") because creating asyncio
+    tasks inside the lifespan context manager deadlocks uvicorn's
+    startup_event / socket binding sequence in uvicorn >=0.41.
+    """
+    from app.tools import register_all_tools
+    register_all_tools()
+    logger.info("Hermes FastAPI started — tools registered")
+
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    await stop_polling()
+    logger.info("Hermes FastAPI shutting down")
 
 app.include_router(telegram_router)
 
@@ -86,7 +93,16 @@ _start_time = time.time()
 
 @app.get("/health", response_model=HealthResponse)
 async def health():
-    """Health check endpoint (D-29). Prometheus scrapes this."""
+    """Health check endpoint (D-29). Prometheus scrapes this.
+
+    Starts Telegram polling on first call (deferred from startup to avoid
+    asyncio.create_task deadlocking uvicorn 0.41 socket binding).
+    """
+    global _polling_started
+    if not _polling_started:
+        start_polling()
+        _polling_started = True
+        logger.info("Telegram polling started (lazy init on first /health)")
     return HealthResponse(
         status="ok",
         hermes="healthy",
@@ -119,7 +135,6 @@ async def metrics():
 # ── Chat ──────────────────────────────────────────────────────────────
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(
-    request: Request,
     body: ChatRequest,
     _token: str = Depends(verify_api_key),
 ):
