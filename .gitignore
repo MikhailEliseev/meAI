@@ -44,6 +44,7 @@ Thumbs.db
 # Project specific
 data/
 !AIM/data/golden_dataset/
+!AIM/frontend/data/
 AIM/data/golden_dataset/results/
 .obsidian/
 obsidian/operator/
