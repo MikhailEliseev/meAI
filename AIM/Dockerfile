@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
-COPY requirements.txt .
+COPY AIM/requirements.txt requirements.txt
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --user -r requirements.txt
@@ -35,7 +35,7 @@ COPY --from=builder /root/.local /root/.local
 COPY AIM/src/aim ./AIM/src/aim
 COPY AIM/obsidian ./AIM/obsidian
 COPY scripts ./scripts
-COPY .env.production .env
+COPY AIM/.env.production .env
 
 # Create data directory
 RUN mkdir -p data/production logs
