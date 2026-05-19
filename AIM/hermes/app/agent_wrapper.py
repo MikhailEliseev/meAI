@@ -92,7 +92,7 @@ async def run_agent(
                 enabled_toolsets=["aim-operations"],
                 max_iterations=15,
                 quiet_mode=True,
-                request_overrides={"thinking": {"type": "disabled"}},  # DeepSeek V4: disable reasoning via extra_body
+                request_overrides={"extra_body": {"thinking": {"type": "disabled"}}},  # DeepSeek V4: disable reasoning via extra_body
             )
             response = agent.run_conversation(message)
             return {
