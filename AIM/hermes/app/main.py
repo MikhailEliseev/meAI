@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 from .auth import verify_api_key
 from .agent_wrapper import run_agent
-from .telegram_gateway import router as telegram_router
+from .telegram_gateway import router as telegram_router, start_polling, stop_polling
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +34,13 @@ MAX_LATENCY_SAMPLES = 100
 # ── Lifespan ──────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Register AIM tools at startup."""
+    """Register AIM tools and start Telegram polling at startup."""
     from app.tools import register_all_tools
     register_all_tools()
-    logger.info("Hermes FastAPI started — tools registered")
+    start_polling()
+    logger.info("Hermes FastAPI started — tools registered, Telegram polling active")
     yield
+    await stop_polling()
     logger.info("Hermes FastAPI shutting down")
 
 
