@@ -17,21 +17,23 @@ security = HTTPBearer(auto_error=False)
 
 async def verify_api_key(
     request: Request,
-    credentials: HTTPAuthorizationCredentials | None = None,
 ) -> str:
     """Verify Bearer token from Authorization header.
 
     Returns the validated API key or raises 401.
     Called as a FastAPI dependency.
+
+    Important: security(request) is called explicitly instead of declaring
+    HTTPAuthorizationCredentials as a parameter — otherwise FastAPI 0.133+
+    wraps it alongside the ChatRequest body, causing 422 "body.body" errors.
     """
-    # Allow health check without auth
     if request.url.path == "/health":
         return "health"
 
     if not HERMES_API_KEY:
-        # No API key configured — allow all (dev mode)
         return "dev-no-key"
 
+    credentials = await security(request)
     if not credentials:
         raise HTTPException(status_code=401, detail="Missing Authorization header")
 
