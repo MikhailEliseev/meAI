@@ -19,7 +19,7 @@ _session_locks: dict[str, asyncio.Lock] = {}
 
 OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "http://138.16.224.188:20128/v1")
 OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "sk-a10f604cd99e7a50-dd1d5a-56e30050")
-DEFAULT_MODEL = os.getenv("HERMES_MODEL", "deepseek/deepseek-v4-pro")
+DEFAULT_MODEL = os.getenv("HERMES_MODEL", "deepseek/deepseek-v4-flash")
 
 
 def get_session_lock(session_id: str) -> asyncio.Lock:
