@@ -10,31 +10,86 @@ import Redis from "ioredis";
 import { sendTemplateEmail, type SendEmailInput } from "./sendgrid-templates";
 import { type EmailSequence, type EmailTemplateData } from "./email-sequences";
 
-// Redis connection
-const connection = new Redis({
-  host: process.env.REDIS_HOST || "localhost",
-  port: parseInt(process.env.REDIS_PORT || "6379"),
-  maxRetriesPerRequest: null,
-});
+// Lazy initialization — avoid connecting to Redis during build
+let _connection: Redis | null = null;
+let _emailQueue: Queue | null = null;
+let _emailWorker: Worker | null = null;
 
-// Email queue
-export const emailQueue = new Queue("email-sequences", {
-  connection,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: "exponential",
-      delay: 60000, // 1 minute
-    },
-    removeOnComplete: {
-      age: 86400, // Keep completed jobs for 24 hours
-      count: 1000,
-    },
-    removeOnFail: {
-      age: 604800, // Keep failed jobs for 7 days
-    },
-  },
-});
+function getConnection(): Redis {
+  if (!_connection) {
+    _connection = new Redis({
+      host: process.env.REDIS_HOST || "localhost",
+      port: parseInt(process.env.REDIS_PORT || "6379"),
+      maxRetriesPerRequest: null,
+    });
+  }
+  return _connection;
+}
+
+function getQueue(): Queue {
+  if (!_emailQueue) {
+    _emailQueue = new Queue("email-sequences", {
+      connection: getConnection(),
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: "exponential",
+          delay: 60000,
+        },
+        removeOnComplete: {
+          age: 86400,
+          count: 1000,
+        },
+        removeOnFail: {
+          age: 604800,
+        },
+      },
+    });
+  }
+  return _emailQueue;
+}
+
+function getWorker(): Worker {
+  if (!_emailWorker) {
+    _emailWorker = new Worker(
+      "email-sequences",
+      async (job: Job<EmailJobData>) => {
+        const { to, templateId, dynamicTemplateData, sequenceId, stepId, leadEmail } = job.data;
+
+        const result = await sendTemplateEmail({
+          to,
+          templateId,
+          dynamicTemplateData,
+        });
+
+        if (!result.success) {
+          throw new Error(`Failed to send email: ${result.error}`);
+        }
+
+        await trackEmailSent(leadEmail, sequenceId, stepId);
+
+        return result;
+      },
+      {
+        connection: getConnection(),
+        concurrency: 5,
+      }
+    );
+
+    _emailWorker.on("completed", (job) => {
+      console.log(`[Email Worker] Job ${job.id} completed`);
+    });
+
+    _emailWorker.on("failed", (job, err) => {
+      console.error(`[Email Worker] Job ${job?.id} failed:`, err);
+    });
+
+    _emailWorker.on("error", (err) => {
+      console.error("[Email Worker] Error:", err);
+    });
+  }
+  return _emailWorker;
+}
 
 // Job data interface
 export interface EmailJobData {
@@ -71,12 +126,13 @@ export async function scheduleEmailSequence(
   templateData: EmailTemplateData,
   startStep: number = 0
 ): Promise<{ jobIds: string[]; nextEmailAt?: Date }> {
+  const emailQueue = getQueue();
   const jobIds: string[] = [];
   let currentTime = Date.now();
 
   for (let i = startStep; i < sequence.steps.length; i++) {
     const step = sequence.steps[i];
-    const delay = step.delayMinutes * 60 * 1000; // Convert to milliseconds
+    const delay = step.delayMinutes * 60 * 1000;
     currentTime += delay;
 
     const jobData: EmailJobData = {
@@ -111,6 +167,7 @@ export async function scheduleEmailSequence(
  * Pause email sequence for a lead
  */
 export async function pauseEmailSequence(leadEmail: string, sequenceId: string): Promise<number> {
+  const emailQueue = getQueue();
   const jobs = await emailQueue.getJobs(["waiting", "delayed"]);
   let pausedCount = 0;
 
@@ -144,7 +201,6 @@ export async function getSequenceStatus(
   sequenceId: string
 ): Promise<SequenceStatus | null> {
   // TODO: Implement status tracking in database (Phase 2.5)
-  // For now, return stub
   return null;
 }
 
@@ -189,7 +245,7 @@ export async function trackEmailClicked(
  * Handle unsubscribe
  */
 export async function handleUnsubscribe(leadEmail: string): Promise<void> {
-  // Remove all pending jobs for this lead
+  const emailQueue = getQueue();
   const jobs = await emailQueue.getJobs(["waiting", "delayed"]);
   let removedCount = 0;
 
@@ -205,56 +261,10 @@ export async function handleUnsubscribe(leadEmail: string): Promise<void> {
 }
 
 /**
- * Email worker - processes email jobs
- */
-export const emailWorker = new Worker(
-  "email-sequences",
-  async (job: Job<EmailJobData>) => {
-    const { to, templateId, dynamicTemplateData, sequenceId, stepId, leadEmail } = job.data;
-
-    console.log(`[Email Worker] Processing job ${job.id}: ${sequenceId} - ${stepId}`);
-
-    // Send email
-    const result = await sendTemplateEmail({
-      to,
-      templateId,
-      dynamicTemplateData,
-    });
-
-    if (!result.success) {
-      throw new Error(`Failed to send email: ${result.error}`);
-    }
-
-    // Track sent event
-    await trackEmailSent(leadEmail, sequenceId, stepId);
-
-    console.log(`[Email Worker] Sent email ${job.id}: ${result.messageId}`);
-
-    return result;
-  },
-  {
-    connection,
-    concurrency: 5, // Process 5 emails concurrently
-  }
-);
-
-// Worker event handlers
-emailWorker.on("completed", (job) => {
-  console.log(`[Email Worker] Job ${job.id} completed`);
-});
-
-emailWorker.on("failed", (job, err) => {
-  console.error(`[Email Worker] Job ${job?.id} failed:`, err);
-});
-
-emailWorker.on("error", (err) => {
-  console.error("[Email Worker] Error:", err);
-});
-
-/**
  * Get queue statistics
  */
 export async function getQueueStats() {
+  const emailQueue = getQueue();
   const [waiting, active, completed, failed, delayed] = await Promise.all([
     emailQueue.getWaitingCount(),
     emailQueue.getActiveCount(),
@@ -277,6 +287,7 @@ export async function getQueueStats() {
  * Clean up old jobs
  */
 export async function cleanupOldJobs() {
+  const emailQueue = getQueue();
   await emailQueue.clean(86400000, 1000, "completed"); // 24 hours
   await emailQueue.clean(604800000, 1000, "failed"); // 7 days
 }

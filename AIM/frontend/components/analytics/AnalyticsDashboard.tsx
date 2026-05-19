@@ -177,7 +177,7 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
                     cx="50%"
                     cy="50%"
                     outerRadius={100}
-                    label={(entry) => `${entry.tier}: ${entry.percentage.toFixed(1)}%`}
+                    label={(entry) => `${entry.name}: ${((entry.percent ?? 0) * 100).toFixed(1)}%`}
                   >
                     {leadData.tierBreakdown.map((entry: any, index: number) => (
                       <Cell
@@ -390,6 +390,14 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
   );
 }
 
+const STAT_CARD_COLORS = {
+  hot: "bg-red-50 text-red-600 border-red-200",
+  warm: "bg-amber-50 text-amber-600 border-amber-200",
+  cold: "bg-blue-50 text-blue-600 border-blue-200",
+  primary: "bg-sky-50 text-sky-600 border-sky-200",
+  success: "bg-emerald-50 text-emerald-600 border-emerald-200",
+};
+
 // Summary Card Component
 function SummaryCard({
   title,
@@ -398,20 +406,12 @@ function SummaryCard({
 }: {
   title: string;
   value: string | number;
-  color: keyof typeof COLORS;
+  color: keyof typeof STAT_CARD_COLORS;
 }) {
-  const COLORS = {
-    hot: "bg-red-50 text-red-600 border-red-200",
-    warm: "bg-amber-50 text-amber-600 border-amber-200",
-    cold: "bg-blue-50 text-blue-600 border-blue-200",
-    primary: "bg-sky-50 text-sky-600 border-sky-200",
-    success: "bg-emerald-50 text-emerald-600 border-emerald-200",
-  };
-
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-100">
       <p className="text-sm font-semibold text-gray-600 mb-2">{title}</p>
-      <p className={cn("text-3xl font-bold", COLORS[color].split(" ")[1])}>
+      <p className={cn("text-3xl font-bold", STAT_CARD_COLORS[color].split(" ")[1])}>
         {value}
       </p>
     </div>

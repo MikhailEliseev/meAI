@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { getStoredUtm } from "@/components/UTMCapture";
 import {
   contactFormSchema,
   type ContactFormData,
@@ -110,10 +111,16 @@ export function ContactForm({ className }: ContactFormProps) {
 
       // Encrypt sensitive fields
       const encryptionKey = process.env.NEXT_PUBLIC_ENCRYPTION_KEY || "default-key";
+      const utm = getStoredUtm();
       const encryptedData = {
         ...data,
         phone: encryptField(data.phone, encryptionKey),
         email: encryptField(data.email, encryptionKey),
+        utm_source: utm.utm_source || "",
+        utm_medium: utm.utm_medium || "",
+        utm_campaign: utm.utm_campaign || "",
+        utm_term: utm.utm_term || "",
+        utm_content: utm.utm_content || "",
       };
 
       // Submit to API

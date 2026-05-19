@@ -3,8 +3,8 @@ import {
   getSequenceByTier,
   buildTemplateData,
   type EmailSequence,
-  type LeadScore,
 } from "@/lib/email-sequences";
+import { type LeadScore } from "@/lib/lead-scoring";
 import { scheduleEmailSequence } from "@/lib/email-queue";
 
 export const runtime = "nodejs";

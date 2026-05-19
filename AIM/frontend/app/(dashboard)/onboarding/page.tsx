@@ -19,7 +19,7 @@ interface OnboardingSession {
     practice_name: string;
     contact_name: string;
     contact_email: string;
-    baa_envelope_id?: string;
+    consent_doc_id?: string;
     linear_project_id?: string;
     kickoff_call_url?: string;
   };
@@ -36,27 +36,27 @@ export default function OnboardingPage() {
   const stages: OnboardingStage[] = [
     {
       id: "documents",
-      name: "Upload Documents",
+      name: "Загрузка документов",
       status: getStageStatus("documents_uploaded"),
     },
     {
       id: "processing",
-      name: "AI Processing",
+      name: "Обработка AI",
       status: getStageStatus("documents_processed"),
     },
     {
-      id: "baa",
-      name: "Sign BAA",
+      id: "consent",
+      name: "Согласие ФЗ-152",
       status: getStageStatus("baa_signed"),
     },
     {
       id: "project",
-      name: "Project Setup",
+      name: "Настройка проекта",
       status: getStageStatus("project_created"),
     },
     {
       id: "kickoff",
-      name: "Schedule Kickoff",
+      name: "Стартовый звонок",
       status: getStageStatus("kickoff_scheduled"),
     },
   ];
@@ -94,13 +94,13 @@ export default function OnboardingPage() {
       const response = await fetch("/api/onboarding/session");
 
       if (!response.ok) {
-        throw new Error("Failed to load onboarding session");
+        throw new Error("Не удалось загрузить сессию онбординга");
       }
 
       const data = await response.json();
       setSession(data.session);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      setError(err instanceof Error ? err.message : "Неизвестная ошибка");
     } finally {
       setLoading(false);
     }
@@ -120,13 +120,13 @@ export default function OnboardingPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to process documents");
+        throw new Error("Не удалось обработать документы");
       }
 
       // Reload session
       await loadSession();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      setError(err instanceof Error ? err.message : "Неизвестная ошибка");
     }
   }
 
@@ -142,13 +142,13 @@ export default function OnboardingPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
-          <h2 className="text-lg font-bold text-red-900 mb-2">Error</h2>
+          <h2 className="text-lg font-bold text-red-900 mb-2">Ошибка</h2>
           <p className="text-red-700">{error}</p>
           <button
             onClick={loadSession}
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
           >
-            Retry
+            Повторить
           </button>
         </div>
       </div>
@@ -161,10 +161,10 @@ export default function OnboardingPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="font-heading text-3xl font-bold text-gray-900">
-            Welcome to AIM! 👋
+            Добро пожаловать в AIM! 👋
           </h1>
           <p className="mt-2 text-gray-600">
-            Let's get you set up. This should take about 10 minutes.
+            Настроим ваш аккаунт. Это займёт около 10 минут.
           </p>
         </div>
 
@@ -242,16 +242,16 @@ export default function OnboardingPage() {
           {session?.stage === "created" && (
             <div>
               <h2 className="font-heading text-2xl font-bold text-gray-900 mb-4">
-                Step 1: Upload Documents
+                Шаг 1: Загрузка документов
               </h2>
               <p className="text-gray-600 mb-6">
-                Please upload your practice documents so we can set up your account:
+                Загрузите документы вашей клиники для настройки аккаунта:
               </p>
               <ul className="list-disc list-inside text-gray-600 mb-8 space-y-2">
-                <li>Medical license</li>
-                <li>Practice registration certificate</li>
-                <li>Google Analytics access (optional)</li>
-                <li>Ad account credentials (optional)</li>
+                <li>Медицинская лицензия</li>
+                <li>Свидетельство о регистрации юрлица</li>
+                <li>Доступ к Яндекс.Метрике (опционально)</li>
+                <li>Доступ к рекламным кабинетам (опционально)</li>
               </ul>
 
               <DocumentUpload
@@ -265,10 +265,10 @@ export default function OnboardingPage() {
             <div className="text-center py-12">
               <div className="animate-spin h-16 w-16 border-4 border-primary-600 border-t-transparent rounded-full mx-auto mb-4" />
               <h2 className="font-heading text-2xl font-bold text-gray-900 mb-2">
-                Processing Documents...
+                Обработка документов...
               </h2>
               <p className="text-gray-600">
-                Our AI is extracting information from your documents. This usually takes 1-2 minutes.
+                Наш AI извлекает информацию из документов. Обычно занимает 1-2 минуты.
               </p>
             </div>
           )}
@@ -277,10 +277,10 @@ export default function OnboardingPage() {
             <div className="text-center py-12">
               <div className="animate-spin h-16 w-16 border-4 border-primary-600 border-t-transparent rounded-full mx-auto mb-4" />
               <h2 className="font-heading text-2xl font-bold text-gray-900 mb-2">
-                Sending BAA...
+                Отправка согласия ФЗ-152...
               </h2>
               <p className="text-gray-600">
-                We're preparing your HIPAA Business Associate Agreement for signature.
+                Готовим согласие на обработку персональных данных (ФЗ-152) для подписания.
               </p>
             </div>
           )}
@@ -319,10 +319,10 @@ export default function OnboardingPage() {
             <div className="text-center py-12">
               <div className="animate-spin h-16 w-16 border-4 border-primary-600 border-t-transparent rounded-full mx-auto mb-4" />
               <h2 className="font-heading text-2xl font-bold text-gray-900 mb-2">
-                Setting Up Your Project...
+                Настройка проекта...
               </h2>
               <p className="text-gray-600">
-                We're creating your project workspace and sending welcome materials.
+                Создаём рабочее пространство и отправляем приветственные материалы.
               </p>
             </div>
           )}
@@ -341,10 +341,10 @@ export default function OnboardingPage() {
                 />
               </svg>
               <h2 className="font-heading text-2xl font-bold text-gray-900 mb-2">
-                All Set! 🎉
+                Готово! 🎉
               </h2>
               <p className="text-gray-600 mb-6">
-                Your onboarding is complete. We've scheduled your kickoff call.
+                Онбординг завершён. Мы запланировали стартовый звонок.
               </p>
 
               {session.data.kickoff_call_url && (
@@ -354,7 +354,7 @@ export default function OnboardingPage() {
                   rel="noopener noreferrer"
                   className="inline-block px-6 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700"
                 >
-                  Schedule Kickoff Call
+                  Записаться на стартовый звонок
                 </a>
               )}
 
@@ -363,7 +363,7 @@ export default function OnboardingPage() {
                   href={`/projects/${session.data.linear_project_id}`}
                   className="inline-block ml-4 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200"
                 >
-                  View Project
+                  Открыть проект
                 </a>
               )}
             </div>
@@ -373,9 +373,9 @@ export default function OnboardingPage() {
         {/* Help Section */}
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-500">
-            Need help?{" "}
+            Нужна помощь?{" "}
             <a href="mailto:support@iamaim.ru" className="text-primary-600 hover:text-primary-700">
-              Contact Support
+              Связаться с поддержкой
             </a>
           </p>
         </div>
