@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # Per-session locks to serialize concurrent requests (Pitfall 2)
 _session_locks: dict[str, asyncio.Lock] = {}
 
-OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "http://138.16.224.188:20128/v1")
+OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "http://omniroute:20128/v1")
 OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "sk-a10f604cd99e7a50-dd1d5a-56e30050")
 DEFAULT_MODEL = os.getenv("HERMES_MODEL", "deepseek/deepseek-v4-flash")
 
@@ -96,7 +96,7 @@ async def run_agent(
             )
             response = agent.run_conversation(message)
             return {
-                "reply": response.get("response", response.get("content", str(response))),
+                "reply": response.get("final_response", response.get("response", response.get("content", str(response)))),
                 "session_id": agent.session_id,
                 "tool_calls": response.get("tool_calls", []),
             }
