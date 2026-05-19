@@ -276,6 +276,10 @@ from aim.api.analytics import router as analytics_router
 from aim.api.email import router as email_router
 from aim.api.webhooks import router as webhooks_router
 from aim.api.gdpr import router as gdpr_router
+from aim.api.seo import router as seo_router
+from aim.api.content import router as content_router
+from aim.api.ads import router as ads_router
+from aim.api.projects import router as projects_router
 
 # Include API routers
 app.include_router(leads_router)
@@ -284,6 +288,10 @@ app.include_router(analytics_router)
 app.include_router(email_router)
 app.include_router(webhooks_router)
 app.include_router(gdpr_router)
+app.include_router(seo_router)
+app.include_router(content_router)
+app.include_router(ads_router)
+app.include_router(projects_router)
 
 # Performance stats endpoint
 @app.get("/api/performance/stats")
@@ -319,7 +327,11 @@ async def api_status():
             "leads": "/api/leads",
             "onboarding": "/api/onboarding",
             "analytics": "/api/analytics",
-            "email": "/api/email"
+            "email": "/api/email",
+            "seo": "/api/seo",
+            "content": "/api/content",
+            "ads": "/api/ads",
+            "projects": "/api/projects"
         }
     }
 
