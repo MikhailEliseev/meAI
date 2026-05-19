@@ -29,6 +29,16 @@ logger = logging.getLogger(__name__)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
+# OmniRoute as HTTPS proxy for Telegram API (hosting blocks direct 443 to Telegram IPs)
+# NOT set globally — would break AI requests which use OmniRoute as AI gateway (HTTP), not proxy
+def _get_proxy_url() -> str | None:
+    """Build proxy URL from OmniRoute config. Returns None if not configured."""
+    proxy_host = os.getenv("OMNIROUTE_URL", "").replace("http://", "").replace("/", "")
+    proxy_auth = os.getenv("OMNIROUTE_AUTH", "")
+    if proxy_host and proxy_auth:
+        return f"http://{proxy_auth}@{proxy_host}"
+    return None
+
 router = APIRouter(prefix="/telegram", tags=["telegram"])
 
 # In-memory session binding store (move to DB later)
@@ -142,13 +152,14 @@ async def telegram_webhook(request: Request):
 
 # ── Helpers ─────────────────────────────────────────────────────────
 async def _send_telegram_message(chat_id: int, text: str) -> dict:
-    """Send message via Bot API (uses HTTPS_PROXY if set in environment)."""
+    """Send message via Bot API (uses OmniRoute as HTTPS proxy)."""
     if not TELEGRAM_BOT_TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN not configured")
         return {"error": "Bot token not configured"}
 
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    proxy = _get_proxy_url()
+    async with httpx.AsyncClient(timeout=10.0, proxy=proxy) as client:
         response = await client.post(url, json={
             "chat_id": chat_id,
             "text": text[:4096],  # Telegram message limit
@@ -158,12 +169,13 @@ async def _send_telegram_message(chat_id: int, text: str) -> dict:
 
 
 async def _get_updates(offset: int = 0, timeout: int = 30) -> list[dict]:
-    """Fetch pending updates from Telegram via long-polling (uses proxy)."""
+    """Fetch pending updates from Telegram via long-polling (uses OmniRoute as HTTPS proxy)."""
     if not TELEGRAM_BOT_TOKEN:
         return []
 
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
-    async with httpx.AsyncClient(timeout=float(timeout + 10)) as client:
+    proxy = _get_proxy_url()
+    async with httpx.AsyncClient(timeout=float(timeout + 10), proxy=proxy) as client:
         try:
             response = await client.post(url, json={
                 "offset": offset,
