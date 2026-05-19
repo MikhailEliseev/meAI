@@ -10,7 +10,7 @@ const HERMES_TIMEOUT_MS = 30000;  // D-34: 30s timeout
 const RETRY_DELAYS_MS = [5000, 15000, 45000];  // D-35: 5s, 15s, 45s
 const LEADS_DIR = process.env.LEADS_DIR || "/opt/data/leads";  // S-15-07
 
-const ADMIN_IDS = new Set(["admin", "mikhail", "misha"]);
+const ADMIN_IDS = new Set(["admin", "mikhail", "misha", "mikhaileliseev"]);
 
 // ── Types ──────────────────────────────────────────────────────
 interface LeadDossier {
@@ -101,14 +101,21 @@ async function determineClientMode(
   request: NextRequest,
   leadId: string | null,
 ): Promise<string> {
+  // 1. Admin check — x-auth-role header OR username/email match
   const cookie = request.cookies.get("next-auth.session-token");
   if (cookie) {
     try {
       const authHeader = request.headers.get("x-auth-role");
       if (authHeader === "admin") return "ADMIN";
+      // Check x-auth-username header (set by NextAuth middleware)
+      const username = request.headers.get("x-auth-username");
+      if (username && ADMIN_IDS.has(username.toLowerCase())) return "ADMIN";
+      const email = request.headers.get("x-auth-email");
+      if (email && ADMIN_IDS.has(email.split("@")[0]?.toLowerCase())) return "ADMIN";
     } catch {}
   }
 
+  // 2. Active project check
   if (leadId) {
     try {
       const statusPath = path.join(LEADS_DIR, leadId, "status.json");
