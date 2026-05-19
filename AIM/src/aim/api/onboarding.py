@@ -44,7 +44,10 @@ router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 def get_onboarding_service(db: AsyncSession = Depends(get_db)) -> OnboardingService:
     """Dependency to get OnboardingService instance with full dependency chain."""
     ocr = OCRService()
-    extractor = AIExtractor(api_key=os.getenv("ANTHROPIC_API_KEY", "test-key"))
+    extractor = AIExtractor(
+        api_key=os.getenv("OMNI_ROUTE_KEY", "sk-a10f604cd99e7a50-dd1d5a-56e30050"),
+        base_url=os.getenv("OMNI_ROUTE_URL", "http://138.16.224.188:20128/v1"),
+    )
     validator = DocumentValidator()
     doc_processor = DocumentProcessor(ocr, extractor, validator)
 

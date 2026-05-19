@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class LLMProvider(str, Enum):
     """Supported LLM providers."""
+    OMNI_ROUTE = "omni_route"
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
 
