@@ -92,7 +92,7 @@ async def run_agent(
                 enabled_toolsets=["aim-operations"],
                 max_iterations=15,
                 quiet_mode=True,
-                request_overrides={"stream": False, "extra_body": {"thinking": {"type": "disabled"}}},
+                request_overrides={"extra_body": {"thinking": {"type": "disabled"}}},
             )
             response = agent.run_conversation(message)
             return {
