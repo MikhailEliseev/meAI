@@ -42,7 +42,7 @@ RUN mkdir -p data/production logs
 
 # Set Python path
 ENV PATH=/root/.local/bin:$PATH
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/AIM/src
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
