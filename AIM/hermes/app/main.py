@@ -8,8 +8,16 @@ Per D-30: Standard RED metrics (Rate, Errors, Duration) via prometheus-client.
 
 import logging
 import os
+import sys
 import time
 from contextlib import asynccontextmanager
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    stream=sys.stdout,
+)
+logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -18,8 +26,6 @@ from pydantic import BaseModel
 from .auth import verify_api_key
 from .agent_wrapper import run_agent
 from .telegram_gateway import router as telegram_router, start_polling, stop_polling
-
-logger = logging.getLogger(__name__)
 
 # ── Metrics ──────────────────────────────────────────────────────────
 _metrics = {
