@@ -28,6 +28,20 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_ADMIN_CHAT_ID = int(os.getenv("TELEGRAM_ADMIN_CHAT_ID", "0"))
+
+
+def _get_mode(chat_id: int, lead_id: str | None) -> str:
+    """Determine client mode for Telegram messages.
+
+    Admin chat always gets ADMIN mode with full tool access.
+    Active leads get ACTIVE, new chats get PRESALE.
+    """
+    if TELEGRAM_ADMIN_CHAT_ID and chat_id == TELEGRAM_ADMIN_CHAT_ID:
+        return "ADMIN"
+    if lead_id:
+        return "ACTIVE"
+    return "PRESALE"
 
 # Telegram API proxy — hosting in NL blocks Telegram IPs on port 443.
 # Old OmniRoute server at 193.111.152.14 acts as HTTP forward proxy.
@@ -135,7 +149,7 @@ async def telegram_webhook(request: Request):
         # Process message via direct OmniRoute call (D-17: unified chat)
         if chat_id and text:
             lead_id = _chat_lead_map.get(chat_id)
-            mode = "ACTIVE" if lead_id else "PRESALE"
+            mode = _get_mode(chat_id, lead_id)
 
             reply = _call_omniroute_direct(mode=mode, user_message=text)
             await _send_telegram_message(chat_id, reply)
@@ -202,7 +216,7 @@ def _get_updates_sync(offset: int = 0, timeout: int = 30) -> list[dict]:
 def _process_update_sync(message_data: dict, chat_id: int, text: str):
     """Process update via direct OmniRoute call — synchronous, for polling thread."""
     lead_id = _chat_lead_map.get(chat_id)
-    mode = "ACTIVE" if lead_id else "PRESALE"
+    mode = _get_mode(chat_id, lead_id)
 
     logger.info(f"Processing tg message: chat_id={chat_id} mode={mode} text={text[:80]}")
     reply = _call_omniroute_direct(mode=mode, user_message=text)
