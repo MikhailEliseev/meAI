@@ -1,0 +1,13 @@
+# Hermes Agent — AI agent framework (Nous Research v0.14.0)
+hermes-agent==0.14.0
+
+# HTTP client for AIM API calls (bundled in Hermes core, explicit pin for reproducibility)
+httpx==0.28.1
+
+# Telethon for Telegram user-client (outgoing messages + channel search)
+telethon>=1.39.0,<2.0.0
+
+# Additional runtime deps
+pydantic==2.12.5
+tenacity==9.1.4
+pyyaml==6.0.3
