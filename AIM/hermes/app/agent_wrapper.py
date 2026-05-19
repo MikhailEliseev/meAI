@@ -92,6 +92,7 @@ async def run_agent(
                 enabled_toolsets=["aim-operations"],
                 max_iterations=15,
                 quiet_mode=True,
+                reasoning_config={"type": "disabled"},  # DeepSeek V4: disable reasoning to avoid timeout
             )
             response = agent.run_conversation(message)
             return {
