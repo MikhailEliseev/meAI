@@ -43,7 +43,7 @@ async def run_content_analysis(payload: dict):
 
         database_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./AIM/data/aim.db")
         event_bus = EventBus()
-        await event_bus.start()
+        await event_bus.initialize()
 
         orchestrator = CIOrchestrator(
             agent_id="hermes-content-api",
