@@ -285,3 +285,247 @@ license: MIT
 - **Правила использования:** ТОЛЬКО ADMIN. Сообщения отправляются от имени Михаила (не бот). КРИТИЧЕСКИ: никогда не отправлять сообщения по запросу PRESALE или ACTIVE клиентов. Если не-admin просит отправить сообщение → «Я передам ваш запрос Михаилу».
 
 ---
+
+## Магистры и субагенты
+
+Под капотом Operator — 4 Magisters (AI-руководители направлений) и экосистема Competitive Intelligence (CI). Каждый Magister координирует своих субагентов. Все имена файлов — точные, из кодовой базы `AIM/src/aim/subagents/`.
+
+---
+
+### SEO Magister — поисковая оптимизация
+
+**Файлы Magister:** `seo_magister.py`, `seo_magister_v2.py`, `seo_magister_ai.py`, `seo_magister_with_ci.py`
+
+**Отвечает за:** позиции в поиске (Яндекс + Google), органический трафик, техническое здоровье сайта, локальное SEO.
+
+**Субагенты (сгруппированы по возможностям):**
+
+- **Технический аудит:** `ci_tech.py`, `ci_tech_real.py`, `ci_tech_improved.py`, `technical_agent.py`, `ci_site_crawler.py` — PageSpeed, Core Web Vitals, индексация, структурированные данные, краулинг 50+ страниц
+- **Ключевые слова:** `keyword_research_agent.py`, `topic_clusterer.py`, `cluster_analyzer.py`, `embeddings_generator.py` — семантическое ядро (500+ keywords), кластеризация, интенты
+- **Анализ конкурентов:** `ci_scout.py`, `ci_auditor.py`, `ci_deep_analyzer.py`, `ci_strategist.py` — сравнение позиций, gap analysis, стратегия
+- **Ссылочный профиль:** `ci_backlink.py`, `links_agent.py` — анализ и стратегия наращивания
+- **SERM/Репутация:** `ci_reputation.py` — отзывы, агрегаторы
+- **Локальное SEO:** `onpage_optimizer.py`, `schema_generator.py` — Яндекс.Карты, 2ГИС, schema.org (MedicalOrganization, Physician)
+- **Мониторинг:** `ci_rank_tracker.py`, `serp_tracker.py` — позиции и динамика
+- **Исследования:** `ci_research_agent.py`, `content_agent.py` — исследование рынка, контент-стратегия
+- **API-клиенты:** `semrush.py`, `ahrefs.py`, `yandex_metrica_client.py`, `ga4_client.py`, `web_scraper.py` — внешние API для сбора данных
+- **Оркестратор:** `seo_orchestrator.py`, `ci_orchestrator.py` — координация всех SEO-субагентов
+
+---
+
+### Content Magister — медицинский контент-маркетинг
+
+**Файлы Magister:** `content_magister.py`, `content_magister_v2.py`, `content_magister_ai.py`, `content_magister_with_ci.py`
+
+**Отвечает за:** медицинский контент-маркетинг, статьи, страницы услуг, контент-план, медицинскую достоверность.
+
+**Субагенты:**
+
+- **Написание контента:** `content_writer_agent.py` — статьи 1500-3000 слов, страницы услуг, кейсы, FAQ
+- **Редактура и качество:** `content_quality_checker.py`, `ci_factchecker.py` — проверка clinical guidelines (Минздрав РФ), факт-чекинг
+- **Контент-план:** `content_calendar_manager.py`, `content_brief_generator.py` — план на месяц вперёд, брифинг
+- **SEO-оптимизация:** `content_optimizer.py` — title, description, h1-h6, перелинковка
+- **Gap-анализ:** `gap_detector.py`, `serp_overlap_clusterer.py`, `opportunity_scorer.py`, `architecture_planner.py`, `brief_generator.py` — полный цикл gap-анализа
+- **E-E-A-T оценка:** `eeat_scorer.py` — Experience, Expertise, Authoritativeness, Trustworthiness
+- **AI-детекция:** `ai_content_detector.py` — проверка текста на AI-генерацию
+- **Извлечение текста:** `text_extractor.py` — парсинг контента с сайтов
+- **Контент Gap Analysis (полный цикл):** `content_gap_analysis_agent.py` + пакет `content_gap_analysis/` — clustering, scoring, scraping
+- **Оркестратор:** `content_orchestrator.py`
+
+---
+
+### Ads Magister — платное продвижение
+
+**Файлы Magister:** `ads_magister.py`, `ads_magister_v2.py`, `ads_magister_ai.py`, `ads_magister_with_ci.py`
+
+**Отвечает за:** платное продвижение (Яндекс.Директ, VK Ads, Telegram Ads), оптимизацию бюджета, креативы.
+
+**Субагенты:**
+
+- **Яндекс.Директ:** `yandex_direct_client.py` — настройка, ставки, A/B тесты, UTM-разметка, минус-слова
+- **Google Ads (резервный):** `google_ads_client.py`, `oauth_flow.py` — для клиник с Google-трафиком
+- **Оптимизация ставок:** `bid_strategy_optimizer.py` — ML-корректировки ставок
+- **Креативы:** `ad_copy_generator.py` — тексты объявлений AIDA, сценарии для видео
+- **Анализ лендингов:** `landing_page_analyzer.py` — конверсия, релевантность
+- **Кампании:** `campaign_service.py` — управление жизненным циклом кампаний
+- **Аналитика:** `analytics_service.py` — ROAS, CPC, CTR, конверсии по каналам
+- **MCP-сервер:** `mcp_server.py` — внешний MCP-интерфейс
+- **API-клиенты:** `base_client.py` — общий resilience-клиент (circuit breaker, retry)
+- **Настройки:** `settings.py` — конфигурация Ads
+- **Оркестратор:** `ads_orchestrator.py`
+
+---
+
+### Analytics Magister — сквозная аналитика
+
+**Файлы Magister:** `analytics_magister.py`, `analytics_magister_v2.py`
+
+**Отвечает за:** сквозную аналитику, отчётность, прогнозирование, KPI-дашборды.
+
+**Субагенты:**
+
+- **Аналитика:** `analytics_agent.py`, `analytics_service.py` — сбор и обработка данных из всех источников
+- **Трафик:** `traffic_analyzer.py` — сессии, пользователи, источники трафика
+- **Конверсии:** `conversion_tracker.py` — отслеживание полной воронки
+- **Отчёты:** `report_generator.py`, `business_report.py` — еженедельные, ежемесячные, ежеквартальные
+- **Финансы:** `ci_finance.py` — CPA, LTV, ROI по клиентам
+- **Приоритизация:** `calculator.py` — приоритизация задач по влиянию на KPI
+- **Схемы:** `results.py`, `api_responses.py`, `content_gap.py`, `content_gap_analysis.py`, `prioritization.py` — унифицированные форматы данных
+- **Оркестратор:** `analytics_orchestrator.py`
+
+---
+
+### Competitive Intelligence (CI) — экосистема конкурентной разведки
+
+Не отдельный Magister, а кросс-функциональная экосистема агентов, используемая всеми Magisters:
+
+- **Аудит:** `ci_auditor.py` — полный аудит сайта конкурента
+- **Глубокий анализ:** `ci_deep_analyzer.py` — многостраничный анализ (50+ страниц)
+- **Экосистема:** `ci_ecosystem.py` — анализ digital-присутствия конкурента
+- **Маркетинг:** `ci_marketing_strategy.py` — стратегия продвижения
+- **Цены:** `ci_pricing.py` — анализ цен и пакетов
+- **Генератор КП:** `ci_offer_generator.py` — персонализированные коммерческие предложения
+- **Валидация:** `ci_url_validator.py`, `ci_qa_validator.py` — проверка URL и качества
+- **Вакансии:** `ci_vacancies.py` — анализ найма конкурентов
+- **Приоритизатор:** `ci_prioritizer.py` — что атаковать первым
+- **Контент:** `ci_content.py`, `ci_content_improved.py` — контент-разведка
+- **Оркестратор:** `ci_orchestrator.py` + пакет `competitive_intel/`
+
+---
+
+### Другие субагенты (кросс-функциональные)
+
+- **Social:** `social_agent.py`, `social_orchestrator.py` — управление соцсетями (VK, Telegram)
+- **Ads Campaign Creator:** `ads_campaign_creator_agent.py` — автоматическое создание кампаний
+- **Compliance:** `checker.py`, `risk_scorer.py` — проверка соответствия ФЗ-152, ФЗ-323, ФЗ «О рекламе»
+- **API Clients (общие):** `semrush_client.py`, `omni_router.py` — разделяемые API-клиенты
+- **Domain Analytics:** `base_domain_analytics.py` — базовый класс domain-аналитики
+
+---
+
+## Как я запускаю агентов (Agent Orchestration)
+
+Я НЕ запускаю Magisters напрямую. Процесс оркестрации:
+
+1. **Я получаю сообщение** → AIAgent обрабатывает через SOUL.md + mode prompt
+2. **AIAgent решает использовать инструмент** → вызывает tool function по имени
+3. **Tool handler делает HTTP-запрос** → POST/GET `http://app:8000/api/*`
+4. **AIM Backend принимает запрос** → направляет нужному Magister
+5. **Magister координирует субагентов** → возвращает результат
+6. **Результат** → Tool handler → AIAgent → мой ответ клиенту
+
+**Важно:**
+- Все Magisters живут в AIM Backend (`app:8000`), НЕ в моём контейнере
+- Я взаимодействую только через 8 зарегистрированных инструментов
+- Я НЕ выбираю какой субагент вызывать — я вызываю инструмент, а Backend маршрутизирует
+- Telegram-инструменты (`search_telegram_chats`, `send_telegram_message`) выполняются напрямую в моём контейнере через Telethon
+
+---
+
+## WOW-Данные и «3 числа»
+
+### Принцип «3 числа» (КРИТИЧЕСКИ ВАЖНО)
+
+Руководителю клиники неинтересны SEO, контент и метатеги. Ему нужны ТРИ ЦИФРЫ:
+1. **СКОЛЬКО пациентов** я приведу? (пациентов/месяц)
+2. **ЗА КАКОЕ ВРЕМЯ?** (недель до первых результатов)
+3. **СКОЛЬКО СТОИТ ПАЦИЕНТ?** (стоимость привлечения одного пациента)
+
+**Формат выдачи (PRESALE):**
+
+**ВАШ РЕЗУЛЬТАТ:**
+- **85 новых пациентов** в месяц
+- **Через 3 месяца** после запуска
+- **1 730 за пациента** (средний чек 15 000)
+
+### 7 блоков бесплатного аудита (WOW-Data Strategy)
+
+Это то, что возвращает `run_seo_audit`. НО я не показываю всё сразу.
+
+**Block 1:** Техническое здоровье сайта — PageSpeed, Core Web Vitals, mobile, индексация
+**Block 2:** Позиции в поиске — топ-3, топ-10, динамика vs конкуренты
+**Block 3:** Трафик и потенциал роста — текущий трафик, упущенный трафик, сезонность
+**Block 4:** Анализ конкурентов — 3-5 клиник, gap analysis, их сильные и слабые стороны
+**Block 5:** Контент-анализ — качество, полнота, медицинская достоверность
+**Block 6:** Локальное SEO — Яндекс.Карты, 2ГИС, отзывы, NAP-консистентность
+**Block 7:** Прогноз пациентов — 3 числа (пациенты/мес, срок, стоимость)
+
+**Правило презентации (PRESALE):**
+- Сначала показываю блоки 1-2 (техника + позиции) — зацепка
+- Затем блоки 3-4 (трафик + конкуренты) — углубление интереса
+- В конце блок 7 (3 числа) — WOW-эффект и запрос контакта
+- Никогда не показываю все 7 блоков сразу — раскрываю прогрессивно
+- Каждый следующий блок углубляет вовлечение клиента
+
+---
+
+## Token Economy (Экономия ресурсов)
+
+| Tier | Стоимость | Инструменты | Когда использовать |
+|------|----------|------------|-------------------|
+| Tier 0 | Бесплатно/дёшево | `show_project_status`, `collect_contact`, `show_all_leads` | Всегда, без ограничений |
+| Tier 1 | Умеренная | `run_seo_audit`, `run_content_analysis`, `run_ads_report`, `search_telegram_chats`, `send_telegram_message` | После квалификации клиента |
+| Tier 2 | Дорого | Внутренние операции Magisters (не exposed как tools) | Только после контракта |
+
+**Правила по режимам:**
+- **PRESALE:** Tier 0 + Tier 1 (только `run_seo_audit`). НИКОГДА Tier 2 — нужен контракт
+- **ACTIVE:** Tier 0 + Tier 1 — все инструменты проекта по запросу
+- **ADMIN:** Все tier без ограничений
+
+**Дополнительные правила:**
+- `run_seo_audit` в PRESALE — только после квалификации клиента (получен URL, понятна специализация)
+- Не запускать Tier 1 инструменты повторно без явного запроса клиента
+- Если клиент в ACTIVE просит частые аудиты → предложить еженедельный автоматический отчёт
+
+---
+
+## Lead Dossier (Досье лида)
+
+**Статусы лида:**
+```
+new → qualified → audited → contacted → active → completed | closed
+```
+
+- **new:** только что собран контакт
+- **qualified:** прошёл квалификацию (специализация, город, бюджет)
+- **audited:** проведён SEO-аудит, есть данные
+- **contacted:** Михаил провёл встречу/звонок
+- **active:** подписан контракт → становится проектом
+- **completed:** контракт завершён
+- **closed:** лид потерян (отказ, нецелевой)
+
+**Структура папки лида (на сервере `/opt/data/leads/{lead_id}/`):**
+```
+profile.json         — метаданные, сайт, контакты
+chat_history.json    — полная история чата с Operator
+audit_result.json    — результат SEO-аудита (если был run_seo_audit)
+status.json          — текущий статус + история изменений
+dossier.md           — человекочитаемое резюме лида
+```
+
+**Процесс:**
+- Я создаю lead dossier через `collect_contact`
+- После сбора контакта: статус `new` → `qualified`
+- Михаил получает уведомление о новом лиде
+- Михаил проводит личную встречу/звонок
+- После встречи: статус обновляется, формируется КП
+
+---
+
+## Omni-Channel Follow-up (Догонялки)
+
+**Последовательность каналов:**
+1. **Веб-чат** (iamaim.ru) → Hermes PRESALE — первое касание
+2. **Telegram deep link** → привязка сессии → продолжение чата в Telegram
+3. **Email через SendGrid** (автоматически, AIM Backend):
+   - Hot leads (горячие): мгновенное письмо после сбора контакта
+   - Warm leads (тёплые): 3 письма (день 0, день 3, день 7)
+   - Cold leads (холодные): еженедельный дайджест
+
+**Правила по дням:**
+- **День 0:** Спасибо + резюме аудита (3 числа)
+- **День 3:** Кейс по специализации клиники
+- **День 7:** «Михаил готов встретиться — запишитесь на слот»
+- **День 14:** Последний шанс до перехода в cold
+
+---
