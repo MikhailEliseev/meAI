@@ -39,7 +39,7 @@ COPY scripts ./scripts
 COPY AIM/.env.production .env
 
 # Create data directory
-RUN mkdir -p data/production logs
+RUN mkdir -p data/production logs AIM/data AIM/reports
 
 # Set Python path
 ENV PATH=/root/.local/bin:$PATH
