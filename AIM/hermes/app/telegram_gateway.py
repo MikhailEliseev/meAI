@@ -19,6 +19,8 @@ import hashlib
 import hmac
 import logging
 import os
+import time
+from concurrent.futures import Future
 from typing import Optional
 
 import httpx
@@ -29,9 +31,8 @@ logger = logging.getLogger(__name__)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
-# Telegram proxy — separate from AI gateway (OmniRoute /v1 only does LLM API, not proxy)
-# Old OmniRoute at 193.111.152.14:7451 still acts as HTTP proxy for outbound 443
-# Hosting blocks direct 443 to Telegram IPs, so we proxy via this
+# Telegram API proxy — hosting in NL blocks Telegram IPs on port 443.
+# Old OmniRoute server at 193.111.152.14 acts as HTTP forward proxy.
 TELEGRAM_PROXY_URL = os.getenv("TELEGRAM_PROXY_URL", "http://193.111.152.14:7451")
 TELEGRAM_PROXY_AUTH = os.getenv("TELEGRAM_PROXY_AUTH", "U9pjtK:hxtlqz")
 
@@ -45,6 +46,7 @@ def _get_proxy_url() -> str | None:
         return f"http://{TELEGRAM_PROXY_AUTH}@{host}"
     return None
 
+
 router = APIRouter(prefix="/telegram", tags=["telegram"])
 
 # In-memory session binding store (move to DB later)
@@ -55,7 +57,7 @@ _session_bindings: dict[str, str] = {}
 _chat_lead_map: dict[int, str] = {}
 
 # Polling control
-_polling_task: Optional[asyncio.Task] = None
+_polling_future: Optional[Future] = None
 _polling_stop = False
 _last_update_id: int = 0
 
@@ -148,7 +150,7 @@ async def telegram_webhook(request: Request):
 
             reply = result.get("reply", "")
             if isinstance(reply, dict):
-                reply = reply.get("response", reply.get("content", str(reply)))
+                reply = reply.get("final_response", reply.get("response", reply.get("content", str(reply))))
 
             await _send_telegram_message(chat_id, str(reply))
             return {"status": "replied"}
@@ -158,32 +160,45 @@ async def telegram_webhook(request: Request):
 
 # ── Helpers ─────────────────────────────────────────────────────────
 async def _send_telegram_message(chat_id: int, text: str) -> dict:
-    """Send message via Bot API (uses OmniRoute as HTTPS proxy)."""
+    """Send message via Bot API. Async version for webhook."""
+    return _send_telegram_message_sync(chat_id, text)
+
+
+def _send_telegram_message_sync(chat_id: int, text: str) -> dict:
+    """Send message via Bot API — synchronous, for use in thread."""
     if not TELEGRAM_BOT_TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN not configured")
         return {"error": "Bot token not configured"}
 
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     proxy = _get_proxy_url()
-    async with httpx.AsyncClient(timeout=10.0, proxy=proxy) as client:
-        response = await client.post(url, json={
-            "chat_id": chat_id,
-            "text": text[:4096],  # Telegram message limit
-            "parse_mode": "HTML",
-        })
-        return response.json()
+    try:
+        with httpx.Client(timeout=10.0, proxy=proxy) as client:
+            response = client.post(url, json={
+                "chat_id": chat_id,
+                "text": text[:4096],
+                "parse_mode": "HTML",
+            })
+            return response.json()
+    except Exception as e:
+        logger.error(f"sendMessage failed: {e}")
+        return {"error": str(e)}
 
 
 async def _get_updates(offset: int = 0, timeout: int = 30) -> list[dict]:
-    """Fetch pending updates from Telegram via long-polling (uses OmniRoute as HTTPS proxy)."""
+    """Fetch pending updates from Telegram via long-polling. Async version for webhook."""
+    return _get_updates_sync(offset, timeout)
+
+
+def _get_updates_sync(offset: int = 0, timeout: int = 30) -> list[dict]:
+    """Fetch pending updates from Telegram via long-polling — synchronous, for thread."""
     if not TELEGRAM_BOT_TOKEN:
         return []
-
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
     proxy = _get_proxy_url()
-    async with httpx.AsyncClient(timeout=float(timeout + 10), proxy=proxy) as client:
-        try:
-            response = await client.post(url, json={
+    try:
+        with httpx.Client(timeout=float(timeout + 10), proxy=proxy) as client:
+            response = client.post(url, json={
                 "offset": offset,
                 "timeout": timeout,
                 "allowed_updates": ["message", "callback_query"],
@@ -193,13 +208,32 @@ async def _get_updates(offset: int = 0, timeout: int = 30) -> list[dict]:
                 return data.get("result", [])
             logger.error(f"getUpdates error: {data}")
             return []
-        except Exception as e:
-            logger.error(f"getUpdates failed: {e}")
-            return []
+    except Exception as e:
+        logger.error(f"getUpdates failed: {e}")
+        return []
 
 
-async def _process_update(message_data: dict, chat_id: int, text: str):
-    """Process a single incoming message through Hermes Operator (D-17)."""
+def _process_update_sync(message_data: dict, chat_id: int, text: str):
+    """Process a single incoming message through Hermes Operator — synchronous, for thread."""
+    import asyncio as asyncio_mod
+
+    lead_id = _chat_lead_map.get(chat_id)
+    mode = "ACTIVE" if lead_id else "PRESALE"
+
+    # run_agent is async, so we need a temporary event loop in this thread
+    try:
+        loop = asyncio_mod.get_running_loop()
+        # We're in the main thread's event loop — should not happen in sync mode
+        logger.warning("_process_update_sync called from async context, using create_task")
+        asyncio_mod.create_task(_process_update_async(message_data, chat_id, text))
+    except RuntimeError:
+        # No running loop — create one for this thread
+        result = asyncio_mod.run(_process_update_async(message_data, chat_id, text))
+        return result
+
+
+async def _process_update_async(message_data: dict, chat_id: int, text: str):
+    """Process update via Hermes Operator (shared by sync and async paths)."""
     from .agent_wrapper import run_agent
 
     lead_id = _chat_lead_map.get(chat_id)
@@ -213,25 +247,33 @@ async def _process_update(message_data: dict, chat_id: int, text: str):
 
     reply = result.get("reply", "")
     if isinstance(reply, dict):
-        reply = reply.get("response", reply.get("content", str(reply)))
+        reply = reply.get("final_response", reply.get("response", reply.get("content", str(reply))))
 
-    await _send_telegram_message(chat_id, str(reply))
+    _send_telegram_message_sync(chat_id, str(reply))
 
 
-async def _polling_loop():
-    """Background task: poll Telegram for updates via getUpdates.
+async def _process_update(message_data: dict, chat_id: int, text: str):
+    """Process a single incoming message through Hermes Operator (D-17). Async wrapper."""
+    await _process_update_async(message_data, chat_id, text)
+
+
+def _polling_loop_sync():
+    """Background thread: poll Telegram for updates via getUpdates.
+
+    Runs in a separate OS thread via run_in_executor to avoid
+    httpx proxy connections blocking the uvicorn event loop.
 
     Uses long-polling (timeout=30s) to reduce request count.
     Reconnects on error with 5s backoff.
     """
     global _last_update_id, _polling_stop
 
-    logger.info("Telegram polling started (getUpdates via proxy)")
+    logger.info("Telegram polling started (getUpdates, sync thread)")
     consecutive_errors = 0
 
     while not _polling_stop:
         try:
-            updates = await _get_updates(offset=_last_update_id + 1, timeout=30)
+            updates = _get_updates_sync(offset=_last_update_id + 1, timeout=30)
             consecutive_errors = 0
 
             for update in updates:
@@ -261,39 +303,50 @@ async def _polling_loop():
                             if lead_id:
                                 _chat_lead_map[chat_id] = lead_id
                                 logger.info(f"Session bound: chat_id={chat_id} -> lead_id={lead_id}")
-                                await _send_telegram_message(
+                                _send_telegram_message_sync(
                                     chat_id,
                                     "✅ Ваш чат привязан к аккаунту AIM. Оператор готов ответить на ваши вопросы."
                                 )
                                 continue
 
                 # Process through Hermes Operator
-                await _process_update(message, chat_id, text)
+                _process_update_sync(message, chat_id, text)
 
         except Exception as e:
             consecutive_errors += 1
             backoff = min(5 * consecutive_errors, 60)
             logger.error(f"Polling error (attempt {consecutive_errors}, backoff {backoff}s): {e}")
-            await asyncio.sleep(backoff)
+            time.sleep(backoff)
 
     logger.info("Telegram polling stopped")
 
 
 def start_polling():
-    """Start the Telegram polling background task. Called from lifespan startup."""
-    global _polling_task, _polling_stop
+    """Start Telegram polling in a separate thread via run_in_executor.
+
+    Called from the first /health request AFTER uvicorn has bound to port 8000.
+    Using run_in_executor (separate OS thread) guarantees Telegram API calls
+    never block the uvicorn event loop.
+    """
+    global _polling_future, _polling_stop
+    if _polling_future is not None and not _polling_future.done():
+        logger.warning("Polling already running, skipping start")
+        return
     _polling_stop = False
-    _polling_task = asyncio.create_task(_polling_loop())
+    loop = asyncio.get_running_loop()
+    _polling_future = loop.run_in_executor(None, _polling_loop_sync)
 
 
 async def stop_polling():
-    """Stop the Telegram polling background task. Called from lifespan shutdown."""
-    global _polling_stop, _polling_task
+    """Stop the Telegram polling thread. Called from on_event("shutdown")."""
+    global _polling_stop, _polling_future
     _polling_stop = True
-    if _polling_task:
-        _polling_task.cancel()
+    if _polling_future:
+        _polling_future.cancel()  # no-op for running threads, but marks cancelled
         try:
-            await _polling_task
-        except asyncio.CancelledError:
+            await asyncio.get_running_loop().run_in_executor(
+                None, lambda: _polling_future.result(timeout=5) if not _polling_future.done() else None
+            )
+        except Exception:
             pass
-        _polling_task = None
+        _polling_future = None
