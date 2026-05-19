@@ -33,6 +33,7 @@ COPY --from=builder /root/.local /root/.local
 
 # Copy application code
 COPY AIM/src/aim ./AIM/src/aim
+COPY src/meai ./src/meai
 COPY AIM/obsidian ./AIM/obsidian
 COPY scripts ./scripts
 COPY AIM/.env.production .env
@@ -42,7 +43,7 @@ RUN mkdir -p data/production logs
 
 # Set Python path
 ENV PATH=/root/.local/bin:$PATH
-ENV PYTHONPATH=/app/AIM/src
+ENV PYTHONPATH=/app/AIM/src:/app
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
