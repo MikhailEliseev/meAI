@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createYuKassaClient } from "@/lib/payment/yukassa-client";
-import { generateInvoice } from "@/lib/payment/invoice-generator";
-import type {
-  PaymentRequest,
-  InvoiceGenerateRequest,
-} from "@/lib/payment/yukassa-client";
+import { generateInvoice, type InvoiceGenerateRequest } from "@/lib/payment/invoice-generator";
+import type { PaymentRequest } from "@/lib/payment/yukassa-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,10 +9,7 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/payment/create
  *
- * Create payment and invoice
- *
- * STUB: Uses mock ЮKassa client
- * Real implementation in Phase 12
+ * Создание платежа и счёта через ЮKassa API.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -51,6 +45,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         invoice_id: invoice.id,
         invoice_number: invoice.number,
         customer_email: invoice.customer.email,
+        customer_name: invoice.customer.name,
+        clinic_name: invoice.customer.name,
+        plan: body.plan || "starter",
+        trigger_onboarding: body.triggerOnboarding ? "true" : "false",
       },
       capture: true, // Auto-capture
       confirmation: {
@@ -103,7 +101,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  * Get payment creation form data (pricing plans)
  */
 export async function GET(): Promise<NextResponse> {
-  // Mock pricing plans
+  // Pricing plans
   const plans = [
     {
       id: "starter",

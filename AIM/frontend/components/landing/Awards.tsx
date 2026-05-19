@@ -49,36 +49,11 @@ interface AwardsProps {
 export function Awards({ className }: AwardsProps) {
   const awards = caseStudiesData.awards;
 
-  // Schema.org markup for organization
-  const schemaMarkup = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "AIM Agency",
-    "url": "https://iamaim.ru",
-    "description": "AI-первое медицинское маркетинговое агентство",
-    "award": awards.map((award) => award.title),
-    "knowsAbout": [
-      "Медицинский маркетинг",
-      "AI-маркетинг",
-      "SEO для клиник",
-      "Яндекс.Директ",
-      "Контент-маркетинг"
-    ],
-    "areaServed": {
-      "@type": "Country",
-      "name": "Россия"
-    }
-  };
-
   return (
     <section
       className={cn("py-20 px-4 bg-gradient-to-b from-gray-50 to-white", className)}
       aria-labelledby="awards-heading"
     >
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaMarkup) }}
-      />
 
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}

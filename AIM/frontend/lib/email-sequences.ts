@@ -223,23 +223,32 @@ export function calculateSendTimes(sequence: EmailSequence, startTime: Date = ne
 export interface EmailTemplateData {
   // Lead data
   name: string;
-  clinicName: string;
-  specialty: string;
+  clinicName?: string;
+  specialty?: string;
 
   // Score data
-  score: number;
-  tier: string;
-  confidence: number;
+  score?: number;
+  tier?: string;
+  confidence?: number;
 
   // Personalization
-  similarClinic?: string; // Similar clinic name for case study
-  growthPercent?: number; // Growth percentage for case study
-  recommendations?: string[]; // Top recommendations
+  similarClinic?: string;
+  growthPercent?: number;
+  recommendations?: string[];
 
   // Links
-  calendarLink?: string; // Meeting booking link
-  roiCalculatorLink?: string; // ROI calculator link
-  unsubscribeLink?: string; // Unsubscribe link
+  calendarLink?: string;
+  roiCalculatorLink?: string;
+  unsubscribeLink?: string;
+
+  // Payment data (transactional emails)
+  amount?: string;
+  currency?: string;
+  paymentId?: string;
+  refundId?: string;
+  invoiceNumber?: string;
+  reason?: string;
+  date?: string;
 }
 
 /**
