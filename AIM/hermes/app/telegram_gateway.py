@@ -15,8 +15,6 @@ web_session_id → bot receives /start command with web_session_id parameter
 """
 
 import asyncio
-import hashlib
-import hmac
 import logging
 import os
 import time
@@ -134,25 +132,13 @@ async def telegram_webhook(request: Request):
                         )
                         return {"status": "bound", "lead_id": lead_id}
 
-        # Process message through Hermes Operator (D-17: unified chat)
+        # Process message via direct OmniRoute call (D-17: unified chat)
         if chat_id and text:
-            from .agent_wrapper import run_agent
-
             lead_id = _chat_lead_map.get(chat_id)
             mode = "ACTIVE" if lead_id else "PRESALE"
 
-            # Route through the same Operator that handles web chat
-            result = await run_agent(
-                message=text,
-                session_id=f"tg_{chat_id}",
-                mode=mode,
-            )
-
-            reply = result.get("reply", "")
-            if isinstance(reply, dict):
-                reply = reply.get("final_response", reply.get("response", reply.get("content", str(reply))))
-
-            await _send_telegram_message(chat_id, str(reply))
+            reply = _call_omniroute_direct(mode=mode, user_message=text)
+            await _send_telegram_message(chat_id, reply)
             return {"status": "replied"}
 
     return {"status": "ok"}
@@ -214,47 +200,26 @@ def _get_updates_sync(offset: int = 0, timeout: int = 30) -> list[dict]:
 
 
 def _process_update_sync(message_data: dict, chat_id: int, text: str):
-    """Process a single incoming message through Hermes Operator — synchronous, for thread."""
-    import asyncio as asyncio_mod
-
+    """Process update via direct OmniRoute call — synchronous, for polling thread."""
     lead_id = _chat_lead_map.get(chat_id)
     mode = "ACTIVE" if lead_id else "PRESALE"
 
-    # run_agent is async, so we need a temporary event loop in this thread
-    try:
-        loop = asyncio_mod.get_running_loop()
-        # We're in the main thread's event loop — should not happen in sync mode
-        logger.warning("_process_update_sync called from async context, using create_task")
-        asyncio_mod.create_task(_process_update_async(message_data, chat_id, text))
-    except RuntimeError:
-        # No running loop — create one for this thread
-        result = asyncio_mod.run(_process_update_async(message_data, chat_id, text))
-        return result
+    logger.info(f"Processing tg message: chat_id={chat_id} mode={mode} text={text[:80]}")
+    reply = _call_omniroute_direct(mode=mode, user_message=text)
+    _send_telegram_message_sync(chat_id, reply)
 
 
-async def _process_update_async(message_data: dict, chat_id: int, text: str):
-    """Process update via Hermes Operator (shared by sync and async paths)."""
-    from .agent_wrapper import run_agent
+def _call_omniroute_direct(mode: str, user_message: str) -> str:
+    """Call OmniRoute directly (no AIAgent) — avoids streaming issues."""
+    from .omniroute_direct import chat
+    from .agent_wrapper import get_mode_prompt
 
-    lead_id = _chat_lead_map.get(chat_id)
-    mode = "ACTIVE" if lead_id else "PRESALE"
-
-    result = await run_agent(
-        message=text,
-        session_id=f"tg_{chat_id}",
-        mode=mode,
-    )
-
-    reply = result.get("reply", "")
-    if isinstance(reply, dict):
-        reply = reply.get("final_response", reply.get("response", reply.get("content", str(reply))))
-
-    _send_telegram_message_sync(chat_id, str(reply))
-
-
-async def _process_update(message_data: dict, chat_id: int, text: str):
-    """Process a single incoming message through Hermes Operator (D-17). Async wrapper."""
-    await _process_update_async(message_data, chat_id, text)
+    system_prompt = get_mode_prompt(mode)
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_message},
+    ]
+    return chat(messages)
 
 
 def _polling_loop_sync():
