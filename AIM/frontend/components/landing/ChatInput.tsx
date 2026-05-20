@@ -4,11 +4,19 @@ import React, { useState, useRef, useEffect } from "react";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
+  onStop?: () => void;
   disabled?: boolean;
+  isStreaming?: boolean;
   placeholder?: string;
 }
 
-export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
+export function ChatInput({
+  onSend,
+  onStop,
+  disabled,
+  isStreaming,
+  placeholder,
+}: ChatInputProps) {
   const [value, setValue] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -48,21 +56,36 @@ export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
                    placeholder:text-gray-400"
         aria-label="Сообщение"
       />
-      <button
-        onClick={handleSubmit}
-        disabled={disabled || !value.trim()}
-        className="shrink-0 w-10 h-10 rounded-xl bg-primary-600 text-white
-                   flex items-center justify-center
-                   hover:bg-primary-700 active:scale-95
-                   disabled:bg-gray-300 disabled:cursor-not-allowed
-                   transition-all duration-200"
-        aria-label="Отправить"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="19" x2="12" y2="5" />
-          <polyline points="5 12 12 5 19 12" />
-        </svg>
-      </button>
+      {isStreaming ? (
+        <button
+          onClick={onStop}
+          className="shrink-0 w-10 h-10 rounded-xl bg-red-500 text-white
+                     flex items-center justify-center
+                     hover:bg-red-600 active:scale-95
+                     transition-all duration-200"
+          aria-label="Остановить"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="4" y="4" width="16" height="16" rx="2" />
+          </svg>
+        </button>
+      ) : (
+        <button
+          onClick={handleSubmit}
+          disabled={disabled || !value.trim()}
+          className="shrink-0 w-10 h-10 rounded-xl bg-primary-600 text-white
+                     flex items-center justify-center
+                     hover:bg-primary-700 active:scale-95
+                     disabled:bg-gray-300 disabled:cursor-not-allowed
+                     transition-all duration-200"
+          aria-label="Отправить"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="19" x2="12" y2="5" />
+            <polyline points="5 12 12 5 19 12" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

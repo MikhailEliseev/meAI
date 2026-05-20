@@ -2,6 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { Streamdown } from "streamdown";
 import { cn } from "@/lib/utils";
 
 interface ChatBubbleProps {
@@ -13,6 +14,7 @@ interface ChatBubbleProps {
 
 export function ChatBubble({ role, content, timestamp, isStreaming }: ChatBubbleProps) {
   const isAgent = role === "agent";
+  const isEmpty = !content.trim();
 
   return (
     <motion.div
@@ -36,15 +38,21 @@ export function ChatBubble({ role, content, timestamp, isStreaming }: ChatBubble
       {/* Bubble */}
       <div
         className={cn(
-          "rounded-2xl px-4 py-3 text-sm leading-relaxed",
+          "rounded-2xl px-4 py-3 text-sm leading-relaxed min-w-0 overflow-hidden",
           isAgent
             ? "bg-white border border-gray-100 text-gray-800 shadow-sm"
             : "bg-primary-600 text-white"
         )}
       >
-        <p className="whitespace-pre-wrap">{content}</p>
-        {isStreaming && (
-          <span className="inline-flex gap-1 ml-1">
+        {isAgent ? (
+          <div className="prose prose-sm prose-stone max-w-none [&_table]:text-xs [&_th]:text-xs [&_td]:text-xs [&_pre]:text-xs">
+            <Streamdown remend={isStreaming}>{content}</Streamdown>
+          </div>
+        ) : (
+          <p className="whitespace-pre-wrap">{content}</p>
+        )}
+        {isStreaming && isEmpty && (
+          <span className="inline-flex gap-1">
             <span className="w-1.5 h-1.5 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
             <span className="w-1.5 h-1.5 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
             <span className="w-1.5 h-1.5 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />

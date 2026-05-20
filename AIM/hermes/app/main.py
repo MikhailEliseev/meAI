@@ -19,8 +19,11 @@ logger = logging.getLogger(__name__)
 
 import os
 
+import asyncio
+import json
+
 from fastapi import FastAPI, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 try:
@@ -43,6 +46,11 @@ _metrics = {
     "errors_total": 0,
     "latencies": [],  # ring buffer, last 100
     "request_start_time": {},  # request_id -> timestamp
+    # Chat metrics
+    "chat_sessions_active": 0,
+    "chat_messages_total": 0,
+    "chat_leads_total": 0,
+    "chat_token_cost_total": 0.0,
 }
 MAX_LATENCY_SAMPLES = 100
 _polling_started = False
@@ -172,6 +180,18 @@ async def metrics():
         "# HELP aim_hermes_errors_total Total error responses",
         "# TYPE aim_hermes_errors_total counter",
         f"aim_hermes_errors_total {_metrics['errors_total']}",
+        "# HELP aim_chat_sessions_active Active SSE chat sessions",
+        "# TYPE aim_chat_sessions_active gauge",
+        f"aim_chat_sessions_active {_metrics['chat_sessions_active']}",
+        "# HELP aim_chat_messages_total Total chat messages",
+        "# TYPE aim_chat_messages_total counter",
+        f"aim_chat_messages_total {_metrics['chat_messages_total']}",
+        "# HELP aim_chat_leads_total Total leads collected via chat",
+        "# TYPE aim_chat_leads_total counter",
+        f"aim_chat_leads_total {_metrics['chat_leads_total']}",
+        "# HELP aim_chat_token_cost_total Total token cost in USD",
+        "# TYPE aim_chat_token_cost_total counter",
+        f"aim_chat_token_cost_total {_metrics['chat_token_cost_total']:.4f}",
     ]
     latencies = _metrics["latencies"]
     if latencies:
@@ -229,6 +249,83 @@ async def chat(
             status_code=502,
             detail={"error": "Hermes agent error", "message": str(e)},
         )
+
+
+# ── Chat (SSE streaming) ──────────────────────────────────────────────
+@app.post("/api/chat/stream")
+async def chat_stream(
+    body: ChatRequest,
+    _token: str = Depends(verify_api_key),
+):
+    """SSE streaming chat endpoint for the frontend full-page chat.
+
+    Runs the AI agent (non-streaming, OmniRoute limitation), buffers the
+    response, then streams it word-by-word via Server-Sent Events.
+
+    Emits events:
+      - step-start / step-end: tool call progress
+      - text-delta: word-by-word reply
+      - finish: session_id + completion signal
+    """
+    mode = body.mode
+    if mode == "ADMIN":
+        logger.warning("ADMIN mode SSE chat request received — audit this access")
+
+    _metrics["requests_total"] += 1
+    _metrics["chat_messages_total"] += 1
+    _metrics["chat_sessions_active"] += 1
+    t0 = time.time()
+
+    async def generate():
+        try:
+            result = await run_agent(
+                message=body.message,
+                session_id=body.session_id,
+                mode=mode,
+            )
+            reply = result.get("reply", "")
+            if isinstance(reply, dict):
+                reply = reply.get("response", reply.get("content", str(reply)))
+            reply = str(reply)
+
+            # Emit tool call progress events
+            for tc in result.get("tool_calls", []):
+                tc_name = tc.get("name", tc.get("function", {}).get("name", "unknown"))
+                yield f"data: {json.dumps({'type': 'step-start', 'step': tc_name}, ensure_ascii=False)}\n\n"
+                await asyncio.sleep(0.15)
+                yield f"data: {json.dumps({'type': 'step-end', 'step': tc_name}, ensure_ascii=False)}\n\n"
+
+            # Stream reply word-by-word (character-by-character is too slow)
+            words = reply.split()
+            for word in words:
+                yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': word + ' '}, ensure_ascii=False)}\n\n"
+                await asyncio.sleep(0.03)
+
+            # Finish signal
+            yield f"data: {json.dumps({'type': 'finish', 'session_id': result.get('session_id')}, ensure_ascii=False)}\n\n"
+
+        except Exception as e:
+            _metrics["errors_total"] += 1
+            logger.exception("SSE chat stream failed")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)}, ensure_ascii=False)}\n\n"
+
+        finally:
+            _metrics["chat_sessions_active"] = max(0, _metrics["chat_sessions_active"] - 1)
+
+    elapsed = time.time() - t0
+    _metrics["latencies"].append(elapsed)
+    if len(_metrics["latencies"]) > MAX_LATENCY_SAMPLES:
+        _metrics["latencies"].pop(0)
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ── Error handlers ────────────────────────────────────────────────────
