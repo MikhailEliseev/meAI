@@ -733,24 +733,24 @@ class VKAdsClient:
 | A4 | Medical advertising ФЗ-38 requirements include mandatory disclaimer text on ALL medical ads (not just certain categories) | Pitfall 2 | Some medical ad categories may have different disclaimer requirements; professional medical advertising consultation recommended |
 | A5 | Yandex Direct agency mode (Client-Login header) is the correct mode for AIM managing client campaigns | Yandex Direct Code Examples | Self-serve mode (no Client-Login) may be simpler if AIM only runs its own campaigns initially |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **VK Ads vs myTarget vs VK Реклама**
+1. **VK Ads vs myTarget vs VK Реклама** — RESOLVED: Start with VK Ads API only. Add myTarget API later if VK Ads doesn't cover OK.ru inventory.
    - What we know: VK consolidated its ad platforms into "VK Реклама" (VK Ads). The old myTarget API is being merged. The API endpoint is `ads.getCampaigns` in VK API.
    - What's unclear: Whether a separate myTarget API client is needed, or whether VK Реклама fully covers the VK ecosystem (VKontakte + OK + myTarget inventory).
    - Recommendation: Start with VK Ads API (vk.com/dev/ads_api), verify inventory coverage. Add myTarget API only if VK Ads doesn't cover OK.ru and other platforms.
 
-2. **Telegram Ads API scope for medical services**
+2. **Telegram Ads API scope for medical services** — RESOLVED: Test with minimal-budget campaign first. Have ФЗ-38 compliance text ready.
    - What we know: Telegram Ads API allows creating ad campaigns in Telegram channels with specific targeting (topics, channels, language). Medical services may face category restrictions.
    - What's unclear: Whether Telegram accepts medical service ads (vs pharmaceutical ads which are universally restricted). Telegram ad policies are less documented than Yandex/VK.
    - Recommendation: Test with a minimal-budget campaign first. Have ФЗ-38 compliance text ready in ad copy.
 
-3. **Landing page A/B testing UX impact**
+3. **Landing page A/B testing UX impact** — RESOLVED: Invisible variant assignment (no UI indicator), 50/50 split, cookie-based sticky with 30-day persistence.
    - What we know: Next.js middleware can assign variants via cookie. Variants must be served consistently within a user session. Statistical tests require minimum sample sizes.
    - What's unclear: Whether the landing page should have a visual "A/B test" indicator (some users find it unsettling), and whether variant changes should be gradual (canary release) or 50/50.
    - Recommendation: Invisible variant assignment (no UI indicator), 50/50 split, cookie-based sticky assignment with 30-day persistence. Alert when minimum sample size reached.
 
-4. **ROI calculation methodology for medical services**
+4. **ROI calculation methodology for medical services** — RESOLVED: Implement both real-time ROAS (daily monitoring) and cohort ROI (90-day tracking, monthly reporting). Real-time metric labeled as provisional.
    - What we know: Medical services have long sales cycles (1-4 weeks). A lead today may convert in 30 days. Simple "this month's ad spend / this month's revenue" doesn't capture the full picture.
    - What's unclear: Whether to use cohort-based ROI (spend in month 1, track revenue from those leads for 90 days) or simplified monthly ROAS.
    - Recommendation: Implement both: real-time ROAS (simplified, for daily monitoring) and cohort ROI (accurate, for monthly reporting). The real-time metric should be clearly labeled as provisional.

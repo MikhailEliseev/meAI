@@ -9,11 +9,11 @@ See: .planning/ROADMAP.md (updated 2026-05-19)
 
 ## Current Position
 
-Phase: 16 complete ◆ All critical phases shipped
-Status: **Phase 16 shipped** — SOUL.md validated, human checkpoint passed
-Last activity: 2026-05-20 — Phase 16 Plan 16-02 (SOUL.md validation + human checkpoint)
+Phase: 13 ◆ Landing Page & Marketing — 3 plans ready, 1 complete
+Status: **Phase 13 ready to execute** — 3 plans (13-02, 13-03, 13-04), 12 tasks, 2 waves
+Last activity: 2026-05-20 — Phase 13-02/03/04 planned (Yandex Direct, VK Ads, Telegram Ads, A/B testing, Attribution, ROI)
 
-Progress: [██████████] 93% — 42/45 plans complete
+Progress: [████████░] 89% — 42/47 plans complete
 
 ## Performance Metrics
 
@@ -31,7 +31,7 @@ Progress: [██████████] 93% — 42/45 plans complete
 | 10. AI Enhancement | 5 | Complete ✅ |
 | 11. Client Acquisition | 4 sprints | Complete ✅ (Sprints 2-4 done; Sprint 1 → Phase 13) |
 | 12. Production Deployment | 3 | Complete ✅ (ЮKassa, Контур.Диадок, Deploy+Monitoring) |
-| 13. Landing Page | — | Complete ✅ (35/35 tests passing, merged from Phase 11 Sprint 1) |
+| 13. Landing Page | 4 | 1/4 done (13-01), 3 ready (13-02/03/04) |
 | 14. Frontend | 2 | Complete ✅ (97% — 32/33 plans) |
 | 15. Hermes AIM Integration | 4 | Complete ✅ (SOUL.md, tools, FastAPI, docker-compose, Telegram, мониторинг) |
 | 16. Hermes Knowledge Training | 2 | Complete ✅ (SOUL.md 753 lines, 22/22 checks pass) |
@@ -40,7 +40,17 @@ Progress: [██████████] 93% — 42/45 plans complete
 
 *Updated 2026-05-20*
 
-## Accumulated Context
+## Pending Plans (Phase 13)
+
+### Wave 1 (no deps)
+- **13-04**: A/B testing engine (scipy) + Attribution pipeline + ROI calculator + Variant serving middleware — 4 tasks
+
+### Wave 2 (depends on 13-04)
+- **13-02**: Fix Yandex Direct MOCK stats via TSV parsing + ФЗ-38 compliance + tests + DB sync — 4 tasks
+- **13-03**: VK Ads client + Telegram Ads client + tests + DB sync — 4 tasks
+
+**Total:** 12 tasks across 3 plans
+**Required tokens:** YANDEX_DIRECT_TOKEN, VK_ADS_TOKEN, YANDEX_METRICA_COUNTER_ID
 
 ### Decisions
 
