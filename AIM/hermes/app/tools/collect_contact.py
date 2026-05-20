@@ -17,6 +17,14 @@ from tools.registry import registry
 
 logger = logging.getLogger(__name__)
 
+
+def _unwrap(value, key):
+    """If hermes-agent passes the whole arguments dict as a param value, unwrap it."""
+    if isinstance(value, dict) and key in value:
+        return value[key]
+    return value
+
+
 AIM_API_BASE = "http://app:8000"
 REQUEST_TIMEOUT = 30.0  # seconds
 
@@ -24,11 +32,11 @@ VALID_CONTACT_TYPES = {"telegram", "email", "phone"}
 
 
 async def handle_collect_contact(
-    contact_type: str,
-    contact_value: str,
-    website: str = "",
-    name: str = "",
-    source: str = "web_chat",
+    contact_type,
+    contact_value,
+    website="",
+    name="",
+    source="web_chat",
     **kwargs,
 ) -> str:
     """Collect client contact information and create a lead dossier.
@@ -46,6 +54,8 @@ async def handle_collect_contact(
     Returns:
         JSON string with lead_id and status.
     """
+    contact_type = _unwrap(contact_type, "contact_type")
+    contact_value = _unwrap(contact_value, "contact_value")
     if contact_type not in VALID_CONTACT_TYPES:
         return json.dumps({
             "error": "Invalid contact_type",
