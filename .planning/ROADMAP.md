@@ -308,10 +308,44 @@ Plans:
 - [ ] 16-01-PLAN.md — SOUL.md: Write comprehensive all-sections file (Identity, Modes, Tools, Magisters, WOW Data, Token Economy, Lead System, Russian Market, Services, KPIs, Style)
 - [ ] 16-02-PLAN.md — SOUL.md: Validate (automated D-01..D-10 checks + human review checkpoint)
 
+### Phase 17: No More Mock Data
+**Goal**: Убрать последние следы mock-данных из CI-агентов. Research audit (25 файлов) показал, что кодовая база значительно чище, чем предполагалось в CONTEXT.md: только 2 файла (ci_content.py, ci_tech.py — оба DEPRECATED) импортируют random, большинство агентов уже используют реальные API, «3 числа» уже вычисляются в ci_strategist. Фокус фазы: удаление deprecated файлов, import hygiene guards, safety-net тесты на structured null pattern.
+**Requirements**: D-02, NO-MOCK-01..NO-MOCK-07 (from RESEARCH.md)
+**Depends on**: Phase 16
+**Success Criteria** (what must be TRUE):
+  1. 0 `import random` / `from random` в production CI-агентах (grep-проверка)
+  2. 3 deprecated/unused файла удалены (ci_content.py, ci_tech.py, ci_tech_improved.py)
+  3. Import guard в __init__.py предотвращает регрессию (ImportError на `import random`)
+  4. 4 structured-null теста проходят (NO-MOCK-02): ci_scout, ci_backlink, ci_reputation, ci_vacancies
+  5. 27 существующих api_clients тестов всё ещё проходят (NO-MOCK-07)
+  6. Orchestrator imports (ci_content_improved, ci_tech_real) работают без изменений
+**Plans**: 1 plan
+
+Plans:
+- [ ] 17-01-PLAN.md — Remove deprecated mock-data files + import hygiene guards + structured null safety-net tests
+
+### Phase 18: System Integration — Hermes Learning Bus
+**Goal**: Связать Hermes (знаниевый хаб), Teacher (внешнее обучение) и Magisters в одну когерентную систему. Hermes становится центральной шиной обучения: слушает EventBus (execution experience), принимает обогащённые знания от Teacher, отдаёт контекст Magisters перед делегированием. Система перестаёт быть набором разрозненных инструментов и становится единым адаптивным организмом.
+**Requirements**: D-01..D-06 (from CONTEXT.md)
+**Depends on**: Phase 17
+**Success Criteria** (what must be TRUE):
+  1. Hermes слушает EventBus — execution-события CI-агентов попадают в raw/executions/
+  2. Teacher → Hermes knowledge flow — внешние исследования обогащают wiki/patterns/
+  3. Magisters → Hermes query interface — перед делегированием запрашивают контекст
+  4. Step-by-step activation sequence для каждого компонента системы
+  5. Hermes обучен на каждом CI-инструменте (scout, auditor, reputation, pricing, etc.)
+  6. Knowledge loop замкнут: execution → capture → learn → improve → next execution
+  7. Система работает как одно целое, не набор разрозненных инструментов
+**Plans**: 2 plans
+
+Plans:
+- [ ] 18-01-PLAN.md — Hermes Knowledge Bus: EventBus listener + vault structure + knowledge endpoints
+- [ ] 18-02-PLAN.md — Teacher ↔ Hermes pipeline + Magisters context query + activation sequence
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16
+Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -332,5 +366,7 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 14. Final Integration | v3.0 | 2/2 | Complete | 2026-05-18 |
 | 15. Hermes AIM Integration | v4.0 | 4/4 | Complete | 2026-05-19 |
 | 16. Hermes Knowledge Training | v4.1 | 0/2 | Planned | 2026-05-19 |
+| 17. No More Mock Data | v4.2 | 0/1 | Planned | 2026-05-20 |
+| 18. Hermes Learning Bus | v4.3 | 0/2 | Planned | 2026-05-20 |
 
-**Overall:** 38/41 plans complete (93%)
+**Overall:** 38/43 plans complete (88%)
