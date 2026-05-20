@@ -133,8 +133,8 @@ class SkillTeacher:
         self.subagent_target_files = {
             # Existing mappings
             "keyword-research": "src/aim/subagents/api_clients/base.py",
-            "ci-content": "src/aim/subagents/competitive_intel/agents/ci_content.py",
-            "ci-tech": "src/aim/subagents/competitive_intel/agents/ci_tech.py",
+            "ci-content": "src/aim/subagents/competitive_intel/agents/ci_content_improved.py",
+            "ci-tech": "src/aim/subagents/competitive_intel/agents/ci_tech_real.py",
             "seo": "src/aim/subagents/seo/seo_agent.py",
             "content": "src/aim/subagents/content/content_agent.py",
             "ads": "src/aim/subagents/ads/ads_agent.py",
