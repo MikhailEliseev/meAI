@@ -17,13 +17,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+import os
+
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+try:
+    from meai.events.event_bus import EventBus
+    _event_bus_available = True
+except ImportError:
+    EventBus = None
+    _event_bus_available = False
+
+from hermes.knowledge.vault import HermesKnowledgeVault
+
 from .auth import verify_api_key
 from .agent_wrapper import run_agent
 from .telegram_gateway import router as telegram_router, start_polling, stop_polling
+from .knowledge_router import router as knowledge_router
 
 # ── Metrics ──────────────────────────────────────────────────────────
 _metrics = {
@@ -47,15 +59,34 @@ app = FastAPI(
 # ── Lifespan ──────────────────────────────────────────────────────────
 @app.on_event("startup")
 async def on_startup():
-    """Register tools + start Telegram polling after uvicorn is fully started.
+    """Register tools + subscribe to EventBus + start Telegram polling.
 
-    Using the (deprecated) on_event("startup") because creating asyncio
-    tasks inside the lifespan context manager deadlocks uvicorn's
-    startup_event / socket binding sequence in uvicorn >=0.41.
+    EventBus subscriptions connect Hermes to CI execution events.
+    For cross-process communication, CI Orchestrator also sends events
+    via HTTP POST /api/knowledge/ingest.
     """
     from app.tools import register_all_tools
     register_all_tools()
     logger.info("Hermes FastAPI started — tools registered")
+
+    # EventBus listener: subscribe to CI execution events (only if meai available)
+    if _event_bus_available:
+        try:
+            database_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/hermes.db")
+            event_bus = EventBus(database_url=database_url)
+            await event_bus.initialize()
+
+            vault = HermesKnowledgeVault()
+
+            event_bus.subscribe("ci.execution.started", vault.ingest_execution)
+            event_bus.subscribe("ci.agent.completed", vault.ingest_agent_result)
+            event_bus.subscribe("ci.execution.completed", vault.ingest_execution)
+
+            logger.info("[Hermes] Subscribed to EventBus: ci.execution.* → Knowledge Vault")
+        except Exception as e:
+            logger.warning(f"[Hermes] EventBus subscription skipped: {e}")
+    else:
+        logger.info("[Hermes] EventBus unavailable (meai not installed) — HTTP ingest only")
 
 
 @app.on_event("shutdown")
@@ -64,6 +95,7 @@ async def on_shutdown():
     logger.info("Hermes FastAPI shutting down")
 
 app.include_router(telegram_router)
+app.include_router(knowledge_router, prefix="/api/knowledge")
 
 
 # ── Models ────────────────────────────────────────────────────────────
@@ -85,6 +117,7 @@ class HealthResponse(BaseModel):
     uptime_seconds: float
     requests_total: int
     errors_total: int
+    knowledge_loop: dict = {}
 
 
 # ── Health ────────────────────────────────────────────────────────────
@@ -95,20 +128,37 @@ _start_time = time.time()
 async def health():
     """Health check endpoint (D-29). Prometheus scrapes this.
 
-    Starts Telegram polling on first call (deferred from startup to avoid
-    asyncio.create_task deadlocking uvicorn 0.41 socket binding).
+    Includes knowledge loop status from Hermes Knowledge Vault.
+    Starts Telegram polling on first call.
     """
     global _polling_started
     if not _polling_started:
         start_polling()
         _polling_started = True
         logger.info("Telegram polling started (lazy init on first /health)")
+
+    # Knowledge loop status
+    try:
+        from .knowledge_router import vault
+        vault_status = await vault.get_status()
+        knowledge_loop = {
+            "executions_total": vault_status["executions_count"],
+            "patterns_total": vault_status["patterns_count"],
+            "learnings_total": vault_status["learnings_count"],
+            "rules_total": vault_status["rules_count"],
+            "last_ingest": vault_status.get("last_ingest"),
+            "loop_health": vault_status["loop_health"],
+        }
+    except Exception:
+        knowledge_loop = {"loop_health": "unavailable"}
+
     return HealthResponse(
         status="ok",
         hermes="healthy",
         uptime_seconds=round(time.time() - _start_time, 1),
         requests_total=_metrics["requests_total"],
         errors_total=_metrics["errors_total"],
+        knowledge_loop=knowledge_loop,
     )
 
 

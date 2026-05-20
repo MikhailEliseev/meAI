@@ -35,6 +35,7 @@ RUN find /usr/local/lib/python3.11/site-packages -name 'run_agent.py' -exec \
 
 # Copy application code
 COPY app/ ./app/
+COPY knowledge/ ./knowledge/
 
 # Copy skills from repo (D-03: stored in repo, copied into image at build time)
 COPY skills/ ./skills/
