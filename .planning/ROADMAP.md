@@ -305,8 +305,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 16-01-PLAN.md — SOUL.md: Write comprehensive all-sections file (Identity, Modes, Tools, Magisters, WOW Data, Token Economy, Lead System, Russian Market, Services, KPIs, Style)
-- [ ] 16-02-PLAN.md — SOUL.md: Validate (automated D-01..D-10 checks + human review checkpoint)
+- [x] 16-01-PLAN.md — SOUL.md: Write comprehensive all-sections file (Identity, Modes, Tools, Magisters, WOW Data, Token Economy, Lead System, Russian Market, Services, KPIs, Style)
+- [x] 16-02-PLAN.md — SOUL.md: Validate (automated D-01..D-10 checks + human review checkpoint)
 
 ### Phase 17: No More Mock Data
 **Goal**: Убрать последние следы mock-данных из CI-агентов. Research audit (25 файлов) показал, что кодовая база значительно чище, чем предполагалось в CONTEXT.md: только 2 файла (ci_content.py, ci_tech.py — оба DEPRECATED) импортируют random, большинство агентов уже используют реальные API, «3 числа» уже вычисляются в ci_strategist. Фокус фазы: удаление deprecated файлов, import hygiene guards, safety-net тесты на structured null pattern.
@@ -322,9 +322,9 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 17-01-PLAN.md — Remove deprecated mock-data files + import hygiene guards + structured null safety-net tests
+- [x] 17-01-PLAN.md — Remove deprecated mock-data files + import hygiene guards + structured null safety-net tests
 
-### Phase 18: System Integration — Hermes Learning Bus
+### Phase 18: System Integration — Hermes Learning Bus ✅
 **Goal**: Связать Hermes (знаниевый хаб), Teacher (внешнее обучение) и Magisters в одну когерентную систему. Hermes становится центральной шиной обучения: слушает EventBus (execution experience), принимает обогащённые знания от Teacher, отдаёт контекст Magisters перед делегированием. Система перестаёт быть набором разрозненных инструментов и становится единым адаптивным организмом.
 **Requirements**: D-01..D-06 (from CONTEXT.md)
 **Depends on**: Phase 17
@@ -339,8 +339,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 18-01-PLAN.md — Hermes Knowledge Bus: EventBus listener + vault structure + knowledge endpoints
-- [ ] 18-02-PLAN.md — Teacher ↔ Hermes pipeline + Magisters context query + activation sequence
+- [x] 18-01-PLAN.md — Hermes Knowledge Bus: EventBus listener + vault structure + knowledge endpoints
+- [x] 18-02-PLAN.md — Teacher ↔ Hermes pipeline + Magisters context query + activation sequence
 
 ## Progress
 
@@ -365,8 +365,8 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 13. Landing Page | v3.0 | 1/2 | In progress | 2026-05-18 |
 | 14. Final Integration | v3.0 | 2/2 | Complete | 2026-05-18 |
 | 15. Hermes AIM Integration | v4.0 | 4/4 | Complete | 2026-05-19 |
-| 16. Hermes Knowledge Training | v4.1 | 0/2 | Planned | 2026-05-19 |
-| 17. No More Mock Data | v4.2 | 0/1 | Planned | 2026-05-20 |
-| 18. Hermes Learning Bus | v4.3 | 0/2 | Planned | 2026-05-20 |
+| 16. Hermes Knowledge Training | v4.1 | 2/2 | Complete | 2026-05-20 |
+| 17. No More Mock Data | v4.2 | 1/1 | Complete | 2026-05-20 |
+| 18. Hermes Learning Bus | v4.3 | 2/2 | Complete | 2026-05-20 |
 
-**Overall:** 38/43 plans complete (88%)
+**Overall:** 42/45 plans complete (93%)
