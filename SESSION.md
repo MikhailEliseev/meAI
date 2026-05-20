@@ -123,11 +123,44 @@ CI Orchestrator → EventBus → Hermes vault → LLM ingest → wiki/patterns/
                         Magisters ← HermesContextProvider.get_context()
 ```
 
-### Next: Phase 13 (AI Sales Agent) — стратегический приоритет #1
+### Next: Phase 16 (Hermes Knowledge Training) — последний открытый план
 
 ---
 
-## Phase 17: No More Mock Data — COMPLETE ✅
+## Phase 20: Planning Docs Sync + Dir Rename — 2026-05-20 19:08 GMT+3
+
+### Documentation Updated ✅
+- ROADMAP.md — Phases 17, 18 marked Complete (41/45 plans, 91%)
+- STATE.md — Updated to reflect actual progress
+
+### Pending: Directory Rename
+- Problem: `!meAI` — Webpack rejects `!` in paths (loader syntax)
+- Fix: `mv /Users/mikhaileliseev/Desktop/Dev/\!meAI /Users/mikhaileliseev/Desktop/Dev/meAI`
+- setup_alias.sh already fixed (path without `!`)
+- Need to restart Claude Code from new path after rename
+
+---
+
+## Phase 16 Plan 16-02: SOUL.md Validation — 2026-05-20 19:35 GMT+3
+
+### Task 1: Automated Verification ✅
+- All 22 automated checks pass (V-D01..V-D10)
+- 3 fixes applied to SOUL.md: removed deprecated ci_content.py, ci_tech.py, ci_tech_improved.py
+- Security: 0 secrets, ADMIN gates OK
+- Structure: all 13 sections present, frontmatter intact, closing signature present
+- 70+ subagent .py files cross-referenced against codebase
+
+### Task 2: Human Checkpoint ✅
+- APPROVED by Mikhail — SOUL.md production-ready
+
+### Phase 16: COMPLETE ✅
+- 2/2 plans, 753-line SOUL.md, 22/22 automated checks pass
+- 3 deprecated references removed (ci_content.py, ci_tech.py, ci_tech_improved.py)
+
+---
+
+## Overall Status: 42/45 plans (93%)
+- Only Phase 13-02 (marketing campaigns) remains — deferred post-MVP
 
 **Date:** 2026-05-20 11:30 GMT+3
 **Status:** 100% COMPLETE (already clean before implementation)

@@ -2,71 +2,106 @@
 
 ## Project Reference
 
-See: .planning/ROADMAP.md (updated 2026-05-18)
+See: .planning/ROADMAP.md (updated 2026-05-19)
 
 **Core value:** AI-first medical marketing agency at iamaim.ru — полный цикл захвата клиентов
-**Current focus:** Phase 12 — Production Deployment (context gathered)
+**Current focus:** Все основные фазы завершены. Остался Phase 13-02 (маркетинг — post-MVP)
 
 ## Current Position
 
-Phase: 14 of 14 (Final Integration)
-Plan: 2 of 2 plans complete ✅
-Status: Complete — 2026-05-18
-Last activity: 2026-05-18 — Phase 14 shipped (commit e7ef4fe)
+Phase: 16 complete ◆ All critical phases shipped
+Status: **Phase 16 shipped** — SOUL.md validated, human checkpoint passed
+Last activity: 2026-05-20 — Phase 16 Plan 16-02 (SOUL.md validation + human checkpoint)
 
-Progress: [█████████░] 97% (32/33 plans complete)
+Progress: [██████████] 93% — 42/45 plans complete
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 25
-- Total execution time: ~380 hours across all phases
+- Total phases: 15
+- Total plans executed: 37+
 
 **By Phase:**
 
-| Phase | Plans | Total | Status |
-|-------|-------|-------|--------|
-| 1-7. Foundation | 13 | 13 | Complete |
-| 7.5. Linear | 1 | 1 | Complete |
-| 8-9. Operations | 5 | 5 | Complete |
-| 10. AI Enhancement | 5 | 5 | Complete |
-| 11. Client Acquisition | 2 | 4 | In progress |
-| 12. Production | 3 | 3 | Ready for execution |
+| Phase | Plans | Status |
+|-------|-------|--------|
+| 1-7. Foundation | 13 | Complete ✅ |
+| 7.5. Linear | 1 | Complete ✅ |
+| 8-9. Operations | 5 | Complete ✅ |
+| 10. AI Enhancement | 5 | Complete ✅ |
+| 11. Client Acquisition | 4 sprints | Complete ✅ (Sprints 2-4 done; Sprint 1 → Phase 13) |
+| 12. Production Deployment | 3 | Complete ✅ (ЮKassa, Контур.Диадок, Deploy+Monitoring) |
+| 13. Landing Page | — | Complete ✅ (35/35 tests passing, merged from Phase 11 Sprint 1) |
+| 14. Frontend | 2 | Complete ✅ (97% — 32/33 plans) |
+| 15. Hermes AIM Integration | 4 | Complete ✅ (SOUL.md, tools, FastAPI, docker-compose, Telegram, мониторинг) |
+| 16. Hermes Knowledge Training | 2 | Complete ✅ (SOUL.md 753 lines, 22/22 checks pass) |
+| 17. No More Mock Data | 1 | Complete ✅ (deprecated files removed, import hygiene guard, 15/15 CI tests) |
+| 18. Hermes Learning Bus | 2 | Complete ✅ (EventBus listener, TeacherSync, knowledge endpoints, LLM ingest) |
 
-*Updated 2026-05-18*
+*Updated 2026-05-20*
 
 ## Accumulated Context
 
 ### Decisions
 
-- **Phase 11 Sprint 1 (Landing Page)**: Deferred to Phase 13 — фокус на lead capture, scoring, onboarding
+- **Phase 11 Sprint 1 (Landing Page)**: Deferred to Phase 13 → Completed (35/35 tests)
 - **ФЗ-152 compliance**: AES-256-GCM field-level encryption, consent tracking, 7-year retention
-- **Russian market**: ЮKassa stub (real in Phase 12), Контур.Диадок stub (real in Phase 12), SendGrid for email
-- **Phase 7.5**: Inserted between Phases 7 and 8 — Linear integration critical for task tracking
-- **Test coverage**: 338/338 tests passing (100%) — 192 Sprint 2 + 146 Sprint 3
-- **Sprint structure**: Phase 11 uses sprints instead of plans (4 sprints, 200h total)
+- **Russian market**: ЮKassa (async_yookassa), Контур.Диадок, SendGrid for email
+- **Phase 7.5**: Inserted between Phases 7 and 8 — Linear integration
+- **Sprint structure**: Phase 11 used 4 sprints (200h total)
+- **Hermes**: Phase 15 replaced DeepSeek with Hermes AIAgent via OmniRoute
+- **Telegram**: Hybrid Bot API (incoming) + Telethon (outgoing) gateway
 
 ### Pending Todos
 
-None — GSD infrastructure complete
+None — all phases complete.
 
 ### Blockers/Concerns
 
-- **Phase 11 Sprint 4**: Зависит от PostgreSQL (db migration), Redis (caching), Prometheus/Grafana (monitoring)
-- **Phase 12**: Требует access к ЮKassa и Контур.Диадок API (пока заглушки)
-- **Phase 13**: Landing Page deferred из Phase 11 Sprint 1
+None — infrastructure ready for production deploy.
+- `HERMES_API_KEY` must be generated on server: `openssl rand -hex 32`
+- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_API_ID`, `TELEGRAM_API_HASH` must be set in .env.production
+- `YOOKASSA_SHOP_ID` and `YOOKASSA_SECRET_KEY` must be set for real payments
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Sprint | Landing Page (Phase 11 Sprint 1) | Deferred to Phase 13 | 2026-05-15 |
-| Integration | ЮKassa real (Helcim stub) | Deferred to Phase 12 | 2026-05-16 |
-| Integration | Контур.Диадок real (DocuSign stub) | Deferred to Phase 12 | 2026-05-16 |
-| Database | PostgreSQL migration | Deferred to Phase 12 | 2026-05-16 |
+| Sprint | Landing Page (Phase 11 Sprint 1) | ✅ Completed in Phase 13 | 2026-05-15 |
+| Integration | ЮKassa real (Helcim stub) | ✅ Completed in Phase 12 | 2026-05-16 |
+| Integration | Контур.Диадок real (DocuSign stub) | ✅ Completed in Phase 12 | 2026-05-16 |
+| Database | PostgreSQL migration | ✅ Completed in Phase 12 | 2026-05-16 |
+
+## What's Built
+
+### Landing & Client Acquisition
+- Landing page: Hero, TrustBadges, CaseStudies, Testimonials, Awards, ProcessSteps, FAQ, ContactForm
+- Sales chat: SalesChat, ChatBubble, ChatInput, UTMCapture
+- Lead capture: extraction, validation, encrypted storage, dossier management
+- AI Lead Scoring: 30+ factors, real-time scoring, tier classification
+- Email automation: SendGrid sequences, queue, retry
+
+### Payment & Onboarding
+- YooKassa integration: redirect flow, webhooks, IP validation
+- Payment UI: billing page, payment form
+- Onboarding: AI document processing, workflow automation
+- Контур.Диадок: electronic document signing
+
+### AI Operations (Hermes)
+- Operator identity: SOUL.md with 3 modes (PRESALE/ACTIVE/ADMIN)
+- 8 Hermes tools: SEO audit, content analysis, ads report, project status, lead capture, lead list, Telegram search, Telegram send
+- FastAPI wrapper: /api/chat, /health, /metrics
+- Next.js chat proxy: retry + Redis fallback
+- Telegram gateway: Bot API webhook + Telethon MCP tools
+
+### Infrastructure
+- Docker Compose: 12 services (postgres, app, frontend, hermes, redis, nginx, prometheus, grafana, postgres-exporter, alertmanager, node-exporter)
+- Monitoring: Prometheus, Grafana, Alertmanager (Telegram + Email alerts)
+- HermesDown alert: 60s downtime → critical → Telegram + Email
+- CI/CD, health checks, persistent volumes
 
 ## Session Continuity
 
-Last session: 2026-05-18 15:00 GMT+3
-Stopped at: Phase 12 context gathered (assumptions mode) — ready for /gsd-plan-phase 12
-Resume file: .planning/phases/12-production-deployment/12-CONTEXT.md
+Last session: 2026-05-19 12:32 GMT+3
+Stopped at: Phase 15 Plan 15-04 complete — all phases done
+Next: Production deploy to 138.16.224.188

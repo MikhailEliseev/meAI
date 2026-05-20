@@ -1,5 +1,67 @@
 # AIM Agency Development Roadmap
 
+---
+
+## SYSTEM PRINCIPLE: Единственное, что хочет знать клиент
+
+```
+Руководителю клиники ПОФИГ на:
+❌ SEO
+❌ Контент
+❌ Скорость сайта
+❌ Соцсети конкурентов
+❌ Технические ошибки
+
+Руководителю клиники НУЖНО знать только ТРИ ВЕЩИ:
+
+1. СКОЛЬКО пациентов вы мне приведёте?
+   → Конкретное число: «85 новых пациентов в месяц»
+
+2. ЗА КАКОЕ ВРЕМЯ?
+   → Конкретный срок: «Через 3 месяца»
+
+3. СКОЛЬКО СТОИТ ПАЦИЕНТ?
+   → Конкретный CPA: «1,730₽ за пациента»
+```
+
+**Правило «Деньги, а не метрики»:**
+
+```
+ВСЁ что мы показываем клиенту должно сводиться к ответу на ОДИН вопрос:
+«Сможете ли вы заработать мне денег?»
+
+SEO → не «у вас 23 запроса в топ-10», а «вы теряете 120 пациентов в месяц,
+       это 960,000₽ мимо вас. Мы это исправим.»
+
+Контент → не «плотность ключевых слов низкая», а «33 вопроса пациентов без ответа,
+          это 50 потерянных записей в месяц. Мы это исправим.»
+
+Соцсети → не «у конкурента 12K подписчиков», а «конкуренты получают 30 пациентов
+          из соцсетей, вы — 0. Мы это исправим.»
+
+Финансы конкурентов → не «они зарабатывают 48M», а «они забирают 180 пациентов
+                      которые могли бы быть вашими. Мы это исправим.»
+```
+
+**Структура ответа AI Sales Agent (всегда):**
+
+```
+1. ВОТ СКОЛЬКО ПАЦИЕНТОВ ВЫ ТЕРЯЕТЕ: _____ пациентов/мес
+2. ВОТ СКОЛЬКО МЫ ПРИВЕДЁМ:             _____ пациентов/мес
+3. ВОТ КОГДА:                            через _____ месяцев
+4. ВОТ ЦЕНА ПАЦИЕНТА:                    _____ ₽
+5. ВОТ ВАША ВЫРУЧКА:                     _____ ₽/мес
+6. ВОТ НАШ ROI:                          _____ ×
+```
+
+**Это НЕ маркетинговый слоган. Это СИСТЕМНЫЙ ПРИНЦИП.**
+Все агенты, все Magisters, все отчёты строятся вокруг этого принципа.
+Если отчёт не отвечает на вопрос «сколько денег я заработаю» — он бесполезен.
+
+**Конкуренты показывают графики. Мы показываем деньги.**
+
+---
+
 ## Milestone 1: Core Infrastructure & Production Launch
 
 **Goal:** Build production-ready AI-first medical marketing agency with full automation
@@ -372,14 +434,16 @@
 
 **Duration:** 8 weeks (200 hours)
 
-**Status:** ✅ PLANNING COMPLETE (Ready for Execution)
+**Status:** ⚠️ SUPERSEDED by Phase 13 (AI Sales Agent)
 
-**Deliverables:**
-- [ ] Landing page with conversion optimization (medical B2B)
-- [ ] AI-powered lead generation automation (30+ factors)
-- [ ] Automated client onboarding flow (AI document processing)
-- [ ] Payment integration (Helcim - HIPAA-compliant)
-- [ ] CRM integration (Linear - existing from Phase 7.5)
+> **Note (2026-05-18):** Концепция традиционного лендинга заменена на AI Sales Agent (Phase 13). Вместо лендинга с формами — AI-чат на главной, который продаёт в диалоге. HIPAA неактуально (РФ рынок), Helcim заменён на ЮKassa (уже сделан).
+
+**Original Deliverables (deprecated):**
+- [ ] ~~Landing page with conversion optimization (medical B2B)~~ → Phase 13
+- [ ] ~~AI-powered lead generation automation (30+ factors)~~ → ✅ Done, used in Phase 13
+- [ ] ~~Automated client onboarding flow (AI document processing)~~ → ✅ Done
+- [ ] ~~Payment integration (Helcim - HIPAA-compliant)~~ → ✅ Done as ЮKassa
+- [ ] ~~CRM integration (Linear)~~ → ✅ Done in Phase 7.5
 
 **Dependencies:**
 - Phase 10 (AI Enhancement) - Planning complete
@@ -413,6 +477,461 @@
 
 ---
 
+## Phase 12: Client Personal Cabinet (Личный кабинет) 🔴 REQUIRED
+
+**Goal:** Full-featured client portal with auth, billing, contracts, and onboarding
+
+**Duration:** 6-8 weeks (est.)
+
+**Status:** 📋 Planning
+
+**Why this phase:**
+- Current dashboard is a skeleton — pages exist but no auth, no real data, no API
+- Clients need a secure portal to track projects, pay invoices, sign contracts
+- This is the core monetization interface — client sees value here
+
+**Current State (Audit 2026-05-18):**
+
+| Component | Status | What's Missing |
+|-----------|--------|----------------|
+| `/onboarding` | 🟡 Styled page | No API integration, mock data |
+| `/billing` | 🟡 Styled page | ЮKassa client exists but not wired to UI |
+| `/contracts` | 🟡 Styled page | Контур.Диадок not integrated |
+| `/tasks` | 🟡 Styled page | No real task data from Linear |
+| `/login` | 🔴 Doesn't exist | No auth page at all |
+| `/dashboard` | 🔴 Doesn't exist | Route group `(dashboard)` has no index |
+| Auth (JWT) | 🔴 Not implemented | Routes unprotected, anyone can access |
+| API `/api/dashboard/*` | 🔴 404 | No dashboard API endpoints |
+| API `/api/auth/*` | 🔴 Doesn't exist | No login/register/refresh |
+
+**Deliverables:**
+- [ ] **Authentication system** — Login, registration, password reset, JWT + refresh tokens
+- [ ] **Dashboard index** — `/dashboard` with project overview, metrics, recent activity
+- [ ] **Billing UI** — Real payment flow with ЮKassa, invoice history, payment status
+- [ ] **Contracts UI** — Document upload, signing status, Контур.Диадок integration
+- [ ] **Onboarding flow** — Real API-backed onboarding with progress tracking
+- [ ] **Tasks UI** — Real-time task status from Linear, comments, file attachments
+- [ ] **Protected routes** — Middleware for auth checks, role-based access
+- [ ] **Client analytics** — Campaign performance, traffic, conversions visible to client
+- [ ] **API layer** — `/api/dashboard/*`, `/api/auth/*`, `/api/billing/*`, `/api/contracts/*`
+
+**Architecture Decisions to Make:**
+- Auth provider: NextAuth.js vs Clerk vs custom JWT
+- UI framework: Keep current setup or redesign from scratch
+- Real-time: WebSocket (existing) vs Server-Sent Events
+- State management: React Query vs SWR vs custom
+
+**Dependencies:**
+- Phase 7.5 (Linear Integration) — ✅ COMPLETED
+- Phase 9 (Agency Operations) — ✅ COMPLETED
+- Phase 11 (Client Acquisition — landing page) — need at least landing page first
+
+**Next Steps:**
+1. Design auth flow and pick provider
+2. Create `/login` and `/dashboard` pages
+3. Wire ЮKassa client to billing UI
+4. Implement API endpoints with real data
+5. Add route protection middleware
+6. Test full client journey: login → onboarding → dashboard → billing
+
+---
+
+## Phase 13: AI Sales Agent (Пре-сейл чат-бот) 🔴 PRIORITY #1
+
+**Goal:** Заменить традиционный лендинг на AI-продавца в чате. Одно окно → разговор → предложение → покупка.
+
+**Duration:** 6-8 weeks (est.)
+
+**Status:** 📋 Concept
+
+**Vision (Миша, 2026-05-18):**
+> «Как Джобс придумал айфон с одной кнопкой — нам надо чтобы человек по адресу открывал окно с чатом, куда подвязывается модель и продаёт. Не стандартная форма, а AI-агент на главной странице, с которым можно поговорить. Он в рамках наших инструментов делает предложение, выясняет потребности, а в бэкенде запускает всю нашу систему. Пресейл — дать столько информации потенциальному клиенту, чтобы он мог сказать "да, хочу, покупаю".»
+
+**Flow:**
+
+```
+Клиент заходит на iamaim.ru
+        ↓
+┌──────────────────────────────────────┐
+│  💬 ЧАТ-ОКНО (вся главная страница)  │
+│                                      │
+│  AI: «Здравствуйте! Расскажите      │
+│      про вашу клинику — и я          │
+│      подготовлю персональное         │
+│      предложение за 3 минуты»        │
+│                                      │
+│  🏥 [Стоматология в Краснодаре]      │
+│  🌐 [stomatologia-krd.ru]    (опц.)  │
+│                                      │
+│         [Начать анализ]              │
+└──────────────────────────────────────┘
+        ↓
+┌──────────────────────────────────────┐
+│  AI задаёт 5-7 уточняющих вопросов:  │
+│  • Какой поток пациентов сейчас?     │
+│  • Какие каналы уже используете?      │
+│  • Средний чек?                      │
+│  • Главные конкуренты?               │
+│  • Пробовали SEO/рекламу раньше?     │
+│                                      │
+│  🎯 AI квалифицирует лида в диалоге  │
+│     (Hot/Warm/Cold — без токенов)    │
+└──────────────────────────────────────┘
+        ↓
+┌──────────────────────────────────────┐
+│  🔧 BACKEND: Запуск Magisters        │
+│                                      │
+│  SEO Magister → аудит сайта          │
+│  Content Magister → анализ контента  │
+│  Ads Magister → оценка рекламы       │
+│  Analytics Magister → трафик, метрики│
+│                                      │
+│  ⏱ 3-5 минут параллельной работы    │
+│  💸 Токены только если лид тёплый    │
+└──────────────────────────────────────┘
+        ↓
+┌──────────────────────────────────────┐
+│  AI выдаёт персональное КП в чате:   │
+│                                      │
+│  «Хорошо, я проанализировал рынок:   │
+│                                      │
+│   📊 ВАШ САЙТ: 34/100 PageSpeed      │
+│   🏆 КОНКУРЕНТЫ: 180 запросов в топ  │
+│   💰 ПОТЕНЦИАЛ: +85 пациентов/мес    │
+│                                      │
+│   🎯 НАШ ПЛАН:                       │
+│   Тариф «Рост» — SEO+Контент         │
+│   49 000 ₽/мес                       │
+│   Прогноз ROI: 6.2x                  │
+│                                      │
+│   Хотите начать?»                    │
+│   [Да, оплатить] [Задать вопрос]     │
+└──────────────────────────────────────┘
+        ↓
+   💳 ЮKassa → оплата → онбординг → ЛК
+```
+
+**Why this approach beats traditional landing page:**
+
+| Традиционный лендинг | AI Sales Agent |
+|---------------------|----------------|
+| 10 секций, человек скроллит | Одно окно чата |
+| Конверсия 2-3% | Квалификация в диалоге |
+| Форма захвата → ждать звонка | AI продаёт здесь и сейчас |
+| Всем показывает одно и то же | Каждому персональное КП |
+| Холодный лид уходит молча | AI выясняет почему нет |
+| Токены PLN на всех | Токены только на тёплых |
+
+**The "Jobs' One Button" Principle:**
+- Вся сложность спрятана под капотом
+- 4 Magisters + API clients + Lead Scoring работают в фоне
+- Клиент видит только чат и получает готовый результат
+- Никаких меню, навигации, секций — только диалог
+
+**What we already have:**
+- ✅ 4 Magisters: SEO, Content, Ads, Analytics
+- ✅ API clients: SEMrush, Ahrefs, Yandex Direct, Yandex Metrica, GA4, PageSpeed
+- ✅ Lead Scoring (30+ факторов, Hot/Warm/Cold)
+- ✅ Email sequences (Hot/Warm/Cold nurturing)
+- ✅ ЮKassa payment integration
+- ✅ Onboarding flow
+- ✅ Real-time WebSocket infrastructure
+
+**What we need to build:**
+
+| Component | What it does | Stack |
+|-----------|-------------|-------|
+| **Chat UI** | Full-page chat interface, typing indicators, progress animations | React, Tailwind, Framer Motion |
+| **Chat Orchestrator** | Manages conversation state, routes messages to LLM | FastAPI, WebSocket |
+| **AI Sales Model** | Claude/GPT-4 prompt with sales methodology, objection handling | Claude API + system prompt |
+| **Background Workers** | Launch Magisters in background during conversation | Celery/TaskIQ or async tasks |
+| **Report Generator** | Convert Magister output to human-readable chat messages | Jinja2 + LLM summary |
+| **Proposal Builder** | Dynamic pricing + prediction based on audit results | Python, pricing model |
+| **Token Economy** | Only launch expensive APIs after qualification, not before | Tiered analysis |
+
+**Tiered Analysis (Token Economy):**
+
+```
+TIER 0: Квалификация (БЕСПЛАТНО)
+  - 5-7 вопросов в чате
+  - AI оценивает серьёзность намерений
+  - Стоимость: $0.00 (только Claude токены: ~$0.003)
+
+TIER 1: Базовый аудит (HOT LEAD)
+  - PageSpeed + технический SEO (PageSpeed API — бесплатно)
+  - Анализ контента (бесплатный скрапинг)
+  - Стоимость: $0.01
+
+TIER 2: Глубокий аудит (ДОПЛАТА или ПЛАТНЫЙ ТАРИФ)
+  - SEMrush keyword analysis ($0.01-0.05)
+  - Конкурентный анализ ($0.02)
+  - Прогноз ROI с ML ($0.05)
+  - Стоимость: $0.08-0.12
+
+TOTAL COST PER QUALIFIED LEAD: $0.09-0.12
+(В 10x дешевле чем платная реклама)
+```
+
+**WOW-Data Strategy: Что даём бесплатно, чтобы «ДА, ХОЧУ»:**
+
+```
+БЛОК 1: SEO-АУДИТ (PageSpeed API + скрапинг → БЕСПЛАТНО)
+┌────────────────────────────────────────────────────┐
+│ 📊 ВАШ САЙТ ПРОТИВ КОНКУРЕНТОВ                    │
+│                                                    │
+│ Скорость: 34/100 (моб.) — 40% пациентов уходят     │
+│ Конкуренты: 67/100 — грузятся в 3× быстрее         │
+│ 47 технических ошибок найдено                      │
+│                                                    │
+│ Видимость: 23 запроса в топ-10                     │
+│ Конкурент #1: 180 запросов в топ-10                │
+│ Вы теряете: ~157 пациентов/мес                     │
+└────────────────────────────────────────────────────┘
+
+БЛОК 2: КОНТЕНТ-АУДИТ (скрапинг → БЕСПЛАТНО)
+┌────────────────────────────────────────────────────┐
+│ 📝 КОНТЕНТ, КОТОРЫЙ НЕ РАБОТАЕТ                    │
+│                                                    │
+│ 33 вопроса пациентов без ответа:                   │
+│ «сколько стоит имплантация» → нет страницы          │
+│ «больно ли ставить имплант» → нет страницы          │
+│                                                    │
+│ Конкуренты закрывают 45+ вопросов, вы — 12          │
+│ 💸 Цена: 33 × 50 пациентов × 5,000₽ = −8.25M₽     │
+└────────────────────────────────────────────────────┘
+
+БЛОК 3: РЕКЛАМНЫЙ ПОТЕНЦИАЛ (Яндекс.Директ API)
+┌────────────────────────────────────────────────────┐
+│ 📢 ОЦЕНКА РЕКЛАМНОГО ПОТЕНЦИАЛА                    │
+│                                                    │
+│ Стоимость клика: 85-120₽ в нише                    │
+│ Стоимость пациента: 1,700-2,400₽                   │
+│ При среднем чеке 15,000₽ → ROI рекламы 6-9×        │
+│                                                    │
+│ ⚠️ Без оптимизации: −30% бюджета впустую           │
+└────────────────────────────────────────────────────┘
+
+БЛОК 4: ДЕНЕЖНЫЙ ФИНАЛ (Aggregator → WOW!)
+┌────────────────────────────────────────────────────┐
+│ 💸 СКОЛЬКО ВЫ ТЕРЯЕТЕ ЕЖЕМЕСЯЧНО:                  │
+│                                                    │
+│ Слабый SEO:    −120 пациентов = −960,000₽/мес      │
+│ Плохой контент: −50 пациентов = −400,000₽/мес      │
+│ Нет рекламы:    −80 пациентов = −640,000₽/мес      │
+│ ═══════════════════════════════════════             │
+│ ИТОГО:         −2,000,000₽/мес                     │
+│                                                    │
+│ 🎯 НАШЕ РЕШЕНИЕ: Тариф «Рост» — 49,000₽/мес        │
+│ Прогноз: +85 пациентов = +680,000₽ выручки          │
+│ ROI: 13.9× │ Окупаемость: 1-й месяц                │
+└────────────────────────────────────────────────────┘
+
+БЛОК 5: СОЦСЕТИ КОНКУРЕНТОВ (Apify + скрапинг → БЕСПЛАТНО)
+┌────────────────────────────────────────────────────┐
+│ 📱 ЧТО ДЕЛАЮТ КОНКУРЕНТЫ В СОЦСЕТЯХ                │
+│                                                    │
+│ Конкурент #1 «Стоматология X»:                     │
+│ • VK: 12,400 подписчиков, 3-4 поста/неделю         │
+│ • Топ-пост за месяц: «Акция на имплантацию»        │
+│   — 840 лайков, 120 комментариев, 56 репостов       │
+│ • Telegram: канал на 2,800 человек                   │
+│                                                    │
+│ ВЫ:                                                 │
+│ • VK: нет аккаунта / 200 подписчиков               │
+│ • Telegram: не найден                               │
+│                                                    │
+│ 🔍 Мы нашли соцсети конкурентов даже без ссылок     │
+│ с сайта — по названию, адресу, телефону             │
+│                                                    │
+│ 💸 Цена: 0 охвата в соцсетях = −30 пациентов/мес   │
+└────────────────────────────────────────────────────┘
+
+БЛОК 6: ФИНАНСЫ КОНКУРЕНТОВ (Руспрофиль/открытые данные)
+┌────────────────────────────────────────────────────┐
+│ 💰 СКОЛЬКО ЗАРАБАТЫВАЮТ КОНКУРЕНТЫ                 │
+│                                                    │
+│ ООО «Стоматология X» (ИНН 2310XXXXXX):             │
+│ • Выручка 2024: 48,200,000₽                         │
+│ • Прибыль: 12,400,000₽                              │
+│ • Сотрудников: 14                                    │
+│ • Растут на 22% в год                                │
+│                                                    │
+│ ООО «Дентал Y» (ИНН 2310XXXXXX):                   │
+│ • Выручка 2024: 32,600,000₽                         │
+│ • Прибыль: 8,100,000₽                               │
+│ • Сотрудников: 9                                     │
+│                                                    │
+│ ВАШЕ ООО «Ваша Клиника» (ИНН XXXXXXXXXX):           │
+│ • Выручка 2024: 11,300,000₽                         │
+│ • Разрыв с лидером: 4.3×                             │
+│                                                    │
+│ ⚡ ЭТО БЬЁТ ПО ЭГО: конкуренты зарабатывают         │
+│ в 4 раза больше. Но с нами этот разрыв              │
+│ сокращается за 6-12 месяцев.                        │
+└────────────────────────────────────────────────────┘
+
+БЛОК 7: ПОТЕРЯННЫЕ ПАЦИЕНТЫ ПРЯМО СЕЙЧАС (real-time оценка)
+┌────────────────────────────────────────────────────┐
+│ ⏰ ПРЯМО СЕЙЧАС, ПОКА МЫ ГОВОРИМ:                   │
+│                                                    │
+│ За последние 30 минут в вашем городе:              │
+│ • 3 чел. искали «имплантация зуба Краснодар»       │
+│ • 2 попали к конкурентам                            │
+│ • 1 не нашёл ничего подходящего                     │
+│ • Все 3 могли быть вашими                           │
+│                                                    │
+│ За день: ~50 человек                                │
+│ За месяц: ~1,500 человек                            │
+│ При конверсии 5%: 75 записей                        │
+│ При среднем чеке 15,000₽: 1,125,000₽/мес           │
+│                                                    │
+│ Эти деньги проходят МИМО вас. Каждый. День.         │
+└────────────────────────────────────────────────────┘
+```
+
+**WOW-Data Sources Summary:**
+
+| # | Блок | Источник | Стоимость | WOW |
+|---|------|----------|-----------|-----|
+| 1 | SEO-аудит | PageSpeed API + скрапинг | $0 | ⭐⭐⭐⭐ |
+| 2 | Контент-аудит | Скрапинг сайта | $0 | ⭐⭐⭐⭐ |
+| 3 | Рекламный потенциал | Яндекс.Директ API | $0 | ⭐⭐⭐ |
+| 4 | Денежные потери | Калькуляция из 1+2+3 | $0 | ⭐⭐⭐⭐⭐ |
+| 5 | Соцсети конкурентов | **Apify** (VK, TG акторы) | ~$0.05 | ⭐⭐⭐⭐⭐ |
+| 6 | Финансы конкурентов | **Руспрофиль** API / открытые данные ФНС | ~$0.02 | ⭐⭐⭐⭐⭐ |
+| 7 | Потерянные пациенты | Яндекс.Wordstat + расчёт | $0 | ⭐⭐⭐⭐⭐ |
+
+**New Integrations Required:**
+
+```
+APIFY (apify.com)
+├── VK Scraper — посты, лайки, комменты конкурентов
+├── Telegram Scraper — каналы, посты, просмотры
+├── Instagram Scraper — если клиники ведут Instagram*
+└── Website Contact Finder — поиск соцсетей по сайту/названию
+
+РУСПРОФИЛЬ (rusprofile.ru)
+├── Поиск юрлиц по названию / ИНН
+├── Финансовая отчётность (выручка, прибыль, активы)
+├── Сравнение юрлиц конкурентов с юрлицом клиента
+└── Открытые данные ФНС / ЕГРЮЛ
+
+*Instagram — запрещён в РФ, но клиники могут вести
+```
+
+**Apify Actors для VK + Telegram:**
+
+```
+VK:
+- apify/vk-scraper — посты, лайки, репосты, комментарии
+- Поиск сообществ по названию клиники / адресу / телефону
+- Определение «залетевших» постов (лайки > avg × 3)
+
+Telegram:
+- apify/telegram-scraper — посты, просмотры, реакции
+- Поиск каналов по ключевым словам (название клиники, город)
+
+Стратегия поиска соцсетей клиента:
+1. Искать ссылки на сайте (часто не указаны)
+2. Искать в Яндекс/Google: «название_клиники VK» / «название_клиники telegram»
+3. Искать по телефону с сайта (VK позволяет поиск по номеру)
+4. Если ничего не найдено — отметить «соцсети не обнаружены» и
+   показать охваты конкурентов как упущенную возможность
+```
+
+**Omni-Channel Follow-up (не теряем лида):**
+
+```
+ДЕНЬ 0 — САЙТ:
+  AI в чате: «Я отправил результаты в Telegram,
+  продолжим там? t.me/aim_agency_bot»
+
+ДЕНЬ 1 — TELEGRAM:
+  «Алексей, посмотрели аудит? Вот похожий кейс:
+  стоматология в Казани → +85 пациентов за 3 месяца»
+
+ДЕНЬ 3 — TELEGRAM:
+  «Есть вопросы по предложению? Могу ответить здесь
+  или созвониться в удобное время»
+
+ДЕНЬ 7 — EMAIL:
+  «Специальное предложение: бесплатный глубокий
+  аудит (обычно 29,000₽) — действует 3 дня»
+
+ДЕНЬ 14 — TELEGRAM:
+  «Нашёл свежую статистику по Краснодару: стоматологии
+  с SEO растут на 40%/год. Ваши конкуренты уже там?»
+```
+
+**Lead Dossier System (папки на каждого лида):**
+
+```
+AIM/data/leads/{lead_id}/
+├── profile.json           # Кто: имя, клиника, город, специализация
+├── chat_history.json      # Полная история (сайт + Telegram + email)
+├── audit_results.json     # Что показали Magisters
+├── proposal.json          # Сгенерированное КП с цифрами
+├── follow_up.json         # Расписание и история догонялок
+├── status.json            # new → qualified → proposed → paid → onboarded
+└── ai_notes.md            # Заметки AI: что сработало, что нет, контекст
+```
+
+**Deliverables:**
+- [ ] **Chat UI** — полностраничный чат-интерфейс, адаптивный, с анимациями
+- [ ] **Chat Orchestrator** — WebSocket endpoint, управление состоянием диалога
+- [ ] **AI Sales Prompt** — системный промпт продавца medical marketing agency
+- [ ] **Background Magister Runner** — параллельный запуск Magisters во время диалога
+- [ ] **Report → Chat Formatter** — конвертация выводов Magisters в читаемые сообщения
+- [ ] **Dynamic Proposal Engine** — персонализированное КП с прогнозом ROI
+- [ ] **Token Economy Controller** — трёхуровневая система: Qualification → Basic Audit → Deep Audit
+- [ ] **Omni-Channel Connector** — сайт (чат) → Telegram → Email, единая история диалога
+- [ ] **Lead Dossier System** — папки/досье на каждого лида, структурированные запросы
+- [ ] **Follow-up Automator** — расписание догонялок по каналам, AI-инициирование контакта
+- [ ] **Fallback to Human** — если AI не справляется, эскалация на человека-менеджера
+- [ ] **Analytics** — отслеживание воронки: зашёл → говорит → тёплый → купил
+
+**Key Prompt Design (AI Sales Agent):**
+
+```
+Ты — AI-консультант AIM Agency, агентства AI-маркетинга для
+медицинских клиник.
+
+ТВОЯ ЗАДАЧА:
+1. Познакомиться с владельцем клиники
+2. Выяснить потребности и боли
+3. Запустить аудит (SEO, контент, конкуренты, реклама)
+4. Показать конкретные цифры
+5. Сделать персонализированное предложение
+6. Закрыть на оплату
+
+ТВОЙ СТИЛЬ:
+- Экспертный, но дружелюбный
+- Конкретные цифры, не абстракции
+- Не давишь, но ведёшь к решению
+- Если клиент не готов — выясняешь почему
+
+ПРАВИЛА:
+- Не рассказывай про AIM абстрактно — покажи цифры
+- Не предлагай цену пока не готов аудит
+- Если клиент холодный — не запускай дорогие анализы
+- Спрашивай разрешение перед запуском глубокого аудита
+```
+
+**Dependencies:**
+- Phase 7 (Production) — ✅ COMPLETED
+- Phase 7.5 (Linear) — ✅ COMPLETED
+- Phase 9 (Agency Ops) — ✅ COMPLETED
+- Phase 10 (AI Enhancement) — for Claude/GPT-4 integration
+
+**Next Steps:**
+1. Design Chat UI concept (минималистичный, одна кнопка)
+2. Write AI Sales Agent prompt (тестировать в Claude.ai)
+3. Build WebSocket chat endpoint
+4. Integrate Magister orchestration in background
+5. Test full flow: зашёл → поговорил → получил КП → оплатил
+
+---
+
 ## Summary
 
 **Milestone 1:** Phases 1-8 COMPLETED ✅
@@ -435,6 +954,12 @@
 - ✅ Deliverable 4: Team Collaboration
 - ✅ Deliverable 5: Knowledge Base
 
+**Critical Next (Priority Order):**
+- 🔴 Phase 13: AI Sales Agent — пресейл через AI-чат вместо лендинга (ключевая инновация)
+- 🔴 Phase 12: Client Personal Cabinet — ЛК после покупки
+- 🟡 Phase 10: AI Enhancement — LLM интеграция для контента
+- ⚠️ Phase 11: SUPERSEDED by Phase 13
+
 ---
 
-**Last Updated:** 2026-05-16 10:22 GMT+3
+**Last Updated:** 2026-05-18 23:55 GMT+3

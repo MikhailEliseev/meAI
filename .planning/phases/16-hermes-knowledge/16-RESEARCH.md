@@ -747,19 +747,19 @@ description: AIM Operator — единый AI-интерфейс агентст�
 | A5 | Hermes-agent `load_soul_identity=True` loads SOUL.md from HERMES_HOME/SOUL.md (via copy_soul.sh) | Architecture Patterns | If path is different, SOUL.md won't load. Verified by code: Dockerfile copies skills/ to /opt/hermes/skills/, copy_soul.sh copies skills/aim/ to /opt/data/. |
 | A6 | The current services.md, processes.md, and kpi.md are accurate and don't need major updates | Knowledge Gaps | These files are already comprehensive (894 lines total). Minor updates may be needed but not a full rewrite. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **SOUL.md size limit — what is the effective context window?**
+1. **SOUL.md size limit — what is the effective context window?** (RESOLVED: Plan targets 550-650 lines with progressive disclosure — critical sections first, deep reference later)
    - What we know: AIAgent loads SOUL.md + supplementary skills + mode prompt + conversation history
    - What's unclear: Exact token budget for SOUL.md vs conversation. DeepSeek V4 context is large but effective window for precise instruction following may be smaller.
    - Recommendation: Keep SOUL.md under 600 lines (~15K tokens). Move deep reference material to separate skill files loaded on-demand.
 
-2. **Should subagent lists be exhaustive or representative?**
+2. **Should subagent lists be exhaustive or representative?** (RESOLVED: Plan uses capability groups — "Technical SEO: ci_tech.py, ci_tech_real.py, technical_agent.py, ci_site_crawler.py" — key files without full detail per RESEARCH.md recommendation)
    - What we know: 70+ subagent files exist. Listing all would bloat SOUL.md.
    - What's unclear: Does Hermes need to know every subagent name, or just capability categories?
    - Recommendation: Group subagents by capability (e.g., "Technical SEO: ci_tech.py, ci_tech_real.py, technical_agent.py, ci_site_crawler.py — handles PageSpeed, Core Web Vitals, crawlability"). List key files without full detail.
 
-3. **How to keep SOUL.md synchronized with codebase changes?**
+3. **How to keep SOUL.md synchronized with codebase changes?** (RESOLVED: Plan Task 3 Section 12 adds manual update triggers; CLAUDE.md rule for future sync)
    - What we know: No automated sync mechanism exists.
    - What's unclear: Should we build a CI check, a pre-commit hook, or rely on manual discipline?
    - Recommendation: Add to CLAUDE.md: "When adding a new Magister/Subagent/tool, update Hermes SOUL.md." Simple manual rule for now.
