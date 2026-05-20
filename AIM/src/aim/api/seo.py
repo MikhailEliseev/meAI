@@ -63,7 +63,11 @@ async def run_seo_audit(payload: dict):
 
     Returns CI analysis with tech stack, content, SEO metrics, strategy.
     """
-    url = payload.get("url", "").strip()
+    url = payload.get("url", "")
+    # Hermes-agent may pass url as dict: {"url": "https://clinic.ru"}
+    if isinstance(url, dict):
+        url = url.get("url", "")
+    url = url.strip() if isinstance(url, str) else ""
     if not url:
         raise HTTPException(status_code=400, detail="url is required")
 

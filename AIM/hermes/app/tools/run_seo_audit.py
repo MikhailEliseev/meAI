@@ -18,11 +18,19 @@ from tools.registry import registry
 
 logger = logging.getLogger(__name__)
 
+
+def _unwrap(value, key):
+    """If hermes-agent passes the whole arguments dict as a param value, unwrap it."""
+    if isinstance(value, dict) and key in value:
+        return value[key]
+    return value
+
+
 AIM_API_BASE = "http://app:8000"
 REQUEST_TIMEOUT = 30.0  # seconds
 
 
-async def handle_run_seo_audit(url: str, **kwargs) -> str:
+async def handle_run_seo_audit(url, **kwargs) -> str:
     """Run a full SEO audit on a client website.
 
     Performs technical SEO analysis, keyword position tracking,
@@ -38,6 +46,7 @@ async def handle_run_seo_audit(url: str, **kwargs) -> str:
         - time_to_result: estimated weeks to first results
         - cost_per_patient: estimated acquisition cost
     """
+    url = _unwrap(url, "url")
     logger.info("Running SEO audit for URL: %s", url)
     try:
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
