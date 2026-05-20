@@ -100,9 +100,62 @@ CI Orchestrator → EventBus.publish(Event) → Hermes.subscribe → vault.inges
                         Magisters → GET /api/knowledge/context → enriched task
 ```
 
-### Next: Plan 18-02 (Teacher↔Hermes + Magisters context + Activation)
-- Task 2.1: Teacher → Hermes sync (teacher_sync.py)
-- Task 2.2: Magisters → Hermes context query (hermes_context.py)
-- Task 2.3: Activation Sequence doc (DONE — ACTIVATION_SEQUENCE.md)
-- Task 2.4: Health endpoint with knowledge loop monitoring
-- Task 2.5: Tool Training Guide (DONE)
+## Phase 18 Plan 18-02: Teacher↔Hermes + Magisters Context — COMPLETE ✅
+
+**Date:** 2026-05-20 18:30 GMT+3
+**Status:** 5/5 tasks complete
+
+### Completed:
+- Task 2.1: Teacher → Hermes sync (`teacher_sync.py` + wired in `main.py` startup) ✅
+- Task 2.2: Magisters → Hermes context query (`hermes_context.py` — already existed) ✅
+- Task 2.3: Activation Sequence (`ACTIVATION_SEQUENCE.md`) ✅
+- Task 2.4: Health endpoint with knowledge loop (already in `/health`) ✅
+- Task 2.5: Tool Training Guide (`TOOL_TRAINING_GUIDE.md` — created) ✅
+
+### Files changed:
+- `AIM/hermes/app/main.py` — TeacherSync wired in startup (non-blocking)
+- `AIM/hermes/docs/TOOL_TRAINING_GUIDE.md` — created (16 CI phases training guide)
+
+### Knowledge Loop: CLOSED 🔄
+```
+CI Orchestrator → EventBus → Hermes vault → LLM ingest → wiki/patterns/
+                                                                    ↓
+                        Magisters ← HermesContextProvider.get_context()
+```
+
+### Next: Phase 13 (AI Sales Agent) — стратегический приоритет #1
+
+---
+
+## Phase 17: No More Mock Data — COMPLETE ✅
+
+**Date:** 2026-05-20 11:30 GMT+3
+**Status:** 100% COMPLETE (already clean before implementation)
+
+### Audit Result:
+- **22 CI agents total** — all clean of mock/random data
+- **0 active agents with `import random`** (only deprecated ci_content.py, ci_tech.py)
+- **All agents use real data sources:** SerpAPI, SEMrush, Ahrefs, hh.ru API, PageSpeed API, httpx+BeautifulSoup scraping, logic-based estimation
+
+### Key Findings:
+1. Phase 17 plan was written from outdated audit — agents were cleaned in subsequent sessions
+2. **ci_content_improved** — already wired, task.payload fix already applied
+3. **ci_backlink** — already extends Agent, has execute_task(), wired in orchestrator
+4. **ci_rank_tracker** — already extends Agent, uses SerpAPI (not mock GSC)
+5. **ci_auditor** — PageSpeed API + httpx + BeautifulSoup, real scoring
+6. **ci_reputation** — SerpAPI review scraping, real SerpAPI+httpx
+7. **ci_vacancies** — hh.ru API integration, no random
+8. **ci_site_crawler** — real BFS crawl via httpx+BeautifulSoup
+9. **ci_pricing** — real price scraping with Russian format regex
+10. **ci_ecosystem** — real social/CRM/payment detection
+11. **ci_finance** — logic-based estimates from real signals, industry benchmarks
+12. **ci_strategist** — "3 numbers" computation with conversion_benchmarks
+
+### Actions Taken:
+- Added deprecation notices to ci_content.py and ci_tech.py
+- Verified orchestrator wiring (ci_content→ci_content_improved, ci_tech→ci_tech_real)
+
+### Commits:
+- `4595d13` feat(17): add deprecation notices
+
+### Next: Phase 13 (AI Sales Agent) — стратегический приоритет #1

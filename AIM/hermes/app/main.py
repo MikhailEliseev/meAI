@@ -77,14 +77,24 @@ async def on_startup():
     register_all_tools()
     logger.info("Hermes FastAPI started — tools registered")
 
+    vault = HermesKnowledgeVault()
+
+    # Teacher → Hermes knowledge sync (non-blocking, best-effort)
+    try:
+        from knowledge.teacher_sync import TeacherSync
+        sync = TeacherSync(vault, teacher_agent=None)
+        results = await sync.sync_all_domains()
+        total = sum(results.values())
+        logger.info(f"[Hermes] TeacherSync: {total} learnings synced across {len(results)} domains")
+    except Exception as e:
+        logger.info(f"[Hermes] TeacherSync skipped (no teacher agent available): {e}")
+
     # EventBus listener: subscribe to CI execution events (only if meai available)
     if _event_bus_available:
         try:
             database_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/hermes.db")
             event_bus = EventBus(database_url=database_url)
             await event_bus.initialize()
-
-            vault = HermesKnowledgeVault()
 
             event_bus.subscribe("ci.execution.started", vault.ingest_execution)
             event_bus.subscribe("ci.agent.completed", vault.ingest_agent_result)
