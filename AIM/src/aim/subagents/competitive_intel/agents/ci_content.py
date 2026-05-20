@@ -1,4 +1,12 @@
 """
+DEPRECATED: Use ci_content_improved.py instead.
+
+Kept for reference. Orchestrator uses CIContentAgentImproved from ci_content_improved.
+This module contains mock/random data and is no longer wired into the CI pipeline.
+"""
+
+# fmt: off
+_OLD_DOC = """
 CI Content Agent - Content Strategy Analysis
 
 Анализирует контент-стратегию конкурентов:
@@ -7,6 +15,9 @@ CI Content Agent - Content Strategy Analysis
 - Качество и глубина контента
 - SEO-оптимизация контента
 - Контент-маркетинг стратегия
+
+DEPRECATED: Use ci_content_improved.py instead.
+Kept for reference. Orchestrator uses CIContentAgentImproved from ci_content_improved.
 """
 
 from typing import Any, Dict, List

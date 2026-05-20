@@ -1,4 +1,12 @@
 """
+DEPRECATED: Use ci_tech_real.py instead.
+
+Kept for reference. Orchestrator uses CITechAgent from ci_tech_real.
+This module contains mock/random data and is no longer wired into the CI pipeline.
+"""
+
+# fmt: off
+_OLD_DOC = """
 CI Tech Agent - Technology Stack Analysis
 
 Анализирует технологический стек конкурентов:
@@ -6,6 +14,9 @@ CI Tech Agent - Technology Stack Analysis
 - CMS и платформы
 - Аналитика и маркетинговые инструменты
 - Уровень технологической зрелости
+
+DEPRECATED: Use ci_tech_real.py instead.
+Kept for reference. Orchestrator uses CITechAgent from ci_tech_real.
 """
 
 from typing import Any, Dict, List, Optional
