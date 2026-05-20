@@ -146,12 +146,12 @@ async def telegram_webhook(request: Request):
                         )
                         return {"status": "bound", "lead_id": lead_id}
 
-        # Process message via direct OmniRoute call (D-17: unified chat)
+        # Process message via Hermes AIAgent with session memory (D-17: unified chat)
         if chat_id and text:
             lead_id = _chat_lead_map.get(chat_id)
             mode = _get_mode(chat_id, lead_id)
 
-            reply = _call_omniroute_direct(mode=mode, user_message=text)
+            reply = _call_hermes_agent(mode=mode, user_message=text, session_id=f"tg:{chat_id}")
             await _send_telegram_message(chat_id, reply)
             return {"status": "replied"}
 
@@ -214,30 +214,35 @@ def _get_updates_sync(offset: int = 0, timeout: int = 30) -> list[dict]:
 
 
 def _process_update_sync(message_data: dict, chat_id: int, text: str):
-    """Process update via direct OmniRoute call — synchronous, for polling thread."""
+    """Process update via Hermes AIAgent — session, tools, memory. Polling thread."""
     lead_id = _chat_lead_map.get(chat_id)
     mode = _get_mode(chat_id, lead_id)
 
     logger.info(f"Processing tg message: chat_id={chat_id} mode={mode} text={text[:80]}")
-    reply = _call_omniroute_direct(mode=mode, user_message=text)
+    reply = _call_hermes_agent(mode=mode, user_message=text, session_id=f"tg:{chat_id}")
     _send_telegram_message_sync(chat_id, reply)
 
 
-def _call_omniroute_direct(mode: str, user_message: str) -> str:
-    """Call OmniRoute directly (no AIAgent) — avoids streaming issues.
+def _call_hermes_agent(mode: str, user_message: str, session_id: str) -> str:
+    """Process message via Hermes AIAgent — full session, tools, SOUL.md identity.
 
-    Uses build_system_prompt() which includes SOUL.md + mode prompt.
-    Telegram path bypasses AIAgent, so SOUL.md must be loaded manually.
+    Uses AIAgent (not raw OmniRoute) so each Telegram chat gets:
+    - Session memory (SQLite persistence per chat_id)
+    - Tool access (run_seo_audit, collect_contact, etc.)
+    - Full SOUL.md identity via load_soul_identity
+    - Consistent behavior with web chat
     """
-    from .omniroute_direct import chat
-    from .agent_wrapper import build_system_prompt
+    from .agent_wrapper import run_agent_sync
 
-    system_prompt = build_system_prompt(mode)
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_message},
-    ]
-    return chat(messages)
+    result = run_agent_sync(
+        message=user_message,
+        session_id=session_id,
+        mode=mode,
+    )
+    reply = result.get("reply", "")
+    if isinstance(reply, dict):
+        reply = reply.get("response", reply.get("content", str(reply)))
+    return str(reply)
 
 
 def _polling_loop_sync():

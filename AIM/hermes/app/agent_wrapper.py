@@ -163,47 +163,81 @@ run_content_analysis, run_ads_report, search_telegram_chats, send_telegram_messa
 """
 
 
+def _create_agent(session_id: str | None, mode: str):
+    """Create AIAgent with standard config. Shared by web and Telegram paths."""
+    from run_agent import AIAgent
+
+    return AIAgent(
+        base_url=OMNIROUTE_URL,
+        api_key=OMNIROUTE_AUTH,
+        provider="custom",
+        api_mode="openai_chat",
+        model=DEFAULT_MODEL,
+        session_id=session_id,
+        load_soul_identity=True,
+        ephemeral_system_prompt=get_mode_prompt(mode),
+        enabled_toolsets=["aim-operations"],
+        max_iterations=15,
+        quiet_mode=True,
+        request_overrides={"extra_body": {"thinking": {"type": "disabled"}}},
+    )
+
+
+def run_agent_sync(
+    message: str,
+    session_id: str | None = None,
+    mode: str = "PRESALE",
+) -> dict:
+    """Run AIAgent synchronously — for Telegram (polling thread) and direct calls.
+
+    Returns dict with reply, session_id, tool_calls.
+    Uses threading.Lock per session_id for SQLite concurrency safety (Pitfall 2).
+    """
+    import threading
+
+    # Use thread lock (not asyncio.Lock) — this runs in OS threads
+    lock = _get_thread_lock(session_id or "new")
+
+    with lock:
+        agent = _create_agent(session_id, mode)
+        response = agent.run_conversation(message)
+        return {
+            "reply": response.get("final_response", response.get("response", response.get("content", str(response)))),
+            "session_id": agent.session_id,
+            "tool_calls": response.get("tool_calls", []),
+        }
+
+
 async def run_agent(
     message: str,
     session_id: str | None = None,
     mode: str = "PRESALE",
 ) -> dict:
-    """Run AIAgent.conversation (sync) in executor thread and return result.
+    """Run AIAgent in executor thread — for FastAPI web chat endpoints.
 
     Per Pitfall 7: AIAgent.run_conversation() is synchronous.
     Wrapping in run_in_executor keeps FastAPI event loop free.
 
     Per Pitfall 2: per-session asyncio.Lock prevents SQLite concurrency errors.
-
-    OmniRoute uses OpenAI-compatible API at /v1 — provider="custom" + api_mode="openai_chat".
     """
-    from run_agent import AIAgent
-
     lock = get_session_lock(session_id or "new")
 
     async with lock:
         loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: run_agent_sync(message, session_id, mode),
+        )
 
-        def _run_sync():
-            agent = AIAgent(
-                base_url=OMNIROUTE_URL,
-                api_key=OMNIROUTE_AUTH,
-                provider="custom",
-                api_mode="openai_chat",
-                model=DEFAULT_MODEL,
-                session_id=session_id,
-                load_soul_identity=True,
-                ephemeral_system_prompt=get_mode_prompt(mode),
-                enabled_toolsets=["aim-operations"],
-                max_iterations=15,
-                quiet_mode=True,
-                request_overrides={"extra_body": {"thinking": {"type": "disabled"}}},
-            )
-            response = agent.run_conversation(message)
-            return {
-                "reply": response.get("final_response", response.get("response", response.get("content", str(response)))),
-                "session_id": agent.session_id,
-                "tool_calls": response.get("tool_calls", []),
-            }
 
-        return await loop.run_in_executor(None, _run_sync)
+# Thread-level locks for sync calls (Telegram polling, webhook via executor)
+_thread_locks: dict[str, object] = {}
+
+
+def _get_thread_lock(session_id: str) -> object:
+    """Get or create a threading.Lock per session_id."""
+    import threading
+
+    if session_id not in _thread_locks:
+        _thread_locks[session_id] = threading.Lock()
+    return _thread_locks[session_id]
