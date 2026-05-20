@@ -133,7 +133,7 @@ export default function OnboardingPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin h-12 w-12 border-4 border-primary-600 border-t-transparent rounded-full" />
+        <div className="animate-spin h-12 w-12 border-4 border-accent border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -141,12 +141,12 @@ export default function OnboardingPage() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
-          <h2 className="text-lg font-bold text-red-900 mb-2">Ошибка</h2>
-          <p className="text-red-700">{error}</p>
+        <div className="bg-surface-3 border border-semantic-error/30 rounded-md p-6 max-w-md">
+          <h2 className="text-lg font-bold text-semantic-error mb-2">Ошибка</h2>
+          <p className="text-semantic-error/80">{error}</p>
           <button
             onClick={loadSession}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            className="mt-4 px-4 py-2 bg-semantic-error text-white rounded-md hover:brightness-110"
           >
             Повторить
           </button>
@@ -156,14 +156,14 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-surface-1 py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="font-heading text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-ink">
             Добро пожаловать в AIM! 👋
           </h1>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-text-muted">
             Настроим ваш аккаунт. Это займёт около 10 минут.
           </p>
         </div>
@@ -182,12 +182,12 @@ export default function OnboardingPage() {
                       w-12 h-12 rounded-full flex items-center justify-center font-bold
                       ${
                         stage.status === "completed"
-                          ? "bg-green-500 text-white"
+                          ? "bg-semantic-success text-white"
                           : stage.status === "in_progress"
-                          ? "bg-primary-600 text-white"
+                          ? "bg-accent text-white"
                           : stage.status === "failed"
-                          ? "bg-red-500 text-white"
-                          : "bg-gray-200 text-gray-500"
+                          ? "bg-semantic-error text-white"
+                          : "bg-surface-3 text-text-subtle"
                       }
                     `}
                   >
@@ -214,7 +214,7 @@ export default function OnboardingPage() {
 
                   {/* Step Label */}
                   <div className="absolute top-14 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                    <p className="text-sm font-medium text-gray-700">{stage.name}</p>
+                    <p className="text-sm font-medium text-text-muted">{stage.name}</p>
                   </div>
                 </div>
 
@@ -226,8 +226,8 @@ export default function OnboardingPage() {
                       ${
                         stages[index + 1].status === "completed" ||
                         stages[index + 1].status === "in_progress"
-                          ? "bg-primary-600"
-                          : "bg-gray-200"
+                          ? "bg-accent"
+                          : "bg-surface-3"
                       }
                     `}
                   />
@@ -238,16 +238,16 @@ export default function OnboardingPage() {
         </div>
 
         {/* Current Stage Content */}
-        <div className="bg-white rounded-xl shadow-sm p-8">
+        <div className="bg-surface-2 rounded-md p-8 border border-border-hairline">
           {session?.stage === "created" && (
             <div>
-              <h2 className="font-heading text-2xl font-bold text-gray-900 mb-4">
+              <h2 className="text-2xl font-bold text-ink mb-4">
                 Шаг 1: Загрузка документов
               </h2>
-              <p className="text-gray-600 mb-6">
+              <p className="text-text-muted mb-6">
                 Загрузите документы вашей клиники для настройки аккаунта:
               </p>
-              <ul className="list-disc list-inside text-gray-600 mb-8 space-y-2">
+              <ul className="list-disc list-inside text-text-muted mb-8 space-y-2">
                 <li>Медицинская лицензия</li>
                 <li>Свидетельство о регистрации юрлица</li>
                 <li>Доступ к Яндекс.Метрике (опционально)</li>
@@ -263,11 +263,11 @@ export default function OnboardingPage() {
 
           {session?.stage === "documents_uploaded" && (
             <div className="text-center py-12">
-              <div className="animate-spin h-16 w-16 border-4 border-primary-600 border-t-transparent rounded-full mx-auto mb-4" />
-              <h2 className="font-heading text-2xl font-bold text-gray-900 mb-2">
+              <div className="animate-spin h-16 w-16 border-4 border-accent border-t-transparent rounded-full mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-ink mb-2">
                 Обработка документов...
               </h2>
-              <p className="text-gray-600">
+              <p className="text-text-muted">
                 Наш AI извлекает информацию из документов. Обычно занимает 1-2 минуты.
               </p>
             </div>
@@ -275,11 +275,11 @@ export default function OnboardingPage() {
 
           {session?.stage === "documents_processed" && (
             <div className="text-center py-12">
-              <div className="animate-spin h-16 w-16 border-4 border-primary-600 border-t-transparent rounded-full mx-auto mb-4" />
-              <h2 className="font-heading text-2xl font-bold text-gray-900 mb-2">
+              <div className="animate-spin h-16 w-16 border-4 border-accent border-t-transparent rounded-full mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-ink mb-2">
                 Отправка согласия ФЗ-152...
               </h2>
-              <p className="text-gray-600">
+              <p className="text-text-muted">
                 Готовим согласие на обработку персональных данных (ФЗ-152) для подписания.
               </p>
             </div>
@@ -288,7 +288,7 @@ export default function OnboardingPage() {
           {session?.stage === "baa_sent" && (
             <div className="text-center py-12">
               <svg
-                className="w-16 h-16 text-primary-600 mx-auto mb-4"
+                className="w-16 h-16 text-accent mx-auto mb-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -300,14 +300,14 @@ export default function OnboardingPage() {
                   d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                 />
               </svg>
-              <h2 className="font-heading text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="text-2xl font-bold text-ink mb-2">
                 Проверьте почту
               </h2>
-              <p className="text-gray-600 mb-4">
+              <p className="text-text-muted mb-4">
                 Мы отправили согласие на обработку данных (ФЗ-152) на{" "}
                 <strong>{session.data.contact_email}</strong>
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-text-subtle">
                 Пожалуйста, подпишите документ для продолжения. Это требование ФЗ-152 «О персональных данных».
               </p>
             </div>
@@ -317,11 +317,11 @@ export default function OnboardingPage() {
             session?.stage === "project_created" ||
             session?.stage === "welcome_sent") && (
             <div className="text-center py-12">
-              <div className="animate-spin h-16 w-16 border-4 border-primary-600 border-t-transparent rounded-full mx-auto mb-4" />
-              <h2 className="font-heading text-2xl font-bold text-gray-900 mb-2">
+              <div className="animate-spin h-16 w-16 border-4 border-accent border-t-transparent rounded-full mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-ink mb-2">
                 Настройка проекта...
               </h2>
-              <p className="text-gray-600">
+              <p className="text-text-muted">
                 Создаём рабочее пространство и отправляем приветственные материалы.
               </p>
             </div>
@@ -330,7 +330,7 @@ export default function OnboardingPage() {
           {session?.stage === "kickoff_scheduled" && (
             <div className="text-center py-12">
               <svg
-                className="w-16 h-16 text-green-500 mx-auto mb-4"
+                className="w-16 h-16 text-semantic-success mx-auto mb-4"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -340,10 +340,10 @@ export default function OnboardingPage() {
                   clipRule="evenodd"
                 />
               </svg>
-              <h2 className="font-heading text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="text-2xl font-bold text-ink mb-2">
                 Готово! 🎉
               </h2>
-              <p className="text-gray-600 mb-6">
+              <p className="text-text-muted mb-6">
                 Онбординг завершён. Мы запланировали стартовый звонок.
               </p>
 
@@ -352,7 +352,7 @@ export default function OnboardingPage() {
                   href={session.data.kickoff_call_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block px-6 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700"
+                  className="inline-block px-6 py-3 bg-accent text-white rounded-lg font-medium hover:brightness-110"
                 >
                   Записаться на стартовый звонок
                 </a>
@@ -361,7 +361,7 @@ export default function OnboardingPage() {
               {session.data.linear_project_id && (
                 <a
                   href={`/projects/${session.data.linear_project_id}`}
-                  className="inline-block ml-4 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200"
+                  className="inline-block ml-4 px-6 py-3 bg-surface-3 text-text-muted rounded-lg font-medium hover:bg-surface-3"
                 >
                   Открыть проект
                 </a>
@@ -372,9 +372,9 @@ export default function OnboardingPage() {
 
         {/* Help Section */}
         <div className="mt-8 text-center">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-text-subtle">
             Нужна помощь?{" "}
-            <a href="mailto:support@iamaim.ru" className="text-primary-600 hover:text-primary-700">
+            <a href="mailto:support@iamaim.ru" className="text-accent hover:brightness-110">
               Связаться с поддержкой
             </a>
           </p>

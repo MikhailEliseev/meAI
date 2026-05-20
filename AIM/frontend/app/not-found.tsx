@@ -5,13 +5,13 @@ export default function NotFound() {
     <main className="min-h-[80vh] flex items-center justify-center px-4">
       <div className="text-center max-w-md">
         <div className="text-8xl mb-6">🤷</div>
-        <h1 className="font-heading text-4xl font-bold text-gray-900 mb-3">
+        <h1 className="text-4xl font-bold text-ink mb-3">
           404
         </h1>
-        <p className="text-lg text-gray-600 mb-2">
+        <p className="text-lg text-text-muted mb-2">
           Страница не найдена
         </p>
-        <p className="text-sm text-gray-500 mb-8">
+        <p className="text-sm text-text-subtle mb-8">
           Возможно, она устарела, удалена или её здесь никогда не было. Даже AI
           иногда ошибается.
         </p>

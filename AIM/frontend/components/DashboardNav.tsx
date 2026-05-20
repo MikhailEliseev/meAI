@@ -47,7 +47,7 @@ export function DashboardNav() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-4rem)] shrink-0">
+    <aside className="w-64 bg-surface-2 border-r border-border-hairline min-h-[calc(100vh-4rem)] shrink-0">
       <nav className="p-4 space-y-1" aria-label="Навигация дашборда">
         {navItems.map((item) => (
           <Link
@@ -56,8 +56,8 @@ export function DashboardNav() {
             className={cn(
               "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
               pathname === item.href
-                ? "bg-primary-50 text-primary-700"
-                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                ? "bg-surface-3 text-accent"
+                : "text-text-muted hover:bg-surface-3 hover:text-ink"
             )}
           >
             {item.icon}

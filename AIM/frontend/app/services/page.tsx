@@ -95,12 +95,12 @@ const services = [
 export default function ServicesPage() {
   return (
     <main className="min-h-screen">
-      <section className="py-16 md:py-24 px-4 bg-gradient-to-br from-primary-50 via-white to-primary-100">
+      <section className="py-16 md:py-24 px-4 bg-canvas">
         <div className="max-w-7xl mx-auto text-center">
-          <h1 className="font-heading text-3xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h1 className="text-3xl md:text-5xl font-bold text-ink mb-4">
             Услуги AI-маркетинга
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-text-muted max-w-2xl mx-auto">
             Полный спектр маркетинговых услуг с применением искусственного
             интеллекта для медицинских клиник.
           </p>
@@ -113,34 +113,34 @@ export default function ServicesPage() {
             {services.map((service) => (
               <div
                 key={service.id}
-                className={`relative rounded-2xl border-2 p-8 flex flex-col ${
+                className={`relative rounded-lg border p-8 flex flex-col ${
                   service.highlighted
-                    ? "border-primary-500 bg-primary-50/30 shadow-xl scale-[1.02]"
-                    : "border-gray-100 bg-white shadow-md hover:shadow-lg"
+                    ? "border-accent bg-surface-3 scale-[1.02]"
+                    : "border-border-hairline bg-surface-2"
                 } transition-all duration-300`}
               >
                 {service.highlighted && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary-600 text-white text-xs font-bold px-4 py-1 rounded-full">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-white text-xs font-bold px-4 py-1 rounded-md">
                     Рекомендуем
                   </span>
                 )}
                 <div className="text-4xl mb-4">{service.icon}</div>
-                <h3 className="font-heading text-xl font-bold text-gray-900 mb-1">
+                <h3 className="text-xl font-bold text-ink mb-1">
                   {service.title}
                 </h3>
-                <p className="text-sm text-gray-500 mb-4">
+                <p className="text-sm text-text-subtle mb-4">
                   {service.subtitle}
                 </p>
-                <p className="text-2xl font-bold text-primary-600 mb-6">
+                <p className="text-2xl font-bold text-accent mb-6">
                   {service.price}
                 </p>
                 <ul className="space-y-2 mb-8 flex-1">
                   {service.features.map((f) => (
                     <li
                       key={f}
-                      className="flex items-start gap-2 text-sm text-gray-700"
+                      className="flex items-start gap-2 text-sm text-text-muted"
                     >
-                      <span className="text-primary-500 mt-0.5">✓</span>
+                      <span className="text-accent mt-0.5">✓</span>
                       {f}
                     </li>
                   ))}

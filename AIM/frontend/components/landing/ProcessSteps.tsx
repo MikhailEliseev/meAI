@@ -76,14 +76,14 @@ function ProcessStepCard({ step, index }: ProcessStepCardProps) {
       {/* Step Card */}
       <div
         className={cn(
-          "bg-white rounded-2xl shadow-lg p-8 border-2 border-gray-100",
-          "hover:shadow-2xl hover:border-primary-200 transition-all duration-300",
+          "bg-surface-2 rounded-lg p-8 border border-border-hairline",
+          "hover:border-accent transition-all duration-300",
           "hover:-translate-y-2"
         )}
       >
         {/* Step Number Badge */}
         <div className="absolute -top-6 left-8">
-          <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-primary-700 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+          <div className="w-12 h-12 bg-accent rounded-full flex items-center justify-center text-white font-bold text-xl">
             {step.number}
           </div>
         </div>
@@ -94,19 +94,19 @@ function ProcessStepCard({ step, index }: ProcessStepCardProps) {
         </div>
 
         {/* Title */}
-        <h3 className="font-heading text-2xl font-bold text-gray-900 mb-2 text-center">
+        <h3 className="text-2xl font-bold text-ink mb-2 text-center">
           {step.title}
         </h3>
 
         {/* Duration */}
         <div className="text-center mb-4">
-          <span className="inline-block px-4 py-1 bg-primary-50 text-primary-700 rounded-full text-sm font-semibold">
+          <span className="inline-block px-4 py-1 bg-surface-3 text-accent rounded-full text-sm font-semibold">
             {step.duration}
           </span>
         </div>
 
         {/* Description */}
-        <p className="text-gray-600 text-center mb-6 leading-relaxed">
+        <p className="text-text-muted text-center mb-6 leading-relaxed">
           {step.description}
         </p>
 
@@ -114,10 +114,10 @@ function ProcessStepCard({ step, index }: ProcessStepCardProps) {
         <ul className="space-y-3">
           {step.details.map((detail, idx) => (
             <li key={idx} className="flex items-start gap-3">
-              <span className="text-medical-green text-xl flex-shrink-0" aria-hidden="true">
+              <span className="text-semantic-success text-xl flex-shrink-0" aria-hidden="true">
                 ✓
               </span>
-              <span className="text-gray-700 text-sm">{detail}</span>
+              <span className="text-text-muted text-sm">{detail}</span>
             </li>
           ))}
         </ul>
@@ -131,7 +131,7 @@ function ProcessStepCard({ step, index }: ProcessStepCardProps) {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: index * 0.2 + 0.3 }}
-            className="text-primary-400 text-4xl"
+            className="text-accent text-4xl"
             aria-hidden="true"
           >
             →
@@ -147,7 +147,7 @@ function ProcessStepCard({ step, index }: ProcessStepCardProps) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: index * 0.2 + 0.3 }}
-            className="text-primary-400 text-4xl rotate-90"
+            className="text-accent text-4xl rotate-90"
             aria-hidden="true"
           >
             →
@@ -165,7 +165,7 @@ interface ProcessStepsProps {
 export function ProcessSteps({ className }: ProcessStepsProps) {
   return (
     <section
-      className={cn("py-20 px-4 bg-gradient-to-b from-white to-gray-50", className)}
+      className={cn("py-20 px-4 bg-canvas", className)}
       aria-labelledby="process-heading"
     >
       <div className="max-w-7xl mx-auto">
@@ -178,11 +178,11 @@ export function ProcessSteps({ className }: ProcessStepsProps) {
         >
           <h2
             id="process-heading"
-            className="font-heading text-3xl md:text-4xl font-bold text-gray-900 mb-4"
+            className="text-3xl md:text-4xl font-bold text-ink mb-4"
           >
             Как мы работаем
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-text-muted max-w-2xl mx-auto">
             Простой и прозрачный процесс от первой консультации до первых пациентов
           </p>
         </motion.div>
@@ -213,7 +213,7 @@ export function ProcessSteps({ className }: ProcessStepsProps) {
           >
             Начать работу
           </button>
-          <p className="text-sm text-gray-500 mt-4">
+          <p className="text-sm text-text-subtle mt-4">
             Первая консультация бесплатно • Без обязательств
           </p>
         </motion.div>

@@ -21,7 +21,7 @@ export function Header() {
   return (
     <>
       <header
-        className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100"
+        className="fixed top-0 left-0 right-0 z-40 bg-canvas/80 backdrop-blur-md border-b border-border-hairline"
         role="banner"
       >
         <nav
@@ -31,10 +31,10 @@ export function Header() {
           {/* Logo */}
           <Link
             href="/"
-            className="flex items-center gap-2 font-heading text-xl font-bold text-gray-900 hover:text-primary-600 transition-colors"
+            className="flex items-center gap-2 text-xl font-bold text-ink hover:text-accent transition-colors"
             aria-label="AIM Agency — на главную"
           >
-            <span className="w-8 h-8 bg-primary-600 text-white rounded-lg flex items-center justify-center text-sm font-extrabold">
+            <span className="w-8 h-8 bg-accent text-white rounded-md flex items-center justify-center text-sm font-extrabold">
               AIM
             </span>
             <span className="hidden sm:inline">AIM Agency</span>
@@ -49,8 +49,8 @@ export function Header() {
                   className={cn(
                     "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
                     pathname === link.href
-                      ? "text-primary-600 bg-primary-50"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      ? "text-accent bg-surface-3"
+                      : "text-text-muted hover:text-ink hover:bg-surface-2"
                   )}
                 >
                   {link.label}
@@ -70,7 +70,7 @@ export function Header() {
           {/* Mobile burger */}
           <button
             onClick={() => setMobileOpen((o) => !o)}
-            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+            className="md:hidden p-2 rounded-md text-text-muted hover:bg-surface-2 transition-colors"
             aria-label={mobileOpen ? "Закрыть меню" : "Открыть меню"}
             aria-expanded={mobileOpen}
           >
@@ -121,7 +121,7 @@ export function Header() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="absolute right-0 top-0 bottom-0 w-72 bg-white shadow-2xl pt-20 px-6"
+              className="absolute right-0 top-0 bottom-0 w-72 bg-canvas border-l border-border-hairline pt-20 px-6"
             >
               <ul className="space-y-1">
                 {navLinks.map((link) => (
@@ -132,8 +132,8 @@ export function Header() {
                       className={cn(
                         "block px-4 py-3 rounded-lg text-base font-medium transition-colors",
                         pathname === link.href
-                          ? "text-primary-600 bg-primary-50"
-                          : "text-gray-700 hover:bg-gray-50"
+                          ? "text-accent bg-surface-3"
+                          : "text-text-muted hover:bg-surface-2"
                       )}
                     >
                       {link.label}

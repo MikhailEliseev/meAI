@@ -48,17 +48,17 @@ export default function PaymentStatus({ paymentId }: PaymentStatusProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-md mx-auto mt-8 p-6 bg-red-50 border border-red-200 rounded-lg">
+      <div className="max-w-md mx-auto mt-8 p-6 bg-surface-3 border border-semantic-error/30 rounded-md">
         <div className="flex items-center mb-4">
           <svg
-            className="w-6 h-6 text-red-600 mr-2"
+            className="w-6 h-6 text-semantic-error mr-2"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -70,12 +70,12 @@ export default function PaymentStatus({ paymentId }: PaymentStatusProps) {
               d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <h2 className="text-xl font-semibold text-red-900">Ошибка</h2>
+          <h2 className="text-xl font-semibold text-semantic-error">Ошибка</h2>
         </div>
-        <p className="text-red-700 mb-4">{error}</p>
+        <p className="text-semantic-error/80 mb-4">{error}</p>
         <button
           onClick={handleReturnToDashboard}
-          className="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition-colors"
+          className="w-full bg-semantic-error text-white py-2 px-4 rounded-md hover:brightness-110 transition-colors"
         >
           Вернуться в панель управления
         </button>
@@ -92,13 +92,13 @@ export default function PaymentStatus({ paymentId }: PaymentStatusProps) {
   const isRefunded = status.status === "refunded";
 
   return (
-    <div className="max-w-md mx-auto mt-8 p-6 bg-white border border-gray-200 rounded-lg shadow-lg">
+    <div className="max-w-md mx-auto mt-8 p-6 bg-surface-2 border border-border-hairline rounded-lg">
       {/* Status Icon and Title */}
       <div className="flex items-center justify-center mb-6">
         {isSuccess && (
           <div className="flex flex-col items-center">
             <svg
-              className="w-16 h-16 text-green-600 mb-2"
+              className="w-16 h-16 text-semantic-success mb-2"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -110,14 +110,14 @@ export default function PaymentStatus({ paymentId }: PaymentStatusProps) {
                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <h2 className="text-2xl font-bold text-green-900">Платёж успешен</h2>
+            <h2 className="text-2xl font-bold text-semantic-success">Платёж успешен</h2>
           </div>
         )}
 
         {isFailed && (
           <div className="flex flex-col items-center">
             <svg
-              className="w-16 h-16 text-red-600 mb-2"
+              className="w-16 h-16 text-semantic-error mb-2"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -129,14 +129,14 @@ export default function PaymentStatus({ paymentId }: PaymentStatusProps) {
                 d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <h2 className="text-2xl font-bold text-red-900">Платёж не прошёл</h2>
+            <h2 className="text-2xl font-bold text-semantic-error">Платёж не прошёл</h2>
           </div>
         )}
 
         {isRefunded && (
           <div className="flex flex-col items-center">
             <svg
-              className="w-16 h-16 text-yellow-600 mb-2"
+              className="w-16 h-16 text-amber-400 mb-2"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -148,33 +148,33 @@ export default function PaymentStatus({ paymentId }: PaymentStatusProps) {
                 d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
               />
             </svg>
-            <h2 className="text-2xl font-bold text-yellow-900">Платёж возвращён</h2>
+            <h2 className="text-2xl font-bold text-amber-400">Платёж возвращён</h2>
           </div>
         )}
       </div>
 
       {/* Transaction Details */}
       <div className="space-y-3 mb-6">
-        <div className="flex justify-between py-2 border-b border-gray-200">
-          <span className="text-gray-600">ID транзакции:</span>
+        <div className="flex justify-between py-2 border-b border-border-hairline">
+          <span className="text-text-muted">ID транзакции:</span>
           <span className="font-mono text-sm">{status.payment_id}</span>
         </div>
 
-        <div className="flex justify-between py-2 border-b border-gray-200">
-          <span className="text-gray-600">Сумма:</span>
+        <div className="flex justify-between py-2 border-b border-border-hairline">
+          <span className="text-text-muted">Сумма:</span>
           <span className="font-semibold">
             {status.amount.toLocaleString("ru-RU")} {status.currency}
           </span>
         </div>
 
-        <div className="flex justify-between py-2 border-b border-gray-200">
-          <span className="text-gray-600">Способ оплаты:</span>
+        <div className="flex justify-between py-2 border-b border-border-hairline">
+          <span className="text-text-muted">Способ оплаты:</span>
           <span className="capitalize">{status.payment_method}</span>
         </div>
 
         {status.card_last4 && (
-          <div className="flex justify-between py-2 border-b border-gray-200">
-            <span className="text-gray-600">Карта:</span>
+          <div className="flex justify-between py-2 border-b border-border-hairline">
+            <span className="text-text-muted">Карта:</span>
             <span>
               {status.card_brand?.toUpperCase()} •••• {status.card_last4}
             </span>
@@ -182,20 +182,20 @@ export default function PaymentStatus({ paymentId }: PaymentStatusProps) {
         )}
 
         {status.external_transaction_id && (
-          <div className="flex justify-between py-2 border-b border-gray-200">
-            <span className="text-gray-600">Внешний ID:</span>
+          <div className="flex justify-between py-2 border-b border-border-hairline">
+            <span className="text-text-muted">Внешний ID:</span>
             <span className="font-mono text-sm">{status.external_transaction_id}</span>
           </div>
         )}
 
-        <div className="flex justify-between py-2 border-b border-gray-200">
-          <span className="text-gray-600">Дата:</span>
+        <div className="flex justify-between py-2 border-b border-border-hairline">
+          <span className="text-text-muted">Дата:</span>
           <span>{new Date(status.created_at).toLocaleString("ru-RU")}</span>
         </div>
 
         {status.completed_at && (
-          <div className="flex justify-between py-2 border-b border-gray-200">
-            <span className="text-gray-600">Завершён:</span>
+          <div className="flex justify-between py-2 border-b border-border-hairline">
+            <span className="text-text-muted">Завершён:</span>
             <span>{new Date(status.completed_at).toLocaleString("ru-RU")}</span>
           </div>
         )}
@@ -203,12 +203,12 @@ export default function PaymentStatus({ paymentId }: PaymentStatusProps) {
 
       {/* Error Message */}
       {isFailed && status.error_message && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm text-red-700">
+        <div className="mb-6 p-4 bg-surface-3 border border-semantic-error/30 rounded-md">
+          <p className="text-sm text-semantic-error/80">
             <span className="font-semibold">Причина:</span> {status.error_message}
           </p>
           {status.error_code && (
-            <p className="text-xs text-red-600 mt-1">Код ошибки: {status.error_code}</p>
+            <p className="text-xs text-semantic-error mt-1">Код ошибки: {status.error_code}</p>
           )}
         </div>
       )}
@@ -218,7 +218,7 @@ export default function PaymentStatus({ paymentId }: PaymentStatusProps) {
         {isSuccess && (
           <button
             onClick={handleDownloadReceipt}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center"
+            className="w-full bg-accent text-white py-2 px-4 rounded-md hover:brightness-110 transition-colors flex items-center justify-center"
           >
             <svg
               className="w-5 h-5 mr-2"
@@ -239,7 +239,7 @@ export default function PaymentStatus({ paymentId }: PaymentStatusProps) {
 
         <button
           onClick={handleReturnToDashboard}
-          className="w-full bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition-colors"
+          className="w-full bg-surface-3 text-text-muted py-2 px-4 rounded-md hover:bg-surface-2 transition-colors"
         >
           Вернуться в панель управления
         </button>

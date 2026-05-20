@@ -165,23 +165,23 @@ export function PaymentForm({
       onSubmit={handleSubmit}
     >
       {/* Amount Display */}
-      <div className="bg-gradient-to-r from-primary-50 to-sky-50 rounded-2xl p-6 border-2 border-primary-200">
-        <p className="text-sm font-semibold text-gray-600 mb-1">К оплате</p>
-        <p className="text-3xl font-bold text-gray-900">
+      <div className="bg-surface-3 rounded-lg p-6 border border-border-hairline">
+        <p className="text-sm font-semibold text-text-muted mb-1">К оплате</p>
+        <p className="text-3xl font-bold text-ink">
           {new Intl.NumberFormat("ru-RU", {
             style: "currency",
             currency: "RUB",
             minimumFractionDigits: 0,
           }).format(amount)}
         </p>
-        <p className="text-sm text-gray-600 mt-2">{description}</p>
+        <p className="text-sm text-text-muted mt-2">{description}</p>
       </div>
 
       {/* Cardholder Name */}
       <div>
         <label
           htmlFor="cardholderName"
-          className="block text-sm font-semibold text-gray-700 mb-2"
+          className="block text-sm font-semibold text-text-muted mb-2"
         >
           Имя владельца карты
         </label>
@@ -192,15 +192,15 @@ export function PaymentForm({
           onChange={(e) => setCardholderName(e.target.value.toUpperCase())}
           placeholder="IVAN PETROV"
           className={cn(
-            "w-full px-4 py-3 rounded-xl border-2 transition-colors",
+            "w-full px-4 py-3 rounded-md border-2 transition-colors",
             errors.cardholderName
-              ? "border-red-300 focus:border-red-500"
-              : "border-gray-200 focus:border-primary-500"
+              ? "border-semantic-error/50 focus:border-semantic-error"
+              : "border-border-hairline focus:border-accent"
           )}
           disabled={loading}
         />
         {errors.cardholderName && (
-          <p className="text-sm text-red-600 mt-1">{errors.cardholderName}</p>
+          <p className="text-sm text-semantic-error mt-1">{errors.cardholderName}</p>
         )}
       </div>
 
@@ -208,7 +208,7 @@ export function PaymentForm({
       <div>
         <label
           htmlFor="cardNumber"
-          className="block text-sm font-semibold text-gray-700 mb-2"
+          className="block text-sm font-semibold text-text-muted mb-2"
         >
           Номер карты
         </label>
@@ -224,15 +224,15 @@ export function PaymentForm({
           }}
           placeholder="1234 5678 9012 3456"
           className={cn(
-            "w-full px-4 py-3 rounded-xl border-2 transition-colors font-mono",
+            "w-full px-4 py-3 rounded-md border-2 transition-colors font-mono",
             errors.cardNumber
-              ? "border-red-300 focus:border-red-500"
-              : "border-gray-200 focus:border-primary-500"
+              ? "border-semantic-error/50 focus:border-semantic-error"
+              : "border-border-hairline focus:border-accent"
           )}
           disabled={loading}
         />
         {errors.cardNumber && (
-          <p className="text-sm text-red-600 mt-1">{errors.cardNumber}</p>
+          <p className="text-sm text-semantic-error mt-1">{errors.cardNumber}</p>
         )}
       </div>
 
@@ -241,7 +241,7 @@ export function PaymentForm({
         <div>
           <label
             htmlFor="expiryDate"
-            className="block text-sm font-semibold text-gray-700 mb-2"
+            className="block text-sm font-semibold text-text-muted mb-2"
           >
             Срок действия
           </label>
@@ -257,22 +257,22 @@ export function PaymentForm({
             }}
             placeholder="MM/YY"
             className={cn(
-              "w-full px-4 py-3 rounded-xl border-2 transition-colors font-mono",
+              "w-full px-4 py-3 rounded-md border-2 transition-colors font-mono",
               errors.expiryDate
-                ? "border-red-300 focus:border-red-500"
-                : "border-gray-200 focus:border-primary-500"
+                ? "border-semantic-error/50 focus:border-semantic-error"
+                : "border-border-hairline focus:border-accent"
             )}
             disabled={loading}
           />
           {errors.expiryDate && (
-            <p className="text-sm text-red-600 mt-1">{errors.expiryDate}</p>
+            <p className="text-sm text-semantic-error mt-1">{errors.expiryDate}</p>
           )}
         </div>
 
         <div>
           <label
             htmlFor="cvv"
-            className="block text-sm font-semibold text-gray-700 mb-2"
+            className="block text-sm font-semibold text-text-muted mb-2"
           >
             CVV
           </label>
@@ -288,22 +288,22 @@ export function PaymentForm({
             }}
             placeholder="123"
             className={cn(
-              "w-full px-4 py-3 rounded-xl border-2 transition-colors font-mono",
+              "w-full px-4 py-3 rounded-md border-2 transition-colors font-mono",
               errors.cvv
-                ? "border-red-300 focus:border-red-500"
-                : "border-gray-200 focus:border-primary-500"
+                ? "border-semantic-error/50 focus:border-semantic-error"
+                : "border-border-hairline focus:border-accent"
             )}
             disabled={loading}
           />
           {errors.cvv && (
-            <p className="text-sm text-red-600 mt-1">{errors.cvv}</p>
+            <p className="text-sm text-semantic-error mt-1">{errors.cvv}</p>
           )}
         </div>
       </div>
 
       {/* Security Notice */}
-      <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-        <p className="text-sm text-gray-600">
+      <div className="bg-surface-3 rounded-md p-4 border border-border-hairline">
+        <p className="text-sm text-text-muted">
           🔒 Платёж защищён по стандарту PCI DSS. Данные карты передаются в
           зашифрованном виде через ЮKassa.
         </p>
@@ -314,10 +314,10 @@ export function PaymentForm({
         type="submit"
         disabled={loading}
         className={cn(
-          "w-full py-4 rounded-xl font-bold text-lg transition-all",
+          "w-full py-4 rounded-md font-bold text-lg transition-all",
           loading
-            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-            : "bg-gradient-to-r from-primary-600 to-sky-600 text-white hover:from-primary-700 hover:to-sky-700 shadow-lg hover:shadow-xl"
+            ? "bg-surface-3 text-text-muted cursor-not-allowed"
+            : "bg-accent text-white hover:brightness-110"
         )}
       >
         {loading ? (
@@ -335,8 +335,8 @@ export function PaymentForm({
       </button>
 
       {/* STUB Notice */}
-      <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-200">
-        <p className="text-sm text-yellow-800">
+      <div className="bg-surface-3 rounded-md p-4 border border-amber-400/30">
+        <p className="text-sm text-amber-400">
           ⚠️ <strong>STUB:</strong> Используется Helcim stub для разработки.
           Реальная интеграция с ЮKassa будет в Phase 12. Платежи обрабатываются
           через backend API, но всегда возвращают успех.

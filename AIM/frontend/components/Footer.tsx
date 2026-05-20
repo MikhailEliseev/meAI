@@ -33,14 +33,14 @@ const footerColumns = [
 export function Footer() {
   return (
     <footer
-      className="bg-gray-900 text-gray-300 pt-16 pb-8 px-4"
+      className="bg-surface-1 text-text-muted pt-16 pb-8 px-4"
       role="contentinfo"
     >
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
           {footerColumns.map((col) => (
             <div key={col.title}>
-              <h4 className="font-heading text-white font-semibold text-sm uppercase tracking-wider mb-4">
+              <h4 className="text-ink font-semibold text-sm uppercase tracking-wider mb-4">
                 {col.title}
               </h4>
               <ul className="space-y-2">
@@ -48,7 +48,7 @@ export function Footer() {
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                      className="text-sm text-text-subtle hover:text-ink transition-colors"
                     >
                       {link.label}
                     </Link>
@@ -60,14 +60,14 @@ export function Footer() {
 
           {/* Contacts column */}
           <div>
-            <h4 className="font-heading text-white font-semibold text-sm uppercase tracking-wider mb-4">
+            <h4 className="text-ink font-semibold text-sm uppercase tracking-wider mb-4">
               Контакты
             </h4>
-            <ul className="space-y-2 text-sm text-gray-400">
+            <ul className="space-y-2 text-sm text-text-subtle">
               <li>
                 <a
                   href="mailto:hello@iamaim.ru"
-                  className="hover:text-white transition-colors"
+                  className="hover:text-ink transition-colors"
                 >
                   hello@iamaim.ru
                 </a>
@@ -75,7 +75,7 @@ export function Footer() {
               <li>
                 <a
                   href="tel:+79991234567"
-                  className="hover:text-white transition-colors"
+                  className="hover:text-ink transition-colors"
                 >
                   +7 999 123-45-67
                 </a>
@@ -85,7 +85,7 @@ export function Footer() {
                   href="https://t.me/aimagency"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-white transition-colors"
+                  className="hover:text-ink transition-colors"
                 >
                   Telegram
                 </a>
@@ -95,7 +95,7 @@ export function Footer() {
                   href="https://vk.com/aimagency"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-white transition-colors"
+                  className="hover:text-ink transition-colors"
                 >
                   VK
                 </a>
@@ -105,16 +105,16 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="border-t border-border-hairline pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="w-6 h-6 bg-primary-600 text-white rounded flex items-center justify-center text-[10px] font-extrabold">
+            <span className="w-6 h-6 bg-accent text-white rounded flex items-center justify-center text-[10px] font-extrabold">
               AIM
             </span>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-text-subtle">
               &copy; {new Date().getFullYear()} AIM Agency. Все права защищены.
             </p>
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-text-subtle">
             AI-first медицинское маркетинговое агентство
           </p>
         </div>

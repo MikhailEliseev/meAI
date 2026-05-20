@@ -16,14 +16,14 @@ export function ProgressSteps({ progress }: ProgressStepsProps) {
       className="self-start max-w-[85%]"
     >
       <div className="flex gap-3">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
           <span className="text-white font-bold text-xs">AI</span>
         </div>
-        <div className="bg-white rounded-2xl px-4 py-3 border border-gray-100 shadow-sm flex-1">
-          <p className="text-sm text-gray-700 mb-2">{progress.step}</p>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="bg-surface-2 rounded-lg px-4 py-3 border border-border-hairline flex-1">
+          <p className="text-sm text-text-muted mb-2">{progress.step}</p>
+          <div className="w-full bg-surface-3 rounded-full h-2">
             <motion.div
-              className="h-2 rounded-full bg-gradient-to-r from-primary-500 to-primary-700"
+              className="h-2 rounded-full bg-accent"
               initial={{ width: 0 }}
               animate={{
                 width: `${Math.round(((progress.stepIndex + 1) / Math.max(progress.totalSteps, 1)) * 100)}%`,

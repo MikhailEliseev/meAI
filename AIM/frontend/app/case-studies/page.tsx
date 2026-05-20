@@ -21,12 +21,12 @@ export const metadata: Metadata = {
 export default function CaseStudiesPage() {
   return (
     <main className="min-h-screen">
-      <section className="py-16 md:py-24 px-4 bg-gradient-to-br from-primary-50 via-white to-primary-100">
+      <section className="py-16 md:py-24 px-4 bg-canvas">
         <div className="max-w-7xl mx-auto text-center">
-          <h1 className="font-heading text-3xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h1 className="text-3xl md:text-5xl font-bold text-ink mb-4">
             Кейсы наших клиентов
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-text-muted max-w-2xl mx-auto">
             50+ медицинских клиник уже доверили нам свой маркетинг. Вот их
             результаты.
           </p>

@@ -27,22 +27,22 @@ export function SalesChat({ className }: { className?: string }) {
     <section
       className={cn(
         "relative flex flex-col h-screen",
-        "bg-white",
+        "bg-canvas",
         className,
       )}
       aria-labelledby="chat-heading"
     >
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-3 border-b border-gray-100 bg-white/80 backdrop-blur sticky top-0 z-10 h-14 shrink-0">
-        <a href="/" className="flex items-center gap-2 font-heading font-bold text-lg text-gray-900 no-underline">
-          <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+      <header className="flex items-center justify-between px-6 py-3 border-b border-border-hairline bg-canvas/80 backdrop-blur sticky top-0 z-10 h-14 shrink-0">
+        <a href="/" className="flex items-center gap-2 font-bold text-lg text-ink no-underline">
+          <span className="w-7 h-7 rounded-md bg-accent flex items-center justify-center">
             <span className="text-white font-bold text-xs">AI</span>
           </span>
           AIM
         </a>
         <a
           href="/about"
-          className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          className="text-sm text-text-muted hover:text-ink transition-colors"
         >
           О компании
         </a>
@@ -78,7 +78,7 @@ export function SalesChat({ className }: { className?: string }) {
 
       {/* Sticky bottom input */}
       {hasMessages && (
-        <div className="sticky bottom-0 bg-white border-t border-gray-100 max-w-3xl mx-auto w-full">
+        <div className="sticky bottom-0 bg-canvas border-t border-border-hairline max-w-3xl mx-auto w-full">
           <ChatInput
             onSend={sendMessage}
             onStop={stop}
