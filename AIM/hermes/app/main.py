@@ -30,7 +30,7 @@ except ImportError:
     EventBus = None
     _event_bus_available = False
 
-from hermes.knowledge.vault import HermesKnowledgeVault
+from knowledge.vault import HermesKnowledgeVault
 
 from .auth import verify_api_key
 from .agent_wrapper import run_agent

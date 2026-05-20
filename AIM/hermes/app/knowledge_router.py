@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from hermes.knowledge.vault import HermesKnowledgeVault
+from knowledge.vault import HermesKnowledgeVault
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +115,7 @@ async def learn(body: LearnRequest):
     saves extracted patterns in wiki/patterns/.
     """
     from datetime import datetime, timezone
-    from hermes.knowledge.ingest import LLMIngest
+    from knowledge.ingest import LLMIngest
 
     execution_id = body.execution_id
     ingest = LLMIngest(vault)
