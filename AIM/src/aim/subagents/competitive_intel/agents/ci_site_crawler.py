@@ -9,10 +9,15 @@ CI Site Crawler Agent - Deep Website Crawling & Structure Analysis
 - Изображения и медиа
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 from datetime import datetime
+from urllib.parse import urljoin, urlparse
+import asyncio
 import json
-import random
+import re
+
+import httpx
+from bs4 import BeautifulSoup
 
 from meai.agents.base_agent import Agent, Task, TaskResult
 from meai.memory.obsidian import ObsidianVault
@@ -129,7 +134,9 @@ class CISiteCrawlerAgent(Agent):
         max_depth: int
     ) -> Dict[str, Any]:
         """
-        Краулинг одного сайта конкурента.
+        Краулинг одного сайта конкурента через реальный BFS crawl.
+
+        Ограничения: до 30 страниц, задержка 1.5s между запросами.
 
         Args:
             competitor: данные конкурента
@@ -143,76 +150,263 @@ class CISiteCrawlerAgent(Agent):
 
         print(f"[CI Site Crawler] Краулинг: {name} ({website})")
 
-        # TODO: Реальный краулинг через Playwright/Scrapy
-        # Пока генерируем реалистичные данные
+        if not website:
+            return self._empty_crawl_result(name, website, "No website URL provided")
 
-        # Количество страниц (зависит от размера компании)
-        size = competitor.get("estimated_size", "medium")
-        page_ranges = {
-            "small": (10, 30),
-            "medium": (30, 100),
-            "large": (100, 500)
+        try:
+            result = await self._real_bfs_crawl(name, website, max_depth)
+        except Exception as e:
+            print(f"[CI Site Crawler] Crawl error for {name}: {e}")
+            result = self._empty_crawl_result(name, website, f"Crawl error: {str(e)[:200]}")
+            result["data_source"] = "error"
+
+        return result
+
+    def _empty_crawl_result(self, name: str, website: str, note: str) -> dict:
+        """Return structured null crawl result."""
+        return {
+            "name": name,
+            "website": website,
+            "total_pages": None,
+            "pages_by_type": {},
+            "site_depth": None,
+            "internal_links": None,
+            "external_links": None,
+            "images_count": None,
+            "avg_content_length": None,
+            "meta_title_coverage": None,
+            "meta_description_coverage": None,
+            "has_schema": None,
+            "mobile_friendly": None,
+            "site_health": "unknown",
+            "data_source": "unavailable",
+            "note": note,
         }
-        total_pages = random.randint(*page_ranges.get(size, (30, 100)))
 
-        # Распределение по типам страниц
-        pages_by_type = {}
-        for page_type in ["homepage", "services", "about", "contacts", "blog", "prices"]:
-            if page_type == "homepage":
-                pages_by_type[page_type] = 1
-            elif page_type == "blog":
-                pages_by_type[page_type] = random.randint(0, total_pages // 2)
+    async def _real_bfs_crawl(
+        self, name: str, start_url: str, max_depth: int
+    ) -> Dict[str, Any]:
+        """Real BFS crawl with httpx + BeautifulSoup, capped at 30 pages."""
+        base_domain = urlparse(start_url).netloc
+        visited: Set[str] = set()
+        queue: List[tuple[str, int]] = [(start_url, 0)]  # (url, depth)
+        pages_data: List[dict] = []
+        max_pages = 30
+        delay = 1.5
+
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(15.0), follow_redirects=True
+        ) as client:
+            while queue and len(visited) < max_pages:
+                url, depth = queue.pop(0)
+                if url in visited:
+                    continue
+                if depth > max_depth:
+                    continue
+
+                visited.add(url)
+
+                try:
+                    resp = await client.get(
+                        url, headers={"User-Agent": "AIM-CI/1.0"}
+                    )
+                    resp.raise_for_status()
+                    html = resp.text
+                    soup = BeautifulSoup(html, "html.parser")
+                    final_url = str(resp.url)
+
+                    # Classify page type from URL
+                    page_type = self._classify_page_url(final_url)
+
+                    # Collect page data
+                    page_data = self._extract_page_data(soup, html, final_url, page_type)
+                    page_data["crawl_url"] = url
+                    page_data["crawl_depth"] = depth
+                    pages_data.append(page_data)
+
+                    # Enqueue internal links for next depth
+                    if depth < max_depth:
+                        for link in soup.find_all("a", href=True):
+                            href = link.get("href", "")
+                            full_url = urljoin(final_url, href)
+                            parsed = urlparse(full_url)
+                            # Only same domain, skip anchors/js/mailto
+                            if (
+                                parsed.netloc == base_domain
+                                and full_url not in visited
+                                and full_url.startswith(("http://", "https://"))
+                                and not href.startswith("#")
+                                and not href.startswith("javascript:")
+                                and not href.startswith("mailto:")
+                                and not href.startswith("tel:")
+                            ):
+                                queue.append((full_url, depth + 1))
+
+                    await asyncio.sleep(delay)
+
+                except Exception as e:
+                    print(f"[CI Site Crawler] Page error {url}: {e}")
+                    continue
+
+        if not pages_data:
+            return self._empty_crawl_result(name, start_url, "No pages crawled")
+
+        return self._aggregate_crawl_results(name, start_url, pages_data)
+
+    def _classify_page_url(self, url: str) -> str:
+        """Classify page by URL pattern."""
+        url_lower = url.lower()
+        if url_lower.rstrip("/").endswith(("/", "/index", "/home")):
+            return "homepage"
+        if any(p in url_lower for p in ["/uslugi", "/service", "/services", "/napravleni", "/lechenie", "/diagnostik"]):
+            return "services"
+        if any(p in url_lower for p in ["/price", "/cena", "/ceny", "/prices", "/stoimost"]):
+            return "prices"
+        if any(p in url_lower for p in ["/about", "/o-nas", "/klinika", "/o-klinike", "/company"]):
+            return "about"
+        if any(p in url_lower for p in ["/contact", "/kontakt", "/contacts"]):
+            return "contacts"
+        if any(p in url_lower for p in ["/blog", "/article", "/stati", "/news", "/novosti", "/journal"]):
+            return "blog"
+        if any(p in url_lower for p in ["/otzyv", "/review", "/reviews", "/testimonials"]):
+            return "reviews"
+        if any(p in url_lower for p in ["/faq", "/question", "/vopros"]):
+            return "faq"
+        if any(p in url_lower for p in ["/zapis", "/appointment", "/booking", "/online", "/bron"]):
+            return "booking"
+        return "other"
+
+    def _extract_page_data(
+        self, soup: BeautifulSoup, html: str, url: str, page_type: str
+    ) -> dict:
+        """Extract real data from a single page."""
+        # Meta title
+        title_tag = soup.find("title")
+        has_title = title_tag is not None and bool(title_tag.get_text().strip())
+
+        # Meta description
+        meta_desc = soup.find("meta", attrs={"name": "description"})
+        has_desc = meta_desc is not None and bool(meta_desc.get("content", "").strip())
+
+        # Headings
+        h1_tags = soup.find_all("h1")
+        h2_tags = soup.find_all("h2")
+
+        # Images
+        images = soup.find_all("img")
+        imgs_with_alt = sum(1 for img in images if img.get("alt"))
+
+        # Content length
+        for tag in soup(["script", "style", "nav", "footer", "header"]):
+            tag.decompose()
+        text = soup.get_text(separator=" ")
+        text = re.sub(r"\s+", " ", text).strip()
+        word_count = len(text.split())
+
+        # Schema
+        schema_tags = soup.find_all("script", type="application/ld+json")
+        has_schema = len(schema_tags) > 0
+
+        # Mobile
+        viewport = soup.find("meta", attrs={"name": "viewport"})
+        mobile_friendly = viewport is not None
+
+        # Internal/external links
+        base_domain = urlparse(url).netloc
+        all_links = soup.find_all("a", href=True)
+        internal = 0
+        external = 0
+        for link in all_links:
+            href = link.get("href", "")
+            parsed = urlparse(href)
+            if not parsed.netloc or parsed.netloc == base_domain:
+                internal += 1
             else:
-                pages_by_type[page_type] = random.randint(1, 10)
+                external += 1
 
-        # Глубина сайта
-        actual_depth = random.randint(2, min(max_depth, 5))
+        return {
+            "url": url,
+            "page_type": page_type,
+            "has_title": has_title,
+            "has_description": has_desc,
+            "h1_count": len(h1_tags),
+            "h2_count": len(h2_tags),
+            "image_count": len(images),
+            "images_with_alt": imgs_with_alt,
+            "word_count": word_count,
+            "has_schema": has_schema,
+            "mobile_friendly": mobile_friendly,
+            "internal_links": internal,
+            "external_links": external,
+        }
 
-        # Внутренние ссылки
-        internal_links = total_pages * random.randint(5, 15)
+    def _aggregate_crawl_results(
+        self, name: str, website: str, pages_data: List[dict]
+    ) -> dict:
+        """Aggregate individual page data into site-level crawl result."""
+        total_pages = len(pages_data)
 
-        # Внешние ссылки
-        external_links = random.randint(10, 50)
+        # Pages by type
+        pages_by_type: dict[str, int] = {}
+        for p in pages_data:
+            pt = p["page_type"]
+            pages_by_type[pt] = pages_by_type.get(pt, 0) + 1
 
-        # Изображения
-        images_count = total_pages * random.randint(2, 8)
+        # Max depth reached
+        max_depth_reached = max(p["crawl_depth"] for p in pages_data)
 
-        # Средняя длина контента (слов)
-        avg_content_length = random.randint(300, 1500)
+        # Total internal/external links (sum across all pages)
+        total_internal = sum(p["internal_links"] for p in pages_data)
+        total_external = sum(p["external_links"] for p in pages_data)
 
-        # Метаданные (% страниц с заполненными meta)
-        meta_title_coverage = random.uniform(0.6, 1.0)
-        meta_description_coverage = random.uniform(0.4, 0.9)
+        # Total images
+        total_images = sum(p["image_count"] for p in pages_data)
 
-        # Структурированные данные (Schema.org)
-        has_schema = random.choice([True, False])
+        # Average content length
+        avg_content_length = round(sum(p["word_count"] for p in pages_data) / total_pages) if total_pages > 0 else 0
 
-        # Мобильная версия
-        mobile_friendly = random.choice([True, True, True, False])  # 75% вероятность
+        # Meta coverage
+        pages_with_title = sum(1 for p in pages_data if p["has_title"])
+        pages_with_desc = sum(1 for p in pages_data if p["has_description"])
+        meta_title_coverage = round(pages_with_title / total_pages * 100, 1) if total_pages > 0 else 0
+        meta_description_coverage = round(pages_with_desc / total_pages * 100, 1) if total_pages > 0 else 0
 
-        result = {
+        # Schema
+        has_schema = any(p["has_schema"] for p in pages_data)
+
+        # Mobile friendly
+        mobile_friendly = any(p["mobile_friendly"] for p in pages_data)
+
+        return {
             "name": name,
             "website": website,
             "total_pages": total_pages,
             "pages_by_type": pages_by_type,
-            "site_depth": actual_depth,
-            "internal_links": internal_links,
-            "external_links": external_links,
-            "images_count": images_count,
+            "site_depth": max_depth_reached,
+            "internal_links": total_internal,
+            "external_links": total_external,
+            "images_count": total_images,
             "avg_content_length": avg_content_length,
-            "meta_title_coverage": round(meta_title_coverage * 100, 1),
-            "meta_description_coverage": round(meta_description_coverage * 100, 1),
+            "meta_title_coverage": meta_title_coverage,
+            "meta_description_coverage": meta_description_coverage,
             "has_schema": has_schema,
             "mobile_friendly": mobile_friendly,
             "site_health": self._assess_site_health(
-                meta_title_coverage,
-                meta_description_coverage,
+                meta_title_coverage / 100 if meta_title_coverage > 0 else 0,
+                meta_description_coverage / 100 if meta_description_coverage > 0 else 0,
                 has_schema,
-                mobile_friendly
-            )
+                mobile_friendly,
+            ),
+            "crawled_pages": [
+                {
+                    "url": p["url"],
+                    "page_type": p["page_type"],
+                    "word_count": p["word_count"],
+                }
+                for p in pages_data[:10]
+            ],
+            "data_source": "httpx_bfs_crawl",
         }
-
-        return result
 
     def _assess_site_health(
         self,

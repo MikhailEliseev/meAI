@@ -11,7 +11,8 @@ CI Vacancies Agent - HR Intelligence Analysis
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 import json
-import random
+
+import httpx
 
 from meai.agents.base_agent import Agent, Task, TaskResult
 from meai.events.event_bus import EventBus
@@ -149,7 +150,7 @@ class CIVacanciesAgent(Agent):
         geo: str
     ) -> Dict[str, Any]:
         """
-        Проанализировать вакансии одного конкурента.
+        Проанализировать вакансии одного конкурента через hh.ru API.
 
         Args:
             competitor: данные конкурента
@@ -157,80 +158,191 @@ class CIVacanciesAgent(Agent):
             geo: город
 
         Returns:
-            Профиль вакансий конкурента
+            Профиль вакансий конкурента на реальных данных
         """
         name = competitor["name"]
         print(f"[CI Vacancies] Анализ: {name}")
 
-        # TODO: Реальный сбор через hh.ru API
-        # Пока генерируем реалистичные данные
-
         size = competitor.get("estimated_size", "medium")
 
-        # Количество открытых вакансий
-        vacancy_ranges = {
-            "small": (0, 3),
-            "medium": (2, 8),
-            "large": (5, 20)
-        }
-        open_vacancies = random.randint(*vacancy_ranges.get(size, (2, 8)))
+        async with httpx.AsyncClient(timeout=httpx.Timeout(15.0)) as client:
+            employer = await self._find_employer_on_hh(client, name, geo)
 
-        # Оценка размера команды
-        team_size_ranges = {
-            "small": (5, 15),
-            "medium": (15, 50),
-            "large": (50, 200)
-        }
-        team_size = random.randint(*team_size_ranges.get(size, (15, 50)))
+            if employer:
+                hh_data = await self._fetch_hh_vacancies(client, employer["id"])
 
-        # Распределение по категориям
-        vacancies_by_category = {}
-        if open_vacancies > 0:
-            # Для медицинской ниши больше медперсонала
-            if "стоматология" in niche.lower() or "косметология" in niche.lower():
-                vacancies_by_category = {
-                    "medical": random.randint(1, max(1, open_vacancies // 2)),
-                    "admin": random.randint(0, max(1, open_vacancies // 3)),
-                    "marketing": random.randint(0, 2),
-                    "sales": random.randint(0, 1)
+                total_found = hh_data.get("found", 0)
+                open_vacancies = min(total_found, 100)
+                vacancies_list = hh_data.get("items", [])
+
+                vacancies_by_category: dict[str, int] = {}
+                total_salary_by_cat: dict[str, float] = {}
+                count_salary_by_cat: dict[str, int] = {}
+
+                for vac in vacancies_list:
+                    roles = vac.get("professional_roles", [])
+                    for role in roles:
+                        role_name = role.get("name", "")
+                        cat = self._map_hh_role_to_category(role_name)
+                        vacancies_by_category[cat] = vacancies_by_category.get(cat, 0) + 1
+
+                    salary = vac.get("salary")
+                    if salary and salary.get("from"):
+                        sal_from = salary.get("from") or 0
+                        sal_to = salary.get("to") or sal_from
+                        avg_sal = (sal_from + sal_to) / 2
+                        for role in roles:
+                            role_name = role.get("name", "")
+                            cat = self._map_hh_role_to_category(role_name)
+                            total_salary_by_cat[cat] = total_salary_by_cat.get(cat, 0.0) + avg_sal
+                            count_salary_by_cat[cat] = count_salary_by_cat.get(cat, 0) + 1
+
+                avg_salaries = {}
+                for cat in vacancies_by_category:
+                    if count_salary_by_cat.get(cat, 0) > 0:
+                        avg_salaries[cat] = round(total_salary_by_cat[cat] / count_salary_by_cat[cat])
+
+                team_size = employer.get("open_vacancies", 0)
+                if team_size == 0:
+                    team_size_ranges = {
+                        "small": (5, 15),
+                        "medium": (15, 50),
+                        "large": (50, 200)
+                    }
+                    low, high = team_size_ranges.get(size, (15, 50))
+                    team_size = (low + high) // 2
+
+                vacancy_ratio = open_vacancies / max(team_size, 1)
+                if vacancy_ratio > 0.2:
+                    growth_rate = "fast"
+                elif vacancy_ratio > 0.05:
+                    growth_rate = "moderate"
+                else:
+                    growth_rate = "slow"
+
+                profile = {
+                    "name": name,
+                    "size": size,
+                    "open_vacancies": open_vacancies,
+                    "vacancies_list": [
+                        {
+                            "title": v.get("name", ""),
+                            "url": v.get("alternate_url", ""),
+                            "salary": v.get("salary"),
+                        }
+                        for v in vacancies_list[:10]
+                    ],
+                    "team_size_estimate": team_size,
+                    "vacancies_by_category": vacancies_by_category,
+                    "avg_salaries": avg_salaries,
+                    "growth_rate": growth_rate,
+                    "hiring_active": open_vacancies > 0,
+                    "sources": ["hh.ru"],
+                    "data_source": "hh.ru API",
+                    "confidence": 0.8,
                 }
             else:
-                # Общее распределение
-                for category in list(self.position_categories.keys())[:4]:
-                    vacancies_by_category[category] = random.randint(0, max(1, open_vacancies // 3))
-
-        # Средние зарплаты по категориям (руб/мес)
-        salary_ranges = {
-            "medical": (60000, 150000),
-            "admin": (40000, 70000),
-            "marketing": (50000, 100000),
-            "sales": (45000, 90000),
-            "tech": (70000, 120000),
-            "management": (100000, 250000)
-        }
-
-        avg_salaries = {}
-        for category in vacancies_by_category.keys():
-            if vacancies_by_category[category] > 0:
-                salary_range = salary_ranges.get(category, (50000, 100000))
-                avg_salaries[category] = random.randint(*salary_range)
-
-        # Темп роста (hiring velocity)
-        growth_rate = random.choice(["slow", "moderate", "fast"])
-
-        profile = {
-            "name": name,
-            "size": size,
-            "open_vacancies": open_vacancies,
-            "team_size_estimate": team_size,
-            "vacancies_by_category": vacancies_by_category,
-            "avg_salaries": avg_salaries,
-            "growth_rate": growth_rate,
-            "hiring_active": open_vacancies > 0,
-            "sources": ["hh", "avito"] if open_vacancies > 0 else []
-        }
+                profile = {
+                    "name": name,
+                    "size": size,
+                    "open_vacancies": None,
+                    "vacancies_list": [],
+                    "team_size_estimate": None,
+                    "vacancies_by_category": {},
+                    "avg_salaries": {},
+                    "growth_rate": None,
+                    "hiring_active": None,
+                    "sources": [],
+                    "data_source": "unavailable",
+                    "confidence": 0.0,
+                    "note": f"Компания '{name}' не найдена на hh.ru",
+                }
 
         return profile
+
+    async def _find_employer_on_hh(
+        self,
+        client: httpx.AsyncClient,
+        company_name: str,
+        area: str = "",
+    ) -> dict | None:
+        """Найти работодателя на hh.ru по названию."""
+        url = "https://api.hh.ru/employers"
+        params: dict[str, Any] = {"text": company_name, "per_page": 5}
+        if area:
+            params["area"] = area
+        try:
+            resp = await client.get(url, params=params,
+                                    headers={"User-Agent": "AIM-CI/1.0"})
+            resp.raise_for_status()
+            data = resp.json()
+            items = data.get("items", [])
+            if items:
+                return items[0]
+            # Fallback: search by first word of company name
+            short_name = company_name.split()[0] if company_name else ""
+            if short_name and short_name != company_name:
+                params["text"] = short_name
+                resp = await client.get(url, params=params,
+                                        headers={"User-Agent": "AIM-CI/1.0"})
+                resp.raise_for_status()
+                data = resp.json()
+                items = data.get("items", [])
+                if items:
+                    return items[0]
+        except Exception as e:
+            print(f"[CI Vacancies] hh.ru employer search error: {e}")
+        return None
+
+    async def _fetch_hh_vacancies(
+        self,
+        client: httpx.AsyncClient,
+        employer_id: str,
+    ) -> dict:
+        """Получить вакансии работодателя с hh.ru."""
+        url = "https://api.hh.ru/vacancies"
+        params = {
+            "employer_id": employer_id,
+            "per_page": 100,
+            "only_with_salary": "false",
+        }
+        resp = await client.get(url, params=params,
+                                headers={"User-Agent": "AIM-CI/1.0"})
+        resp.raise_for_status()
+        return resp.json()
+
+    def _map_hh_role_to_category(self, hh_role_name: str) -> str:
+        """Маппинг специализации hh.ru → категория позиции."""
+        role_lower = hh_role_name.lower()
+        if any(w in role_lower for w in [
+            "врач", "медицинск", "доктор", "медсестр", "стоматолог",
+            "фельдшер", "косметолог", "массажист",
+        ]):
+            return "medical"
+        elif any(w in role_lower for w in [
+            "администрат", "ресепш", "секретар", "оператор",
+            "хостес",
+        ]):
+            return "admin"
+        elif any(w in role_lower for w in [
+            "маркет", "smm", "seo", "продвижени", "реклам",
+            "контент", "копирайт",
+        ]):
+            return "marketing"
+        elif any(w in role_lower for w in [
+            "прода", "менеджер по продаж", "торгов",
+        ]):
+            return "sales"
+        elif any(w in role_lower for w in [
+            "it", "программист", "разработчик", "техническ",
+            "devops", "системный",
+        ]):
+            return "tech"
+        elif any(w in role_lower for w in [
+            "управл", "директор", "руководител", "начальник",
+        ]):
+            return "management"
+        return "other"
 
     async def _analyze_market_hr(
         self,

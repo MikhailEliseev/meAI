@@ -9,12 +9,15 @@ Source: https://github.com/ahrefs/ahrefs-python
 """
 
 import asyncio
+import os
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
 import httpx
 import structlog
+
+from meai.agents.base_agent import Agent, Task, TaskResult
 
 
 @dataclass
@@ -85,7 +88,7 @@ class BacklinkAnalysisResult:
     recommendations: list[str]
 
 
-class CIBacklinkAgent:
+class CIBacklinkAgent(Agent):
     """
     Competitive Intelligence Backlink Agent.
 
@@ -93,15 +96,30 @@ class CIBacklinkAgent:
     link building opportunities using Ahrefs API.
     """
 
-    def __init__(self, api_key: str | None = None):
+    def __init__(
+        self,
+        agent_id: str,
+        api_key: str | None = None,
+        database_url: str = "sqlite+aiosqlite:///./data/meai.db",
+        vault_path: str = "./obsidian",
+    ):
         """
         Initialize CI Backlink Agent.
 
         Args:
+            agent_id: Unique agent identifier
             api_key: Ahrefs API key (or set AHREFS_API_KEY env var)
+            database_url: Database connection URL
+            vault_path: Obsidian vault path
         """
+        super().__init__(
+            agent_id=agent_id,
+            agent_type="ci-backlink",
+            database_url=database_url,
+            vault_path=vault_path,
+        )
         self.logger = structlog.get_logger()
-        self.api_key = api_key
+        self.api_key = api_key or os.getenv("AHREFS_API_KEY")
         self.base_url = "https://api.ahrefs.com/v3"
         self.timeout = httpx.Timeout(30.0)
 
@@ -202,6 +220,152 @@ class CIBacklinkAgent:
         )
 
         return result
+
+    async def execute_task(self, task: Task) -> TaskResult:
+        """
+        Execute backlink analysis task from orchestrator.
+
+        Args:
+            task: Task with payload:
+                - competitors: list of competitor dicts with 'url' key
+                - our_url: our site URL (optional, uses first competitor as reference)
+
+        Returns:
+            TaskResult with backlink analysis
+        """
+        try:
+            competitors = task.payload.get("competitors", [])
+            our_url = task.payload.get("our_url", "")
+
+            if not competitors:
+                return TaskResult(
+                    subtask_id=task.subtask_id,
+                    agent_id=self.agent_id,
+                    action=task.action,
+                    status="failed",
+                    result={"error": "No competitors provided"},
+                    error="No competitors provided",
+                    duration_seconds=0.0,
+                    completed_at=datetime.now(),
+                )
+
+            # Use first competitor URL as target
+            target = competitors[0]
+            target_url = target.get("url", "") if isinstance(target, dict) else str(target)
+
+            if not target_url:
+                return TaskResult(
+                    subtask_id=task.subtask_id,
+                    agent_id=self.agent_id,
+                    action=task.action,
+                    status="failed",
+                    result={"error": "No valid competitor URL"},
+                    error="No valid competitor URL",
+                    duration_seconds=0.0,
+                    completed_at=datetime.now(),
+                )
+
+            # If no our_url, use a placeholder (real analysis needs our URL)
+            if not our_url:
+                return TaskResult(
+                    subtask_id=task.subtask_id,
+                    agent_id=self.agent_id,
+                    action=task.action,
+                    status="failed",
+                    result={
+                        "error": "our_url is required for backlink comparison",
+                        "target_url": target_url,
+                    },
+                    error="our_url is required",
+                    duration_seconds=0.0,
+                    completed_at=datetime.now(),
+                )
+
+            # Run real Ahrefs analysis
+            if not self.api_key:
+                return TaskResult(
+                    subtask_id=task.subtask_id,
+                    agent_id=self.agent_id,
+                    action=task.action,
+                    status="failed",
+                    result={
+                        "target_url": target_url,
+                        "our_url": our_url,
+                        "error": "AHREFS_API_KEY not configured",
+                        "backlink_gap": None,
+                        "refdomains_gap": None,
+                        "dr_gap": None,
+                        "opportunities": [],
+                        "summary": "Ahrefs API key not available. Backlink analysis skipped.",
+                        "recommendations": ["Configure AHREFS_API_KEY to enable backlink analysis."],
+                    },
+                    error="AHREFS_API_KEY not configured",
+                    duration_seconds=0.0,
+                    completed_at=datetime.now(),
+                )
+
+            start_time = datetime.now()
+            result = await self.analyze(target_url=target_url, our_url=our_url)
+
+            return TaskResult(
+                subtask_id=task.subtask_id,
+                agent_id=self.agent_id,
+                action=task.action,
+                status="success",
+                result={
+                    "target_url": result.target_url,
+                    "our_url": result.our_url,
+                    "backlink_gap": result.backlink_gap,
+                    "refdomains_gap": result.refdomains_gap,
+                    "dr_gap": result.dr_gap,
+                    "our_stats": {
+                        "live": result.our_stats.live,
+                        "live_refdomains": result.our_stats.live_refdomains,
+                        "dofollow": result.our_stats.dofollow,
+                    },
+                    "competitor_stats": {
+                        "live": result.competitor_stats.live,
+                        "live_refdomains": result.competitor_stats.live_refdomains,
+                        "dofollow": result.competitor_stats.dofollow,
+                    },
+                    "opportunities": [
+                        {
+                            "domain": o.domain,
+                            "domain_rating": o.domain_rating,
+                            "gap": o.gap,
+                            "opportunity_score": o.opportunity_score,
+                        }
+                        for o in result.opportunities[:10]
+                    ],
+                    "summary": result.summary,
+                    "recommendations": result.recommendations,
+                },
+                error=None,
+                duration_seconds=(datetime.now() - start_time).total_seconds(),
+                completed_at=datetime.now(),
+            )
+
+        except Exception as e:
+            self.logger.error("backlink_execute_task_failed", error=str(e))
+            return TaskResult(
+                subtask_id=task.subtask_id,
+                agent_id=self.agent_id,
+                action=task.action,
+                status="failed",
+                result={"error": str(e)},
+                error=str(e),
+                duration_seconds=0.0,
+                completed_at=datetime.now(),
+            )
+
+    def get_capabilities(self) -> list[str]:
+        """Return list of agent capabilities."""
+        return [
+            "backlink_analysis",
+            "link_gap_analysis",
+            "domain_authority_analysis",
+            "link_building_opportunities",
+        ]
 
     async def _fetch_backlinks_stats(
         self,

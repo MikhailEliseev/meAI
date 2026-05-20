@@ -11,7 +11,6 @@ CI Finance Agent - Financial Intelligence Analysis
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 import json
-import random
 
 from meai.agents.base_agent import Agent, Task, TaskResult
 from meai.events.event_bus import EventBus
@@ -140,6 +139,38 @@ class CIFinanceAgent(Agent):
                 completed_at=datetime.now()
             )
 
+    # Medical industry benchmarks (Russian market)
+    # Sources: Russian medical services industry reports, RBC Medicine, Vademecum
+    MEDICAL_REVENUE_PER_EMPLOYEE = {
+        "budget": 2_000_000,
+        "mid": 3_500_000,
+        "premium": 6_000_000,
+    }
+
+    MEDICAL_MARGIN_BENCHMARKS = {
+        "budget": (0.10, 0.15),
+        "mid": (0.15, 0.20),
+        "premium": (0.20, 0.30),
+    }
+
+    MEDICAL_ROI_BENCHMARKS = {
+        "budget": (25.0, 35.0),
+        "mid": (20.0, 30.0),
+        "premium": (15.0, 25.0),
+    }
+
+    MEDICAL_VALUATION_MULTIPLES = {
+        "budget": 2.0,
+        "mid": 3.0,
+        "premium": 4.0,
+    }
+
+    SIZE_REVENUE_FALLBACK = {
+        "small": 15_000_000,
+        "medium": 50_000_000,
+        "large": 150_000_000,
+    }
+
     async def _analyze_competitor_finances(
         self,
         competitor: Dict[str, Any],
@@ -148,6 +179,9 @@ class CIFinanceAgent(Agent):
     ) -> Dict[str, Any]:
         """
         Проанализировать финансы одного конкурента.
+
+        Все оценки основаны на логике и отраслевых бенчмарках,
+        а не на случайных числах. Каждое число тегировано методом и уверенностью.
 
         Args:
             competitor: данные конкурента
@@ -160,68 +194,65 @@ class CIFinanceAgent(Agent):
         name = competitor["name"]
         print(f"[CI Finance] Анализ: {name}")
 
-        # TODO: Реальный сбор данных через WebSearch, hh.ru, СПАРК
-        # Пока генерируем реалистичные оценки
-
-        # Оценка размера компании
         size = competitor.get("estimated_size", "medium")
         price_segment = competitor.get("price_segment", "mid")
+        team_size = competitor.get("team_size_estimate") or competitor.get("team_size")
 
-        # Базовые множители для оценки
-        size_multipliers = {
-            "small": 1.0,
-            "medium": 3.0,
-            "large": 10.0
-        }
+        # --- Revenue ---
+        if team_size and isinstance(team_size, (int, float)) and team_size > 0:
+            rev_per_emp = self.MEDICAL_REVENUE_PER_EMPLOYEE.get(price_segment, 3_500_000)
+            revenue = team_size * rev_per_emp
+            revenue_method = f"team_size × revenue_per_employee ({team_size} × {rev_per_emp:,})"
+            revenue_confidence = 0.6
+        else:
+            base = self.SIZE_REVENUE_FALLBACK.get(size, 50_000_000)
+            price_mult = {"budget": 0.7, "mid": 1.0, "premium": 1.5}
+            revenue = base * price_mult.get(price_segment, 1.0)
+            revenue_method = f"size_based_estimate ({size}, {price_segment})"
+            revenue_confidence = 0.35
 
-        price_multipliers = {
-            "budget": 0.7,
-            "mid": 1.0,
-            "premium": 1.5
-        }
-
-        base_revenue = 50_000_000  # 50 млн руб базовая выручка для medium/mid
-        revenue = base_revenue * size_multipliers.get(size, 1.0) * price_multipliers.get(price_segment, 1.0)
-
-        # Добавляем случайность ±30%
-        revenue = revenue * random.uniform(0.7, 1.3)
-
-        # Оценка прибыли (маржа 10-30% в зависимости от сегмента)
-        margin_ranges = {
-            "budget": (5, 15),
-            "mid": (10, 20),
-            "premium": (20, 35)
-        }
-        margin = random.uniform(*margin_ranges.get(price_segment, (10, 20)))
+        # --- Margin ---
+        margin_low, margin_high = self.MEDICAL_MARGIN_BENCHMARKS.get(
+            price_segment, (0.10, 0.20)
+        )
+        margin = round((margin_low + margin_high) / 2 * 100, 1)
         profit = revenue * (margin / 100)
 
-        # EBITDA (обычно выше чистой прибыли на 5-10%)
-        ebitda = profit * random.uniform(1.05, 1.15)
+        # --- EBITDA ---
+        ebitda_margin = margin + 5.0
+        ebitda = revenue * (ebitda_margin / 100)
 
-        # ROI (зависит от эффективности)
-        roi = random.uniform(15, 45)
+        # --- ROI ---
+        roi_low, roi_high = self.MEDICAL_ROI_BENCHMARKS.get(price_segment, (20.0, 30.0))
+        roi = round((roi_low + roi_high) / 2, 1)
 
-        # Финансирование (для растущих компаний)
-        has_funding = random.choice([True, False])
-        funding_amount = random.randint(5_000_000, 50_000_000) if has_funding else 0
+        # --- Funding ---
+        has_funding = None
+        funding_amount = None
 
-        # Оценка стоимости (обычно 2-5x от годовой выручки)
-        valuation = revenue * random.uniform(2, 5)
+        # --- Valuation ---
+        valuation_mult = self.MEDICAL_VALUATION_MULTIPLES.get(price_segment, 3.0)
+        valuation = revenue * valuation_mult
 
         profile = {
             "name": name,
             "size": size,
             "price_segment": price_segment,
             "revenue_estimate": round(revenue),
+            "revenue_method": revenue_method,
+            "revenue_confidence": revenue_confidence,
             "profit_estimate": round(profit),
             "ebitda_estimate": round(ebitda),
-            "margin_percent": round(margin, 1),
-            "roi_percent": round(roi, 1),
+            "margin_percent": margin,
+            "margin_method": f"medical_industry_benchmark ({price_segment}: {margin_low:.0%}-{margin_high:.0%})",
+            "roi_percent": roi,
+            "roi_method": f"medical_clinic_benchmark ({price_segment}: {roi_low:.0f}-{roi_high:.0f}%)",
             "has_funding": has_funding,
-            "funding_amount": funding_amount if has_funding else None,
+            "funding_amount": funding_amount,
+            "funding_note": "Требуются данные из СПАРК/Контур.Фокус/Rusbase",
             "valuation_estimate": round(valuation),
-            "estimation_method": random.choice(self.estimation_methods),
-            "confidence": random.uniform(0.6, 0.85)
+            "valuation_method": f"revenue_multiple (×{valuation_mult}, {price_segment} clinic)",
+            "confidence": revenue_confidence,
         }
 
         return profile

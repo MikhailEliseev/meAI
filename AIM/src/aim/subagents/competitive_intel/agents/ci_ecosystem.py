@@ -9,10 +9,14 @@ CI Ecosystem Agent - Partner & Integration Ecosystem Analysis
 - Каналы дистрибуции
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Set
 from datetime import datetime
+from urllib.parse import urljoin, urlparse
 import json
-import random
+import re
+
+import httpx
+from bs4 import BeautifulSoup
 
 from meai.agents.base_agent import Agent, Task, TaskResult
 from meai.memory.obsidian import ObsidianVault
@@ -54,6 +58,71 @@ class CIEcosystemAgent(Agent):
             "booking": "Онлайн-запись",
             "marketing": "Маркетинг автоматизация"
         }
+
+        # HTML-сигналы для детекшна интеграций (российский рынок)
+        self.crm_signals = {
+            "amoCRM": ["amocrm", "amo_social", "amoforms", "amocrm.ru/js"],
+            "Bitrix24": ["bitrix24", "bitrix.info", "bx24", "b24form"],
+            "Salesforce": ["salesforce", "force.com"],
+            "RetailCRM": ["retailcrm", "retailrocket"],
+        }
+
+        self.payment_signals = {
+            "YooKassa": ["yookassa", "yoomoney", "yandex.checkout", "ЮKassa"],
+            "CloudPayments": ["cloudpayments", "cloudpayments.ru"],
+            "Sberbank": ["sberbank.ru/acquiring", "sberbank.*платеж", "sber.acquiring"],
+            "Tinkoff": ["tinkoff.ru/acquiring", "tinkoff.*kassa", "tinkoff.ru/payment"],
+            "Robokassa": ["robokassa", "roboxchange"],
+        }
+
+        self.analytics_signals = {
+            "Yandex.Metrika": ["mc.yandex.ru/metrika", "metrika", "yandex_metrika", "ym("],
+            "Google Analytics": ["googletagmanager", "gtag", "analytics.js", "ga\(", "gtm.start"],
+            "VK Pixel": ["vk.com/js/api", "vk_pixel", "VK.Retargeting", "vk_retargeting"],
+            "MyTarget": ["top-fwz1.mail.ru", "mytarget", "top.mail.ru/js"],
+        }
+
+        self.booking_signals = {
+            "Yclients": ["yclients", "yclients.com"],
+            "DIKIDI": ["dikidi", "dikidi.ru"],
+            "Altegio": ["altegio", "altegio.com"],
+            "MedFlex": ["medflex", "medflex.ru"],
+            "Prodoctorov": ["prodoctorov.ru", "prodoctorov"],
+            "1C-Medicine": ["1c-med", "1c.*медицин"],
+        }
+
+        self.communication_signals = {
+            "JivoSite": ["jivosite", "jivosite.ru/js", "jivo_chat"],
+            "CallbackHunter": ["callbackhunter", "callbackhunter.ru"],
+            "LiveTex": ["livetex", "livetex.ru"],
+            "Talk-Me": ["talk-me", "talkme"],
+            "WhatsApp": ["api.whatsapp", "whatsapp://", "wa.me/", "chat.whatsapp"],
+            "Telegram": ["t.me/", "telegram.me/", "telegram.org/js"],
+        }
+
+        self.aggregator_signals = {
+            "Prodoctorov": ["prodoctorov.ru", "prodoctorov"],
+            "2GIS": ["2gis.ru", "2gis.com", "2gis.*отзыв"],
+            "Yandex.Maps": ["yandex.ru/maps", "yandex.*карт", "yandex.ru/profile"],
+            "Google Maps": ["google.com/maps", "maps.google", "google.*maps"],
+            "Zoon": ["zoon.ru", "zoon"],
+            "Yell": ["yell.ru", "yell"],
+        }
+
+        self.social_domains = {
+            "VK": ["vk.com", "vk.ru", "vkontakte.ru"],
+            "Telegram": ["t.me", "telegram.me", "tg.me"],
+            "YouTube": ["youtube.com", "youtu.be", "youtube.ru"],
+            "Instagram": ["instagram.com"],
+            "Odnoklassniki": ["ok.ru", "odnoklassniki.ru"],
+            "Yandex.Zen": ["dzen.ru", "zen.yandex.ru"],
+            "Rutube": ["rutube.ru"],
+        }
+
+        self.partner_link_keywords = [
+            "partner", "партнёр", "партнер", "сотрудничеств",
+            "франшиз", "franchise", "franchisee",
+        ]
 
     async def execute_task(self, task: Task) -> TaskResult:
         """
@@ -141,79 +210,210 @@ class CIEcosystemAgent(Agent):
         niche: str
     ) -> Dict[str, Any]:
         """
-        Проанализировать экосистему одного конкурента.
+        Проанализировать экосистему конкурента через реальный HTML-анализ сайта.
 
-        Args:
-            competitor: данные конкурента
-            niche: ниша
+        Детектирует: CRM, платёжные системы, аналитику, онлайн-запись,
+        соцсети, мессенджеры, виджеты, партнёрские интеграции.
 
-        Returns:
-            Профиль экосистемы конкурента
+        Если сайт недоступен → structured null.
         """
         name = competitor["name"]
+        website = competitor.get("website") or competitor.get("url") or competitor.get("site")
         print(f"[CI Ecosystem] Анализ экосистемы: {name}")
 
-        # TODO: Реальный сбор через парсинг сайтов, соцсетей, пресс-релизов
-        # Пока генерируем реалистичные данные
+        if not website:
+            print(f"[CI Ecosystem] Нет website для {name}, возвращаю structured null")
+            return {
+                "name": name,
+                "partners_by_type": {},
+                "total_partners": 0,
+                "integrations": {},
+                "integration_count": 0,
+                "distribution_channels": [],
+                "strategic_alliances": [],
+                "has_strategic_alliances": False,
+                "ecosystem_maturity": "unknown",
+                "confidence": 0.0,
+                "note": "no website provided"
+            }
 
-        # Партнёры по типам
+        signals = await self._scan_website_ecosystem(website)
+
+        if signals is None:
+            return {
+                "name": name,
+                "website": website,
+                "partners_by_type": {},
+                "total_partners": 0,
+                "integrations": {},
+                "integration_count": 0,
+                "distribution_channels": [],
+                "strategic_alliances": [],
+                "has_strategic_alliances": False,
+                "ecosystem_maturity": "unknown",
+                "confidence": 0.0,
+                "note": "website unreachable"
+            }
+
+        # Построение профиля из детектированных сигналов
         partners_by_type = {}
-        for partner_type in ["technology", "marketing", "suppliers", "strategic"]:
-            count = random.randint(0, 5) if random.random() > 0.4 else 0
-            if count > 0:
-                partners_by_type[partner_type] = count
-
-        # Интеграции
         integrations = {}
-        for integration_cat in ["crm", "payment", "analytics", "booking"]:
-            has_integration = random.choice([True, False])
-            if has_integration:
-                # Примеры популярных сервисов
-                services = {
-                    "crm": ["amoCRM", "Битрикс24", "Salesforce"],
-                    "payment": ["Яндекс.Касса", "CloudPayments", "Сбербанк"],
-                    "analytics": ["Google Analytics", "Яндекс.Метрика"],
-                    "booking": ["Yclients", "DIKIDI", "Altegio"]
-                }
-                integrations[integration_cat] = random.choice(services.get(integration_cat, ["Unknown"]))
-
-        # Каналы дистрибуции
         distribution_channels = []
-        channels = ["direct", "aggregators", "marketplaces", "partners"]
-        for channel in channels:
-            if random.choice([True, False]):
-                distribution_channels.append(channel)
-
-        # Стратегические альянсы
-        has_strategic_alliances = random.choice([True, False])
         strategic_alliances = []
-        if has_strategic_alliances:
-            strategic_alliances = [
-                {"type": "co-marketing", "partner": "Партнёр А"},
-                {"type": "referral", "partner": "Партнёр Б"}
-            ]
 
-        # Оценка зрелости экосистемы
+        if signals["crm"]:
+            for crm in signals["crm"]:
+                integrations[f"crm:{crm}"] = crm
+            partners_by_type["technology"] = partners_by_type.get("technology", 0) + len(signals["crm"])
+
+        if signals["payment"]:
+            for pay in signals["payment"]:
+                integrations[f"payment:{pay}"] = pay
+            partners_by_type["suppliers"] = partners_by_type.get("suppliers", 0) + len(signals["payment"])
+
+        if signals["analytics"]:
+            for an in signals["analytics"]:
+                integrations[f"analytics:{an}"] = an
+            partners_by_type["technology"] = partners_by_type.get("technology", 0) + len(signals["analytics"])
+
+        if signals["booking"]:
+            for book in signals["booking"]:
+                integrations[f"booking:{book}"] = book
+            partners_by_type["integration"] = partners_by_type.get("integration", 0) + len(signals["booking"])
+
+        if signals["communication"]:
+            for comm in signals["communication"]:
+                integrations[f"communication:{comm}"] = comm
+            partners_by_type["technology"] = partners_by_type.get("technology", 0) + len(signals["communication"])
+
+        if signals["social_links"]:
+            partners_by_type["marketing"] = partners_by_type.get("marketing", 0) + len(signals["social_links"])
+
+        if signals["aggregators"]:
+            for agg in signals["aggregators"]:
+                distribution_channels.append(agg)
+            partners_by_type["distribution"] = partners_by_type.get("distribution", 0) + len(signals["aggregators"])
+
+        if signals["partner_links"]:
+            partners_by_type["strategic"] = partners_by_type.get("strategic", 0) + len(signals["partner_links"])
+            for pl in signals["partner_links"]:
+                strategic_alliances.append({"type": "detected_partner_link", "url": pl})
+
         ecosystem_maturity = self._assess_ecosystem_maturity(
             len(partners_by_type),
             len(integrations),
             len(distribution_channels),
-            has_strategic_alliances
+            len(strategic_alliances) > 0
         )
 
         profile = {
             "name": name,
+            "website": website,
             "partners_by_type": partners_by_type,
             "total_partners": sum(partners_by_type.values()),
             "integrations": integrations,
             "integration_count": len(integrations),
             "distribution_channels": distribution_channels,
             "strategic_alliances": strategic_alliances,
-            "has_strategic_alliances": has_strategic_alliances,
-            "ecosystem_maturity": ecosystem_maturity
+            "has_strategic_alliances": len(strategic_alliances) > 0,
+            "ecosystem_maturity": ecosystem_maturity,
+            "detected_signals": signals,
+            "confidence": 0.7 if signals["page_loaded"] else 0.0
         }
 
         return profile
+
+    async def _scan_website_ecosystem(self, website: str) -> Optional[Dict[str, Any]]:
+        """Сканировать сайт на наличие экосистемных сигналов."""
+        url = website if website.startswith('http') else f'https://{website}'
+
+        result = {
+            "page_loaded": False,
+            "crm": [],
+            "payment": [],
+            "analytics": [],
+            "booking": [],
+            "communication": [],
+            "social_links": [],
+            "aggregators": [],
+            "partner_links": [],
+        }
+
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            try:
+                resp = await client.get(url, headers={"User-Agent": "AIM-CI-Ecosystem/1.0"})
+                resp.raise_for_status()
+            except Exception as e:
+                print(f"[CI Ecosystem] Ошибка загрузки {url}: {e}")
+                return None
+
+        result["page_loaded"] = True
+        html = resp.text
+        html_lower = html.lower()
+        soup = BeautifulSoup(html, 'html.parser')
+
+        # Детектим CRM по скриптам, iframe, формам
+        for name, patterns in self.crm_signals.items():
+            for pattern in patterns:
+                if re.search(pattern, html_lower):
+                    result["crm"].append(name)
+                    break
+
+        # Детектим платёжные системы
+        for name, patterns in self.payment_signals.items():
+            for pattern in patterns:
+                if re.search(pattern, html_lower):
+                    result["payment"].append(name)
+                    break
+
+        # Детектим аналитику (скрипты, счётчики, пиксели)
+        for name, patterns in self.analytics_signals.items():
+            for pattern in patterns:
+                if re.search(pattern, html_lower):
+                    result["analytics"].append(name)
+                    break
+
+        # Детектим системы онлайн-записи
+        for name, patterns in self.booking_signals.items():
+            for pattern in patterns:
+                if re.search(pattern, html_lower):
+                    result["booking"].append(name)
+                    break
+
+        # Детектим коммуникационные виджеты
+        for name, patterns in self.communication_signals.items():
+            for pattern in patterns:
+                if re.search(pattern, html_lower):
+                    result["communication"].append(name)
+                    break
+
+        # Детектим соцсети по ссылкам
+        for platform, domains in self.social_domains.items():
+            for domain in domains:
+                if domain in html_lower:
+                    result["social_links"].append(platform)
+                    break
+
+        # Детектим агрегаторы по ссылкам
+        for name, patterns in self.aggregator_signals.items():
+            for pattern in patterns:
+                if re.search(pattern, html_lower):
+                    result["aggregators"].append(name)
+                    break
+
+        # Детектим партнёрские ссылки
+        for link in soup.find_all('a', href=True):
+            href = (link.get('href') or '').lower()
+            link_text = (link.get_text() or '').lower().strip()
+            for kw in self.partner_link_keywords:
+                if kw in href or kw in link_text:
+                    result["partner_links"].append(link.get('href'))
+                    break
+
+        # Дедупликация partner_links
+        result["partner_links"] = list(set(result["partner_links"]))
+
+        return result
 
     def _assess_ecosystem_maturity(
         self,
@@ -283,8 +483,7 @@ class CIEcosystemAgent(Agent):
         # Популярные интеграции
         integration_usage = {}
         for profile in ecosystem_profiles:
-            for category, service in profile["integrations"].items():
-                key = f"{category}:{service}"
+            for key, service in profile["integrations"].items():
                 integration_usage[key] = integration_usage.get(key, 0) + 1
 
         most_popular_integrations = sorted(
@@ -403,7 +602,9 @@ class CIEcosystemAgent(Agent):
         used_categories = set()
 
         for profile in ecosystem_profiles:
-            used_categories.update(profile["integrations"].keys())
+            for key in profile["integrations"].keys():
+                category = key.split(":")[0]
+                used_categories.add(category)
 
         missing_categories = all_categories - used_categories
 
