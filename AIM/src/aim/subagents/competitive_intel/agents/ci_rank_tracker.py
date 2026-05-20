@@ -10,12 +10,15 @@ Based on:
 """
 
 import asyncio
+import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
 import httpx
 import structlog
+
+from meai.agents.base_agent import Agent, Task, TaskResult
 
 
 @dataclass
@@ -85,30 +88,38 @@ class RankTrackingResult:
     lost_rankings: list[str]
 
 
-class CIRankTrackerAgent:
+class CIRankTrackerAgent(Agent):
     """
     Competitive Intelligence Rank Tracker Agent.
 
-    Tracks keyword rankings using Google Search Console API
+    Tracks keyword rankings using SerpAPI for real-time SERP data
     and monitors competitor positions.
     """
 
     def __init__(
         self,
-        gsc_credentials: dict[str, Any] | None = None,
+        agent_id: str,
         serpapi_key: str | None = None,
+        database_url: str = "sqlite+aiosqlite:///./data/meai.db",
+        vault_path: str = "./obsidian",
     ):
         """
         Initialize CI Rank Tracker Agent.
 
         Args:
-            gsc_credentials: Google Search Console API credentials
+            agent_id: Unique agent identifier
             serpapi_key: SerpAPI key for real-time SERP data
+            database_url: Database connection URL
+            vault_path: Obsidian vault path
         """
+        super().__init__(
+            agent_id=agent_id,
+            agent_type="ci-rank-tracker",
+            database_url=database_url,
+            vault_path=vault_path,
+        )
         self.logger = structlog.get_logger()
-        self.gsc_credentials = gsc_credentials
-        self.serpapi_key = serpapi_key
-        self.gsc_base_url = "https://www.googleapis.com/webmasters/v3"
+        self.serpapi_key = serpapi_key or os.getenv("SERPAPI_KEY")
         self.serpapi_base_url = "https://serpapi.com/search"
         self.timeout = httpx.Timeout(30.0)
 
@@ -120,13 +131,13 @@ class CIRankTrackerAgent:
         compare_days: int = 7,
     ) -> RankTrackingResult:
         """
-        Track keyword rankings for target URL.
+        Track keyword rankings for target URL using SerpAPI.
 
         Args:
             target_url: URL to track rankings for
-            keywords: Specific keywords to track (None = all from GSC)
-            days: Number of days to analyze
-            compare_days: Days to compare against for changes
+            keywords: Specific keywords to track (required)
+            days: Number of days to analyze (for metadata only — SerpAPI gives current)
+            compare_days: Days to compare against (not used in SerpAPI mode)
 
         Returns:
             Complete rank tracking result with changes and insights
@@ -134,36 +145,26 @@ class CIRankTrackerAgent:
         self.logger.info(
             "rank_tracking_start",
             target=target_url,
-            keywords_count=len(keywords) if keywords else "all",
+            keywords_count=len(keywords) if keywords else 0,
             days=days,
         )
 
-        # Calculate date ranges
+        if not keywords:
+            keywords = []
+
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
-        compare_end_date = start_date - timedelta(days=1)
-        compare_start_date = compare_end_date - timedelta(days=compare_days)
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            # Fetch current period data
-            current_positions = await self._fetch_gsc_data(
-                client,
-                target_url,
-                start_date.strftime("%Y-%m-%d"),
-                end_date.strftime("%Y-%m-%d"),
-                keywords,
+            # Fetch current positions via SerpAPI
+            current_positions = await self._fetch_our_positions(
+                client, target_url, keywords
             )
 
-            # Fetch comparison period data
-            previous_positions = await self._fetch_gsc_data(
-                client,
-                target_url,
-                compare_start_date.strftime("%Y-%m-%d"),
-                compare_end_date.strftime("%Y-%m-%d"),
-                keywords,
-            )
+            # Previous positions not available via SerpAPI (would need historical storage)
+            previous_positions = []
 
-            # Calculate changes
+            # Calculate changes (empty if no historical data)
             changes = self._calculate_changes(
                 current_positions, previous_positions
             )
@@ -171,7 +172,7 @@ class CIRankTrackerAgent:
             # Fetch competitor positions for top keywords
             competitor_positions = await self._fetch_competitor_positions(
                 client,
-                [p.keyword for p in current_positions[:10]],  # Top 10 keywords
+                [p.keyword for p in current_positions[:10]],
             )
 
         # Calculate summary metrics
@@ -237,49 +238,75 @@ class CIRankTrackerAgent:
 
         return result
 
-    async def _fetch_gsc_data(
+    async def _fetch_our_positions(
         self,
         client: httpx.AsyncClient,
-        site_url: str,
-        start_date: str,
-        end_date: str,
-        keywords: list[str] | None = None,
+        target_url: str,
+        keywords: list[str],
     ) -> list[KeywordPosition]:
         """
-        Fetch ranking data from Google Search Console API.
+        Fetch our real keyword positions using SerpAPI.
 
-        Note: This is a simplified implementation.
-        Real implementation requires OAuth2 authentication.
+        Searches for each keyword and finds our URL in the organic results.
         """
-        # Mock data for now (real implementation needs GSC OAuth2)
-        # In production, use google-api-python-client library
+        if not self.serpapi_key:
+            self.logger.warning("serpapi_key_not_set", action="returning_empty")
+            return []
 
-        self.logger.info(
-            "fetching_gsc_data",
-            site=site_url,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-        # Placeholder: Return mock data
-        # Real implementation would call GSC API here
+        domain = self._extract_domain(target_url)
         positions = []
 
-        if keywords:
-            for keyword in keywords[:20]:  # Limit to 20 for demo
-                positions.append(
-                    KeywordPosition(
-                        keyword=keyword,
-                        position=15.0,  # Mock position
-                        url=f"{site_url}/page",
-                        impressions=100,
-                        clicks=5,
-                        ctr=0.05,
-                        date=end_date,
+        for keyword in keywords[:20]:
+            try:
+                params = {
+                    "q": keyword,
+                    "api_key": self.serpapi_key,
+                    "engine": "google",
+                    "hl": "ru",
+                    "gl": "ru",
+                    "num": 100,
+                }
+                response = await client.get(self.serpapi_base_url, params=params)
+                response.raise_for_status()
+                data = response.json()
+
+                organic_results = data.get("organic_results", [])
+                our_position = None
+                our_url_match = ""
+
+                for i, result in enumerate(organic_results, 1):
+                    link = result.get("link", "")
+                    if domain in link:
+                        our_position = float(i)
+                        our_url_match = link
+                        break
+
+                if our_position:
+                    positions.append(
+                        KeywordPosition(
+                            keyword=keyword,
+                            position=our_position,
+                            url=our_url_match,
+                            impressions=0,   # SerpAPI doesn't provide impressions
+                            clicks=0,         # SerpAPI doesn't provide clicks
+                            ctr=0.0,
+                            date=datetime.now().strftime("%Y-%m-%d"),
+                        )
                     )
-                )
+
+                await asyncio.sleep(0.5)  # Rate limit between keyword searches
+
+            except Exception as e:
+                self.logger.error("serpapi_position_fetch_error", keyword=keyword, error=str(e))
+                continue
 
         return positions
+
+    def _extract_domain(self, url: str) -> str:
+        """Extract domain from URL."""
+        import re
+        match = re.search(r"https?://([^/]+)", url)
+        return match.group(1) if match else url
 
     async def _fetch_competitor_positions(
         self,
@@ -376,6 +403,153 @@ class CIRankTrackerAgent:
                 )
 
         return changes
+
+    async def execute_task(self, task: Task) -> TaskResult:
+        """
+        Execute rank tracking task from orchestrator.
+
+        Args:
+            task: Task with payload:
+                - competitors: list of competitor dicts with 'url' key
+                - keywords: list of keywords to track
+                - our_url: our site URL
+
+        Returns:
+            TaskResult with rank tracking data
+        """
+        try:
+            competitors = task.payload.get("competitors", [])
+            keywords = task.payload.get("keywords", [])
+            our_url = task.payload.get("our_url", "")
+
+            # Generate keywords from niche if not provided
+            if not keywords:
+                niche = task.payload.get("niche", "")
+                geo = task.payload.get("geo", "")
+                if niche:
+                    keywords = [
+                        f"{niche} {geo}",
+                        f"клиника {niche} {geo}",
+                        f"лучшие {niche} {geo}",
+                        f"{niche} {geo} цены",
+                        f"{niche} {geo} отзывы",
+                    ]
+
+            if not our_url:
+                # Use first competitor url or require our_url
+                if not competitors:
+                    return TaskResult(
+                        subtask_id=task.subtask_id,
+                        agent_id=self.agent_id,
+                        action=task.action,
+                        status="failed",
+                        result={"error": "our_url or competitors required"},
+                        error="our_url or competitors required",
+                        duration_seconds=0.0,
+                        completed_at=datetime.now(),
+                    )
+                our_url = competitors[0].get("url", "") if isinstance(competitors[0], dict) else str(competitors[0])
+
+            if not self.serpapi_key:
+                return TaskResult(
+                    subtask_id=task.subtask_id,
+                    agent_id=self.agent_id,
+                    action=task.action,
+                    status="failed",
+                    result={
+                        "our_url": our_url,
+                        "error": "SERPAPI_KEY not configured",
+                        "avg_position": None,
+                        "total_keywords": 0,
+                        "positions": [],
+                        "changes": [],
+                        "competitor_positions": [],
+                        "recommendation": "Configure SERPAPI_KEY to enable rank tracking.",
+                    },
+                    error="SERPAPI_KEY not configured",
+                    duration_seconds=0.0,
+                    completed_at=datetime.now(),
+                )
+
+            start_time = datetime.now()
+            result = await self.track_rankings(
+                target_url=our_url,
+                keywords=keywords,
+                days=7,
+            )
+
+            return TaskResult(
+                subtask_id=task.subtask_id,
+                agent_id=self.agent_id,
+                action=task.action,
+                status="success",
+                result={
+                    "target_url": result.target_url,
+                    "avg_position": result.avg_position,
+                    "total_keywords": result.total_keywords,
+                    "top_3_count": result.top_3_count,
+                    "top_10_count": result.top_10_count,
+                    "top_100_count": result.top_100_count,
+                    "positions": [
+                        {
+                            "keyword": p.keyword,
+                            "position": p.position,
+                            "url": p.url,
+                        }
+                        for p in result.positions[:20]
+                    ],
+                    "changes": [
+                        {
+                            "keyword": c.keyword,
+                            "current_position": c.current_position,
+                            "change": c.change,
+                            "trend": c.trend,
+                        }
+                        for c in result.changes[:10]
+                    ],
+                    "competitor_positions": [
+                        {
+                            "keyword": cp.keyword,
+                            "competitor_url": cp.competitor_url,
+                            "position": cp.position,
+                        }
+                        for cp in result.competitor_positions[:20]
+                    ],
+                    "biggest_gains": [
+                        {"keyword": bg.keyword, "change": bg.change}
+                        for bg in result.biggest_gains[:5]
+                    ],
+                    "biggest_losses": [
+                        {"keyword": bl.keyword, "change": bl.change}
+                        for bl in result.biggest_losses[:5]
+                    ],
+                },
+                error=None,
+                duration_seconds=(datetime.now() - start_time).total_seconds(),
+                completed_at=datetime.now(),
+            )
+
+        except Exception as e:
+            self.logger.error("rank_tracker_execute_task_failed", error=str(e))
+            return TaskResult(
+                subtask_id=task.subtask_id,
+                agent_id=self.agent_id,
+                action=task.action,
+                status="failed",
+                result={"error": str(e)},
+                error=str(e),
+                duration_seconds=0.0,
+                completed_at=datetime.now(),
+            )
+
+    def get_capabilities(self) -> list[str]:
+        """Return list of agent capabilities."""
+        return [
+            "rank_tracking",
+            "serp_position_monitoring",
+            "keyword_performance",
+            "competitor_position_analysis",
+        ]
 
 
 async def main():

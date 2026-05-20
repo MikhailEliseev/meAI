@@ -248,8 +248,8 @@ class CIContentAgentImproved(Agent):
             TaskResult с анализом контента
         """
         try:
-            competitors = task.data["competitors"]
-            niche = task.data.get("niche", "")
+            competitors = task.payload["competitors"]
+            niche = task.payload.get("niche", "")
 
             print(f"[CI Content Improved] Начало анализа контента {len(competitors)} конкурентов")
 

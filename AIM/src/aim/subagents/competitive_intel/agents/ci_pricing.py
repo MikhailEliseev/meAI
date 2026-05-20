@@ -9,10 +9,14 @@ CI Pricing Agent - Pricing Strategy Analysis
 - Прозрачность цен
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from datetime import datetime
+from urllib.parse import urljoin, urlparse
 import json
-import random
+import re
+
+import httpx
+from bs4 import BeautifulSoup
 
 from meai.agents.base_agent import Agent, Task, TaskResult
 from meai.memory.obsidian import ObsidianVault
@@ -132,6 +136,158 @@ class CIPricingAgent(Agent):
                 completed_at=datetime.now()
             )
 
+    # Russian price patterns
+    PRICE_PATTERNS = [
+        re.compile(r'(\d[\d\s]{0,7})\s*(?:₽|руб|р\.)', re.IGNORECASE),
+        re.compile(r'от\s+(\d[\d\s]{0,7})\s*(?:₽|руб|р\.)', re.IGNORECASE),
+        re.compile(r'(\d[\d\s]{0,7})\s*(?:₽|руб|р\.)\s*[-–—]\s*(\d[\d\s]{0,7})', re.IGNORECASE),
+    ]
+
+    PRICING_PAGE_PATHS = [
+        '/price', '/prices', '/pricing', '/price-list', '/prajs', '/price.html',
+        '/prices.html', '/services', '/services/', '/uslugi', '/uslugi/',
+        '/stoimost', '/stoimost/', '/tseny', '/tseny/',
+    ]
+
+    PROMO_KEYWORDS = [
+        'скидк', 'акци', 'спецпредложен', 'подар', 'бесплат',
+        'рассроч', 'кэшб', 'cashback', 'бонус',
+    ]
+
+    async def _find_pricing_url(self, website: str) -> Optional[str]:
+        """Найти URL страницы с ценами на сайте конкурента."""
+        if not website:
+            return None
+        base = website if website.startswith('http') else f'https://{website}'
+        base = base.rstrip('/')
+
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            try:
+                resp = await client.get(base, headers={"User-Agent": "AIM-CI-Pricing/1.0"})
+                resp.raise_for_status()
+                soup = BeautifulSoup(resp.text, 'html.parser')
+
+                for link in soup.find_all('a', href=True):
+                    href = (link.get('href') or '').lower().strip().rstrip('/')
+                    if not href or href.startswith('#') or href.startswith('javascript'):
+                        continue
+                    for path in self.PRICING_PAGE_PATHS:
+                        if href == path.lstrip('/') or href.endswith(path.lstrip('/')):
+                            return urljoin(base, link['href'])
+
+                return None
+            except Exception as e:
+                print(f"[CI Pricing] Не удалось найти страницу цен для {website}: {e}")
+                return None
+
+    async def _scrape_prices_from_page(self, url: str) -> Dict[str, Any]:
+        """Собрать цены со страницы."""
+        result = {"prices_found": False, "prices": {}, "raw_numbers": [], "promo_detected": False, "promos": []}
+
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            try:
+                resp = await client.get(url, headers={"User-Agent": "AIM-CI-Pricing/1.0"})
+                resp.raise_for_status()
+            except Exception as e:
+                print(f"[CI Pricing] Ошибка загрузки {url}: {e}")
+                return result
+
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        text = soup.get_text()
+
+        # Извлекаем все числа похожие на цены
+        raw_numbers = []
+        for pattern in self.PRICE_PATTERNS:
+            for match in pattern.finditer(text):
+                price_str = match.group(1).replace(' ', '')
+                try:
+                    price = int(price_str)
+                    if 100 <= price <= 10_000_000:
+                        raw_numbers.append(price)
+                except ValueError:
+                    continue
+
+        if raw_numbers:
+            result["prices_found"] = True
+            result["raw_numbers"] = sorted(raw_numbers)
+
+            # Категоризируем цены
+            cheap = [p for p in raw_numbers if p <= 3000]
+            mid = [p for p in raw_numbers if 3000 < p <= 15000]
+            expensive = [p for p in raw_numbers if p > 15000]
+
+            result["prices"] = {
+                "min": min(raw_numbers),
+                "max": max(raw_numbers),
+                "median": sorted(raw_numbers)[len(raw_numbers) // 2],
+                "count": len(raw_numbers),
+                "budget_range": f"{min(cheap) if cheap else '—'} – {max(cheap) if cheap else '—'}",
+                "mid_range": f"{min(mid) if mid else '—'} – {max(mid) if mid else '—'}",
+                "premium_range": f"{min(expensive) if expensive else '—'} – {max(expensive) if expensive else '—'}",
+            }
+
+        # Ищем акции
+        page_lower = text.lower()
+        for kw in self.PROMO_KEYWORDS:
+            if kw in page_lower:
+                result["promo_detected"] = True
+                # Ищем конкретные цифры скидок рядом с ключевым словом
+                idx = page_lower.find(kw)
+                context = text[max(0, idx - 50):idx + 100]
+                discount_match = re.search(r'(\d{1,2})\s*%', context)
+                if discount_match:
+                    result["promos"].append({
+                        "keyword": kw,
+                        "discount_percent": int(discount_match.group(1)),
+                        "context": context.strip()[:120]
+                    })
+                else:
+                    result["promos"].append({"keyword": kw, "discount_percent": None})
+
+        return result
+
+    def _determine_price_segment(self, price_data: Dict[str, Any]) -> Optional[str]:
+        """Определить ценовой сегмент на основе реальных цен (логика, не random)."""
+        if not price_data.get("prices_found") or not price_data["prices"].get("median"):
+            return None
+
+        median = price_data["prices"]["median"]
+
+        # Медицинские бенчмарки (российский рынок)
+        if median <= 3000:
+            return "budget"
+        elif median <= 12000:
+            return "mid"
+        elif median <= 35000:
+            return "premium"
+        else:
+            return "luxury"
+
+    def _determine_pricing_strategy(self, prices: Dict[str, Any], segment: Optional[str]) -> Optional[str]:
+        """Определить ценовую стратегию на основе реальных данных."""
+        if not prices.get("prices_found"):
+            return None
+
+        raw = prices.get("raw_numbers", [])
+        if len(raw) < 3:
+            return None
+
+        # Смотрим разброс цен (coefficient of variation)
+        mean = sum(raw) / len(raw)
+        variance = sum((p - mean) ** 2 for p in raw) / len(raw)
+        cv = (variance ** 0.5) / mean if mean > 0 else 0
+
+        if segment == "premium" or segment == "luxury":
+            return "skimming"
+        elif segment == "budget" and cv < 0.3:
+            return "penetration"
+        elif cv < 0.25:
+            return "competitive"
+        elif cv > 0.5:
+            return "dynamic"
+        else:
+            return "value_based"
+
     async def _analyze_competitor_pricing(
         self,
         competitor: Dict[str, Any],
@@ -139,93 +295,85 @@ class CIPricingAgent(Agent):
         services: List[str]
     ) -> Dict[str, Any]:
         """
-        Проанализировать цены одного конкурента.
+        Проанализировать цены одного конкурента через реальный сбор данных.
 
-        Args:
-            competitor: данные конкурента
-            niche: ниша
-            services: список услуг
-
-        Returns:
-            Ценовой профиль конкурента
+        Стратегия:
+        1. Найти страницу с ценами на сайте конкурента
+        2. Загрузить и распарсить цены (Russian price patterns)
+        3. Определить ценовой сегмент из реальных цен
+        4. Детектировать акции/скидки
+        5. Если страница не найдена → structured null
         """
         name = competitor["name"]
+        website = competitor.get("website") or competitor.get("url") or competitor.get("site")
         print(f"[CI Pricing] Анализ цен: {name}")
 
-        # TODO: Реальный парсинг прайс-листов с сайтов
-        # Пока генерируем реалистичные данные
-
-        # Ценовой сегмент
-        price_segment = competitor.get("price_segment", random.choice(["budget", "mid", "premium"]))
-
-        # Базовые множители для разных сегментов
-        segment_multipliers = {
-            "budget": 0.7,
-            "mid": 1.0,
-            "premium": 1.5,
-            "luxury": 2.5
-        }
-
-        multiplier = segment_multipliers.get(price_segment, 1.0)
-
-        # Генерация цен на типовые услуги (для медицинской ниши)
-        if "стоматология" in niche.lower():
-            base_prices = {
-                "консультация": 1000,
-                "чистка": 3000,
-                "пломба": 5000,
-                "отбеливание": 15000,
-                "имплант": 50000
-            }
-        elif "косметология" in niche.lower():
-            base_prices = {
-                "консультация": 1500,
-                "чистка_лица": 3500,
-                "пилинг": 5000,
-                "ботокс": 12000,
-                "филлеры": 20000
-            }
-        else:
-            base_prices = {
-                "услуга_1": 2000,
-                "услуга_2": 5000,
-                "услуга_3": 10000
+        if not website:
+            print(f"[CI Pricing] Нет website для {name}, возвращаю structured null")
+            return {
+                "name": name,
+                "price_segment": None,
+                "prices": {},
+                "avg_check": None,
+                "price_transparency": False,
+                "has_promotions": None,
+                "promotions": [],
+                "pricing_strategy": None,
+                "price_competitiveness": None,
+                "confidence": 0.0,
+                "note": "no website provided"
             }
 
-        # Применяем множитель и добавляем случайность
-        prices = {}
-        for service, base_price in base_prices.items():
-            price = base_price * multiplier * random.uniform(0.9, 1.1)
-            prices[service] = round(price, -2)  # Округляем до сотен
+        # Шаг 1: Найти URL страницы с ценами
+        pricing_url = await self._find_pricing_url(website)
 
-        # Прозрачность цен (есть ли прайс на сайте)
-        price_transparency = random.choice([True, True, False])  # 66% вероятность
+        if not pricing_url:
+            print(f"[CI Pricing] Страница цен не найдена для {name}")
+            return {
+                "name": name,
+                "website": website,
+                "price_segment": None,
+                "prices": {},
+                "avg_check": None,
+                "price_transparency": False,
+                "has_promotions": None,
+                "promotions": [],
+                "pricing_strategy": None,
+                "price_competitiveness": None,
+                "confidence": 0.0,
+                "note": "no pricing page detected"
+            }
 
-        # Акции и скидки
-        has_promotions = random.choice([True, False])
-        promotions = []
-        if has_promotions:
-            promotions = [
-                {"type": "first_visit", "discount": random.randint(10, 30)},
-                {"type": "package", "discount": random.randint(15, 40)}
-            ]
+        # Шаг 2: Собрать цены со страницы
+        price_data = await self._scrape_prices_from_page(pricing_url)
 
-        # Ценовая стратегия
-        pricing_strategy = random.choice(self.pricing_strategies)
+        # Шаг 3: Определить ценовой сегмент (логика)
+        price_segment = self._determine_price_segment(price_data)
 
-        # Средняя цена чека
-        avg_check = sum(prices.values()) / len(prices)
+        # Шаг 4: Ценовая стратегия (логика)
+        pricing_strategy = self._determine_pricing_strategy(price_data, price_segment)
+
+        # Шаг 5: Средний чек из реальных данных
+        avg_check = price_data["prices"].get("median") if price_data["prices_found"] else None
+
+        # Шаг 6: Прозрачность цен
+        price_transparency = price_data["prices_found"]
 
         profile = {
             "name": name,
+            "website": website,
+            "pricing_url": pricing_url,
             "price_segment": price_segment,
-            "prices": prices,
-            "avg_check": round(avg_check),
+            "prices": price_data["prices"],
+            "raw_prices": price_data.get("raw_numbers", []),
+            "avg_check": avg_check,
             "price_transparency": price_transparency,
-            "has_promotions": has_promotions,
-            "promotions": promotions,
+            "has_promotions": price_data["promo_detected"],
+            "promotions": price_data["promos"],
             "pricing_strategy": pricing_strategy,
-            "price_competitiveness": self._assess_competitiveness(price_segment)
+            "price_competitiveness": self._assess_competitiveness(price_segment) if price_segment else None,
+            "confidence": 0.7 if price_data["prices_found"] else 0.0,
+            "note": None if price_data["prices_found"] else "no prices extracted from page"
         }
 
         return profile

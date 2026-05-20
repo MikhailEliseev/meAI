@@ -8,10 +8,13 @@ CI Reputation Agent - Competitor Reputation Analysis
 - Sentiment analysis
 """
 
+import os
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 import json
 import re
+
+import httpx
 
 from meai.agents.base_agent import Agent, Task, TaskResult
 from meai.events.event_bus import EventBus
@@ -32,6 +35,7 @@ class CIReputationAgent(Agent):
     def __init__(
         self,
         agent_id: str,
+        serpapi_key: str | None = None,
         database_url: str = "sqlite+aiosqlite:///./data/meai.db",
         vault_path: str = "./obsidian"
     ):
@@ -41,8 +45,9 @@ class CIReputationAgent(Agent):
             database_url=database_url,
             vault_path=vault_path
         )
-        # Переопределяем vault на специфичный для CI Reputation
         self.vault = ObsidianVault("AIM/obsidian/ci-reputation")
+        self.serpapi_key = serpapi_key or os.getenv("SERPAPI_KEY")
+        self.serpapi_base_url = "https://serpapi.com/search"
 
         # Review sources
         self.sources = {
@@ -214,8 +219,10 @@ class CIReputationAgent(Agent):
                 source_reviews = await self._collect_from_source(competitor, source)
                 reviews["sources"][source] = source_reviews
 
-                total_rating += source_reviews["avg_rating"] * source_reviews["count"]
-                total_count += source_reviews["count"]
+                # Skip sources with no real data (None values)
+                if source_reviews["count"] and source_reviews["avg_rating"]:
+                    total_rating += source_reviews["avg_rating"] * source_reviews["count"]
+                    total_count += source_reviews["count"]
 
         reviews["total_reviews"] = total_count
         reviews["avg_rating"] = round(total_rating / total_count, 2) if total_count > 0 else 0.0
@@ -237,85 +244,85 @@ class CIReputationAgent(Agent):
         Returns:
             Данные отзывов из источника
         """
-        # TODO: Реальный сбор через WebFetch
-        # Пока генерируем реалистичные тестовые данные
+        name = competitor["name"]
+        source_info = self.sources[source]
 
-        import random
+        if not self.serpapi_key:
+            return {
+                "source": source,
+                "source_name": source_info["name"],
+                "count": None,
+                "avg_rating": None,
+                "sentiment_distribution": None,
+                "recent_reviews": [],
+                "data_source": "unavailable",
+                "note": "SERPAPI_KEY not configured",
+            }
 
-        count = random.randint(20, 200)
-        avg_rating = round(random.uniform(3.8, 4.9), 1)
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(15.0)) as client:
+                query = f"{name} отзывы {source_info['name']}"
+                params = {
+                    "q": query,
+                    "api_key": self.serpapi_key,
+                    "engine": "google",
+                    "hl": "ru",
+                    "gl": "ru",
+                    "num": 10,
+                }
+                resp = await client.get(self.serpapi_base_url, params=params)
+                resp.raise_for_status()
+                data = resp.json()
 
-        # Генерировать распределение по sentiment
-        positive_pct = random.randint(60, 85)
-        negative_pct = random.randint(5, 20)
-        neutral_pct = 100 - positive_pct - negative_pct
+                rating = None
+                count = None
+                snippets = []
 
-        return {
-            "source": source,
-            "source_name": self.sources[source]["name"],
-            "count": count,
-            "avg_rating": avg_rating,
-            "sentiment_distribution": {
-                "positive": positive_pct,
-                "negative": negative_pct,
-                "neutral": neutral_pct
-            },
-            "recent_reviews": self._generate_sample_reviews(count, avg_rating)
-        }
+                kg = data.get("knowledge_graph", {})
+                if kg:
+                    rating = kg.get("rating")
+                    count = kg.get("reviews_count") or kg.get("rating_count")
 
-    def _generate_sample_reviews(self, count: int, avg_rating: float) -> List[Dict[str, Any]]:
-        """Генерировать примеры отзывов."""
-        import random
+                for result in data.get("organic_results", [])[:5]:
+                    snippet = result.get("snippet", "")
+                    if snippet:
+                        snippets.append({
+                            "text": snippet[:300],
+                            "source": result.get("link", ""),
+                            "date": None,
+                        })
 
-        samples = []
-        num_samples = min(5, count)
+                sentiment_dist = None
+                if rating and isinstance(rating, (int, float)):
+                    if rating >= 4.0:
+                        sentiment_dist = {"positive": 70, "negative": 15, "neutral": 15}
+                    elif rating >= 3.0:
+                        sentiment_dist = {"positive": 40, "negative": 30, "neutral": 30}
+                    else:
+                        sentiment_dist = {"positive": 20, "negative": 60, "neutral": 20}
 
-        for _ in range(num_samples):
-            rating = round(random.gauss(avg_rating, 0.5), 1)
-            rating = max(1.0, min(5.0, rating))
+                return {
+                    "source": source,
+                    "source_name": source_info["name"],
+                    "count": count,
+                    "avg_rating": round(rating, 1) if rating else None,
+                    "sentiment_distribution": sentiment_dist,
+                    "recent_reviews": snippets,
+                    "data_source": "serpapi",
+                }
 
-            sentiment = "positive" if rating >= 4.0 else "negative" if rating < 3.0 else "neutral"
-
-            samples.append({
-                "rating": rating,
-                "sentiment": sentiment,
-                "text": self._generate_review_text(sentiment),
-                "date": "2026-04-15"  # Примерная дата
-            })
-
-        return samples
-
-    def _generate_review_text(self, sentiment: str) -> str:
-        """Генерировать текст отзыва."""
-        positive_texts = [
-            "Отличная клиника, профессиональные врачи",
-            "Очень довольна результатом, рекомендую",
-            "Современное оборудование, вежливый персонал",
-            "Быстро записали, качественно обслужили"
-        ]
-
-        negative_texts = [
-            "Долго ждали приёма, не понравилось",
-            "Завышенные цены, результат не оправдал ожиданий",
-            "Грубый персонал, не рекомендую",
-            "Обещали одно, сделали другое"
-        ]
-
-        neutral_texts = [
-            "Обычная клиника, ничего особенного",
-            "Нормально, но есть куда расти",
-            "Средний уровень обслуживания",
-            "Приемлемо, но не более"
-        ]
-
-        import random
-
-        if sentiment == "positive":
-            return random.choice(positive_texts)
-        elif sentiment == "negative":
-            return random.choice(negative_texts)
-        else:
-            return random.choice(neutral_texts)
+        except Exception as e:
+            print(f"[CI Reputation] SerpAPI search error for {name}/{source}: {e}")
+            return {
+                "source": source,
+                "source_name": source_info["name"],
+                "count": None,
+                "avg_rating": None,
+                "sentiment_distribution": None,
+                "recent_reviews": [],
+                "data_source": "error",
+                "note": str(e)[:200],
+            }
 
     async def _analyze_sentiment(
         self,
@@ -340,8 +347,12 @@ class CIReputationAgent(Agent):
             total_count = 0
 
             for source_data in competitor_reviews["sources"].values():
-                dist = source_data["sentiment_distribution"]
-                count = source_data["count"]
+                dist = source_data.get("sentiment_distribution")
+                count = source_data.get("count")
+
+                # Skip sources with no real data
+                if not dist or not count:
+                    continue
 
                 total_positive += (dist["positive"] / 100) * count
                 total_negative += (dist["negative"] / 100) * count
@@ -370,49 +381,69 @@ class CIReputationAgent(Agent):
         """
         Провести topic analysis (что обсуждают в отзывах).
 
+        Извлекает темы из реальных сниппетов отзывов через keyword matching.
+        Без NLP-модели точный sentiment по темам недоступен — возвращаем
+        structured null для sentiment с указанием confidence=0.
+
         Args:
             reviews_data: данные отзывов
 
         Returns:
             Результаты topic analysis
         """
-        # TODO: Реальный NLP анализ тем
-        # Пока генерируем реалистичные данные
-
-        import random
-
         topic_data = []
 
         for competitor_reviews in reviews_data:
             topics = {}
+            all_snippets: List[str] = []
 
+            # Collect all real review snippets from all sources
+            for source_data in competitor_reviews["sources"].values():
+                for review in source_data.get("recent_reviews", []):
+                    text = review.get("text", "")
+                    if text:
+                        all_snippets.append(text.lower())
+
+            # Match snippets against topic keywords
             for topic_key, topic_name in self.review_topics.items():
-                # Генерировать упоминания темы
-                mentions = random.randint(10, 100)
-
-                # Генерировать sentiment для темы
-                positive_pct = random.randint(50, 90)
-                negative_pct = random.randint(5, 30)
-                neutral_pct = 100 - positive_pct - negative_pct
+                mentions = 0
+                for snippet in all_snippets:
+                    if self._text_matches_topic(snippet, topic_key):
+                        mentions += 1
 
                 topics[topic_key] = {
                     "name": topic_name,
                     "mentions": mentions,
-                    "sentiment": {
-                        "positive": positive_pct,
-                        "negative": negative_pct,
-                        "neutral": neutral_pct
-                    }
+                    "sentiment": None,  # No NLP — can't determine per-topic sentiment
+                    "sentiment_note": "Per-topic sentiment requires NLP model. Set OPENAI_API_KEY or YANDEXGPT_KEY for LLM-based analysis.",
+                    "confidence": 0.0,
                 }
 
             topic_data.append({
                 "name": competitor_reviews["name"],
-                "topics": topics
+                "topics": topics,
+                "total_snippets_analyzed": len(all_snippets),
+                "data_source": "keyword_matching" if all_snippets else "no_data",
             })
 
         print(f"[CI Reputation] Topic analysis завершён для {len(topic_data)} конкурентов")
 
         return topic_data
+
+    def _text_matches_topic(self, text: str, topic_key: str) -> bool:
+        """Check if review text mentions a topic via keyword matching."""
+        topic_keywords = {
+            "service": ["обслуживание", "сервис", "вежлив", "хам", "груб", "отношение", "администрат"],
+            "doctors": ["врач", "доктор", "специалист", "медсестр", "персонал", "хирург", "терапевт"],
+            "price": ["цен", "дорог", "дешёв", "дешев", "стоим", "рубл", "прайс", "скидк"],
+            "equipment": ["оборудован", "аппарат", "томограф", "узи", "рентген", "оснащен"],
+            "cleanliness": ["чистот", "чист", "грязн", "стерильн", "уборк", "поряд"],
+            "waiting_time": ["очеред", "ждать", "ожидан", "быстр", "долг", "задержк", "минут"],
+            "results": ["результат", "лечени", "помог", "эффект", "вылечил", "толк"],
+            "communication": ["объяснил", "рассказал", "поговори", "обсуди", "ответил", "звонк", "сообщил"],
+        }
+        keywords = topic_keywords.get(topic_key, [])
+        return any(kw in text for kw in keywords)
 
     async def _calculate_reputation_scores(
         self,
@@ -493,24 +524,30 @@ class CIReputationAgent(Agent):
             sentiment = sentiment_data[i]
             topics = topic_data[i]["topics"]
 
-            # Риски: высокий негатив
-            if sentiment["sentiment"]["negative"] > 20:
+            # Риски: высокий негатив (only if we have real sentiment data)
+            sentiment_negative = sentiment["sentiment"]["negative"]
+            sentiment_total = sentiment["total_reviews"]
+            if sentiment_total > 0 and sentiment_negative > 20:
                 risks.append({
                     "type": "high_negative_sentiment",
                     "competitor": score_data["name"],
-                    "negative_pct": sentiment["sentiment"]["negative"],
-                    "description": f"{score_data['name']} имеет {sentiment['sentiment']['negative']}% негативных отзывов"
+                    "negative_pct": sentiment_negative,
+                    "description": f"{score_data['name']} имеет {sentiment_negative}% негативных отзывов"
                 })
 
             # Возможности: слабые темы у конкурентов
+            # Skip if topic sentiment is None (no NLP model available)
             for topic_key, topic_data_item in topics.items():
-                if topic_data_item["sentiment"]["negative"] > 30:
+                topic_sentiment = topic_data_item.get("sentiment")
+                if topic_sentiment is None:
+                    continue  # No per-topic sentiment available
+                if topic_sentiment["negative"] > 30:
                     opportunities.append({
                         "type": "competitor_weakness",
                         "competitor": score_data["name"],
                         "topic": topic_data_item["name"],
-                        "negative_pct": topic_data_item["sentiment"]["negative"],
-                        "description": f"{score_data['name']} получает критику по теме '{topic_data_item['name']}' ({topic_data_item['sentiment']['negative']}% негатива)"
+                        "negative_pct": topic_sentiment["negative"],
+                        "description": f"{score_data['name']} получает критику по теме '{topic_data_item['name']}' ({topic_sentiment['negative']}% негатива)"
                     })
 
         print(f"[CI Reputation] Найдено {len(risks)} рисков и {len(opportunities)} возможностей")

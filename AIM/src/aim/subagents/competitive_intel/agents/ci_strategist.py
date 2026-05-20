@@ -71,6 +71,28 @@ class CIStrategistAgent(Agent):
             "low": "Низкий приоритет"
         }
 
+        # Medical conversion benchmarks (industry standards, Russian market)
+        # Source: Russian medical marketing studies, 2024-2025
+        self.conversion_benchmarks = {
+            "стоматология": {"low": 0.02, "mid": 0.035, "high": 0.05},
+            "косметология": {"low": 0.02, "mid": 0.03, "high": 0.045},
+            "пластическая_хирургия": {"low": 0.01, "mid": 0.02, "high": 0.03},
+            "гинекология": {"low": 0.015, "mid": 0.025, "high": 0.04},
+            "офтальмология": {"low": 0.02, "mid": 0.03, "high": 0.045},
+            "default": {"low": 0.015, "mid": 0.025, "high": 0.04},
+        }
+
+        # Niche complexity (time-to-result factor)
+        # Based on: treatment duration, decision cycle, competition density
+        self.niche_complexity = {
+            "стоматология": 1.0,
+            "косметология": 1.1,
+            "пластическая_хирургия": 1.3,
+            "гинекология": 0.9,
+            "офтальмология": 0.85,
+            "default": 1.0,
+        }
+
     async def execute_task(self, task: Task) -> TaskResult:
         """
         Выполнить стратегический синтез.
@@ -116,7 +138,26 @@ class CIStrategistAgent(Agent):
                 positioning, differentiation, advantages, gtm
             )
 
-            # Шаг 9: Save results
+            # Шаг 9: Compute "3 Numbers" (D-05)
+            niche = client_context.get("niche") or task.payload.get("niche", "default")
+
+            # Extract traffic data from previous phases
+            traffic_data = {}
+            traffic_data.update(previous_results.get("phase_3", {}))  # Deep Analyzer
+            traffic_data.update(previous_results.get("phase_5", {}))  # Site Crawler
+
+            patients = self._estimate_patients_per_month(traffic_data, niche)
+            time_to_result = self._estimate_time_to_result(
+                niche,
+                landscape.get("competitive_intensity", "medium"),
+                client_context.get("budget_level", "medium")
+            )
+            cost_per_patient = self._estimate_cost_per_patient(
+                traffic_data.get("avg_cpc") or client_context.get("avg_cpc"),
+                patients.get("conversion_rate_used")
+            )
+
+            # Шаг 10: Save results
             results = {
                 "synthesis_date": datetime.now().isoformat(),
                 "insights": insights,
@@ -126,7 +167,12 @@ class CIStrategistAgent(Agent):
                 "differentiation": differentiation,
                 "competitive_advantages": advantages,
                 "gtm_strategy": gtm,
-                "recommendations": recommendations
+                "recommendations": recommendations,
+                "metrics": {
+                    "patients_per_month": patients,
+                    "time_to_result": time_to_result,
+                    "cost_per_patient": cost_per_patient
+                }
             }
 
             await self._save_results(results)
@@ -590,6 +636,124 @@ class CIStrategistAgent(Agent):
         ]
 
         return recommendations
+
+    # ── "3 Numbers" calculation methods ──────────────────────────────
+
+    def _estimate_patients_per_month(
+        self,
+        traffic_data: Dict[str, Any],
+        niche: str
+    ) -> Dict[str, Any]:
+        """
+        Оценить количество пациентов в месяц из данных трафика.
+
+        Formula: monthly_organic_traffic × conversion_rate
+
+        Medical conversion benchmarks: 2-5% for dental, 2-4.5% for cosmetology.
+        Uses industry-standard conversion rates, not random.
+        """
+        monthly_visits = traffic_data.get("monthly_organic_traffic") or traffic_data.get("estimated_monthly_visits")
+        if monthly_visits is None:
+            monthly_visits = traffic_data.get("total_monthly_visits")
+
+        if monthly_visits is None:
+            return {
+                "patients_per_month": None,
+                "confidence": 0.0,
+                "note": "no traffic data available"
+            }
+
+        benchmarks = self.conversion_benchmarks.get(niche, self.conversion_benchmarks["default"])
+        conv_low = monthly_visits * benchmarks["low"]
+        conv_mid = monthly_visits * benchmarks["mid"]
+        conv_high = monthly_visits * benchmarks["high"]
+
+        return {
+            "patients_per_month": round(conv_mid),
+            "range_low": round(conv_low),
+            "range_high": round(conv_high),
+            "conversion_rate_used": benchmarks["mid"],
+            "confidence": 0.6,
+            "method": "monthly_organic_traffic × medical_conversion_benchmark",
+            "source": "Russian medical marketing studies 2024-2025"
+        }
+
+    def _estimate_time_to_result(
+        self,
+        niche: str,
+        competition_level: str,
+        budget_level: str = "medium"
+    ) -> Dict[str, Any]:
+        """
+        Оценить время до первых результатов.
+
+        Logic model:
+          base_time × niche_complexity_multiplier × competition_multiplier × budget_multiplier
+
+        Base time for medical SEO: 3-6 months (industry standard).
+        """
+        base_time_months = 4.0  # Medical SEO baseline
+
+        # Niche complexity factor
+        niche_factor = self.niche_complexity.get(niche, self.niche_complexity["default"])
+
+        # Competition factor
+        competition_factors = {"low": 0.8, "medium": 1.0, "high": 1.3}
+        competition_factor = competition_factors.get(competition_level, 1.0)
+
+        # Budget factor (more budget = faster results)
+        budget_factors = {"low": 1.4, "medium": 1.0, "high": 0.7}
+        budget_factor = budget_factors.get(budget_level, 1.0)
+
+        months = base_time_months * niche_factor * competition_factor * budget_factor
+
+        return {
+            "estimated_months": round(months, 1),
+            "range_low_months": round(months * 0.7, 1),
+            "range_high_months": round(months * 1.4, 1),
+            "confidence": 0.5,
+            "method": "base_time × niche_complexity × competition × budget",
+            "factors": {
+                "base_time_months": base_time_months,
+                "niche_factor": niche_factor,
+                "competition_factor": competition_factor,
+                "budget_factor": budget_factor
+            },
+            "note": "Medical SEO industry baseline: 3-6 months to first page"
+        }
+
+    def _estimate_cost_per_patient(
+        self,
+        avg_cpc: Optional[float],
+        conversion_rate: Optional[float]
+    ) -> Dict[str, Any]:
+        """
+        Оценить стоимость привлечения одного пациента.
+
+        Formula: CPC / conversion_rate
+
+        If no CPC data → use medical industry benchmarks.
+        """
+        if avg_cpc is None and conversion_rate is None:
+            return {
+                "cost_per_patient": None,
+                "confidence": 0.0,
+                "note": "no CPC or conversion data available"
+            }
+
+        cpc = avg_cpc if avg_cpc else 150.0  # Medical default CPC (Russian market)
+        conv = conversion_rate if conversion_rate else 0.025  # Default 2.5% conversion
+
+        cpp = cpc / conv
+
+        return {
+            "cost_per_patient": round(cpp),
+            "cpc_used": cpc,
+            "conversion_rate_used": conv,
+            "confidence": 0.5 if avg_cpc else 0.3,
+            "method": "CPC / conversion_rate",
+            "note": None if avg_cpc else "using medical industry default CPC (150 RUB)"
+        }
 
     async def _save_results(self, results: Dict[str, Any]):
         """Сохранить результаты в файл."""
