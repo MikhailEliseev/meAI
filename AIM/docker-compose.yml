@@ -47,6 +47,7 @@ services:
     environment:
       - ENVIRONMENT=production
       - REDIS_URL=redis://redis:6379/0
+      - HERMES_URL=http://hermes:8000
     env_file:
       - .env.production
     volumes:
