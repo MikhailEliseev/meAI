@@ -255,7 +255,7 @@ Plans:
 - [x] 13-01: Landing page implementation (from Phase 11 Sprint 1)
 - [ ] 13-02: Fix Yandex Direct MOCK stats + ФЗ-38 compliance (wave 2, depends on 13-04)
 - [ ] 13-03: VK Ads + Telegram Ads API clients (wave 2, depends on 13-04)
-- [ ] 13-04: A/B testing engine + Attribution pipeline + ROI calculator + Variant middleware (wave 1)
+- [x] 13-04: A/B testing engine + Attribution pipeline + ROI calculator + Variant middleware (wave 1)
 
 ### Phase 14: Final Integration — Operability & Client Dashboard
 **Goal**: Закрыть оставшиеся gaps: LinearMixin на всех Magisters, клиентский веб-дашборд
@@ -366,11 +366,11 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 10. AI Enhancement | v2.0 | 5/5 | Complete | 2026-05-16 |
 | 11. Client Acquisition | v2.1 | 3/4 | Complete | 2026-05-18 |
 | 12. Production Deployment | v3.0 | 3/3 | Complete | 2026-05-18 |
-| 13. Landing Page | v3.0 | 1/4 | Ready to execute | 2026-05-18 |
+| 13. Landing Page | v3.0 | 2/4 | Wave 1 done | 2026-05-18 |
 | 14. Final Integration | v3.0 | 2/2 | Complete | 2026-05-18 |
 | 15. Hermes AIM Integration | v4.0 | 4/4 | Complete | 2026-05-19 |
 | 16. Hermes Knowledge Training | v4.1 | 2/2 | Complete | 2026-05-20 |
 | 17. No More Mock Data | v4.2 | 1/1 | Complete | 2026-05-20 |
 | 18. Hermes Learning Bus | v4.3 | 2/2 | Complete | 2026-05-20 |
 
-**Overall:** 42/47 plans complete (89%)
+**Overall:** 43/47 plans complete (91%)
