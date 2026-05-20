@@ -46,7 +46,7 @@ export function ChatBubble({ role, content, timestamp, isStreaming }: ChatBubble
       >
         {isAgent ? (
           <div className="prose prose-sm prose-stone max-w-none [&_table]:text-xs [&_th]:text-xs [&_td]:text-xs [&_pre]:text-xs">
-            <Streamdown remend={isStreaming}>{content}</Streamdown>
+            <Streamdown remend={isStreaming ? {} : undefined}>{content}</Streamdown>
           </div>
         ) : (
           <p className="whitespace-pre-wrap">{content}</p>
