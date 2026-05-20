@@ -224,11 +224,15 @@ def _process_update_sync(message_data: dict, chat_id: int, text: str):
 
 
 def _call_omniroute_direct(mode: str, user_message: str) -> str:
-    """Call OmniRoute directly (no AIAgent) — avoids streaming issues."""
-    from .omniroute_direct import chat
-    from .agent_wrapper import get_mode_prompt
+    """Call OmniRoute directly (no AIAgent) — avoids streaming issues.
 
-    system_prompt = get_mode_prompt(mode)
+    Uses build_system_prompt() which includes SOUL.md + mode prompt.
+    Telegram path bypasses AIAgent, so SOUL.md must be loaded manually.
+    """
+    from .omniroute_direct import chat
+    from .agent_wrapper import build_system_prompt
+
+    system_prompt = build_system_prompt(mode)
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_message},
