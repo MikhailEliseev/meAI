@@ -21,7 +21,7 @@
 
 **Architecture:**
 ```
-!meAI/                          # Command Center (ты работаешь отсюда)
+meAI/                           # Command Center (ты работаешь отсюда)
 ├── src/meai/                   # Framework (базовые классы)
 │   ├── core/                   # Architect, Orchestrator, Decision Maker
 │   ├── agents/                 # Base: Operator, BaseMagister, BaseAgent
@@ -44,7 +44,7 @@
 ```
 
 **Workflow:**
-- Ты работаешь из `/Users/mikhaileliseev/Desktop/Dev/!meAI` (командный пункт)
+- Ты работаешь из `/Users/mikhaileliseev/Desktop/Dev/meAI` (командный пункт)
 - Используешь `/architect` для стратегических решений
 - Architect создаёт код в `AIM/` (агентство)
 - Framework (`src/meai/`) переиспользуется агентством (`AIM/`)
@@ -489,14 +489,14 @@ class Agent(ABC):
    - `agents/factory.py` — Agent creation (IMPLEMENTED)
 
 4. **Memory System** (Obsidian vaults with LLM Wiki pattern)
-   - `obsidian/architect/` — Architect's strategic vault (в корне !meAI)
+   - `obsidian/architect/` — Architect's strategic vault (в корне meAI)
    - `AIM/obsidian/operator/` — Operator's tactical vault
    - `AIM/obsidian/seo-magister/` — SEO Magister's domain vault
    - `AIM/obsidian/content-magister/` — Content Magister's domain vault
    - `AIM/obsidian/ads-magister/` — Ads Magister's domain vault
 
 5. **Data Layer**
-   - `data/` — meAI framework database (в корне !meAI)
+   - `data/` — meAI framework database (в корне meAI)
    - `AIM/data/` — AIM agency database
    - SQLite for structured data (tasks, metrics, logs, decisions)
    - Obsidian for unstructured knowledge and agent memory
@@ -665,7 +665,7 @@ class SEOMagister(BaseMagister):  # Конкретная реализация
 ```
 
 **Разработка:**
-- Работаешь из корня `/Users/mikhaileliseev/Desktop/Dev/!meAI`
+- Работаешь из корня `/Users/mikhaileliseev/Desktop/Dev/meAI`
 - Framework код в `src/meai/`
 - Agency код в `AIM/src/aim/`
 - Всё в одном репо, но логически разделено
