@@ -20,7 +20,7 @@ _session_locks: dict[str, asyncio.Lock] = {}
 
 OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "http://omniroute:20128/v1")
 OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "sk-a10f604cd99e7a50-dd1d5a-56e30050")
-DEFAULT_MODEL = os.getenv("HERMES_MODEL", "deepseek/deepseek-v4-flash")
+DEFAULT_MODEL = os.getenv("HERMES_MODEL", "deepseek/deepseek-v4-pro")
 
 # SOUL.md cache — loaded once, reused across requests
 _soul_md_cache: Optional[str] = None
