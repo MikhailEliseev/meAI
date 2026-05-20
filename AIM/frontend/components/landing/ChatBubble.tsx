@@ -28,8 +28,8 @@ export function ChatBubble({ role, content, timestamp, isStreaming }: ChatBubble
         className={cn(
           "w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold",
           isAgent
-            ? "bg-gradient-to-br from-primary-500 to-primary-700 text-white"
-            : "bg-gray-200 text-gray-600"
+            ? "bg-accent text-white"
+            : "bg-surface-3 text-text-muted"
         )}
       >
         {isAgent ? "AI" : "Вы"}
@@ -38,10 +38,10 @@ export function ChatBubble({ role, content, timestamp, isStreaming }: ChatBubble
       {/* Bubble */}
       <div
         className={cn(
-          "rounded-2xl px-4 py-3 text-sm leading-relaxed min-w-0 overflow-hidden",
+          "rounded-lg px-4 py-3 text-sm leading-relaxed min-w-0 overflow-hidden",
           isAgent
-            ? "bg-white border border-gray-100 text-gray-800 shadow-sm"
-            : "bg-primary-600 text-white"
+            ? "bg-surface-2 border border-border-hairline text-ink"
+            : "bg-accent text-white"
         )}
       >
         {isAgent ? (
@@ -53,9 +53,9 @@ export function ChatBubble({ role, content, timestamp, isStreaming }: ChatBubble
         )}
         {isStreaming && isEmpty && (
           <span className="inline-flex gap-1">
-            <span className="w-1.5 h-1.5 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-            <span className="w-1.5 h-1.5 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-            <span className="w-1.5 h-1.5 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+            <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+            <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+            <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
           </span>
         )}
         {timestamp && (

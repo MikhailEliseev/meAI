@@ -19,30 +19,30 @@ function TestimonialCard({ testimonial, caseStudy, index }: TestimonialProps) {
       whileInView={{ opacity: 1, scale: 1 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="bg-white rounded-xl shadow-lg p-8 border border-gray-100 hover:shadow-xl transition-shadow duration-300"
+      className="bg-surface-2 rounded-lg p-8 border border-border-hairline hover:border-border-strong transition-colors duration-300"
     >
       {/* Quote Icon */}
-      <div className="text-primary-600 text-5xl mb-4" aria-hidden="true">
+      <div className="text-accent text-5xl mb-4" aria-hidden="true">
         "
       </div>
 
       {/* Testimonial Text */}
-      <blockquote className="text-gray-700 text-lg mb-6 leading-relaxed">
+      <blockquote className="text-text-muted text-lg mb-6 leading-relaxed">
         {testimonial.text}
       </blockquote>
 
       {/* Author Info */}
-      <div className="flex items-center gap-4 pt-6 border-t border-gray-100">
-        <div className="relative w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+      <div className="flex items-center gap-4 pt-6 border-t border-border-hairline">
+        <div className="relative w-16 h-16 rounded-full overflow-hidden bg-surface-3 flex-shrink-0">
           {/* Placeholder for photo - in production, use real images */}
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-400 to-primary-600 text-white text-2xl font-bold">
+          <div className="w-full h-full flex items-center justify-center bg-accent text-white text-2xl font-bold">
             {testimonial.author.charAt(0)}
           </div>
         </div>
         <div>
-          <div className="font-semibold text-gray-900">{testimonial.author}</div>
-          <div className="text-sm text-gray-600">{testimonial.position}</div>
-          <div className="text-xs text-primary-600 mt-1">
+          <div className="font-semibold text-ink">{testimonial.author}</div>
+          <div className="text-sm text-text-muted">{testimonial.position}</div>
+          <div className="text-xs text-accent mt-1">
             {caseStudy.title}
           </div>
         </div>
@@ -50,10 +50,10 @@ function TestimonialCard({ testimonial, caseStudy, index }: TestimonialProps) {
 
       {/* Results Badge */}
       <div className="mt-6 flex items-center gap-2 text-sm">
-        <span className="px-3 py-1 bg-medical-green/10 text-medical-green rounded-full font-semibold">
+        <span className="px-3 py-1 bg-semantic-success/10 text-semantic-success rounded-full font-semibold">
           ROI {caseStudy.results.roi}
         </span>
-        <span className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full font-semibold">
+        <span className="px-3 py-1 bg-surface-3 text-accent rounded-full font-semibold">
           {caseStudy.results.trafficGrowth} трафика
         </span>
       </div>
@@ -98,7 +98,7 @@ export function Testimonials({ className, limit = 3 }: TestimonialsProps) {
 
   return (
     <section
-      className={cn("py-20 px-4 bg-white", className)}
+      className={cn("py-20 px-4 bg-canvas", className)}
       aria-labelledby="testimonials-heading"
     >
       <script
@@ -116,11 +116,11 @@ export function Testimonials({ className, limit = 3 }: TestimonialsProps) {
         >
           <h2
             id="testimonials-heading"
-            className="font-heading text-3xl md:text-4xl font-bold text-gray-900 mb-4"
+            className="text-3xl md:text-4xl font-bold text-ink mb-4"
           >
             Что говорят наши клиенты
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-text-muted max-w-2xl mx-auto">
             Отзывы руководителей медицинских клиник, которые уже получили результат
             от работы с AIM Agency.
           </p>
@@ -146,20 +146,20 @@ export function Testimonials({ className, limit = 3 }: TestimonialsProps) {
           className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 text-center"
         >
           <div>
-            <div className="text-4xl font-bold text-primary-600 mb-2">50+</div>
-            <div className="text-gray-600">Довольных клиентов</div>
+            <div className="text-4xl font-bold text-accent mb-2">50+</div>
+            <div className="text-text-muted">Довольных клиентов</div>
           </div>
           <div>
-            <div className="text-4xl font-bold text-primary-600 mb-2">15K+</div>
-            <div className="text-gray-600">Новых пациентов</div>
+            <div className="text-4xl font-bold text-accent mb-2">15K+</div>
+            <div className="text-text-muted">Новых пациентов</div>
           </div>
           <div>
-            <div className="text-4xl font-bold text-primary-600 mb-2">450%</div>
-            <div className="text-gray-600">Средний ROI</div>
+            <div className="text-4xl font-bold text-accent mb-2">450%</div>
+            <div className="text-text-muted">Средний ROI</div>
           </div>
           <div>
-            <div className="text-4xl font-bold text-primary-600 mb-2">98%</div>
-            <div className="text-gray-600">Продлевают контракт</div>
+            <div className="text-4xl font-bold text-accent mb-2">98%</div>
+            <div className="text-text-muted">Продлевают контракт</div>
           </div>
         </motion.div>
       </div>

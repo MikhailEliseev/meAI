@@ -20,16 +20,16 @@ const statusLabels: Record<string, string> = {
 };
 
 const statusStyles: Record<string, string> = {
-  todo: "bg-gray-100 text-gray-700",
-  in_progress: "bg-blue-100 text-blue-700",
-  done: "bg-green-100 text-green-700",
-  canceled: "bg-red-100 text-red-700",
+  todo: "bg-surface-3 text-text-muted",
+  in_progress: "bg-accent/15 text-accent",
+  done: "bg-semantic-success/15 text-semantic-success",
+  canceled: "bg-semantic-error/15 text-semantic-error",
 };
 
 const priorityStyles: Record<string, string> = {
-  high: "text-red-600",
-  medium: "text-yellow-600",
-  low: "text-gray-500",
+  high: "text-semantic-error",
+  medium: "text-amber-400",
+  low: "text-text-subtle",
 };
 
 function getMockTasks(): Task[] {
@@ -139,7 +139,7 @@ export default function TasksPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin h-10 w-10 border-4 border-primary-600 border-t-transparent rounded-full" />
+        <div className="animate-spin h-10 w-10 border-4 border-accent border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -148,31 +148,31 @@ export default function TasksPage() {
     <div className="p-6 lg:p-8 max-w-6xl">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="font-heading text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl lg:text-3xl font-bold text-ink mb-2">
           Задачи
         </h1>
-        <p className="text-gray-600">
+        <p className="text-text-muted">
           Управление задачами агентства и отслеживание прогресса
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500 mb-1">Всего задач</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+        <div className="bg-surface-2 rounded-md border border-border-hairline p-4">
+          <p className="text-sm text-text-subtle mb-1">Всего задач</p>
+          <p className="text-2xl font-bold text-ink">{stats.total}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500 mb-1">Готово</p>
-          <p className="text-2xl font-bold text-green-600">{stats.done}</p>
+        <div className="bg-surface-2 rounded-md border border-border-hairline p-4">
+          <p className="text-sm text-text-subtle mb-1">Готово</p>
+          <p className="text-2xl font-bold text-semantic-success">{stats.done}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500 mb-1">В работе</p>
-          <p className="text-2xl font-bold text-blue-600">{stats.inProgress}</p>
+        <div className="bg-surface-2 rounded-md border border-border-hairline p-4">
+          <p className="text-sm text-text-subtle mb-1">В работе</p>
+          <p className="text-2xl font-bold text-accent">{stats.inProgress}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500 mb-1">Ожидают</p>
-          <p className="text-2xl font-bold text-gray-600">{stats.todo}</p>
+        <div className="bg-surface-2 rounded-md border border-border-hairline p-4">
+          <p className="text-sm text-text-subtle mb-1">Ожидают</p>
+          <p className="text-2xl font-bold text-text-muted">{stats.todo}</p>
         </div>
       </div>
 
@@ -189,8 +189,8 @@ export default function TasksPage() {
             onClick={() => setFilter(f.key)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               filter === f.key
-                ? "bg-primary-600 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                ? "bg-accent text-white"
+                : "bg-surface-2 text-text-muted hover:bg-surface-3 border border-border-hairline"
             }`}
           >
             {f.label}
@@ -199,22 +199,22 @@ export default function TasksPage() {
       </div>
 
       {/* Task List */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="divide-y divide-gray-100">
+      <div className="bg-surface-2 rounded-md border border-border-hairline overflow-hidden">
+        <div className="divide-y divide-border-hairline">
           {filteredTasks.length === 0 ? (
-            <div className="p-12 text-center text-gray-500">
+            <div className="p-12 text-center text-text-subtle">
               Нет задач по выбранному фильтру
             </div>
           ) : (
             filteredTasks.map((task) => (
               <div
                 key={task.id}
-                className="p-4 hover:bg-gray-50 transition-colors"
+                className="p-4 hover:bg-surface-3 transition-colors"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-mono text-gray-400">
+                      <span className="text-xs font-mono text-text-subtle">
                         {task.id}
                       </span>
                       <span
@@ -232,10 +232,10 @@ export default function TasksPage() {
                           : "Низкий"}
                       </span>
                     </div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-ink">
                       {task.title}
                     </p>
-                    <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
+                    <div className="flex items-center gap-3 mt-1.5 text-xs text-text-subtle">
                       <span>{task.assignee}</span>
                       <span>·</span>
                       <span>{task.projectName}</span>

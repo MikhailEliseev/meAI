@@ -41,7 +41,7 @@ export function ChatInput({
   };
 
   return (
-    <div className="flex gap-3 items-end p-4 bg-white border-t border-gray-100">
+    <div className="flex gap-3 items-end p-4">
       <textarea
         ref={inputRef}
         value={value}
@@ -50,18 +50,15 @@ export function ChatInput({
         placeholder={placeholder || "Напишите адрес вашего сайта или задайте вопрос..."}
         disabled={disabled}
         rows={1}
-        className="flex-1 resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm
-                   focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-                   disabled:bg-gray-50 disabled:text-gray-400
-                   placeholder:text-gray-400"
+        className="input-base flex-1 resize-none text-sm"
         aria-label="Сообщение"
       />
       {isStreaming ? (
         <button
           onClick={onStop}
-          className="shrink-0 w-10 h-10 rounded-xl bg-red-500 text-white
+          className="shrink-0 w-10 h-10 rounded-md bg-semantic-error text-white
                      flex items-center justify-center
-                     hover:bg-red-600 active:scale-95
+                     hover:brightness-110 active:scale-95
                      transition-all duration-200"
           aria-label="Остановить"
         >
@@ -73,10 +70,10 @@ export function ChatInput({
         <button
           onClick={handleSubmit}
           disabled={disabled || !value.trim()}
-          className="shrink-0 w-10 h-10 rounded-xl bg-primary-600 text-white
+          className="shrink-0 w-10 h-10 rounded-md bg-accent text-white
                      flex items-center justify-center
-                     hover:bg-primary-700 active:scale-95
-                     disabled:bg-gray-300 disabled:cursor-not-allowed
+                     hover:brightness-110 active:scale-95
+                     disabled:bg-surface-3 disabled:text-text-subtle disabled:cursor-not-allowed
                      transition-all duration-200"
           aria-label="Отправить"
         >

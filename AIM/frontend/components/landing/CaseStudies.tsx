@@ -17,32 +17,32 @@ function CaseStudyCard({ caseStudy, index }: CaseStudyProps) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow duration-300"
+      className="bg-surface-2 rounded-lg border border-border-hairline overflow-hidden hover:border-border-strong transition-colors duration-300"
     >
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-6 text-white">
+      <div className="bg-accent p-6 text-white">
         <div className="flex items-start justify-between mb-2">
           <div>
             <h3 className="text-2xl font-bold mb-1">{caseStudy.title}</h3>
-            <p className="text-primary-100 text-sm">
+            <p className="text-white/70 text-sm">
               {caseStudy.location} • {caseStudy.specialty}
             </p>
           </div>
-          <div className="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold">
+          <div className="bg-surface-2/50 px-3 py-1 rounded-full text-sm font-semibold">
             {caseStudy.results.timeframe}
           </div>
         </div>
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-2 gap-4 p-6 bg-gray-50">
+      <div className="grid grid-cols-2 gap-4 p-6 bg-surface-1">
         {caseStudy.metrics.map((metric, idx) => (
           <div key={idx} className="text-center">
             <div className="text-3xl mb-1">{metric.icon}</div>
-            <div className="text-2xl font-bold text-primary-600 mb-1">
+            <div className="text-2xl font-bold text-accent mb-1">
               {metric.value}
             </div>
-            <div className="text-xs text-gray-600">{metric.label}</div>
+            <div className="text-xs text-text-muted">{metric.label}</div>
           </div>
         ))}
       </div>
@@ -50,12 +50,12 @@ function CaseStudyCard({ caseStudy, index }: CaseStudyProps) {
       {/* Challenge & Solution */}
       <div className="p-6 space-y-4">
         <div>
-          <h4 className="font-semibold text-gray-900 mb-2">Задача:</h4>
-          <p className="text-gray-600 text-sm">{caseStudy.challenge}</p>
+          <h4 className="font-semibold text-ink mb-2">Задача:</h4>
+          <p className="text-text-muted text-sm">{caseStudy.challenge}</p>
         </div>
         <div>
-          <h4 className="font-semibold text-gray-900 mb-2">Решение:</h4>
-          <p className="text-gray-600 text-sm">{caseStudy.solution}</p>
+          <h4 className="font-semibold text-ink mb-2">Решение:</h4>
+          <p className="text-text-muted text-sm">{caseStudy.solution}</p>
         </div>
       </div>
 
@@ -65,7 +65,7 @@ function CaseStudyCard({ caseStudy, index }: CaseStudyProps) {
           {caseStudy.tags.map((tag, idx) => (
             <span
               key={idx}
-              className="px-3 py-1 bg-primary-50 text-primary-700 text-xs font-medium rounded-full"
+              className="px-3 py-1 bg-surface-3 text-accent text-xs font-medium rounded-full"
             >
               {tag}
             </span>
@@ -75,9 +75,9 @@ function CaseStudyCard({ caseStudy, index }: CaseStudyProps) {
 
       {/* ROI Badge */}
       <div className="px-6 pb-6">
-        <div className="bg-medical-green/10 border-2 border-medical-green rounded-lg p-4 text-center">
-          <div className="text-sm text-gray-600 mb-1">ROI</div>
-          <div className="text-3xl font-bold text-medical-green">
+        <div className="bg-semantic-success/10 border border-semantic-success rounded-lg p-4 text-center">
+          <div className="text-sm text-text-muted mb-1">ROI</div>
+          <div className="text-3xl font-bold text-semantic-success">
             {caseStudy.results.roi}
           </div>
         </div>
@@ -118,7 +118,7 @@ export function CaseStudies({ className, limit }: CaseStudiesProps) {
   return (
     <section
       id="case-studies"
-      className={cn("py-20 px-4 bg-gray-50", className)}
+      className={cn("py-20 px-4 bg-surface-1", className)}
       aria-labelledby="case-studies-heading"
     >
       <script
@@ -136,11 +136,11 @@ export function CaseStudies({ className, limit }: CaseStudiesProps) {
         >
           <h2
             id="case-studies-heading"
-            className="font-heading text-3xl md:text-4xl font-bold text-gray-900 mb-4"
+            className="text-3xl md:text-4xl font-bold text-ink mb-4"
           >
             Наши кейсы
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-text-muted max-w-2xl mx-auto">
             Реальные результаты наших клиентов. Каждый кейс — это история успеха
             медицинской клиники, которая доверилась AI-маркетингу.
           </p>

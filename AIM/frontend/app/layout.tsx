@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Poppins } from "next/font/google";
+import { Inter } from "next/font/google";
 import Script from "next/script";
 import { PublicLayout } from "@/components/PublicLayout";
 import { UTMCapture } from "@/components/UTMCapture";
@@ -9,14 +9,8 @@ import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin", "cyrillic"],
+  weight: ["400", "500", "600"],
   variable: "--font-inter",
-  display: "swap",
-});
-
-const poppins = Poppins({
-  weight: ["400", "600", "700"],
-  subsets: ["latin"],
-  variable: "--font-poppins",
   display: "swap",
 });
 
@@ -90,7 +84,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ru" className={`${inter.variable} ${poppins.variable}`}>
+    <html lang="ru" className={inter.variable}>
       <head>
         {/* Preconnect for performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />

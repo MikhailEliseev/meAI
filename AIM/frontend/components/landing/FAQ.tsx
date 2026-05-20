@@ -88,7 +88,7 @@ export function FAQ({ className, limit }: FAQProps) {
 
   return (
     <section
-      className={cn("py-20 px-4 bg-white", className)}
+      className={cn("py-20 px-4 bg-canvas", className)}
       aria-labelledby="faq-heading"
     >
       <div className="max-w-4xl mx-auto">
@@ -101,11 +101,11 @@ export function FAQ({ className, limit }: FAQProps) {
         >
           <h2
             id="faq-heading"
-            className="font-heading text-3xl md:text-4xl font-bold text-gray-900 mb-4"
+            className="text-3xl md:text-4xl font-bold text-ink mb-4"
           >
             Часто задаваемые вопросы
           </h2>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-text-muted">
             Ответы на популярные вопросы о нашей работе
           </p>
         </motion.div>
@@ -124,7 +124,7 @@ export function FAQ({ className, limit }: FAQProps) {
               placeholder="Поиск по вопросам..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-6 py-4 pr-12 rounded-xl border-2 border-gray-200 focus:border-primary-500 focus:outline-none transition-colors text-gray-900 placeholder-gray-400"
+              className="input-base w-full px-4 py-3"
               aria-label="Поиск по вопросам"
             />
             <span
@@ -151,8 +151,8 @@ export function FAQ({ className, limit }: FAQProps) {
               className={cn(
                 "px-4 py-2 rounded-full text-sm font-medium transition-all",
                 selectedCategory === cat.id
-                  ? "bg-primary-600 text-white shadow-md"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-accent text-white"
+                  : "bg-surface-2 text-text-muted hover:bg-surface-3"
               )}
               aria-pressed={selectedCategory === cat.id}
             >
@@ -167,7 +167,7 @@ export function FAQ({ className, limit }: FAQProps) {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-center py-12 text-gray-500"
+              className="text-center py-12 text-text-subtle"
             >
               <p className="text-lg">
                 Вопросы не найдены. Попробуйте изменить запрос.
@@ -182,26 +182,26 @@ export function FAQ({ className, limit }: FAQProps) {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.05 }}
                 className={cn(
-                  "border-2 rounded-xl overflow-hidden transition-all",
+                  "border rounded-lg overflow-hidden transition-all",
                   openId === faq.id
-                    ? "border-primary-500 shadow-lg"
-                    : "border-gray-200 hover:border-gray-300"
+                    ? "border-accent"
+                    : "border-border-hairline hover:border-border-strong"
                 )}
               >
                 {/* Question Button */}
                 <button
                   onClick={() => toggleFAQ(faq.id)}
-                  className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+                  className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-surface-2 transition-colors"
                   aria-expanded={openId === faq.id}
                   aria-controls={`faq-answer-${faq.id}`}
                 >
-                  <span className="font-semibold text-gray-900 pr-4">
+                  <span className="font-semibold text-ink pr-4">
                     {faq.question}
                   </span>
                   <motion.span
                     animate={{ rotate: openId === faq.id ? 180 : 0 }}
                     transition={{ duration: 0.3 }}
-                    className="text-2xl text-primary-600 flex-shrink-0"
+                    className="text-2xl text-accent flex-shrink-0"
                     aria-hidden="true"
                   >
                     ▼
@@ -219,8 +219,8 @@ export function FAQ({ className, limit }: FAQProps) {
                       transition={{ duration: 0.3 }}
                       className="overflow-hidden"
                     >
-                      <div className="px-6 pb-5 pt-2 border-t-2 border-gray-100">
-                        <p className="text-gray-700 leading-relaxed mb-4">
+                      <div className="px-6 pb-5 pt-2 border-t border-border-hairline">
+                        <p className="text-text-muted leading-relaxed mb-4">
                           {faq.answer}
                         </p>
                         {/* Tags */}
@@ -228,7 +228,7 @@ export function FAQ({ className, limit }: FAQProps) {
                           {faq.tags.map((tag) => (
                             <span
                               key={tag}
-                              className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-xs font-medium"
+                              className="px-3 py-1 bg-surface-3 text-accent rounded-full text-xs font-medium"
                             >
                               {tag}
                             </span>
@@ -250,7 +250,7 @@ export function FAQ({ className, limit }: FAQProps) {
           viewport={{ once: true }}
           className="text-center mt-12"
         >
-          <p className="text-gray-600 mb-4">
+          <p className="text-text-muted mb-4">
             Не нашли ответ на свой вопрос?
           </p>
           <button

@@ -244,7 +244,7 @@ export function ContactForm({ className }: ContactFormProps) {
   return (
     <section
       id="contact-form"
-      className={cn("py-20 px-4 bg-gradient-to-b from-gray-50 to-white scroll-mt-20", className)}
+      className={cn("py-20 px-4 bg-canvas scroll-mt-20", className)}
       aria-labelledby="contact-heading"
     >
       <div className="max-w-3xl mx-auto">
@@ -257,11 +257,11 @@ export function ContactForm({ className }: ContactFormProps) {
         >
           <h2
             id="contact-heading"
-            className="font-heading text-3xl md:text-4xl font-bold text-gray-900 mb-4"
+            className="text-3xl md:text-4xl font-bold text-ink mb-4"
           >
             Получите бесплатную консультацию
           </h2>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-text-muted">
             Заполните форму, и мы свяжемся с вами в течение 15 минут
           </p>
         </motion.div>
@@ -271,15 +271,15 @@ export function ContactForm({ className }: ContactFormProps) {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-medical-green/10 border-2 border-medical-green rounded-2xl p-8 text-center"
+            className="bg-semantic-success/10 border border-semantic-success rounded-lg p-8 text-center"
           >
             <div className="text-6xl mb-4" aria-hidden="true">
               ✓
             </div>
-            <h3 className="font-heading text-2xl font-bold text-gray-900 mb-2">
+            <h3 className="text-2xl font-bold text-ink mb-2">
               Спасибо за обращение!
             </h3>
-            <p className="text-gray-700 mb-6">
+            <p className="text-text-muted mb-6">
               Мы получили вашу заявку и свяжемся с вами в ближайшее время.
             </p>
             <button
@@ -298,23 +298,23 @@ export function ContactForm({ className }: ContactFormProps) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             onSubmit={handleSubmit(onSubmit)}
-            className="bg-white rounded-2xl shadow-xl p-8 space-y-6"
+            className="bg-surface-2 rounded-lg border border-border-hairline p-8 space-y-6"
             noValidate
           >
             {/* Name */}
             <div>
-              <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
-                Ваше имя <span className="text-red-500">*</span>
+              <label htmlFor="name" className="block text-sm font-medium text-text-muted mb-1.5">
+                Ваше имя <span className="text-semantic-error">*</span>
               </label>
               <input
                 {...register("name")}
                 type="text"
                 id="name"
                 className={cn(
-                  "w-full px-4 py-3 rounded-lg border-2 transition-colors",
+                  "w-full px-4 py-3 rounded-md border transition-colors bg-surface-2 text-ink placeholder:text-text-subtle",
                   errors.name
-                    ? "border-red-500 focus:border-red-600"
-                    : "border-gray-200 focus:border-primary-500",
+                    ? "border-semantic-error focus:border-semantic-error"
+                    : "border-border-hairline focus:border-accent",
                   "focus:outline-none"
                 )}
                 placeholder="Иван Иванов"
@@ -322,7 +322,7 @@ export function ContactForm({ className }: ContactFormProps) {
                 aria-describedby={errors.name ? "name-error" : undefined}
               />
               {errors.name && (
-                <p id="name-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="name-error" className="mt-1 text-sm text-semantic-error" role="alert">
                   {errors.name.message}
                 </p>
               )}
@@ -330,18 +330,18 @@ export function ContactForm({ className }: ContactFormProps) {
 
             {/* Phone */}
             <div>
-              <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2">
-                Телефон <span className="text-red-500">*</span>
+              <label htmlFor="phone" className="block text-sm font-medium text-text-muted mb-1.5">
+                Телефон <span className="text-semantic-error">*</span>
               </label>
               <input
                 {...register("phone")}
                 type="tel"
                 id="phone"
                 className={cn(
-                  "w-full px-4 py-3 rounded-lg border-2 transition-colors",
+                  "w-full px-4 py-3 rounded-md border transition-colors bg-surface-2 text-ink placeholder:text-text-subtle",
                   errors.phone
-                    ? "border-red-500 focus:border-red-600"
-                    : "border-gray-200 focus:border-primary-500",
+                    ? "border-semantic-error focus:border-semantic-error"
+                    : "border-border-hairline focus:border-accent",
                   "focus:outline-none"
                 )}
                 placeholder="+7 999 123-45-67"
@@ -349,7 +349,7 @@ export function ContactForm({ className }: ContactFormProps) {
                 aria-describedby={errors.phone ? "phone-error" : undefined}
               />
               {errors.phone && (
-                <p id="phone-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="phone-error" className="mt-1 text-sm text-semantic-error" role="alert">
                   {errors.phone.message}
                 </p>
               )}
@@ -357,18 +357,18 @@ export function ContactForm({ className }: ContactFormProps) {
 
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
-                Email <span className="text-red-500">*</span>
+              <label htmlFor="email" className="block text-sm font-medium text-text-muted mb-1.5">
+                Email <span className="text-semantic-error">*</span>
               </label>
               <input
                 {...register("email")}
                 type="email"
                 id="email"
                 className={cn(
-                  "w-full px-4 py-3 rounded-lg border-2 transition-colors",
+                  "w-full px-4 py-3 rounded-md border transition-colors bg-surface-2 text-ink placeholder:text-text-subtle",
                   errors.email
-                    ? "border-red-500 focus:border-red-600"
-                    : "border-gray-200 focus:border-primary-500",
+                    ? "border-semantic-error focus:border-semantic-error"
+                    : "border-border-hairline focus:border-accent",
                   "focus:outline-none"
                 )}
                 placeholder="ivan@example.com"
@@ -376,7 +376,7 @@ export function ContactForm({ className }: ContactFormProps) {
                 aria-describedby={errors.email ? "email-error" : undefined}
               />
               {errors.email && (
-                <p id="email-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="email-error" className="mt-1 text-sm text-semantic-error" role="alert">
                   {errors.email.message}
                 </p>
               )}
@@ -384,18 +384,18 @@ export function ContactForm({ className }: ContactFormProps) {
 
             {/* Clinic Name */}
             <div>
-              <label htmlFor="clinicName" className="block text-sm font-semibold text-gray-700 mb-2">
-                Название клиники <span className="text-red-500">*</span>
+              <label htmlFor="clinicName" className="block text-sm font-medium text-text-muted mb-1.5">
+                Название клиники <span className="text-semantic-error">*</span>
               </label>
               <input
                 {...register("clinicName")}
                 type="text"
                 id="clinicName"
                 className={cn(
-                  "w-full px-4 py-3 rounded-lg border-2 transition-colors",
+                  "w-full px-4 py-3 rounded-md border transition-colors bg-surface-2 text-ink placeholder:text-text-subtle",
                   errors.clinicName
-                    ? "border-red-500 focus:border-red-600"
-                    : "border-gray-200 focus:border-primary-500",
+                    ? "border-semantic-error focus:border-semantic-error"
+                    : "border-border-hairline focus:border-accent",
                   "focus:outline-none"
                 )}
                 placeholder="Медицинский центр «Здоровье»"
@@ -403,7 +403,7 @@ export function ContactForm({ className }: ContactFormProps) {
                 aria-describedby={errors.clinicName ? "clinicName-error" : undefined}
               />
               {errors.clinicName && (
-                <p id="clinicName-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="clinicName-error" className="mt-1 text-sm text-semantic-error" role="alert">
                   {errors.clinicName.message}
                 </p>
               )}
@@ -411,17 +411,17 @@ export function ContactForm({ className }: ContactFormProps) {
 
             {/* Specialty */}
             <div>
-              <label htmlFor="specialty" className="block text-sm font-semibold text-gray-700 mb-2">
-                Специализация <span className="text-red-500">*</span>
+              <label htmlFor="specialty" className="block text-sm font-medium text-text-muted mb-1.5">
+                Специализация <span className="text-semantic-error">*</span>
               </label>
               <select
                 {...register("specialty")}
                 id="specialty"
                 className={cn(
-                  "w-full px-4 py-3 rounded-lg border-2 transition-colors",
+                  "w-full px-4 py-3 rounded-md border transition-colors bg-surface-2 text-ink placeholder:text-text-subtle",
                   errors.specialty
-                    ? "border-red-500 focus:border-red-600"
-                    : "border-gray-200 focus:border-primary-500",
+                    ? "border-semantic-error focus:border-semantic-error"
+                    : "border-border-hairline focus:border-accent",
                   "focus:outline-none"
                 )}
                 aria-invalid={!!errors.specialty}
@@ -434,7 +434,7 @@ export function ContactForm({ className }: ContactFormProps) {
                 ))}
               </select>
               {errors.specialty && (
-                <p id="specialty-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="specialty-error" className="mt-1 text-sm text-semantic-error" role="alert">
                   {errors.specialty.message}
                 </p>
               )}
@@ -442,7 +442,7 @@ export function ContactForm({ className }: ContactFormProps) {
 
             {/* Message */}
             <div>
-              <label htmlFor="message" className="block text-sm font-semibold text-gray-700 mb-2">
+              <label htmlFor="message" className="block text-sm font-medium text-text-muted mb-1.5">
                 Сообщение (опционально)
               </label>
               <textarea
@@ -450,10 +450,10 @@ export function ContactForm({ className }: ContactFormProps) {
                 id="message"
                 rows={4}
                 className={cn(
-                  "w-full px-4 py-3 rounded-lg border-2 transition-colors resize-none",
+                  "w-full px-4 py-3 rounded-md border transition-colors bg-surface-2 text-ink placeholder:text-text-subtle resize-none",
                   errors.message
-                    ? "border-red-500 focus:border-red-600"
-                    : "border-gray-200 focus:border-primary-500",
+                    ? "border-semantic-error focus:border-semantic-error"
+                    : "border-border-hairline focus:border-accent",
                   "focus:outline-none"
                 )}
                 placeholder="Расскажите о вашей клинике и целях..."
@@ -461,7 +461,7 @@ export function ContactForm({ className }: ContactFormProps) {
                 aria-describedby={errors.message ? "message-error" : undefined}
               />
               {errors.message && (
-                <p id="message-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="message-error" className="mt-1 text-sm text-semantic-error" role="alert">
                   {errors.message.message}
                 </p>
               )}
@@ -473,25 +473,25 @@ export function ContactForm({ className }: ContactFormProps) {
                 <input
                   {...register("fz152Consent")}
                   type="checkbox"
-                  className="mt-1 w-5 h-5 rounded border-2 border-gray-300 text-primary-600 focus:ring-2 focus:ring-primary-500"
+                  className="mt-1 w-5 h-5 rounded border-2 border-border-hairline text-accent focus:ring-2 focus:ring-accent"
                   aria-invalid={!!errors.fz152Consent}
                   aria-describedby={errors.fz152Consent ? "consent-error" : undefined}
                 />
-                <span className="text-sm text-gray-700">
+                <span className="text-sm text-text-muted">
                   Я согласен на обработку персональных данных в соответствии с{" "}
                   <a
                     href="/privacy-policy"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary-600 hover:text-primary-700 underline"
+                    className="text-accent hover:text-accent underline"
                   >
                     ФЗ-152
                   </a>{" "}
-                  <span className="text-red-500">*</span>
+                  <span className="text-semantic-error">*</span>
                 </span>
               </label>
               {errors.fz152Consent && (
-                <p id="consent-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="consent-error" className="mt-1 text-sm text-semantic-error" role="alert">
                   {errors.fz152Consent.message}
                 </p>
               )}
@@ -499,8 +499,8 @@ export function ContactForm({ className }: ContactFormProps) {
 
             {/* Error Message */}
             {submissionState === "error" && errorMessage && (
-              <div className="bg-red-50 border-2 border-red-500 rounded-lg p-4" role="alert">
-                <p className="text-sm text-red-700">{errorMessage}</p>
+              <div className="bg-surface-3 border-2 border-semantic-error rounded-md p-4" role="alert">
+                <p className="text-sm text-semantic-error">{errorMessage}</p>
               </div>
             )}
 
@@ -524,13 +524,13 @@ export function ContactForm({ className }: ContactFormProps) {
             </button>
 
             {/* reCAPTCHA Notice */}
-            <p className="text-xs text-gray-500 text-center">
+            <p className="text-xs text-text-subtle text-center">
               Этот сайт защищён reCAPTCHA. Применяются{" "}
               <a
                 href="https://policies.google.com/privacy"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline hover:text-gray-700"
+                className="underline hover:text-text-muted"
               >
                 Политика конфиденциальности
               </a>{" "}
@@ -539,7 +539,7 @@ export function ContactForm({ className }: ContactFormProps) {
                 href="https://policies.google.com/terms"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline hover:text-gray-700"
+                className="underline hover:text-text-muted"
               >
                 Условия использования
               </a>{" "}

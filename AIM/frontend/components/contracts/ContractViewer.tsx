@@ -103,16 +103,16 @@ export default function ContractViewer({
 
   const getStatusBadge = (status: Contract["status"]) => {
     const badges = {
-      draft: { label: "Черновик", color: "bg-gray-100 text-gray-800" },
-      sent: { label: "Отправлен", color: "bg-blue-100 text-blue-800" },
-      signed: { label: "Подписан", color: "bg-green-100 text-green-800" },
-      declined: { label: "Отклонён", color: "bg-red-100 text-red-800" },
-      expired: { label: "Истёк", color: "bg-orange-100 text-orange-800" },
+      draft: { label: "Черновик", color: "bg-surface-3 text-text-muted" },
+      sent: { label: "Отправлен", color: "bg-accent/15 text-accent" },
+      signed: { label: "Подписан", color: "bg-semantic-success/15 text-semantic-success" },
+      declined: { label: "Отклонён", color: "bg-semantic-error/15 text-semantic-error" },
+      expired: { label: "Истёк", color: "bg-amber-400/15 text-amber-400" },
     }
 
     const badge = badges[status]
     return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${badge.color}`}>
+      <span className={`px-3 py-1 rounded-md text-sm font-medium ${badge.color}`}>
         {badge.label}
       </span>
     )
@@ -184,7 +184,7 @@ export default function ContractViewer({
   if (loading) {
     return (
       <div className={`flex items-center justify-center py-12 ${className}`}>
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-md h-12 w-12 border-b-2 border-accent"></div>
       </div>
     )
   }
@@ -193,7 +193,7 @@ export default function ContractViewer({
     <div className={`space-y-6 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Договоры</h2>
+        <h2 className="text-2xl font-bold text-ink">Договоры</h2>
 
         {/* Filter */}
         <div className="flex gap-2">
@@ -203,8 +203,8 @@ export default function ContractViewer({
               onClick={() => setFilter(status)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 filter === status
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-accent text-white"
+                  : "bg-surface-3 text-text-muted hover:bg-surface-2"
               }`}
             >
               {status === "all" ? "Все" : getStatusBadge(status as Contract["status"]).props.children}
@@ -216,7 +216,7 @@ export default function ContractViewer({
       {/* Contracts List */}
       {contracts.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">Договоры не найдены</p>
+          <p className="text-text-subtle">Договоры не найдены</p>
         </div>
       ) : (
         <div className="grid gap-4">
@@ -226,30 +226,30 @@ export default function ContractViewer({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-shadow"
+              className="bg-surface-2 rounded-lg border border-border-hairline p-6 transition-colors"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   {/* Contract Number & Type */}
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-ink">
                       {contract.contractNumber}
                     </h3>
                     {getStatusBadge(contract.status)}
                   </div>
 
                   {/* Contract Type */}
-                  <p className="text-sm text-gray-600 mb-1">
+                  <p className="text-sm text-text-muted mb-1">
                     {getContractTypeName(contract.contractType)}
                   </p>
 
                   {/* Client Name */}
-                  <p className="text-sm text-gray-600 mb-3">
+                  <p className="text-sm text-text-muted mb-3">
                     Клиент: <span className="font-medium">{contract.clientName}</span>
                   </p>
 
                   {/* Details */}
-                  <div className="flex items-center gap-6 text-sm text-gray-500">
+                  <div className="flex items-center gap-6 text-sm text-text-subtle">
                     <div>
                       <span className="font-medium">Создан:</span> {formatDate(contract.createdAt)}
                     </div>
@@ -270,7 +270,7 @@ export default function ContractViewer({
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleDownload(contract)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    className="px-4 py-2 bg-accent text-white rounded-lg hover:brightness-110 transition-colors text-sm font-medium"
                   >
                     Скачать PDF
                   </button>
@@ -279,13 +279,13 @@ export default function ContractViewer({
                     <>
                       <button
                         onClick={() => handleResend(contract)}
-                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                        className="px-4 py-2 bg-surface-3 text-text-muted rounded-lg hover:bg-surface-2 transition-colors text-sm font-medium"
                       >
                         Отправить повторно
                       </button>
                       <button
                         onClick={() => handleCancel(contract)}
-                        className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                        className="px-4 py-2 bg-semantic-error/15 text-semantic-error rounded-md hover:bg-semantic-error/25 transition-colors text-sm font-medium"
                       >
                         Отменить
                       </button>
@@ -295,7 +295,7 @@ export default function ContractViewer({
                   {contract.status === "draft" && (
                     <button
                       onClick={() => alert("STUB: Отправка на подпись")}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                      className="px-4 py-2 bg-semantic-success text-white rounded-lg hover:brightness-110 transition-colors text-sm font-medium"
                     >
                       Отправить на подпись
                     </button>
@@ -305,8 +305,8 @@ export default function ContractViewer({
 
               {/* STUB Notice */}
               {contract.documentId && (
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800">
+                <div className="mt-4 p-3 bg-surface-3 border border-amber-400/30 rounded-md">
+                  <p className="text-sm text-amber-400">
                     <span className="font-semibold">STUB:</span> Интеграция с Контур.Диадок будет реализована в Phase 12.
                     Document ID: {contract.documentId}
                   </p>

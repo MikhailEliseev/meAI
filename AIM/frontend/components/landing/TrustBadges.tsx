@@ -56,8 +56,8 @@ export function TrustBadges({ className, variant = "horizontal" }: TrustBadgesPr
         <div
           key={badge.id}
           className={cn(
-            "flex items-center gap-3 px-4 py-3 bg-white rounded-lg shadow-sm border border-gray-200",
-            "hover:shadow-md transition-shadow duration-200",
+            "flex items-center gap-3 px-4 py-3 bg-surface-2 rounded-lg border border-border-hairline",
+            "hover:border-border-strong transition-colors duration-200",
             variant === "horizontal" ? "flex-1 min-w-[200px]" : "w-full"
           )}
           role="listitem"
@@ -66,10 +66,10 @@ export function TrustBadges({ className, variant = "horizontal" }: TrustBadgesPr
             {badge.icon}
           </span>
           <div className="flex flex-col">
-            <span className="font-semibold text-gray-900 text-sm">
+            <span className="font-semibold text-ink text-sm">
               {badge.label}
             </span>
-            <span className="text-xs text-gray-600 sr-only">
+            <span className="text-xs text-text-muted sr-only">
               {badge.description}
             </span>
           </div>

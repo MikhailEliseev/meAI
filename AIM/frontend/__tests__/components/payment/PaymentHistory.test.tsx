@@ -110,7 +110,7 @@ describe("PaymentHistory", () => {
       const paidButton = screen.getByRole("button", { name: "Оплачены" });
       await user.click(paidButton);
 
-      expect(paidButton).toHaveClass("bg-primary-600");
+      expect(paidButton).toHaveClass("bg-accent");
       expect(paidButton).toHaveClass("text-white");
     });
   });
@@ -248,7 +248,7 @@ describe("PaymentHistory", () => {
       });
 
       // Check that motion.div is used (framer-motion adds data attributes)
-      const cards = document.querySelectorAll('[class*="rounded-2xl"]');
+      const cards = document.querySelectorAll('[class*="rounded-lg"]');
       expect(cards.length).toBeGreaterThan(0);
     });
   });
@@ -259,8 +259,8 @@ describe("PaymentHistory", () => {
 
       await waitFor(() => {
         const paidBadges = screen.getAllByText("Оплачен");
-        expect(paidBadges[0]).toHaveClass("bg-green-100");
-        expect(paidBadges[0]).toHaveClass("text-green-700");
+        expect(paidBadges[0]).toHaveClass("bg-semantic-success/15");
+        expect(paidBadges[0]).toHaveClass("text-semantic-success");
       });
     });
 
@@ -269,8 +269,8 @@ describe("PaymentHistory", () => {
 
       await waitFor(() => {
         const sentBadge = screen.getByText("Отправлен");
-        expect(sentBadge).toHaveClass("bg-blue-100");
-        expect(sentBadge).toHaveClass("text-blue-700");
+        expect(sentBadge).toHaveClass("bg-accent/15");
+        expect(sentBadge).toHaveClass("text-accent");
       });
     });
   });

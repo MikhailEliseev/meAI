@@ -17,7 +17,7 @@ function AwardCard({ award, index }: AwardProps) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="bg-white rounded-xl shadow-md p-6 border border-gray-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+      className="bg-surface-2 rounded-lg p-6 border border-border-hairline hover:border-border-strong transition-all duration-300 hover:-translate-y-1"
     >
       {/* Icon */}
       <div className="text-5xl mb-4 text-center" aria-hidden="true">
@@ -25,17 +25,17 @@ function AwardCard({ award, index }: AwardProps) {
       </div>
 
       {/* Title */}
-      <h3 className="font-semibold text-gray-900 text-center mb-2">
+      <h3 className="font-semibold text-ink text-center mb-2">
         {award.title}
       </h3>
 
       {/* Organization & Year */}
-      <div className="text-sm text-gray-600 text-center mb-3">
+      <div className="text-sm text-text-muted text-center mb-3">
         {award.organization} • {award.year}
       </div>
 
       {/* Description */}
-      <p className="text-xs text-gray-500 text-center leading-relaxed">
+      <p className="text-xs text-text-subtle text-center leading-relaxed">
         {award.description}
       </p>
     </motion.div>
@@ -51,7 +51,7 @@ export function Awards({ className }: AwardsProps) {
 
   return (
     <section
-      className={cn("py-20 px-4 bg-gradient-to-b from-gray-50 to-white", className)}
+      className={cn("py-20 px-4 bg-canvas", className)}
       aria-labelledby="awards-heading"
     >
 
@@ -65,11 +65,11 @@ export function Awards({ className }: AwardsProps) {
         >
           <h2
             id="awards-heading"
-            className="font-heading text-3xl md:text-4xl font-bold text-gray-900 mb-4"
+            className="text-3xl md:text-4xl font-bold text-ink mb-4"
           >
             Награды и сертификации
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-text-muted max-w-2xl mx-auto">
             Наша экспертиза подтверждена ведущими организациями индустрии
           </p>
         </motion.div>
@@ -88,9 +88,9 @@ export function Awards({ className }: AwardsProps) {
           viewport={{ once: true }}
           className="mt-16 text-center"
         >
-          <div className="inline-flex items-center gap-3 px-6 py-4 bg-primary-50 rounded-full">
+          <div className="inline-flex items-center gap-3 px-6 py-4 bg-surface-3 rounded-full">
             <span className="text-2xl">🔒</span>
-            <span className="text-sm font-semibold text-primary-900">
+            <span className="text-sm font-semibold text-ink">
               Полное соответствие ФЗ-152 о защите персональных данных
             </span>
           </div>

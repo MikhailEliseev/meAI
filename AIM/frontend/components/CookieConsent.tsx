@@ -113,19 +113,19 @@ export function CookieConsent() {
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
           className="fixed bottom-0 left-0 right-0 z-50 p-4 md:p-6"
         >
-          <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 space-y-4">
+          <div className="max-w-2xl mx-auto bg-surface-2 rounded-lg border border-border-hairline p-6 space-y-4">
             {/* Title */}
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="font-heading text-lg font-bold text-gray-900">
+                <h3 className="text-lg font-bold text-ink">
                   Мы используем cookie-файлы
                 </h3>
-                <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+                <p className="mt-2 text-sm text-text-muted leading-relaxed">
                   Это помогает нам анализировать трафик и улучшать сайт.
                   Подробнее — в{" "}
                   <a
                     href="/privacy-policy"
-                    className="text-primary-600 hover:text-primary-700 underline"
+                    className="text-accent hover:text-accent underline"
                   >
                     Политике конфиденциальности
                   </a>
@@ -135,22 +135,22 @@ export function CookieConsent() {
             </div>
 
             {/* Preferences toggles */}
-            <div className="space-y-2 border-y border-gray-100 py-3">
+            <div className="space-y-2 border-y border-border-hairline py-3">
               <label className="flex items-center gap-3 cursor-not-allowed opacity-70">
                 <input
                   type="checkbox"
                   checked={preferences.necessary}
                   disabled
-                  className="w-4 h-4 rounded border-gray-300 text-primary-600 accent-primary-600"
+                  className="w-4 h-4 rounded border-border-hairline text-accent accent-accent"
                 />
                 <div>
-                  <span className="text-sm font-semibold text-gray-700">
+                  <span className="text-sm font-semibold text-ink">
                     Необходимые
                   </span>
-                  <span className="text-xs text-gray-500 ml-2">
+                  <span className="text-xs text-text-subtle ml-2">
                     Всегда включены
                   </span>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-text-subtle">
                     Базовая функциональность сайта
                   </p>
                 </div>
@@ -161,13 +161,13 @@ export function CookieConsent() {
                   type="checkbox"
                   checked={preferences.analytics}
                   onChange={() => toggle("analytics")}
-                  className="w-4 h-4 rounded border-gray-300 text-primary-600 accent-primary-600"
+                  className="w-4 h-4 rounded border-border-hairline text-accent accent-accent"
                 />
                 <div>
-                  <span className="text-sm font-semibold text-gray-700">
+                  <span className="text-sm font-semibold text-ink">
                     Аналитика
                   </span>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-text-subtle">
                     Яндекс.Метрика — помогает понять, как используют сайт
                   </p>
                 </div>
@@ -178,13 +178,13 @@ export function CookieConsent() {
                   type="checkbox"
                   checked={preferences.marketing}
                   onChange={() => toggle("marketing")}
-                  className="w-4 h-4 rounded border-gray-300 text-primary-600 accent-primary-600"
+                  className="w-4 h-4 rounded border-border-hairline text-accent accent-accent"
                 />
                 <div>
-                  <span className="text-sm font-semibold text-gray-700">
+                  <span className="text-sm font-semibold text-ink">
                     Маркетинг
                   </span>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-text-subtle">
                     VK Pixel и MyTarget — персонализация рекламы
                   </p>
                 </div>
@@ -207,7 +207,7 @@ export function CookieConsent() {
               </button>
               <button
                 onClick={declineAll}
-                className="flex-1 px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                className="flex-1 px-4 py-2.5 text-sm text-text-subtle hover:text-ink hover:bg-surface-2 rounded-md transition-colors"
               >
                 Только необходимые
               </button>

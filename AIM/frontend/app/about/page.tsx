@@ -64,14 +64,14 @@ export default function AboutPage() {
   return (
     <main className="min-h-screen">
       {/* Hero */}
-      <section className="py-16 md:py-24 px-4 bg-gradient-to-br from-primary-50 via-white to-primary-100">
+      <section className="py-16 md:py-24 px-4 bg-canvas">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h1 className="font-heading text-3xl md:text-5xl font-bold text-gray-900 mb-4">
+              <h1 className="text-3xl md:text-5xl font-bold text-ink mb-4">
                 Мы — AIM Agency
               </h1>
-              <p className="text-lg text-gray-600 mb-6 leading-relaxed">
+              <p className="text-lg text-text-muted mb-6 leading-relaxed">
                 AI-first маркетинговое агентство для медицинских клиник.
                 Мы объединили 10+ лет опыта в медицинском маркетинге с мощью
                 искусственного интеллекта, чтобы давать результаты, которые
@@ -83,12 +83,12 @@ export default function AboutPage() {
               {stats.map((s) => (
                 <div
                   key={s.label}
-                  className="bg-white p-4 rounded-xl shadow-md border border-gray-100 text-center"
+                  className="bg-surface-2 p-4 rounded-md border border-border-hairline text-center"
                 >
-                  <div className="text-2xl font-bold text-primary-600">
+                  <div className="text-2xl font-bold text-accent">
                     {s.value}
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">{s.label}</div>
+                  <div className="text-xs text-text-subtle mt-1">{s.label}</div>
                 </div>
               ))}
             </div>
@@ -99,10 +99,10 @@ export default function AboutPage() {
       {/* Mission */}
       <section className="py-16 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="font-heading text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+          <h2 className="text-2xl md:text-3xl font-bold text-ink mb-4">
             Наша миссия
           </h2>
-          <p className="text-lg text-gray-600 leading-relaxed">
+          <p className="text-lg text-text-muted leading-relaxed">
             Сделать AI-маркетинг доступным для каждой медицинской клиники в
             России. Мы верим, что искусственный интеллект может работать 24/7,
             находя точки роста, которые человек пропустит. Наша цель — чтобы
@@ -112,27 +112,27 @@ export default function AboutPage() {
       </section>
 
       {/* Team */}
-      <section className="py-16 px-4 bg-gray-50">
+      <section className="py-16 px-4 bg-surface-1">
         <div className="max-w-7xl mx-auto">
-          <h2 className="font-heading text-2xl md:text-3xl font-bold text-gray-900 text-center mb-12">
+          <h2 className="text-2xl md:text-3xl font-bold text-ink text-center mb-12">
             Наша команда
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {team.map((member) => (
               <div
                 key={member.name}
-                className="bg-white rounded-xl p-6 shadow-md border border-gray-100 text-center"
+                className="bg-surface-2 rounded-md p-6 border border-border-hairline text-center"
               >
-                <div className="w-16 h-16 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+                <div className="w-16 h-16 bg-surface-3 text-accent rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
                   {member.name[0]}
                 </div>
-                <h3 className="font-heading font-bold text-gray-900">
+                <h3 className="font-bold text-ink">
                   {member.name}
                 </h3>
-                <p className="text-sm text-primary-600 font-medium mb-3">
+                <p className="text-sm text-accent font-medium mb-3">
                   {member.role}
                 </p>
-                <p className="text-sm text-gray-600">{member.bio}</p>
+                <p className="text-sm text-text-muted">{member.bio}</p>
               </div>
             ))}
           </div>
@@ -141,10 +141,10 @@ export default function AboutPage() {
 
       {/* CTA */}
       <section className="py-16 px-4 text-center">
-        <h2 className="font-heading text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+        <h2 className="text-2xl md:text-3xl font-bold text-ink mb-4">
           Готовы расти вместе с нами?
         </h2>
-        <p className="text-gray-600 mb-8">
+        <p className="text-text-muted mb-8">
           Оставьте заявку и получите бесплатный аудит вашего маркетинга.
         </p>
         <Link href="/contact" className="btn-primary text-lg px-8 py-4 inline-block">

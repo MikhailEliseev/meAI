@@ -179,7 +179,7 @@ export function DocumentUpload({
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Upload Area */}
-      <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-primary-500 transition-colors">
+      <div className="border-2 border-dashed border-border-hairline rounded-md p-8 text-center hover:border-accent transition-colors">
         <input
           type="file"
           id="document-upload"
@@ -194,7 +194,7 @@ export function DocumentUpload({
         >
           <div className="space-y-2">
             <svg
-              className="mx-auto h-12 w-12 text-gray-400"
+              className="mx-auto h-12 w-12 text-text-subtle"
               stroke="currentColor"
               fill="none"
               viewBox="0 0 48 48"
@@ -207,13 +207,13 @@ export function DocumentUpload({
                 strokeLinejoin="round"
               />
             </svg>
-            <div className="text-sm text-gray-600">
-              <span className="font-medium text-primary-600 hover:text-primary-500">
+            <div className="text-sm text-text-muted">
+              <span className="font-medium text-accent hover:text-accent">
                 Загрузите документы
               </span>{" "}
               или перетащите сюда
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-text-subtle">
               PNG, JPG до 10MB (можно несколько)
             </p>
           </div>
@@ -235,7 +235,7 @@ export function DocumentUpload({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className="bg-white border border-gray-200 rounded-lg p-4 flex items-start gap-4"
+                className="bg-surface-2 border border-border-hairline rounded-lg p-4 flex items-start gap-4"
               >
                 {/* Preview */}
                 <img
@@ -246,10 +246,10 @@ export function DocumentUpload({
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-sm font-medium text-ink truncate">
                     {doc.file.name}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-text-subtle">
                     {(doc.file.size / 1024).toFixed(0)} KB
                   </p>
 
@@ -260,7 +260,7 @@ export function DocumentUpload({
                       onChange={(e) =>
                         updateDocumentType(doc.id, e.target.value as DocumentType)
                       }
-                      className="mt-2 text-sm border-gray-300 rounded-md"
+                      className="mt-2 text-sm border-border-hairline rounded-md"
                       disabled={isProcessing}
                     >
                       {DOCUMENT_TYPES.map((type) => (
@@ -273,15 +273,15 @@ export function DocumentUpload({
 
                   {/* Status */}
                   {doc.status === "processing" && (
-                    <div className="mt-2 flex items-center gap-2 text-sm text-blue-600">
-                      <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                    <div className="mt-2 flex items-center gap-2 text-sm text-accent">
+                      <div className="animate-spin h-4 w-4 border-2 border-accent border-t-transparent rounded-full" />
                       Обработка...
                     </div>
                   )}
 
                   {doc.status === "success" && doc.result?.data && (
                     <div className="mt-2 space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-green-600">
+                      <div className="flex items-center gap-2 text-sm text-semantic-success">
                         <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                           <path
                             fillRule="evenodd"
@@ -291,14 +291,14 @@ export function DocumentUpload({
                         </svg>
                         Обработано ({doc.result.data.confidence}% уверенность)
                       </div>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs text-text-muted">
                         Извлечено полей: {doc.result.data.extractedFields?.length || 0}
                       </p>
                     </div>
                   )}
 
                   {doc.status === "error" && (
-                    <div className="mt-2 text-sm text-red-600">
+                    <div className="mt-2 text-sm text-semantic-error">
                       Ошибка обработки
                     </div>
                   )}
@@ -308,7 +308,7 @@ export function DocumentUpload({
                 {doc.status === "pending" && (
                   <button
                     onClick={() => removeDocument(doc.id)}
-                    className="text-gray-400 hover:text-red-500"
+                    className="text-text-subtle hover:text-semantic-error"
                     disabled={isProcessing}
                   >
                     <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
@@ -331,7 +331,7 @@ export function DocumentUpload({
         <button
           onClick={processDocuments}
           disabled={isProcessing || documents.every((d) => d.status !== "pending")}
-          className="w-full bg-primary-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          className="w-full bg-accent text-white py-3 px-6 rounded-lg font-medium hover:brightness-110 disabled:bg-surface-3 disabled:cursor-not-allowed transition-colors"
         >
           {isProcessing ? (
             <span className="flex items-center justify-center gap-2">
@@ -349,63 +349,63 @@ export function DocumentUpload({
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-green-50 border border-green-200 rounded-lg p-6"
+          className="bg-surface-3 border border-semantic-success/30 rounded-md p-6"
         >
-          <h3 className="font-heading text-lg font-bold text-green-900 mb-4">
+          <h3 className="text-lg font-bold text-semantic-success mb-4">
             ✅ Данные извлечены ({mergedData.confidence}% уверенность)
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             {mergedData.clinicName && (
               <div>
-                <span className="font-medium text-gray-700">Название:</span>{" "}
-                <span className="text-gray-900">{mergedData.clinicName}</span>
+                <span className="font-medium text-text-muted">Название:</span>{" "}
+                <span className="text-ink">{mergedData.clinicName}</span>
               </div>
             )}
             {mergedData.inn && (
               <div>
-                <span className="font-medium text-gray-700">ИНН:</span>{" "}
-                <span className="text-gray-900">{mergedData.inn}</span>
+                <span className="font-medium text-text-muted">ИНН:</span>{" "}
+                <span className="text-ink">{mergedData.inn}</span>
               </div>
             )}
             {mergedData.ogrn && (
               <div>
-                <span className="font-medium text-gray-700">ОГРН:</span>{" "}
-                <span className="text-gray-900">{mergedData.ogrn}</span>
+                <span className="font-medium text-text-muted">ОГРН:</span>{" "}
+                <span className="text-ink">{mergedData.ogrn}</span>
               </div>
             )}
             {mergedData.legalAddress && (
               <div className="md:col-span-2">
-                <span className="font-medium text-gray-700">Юридический адрес:</span>{" "}
-                <span className="text-gray-900">{mergedData.legalAddress}</span>
+                <span className="font-medium text-text-muted">Юридический адрес:</span>{" "}
+                <span className="text-ink">{mergedData.legalAddress}</span>
               </div>
             )}
             {mergedData.specialties && mergedData.specialties.length > 0 && (
               <div className="md:col-span-2">
-                <span className="font-medium text-gray-700">Специализации:</span>{" "}
-                <span className="text-gray-900">{mergedData.specialties.join(", ")}</span>
+                <span className="font-medium text-text-muted">Специализации:</span>{" "}
+                <span className="text-ink">{mergedData.specialties.join(", ")}</span>
               </div>
             )}
             {mergedData.licenseNumber && (
               <div>
-                <span className="font-medium text-gray-700">Лицензия:</span>{" "}
-                <span className="text-gray-900">{mergedData.licenseNumber}</span>
+                <span className="font-medium text-text-muted">Лицензия:</span>{" "}
+                <span className="text-ink">{mergedData.licenseNumber}</span>
               </div>
             )}
             {mergedData.directorName && (
               <div>
-                <span className="font-medium text-gray-700">Директор:</span>{" "}
-                <span className="text-gray-900">{mergedData.directorName}</span>
+                <span className="font-medium text-text-muted">Директор:</span>{" "}
+                <span className="text-ink">{mergedData.directorName}</span>
               </div>
             )}
           </div>
 
           {mergedData.warnings.length > 0 && (
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-              <p className="text-sm font-medium text-yellow-800 mb-1">
+            <div className="mt-4 p-3 bg-surface-3 border border-amber-400/30 rounded-md">
+              <p className="text-sm font-medium text-amber-400 mb-1">
                 ⚠️ Предупреждения:
               </p>
-              <ul className="text-xs text-yellow-700 space-y-1">
+              <ul className="text-xs text-amber-400/80 space-y-1">
                 {mergedData.warnings.map((warning, i) => (
                   <li key={i}>• {warning}</li>
                 ))}

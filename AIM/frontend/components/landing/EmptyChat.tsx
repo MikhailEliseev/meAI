@@ -23,11 +23,11 @@ export function EmptyChat({ onSend }: EmptyChatProps) {
     >
       {/* Hero */}
       <div className="text-center max-w-lg mb-10">
-        <h1 className="font-heading text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">
+        <h1 className="text-3xl md:text-4xl font-bold text-ink mb-4 leading-tight">
           AI-агент медицинского{" "}
-          <span className="text-primary-600">маркетинга</span>
+          <span className="text-accent">маркетинга</span>
         </h1>
-        <p className="text-base md:text-lg text-gray-600">
+        <p className="text-base md:text-lg text-text-muted">
           Проанализирую вашу клинику, конкурентов и рынок.
           Покажу сколько пациентов вы теряете и как это исправить.
         </p>
@@ -39,9 +39,7 @@ export function EmptyChat({ onSend }: EmptyChatProps) {
           <input
             type="text"
             placeholder="Введите адрес сайта вашей клиники..."
-            className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm
-                       focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-                       placeholder:text-gray-400 shadow-sm"
+            className="input-base flex-1 text-sm"
             onKeyDown={(e) => {
               if (e.key === "Enter" && e.currentTarget.value.trim()) {
                 onSend(e.currentTarget.value.trim());
@@ -59,10 +57,10 @@ export function EmptyChat({ onSend }: EmptyChatProps) {
                 input.value = "";
               }
             }}
-            className="shrink-0 w-10 h-10 rounded-xl bg-primary-600 text-white
+            className="shrink-0 w-10 h-10 rounded-md bg-accent text-white
                        flex items-center justify-center
-                       hover:bg-primary-700 active:scale-95
-                       transition-all duration-200 shadow-sm"
+                       hover:brightness-110 active:scale-95
+                       transition-all duration-200"
             aria-label="Отправить"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -78,7 +76,7 @@ export function EmptyChat({ onSend }: EmptyChatProps) {
             <button
               key={action}
               onClick={() => onSend(action)}
-              className="text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1.5 transition-colors"
+              className="text-xs text-text-muted bg-surface-2 hover:bg-surface-3 rounded-full px-3 py-1.5 transition-colors"
             >
               {action}
             </button>
@@ -86,7 +84,7 @@ export function EmptyChat({ onSend }: EmptyChatProps) {
         </div>
 
         {/* Trust signals */}
-        <div className="flex items-center justify-center gap-4 mt-6 text-xs text-gray-400">
+        <div className="flex items-center justify-center gap-4 mt-6 text-xs text-text-subtle">
           <span className="flex items-center gap-1">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
             Конфиденциально

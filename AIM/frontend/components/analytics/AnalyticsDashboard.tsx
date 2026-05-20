@@ -73,13 +73,13 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
       </div>
     );
   }
 
   return (
-    <div className={cn("py-20 px-4 bg-gray-50", className)}>
+    <div className={cn("py-20 px-4 bg-surface-1", className)}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
@@ -87,23 +87,23 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="font-heading text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold text-ink mb-2">
             Аналитика
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-text-muted">
             Отслеживайте эффективность лидов и email-кампаний
           </p>
         </motion.div>
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-8 border-b border-gray-200">
+        <div className="flex gap-4 mb-8 border-b border-border-hairline">
           <button
             onClick={() => setActiveTab("leads")}
             className={cn(
               "px-6 py-3 font-semibold transition-colors border-b-2",
               activeTab === "leads"
-                ? "text-primary-600 border-primary-600"
-                : "text-gray-600 border-transparent hover:text-gray-900"
+                ? "text-accent border-accent"
+                : "text-text-muted border-transparent hover:text-ink"
             )}
           >
             Лиды
@@ -113,8 +113,8 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
             className={cn(
               "px-6 py-3 font-semibold transition-colors border-b-2",
               activeTab === "email"
-                ? "text-primary-600 border-primary-600"
-                : "text-gray-600 border-transparent hover:text-gray-900"
+                ? "text-accent border-accent"
+                : "text-text-muted border-transparent hover:text-ink"
             )}
           >
             Email
@@ -124,8 +124,8 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
             className={cn(
               "px-6 py-3 font-semibold transition-colors border-b-2",
               activeTab === "queue"
-                ? "text-primary-600 border-primary-600"
-                : "text-gray-600 border-transparent hover:text-gray-900"
+                ? "text-accent border-accent"
+                : "text-text-muted border-transparent hover:text-ink"
             )}
           >
             Очередь
@@ -164,8 +164,8 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
             </div>
 
             {/* Tier Breakdown */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="font-heading text-xl font-bold text-gray-900 mb-4">
+            <div className="bg-surface-2 rounded-lg p-6 border border-border-hairline">
+              <h3 className="text-xl font-bold text-ink mb-4">
                 Распределение по уровням
               </h3>
               <ResponsiveContainer width="100%" height={300}>
@@ -192,8 +192,8 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
             </div>
 
             {/* Daily Leads */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="font-heading text-xl font-bold text-gray-900 mb-4">
+            <div className="bg-surface-2 rounded-lg p-6 border border-border-hairline">
+              <h3 className="text-xl font-bold text-ink mb-4">
                 Лиды по дням
               </h3>
               <ResponsiveContainer width="100%" height={300}>
@@ -211,8 +211,8 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
             </div>
 
             {/* Top Specialties */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="font-heading text-xl font-bold text-gray-900 mb-4">
+            <div className="bg-surface-2 rounded-lg p-6 border border-border-hairline">
+              <h3 className="text-xl font-bold text-ink mb-4">
                 Топ специализаций
               </h3>
               <div className="space-y-4">
@@ -220,16 +220,16 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-gray-900">
+                        <span className="font-semibold text-ink">
                           {spec.specialty}
                         </span>
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-text-muted">
                           {spec.count} лидов • {spec.avgScore.toFixed(1)} балл
                         </span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-surface-3 rounded-full h-2">
                         <div
-                          className="bg-primary-600 h-2 rounded-full"
+                          className="bg-accent h-2 rounded-full"
                           style={{
                             width: `${(spec.count / leadData.summary.totalLeads) * 100}%`,
                           }}
@@ -275,35 +275,35 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
             </div>
 
             {/* Sequence Performance */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="font-heading text-xl font-bold text-gray-900 mb-4">
+            <div className="bg-surface-2 rounded-lg p-6 border border-border-hairline">
+              <h3 className="text-xl font-bold text-ink mb-4">
                 Эффективность последовательностей
               </h3>
               <div className="space-y-4">
                 {emailData.sequencePerformance.map((seq: any, index: number) => (
-                  <div key={index} className="border-b border-gray-200 pb-4 last:border-0">
+                  <div key={index} className="border-b border-border-hairline pb-4 last:border-0">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-semibold text-gray-900">{seq.name}</span>
-                      <span className="text-sm text-gray-600">
+                      <span className="font-semibold text-ink">{seq.name}</span>
+                      <span className="text-sm text-text-muted">
                         {seq.sent} отправлено
                       </span>
                     </div>
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div>
-                        <span className="text-gray-600">Open Rate:</span>
-                        <span className="ml-2 font-semibold text-emerald-600">
+                        <span className="text-text-muted">Open Rate:</span>
+                        <span className="ml-2 font-semibold text-semantic-success">
                           {(seq.openRate * 100).toFixed(1)}%
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-600">Click Rate:</span>
-                        <span className="ml-2 font-semibold text-sky-600">
+                        <span className="text-text-muted">Click Rate:</span>
+                        <span className="ml-2 font-semibold text-accent">
                           {(seq.clickRate * 100).toFixed(1)}%
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-600">Завершено:</span>
-                        <span className="ml-2 font-semibold text-gray-900">
+                        <span className="text-text-muted">Завершено:</span>
+                        <span className="ml-2 font-semibold text-ink">
                           {(seq.completionRate * 100).toFixed(1)}%
                         </span>
                       </div>
@@ -314,8 +314,8 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
             </div>
 
             {/* Daily Performance */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="font-heading text-xl font-bold text-gray-900 mb-4">
+            <div className="bg-surface-2 rounded-lg p-6 border border-border-hairline">
+              <h3 className="text-xl font-bold text-ink mb-4">
                 Производительность по дням
               </h3>
               <ResponsiveContainer width="100%" height={300}>
@@ -391,11 +391,11 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
 }
 
 const STAT_CARD_COLORS = {
-  hot: "bg-red-50 text-red-600 border-red-200",
-  warm: "bg-amber-50 text-amber-600 border-amber-200",
-  cold: "bg-blue-50 text-blue-600 border-blue-200",
-  primary: "bg-sky-50 text-sky-600 border-sky-200",
-  success: "bg-emerald-50 text-emerald-600 border-emerald-200",
+  hot: "text-semantic-error",
+  warm: "text-amber-400",
+  cold: "text-accent",
+  primary: "text-accent",
+  success: "text-semantic-success",
 };
 
 // Summary Card Component
@@ -409,9 +409,9 @@ function SummaryCard({
   color: keyof typeof STAT_CARD_COLORS;
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-100">
-      <p className="text-sm font-semibold text-gray-600 mb-2">{title}</p>
-      <p className={cn("text-3xl font-bold", STAT_CARD_COLORS[color].split(" ")[1])}>
+    <div className="bg-surface-2 rounded-lg p-6 border border-border-hairline">
+      <p className="text-sm font-semibold text-text-muted mb-2">{title}</p>
+      <p className={cn("text-3xl font-bold", STAT_CARD_COLORS[color])}>
         {value}
       </p>
     </div>

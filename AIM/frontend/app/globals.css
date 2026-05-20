@@ -3,29 +3,83 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --foreground-rgb: 0, 0, 0;
-    --background-start-rgb: 255, 255, 255;
-    --background-end-rgb: 255, 255, 255;
+  body {
+    @apply bg-canvas text-ink antialiased;
   }
 
-  body {
-    color: rgb(var(--foreground-rgb));
-    background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent rounded-sm;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0f1011;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #23252a;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #34343a;
+  }
+
+  ::selection {
+    background-color: rgba(94, 106, 210, 0.3);
+    color: #f7f8f8;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+    @apply bg-accent text-white font-medium rounded-md;
+    @apply px-[14px] py-2;
+    @apply transition-colors duration-150;
+    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+    @apply hover:brightness-110 active:brightness-90;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply bg-white hover:bg-gray-50 text-primary-600 font-semibold py-3 px-6 rounded-lg border-2 border-primary-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+    @apply bg-surface-2 text-ink font-medium rounded-md;
+    @apply px-[14px] py-2;
+    @apply border border-border-hairline;
+    @apply transition-colors duration-150;
+    @apply hover:bg-surface-3 hover:border-border-strong;
+    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply text-text-muted font-medium rounded-md;
+    @apply px-[14px] py-2;
+    @apply transition-colors duration-150;
+    @apply hover:bg-surface-3 hover:text-ink;
+    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+  }
+
+  .input-base {
+    @apply bg-surface-2 text-ink rounded-md px-3 py-2;
+    @apply border border-border-hairline;
+    @apply transition-colors duration-150;
+    @apply placeholder:text-text-subtle;
+    @apply focus:outline-none focus:border-accent;
+  }
+
+  .card-base {
+    @apply bg-surface-2 rounded-lg border border-border-hairline;
+  }
+
+  .card-elevated {
+    @apply bg-surface-3 rounded-lg border border-border-strong;
+  }
+
+  .section {
+    @apply py-24 px-4;
+  }
+
+  .section-sm {
+    @apply py-16 px-4;
   }
 }
