@@ -22,7 +22,7 @@ AIM_API_BASE = "http://app:8000"
 REQUEST_TIMEOUT = 30.0  # seconds
 
 
-async def handle_run_seo_audit(url: str) -> str:
+async def handle_run_seo_audit(url: str, **kwargs) -> str:
     """Run a full SEO audit on a client website.
 
     Performs technical SEO analysis, keyword position tracking,

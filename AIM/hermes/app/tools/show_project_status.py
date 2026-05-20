@@ -22,7 +22,7 @@ AIM_API_BASE = "http://app:8000"
 REQUEST_TIMEOUT = 30.0  # seconds
 
 
-async def handle_show_project_status(project_id: str) -> str:
+async def handle_show_project_status(project_id: str, **kwargs) -> str:
     """Show current project status for a client project.
 
     Returns active tasks, recent KPIs, current sprint progress,

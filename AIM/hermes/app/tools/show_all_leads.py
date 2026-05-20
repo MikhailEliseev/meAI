@@ -22,7 +22,7 @@ AIM_API_BASE = "http://app:8000"
 REQUEST_TIMEOUT = 30.0  # seconds
 
 
-async def handle_show_all_leads(period: str = "week", status: str = "all") -> str:
+async def handle_show_all_leads(period: str = "week", status: str = "all", **kwargs) -> str:
     """Show all leads captured by the AIM agency.
 
     Lists lead details including source, status, contact info, website,
