@@ -66,7 +66,7 @@ End-to-end tests validate the complete user journey through the AIM Agency platf
 ### Install Dependencies
 
 ```bash
-cd /Users/mikhaileliseev/Desktop/Dev/!meAI/AIM/frontend
+cd /Users/mikhaileliseev/Desktop/Dev/meAI/AIM/frontend
 npm install
 ```
 
@@ -84,9 +84,7 @@ npx playwright install chromium
 
 ## Running Tests
 
-**IMPORTANT:** Due to the `!` character in the project path (`!meAI`), Playwright cannot auto-start the dev server. You must start it manually first.
-
-### Step 1: Start Dev Server
+### Step 1: Start Dev Server (optional)
 
 In one terminal:
 ```bash
