@@ -24,6 +24,8 @@ class APISettings(BaseSettings):
         rate_limit_capacity: Rate limiter bucket capacity
         rate_limit_refill: Rate limiter refill rate (requests/sec)
         upload_dir: Directory for uploaded documents
+        serpapi_api_key: SerpAPI key for real-time SERP data
+        pagespeed_api_key: Google PageSpeed Insights API key
     """
 
     model_config = SettingsConfigDict(
@@ -43,6 +45,15 @@ class APISettings(BaseSettings):
         None,
         description="Ahrefs API key (optional fallback)",
         min_length=10,
+    )
+    serpapi_api_key: Optional[str] = Field(
+        default=None,
+        description="SerpAPI key for real-time SERP and web search",
+        min_length=10,
+    )
+    pagespeed_api_key: Optional[str] = Field(
+        default=None,
+        description="Google PageSpeed Insights API key (optional, free tier: 25k req/day)",
     )
 
     # OmniRoute LLM endpoint
