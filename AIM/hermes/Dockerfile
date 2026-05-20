@@ -23,14 +23,10 @@ RUN pip install --no-cache-dir -r requirements.txt && \
     "hermes-agent[web]>=0.14.0" \
     "hermes-agent[anthropic]>=0.14.0"
 
-# Patch AIAgent: disable hardcoded streaming (run_agent.py ~line 8206)
-# OmniRoute DeepSeek V4 times out on streamed responses (>30s for first token).
-# The agent unconditionally sets "stream": True and "stream_options" AFTER
-# **api_kwargs, so request_overrides cannot override them.
-# stream_options with stream=false causes HTTP 400 from OmniRoute.
+# Patch AIAgent: remove stream_options which causes HTTP 400 from OmniRoute
+# when include_usage is requested but provider doesn't support it.
+# (Previously we also forced stream=False, but OmniRoute now handles streaming.)
 RUN find /usr/local/lib/python3.11/site-packages -name 'run_agent.py' -exec \
-    sed -i 's/"stream": True/"stream": False/' {} \; && \
-    find /usr/local/lib/python3.11/site-packages -name 'run_agent.py' -exec \
     sed -i '/"stream_options": {.*include_usage.*}/d' {} \;
 
 # Copy application code
