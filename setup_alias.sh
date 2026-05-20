@@ -54,7 +54,7 @@ fi
 # Добавляем алиас
 echo "" >> "$SHELL_RC"
 echo "# meAI Architect - Quick access from anywhere" >> "$SHELL_RC"
-echo "alias architect='/Users/mikhaileliseev/Desktop/Dev/!meAI/architect.sh'" >> "$SHELL_RC"
+echo "alias architect='/Users/mikhaileliseev/Desktop/Dev/meAI/architect.sh'" >> "$SHELL_RC"
 
 echo -e "${GREEN}✅ Alias added successfully!${NC}"
 echo ""
