@@ -60,6 +60,16 @@ class ContentMagisterWithCI(ContentMagister):
             "created_at": datetime.now().isoformat()
         }
 
+        # Запрашиваем контекст у Hermes (знания из прошлых запусков)
+        try:
+            from aim.integration.hermes_context import HermesContextProvider
+            if not hasattr(self, '_hermes'):
+                self._hermes = HermesContextProvider()
+            hermes_context = await self._hermes.get_context(domain="content", action=action)
+            plan["hermes_context"] = hermes_context
+        except Exception:
+            pass
+
         # Добавляем CI инсайты
         if self.ci_integration:
             ci_insights = await self.ci_integration.get_insights_for_magister(

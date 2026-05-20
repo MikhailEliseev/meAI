@@ -8,12 +8,13 @@ CI Orchestrator Agent - Universal Competitive Intelligence System
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 import json
 import asyncio
 import logging
 
 from meai.agents.base_agent import Agent, Task, TaskResult
-from meai.events.event_bus import EventBus
+from meai.events.event_bus import Event, EventBus
 from meai.memory.obsidian import ObsidianVault
 
 logger = logging.getLogger(__name__)
@@ -55,7 +56,7 @@ class CIOrchestrator(Agent):
             3: "ci-auditor",
             4: "ci-reputation",
             5: ["ci-finance", "ci-vacancies", "ci-tech", "ci-site-crawler",
-                "ci-content", "ci-pricing", "ci-ecosystem"],  # Parallel
+                "ci-content", "ci-pricing", "ci-ecosystem", "ci-backlink", "ci-rank-tracker"],  # Parallel
             6: "ci-factchecker",
             7: "ci-strategist",
             8: "ci-strategist",
@@ -105,14 +106,20 @@ class CIOrchestrator(Agent):
                 from aim.subagents.competitive_intel.agents.ci_site_crawler import CISiteCrawlerAgent
                 agent = CISiteCrawlerAgent(agent_id=f"{self.agent_id}-crawler", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-content":
-                from aim.subagents.competitive_intel.agents.ci_content import CIContentAgent
-                agent = CIContentAgent(agent_id=f"{self.agent_id}-content", database_url=db_url, vault_path=vault)
+                from aim.subagents.competitive_intel.agents.ci_content_improved import CIContentAgentImproved
+                agent = CIContentAgentImproved(agent_id=f"{self.agent_id}-content", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-pricing":
                 from aim.subagents.competitive_intel.agents.ci_pricing import CIPricingAgent
                 agent = CIPricingAgent(agent_id=f"{self.agent_id}-pricing", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-ecosystem":
                 from aim.subagents.competitive_intel.agents.ci_ecosystem import CIEcosystemAgent
                 agent = CIEcosystemAgent(agent_id=f"{self.agent_id}-ecosystem", database_url=db_url, vault_path=vault)
+            elif agent_name == "ci-backlink":
+                from aim.subagents.competitive_intel.agents.ci_backlink import CIBacklinkAgent
+                agent = CIBacklinkAgent(agent_id=f"{self.agent_id}-backlink", database_url=db_url, vault_path=vault)
+            elif agent_name == "ci-rank-tracker":
+                from aim.subagents.competitive_intel.agents.ci_rank_tracker import CIRankTrackerAgent
+                agent = CIRankTrackerAgent(agent_id=f"{self.agent_id}-ranktracker", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-factchecker":
                 from aim.subagents.competitive_intel.agents.ci_factchecker import CIFactcheckerAgent
                 agent = CIFactcheckerAgent(agent_id=f"{self.agent_id}-factchecker", database_url=db_url, vault_path=vault)
@@ -174,6 +181,25 @@ class CIOrchestrator(Agent):
         start_time = datetime.now()
         tier = task_data.get("tier", "deep")
         task_id = task_data.get("task_id", "unknown")
+        url = task_data.get("url", "")
+        niche = task_data.get("niche", "")
+        geo = task_data.get("geo", "")
+
+        # Generate correlation_id for cross-event traceability
+        correlation_id = f"ci-{uuid4().hex[:8]}"
+
+        # Publish execution started event
+        await self.event_bus.publish(Event(
+            event_type="ci.execution.started",
+            payload={
+                "correlation_id": correlation_id,
+                "task_id": task_id,
+                "url": url,
+                "niche": niche,
+                "geo": geo,
+                "tier": tier,
+            }
+        ))
 
         try:
             # Get phases for tier
@@ -198,6 +224,7 @@ class CIOrchestrator(Agent):
 
                     # Prepare phase-specific task data
                     phase_task_data = task_data.copy()
+                    phase_task_data["correlation_id"] = correlation_id
 
                     # Phase 1 uses initial URLs, Phase 2+ uses results from Phase 1
                     if phase_num == 1:
@@ -243,6 +270,25 @@ class CIOrchestrator(Agent):
             # Generate reports
             reports = await self._generate_reports(task_id, findings, task_data)
 
+            summary = {
+                "tier": tier,
+                "phases_executed": len(phases),
+                "execution_time_seconds": int(execution_time),
+                "competitors_analyzed": len(task_data.get("competitors", [])),
+                "quality_score": quality_score,
+                "errors_count": len(errors),
+            }
+
+            # Publish execution completed event
+            await self.event_bus.publish(Event(
+                event_type="ci.execution.completed",
+                payload={
+                    "correlation_id": correlation_id,
+                    "task_id": task_id,
+                    "summary": summary,
+                }
+            ))
+
             # Return structured result
             return {
                 "task_id": task_id,
@@ -253,7 +299,8 @@ class CIOrchestrator(Agent):
                 "findings": findings,
                 "reports": reports,
                 "quality_score": quality_score,
-                "errors": errors
+                "errors": errors,
+                "correlation_id": correlation_id,
             }
 
         except Exception as e:
@@ -313,6 +360,19 @@ class CIOrchestrator(Agent):
 
         # Execute agent
         result = await agent.execute_task(task)
+
+        # Publish agent completed event
+        correlation_id = task_data.get("correlation_id", task_data.get("task_id", "unknown"))
+        await self.event_bus.publish(Event(
+            event_type="ci.agent.completed",
+            payload={
+                "correlation_id": correlation_id,
+                "agent": agent_name,
+                "phase": phase_num,
+                "status": result.status,
+                "result": result.result if hasattr(result, 'result') else {},
+            }
+        ))
 
         return {
             "phase": phase_num,
@@ -793,11 +853,10 @@ class CIOrchestrator(Agent):
             Результат агента
         """
         # Отправить событие через Event Bus
-        await self.event_bus.publish(
+        await self.event_bus.publish(Event(
             event_type=f"task.{agent_id}",
             payload=task.to_dict(),
-            priority=1
-        )
+        ))
 
         # Логировать делегирование
         await self.vault.log_operation(

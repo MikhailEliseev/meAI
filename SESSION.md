@@ -1,53 +1,108 @@
-# Session: 2026-05-18
+# Session: 2026-05-20
 
-## Phase 12: Production Deployment — COMPLETE ✅
+## PRODUCTION DEPLOYED 🚀
 
-**Date:** 2026-05-18 19:04 GMT+3
-**Status:** ✅ All 3 plans complete
-**Commit:** `f11de51` — feat(phase-12): complete production deployment
+**Date:** 2026-05-19 14:20 GMT+3
+**Server:** 138.16.224.188
+**Domain:** https://iamaim.ru
 
-See git log for full details.
+### Deployed Services (all healthy):
+- ✅ aim-app (FastAPI backend)
+- ✅ aim-frontend (Next.js 14 — 21 pages)
+- ✅ aim-hermes (Hermes AIAgent operator)
+- ✅ aim-postgres (PostgreSQL 16)
+- ✅ aim-redis (Redis 7)
+- ✅ aim-nginx (SSL via Let's Encrypt)
+- ✅ aim-prometheus + grafana + alertmanager + postgres-exporter + node-exporter
 
----
+### All Pages Live (200 OK):
+Home, About, Blog, Services, Contact, Privacy Policy, Case Studies, Health endpoint
 
-## Phase 13: Landing Page & Marketing — IN PROGRESS ⏳
+### Pending:
+- ⚠️ Telegram webhook — Telegram DNS ещё не видит iamaim.ru, попробовать позже
+- ⚠️ TELEGRAM_API_ID + TELEGRAM_API_HASH — Миша сказал "позже"
+- ⚠️ Alertmanager Telegram chat_id + SendGrid API key для реальных алертов
+- ⚠️ POSTGRES_PASSWORD warning в docker-compose — косметическое
 
-**Date resumed:** 2026-05-18 21:30 GMT+3
-**Goal:** Landing page (deferred from Phase 11 Sprint 1) + marketing launch
+### Commits (deploy session):
+- `c419a3d` fix: commit correct nginx config (frontend routing) + monitoring configs
+- `144b6cc` fix: add missing deps (sendgrid, apscheduler), remove duplicates
+- `2427cc7` fix: PYTHONPATH should point to /app/AIM/src where aim package lives
+- `24c1c1c` fix: add missing web framework deps (fastapi, uvicorn)
+- `d0a97e2` fix: add frontend/data JSON files (case-studies, faq)
+- `1b80edc` fix: add all untracked frontend files (Phase 14) + fix gitignore lib/ blocking frontend/lib/
 
-### Landing Page Implementation (13-01) — IN PROGRESS
-
-**Components created:**
-- Header.tsx — fixed nav with mobile drawer, CTA
-- Footer.tsx — 4-column footer with social links
-- CookieConsent.tsx — ФЗ-152 GDPR-style cookie banner with 3 categories
-- UTMCapture.tsx — UTM parameter capture and persistence
-
-**Pages created:**
-- app/about/ — team, stats, history
-- app/blog/ — coming soon placeholder
-- app/case-studies/ — case studies grid with CaseStudies + Testimonials
-- app/contact/ — contact form
-- app/privacy-policy/ — full ФЗ-152 privacy policy (10 sections)
-- app/services/ — services grid with pricing
-- app/error.tsx — error boundary with reset
-- app/not-found.tsx — 404 page
-
-**Tests: 35/35 passing ✅**
-- lib/utm.test.ts (4 tests)
-- components/Footer.test.tsx (7 tests)
-- components/Header.test.tsx (5 tests)
-- components/CookieConsent.test.tsx (8 tests)
-- pages/landing-pages.test.tsx (11 tests)
-
-### Known issues (pre-existing, not Phase 13):
-- 9 test suites failing: e2e/* (playwright), landing/SocialProof, landing/FAQ, landing/ContactForm, payment/*
-- These are unrelated to Phase 13 components
+### Known issues fixed during deploy:
+- Docker build context mismatch (app needed repo root, not AIM/)
+- requirements.txt missing core deps (fastapi, uvicorn, sendgrid, apscheduler)
+- PYTHONPATH wrong (was /app, should be /app/AIM/src)
+- frontend/lib/utils.ts gitignored by AIM/.gitignore lib/ rule
+- frontend/data/case-studies.json gitignored by root .gitignore data/ rule
+- nginx config on server was old version (all traffic to backend, no frontend routing)
+- alertmanager had env var placeholders instead of actual values
+- SSL chain.pem symlink missing in ./ssl/
 
 ---
 
-## Next Steps
+## Phase 18: Hermes Learning Bus — Implementation (Plan 18-01)
 
-- [ ] 13-01: Finish landing page — review + polish
-- [ ] 13-02: Marketing campaigns launch + analytics
-- [ ] Fix pre-existing test failures (ContactForm, SocialProof, FAQ)
+**Date:** 2026-05-20 10:30 GMT+3
+**Status:** Plan 18-01 COMPLETE ✅ (5/5 tasks)
+
+### Completed Tasks:
+
+**Task 1.1: Hermes Knowledge Vault** ✅
+- `AIM/hermes/knowledge/__init__.py` — exports HermesKnowledgeVault + LLMIngest
+- `AIM/hermes/knowledge/vault.py` (160 lines) — full vault manager
+  - ingest_execution(event), ingest_agent_result(event)
+  - query_context(domain, action), store_learning(domain, knowledge)
+  - get_status(), get_execution(id), get_latest_executions(limit)
+- Directory structure: raw/executions/, wiki/patterns/, wiki/learnings/, decisions/rules/
+
+**Task 1.2: EventBus Listener** ✅
+- `AIM/hermes/app/main.py` — startup subscribes to ci.execution.* events
+  - ci.execution.started → vault.ingest_execution
+  - ci.agent.completed → vault.ingest_agent_result
+  - ci.execution.completed → vault.ingest_execution
+
+**Task 1.3: CI Orchestrator — execution events** ✅
+- `ci_orchestrator.py` — publish 3 event types with correlation_id
+  - ci.execution.started (before phases loop)
+  - ci.agent.completed (after each agent execution)
+  - ci.execution.completed (before return, with summary)
+- correlation_id = f"ci-{uuid4().hex[:8]}" for traceability
+- Fixed _delegate_to_agent: Event() instead of kwargs
+- Added Event import from event_bus
+
+**Task 1.4: Knowledge API Endpoints** ✅
+- `AIM/hermes/app/knowledge_router.py` (172 lines) — 5 endpoints
+  - POST /api/knowledge/ingest — store execution event
+  - GET /api/knowledge/context?domain=&action= — search vault
+  - GET /api/knowledge/status — vault health
+  - POST /api/knowledge/learn — LLM pattern extraction
+  - GET /api/knowledge/search?q=&domain= — full-text search
+
+**Task 1.5: LLM Ingest** ✅
+- `AIM/hermes/knowledge/ingest.py` (154 lines) — pattern extraction via OmniRoute
+  - extract_patterns(execution_id) — single or "latest"
+  - extract_all() — process all unprocessed executions
+  - Uses omniroute_direct.chat() for LLM calls
+  - Updates wiki/patterns/index.md with entries
+
+### Flow:
+```
+CI Orchestrator → EventBus.publish(Event) → Hermes.subscribe → vault.ingest_execution
+                                                                    ↓
+                                                            raw/executions/
+                                                                    ↓
+                                    POST /api/knowledge/learn → LLMIngest → wiki/patterns/
+                                                                    ↓
+                        Magisters → GET /api/knowledge/context → enriched task
+```
+
+### Next: Plan 18-02 (Teacher↔Hermes + Magisters context + Activation)
+- Task 2.1: Teacher → Hermes sync (teacher_sync.py)
+- Task 2.2: Magisters → Hermes context query (hermes_context.py)
+- Task 2.3: Activation Sequence doc (DONE — ACTIVATION_SEQUENCE.md)
+- Task 2.4: Health endpoint with knowledge loop monitoring
+- Task 2.5: Tool Training Guide (DONE)
