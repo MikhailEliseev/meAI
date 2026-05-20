@@ -1,6 +1,37 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+
+const LS_SESSION_KEY = "aim_session_id";
+const LS_MESSAGES_KEY = "aim_messages";
+
+function loadSessionId(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(LS_SESSION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function loadMessages(): Message[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LS_MESSAGES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((m: Message) => ({ ...m, timestamp: new Date(m.timestamp) }));
+  } catch {
+    return [];
+  }
+}
+
+function saveMessages(msgs: Message[]) {
+  try {
+    localStorage.setItem(LS_MESSAGES_KEY, JSON.stringify(msgs));
+  } catch { /* quota exceeded — ignore */ }
+}
 
 export interface Message {
   id: string;
@@ -26,12 +57,17 @@ interface SSEEvent {
 }
 
 export function useStreamChat() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(loadMessages);
   const [status, setStatus] = useState<StreamStatus>("ready");
   const [progress, setProgress] = useState<StreamProgress | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(loadSessionId);
   const abortRef = useRef<AbortController | null>(null);
   const toolStepsRef = useRef<string[]>([]);
+
+  // Persist messages to localStorage on every change
+  useEffect(() => {
+    saveMessages(messages);
+  }, [messages]);
 
   const addMessage = useCallback((role: "agent" | "user", content: string) => {
     const msg: Message = {
@@ -149,6 +185,9 @@ export function useStreamChat() {
                 case "finish":
                   if (event.session_id) {
                     setSessionId(event.session_id);
+                    try {
+                      localStorage.setItem(LS_SESSION_KEY, event.session_id);
+                    } catch { /* ignore */ }
                   }
                   break;
 
