@@ -127,17 +127,21 @@ CI Orchestrator → EventBus → Hermes vault → LLM ingest → wiki/patterns/
 
 ---
 
-## Phase 20: Planning Docs Sync + Dir Rename — 2026-05-20 19:08 GMT+3
+## Phase 20: Planning Docs Sync + Dir Rename — 2026-05-20 20:13 GMT+3
 
 ### Documentation Updated ✅
 - ROADMAP.md — Phases 17, 18 marked Complete (41/45 plans, 91%)
 - STATE.md — Updated to reflect actual progress
 
-### Pending: Directory Rename
-- Problem: `!meAI` — Webpack rejects `!` in paths (loader syntax)
-- Fix: `mv /Users/mikhaileliseev/Desktop/Dev/\!meAI /Users/mikhaileliseev/Desktop/Dev/meAI`
+### Directory Rename ✅
+- `!meAI` → `meAI` — done, Webpack now works with local builds
 - setup_alias.sh already fixed (path without `!`)
-- Need to restart Claude Code from new path after rename
+
+### Commits (this session):
+- `5fa1a4d` docs: sync planning docs (Phases 16-18 complete, 93%)
+- `b298209` fix: remove deprecated CI agent references from SOUL.md + fix alias path
+- `85a8f0e` feat(17): remove mock/random data from all 14 CI agents
+- `a6f7cbb` chore: update env example and settings for Phase 17/18
 
 ---
 
@@ -159,13 +163,25 @@ CI Orchestrator → EventBus → Hermes vault → LLM ingest → wiki/patterns/
 
 ---
 
+## Directory Rename: !meAI → meAI — 2026-05-20 20:20 GMT+3
+- ✅ Directory renamed, local `npm run dev` works (was blocked by Webpack `!` loader syntax)
+- ✅ CLAUDE.md updated with new paths
+- ✅ setup_alias.sh fixed
+- ✅ AIM/frontend/e2e/README.md updated (no more `!` workaround needed)
+
+### Commits:
+- `e5a7ae5` fix: update path references !meAI → meAI in CLAUDE.md and e2e README
+
+---
+
 ## Overall Status: 42/45 plans (93%)
 - Only Phase 13-02 (marketing campaigns) remains — deferred post-MVP
+- All commits pushed to main ✅
 
-**Date:** 2026-05-20 11:30 GMT+3
-**Status:** 100% COMPLETE (already clean before implementation)
+**Date:** 2026-05-20 20:20 GMT+3
+**Status:** All commits pushed ✅
 
-### Audit Result:
+### Audit Result (historical):
 - **22 CI agents total** — all clean of mock/random data
 - **0 active agents with `import random`** (only deprecated ci_content.py, ci_tech.py)
 - **All agents use real data sources:** SerpAPI, SEMrush, Ahrefs, hh.ru API, PageSpeed API, httpx+BeautifulSoup scraping, logic-based estimation
