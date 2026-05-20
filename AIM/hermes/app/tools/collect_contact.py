@@ -29,6 +29,7 @@ async def handle_collect_contact(
     website: str = "",
     name: str = "",
     source: str = "web_chat",
+    **kwargs,
 ) -> str:
     """Collect client contact information and create a lead dossier.
 

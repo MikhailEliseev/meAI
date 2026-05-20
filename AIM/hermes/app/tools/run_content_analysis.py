@@ -21,7 +21,7 @@ AIM_API_BASE = "http://app:8000"
 REQUEST_TIMEOUT = 30.0  # seconds
 
 
-async def handle_run_content_analysis(url: str, content_type: str = "all") -> str:
+async def handle_run_content_analysis(url: str, content_type: str = "all", **kwargs) -> str:
     """Analyze content quality on a medical clinic website.
 
     Evaluates medical accuracy, SEO optimization, readability scores,

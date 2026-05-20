@@ -46,7 +46,7 @@ async def _get_client():
 
 # ── Tool: search_chats ──────────────────────────────────────────────
 
-async def handle_search_chats(query: str, limit: int = 10) -> str:
+async def handle_search_chats(query: str, limit: int = 10, **kwargs) -> str:
     """Search Telegram chats and channels by name."""
     try:
         client = await _get_client()
@@ -94,7 +94,7 @@ registry.register(
 
 # ── Tool: send_message_as_user ──────────────────────────────────────
 
-async def handle_send_message_as_user(peer: str, message: str) -> str:
+async def handle_send_message_as_user(peer: str, message: str, **kwargs) -> str:
     """Send a Telegram message as the user (Mikhail), not the bot.
 
     Args:

@@ -21,7 +21,7 @@ AIM_API_BASE = "http://app:8000"
 REQUEST_TIMEOUT = 30.0  # seconds
 
 
-async def handle_run_ads_report(project_id: str, period: str = "month") -> str:
+async def handle_run_ads_report(project_id: str, period: str = "month", **kwargs) -> str:
     """Generate advertising performance report for a client project.
 
     Shows ROAS, CPC, CTR, conversion rates, and budget utilization
