@@ -313,7 +313,7 @@ license: MIT
 
 **Субагенты (сгруппированы по возможностям):**
 
-- **Технический аудит:** `ci_tech.py`, `ci_tech_real.py`, `ci_tech_improved.py`, `technical_agent.py`, `ci_site_crawler.py` — PageSpeed, Core Web Vitals, индексация, структурированные данные, краулинг 50+ страниц
+- **Технический аудит:** `ci_tech_real.py`, `technical_agent.py`, `ci_site_crawler.py` — PageSpeed, Core Web Vitals, индексация, структурированные данные, краулинг 50+ страниц
 - **Ключевые слова:** `keyword_research_agent.py`, `topic_clusterer.py`, `cluster_analyzer.py`, `embeddings_generator.py` — семантическое ядро (500+ keywords), кластеризация, интенты
 - **Анализ конкурентов:** `ci_scout.py`, `ci_auditor.py`, `ci_deep_analyzer.py`, `ci_strategist.py` — сравнение позиций, gap analysis, стратегия
 - **Ссылочный профиль:** `ci_backlink.py`, `links_agent.py` — анализ и стратегия наращивания
@@ -401,7 +401,7 @@ license: MIT
 - **Валидация:** `ci_url_validator.py`, `ci_qa_validator.py` — проверка URL и качества
 - **Вакансии:** `ci_vacancies.py` — анализ найма конкурентов
 - **Приоритизатор:** `ci_prioritizer.py` — что атаковать первым
-- **Контент:** `ci_content.py`, `ci_content_improved.py` — контент-разведка
+- **Контент:** `ci_content_improved.py` — контент-разведка
 - **Оркестратор:** `ci_orchestrator.py` + пакет `competitive_intel/`
 
 ---
