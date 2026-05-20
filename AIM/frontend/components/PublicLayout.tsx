@@ -4,13 +4,13 @@ import { usePathname } from "next/navigation";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 
-const dashboardPaths = ["/billing", "/contracts", "/onboarding", "/tasks"];
+const minimalPaths = ["/billing", "/contracts", "/onboarding", "/tasks"];
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isDashboard = dashboardPaths.some((p) => pathname.startsWith(p));
+  const isMinimal = pathname === "/" || minimalPaths.some((p) => pathname.startsWith(p));
 
-  if (isDashboard) {
+  if (isMinimal) {
     return <>{children}</>;
   }
 
