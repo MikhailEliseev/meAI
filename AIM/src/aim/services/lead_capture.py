@@ -37,6 +37,7 @@ from aim.schemas.lead import (
     LeadRecord,
     LeadSource,
 )
+from aim.services.pre_sale_folder import PreSaleFolder
 from aim.utils.encryption import get_encryptor
 
 
@@ -262,6 +263,18 @@ class LeadCaptureService:
         self.db.add(lead_record)
         await self.db.commit()
         await self.db.refresh(lead_record)
+
+        # Create pre-sale/ folder for chat leads (fire-and-forget, never fails capture)
+        if request.website:
+            try:
+                psf = PreSaleFolder(lead_id)
+                psf.ensure()
+                psf.save_session(
+                    url=request.website,
+                    company_name=request.name or None,
+                )
+            except Exception:
+                pass  # pre-sale folder is best-effort, never blocks lead capture
 
         leads_captured_total.labels(source=request.source, specialty="other").inc()
         cache.invalidate("analytics:")

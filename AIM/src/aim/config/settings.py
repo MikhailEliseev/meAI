@@ -46,6 +46,11 @@ class APISettings(BaseSettings):
         description="Ahrefs API key (optional fallback)",
         min_length=10,
     )
+    dadata_api_key: Optional[str] = Field(
+        default=None,
+        description="DaData API key for Russian company search (10k req/day free)",
+        min_length=10,
+    )
     serpapi_api_key: Optional[str] = Field(
         default=None,
         description="SerpAPI key for real-time SERP and web search",

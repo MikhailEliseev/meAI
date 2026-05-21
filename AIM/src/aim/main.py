@@ -339,6 +339,8 @@ from aim.api.ads import router as ads_router
 from aim.api.projects import router as projects_router
 from aim.api.telegram import router as telegram_router
 from aim.api.sales import router as sales_router
+from aim.api.competitors import router as competitors_router
+from aim.api.pre_sale import router as pre_sale_router
 
 # Include API routers
 app.include_router(leads_router)
@@ -353,6 +355,8 @@ app.include_router(ads_router)
 app.include_router(projects_router)
 app.include_router(telegram_router)
 app.include_router(sales_router)
+app.include_router(competitors_router)
+app.include_router(pre_sale_router)
 
 # Performance stats endpoint
 @app.get("/api/performance/stats")
