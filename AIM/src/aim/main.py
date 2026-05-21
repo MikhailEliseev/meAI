@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI):
         from alembic import command
 
         await asyncio.to_thread(
-            lambda: command.upgrade(Config("alembic/alembic.ini"), "head")
+            lambda: command.upgrade(Config("AIM/alembic.ini"), "head")
         )
         logger.info("alembic_migrations_applied")
 

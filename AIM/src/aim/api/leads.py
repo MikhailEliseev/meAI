@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from aim.database import get_db
 from aim.schemas.lead import (
+    ChatLeadRequest,
     LeadCaptureRequest,
     LeadCaptureResponse,
 )
@@ -28,6 +29,35 @@ def get_lead_service(db: AsyncSession = Depends(get_db)) -> LeadCaptureService:
     """Dependency to get LeadCaptureService instance."""
     recaptcha_secret = os.getenv("RECAPTCHA_SECRET_KEY", "test_secret_key")
     return LeadCaptureService(db, recaptcha_secret=recaptcha_secret)
+
+
+@router.post("", response_model=LeadCaptureResponse, status_code=status.HTTP_201_CREATED)
+async def capture_chat_lead(
+    request: ChatLeadRequest,
+    service: LeadCaptureService = Depends(get_lead_service),
+) -> LeadCaptureResponse:
+    """Capture lead from Hermes chat — lightweight, no form validation.
+
+    Hermes collects contact via two-step conversation flow and calls
+    this endpoint via the collect_contact tool. No reCAPTCHA (internal
+    service call), no rate limiting (Hermes throttles itself).
+
+    Returns LeadCaptureResponse with lead_id for Hermes to report back.
+    """
+    try:
+        result = await service.capture_chat_lead(request=request)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Failed to capture chat lead: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to capture chat lead",
+        )
 
 
 @router.post("/capture", response_model=LeadCaptureResponse, status_code=status.HTTP_201_CREATED)

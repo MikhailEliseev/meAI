@@ -31,6 +31,7 @@ from aim.models.lead import Lead as LeadModel
 from aim.middleware.cache import cache
 from aim.metrics import leads_captured_total, leads_scored_total, rate_limit_hits_total
 from aim.schemas.lead import (
+    ChatLeadRequest,
     LeadCaptureRequest,
     LeadCaptureResponse,
     LeadRecord,
@@ -193,6 +194,91 @@ class LeadCaptureService:
             success=True,
             lead_id=lead_id,
             message="Спасибо за обращение! Мы свяжемся с вами в течение 15 минут.",
+            estimated_response_time="15 минут",
+            tier=scoring_result.get("tier"),
+            score=scoring_result.get("score"),
+        )
+
+    async def capture_chat_lead(
+        self,
+        request: ChatLeadRequest,
+        client_ip: str = "hermes",
+    ) -> LeadCaptureResponse:
+        """Capture lead from Hermes chat — lightweight, no form validation.
+
+        Hermes collects contact via two-step conversation and calls this
+        via POST /api/leads. No reCAPTCHA (internal service call),
+        no rate limiting (Hermes throttles itself).
+
+        Maps contact_value to the appropriate field based on contact_type.
+        Generates placeholders for required fields we don't have yet.
+        """
+        # Map contact to fields
+        name = request.name or "Чат-лид"
+        phone = "+70000000000"  # placeholder
+        email = "chat@iamaim.ru"  # placeholder
+        clinic_name = "Не указана"
+        message = ""
+
+        if request.contact_type == "telegram":
+            message = f"Telegram: {request.contact_value}"
+        elif request.contact_type == "email":
+            email = request.contact_value
+        elif request.contact_type == "phone":
+            phone = request.contact_value
+
+        if request.website:
+            message = f"Сайт: {request.website}\n" + message
+
+        # Generate lead ID
+        lead_id = self._generate_lead_id()
+
+        # Encrypt fields
+        encrypted_data = self.encryptor.encrypt_dict(
+            {"name": name, "phone": phone, "email": email,
+             "clinic_name": clinic_name, "message": message.strip() or None},
+            ["name", "phone", "email", "clinic_name", "message"],
+        )
+
+        # Create lead record
+        lead_record = LeadModel(
+            id=lead_id,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+            name_encrypted=encrypted_data["name_encrypted"],
+            phone_encrypted=encrypted_data["phone_encrypted"],
+            email_encrypted=encrypted_data["email_encrypted"],
+            email_hash=LeadModel.hash_email(email),
+            clinic_name_encrypted=encrypted_data["clinic_name_encrypted"],
+            message_encrypted=encrypted_data.get("message_encrypted"),
+            specialty="other",
+            fz152_consent=True,  # obtained verbally in chat
+            fz152_consent_timestamp=datetime.now(timezone.utc),
+            fz152_consent_ip=client_ip,
+            source=request.source,
+            processed=False,
+        )
+
+        self.db.add(lead_record)
+        await self.db.commit()
+        await self.db.refresh(lead_record)
+
+        leads_captured_total.labels(source=request.source, specialty="other").inc()
+        cache.invalidate("analytics:")
+
+        await self._audit_log(
+            lead_id=lead_id,
+            action="lead_captured_chat",
+            ip=client_ip,
+            details={"source": request.source, "contact_type": request.contact_type},
+        )
+
+        scoring_result = await self._process_lead_async(lead_id)
+
+        return LeadCaptureResponse(
+            success=True,
+            lead_id=lead_id,
+            message="Контакт сохранён. Михаил свяжется с вами в ближайшее время.",
             estimated_response_time="15 минут",
             tier=scoring_result.get("tier"),
             score=scoring_result.get("score"),
