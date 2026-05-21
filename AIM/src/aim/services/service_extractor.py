@@ -201,7 +201,20 @@ def _detect_specialization(text_lower: str, url: str) -> str:
 
 def _detect_city(text: str) -> str:
     """Detect city from page text."""
-    # Heuristic: first city match in the first 5000 chars (header/contact area)
+    # Strategy 1: "в Городе" pattern (common in titles/headers: "стоматология в Орле")
+    city_preposition = re.match(
+        r".*?\bв\s+(гор\.?\s*)?([А-ЯЁ][а-яё]+(?:[\s-][А-ЯЁ][а-яё]+)?)\b",
+        text[:5000],
+        re.IGNORECASE,
+    )
+    if city_preposition:
+        candidate = city_preposition.group(2)
+        # Validate against known cities (with ё→е normalisation)
+        for city in _RUSSIAN_CITIES:
+            if _norm(candidate) == _norm(city):
+                return city
+
+    # Strategy 2: Direct city name match in first 5000 chars
     text_head = text[:5000]
     for pattern, city in _CITY_PATTERNS:
         if pattern.search(text_head):
@@ -239,15 +252,23 @@ def _extract_company_name(html: str) -> Optional[str]:
         if og and og.get("content"):
             return og["content"].strip()
 
-        # Fallback to title
+        # Fallback to title — truncate at separators
         title = soup.find("title")
         if title:
             t = title.get_text(strip=True)
-            # Truncate at common separators
             for sep in [" — ", " – ", " | ", ": "]:
                 if sep in t:
                     t = t.split(sep)[0]
+            # If title looks like an SEO phrase (long, contains "в городе"),
+            # it's likely not the company name
+            if len(t) > 40 or re.search(r"\bв\s+г(?:ор\.?\s*)?[А-ЯЁ]", t, re.IGNORECASE):
+                return None
             return t.strip()
     except Exception:
         pass
     return None
+
+
+def _norm(s: str) -> str:
+    """Normalise Cyrillic string: ё→е, lowercase."""
+    return s.replace("ё", "е").replace("Ё", "Е").lower()

@@ -94,23 +94,45 @@ class CompetitorMatcher:
     # ── Candidate search ───────────────────────────────────────────
 
     async def _search_candidates(self, client: ClientProfile) -> list[CompanyProfile]:
-        """Search DaData for potential competitors."""
-        query = client.specialization or "медицинская клиника"
+        """Search DaData for potential competitors.
+
+        Uses multiple queries for diversity — single query returns many
+        identically-named companies from different cities.
+        """
+        spec = client.specialization or "медицинская клиника"
         city = client.city
 
-        try:
-            raw = await self.dadata.find_medical_companies(
-                query=query,
-                city=city,
-                count=20,
-            )
-        except Exception as e:
-            logger.error("DaData search failed: %s", e)
-            return []
+        # Query variants for broader coverage
+        queries = [spec]
+        if city:
+            queries.append(f"{spec} {city}")
+        if spec == "стоматология":
+            queries.extend(["стоматологическая клиника", "стоматологический центр"])
+        elif spec == "косметология":
+            queries.extend(["косметологический центр", "центр косметологии"])
+        elif spec == "многопрофильная клиника":
+            queries.extend(["медицинский центр", "многопрофильный медицинский центр"])
+
+        raw_all: list[CompanyProfile] = []
+        seen_inn: set[str] = set()
+
+        for q in queries[:4]:  # max 4 queries
+            try:
+                batch = await self.dadata.find_medical_companies(
+                    query=q,
+                    city="" if city in q else city,  # don't double-add city
+                    count=10,
+                )
+                for p in batch:
+                    if p.inn and p.inn not in seen_inn:
+                        seen_inn.add(p.inn)
+                        raw_all.append(p)
+            except Exception as e:
+                logger.error("DaData search failed for query=%s: %s", q, e)
 
         # Filter out the client's own company
         candidates = []
-        for p in raw:
+        for p in raw_all:
             if client.company_name and client.company_name.lower() in p.legal_name.lower():
                 continue
             if p.legal_name and client.company_name and _name_similarity(
