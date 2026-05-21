@@ -125,12 +125,14 @@ class DaDataClient:
     ) -> list[CompanyProfile]:
         """Search for medical companies in a city.
 
-        Appends city and medical OKVED filters to the query.
+        Uses specialization as the primary query (e.g. "стоматология").
+        DaData suggest/party matches by company name prefix — generic terms
+        like "медицинская клиника" break matching, so only add city when known.
+        Results are post-filtered by medical OKVED codes.
         """
         full_query = query
         if city:
             full_query = f"{query} {city}"
-        full_query = f"{full_query} медицинская клиника"
 
         results = await self.search_company(full_query, count=count)
         return [p for p in results if _is_medical(p)]
