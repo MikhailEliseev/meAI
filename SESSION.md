@@ -304,3 +304,173 @@ Telegram → TelegramMonitor → EventBus → SalesAdminMagister
 - 43/45 plans (95%)
 - Phase 13 complete, deployed to server
 - Vaults synced, server clean
+
+---
+
+## Pre-Sale Workflow Test — 2026-05-21 20:30 GMT+3
+
+### Test Result: ✅ FULL FLOW WORKS
+
+Проведён живой E2E-тест через браузер (iamaim.ru). Полный цикл Pre-Sale работает.
+
+**Test session:** `стоматология-смайл.рф` → SEO-аудит → WOW-цифры → сбор контакта → лид в базе
+
+**Что исправлено для теста:**
+- `AIM_ENCRYPTION_KEY` — сгенерирован и добавлен в server .env (блокировал `collect_contact`)
+- Контейнер `app` пересоздан с новым ключом
+
+### Путь клиента (Client Journey)
+
+```
+1. Клиент заходит на iamaim.ru
+   ↓
+2. Видит SalesChat (AI-чат, не форма)
+   Заголовок: "AI-агент медицинского маркетинга"
+   Подсказка: "Проанализирую вашу клинику, конкурентов и рынок"
+   ↓
+3. Вводит URL сайта клиники (или выбирает пример)
+   POST /api/chat/stream → Next.js proxy → Hermes /api/chat/stream
+   mode: "PRESALE"
+   ↓
+4. Hermes (DeepSeek V4 Pro через OmniRoute):
+   ├─ Вызывает run_seo_audit(url) → POST http://app:8000/api/seo/audit
+   │  └─ AIM Backend → SEO Magister → 70+ субагентов → compacted результат
+   ├─ Форматирует "ТРИ ЦИФРЫ" (WOW-формат):
+   │  • СКОЛЬКО пациентов в месяц
+   │  • ЗА КАКОЕ ВРЕМЯ (недель до результата)
+   │  • СКОЛЬКО СТОИТ пациент
+   └─ Стримит ответ через SSE (text-delta, step-start, step-end, finish)
+   ↓
+5. Клиент видит WOW-результат (75–90 пациентов/мес, 8–10 недель, 1 100–1 600 ₽)
+   ↓
+6. Hermes запрашивает контакт (ДВА ШАГА):
+   Шаг 1: "Как вам удобнее оставить контакт — телефон, Telegram или email?"
+   Шаг 2: collect_contact(contact_type, contact_value) → POST /api/leads
+   ↓
+7. AIM Backend:
+   ├─ LeadCaptureService.capture_chat_lead()
+   ├─ AES-256-GCM шифрование PII (ФЗ-152)
+   ├─ Сохранение в БД (lead_id)
+   ├─ LeadScoringService.score() → 15-факторная модель
+   ├─ WorkflowEngine → email-последовательность
+   └─ Ответ: "Контакт сохранён. Михаил свяжется с вами в течение 15 минут."
+   ↓
+8. Михаил получает уведомление (Linear task) и связывается с клиентом
+```
+
+### Критерии квалификации (Qualification Criteria)
+
+**Два уровня квалификации:**
+
+#### Уровень 1: Chat Qualification (QualificationService — динамическая, из диалога)
+
+Срабатывает каждые 3 сообщения в Telegram/чате.
+
+**Формула скоринга (0–100):**
+
+| Фактор | Вес | Описание |
+|--------|-----|----------|
+| Базовая оценка | +20 | Любой диалог имеет потенциал |
+| budget_discussion | +20 | Ключевые слова: стоимость, цена, бюджет, сколько стоит |
+| high_intent | +25 | "готов", "хочу записаться", "давайте", "согласен" |
+| service_inquiry | +15 | "приём", "консультация", "запись", "врач", "лечение" |
+| sustained_conversation | +10 | ≥3 сообщений в диалоге |
+| urgency_high | +20 | "срочно", "сегодня", "завтра", "немедленно" |
+| urgency_medium | +10 | "на этой неделе", "планирую", "в течение месяца" |
+| specialty_match | +15 | Специальность совпадает с высокоценными |
+| deep_conversation | +5 | ≥5 сообщений |
+| patient_anxiety | -5 | "боюсь", "страшно", "осложнения" |
+| low_engagement | -10 | <30 символов в сообщении |
+
+**Тиры (Tiers):**
+- 🔥 **HOT** (≥70): `create_lead` — немедленное создание лида
+- 🟡 **WARM** (≥40): `create_lead` при budget/service сигналах, иначе `nurture`
+- 🔵 **COLD** (<40): `nurture` при sustained_conversation, `ignore` при low_engagement без сигналов
+
+#### Уровень 2: Form Qualification (LeadScoringService — статическая, из формы)
+
+15-факторная взвешенная модель для лидов с `/contact`. Файл: `AIM/frontend/lib/lead-scoring.ts`
+
+### Критерии эскалации (Escalation Criteria)
+
+**Когда бот передаёт клиента человеку (Михаилу):**
+
+| # | Категория | Severity | Авто-эскалация | Триггеры |
+|---|-----------|----------|----------------|----------|
+| 1 | medical_data_request | IMMEDIATE | ✅ Да | "я у вас был", "моя история", "мой диагноз", "мой анализ" |
+| 2 | human_request | URGENT | ✅ Да | "позовите человека", "дайте телефон", "не робот", "оператор" |
+| 3 | threats | URGENT | ✅ Да | "подам в суд", "роспотребнадзор", "обманули", "лицензия" |
+| 4 | complex_question | URGENT | ✅ Да | >3 вопросительных знаков в длинном тексте |
+| 5 | technical_failure | ROUTINE | ✅ Да | ≥3 ошибок подряд или ≥3 одинаковых ответа агента |
+| 6 | inappropriate_behavior | ROUTINE | ❌ Сначала предупреждение | Нецензурная лексика |
+
+**Шаблоны ответов при эскалации:**
+- **medical_data:** "Это вопрос по вашим медицинским данным. По ФЗ-152 я не имею к ним доступа. Михаил свяжется с вами лично."
+- **human_request:** "Сейчас позову человека. Михаил уже подключается."
+- **threats:** "Я передаю ваш вопрос руководителю."
+- **complex_question:** "Это сложный вопрос. Михаил ответит вам лично."
+
+### Архитектура Pre-Sale
+
+```
+┌─ iamaim.ru (SalesChat) ──┐     ┌─ Telegram Bot ──┐
+│  Next.js 14              │     │  (pending token) │
+│  POST /api/chat/stream   │     │  /telegram/webhook│
+└─────────┬────────────────┘     └────────┬─────────┘
+          │                               │
+          ▼                               ▼
+┌─────────────────────────────────────────────────────┐
+│  Hermes (PRESALE mode)                              │
+│  DeepSeek V4 Pro via OmniRoute                      │
+│  SOUL.md + _presale_prompt()                        │
+│                                                     │
+│  Tools: run_seo_audit, collect_contact              │
+│  Rules: WOW-цифры, 2 шага контакта, 5-6 сообщений  │
+└─────────────────────┬───────────────────────────────┘
+                      │
+          ┌───────────┴───────────┐
+          ▼                       ▼
+  ┌──────────────┐     ┌────────────────────┐
+  │ SEO Magister │     │ LeadCaptureService │
+  │ 70+ subagents│     │ AES-256-GCM + DB   │
+  │ /api/seo/audit│    │ /api/leads         │
+  └──────────────┘     └────────┬───────────┘
+                                │
+                    ┌───────────┴───────────┐
+                    ▼                       ▼
+          ┌──────────────┐     ┌────────────────────┐
+          │ Lead Scoring │     │ Workflow Engine    │
+          │ 15-factor    │     │ Email sequence     │
+          └──────────────┘     └────────────────────┘
+```
+
+### Что ещё нужно доделать
+
+| Компонент | Статус | Что нужно |
+|-----------|--------|-----------|
+| Telegram Bot | 🟡 Есть локально, не на сервере | `TELEGRAM_BOT_TOKEN=8902680776:...` — задеплоить в `.env.production` |
+| Telethon Client | ⚠️ Нет API ID/Hash | `TELEGRAM_API_ID`, `TELEGRAM_API_HASH` — my.telegram.org |
+| Bitrix24 CRM | ⚠️ Не настроен | CRM sync agent работает в graceful degradation |
+| HERMES_API_KEY | ✅ Обновлён | `hmr_anbjfKH_hqaZIU9Z2vaF8f0t-nrDJGlv-nWfEhRuxP4` |
+| AIM_ENCRYPTION_KEY | ✅ Установлен | AES-256-GCM, ФЗ-152 |
+| Contact Form | ✅ Работает | `/contact` с ФЗ-152, reCAPTCHA, SendGrid |
+| SalesChat | ✅ Работает | SSE streaming, DeepSeek V4 Pro, SEO аудит, сбор контактов |
+
+### Доступы записаны в память
+
+Все ключи и доступы сохранены в `.claude/projects/.../memory/`:
+- [[server_production]] — SSH, Docker, .env переменные
+- [[api_keys]] — Linear, Яндекс, OmniRoute, SEMrush
+- [[telegram_bot]] — Bot token, admin chat, webhook
+- [[internal_secrets]] — HERMES_API_KEY, ENCRYPTION_KEY, DB
+
+### Метрики тестового прогона
+
+- **Время ответа Hermes:** ~24s (API call #2: 23.9s latency)
+- **Токены:** 9,509 in / 637 out (SEO аудит)
+- **collect_contact:** 0.33s (внутренний HTTP)
+- **Lead score:** 43 (Cold) — тестовый email, без сигналов
+- **Консоль браузера:** 0 ошибок
+
+---
+

@@ -151,9 +151,13 @@ async def health():
     """
     global _polling_started
     if not _polling_started:
-        start_polling()
+        webhook_url = os.getenv("TELEGRAM_WEBHOOK_URL", "")
+        if webhook_url:
+            logger.info("Telegram webhook configured (%s), skipping getUpdates polling", webhook_url)
+        else:
+            start_polling()
+            logger.info("Telegram polling started (lazy init on first /health)")
         _polling_started = True
-        logger.info("Telegram polling started (lazy init on first /health)")
 
     # Knowledge loop status
     try:
