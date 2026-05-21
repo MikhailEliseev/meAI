@@ -71,8 +71,11 @@ async def lifespan(app: FastAPI):
                 if not acquired:
                     logger.info("alembic_migrations_skipped", reason="advisory_lock_not_acquired")
                 else:
+                    alembic_cfg = Config("AIM/alembic.ini")
+                    # Override with env DATABASE_URL so we never use the hardcoded fallback
+                    alembic_cfg.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL", ""))
                     await asyncio.to_thread(
-                        lambda: command.upgrade(Config("AIM/alembic.ini"), "head")
+                        lambda: command.upgrade(alembic_cfg, "head")
                     )
                     logger.info("alembic_migrations_applied")
             # lock_conn closes here → advisory lock released
