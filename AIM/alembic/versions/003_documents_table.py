@@ -1,7 +1,7 @@
 """add documents table
 
 Revision ID: 003
-Revises: 002
+Revises: 07c3a0904edc
 Create Date: 2026-05-17 01:12:00
 
 """

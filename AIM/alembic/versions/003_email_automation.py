@@ -1,7 +1,7 @@
 """add email automation tables
 
 Revision ID: 003_email_automation
-Revises: 002_user_feedback
+Revises: 003
 Create Date: 2026-05-16 20:04:12.655000
 
 """
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = '003_email_automation'
-down_revision: Union[str, None] = '07c3a0904edc'
+down_revision: Union[str, None] = '003'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
