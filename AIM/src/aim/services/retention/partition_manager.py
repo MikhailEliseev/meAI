@@ -24,14 +24,38 @@ class PartitionManager:
     def __init__(self, session_factory):
         self.session_factory = session_factory
 
+    async def _get_partitioned_tables(self) -> set[str]:
+        """Return which of the target tables are actually partitioned."""
+        async with self.session_factory() as session:
+            result = await session.execute(text("""
+                SELECT c.relname
+                FROM pg_class c
+                JOIN pg_partitioned_table p ON p.partrelid = c.oid
+                WHERE c.relname = ANY(:tables)
+            """), {"tables": self.PARTITIONED_TABLES})
+            return {row[0] for row in result.fetchall()}
+
     async def ensure_partitions(self):
         """Create future partitions if they don't exist. Run on startup + monthly cron."""
+        partitioned = await self._get_partitioned_tables()
+        skipped = set(self.PARTITIONED_TABLES) - partitioned
+        if skipped:
+            logger.info(
+                "partition_tables_not_partitioned",
+                tables=sorted(skipped),
+                hint="Run migration to add PARTITION BY RANGE (created_at) to these tables",
+            )
+
+        if not partitioned:
+            return
+
         now = datetime.now(timezone.utc)
         for i in range(self.FUTURE_PARTITIONS + 1):
             target_month = now.month + i
             target_year = now.year + (target_month - 1) // 12
             target_month = ((target_month - 1) % 12) + 1
-            await self._create_partition(target_year, target_month)
+            for table in partitioned:
+                await self._create_partition_for_table(table, target_year, target_month)
 
     async def run_retention_cycle(self):
         """Detach and optionally drop expired partitions. Run monthly."""
@@ -39,28 +63,27 @@ class PartitionManager:
         await self._detach_expired(cutoff)
         await self._drop_detached(days_old=30)
 
-    async def _create_partition(self, year: int, month: int):
-        """Create a monthly partition for all partitioned tables."""
+    async def _create_partition_for_table(self, table: str, year: int, month: int):
+        """Create a monthly partition for a single table."""
         start = f"{year}-{month:02d}-01"
         if month == 12:
             end = f"{year + 1}-01-01"
         else:
             end = f"{year}-{month + 1:02d}-01"
 
+        partition_name = f"{table}_{year}_{month:02d}"
         async with self.session_factory() as session:
-            for table in self.PARTITIONED_TABLES:
-                partition_name = f"{table}_{year}_{month:02d}"
-                try:
-                    await session.execute(text(f"""
-                        CREATE TABLE IF NOT EXISTS {partition_name}
-                        PARTITION OF {table}
-                        FOR VALUES FROM ('{start}') TO ('{end}')
-                    """))
-                    await session.commit()
-                    logger.info("partition_created", table=table, partition=partition_name)
-                except Exception as e:
-                    await session.rollback()
-                    logger.warning("partition_create_skipped", table=table, partition=partition_name, error=str(e))
+            try:
+                await session.execute(text(f"""
+                    CREATE TABLE IF NOT EXISTS {partition_name}
+                    PARTITION OF {table}
+                    FOR VALUES FROM ('{start}') TO ('{end}')
+                """))
+                await session.commit()
+                logger.info("partition_created", table=table, partition=partition_name)
+            except Exception as e:
+                await session.rollback()
+                logger.warning("partition_create_skipped", table=table, partition=partition_name, error=str(e))
 
     async def _detach_expired(self, cutoff: datetime):
         """Detach partitions older than retention period."""
