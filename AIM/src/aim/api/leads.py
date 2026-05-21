@@ -18,7 +18,7 @@ from aim.schemas.lead import (
     LeadCaptureRequest,
     LeadCaptureResponse,
 )
-from aim.services.lead_capture import LeadCaptureService, RateLimitExceeded
+from aim.services.lead_capture import LeadCaptureService, RateLimitExceeded, RecaptchaVerificationFailed
 
 logger = logging.getLogger(__name__)
 
@@ -99,13 +99,18 @@ async def capture_lead(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=str(e),
         )
+    except RecaptchaVerificationFailed as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
     except Exception as e:
-        logger.error(f"Failed to capture lead: {e}", exc_info=True)
+        print(f"[ERROR] Failed to capture lead: {e}", flush=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to capture lead",
