@@ -5,7 +5,7 @@ Represents a single email scheduled to be sent as part of a workflow.
 Part of: Phase 11 Sprint 2 - Task 2.4
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
@@ -50,12 +50,12 @@ class ScheduledEmail(Base):
     subject = Column(Text, nullable=False)
     html_content = Column(Text, nullable=False)
     text_content = Column(Text, nullable=False)
-    scheduled_at = Column(DateTime, nullable=False)
-    sent_at = Column(DateTime, nullable=True)
+    scheduled_at = Column(DateTime(timezone=True), nullable=False)
+    sent_at = Column(DateTime(timezone=True), nullable=True)
     status = Column(String(20), nullable=False, default="pending")  # pending, sent, failed, cancelled
     retry_count = Column(Integer, nullable=False, default=0)
     sendgrid_message_id = Column(String(255), nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     workflow = relationship("EmailWorkflow", back_populates="scheduled_emails")
