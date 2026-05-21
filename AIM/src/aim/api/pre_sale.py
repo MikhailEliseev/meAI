@@ -63,7 +63,7 @@ async def append_chat(body: AppendChatRequest) -> AppendChatResponse:
     folder = PreSaleFolder(body.lead_id)
     folder.append_chat(role=body.role, text=body.message)
 
-    logger.debug("chat_appended", lead_id=body.lead_id, role=body.role)
+    logger.debug("chat_appended: lead_id=%s role=%s", body.lead_id, body.role)
 
     return AppendChatResponse(
         success=True,
@@ -84,7 +84,7 @@ async def save_session(body: SaveSessionRequest) -> SaveSessionResponse:
         company_name=body.company_name,
     )
 
-    logger.info("pre_sale_session_saved", lead_id=body.lead_id)
+    logger.info("pre_sale_session_saved: lead_id=%s", body.lead_id)
 
     return SaveSessionResponse(
         success=True,
@@ -98,7 +98,7 @@ async def update_phase(body: UpdatePhaseRequest) -> UpdatePhaseResponse:
     folder = PreSaleFolder(body.lead_id)
     folder.update_phase(body.phase)
 
-    logger.info("pre_sale_phase_updated", lead_id=body.lead_id, phase=body.phase)
+    logger.info("pre_sale_phase_updated: lead_id=%s phase=%s", body.lead_id, body.phase)
 
     return UpdatePhaseResponse(
         success=True,
