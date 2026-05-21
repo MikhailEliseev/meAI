@@ -8,7 +8,7 @@ Part of: Phase 11 Sprint 3 - Task 3.3
 import logging
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -161,7 +161,7 @@ async def upload_document(
         mime_type=file.content_type or "application/octet-stream",
         status="pending",
         created_by="api",
-        uploaded_at=datetime.utcnow(),
+        uploaded_at=datetime.now(timezone.utc),
     )
 
     db.add(document)

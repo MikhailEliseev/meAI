@@ -3,7 +3,7 @@
 Models for keyword analysis results and research reports.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
@@ -32,7 +32,7 @@ class KeywordAnalysisResult(BaseModel):
     priority: KeywordPriority = Field(..., description="Priority calculation result")
 
     # Metadata
-    analyzed_at: datetime = Field(default_factory=datetime.utcnow)
+    analyzed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     analysis_duration_ms: float = Field(..., ge=0, description="Analysis duration in milliseconds")
     cost_usd: float = Field(..., ge=0, description="API cost for this keyword")
 
@@ -68,7 +68,7 @@ class KeywordResearchReport(BaseModel):
     # Request context
     seed_keyword: str = Field(..., description="Original seed keyword")
     requested_at: datetime = Field(..., description="When research was requested")
-    completed_at: datetime = Field(default_factory=datetime.utcnow)
+    completed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Results
     keywords: list[KeywordAnalysisResult] = Field(..., description="All analyzed keywords")

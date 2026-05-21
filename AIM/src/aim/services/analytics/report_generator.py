@@ -8,7 +8,7 @@ Part of: Phase 11 Sprint 2 - Task 2.5
 import csv
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -63,7 +63,7 @@ class ReportGenerator:
         Returns:
             Path to generated CSV file
         """
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         filename = f"analytics_report_{timestamp}.csv"
         filepath = self.output_dir / filename
 
@@ -74,7 +74,7 @@ class ReportGenerator:
             writer.writerow(["Analytics Report"])
             writer.writerow(
                 [
-                    f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+                    f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}"
                 ]
             )
             writer.writerow(
@@ -160,12 +160,12 @@ class ReportGenerator:
         Returns:
             Path to generated JSON file
         """
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         filename = f"analytics_report_{timestamp}.json"
         filepath = self.output_dir / filename
 
         report = {
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "period": {
                 "start": lead_metrics.start_date.isoformat(),
                 "end": lead_metrics.end_date.isoformat(),
@@ -200,7 +200,7 @@ class ReportGenerator:
         Returns:
             Path to generated PDF file
         """
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         filename = f"analytics_report_{timestamp}.pdf"
         filepath = self.output_dir / filename
 
@@ -238,7 +238,7 @@ class ReportGenerator:
         story.append(Paragraph("Analytics Report", title_style))
         story.append(
             Paragraph(
-                f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}",
+                f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
                 styles["Normal"],
             )
         )

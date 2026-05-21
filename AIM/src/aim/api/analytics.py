@@ -6,7 +6,7 @@ Part of: Phase 11 Sprint 2 - Task 2.5
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
@@ -312,7 +312,7 @@ async def export_report(
             file_path=file_path,
             file_size=file_size,
             format=format,
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(timezone.utc),
         )
 
     except HTTPException:

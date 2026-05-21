@@ -8,7 +8,7 @@ Part of: Phase 11 Sprint 2 - Task 2.4
 import hashlib
 import hmac
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -180,7 +180,7 @@ class WebhookHandler:
         if timestamp:
             occurred_at = datetime.fromtimestamp(timestamp)
         else:
-            occurred_at = datetime.utcnow()
+            occurred_at = datetime.now(timezone.utc)
 
         # Map SendGrid event types to our event types
         event_type_mapping = {

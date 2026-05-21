@@ -9,7 +9,7 @@ Based on: Content Marketing Best Practices + Editorial Calendar Management
 
 import asyncio
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import structlog
@@ -951,7 +951,7 @@ async def _executable_task_instances_to_queued(self, max_tis: int, session: Any)
 
             queued_values: dict[str, Any] = {
                 "state": TaskInstanceState.QUEUED,
-                "queued_dttm": timezone.utcnow(),
+                "queued_dttm": datetime.now(timezone.utc),
                 "queued_by_job_id": self.job.id,
             }
 
@@ -1459,7 +1459,7 @@ async def _executable_task_instances_to_queued(self, max_tis: int, session: Any)
 
             queued_values: dict[str, Any] = {
                 "state": TaskInstanceState.QUEUED,
-                "queued_dttm": timezone.utcnow(),
+                "queued_dttm": datetime.now(timezone.utc),
                 "queued_by_job_id": self.job.id,
             }
 

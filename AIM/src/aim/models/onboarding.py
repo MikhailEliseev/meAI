@@ -6,7 +6,7 @@ Part of: Phase 11 Sprint 3 - Task 3.4
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import JSON, Float, Integer, String, DateTime
@@ -58,10 +58,10 @@ class Onboarding(Base):
 
     # Timestamps
     started_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow, index=True
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), index=True
     )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    failed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    failed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Failure tracking
     failure_reason: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
@@ -84,7 +84,7 @@ class Onboarding(Base):
         Returns:
             Onboarding ID
         """
-        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
         random_suffix = uuid.uuid4().hex[:6]
         return f"onb_{timestamp}_{random_suffix}"
 

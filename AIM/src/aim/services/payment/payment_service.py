@@ -8,7 +8,7 @@ Part of: Phase 12 - Production Deployment
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -204,7 +204,7 @@ class PaymentService:
 
                 if yk_status == "succeeded":
                     payment.status = PaymentStatus.COMPLETED.value
-                    payment.completed_at = datetime.utcnow()
+                    payment.completed_at = datetime.now(timezone.utc)
                 elif yk_status == "canceled":
                     payment.status = PaymentStatus.FAILED.value
                     payment.error_message = "Payment canceled on YooKassa side"
@@ -278,7 +278,7 @@ class PaymentService:
             payment.status = PaymentStatus.REFUNDED.value
             payment.refunded_amount = refund_amount
             payment.refund_reason = request.reason
-            payment.refunded_at = datetime.utcnow()
+            payment.refunded_at = datetime.now(timezone.utc)
 
             await self.db.commit()
 
@@ -353,6 +353,6 @@ class PaymentService:
         Returns:
             Payment ID in format: pay_YYYYMMDDHHMMSS_random
         """
-        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
         random_suffix = uuid.uuid4().hex[:6]
         return f"pay_{timestamp}_{random_suffix}"

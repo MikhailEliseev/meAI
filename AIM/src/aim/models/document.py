@@ -6,7 +6,7 @@ Part of: Phase 11 Sprint 3 - Task 3.3
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import JSON, Float, Integer, String, Text, DateTime
@@ -63,9 +63,9 @@ class Document(Base):
 
     # Audit trail
     uploaded_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow, index=True
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), index=True
     )
-    processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by: Mapped[str] = mapped_column(String(50), nullable=False)
     ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
 
@@ -84,6 +84,6 @@ class Document(Base):
         Returns:
             Document ID
         """
-        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
         random_suffix = uuid.uuid4().hex[:6]
         return f"doc_{timestamp}_{random_suffix}"

@@ -6,7 +6,7 @@ State machine for automated client onboarding with ФЗ-152 compliance.
 
 from typing import Dict, Any, Optional, List
 from enum import Enum
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import structlog
 
 from pydantic import BaseModel, Field
@@ -58,8 +58,8 @@ class OnboardingSession(BaseModel):
     payment_intent_id: Optional[str] = None
     linear_project_id: Optional[str] = None
     kickoff_meeting_id: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -162,7 +162,7 @@ class OnboardingWorkflow:
             Onboarding session
         """
         session = OnboardingSession(
-            session_id=f"onb_{client_id}_{int(datetime.utcnow().timestamp())}",
+            session_id=f"onb_{client_id}_{int(datetime.now(timezone.utc).timestamp())}",
             client_id=client_id,
             state=OnboardingState.LEAD_CAPTURED,
             lead_score=lead_score,
@@ -234,10 +234,10 @@ class OnboardingWorkflow:
             session = await self._schedule_kickoff(session)
         elif event == OnboardingEvent.KICKOFF_SCHEDULED:
             session.state = OnboardingState.ONBOARDING_COMPLETE
-            session.updated_at = datetime.utcnow()
+            session.updated_at = datetime.now(timezone.utc)
             return session  # Don't update timestamp twice
 
-        session.updated_at = datetime.utcnow()
+        session.updated_at = datetime.now(timezone.utc)
         return session
 
     async def _request_documents(
@@ -476,8 +476,8 @@ class OnboardingWorkflow:
         """Schedule kickoff call"""
         # Find available slot (next 7 days, business hours)
         available_slots = await self.calendar.find_available_slots(
-            start_date=datetime.utcnow(),
-            end_date=datetime.utcnow() + timedelta(days=7),
+            start_date=datetime.now(timezone.utc),
+            end_date=datetime.now(timezone.utc) + timedelta(days=7),
             duration_minutes=60,
         )
 

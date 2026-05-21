@@ -3,7 +3,7 @@
 Models for keyword prioritization, user feedback, and adaptive learning.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
@@ -59,7 +59,7 @@ class KeywordPriority(BaseModel):
     compliance_penalty: float = Field(default=0.0, ge=0, le=1.0, description="Compliance penalty")
 
     # Metadata
-    calculated_at: datetime = Field(default_factory=datetime.utcnow)
+    calculated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     confidence: float = Field(default=1.0, ge=0, le=1, description="Confidence in calculation")
 
     @field_validator("tier", mode="before")
@@ -105,7 +105,7 @@ class UserFeedback(BaseModel):
     suggested_priority: Optional[PriorityTier] = Field(None, description="User-suggested priority")
 
     # Metadata
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     user_id: Optional[str] = Field(None, description="User identifier")
 
 
@@ -134,5 +134,5 @@ class FeedbackSummary(BaseModel):
     adjustment_reason: Optional[str] = Field(None, description="Why adjustment is needed")
 
     # Metadata
-    calculated_at: datetime = Field(default_factory=datetime.utcnow)
+    calculated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     feedback_period_days: int = Field(..., ge=1, description="Period covered by summary")
