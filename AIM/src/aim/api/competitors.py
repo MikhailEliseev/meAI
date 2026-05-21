@@ -89,7 +89,7 @@ async def find_competitors(body: FindCompetitorsRequest) -> FindCompetitorsRespo
 
         competitors = [_competitor_to_json(m) for m in matches]
 
-        logger.info("competitors_found", url=body.url, count=len(competitors))
+        logger.info("competitors_found: url=%s count=%d", body.url, len(competitors))
 
         return FindCompetitorsResponse(
             success=True,
@@ -133,7 +133,7 @@ async def save_competitors(body: SaveCompetitorsRequest) -> SaveCompetitorsRespo
         })
         count = len(body.client_urls)
 
-    logger.info("competitors_saved", lead_id=body.lead_id, status=body.status, count=count)
+    logger.info("competitors_saved: lead_id=%s status=%s count=%d", body.lead_id, body.status, count)
 
     return SaveCompetitorsResponse(
         success=True,
