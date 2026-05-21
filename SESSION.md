@@ -208,3 +208,74 @@ CI Orchestrator → EventBus → Hermes vault → LLM ingest → wiki/patterns/
 - `4595d13` feat(17): add deprecation notices
 
 ### Next: Phase 13 (AI Sales Agent) — стратегический приоритет #1
+
+---
+
+## Phase 13: AI Sales Admin Agent — COMPLETE ✅
+
+**Date:** 2026-05-21 16:05 GMT+3
+**Status:** Sub-Phases 1-5 complete, Sub-Phase 6 deferred (P2)
+
+### Completed Sub-Phases:
+
+**Sub-Phase 1+2: Foundation + Qualification Engine** (commit `88f0faf`)
+- `AIM/src/aim/magisters/sales_admin_base.py` — Channel, LeadPipelineStage, EscalationReason enums + Pydantic configs
+- `AIM/src/aim/models/sales.py` — SalesConversation, SalesMessage, SalesEscalation, SalesAgentActivity
+- `AIM/src/aim/magisters/sales_admin_magister.py` — SalesAdminMagister (extends BaseMagister)
+- `AIM/src/aim/subagents/sales/channel_monitor_base.py` — BaseChannelMonitor + ChannelMessage
+- `AIM/src/aim/subagents/sales/telegram_monitor.py` — TelegramMonitor
+- `AIM/src/aim/services/sales/qualification_service.py` — BANT/SPIN scoring via LLM
+- `AIM/src/aim/services/sales/escalation_service.py` — 152-ФЗ, complex questions, inappropriate behavior detection
+
+**Sub-Phase 3+5: Per-Client Vaults + API + Hermes Tools** (commit `a9d859a`)
+- `AIM/src/aim/subagents/sales/knowledge_manager.py` — Per-client vault (5 .md files per client)
+- `AIM/src/aim/subagents/sales/website_monitor.py` — Daily 3AM crawl for price/service changes
+- `AIM/src/aim/api/sales.py` — 8 FastAPI endpoints (pipeline, conversations, activity, qualify, escalate, CRM sync, knowledge)
+- `AIM/hermes/app/tools/qualify_lead.py` — Hermes tool: квалификация лида
+- `AIM/hermes/app/tools/escalate_to_manager.py` — Hermes tool: эскалация менеджеру
+- `AIM/hermes/app/tools/get_lead_pipeline.py` — Hermes tool: воронка лидов
+- `AIM/hermes/app/tools/update_knowledge.py` — Hermes tool: обновление базы знаний
+- `AIM/hermes/app/agent_wrapper.py` — SALES_ADMIN mode (+_sales_admin_prompt)
+- `AIM/hermes/skills/aim/SOUL.md` — SALES_ADMIN mode documentation
+
+**Sub-Phase 4: Bitrix24 CRM Integration** (commit `8ff5419`)
+- `AIM/src/aim/integrations/bitrix24/__init__.py` — Package init
+- `AIM/src/aim/integrations/bitrix24/client.py` (345 lines) — Async REST client (fast_bitrix24 + circuit breaker + retry)
+- `AIM/src/aim/integrations/bitrix24/schemas.py` — 6 Pydantic v2 models (Lead, Contact, Deal, Webhook, CrmSyncResult)
+- `AIM/src/aim/subagents/sales/crm_agent.py` (314 lines) — Event-driven CRM sync agent
+- `AIM/requirements.txt` — Added fast-bitrix24>=1.8.0
+
+### Architecture:
+```
+Telegram → TelegramMonitor → EventBus → SalesAdminMagister
+                                           ├─ QualificationService → score + tier
+                                           ├─ EscalationService → 152-ФЗ / complex / human
+                                           ├─ Hermes (SALES_ADMIN mode) → auto-reply
+                                           └─ CrmAgent → Bitrix24 (lead → contact → deal)
+```
+
+### Key Design Decisions:
+- **Graceful degradation:** Bitrix24 not configured → CrmAgent reports enabled=False
+- **PII encryption:** AES-256-GCM at rest, decrypted only during CRM sync
+- **Deduplication:** Check email + phone before creating Bitrix24 entities
+- **Deal creation:** Only for hot/warm leads (not cold)
+- **fast_bitrix24 library:** 196 GitHub stars, used by Yandex, async + batch + rate limiting
+- **Resilience:** Circuit breaker (pybreaker, fail_max=5, 60s reset) + exponential backoff (tenacity, 3 retries)
+
+### Deferred:
+- **Sub-Phase 6:** Multi-Channel (Instagram, VK, WhatsApp) — P2, added when Telegram is stable
+
+### Commits:
+- `88f0faf` feat(sales): Phase 13 Sub-Phase 1+2 — Sales Admin Agent foundation with qualification and escalation
+- `a9d859a` feat(sales): Phase 13 Sub-Phase 3+5 — Per-Client Vaults + Sales API + Hermes Tools + SALES_ADMIN mode
+- `8ff5419` feat(sales): Phase 13 Sub-Phase 4 — Bitrix24 CRM Integration
+
+---
+
+## Overall Status: 43/45 plans (95%)
+- Only Phase 13-02 (marketing campaigns) remains — deferred post-MVP
+- Phase 13 (AI Sales Agent) complete — 3 commits, 15+ files, ~2,500 lines
+- All commits on main, ready to push ✅
+
+**Date:** 2026-05-21 16:05 GMT+3
+**Status:** Phase 13 complete ✅. Next: push commits or Phase 13-02

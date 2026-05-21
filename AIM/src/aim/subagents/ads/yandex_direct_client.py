@@ -9,6 +9,8 @@ Documentation: https://yandex.ru/dev/direct/doc/
 """
 
 import asyncio
+import csv
+import io
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -177,6 +179,90 @@ class YandexDirectAPIClient:
 
             return campaigns
 
+    async def sync_campaigns_to_db(
+        self,
+        db_session_factory,
+        campaign_ids: list[int] | None = None,
+    ) -> int:
+        """Fetch campaigns from Yandex Direct API and sync to Campaign DB table.
+
+        Uses upsert logic: inserts new campaigns, updates existing ones
+        matched by external_id + platform.
+
+        Args:
+            db_session_factory: Async callable returning an async context manager
+                (e.g., async_session_maker).
+            campaign_ids: Specific campaigns to sync (None = all campaigns).
+
+        Returns:
+            Number of campaigns synced to DB.
+        """
+        from datetime import datetime, timezone
+
+        from sqlalchemy import select
+        from aim.models.campaign_models import Campaign
+
+        campaigns = await self.get_campaigns()
+        if campaign_ids:
+            campaigns = [c for c in campaigns if c.id in campaign_ids]
+
+        if not campaigns:
+            self.logger.info("sync_campaigns_no_campaigns_to_sync")
+            return 0
+
+        synced = 0
+        async with db_session_factory() as db:
+            for campaign_info in campaigns:
+                result = await db.execute(
+                    select(Campaign).where(
+                        Campaign.external_id == str(campaign_info.id),
+                        Campaign.platform == "yandex",
+                    )
+                )
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    existing.name = campaign_info.name
+                    existing.status = campaign_info.status
+                    existing.daily_budget = campaign_info.daily_budget
+                    existing.currency = campaign_info.currency
+                    if campaign_info.end_date:
+                        existing.end_date = datetime.fromisoformat(campaign_info.end_date)
+                    self.logger.debug(
+                        "sync_campaign_updated",
+                        external_id=str(campaign_info.id),
+                        name=campaign_info.name,
+                    )
+                else:
+                    db.add(
+                        Campaign(
+                            external_id=str(campaign_info.id),
+                            name=campaign_info.name,
+                            platform="yandex",
+                            status=campaign_info.status,
+                            daily_budget=campaign_info.daily_budget,
+                            currency=campaign_info.currency,
+                            start_date=datetime.fromisoformat(campaign_info.start_date),
+                            end_date=(
+                                datetime.fromisoformat(campaign_info.end_date)
+                                if campaign_info.end_date
+                                else None
+                            ),
+                            created_at=datetime.now(timezone.utc),
+                        )
+                    )
+                    self.logger.debug(
+                        "sync_campaign_created",
+                        external_id=str(campaign_info.id),
+                        name=campaign_info.name,
+                    )
+                synced += 1
+
+            await db.commit()
+
+        self.logger.info("sync_campaigns_complete", synced_count=synced)
+        return synced
+
     async def get_campaign_stats(
         self,
         campaign_ids: list[int],
@@ -205,30 +291,34 @@ class YandexDirectAPIClient:
             headers = {
                 "Authorization": f"Bearer {self.token}",
                 "Accept-Language": "ru",
+                "processingMode": "auto",
+                "skipReportHeader": "true",
+                "skipColumnHeader": "true",
+                "skipReportSummary": "true",
             }
 
             payload = {
-                "method": "get",
                 "params": {
                     "SelectionCriteria": {
-                        "CampaignIds": campaign_ids,
                         "DateFrom": date_from,
                         "DateTo": date_to,
+                        "Filter": [{
+                            "Field": "CampaignId",
+                            "Operator": "IN",
+                            "Values": [str(cid) for cid in campaign_ids],
+                        }],
                     },
                     "FieldNames": [
-                        "CampaignId",
-                        "Date",
-                        "Impressions",
-                        "Clicks",
-                        "Cost",
-                        "Conversions",
+                        "Date", "CampaignId", "CampaignName",
+                        "Impressions", "Clicks", "Cost",
+                        "Conversions", "Ctr", "AvgCpc", "AvgCpa",
                     ],
-                    "ReportName": "Campaign Stats Report",
+                    "ReportName": f"Campaign_Stats_{date_from}_{date_to}",
                     "ReportType": "CAMPAIGN_PERFORMANCE_REPORT",
                     "DateRangeType": "CUSTOM_DATE",
                     "Format": "TSV",
                     "IncludeVAT": "YES",
-                },
+                }
             }
 
             response = await client.post(
@@ -236,25 +326,53 @@ class YandexDirectAPIClient:
                 json=payload,
                 headers=headers,
             )
-            await response.raise_for_status()
 
-            # Parse TSV response (simplified)
-            stats = []
-            for campaign_id in campaign_ids:
-                # Mock stats for now (real implementation parses TSV)
-                stats.append(
-                    CampaignStats(
-                        campaign_id=campaign_id,
-                        impressions=10000,
-                        clicks=500,
-                        cost=5000.0,
-                        conversions=50,
-                        ctr=5.0,
-                        cpc=10.0,
-                        cpa=100.0,
-                        date=date_to,
+            # Handle async report generation (HTTP 201/202 → poll with retryIn header)
+            poll_count = 0
+            while response.status_code in (201, 202):
+                poll_count += 1
+                if poll_count > 10:
+                    raise TimeoutError(
+                        f"Yandex Reports API: report not ready after {poll_count} polling attempts"
                     )
+                retry_in = int(response.headers.get("retryIn", 5))
+                await asyncio.sleep(retry_in)
+                response = await client.get(
+                    f"{self.base_url}/reports",
+                    headers=headers,
                 )
+
+            response.raise_for_status()
+
+            # Parse TSV response using csv module
+            tsv_data = response.text
+            if not tsv_data.strip():
+                self.logger.info("campaign_stats_empty")
+                return []
+
+            reader = csv.DictReader(
+                io.StringIO(tsv_data),
+                delimiter="\t",
+            )
+
+            stats = []
+            for row in reader:
+                # Yandex returns costs in micros (1/1,000,000 of currency unit)
+                cost_micros = float(row.get("Cost", "0"))
+                cpc_micros = float(row.get("AvgCpc", "0"))
+                cpa_micros = float(row.get("AvgCpa", "0"))
+
+                stats.append(CampaignStats(
+                    campaign_id=int(row["CampaignId"]),
+                    impressions=int(row.get("Impressions", "0")),
+                    clicks=int(row.get("Clicks", "0")),
+                    cost=round(cost_micros / 1_000_000, 2),
+                    conversions=int(row.get("Conversions", "0")),
+                    ctr=round(float(row.get("Ctr", "0")), 2),
+                    cpc=round(cpc_micros / 1_000_000, 2) if cpc_micros else 0.0,
+                    cpa=round(cpa_micros / 1_000_000, 2) if cpa_micros else 0.0,
+                    date=row.get("Date", date_to),
+                ))
 
             self.logger.info(
                 "campaign_stats_fetched",
