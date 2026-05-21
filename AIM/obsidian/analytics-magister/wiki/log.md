@@ -29,3 +29,9 @@ Analytics Magister инициализирован с 4 субагентами:
 ---
 
 *Все операции логируются автоматически*
+
+## [2026-05-21 19:50] index | Wiki index updated
+
+Updated wiki/index.md with current agent structure, subagents, and workflows.
+
+---

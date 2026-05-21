@@ -54,3 +54,9 @@
 
 ## [2026-05-07 07:43] aggregate_complete | Generated 4 insights, 3 recommendations, 1 opportunities
 
+
+## [2026-05-21 19:50] index | Wiki index updated
+
+Updated wiki/index.md with current agent structure, subagents, and workflows.
+
+---
