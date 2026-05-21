@@ -236,7 +236,7 @@ async def get_realtime_stats(
 async def export_report(
     start_date: datetime = Query(..., description="Start date for export"),
     end_date: datetime = Query(..., description="End date for export"),
-    format: str = Query("csv", regex="^(csv|json|pdf)$", description="Export format"),
+    format: str = Query("csv", pattern="^(csv|json|pdf)$", description="Export format"),
     include_charts: bool = Query(False, description="Include charts in PDF export"),
     service: AnalyticsService = Depends(get_analytics_service),
 ) -> AnalyticsExportResponse:
