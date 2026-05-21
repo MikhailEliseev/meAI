@@ -309,6 +309,7 @@ from aim.api.seo import router as seo_router
 from aim.api.content import router as content_router
 from aim.api.ads import router as ads_router
 from aim.api.projects import router as projects_router
+from aim.api.telegram import router as telegram_router
 
 # Include API routers
 app.include_router(leads_router)
@@ -321,6 +322,7 @@ app.include_router(seo_router)
 app.include_router(content_router)
 app.include_router(ads_router)
 app.include_router(projects_router)
+app.include_router(telegram_router)
 
 # Performance stats endpoint
 @app.get("/api/performance/stats")
