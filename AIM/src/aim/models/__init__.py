@@ -22,6 +22,12 @@ from aim.models.email_template import EmailTemplate
 from aim.models.payment import Payment
 from aim.models.document import Document
 from aim.models.fz152_audit import FZ152AuditLog
+from aim.models.sales import (
+    SalesConversation,
+    SalesMessage,
+    SalesEscalation,
+    SalesAgentActivity,
+)
 
 __all__ = [
     "Base",
@@ -40,4 +46,8 @@ __all__ = [
     "Payment",
     "Document",
     "FZ152AuditLog",
+    "SalesConversation",
+    "SalesMessage",
+    "SalesEscalation",
+    "SalesAgentActivity",
 ]

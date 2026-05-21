@@ -92,7 +92,35 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("fz152_partitions_failed", error=str(e))
 
+    # Start Sales Admin Agent (Phase 13) — if enabled
+    sales_magister = None
+    if os.getenv("SALES_ADMIN_ENABLED", "false").lower() == "true":
+        try:
+            from meai.events.event_bus import EventBus
+            from aim.magisters.sales_admin_magister import SalesAdminMagister
+
+            db_url = os.getenv("DATABASE_URL", "")
+            event_bus = EventBus(db_url)
+            await event_bus.initialize()
+
+            # Hermes bridge is deferred to Sub-Phase 5.
+            # For now the magister handles escalations (keyword triggers +
+            # template responses) without LLM-powered auto-replies.
+            sales_magister = SalesAdminMagister(event_bus=event_bus)
+            await sales_magister.start(event_bus)
+            logger.info("sales_admin_magister_started")
+        except Exception as e:
+            logger.error("sales_admin_magister_failed", error=str(e))
+
     yield
+
+    # Shutdown Sales Admin Agent
+    if sales_magister:
+        try:
+            await sales_magister.stop()
+            logger.info("sales_admin_magister_stopped")
+        except Exception as e:
+            logger.error("sales_admin_magister_shutdown_failed", error=str(e))
 
 
 # Create FastAPI application
