@@ -66,3 +66,15 @@ server.log
 
 # Deep research archives (raw data)
 obsidian/deep-research/raw/
+
+# Playwright MCP logs
+.playwright-mcp/
+
+# Generated reports
+reports/
+
+# Log files
+logs/
+
+# Linear tasks (temporary)
+plans/cleanup-linear-tasks.md
