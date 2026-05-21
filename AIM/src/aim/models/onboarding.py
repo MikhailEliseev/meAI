@@ -12,7 +12,7 @@ from typing import Optional
 from sqlalchemy import JSON, Float, Integer, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 
-from aim.database import Base
+from aim.storage.models import Base
 
 
 class Onboarding(Base):

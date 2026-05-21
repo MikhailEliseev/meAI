@@ -138,6 +138,42 @@ class LeadCaptureRequest(BaseModel):
         return v.strip() if v else None
 
 
+class ChatLeadRequest(BaseModel):
+    """Lightweight lead capture from Hermes chat — no form validation.
+
+    Hermes collects contact via two-step conversation flow and calls
+    collect_contact tool, which POSTs here. No reCAPTCHA, no rate limiting,
+    no ФЗ-152 consent checkbox (obtained verbally in chat).
+    """
+
+    contact_type: str = Field(
+        ...,
+        pattern=r"^(telegram|email|phone)$",
+        description="Contact type: telegram, email, or phone",
+    )
+    contact_value: str = Field(
+        ...,
+        min_length=1,
+        max_length=200,
+        description="Contact value: @username, email@domain.com, +7...",
+    )
+    website: str = Field(
+        default="",
+        max_length=500,
+        description="Client website URL (optional)",
+    )
+    name: str = Field(
+        default="",
+        max_length=100,
+        description="Client name (optional, supports Cyrillic)",
+    )
+    source: str = Field(
+        default="web_chat",
+        max_length=50,
+        description="Lead source",
+    )
+
+
 class LeadCaptureResponse(BaseModel):
     """Lead capture response"""
 

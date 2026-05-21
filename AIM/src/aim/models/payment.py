@@ -11,7 +11,7 @@ from typing import Optional
 from sqlalchemy import JSON, DateTime, Float, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from aim.database import Base
+from aim.storage.models import Base
 
 
 class Payment(Base):

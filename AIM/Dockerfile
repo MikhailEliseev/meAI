@@ -35,6 +35,8 @@ COPY --from=builder /root/.local /root/.local
 COPY AIM/src/aim ./AIM/src/aim
 COPY src/meai ./src/meai
 COPY AIM/obsidian ./AIM/obsidian
+COPY AIM/alembic ./AIM/alembic
+COPY AIM/alembic.ini ./AIM/alembic.ini
 COPY scripts ./scripts
 COPY AIM/.env.production .env
 

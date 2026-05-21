@@ -18,11 +18,11 @@ from tools.registry import registry
 logger = logging.getLogger(__name__)
 
 
-def _unwrap(value, key):
-    """If hermes-agent passes the whole arguments dict as a param value, unwrap it."""
-    if isinstance(value, dict) and key in value:
-        return value[key]
-    return value
+def _normalize_args(first_param, defaults):
+    """If hermes-agent passes the whole arguments object as first_param, extract all values."""
+    if isinstance(first_param, dict):
+        return {k: first_param.get(k, defaults[k]) for k in defaults}
+    return None
 
 
 AIM_API_BASE = "http://app:8000"
@@ -32,8 +32,8 @@ VALID_CONTACT_TYPES = {"telegram", "email", "phone"}
 
 
 async def handle_collect_contact(
-    contact_type,
-    contact_value,
+    contact_type=None,
+    contact_value=None,
     website="",
     name="",
     source="web_chat",
@@ -54,8 +54,16 @@ async def handle_collect_contact(
     Returns:
         JSON string with lead_id and status.
     """
-    contact_type = _unwrap(contact_type, "contact_type")
-    contact_value = _unwrap(contact_value, "contact_value")
+    # hermes-agent v0.14.0 passes whole args dict as first param
+    unpacked = _normalize_args(contact_type, {
+        "contact_type": "", "contact_value": "", "website": "", "name": "", "source": "web_chat"
+    })
+    if unpacked:
+        contact_type = unpacked["contact_type"]
+        contact_value = unpacked["contact_value"]
+        website = unpacked["website"]
+        name = unpacked["name"]
+        source = unpacked["source"]
     if contact_type not in VALID_CONTACT_TYPES:
         return json.dumps({
             "error": "Invalid contact_type",

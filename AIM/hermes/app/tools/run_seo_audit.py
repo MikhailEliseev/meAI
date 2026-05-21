@@ -19,18 +19,75 @@ from tools.registry import registry
 logger = logging.getLogger(__name__)
 
 
-def _unwrap(value, key):
-    """If hermes-agent passes the whole arguments dict as a param value, unwrap it."""
-    if isinstance(value, dict) and key in value:
-        return value[key]
-    return value
+def _normalize_args(first_param, defaults):
+    """If hermes-agent passes the whole arguments object as first_param, extract all values."""
+    if isinstance(first_param, dict):
+        return {k: first_param.get(k, defaults[k]) for k in defaults}
+    return None
 
 
 AIM_API_BASE = "http://app:8000"
 REQUEST_TIMEOUT = 30.0  # seconds
 
 
-async def handle_run_seo_audit(url, **kwargs) -> str:
+def _compact_audit_result(data: dict) -> dict:
+    """Extract only LLM-essential metrics from the full CI result (18K → ~2K)."""
+    findings = data.get("findings", {})
+
+    # Helper: safely slice any iterable (list/dict/set/str)
+    def _take(obj, n):
+        if isinstance(obj, list):
+            return obj[:n]
+        if isinstance(obj, dict):
+            return {k: obj[k] for k in list(obj.keys())[:n]}
+        return obj
+
+    # Phase 7 (ci-strategist) — 3 WOW numbers + insights
+    phase7 = findings.get("phase_7", {})
+    strat_result = phase7.get("result", {}) if isinstance(phase7, dict) else {}
+    estimates = strat_result.get("estimates", {}) or {}
+    insights = _take(strat_result.get("insights", []), 5)
+    opportunities = _take(strat_result.get("opportunities", []), 3)
+    landscape = strat_result.get("landscape", {}) or {}
+
+    # Phase 1 (ci-scout) — competitors found
+    phase1 = findings.get("phase_1", {})
+    scout_result = phase1.get("result", {}) if isinstance(phase1, dict) else {}
+    competitors = _take(scout_result.get("top_for_analysis", []), 5)
+
+    # Phase 9 (ci-prioritizer) — action items
+    phase9 = findings.get("phase_9", {})
+    prio_result = phase9.get("result", {}) if isinstance(phase9, dict) else {}
+    actions = _take(prio_result.get("action_items", []), 5)
+
+    return {
+        "wow": {
+            "patients_per_month": estimates.get("patients_per_month"),
+            "time_to_result_weeks": estimates.get("time_to_result"),
+            "cost_per_patient_rub": estimates.get("cost_per_patient"),
+        },
+        "market": {
+            "competitive_intensity": landscape.get("competitive_intensity", "unknown"),
+            "digital_maturity": landscape.get("digital_maturity", "unknown"),
+            "niche_size": landscape.get("market_size", "unknown"),
+        },
+        "competitors": [
+            {"name": c.get("name", c.get("url", "")), "url": c.get("url", "")}
+            for c in (competitors if isinstance(competitors, list) else [])
+        ],
+        "insights": insights if isinstance(insights, list) else [],
+        "opportunities": opportunities if isinstance(opportunities, list) else [],
+        "actions": actions if isinstance(actions, list) else [],
+        "meta": {
+            "tier": data.get("tier"),
+            "phases": len(data.get("phases_executed", [])),
+            "time_seconds": data.get("execution_time_seconds"),
+            "quality_score": data.get("quality_score"),
+        },
+    }
+
+
+async def handle_run_seo_audit(url=None, **kwargs) -> str:
     """Run a full SEO audit on a client website.
 
     Performs technical SEO analysis, keyword position tracking,
@@ -46,7 +103,9 @@ async def handle_run_seo_audit(url, **kwargs) -> str:
         - time_to_result: estimated weeks to first results
         - cost_per_patient: estimated acquisition cost
     """
-    url = _unwrap(url, "url")
+    unpacked = _normalize_args(url, {"url": ""})
+    if unpacked:
+        url = unpacked["url"]
     logger.info("Running SEO audit for URL: %s", url)
     try:
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
@@ -56,8 +115,10 @@ async def handle_run_seo_audit(url, **kwargs) -> str:
             )
             response.raise_for_status()
             data = response.json()
-            logger.info("SEO audit completed for URL: %s", url)
-            return json.dumps(data, ensure_ascii=False, indent=2)
+            compact = _compact_audit_result(data)
+            logger.info("SEO audit completed for URL: %s (compacted %d→%d chars)",
+                         url, len(json.dumps(data)), len(json.dumps(compact)))
+            return json.dumps(compact, ensure_ascii=False, indent=2)
     except httpx.HTTPStatusError as e:
         logger.error("AIM API returned error for SEO audit: %s", e)
         return json.dumps({

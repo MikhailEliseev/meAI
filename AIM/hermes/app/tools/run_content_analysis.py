@@ -18,18 +18,18 @@ from tools.registry import registry
 logger = logging.getLogger(__name__)
 
 
-def _unwrap(value, key):
-    """If hermes-agent passes the whole arguments dict as a param value, unwrap it."""
-    if isinstance(value, dict) and key in value:
-        return value[key]
-    return value
+def _normalize_args(first_param, defaults):
+    """If hermes-agent passes the whole arguments object as first_param, extract all values."""
+    if isinstance(first_param, dict):
+        return {k: first_param.get(k, defaults[k]) for k in defaults}
+    return None
 
 
 AIM_API_BASE = "http://app:8000"
 REQUEST_TIMEOUT = 30.0  # seconds
 
 
-async def handle_run_content_analysis(url, content_type="all", **kwargs) -> str:
+async def handle_run_content_analysis(url=None, content_type="all", **kwargs) -> str:
     """Analyze content quality on a medical clinic website.
 
     Evaluates medical accuracy, SEO optimization, readability scores,
@@ -42,7 +42,10 @@ async def handle_run_content_analysis(url, content_type="all", **kwargs) -> str:
     Returns:
         JSON string with content analysis results per page type.
     """
-    url = _unwrap(url, "url")
+    unpacked = _normalize_args(url, {"url": "", "content_type": "all"})
+    if unpacked:
+        url = unpacked["url"]
+        content_type = unpacked["content_type"]
     logger.info("Running content analysis for URL: %s (type: %s)", url, content_type)
     try:
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:

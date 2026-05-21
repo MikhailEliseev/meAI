@@ -18,18 +18,18 @@ from tools.registry import registry
 logger = logging.getLogger(__name__)
 
 
-def _unwrap(value, key):
-    """If hermes-agent passes the whole arguments dict as a param value, unwrap it."""
-    if isinstance(value, dict) and key in value:
-        return value[key]
-    return value
+def _normalize_args(first_param, defaults):
+    """If hermes-agent passes the whole arguments object as first_param, extract all values."""
+    if isinstance(first_param, dict):
+        return {k: first_param.get(k, defaults[k]) for k in defaults}
+    return None
 
 
 AIM_API_BASE = "http://app:8000"
 REQUEST_TIMEOUT = 30.0  # seconds
 
 
-async def handle_run_ads_report(project_id, period="month", **kwargs) -> str:
+async def handle_run_ads_report(project_id=None, period="month", **kwargs) -> str:
     """Generate advertising performance report for a client project.
 
     Shows ROAS, CPC, CTR, conversion rates, and budget utilization
@@ -42,7 +42,10 @@ async def handle_run_ads_report(project_id, period="month", **kwargs) -> str:
     Returns:
         JSON string with multi-platform ads performance metrics.
     """
-    project_id = _unwrap(project_id, "project_id")
+    unpacked = _normalize_args(project_id, {"project_id": "", "period": "month"})
+    if unpacked:
+        project_id = unpacked["project_id"]
+        period = unpacked["period"]
     logger.info("Running ads report for project: %s (period: %s)", project_id, period)
     try:
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:

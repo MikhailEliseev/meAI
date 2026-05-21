@@ -5,11 +5,17 @@ Per Pitfall 2: SQLite session DB needs per-session serialization to avoid
 
 Per Pitfall 7: AIAgent.run_conversation() is SYNCHRONOUS (returns Dict[str, Any]).
 Must wrap in loop.run_in_executor() for FastAPI async endpoints.
+
+Per Pitfall 8: Each FastAPI request creates a new AIAgent instance, but
+hermes-agent doesn't load previous session history into new instances.
+Solution: cache AIAgent instances per session_id so conversation history
+is preserved across requests.
 """
 
 import asyncio
 import logging
 import os
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -17,6 +23,11 @@ logger = logging.getLogger(__name__)
 
 # Per-session locks to serialize concurrent requests (Pitfall 2)
 _session_locks: dict[str, asyncio.Lock] = {}
+
+# Agent cache (Pitfall 8) — preserve conversation history across web requests
+# Each entry: (agent_instance, last_used_ts, conversation_history)
+_agent_cache: dict[str, tuple[object, float, list[dict]]] = {}
+_AGENT_CACHE_TTL = 3600  # 1 hour
 
 OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "http://omniroute:20128/v1")
 OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "sk-a10f604cd99e7a50-dd1d5a-56e30050")
@@ -109,15 +120,26 @@ def _presale_prompt() -> str:
 5. **2-3 минуты** — не затягивай больше 5-6 сообщений.
 6. **Цены из SOUL.md / services.md** — не выдумывай другие цифры.
 
+### Как собирать контакт (КРИТИЧЕСКИ ВАЖНО):
+После показа WOW-данных ты ДОЛЖЕН получить контакт клиента.
+Делай это в ДВА ШАГА:
+1. **Спроси одним коротким вопросом:** «Как вам удобнее оставить контакт — телефон, Telegram или email?»
+   - Коротко! Без лишних слов. Только вопрос.
+2. **Когда клиент ответит** — СРАЗУ вызывай collect_contact с указанными contact_type и contact_value.
+   - Извлеки тип и значение из ответа клиента
+   - Вызови collect_contact(contact_type="...", contact_value="...")
+   - НЕ пиши больше текст — просто вызови инструмент
+
 ### Контекст веб-чата:
 - Клиент на сайте iamaim.ru, видит полностраничный чат
 - Первое сообщение уже отправлено фронтендом: клиент видит приветствие
-- Если клиент дал URL — сразу запускай run_seo_audit
-- После показа WOW-данных — собирай контакт через collect_contact
+- Если клиент дал URL — сразу запускай run_seo_audit, НЕ задавай НИКАКИХ уточняющих вопросов (ни про специализацию, ни про город, ни про бюджет — ничего). Просто молча запусти аудит и покажи результат.
+- После показа WOW-данных — спроси про способ связи (см. правило выше)
+- Когда клиент дал контакт — вызывай collect_contact, не продолжай диалог
 
 ### Доступные инструменты (ТОЛЬКО эти 2):
-- run_seo_audit — SEO-аудит сайта (только после получения URL)
-- collect_contact — сбор контакта (только после показа WOW-данных)
+- run_seo_audit — SEO-аудит сайта (сразу после получения URL)
+- collect_contact — сбор контакта (только когда клиент дал contact_type и contact_value)
 """
 
 
@@ -192,20 +214,55 @@ def run_agent_sync(
 
     Returns dict with reply, session_id, tool_calls.
     Uses threading.Lock per session_id for SQLite concurrency safety (Pitfall 2).
+    Caches AIAgent instances per session_id (Pitfall 8) so conversation history
+    is preserved across web requests.
     """
     import threading
 
+    sid = session_id or "new"
+
     # Use thread lock (not asyncio.Lock) — this runs in OS threads
-    lock = _get_thread_lock(session_id or "new")
+    lock = _get_thread_lock(sid)
 
     with lock:
-        agent = _create_agent(session_id, mode)
-        response = agent.run_conversation(message)
+        # Pitfall 8: Reuse cached agent + conversation history
+        agent, _, history = _agent_cache.get(sid, (None, 0, []))
+        if agent is None:
+            agent = _create_agent(session_id, mode)
+            history = []
+            logger.info(f"Agent created (cached): session={agent.session_id}")
+        else:
+            logger.info(f"Agent reused from cache: session={agent.session_id} history={len(history)} msgs")
+
+        response = agent.run_conversation(message, conversation_history=history if history else None)
+
+        # Append this turn to history
+        history.append({"role": "user", "content": message})
+        reply_text = response.get("final_response", response.get("response", response.get("content", str(response))))
+        history.append({"role": "assistant", "content": reply_text})
+
+        # Cache under REAL session_id so frontend can resume across requests
+        cache_key = agent.session_id
+        _agent_cache[cache_key] = (agent, time.time(), history)
+
+        # Expire old agents (lazy cleanup)
+        _expire_stale_agents()
+
         return {
-            "reply": response.get("final_response", response.get("response", response.get("content", str(response)))),
+            "reply": reply_text,
             "session_id": agent.session_id,
             "tool_calls": response.get("tool_calls", []),
         }
+
+
+def _expire_stale_agents():
+    """Remove agents idle for longer than _AGENT_CACHE_TTL."""
+    cutoff = time.time() - _AGENT_CACHE_TTL
+    stale = [sid for sid, (_, ts, _) in _agent_cache.items() if ts < cutoff]
+    for sid in stale:
+        del _agent_cache[sid]
+    if stale:
+        logger.info(f"Expired {len(stale)} stale agent(s) from cache")
 
 
 async def run_agent(
