@@ -279,3 +279,28 @@ Telegram → TelegramMonitor → EventBus → SalesAdminMagister
 
 **Date:** 2026-05-21 16:05 GMT+3
 **Status:** Phase 13 complete ✅. Next: push commits or Phase 13-02
+
+---
+
+## Project Cleanup & Organization — 2026-05-21 19:50 GMT+3
+
+### Server Cleanup ✅
+- Server root: 67 → 5 essential .md files (62 moved to archive/)
+- Archive structure: archive/{sessions,summaries,guides,misc}/
+- Kept: CLAUDE.md, SESSION.md, CHECKPOINTS.md, ROADMAP.md, README.md
+
+### Obsidian Vaults Indexed ✅
+- Architect wiki enriched: +4 agent pages, +1 technology page
+- Agent vault indexes updated: operator, seo-magister, content-magister, ads-magister, analytics-magister
+- All vaults synced local → server (rsync)
+
+### Linear Tasks Created ✅
+- 8 tasks in "AIM Development" team
+- 3 Done: Server cleanup, .gitignore, Vault sync
+- 1 In Progress: Obsidian indexing
+- 4 Todo: Teacher Agent, LINEAR_API_KEY, conftest.py, Pydantic V2
+
+### Status
+- 43/45 plans (95%)
+- Phase 13 complete, deployed to server
+- Vaults synced, server clean

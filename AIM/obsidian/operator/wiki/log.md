@@ -9,3 +9,9 @@
 - Created vault structure following LLM Wiki pattern
 - Initialized 8 wiki categories
 - Status: ready for operations
+
+## [2026-05-21 19:50] index | Wiki index updated
+
+Updated wiki/index.md with current agent structure, subagents, and workflows.
+
+---

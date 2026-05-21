@@ -1,28 +1,33 @@
 # Content Magister Wiki Index
 
-**Last Updated:** 2026-05-03 23:09
-
-**Total Pages:** 0
+**Last Updated:** 2026-05-21
+**Agent:** Content Magister
+**Status:** ✅ Active (Phase 8)
 
 ## Categories
 
-### Concepts (0)
-*No pages yet*
+### Concepts (2)
+- Medical Content Marketing
+- ФЗ-38 Compliance (закон о рекламе медицинских услуг)
 
-### Technologies (0)
-*No pages yet*
+### Technologies (1)
+- Claude API (контент-генерация)
 
-### Strategies (0)
-*No pages yet*
+### Strategies (1)
+- Content Strategy for Medical Clinics
 
-### Agents (0)
-*No pages yet*
+### Agents (5)
+- BlogContentAgent — Написание статей
+- MedicalFactChecker — Проверка медицинских утверждений
+- FZ38ComplianceChecker — Проверка ФЗ-38
+- ContentPlanner — Контент-календарь
+- ContentGapAnalyzer — Анализ пробелов в контенте
 
-### Workflows (0)
-*No pages yet*
+### Workflows (1)
+- Content Pipeline: Brief → Draft → FactCheck → FZ38 → Publish
 
-### Projects (0)
-*No pages yet*
+### Projects (1)
+- Phase 8: Content Magister Implementation
 
 ### Sources (0)
 *No pages yet*
@@ -33,7 +38,7 @@
 ---
 
 **Statistics:**
-- Total pages: 0
-- Last ingest: never
+- Total pages: 2
+- Last ingest: 2026-05-21
 - Last query: never
 - Last lint: never

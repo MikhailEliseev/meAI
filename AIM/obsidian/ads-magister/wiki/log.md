@@ -50,3 +50,9 @@
 
 ## [2026-05-14 19:19] aggregate_results | Aggregating results from 0 subagent(s)
 
+
+## [2026-05-21 19:50] index | Wiki index updated
+
+Updated wiki/index.md with current agent structure, subagents, and workflows.
+
+---

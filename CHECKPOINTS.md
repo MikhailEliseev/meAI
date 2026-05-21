@@ -1944,3 +1944,42 @@ Telegram → TelegramMonitor → EventBus → SalesAdminMagister
 
 **Время завершения:** 2026-05-21T16:05 GMT+3
 
+---
+
+## Checkpoint #23: Project Cleanup & Organization (2026-05-21 19:50)
+
+**Что сделано:**
+- ✅ Server root очищен: 67 → 5 essential .md файлов
+- ✅ 62 файла перенесены в archive/{sessions,summaries,guides,misc}/
+- ✅ Architect wiki пополнен: +4 agent pages (seo-magister, content-magister, operator, ads-magister), +1 technology page (stack)
+- ✅ Agent vault indexes обновлены: operator, seo-magister, content-magister, ads-magister, analytics-magister
+- ✅ Все vaults синхронизированы local → server (rsync)
+- ✅ 8 Linear задач создано в "AIM Development" team
+- ✅ .playwright-mcp/, reports/, logs/ добавлены в .gitignore
+
+**Ключевые файлы:**
+- `server:~/meAI/archive/` — 62 архивных файла
+- `obsidian/architect/wiki/agents/{seo-magister,content-magister,operator}.md` — новые страницы
+- `obsidian/architect/wiki/technologies/stack.md` — полный стек
+- `AIM/obsidian/{operator,seo-magister,content-magister,ads-magister,analytics-magister}/wiki/index.md` — обновлены
+- `plans/cleanup-linear-tasks.md` — план cleanup задач
+
+**Linear статус:**
+- 3 Done: Server cleanup, .gitignore, Vault sync
+- 1 In Progress: Obsidian indexing
+- 4 Todo: Teacher Agent, LINEAR_API_KEY, conftest.py, Pydantic V2 migration
+
+**Контекст для продолжения:**
+- Сервер чистый, vaults синхронизированы
+- Architect wiki — основная база знаний проекта
+- Agent vaults имеют базовую структуру, нужно наполнять контентом по мере работы агентов
+- 4 задачи в Linear Todo — можно брать любую
+
+**Следующий шаг:**
+1. Pydantic V2 migration для AdsSettings (быстрая победа)
+2. Починить conftest.py зависимости
+3. Настроить Teacher Agent на регулярный цикл
+4. Установить LINEAR_API_KEY на сервер
+
+**Время завершения:** 2026-05-21T19:50 GMT+3
+
