@@ -5,7 +5,7 @@ Manages multi-step email sequences for leads based on their tier.
 Part of: Phase 11 Sprint 2 - Task 2.4
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
@@ -119,7 +119,7 @@ class WorkflowEngine:
             tier=tier,
             status="active",
             current_step=0,
-            started_at=datetime.utcnow() if start_immediately else None,
+            started_at=datetime.now(timezone.utc) if start_immediately else None,
         )
         self.db.add(workflow)
         await self.db.flush()
@@ -141,7 +141,7 @@ class WorkflowEngine:
             lead: Lead receiving emails
         """
         workflow_def = self.WORKFLOW_DEFINITIONS[workflow.tier]
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         for step_idx, step_def in enumerate(workflow_def):
             # Calculate send time
@@ -253,7 +253,7 @@ class WorkflowEngine:
         Returns:
             List of emails ready to send
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         # Find due emails
         result = await self.db.execute(
@@ -346,7 +346,7 @@ class WorkflowEngine:
             raise ValueError(f"Workflow not found: {workflow_id}")
 
         workflow.status = "completed"
-        workflow.completed_at = datetime.utcnow()
+        workflow.completed_at = datetime.now(timezone.utc)
         await self.db.commit()
 
     async def cancel_workflow(self, workflow_id: UUID) -> None:
@@ -367,7 +367,7 @@ class WorkflowEngine:
 
         # Cancel workflow
         workflow.status = "cancelled"
-        workflow.completed_at = datetime.utcnow()
+        workflow.completed_at = datetime.now(timezone.utc)
 
         # Cancel pending emails
         result = await self.db.execute(

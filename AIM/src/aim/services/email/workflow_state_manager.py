@@ -5,7 +5,7 @@ Tracks workflow progress and updates state based on email events.
 Part of: Phase 11 Sprint 2 - Task 2.4
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -66,7 +66,7 @@ class WorkflowStateManager:
 
         # Update email status
         email.status = "sent"
-        email.sent_at = datetime.utcnow()
+        email.sent_at = datetime.now(timezone.utc)
 
         # Increment workflow step
         workflow.current_step += 1
@@ -85,7 +85,7 @@ class WorkflowStateManager:
         )
         if all_done:
             workflow.status = "completed"
-            workflow.completed_at = datetime.utcnow()
+            workflow.completed_at = datetime.now(timezone.utc)
 
         await self.db.commit()
 
@@ -118,7 +118,7 @@ class WorkflowStateManager:
             email_id=email_id,
             event_type="failed",
             event_data={"error": error_message},
-            occurred_at=datetime.utcnow(),
+            occurred_at=datetime.now(timezone.utc),
         )
         self.db.add(event)
 
@@ -171,7 +171,7 @@ class WorkflowStateManager:
             email_id=email_id,
             event_type=event_type,
             event_data=event_data or {},
-            occurred_at=datetime.utcnow(),
+            occurred_at=datetime.now(timezone.utc),
         )
         self.db.add(event)
         await self.db.commit()
@@ -354,7 +354,7 @@ class WorkflowStateManager:
 
         # Reset to pending for retry
         email.status = "pending"
-        email.scheduled_at = datetime.utcnow()  # Send immediately
+        email.scheduled_at = datetime.now(timezone.utc)  # Send immediately
 
         await self.db.commit()
 
