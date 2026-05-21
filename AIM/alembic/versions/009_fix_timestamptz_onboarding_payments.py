@@ -1,4 +1,4 @@
-"""fix onboarding + payments timestamp columns to timestamptz
+"""fix onboardings + payments timestamp columns to timestamptz
 
 Revision ID: 009
 Revises: 008
@@ -18,9 +18,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # onboarding: TIMESTAMP WITHOUT TIME ZONE → TIMESTAMP WITH TIME ZONE
+    # onboardings: TIMESTAMP WITHOUT TIME ZONE → TIMESTAMP WITH TIME ZONE
     op.execute("""
-        ALTER TABLE onboarding
+        ALTER TABLE onboardings
         ALTER COLUMN started_at TYPE timestamptz,
         ALTER COLUMN completed_at TYPE timestamptz,
         ALTER COLUMN failed_at TYPE timestamptz
@@ -38,7 +38,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.execute("""
-        ALTER TABLE onboarding
+        ALTER TABLE onboardings
         ALTER COLUMN started_at TYPE timestamp,
         ALTER COLUMN completed_at TYPE timestamp,
         ALTER COLUMN failed_at TYPE timestamp
