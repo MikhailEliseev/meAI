@@ -31,7 +31,7 @@ class SERPFeatureData(BaseModel):
 
     keyword: str = Field(..., description="Keyword")
     features: list[str] = Field(..., description="Detected SERP features")
-    detected_at: datetime = Field(default_factory=datetime.utcnow)
+    detected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # CTR data (if available from GSC)
     organic_ctr: Optional[float] = Field(None, ge=0, le=1, description="Organic CTR")
@@ -49,7 +49,7 @@ class SERPFeatureImpact(BaseModel):
     ctr_reduction: float = Field(..., ge=0, le=1, description="CTR reduction (0-1)")
     sample_size: int = Field(..., ge=0, description="Number of keywords in sample")
     confidence: float = Field(..., ge=0, le=1, description="Statistical confidence")
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class SERPTracker:

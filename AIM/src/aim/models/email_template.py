@@ -6,7 +6,7 @@ Templates support Jinja2 variables and AI content generation.
 Part of: Phase 11 Sprint 2 - Task 2.4
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, Integer, String, Text, JSON
 
@@ -69,8 +69,8 @@ class EmailTemplate(Base):
     text_template = Column(Text, nullable=False)
     ai_prompt = Column(Text, nullable=True)  # Optional AI content generation prompt
     variables = Column(JSON, nullable=True)  # JSON schema of required variables
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def __repr__(self) -> str:
         return f"<EmailTemplate(id={self.id}, tier={self.tier}, step={self.step}, name={self.name})>"

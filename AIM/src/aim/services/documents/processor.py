@@ -8,7 +8,7 @@ Part of: Phase 11 Sprint 3 - Task 3.3
 
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -111,7 +111,7 @@ class DocumentProcessor:
 
             # Step 4: Determine final status
             document.status = "completed"
-            document.processed_at = datetime.utcnow()
+            document.processed_at = datetime.now(timezone.utc)
 
             if validation_result.is_valid:
                 document.validation_status = "valid"

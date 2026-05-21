@@ -5,7 +5,7 @@ Pydantic models for analytics metrics and reports.
 Part of: Phase 11 Sprint 2 - Task 2.5
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -52,7 +52,7 @@ class LeadMetrics(BaseModel):
     start_date: datetime = Field(..., description="Metrics start date")
     end_date: datetime = Field(..., description="Metrics end date")
     generated_at: datetime = Field(
-        default_factory=datetime.utcnow, description="When metrics were generated"
+        default_factory=lambda: datetime.now(timezone.utc), description="When metrics were generated"
     )
 
 
@@ -102,7 +102,7 @@ class EmailMetrics(BaseModel):
     start_date: datetime = Field(..., description="Metrics start date")
     end_date: datetime = Field(..., description="Metrics end date")
     generated_at: datetime = Field(
-        default_factory=datetime.utcnow, description="When metrics were generated"
+        default_factory=lambda: datetime.now(timezone.utc), description="When metrics were generated"
     )
 
 
@@ -138,7 +138,7 @@ class ConversionFunnel(BaseModel):
     start_date: datetime = Field(..., description="Metrics start date")
     end_date: datetime = Field(..., description="Metrics end date")
     generated_at: datetime = Field(
-        default_factory=datetime.utcnow, description="When metrics were generated"
+        default_factory=lambda: datetime.now(timezone.utc), description="When metrics were generated"
     )
 
 
@@ -161,7 +161,7 @@ class RealTimeStats(BaseModel):
 
     # Metadata
     last_updated: datetime = Field(
-        default_factory=datetime.utcnow, description="When stats were last updated"
+        default_factory=lambda: datetime.now(timezone.utc), description="When stats were last updated"
     )
 
 
@@ -187,5 +187,5 @@ class AnalyticsExportResponse(BaseModel):
     file_size: int = Field(..., description="File size in bytes")
     format: str = Field(..., description="Export format")
     generated_at: datetime = Field(
-        default_factory=datetime.utcnow, description="When export was generated"
+        default_factory=lambda: datetime.now(timezone.utc), description="When export was generated"
     )

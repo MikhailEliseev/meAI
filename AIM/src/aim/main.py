@@ -5,12 +5,14 @@ Production-ready API with health checks, metrics, and monitoring.
 """
 
 import asyncio
+import os
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, status, Request
 from fastapi.responses import JSONResponse, Response
-from datetime import datetime
-import os
+
+from sqlalchemy import text
 
 # Prometheus metrics
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
@@ -45,22 +47,47 @@ if sentry_dsn:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Run Alembic migrations on startup (production mode only)."""
+    """Run Alembic migrations and ensure partitions on startup.
+
+    Uses a Postgres advisory lock so only one worker executes migrations.
+    Errors are logged but never crash the app — a failed migration is
+    surfaced via /ready checks, not by refusing to start.
+    """
     if os.getenv("AUTO_MIGRATE", "false").lower() == "true":
-        from alembic.config import Config
-        from alembic import command
+        try:
+            from aim.database import engine
+            from alembic.config import Config
+            from alembic import command
 
-        await asyncio.to_thread(
-            lambda: command.upgrade(Config("AIM/alembic.ini"), "head")
-        )
-        logger.info("alembic_migrations_applied")
+            # Acquire a session-level advisory lock so only one worker migrates.
+            # The connection MUST stay open for the entire migration; otherwise
+            # the lock is released and another worker races in.
+            async with engine.connect() as lock_conn:
+                result = await lock_conn.execute(
+                    text("SELECT pg_try_advisory_lock(42) AS acquired")
+                )
+                acquired = result.scalar()
 
-    # Ensure ФЗ-152 partitions exist
-    from aim.services.retention.partition_manager import PartitionManager
-    from aim.database import async_session_maker
-    pm = PartitionManager(async_session_maker)
-    await pm.ensure_partitions()
-    logger.info("fz152_partitions_ensured")
+                if not acquired:
+                    logger.info("alembic_migrations_skipped", reason="advisory_lock_not_acquired")
+                else:
+                    await asyncio.to_thread(
+                        lambda: command.upgrade(Config("AIM/alembic.ini"), "head")
+                    )
+                    logger.info("alembic_migrations_applied")
+            # lock_conn closes here → advisory lock released
+        except Exception as e:
+            logger.error("alembic_migrations_failed", error=str(e))
+
+    # Ensure ФЗ-152 partitions exist (safe — handles all errors internally)
+    try:
+        from aim.services.retention.partition_manager import PartitionManager
+        from aim.database import async_session_maker
+        pm = PartitionManager(async_session_maker)
+        await pm.ensure_partitions()
+        logger.info("fz152_partitions_ensured")
+    except Exception as e:
+        logger.error("fz152_partitions_failed", error=str(e))
 
     yield
 
@@ -174,7 +201,7 @@ async def root():
         "service": "AIM Agency API",
         "version": "1.0.0",
         "status": "operational",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -187,7 +214,7 @@ async def health_check():
     logger.debug("health_check_called")
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -246,7 +273,7 @@ async def readiness_check():
         return {
             "status": "ready",
             "checks": checks,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
     else:
         logger.warning("readiness_check_failed", checks=checks)
@@ -255,7 +282,7 @@ async def readiness_check():
             content={
                 "status": "not_ready",
                 "checks": checks,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
         )
 

@@ -5,7 +5,7 @@ Tracks payment transactions with encryption for sensitive data.
 Part of: Phase 11 Sprint 3 - Task 3.1
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import JSON, DateTime, Float, String
@@ -79,22 +79,22 @@ class Payment(Base):
     # Refund tracking
     refunded_amount: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     refund_reason: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    refunded_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    refunded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
         nullable=False,
         index=True,
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Audit trail
     created_by: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)

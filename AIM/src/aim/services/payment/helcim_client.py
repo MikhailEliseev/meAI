@@ -17,7 +17,7 @@ warnings.warn(
     stacklevel=2,
 )
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -100,7 +100,7 @@ class HelcimClient:
             "currency": currency,
             "card_last4": card_last4,
             "card_brand": card_brand,
-            "processed_at": datetime.utcnow().isoformat(),
+            "processed_at": datetime.now(timezone.utc).isoformat(),
             "message": "Payment processed successfully (STUB)",
         }
 
@@ -160,7 +160,7 @@ class HelcimClient:
             "transaction_id": transaction_id,
             "status": "refunded",
             "refunded_amount": amount,
-            "refunded_at": datetime.utcnow().isoformat(),
+            "refunded_at": datetime.now(timezone.utc).isoformat(),
             "message": "Refund processed successfully (STUB)",
         }
 

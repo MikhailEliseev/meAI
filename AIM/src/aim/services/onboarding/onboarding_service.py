@@ -6,7 +6,7 @@ Part of: Phase 11 Sprint 3 - Task 3.4
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -98,7 +98,7 @@ class OnboardingService:
             documents_uploaded=[],
             documents_validated=False,
             onboarding_fee=self.DEFAULT_ONBOARDING_FEE,
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
             metadata={"document_types": []},
         )
 
@@ -161,7 +161,7 @@ class OnboardingService:
             mime_type="application/octet-stream",
             status="pending",
             created_by="onboarding_service",
-            uploaded_at=datetime.utcnow(),
+            uploaded_at=datetime.now(timezone.utc),
         )
 
         db.add(document)
@@ -301,7 +301,7 @@ class OnboardingService:
             # Transition to failed
             state_machine.transition(OnboardingEvent.FAIL)
             onboarding.state = OnboardingState.ONBOARDING_FAILED.value
-            onboarding.failed_at = datetime.utcnow()
+            onboarding.failed_at = datetime.now(timezone.utc)
             onboarding.failure_reason = "Document validation failed"
 
             logger.error(f"Document validation failed")
@@ -430,7 +430,7 @@ class OnboardingService:
                 state_machine = OnboardingStateMachine(onboarding.state)
                 state_machine.transition(OnboardingEvent.FAIL)
                 onboarding.state = OnboardingState.ONBOARDING_FAILED.value
-                onboarding.failed_at = datetime.utcnow()
+                onboarding.failed_at = datetime.now(timezone.utc)
                 onboarding.failure_reason = f"Payment failed: {payment.status}"
 
                 logger.error(f"Payment failed: {payment.status}")
@@ -447,7 +447,7 @@ class OnboardingService:
             state_machine = OnboardingStateMachine(onboarding.state)
             state_machine.transition(OnboardingEvent.FAIL)
             onboarding.state = OnboardingState.ONBOARDING_FAILED.value
-            onboarding.failed_at = datetime.utcnow()
+            onboarding.failed_at = datetime.now(timezone.utc)
             onboarding.failure_reason = f"Payment error: {str(e)}"
 
             await db.commit()
@@ -491,7 +491,7 @@ class OnboardingService:
         state_machine.transition(OnboardingEvent.COMPLETE_ONBOARDING)
         onboarding.state = OnboardingState.ONBOARDING_COMPLETE.value
         onboarding.progress = 100
-        onboarding.completed_at = datetime.utcnow()
+        onboarding.completed_at = datetime.now(timezone.utc)
 
         await db.commit()
         await db.refresh(onboarding)

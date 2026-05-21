@@ -5,7 +5,7 @@ Tracks SendGrid webhook events (sent, delivered, opened, clicked, bounced, etc.)
 Part of: Phase 11 Sprint 2 - Task 2.4
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from sqlalchemy import Column, DateTime, ForeignKey, String, JSON
@@ -48,8 +48,8 @@ class EmailEvent(Base):
     email_id = Column(UUID(as_uuid=True), ForeignKey("scheduled_emails.id"), nullable=False)
     event_type = Column(String(20), nullable=False)
     event_data = Column(JSON, nullable=True)
-    occurred_at = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    occurred_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     email = relationship("ScheduledEmail", back_populates="events")

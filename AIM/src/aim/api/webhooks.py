@@ -14,7 +14,7 @@ Part of: Phase 12 - Production Deployment
 import ipaddress
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request, status
 from sqlalchemy import select
@@ -89,7 +89,7 @@ async def yookassa_payment_webhook(request: Request):
 
         if event == "payment.succeeded":
             payment.status = PaymentStatus.COMPLETED.value
-            payment.completed_at = datetime.utcnow()
+            payment.completed_at = datetime.now(timezone.utc)
         elif event == "payment.canceled":
             payment.status = PaymentStatus.FAILED.value
             payment.error_message = "Payment canceled by user"
@@ -97,7 +97,7 @@ async def yookassa_payment_webhook(request: Request):
             payment.status = PaymentStatus.PROCESSING.value
         elif event == "refund.succeeded":
             payment.status = PaymentStatus.REFUNDED.value
-            payment.refunded_at = datetime.utcnow()
+            payment.refunded_at = datetime.now(timezone.utc)
 
         await db.commit()
 
