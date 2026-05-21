@@ -249,12 +249,11 @@ async def readiness_check():
 
     # Check redis
     try:
-        import aioredis
+        import redis.asyncio as aioredis
         redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
-        redis = await aioredis.create_redis_pool(redis_url)
-        await redis.ping()
-        redis.close()
-        await redis.wait_closed()
+        r = aioredis.from_url(redis_url)
+        await r.ping()
+        await r.aclose()
         checks["redis"] = True
         logger.debug("redis_check_passed")
     except Exception as e:
