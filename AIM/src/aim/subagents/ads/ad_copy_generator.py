@@ -129,6 +129,30 @@ class AdCopyGenerator:
             "даром",
         ]
 
+        # ФЗ-38 "О рекламе" — mandatory medical advertising compliance
+        # Source: Федеральный закон от 13.03.2006 N 38-ФЗ, статья 24
+        self.FZ38_MANDATORY_DISCLAIMER = "ИМЕЮТСЯ ПРОТИВОПОКАЗАНИЯ, НЕОБХОДИМА КОНСУЛЬТАЦИЯ СПЕЦИАЛИСТА"
+
+        # Medical service keywords — trigger ФЗ-38 compliance checks
+        self.MEDICAL_KEYWORDS = [
+            "имплант", "имплантат", "стоматолог", "ортодонт",
+            "хирург", "операци", "лечени", "диагност", "клиник",
+            "врач", "медицин", "пациент", "здоров", "болезн",
+            "терап", "протез", "реабилитац", "анализ",
+        ]
+
+        # Prohibited efficacy claims (ФЗ-38 ст.24 ч.7-8)
+        self.PROHIBITED_MEDICAL_CLAIMS = [
+            "гарантированный результат",
+            "100% излечение",
+            "полное выздоровление",
+            "лучшее лечение",
+            "самый эффективный",
+            "без побочных эффектов",
+            "безопасно на 100%",
+            "излечивает навсегда",
+        ]
+
     async def generate(
         self,
         target_keyword: str,
@@ -448,6 +472,48 @@ class AdCopyGenerator:
             if word in text:
                 violations.append(f"Запрещённое слово: '{word}'")
 
+        # Check if this is a medical ad (triggers ФЗ-38 rules)
+        is_medical_ad = any(kw in text for kw in self.MEDICAL_KEYWORDS)
+
+        if is_medical_ad:
+            # ФЗ-38 ст.24 ч.1: Mandatory disclaimer
+            if self.FZ38_MANDATORY_DISCLAIMER.lower() not in text:
+                violations.append(
+                    "ФЗ-38: отсутствует обязательное предупреждение "
+                    "'ИМЕЮТСЯ ПРОТИВОПОКАЗАНИЯ, НЕОБХОДИМА КОНСУЛЬТАЦИЯ СПЕЦИАЛИСТА'"
+                )
+
+            # ФЗ-38 ст.24 ч.7: Prohibited efficacy claims
+            for claim in self.PROHIBITED_MEDICAL_CLAIMS:
+                if claim in text:
+                    violations.append(
+                        f"ФЗ-38: запрещённое утверждение эффективности — '{claim}'"
+                    )
+
+            # ФЗ-38 ст.24: Age restriction check (medical ads require 18+)
+            age_patterns = ["0+", "6+", "12+", "16+"]
+            found_age = False
+            for pattern in age_patterns:
+                if pattern in f"{headline} {description}":
+                    found_age = True
+                    warnings.append(
+                        f"ФЗ-38: медицинская реклама должна иметь маркировку 18+, "
+                        f"не {pattern}"
+                    )
+                    break
+            if not found_age and "18+" not in f"{headline} {description}":
+                warnings.append(
+                    "ФЗ-38: рекомендуется указать возрастную маркировку 18+ "
+                    "для рекламы медицинских услуг"
+                )
+
+            # ЕРИР маркировка (Федеральный закон от 02.07.2021 N 347-ФЗ)
+            if "erir" not in text and "ерир" not in text:
+                warnings.append(
+                    "ЕРИР: интернет-реклама должна содержать маркировку "
+                    "(токен ЕРИР / erir_token)"
+                )
+
         # Check length limits
         limits = self.limits[platform]
         if len(headline) > limits["headline_max"]:
@@ -513,102 +579,6 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 
-
-# ==============================================================================
-# Added by Teacher Agent: ad-copy
-# ==============================================================================
-
-import asyncio
-
-async def generate_hashtags(
-    product: str,
-    description: str,
-    target_audience: str,
-    platform: str,
-    tone: str,
-    llm: ChatOpenAI | None = None,
-) -> list[str]:
-    """
-    Generate hashtags for the given platform.
-
-    Returns empty list for platforms that don't use hashtags (google, facebook).
-    """
-    spec = get_spec(platform)
-
-    # Platforms that don't use hashtags
-    if spec.hashtag_max == 0:
-        return []
-
-    # Use midpoint of allowed range as target count
-    target_count = (spec.hashtag_min + spec.hashtag_max) // 2
-    target_count = max(target_count, spec.hashtag_min)
-
-    chain = build_hashtag_chain(llm)
-    result = await chain.ainvoke(
-        {
-            "product": product,
-            "description": description,
-            "target_audience": target_audience,
-            "platform_name": spec.name,
-            "tone": tone,
-            "hashtag_count": target_count,
-        }
-    )
-
-    hashtags = result.get("hashtags", [])
-
-    # Enforce platform limits
-    hashtags = hashtags[: spec.hashtag_max]
-
-    return hashtags
-
-# ==============================================================================
-# Added by Teacher Agent: ad-copy
-# ==============================================================================
-
-import asyncio
-
-async def generate_hashtags(
-    product: str,
-    description: str,
-    target_audience: str,
-    platform: str,
-    tone: str,
-    llm: ChatOpenAI | None = None,
-) -> list[str]:
-    """
-    Generate hashtags for the given platform.
-
-    Returns empty list for platforms that don't use hashtags (google, facebook).
-    """
-    spec = get_spec(platform)
-
-    # Platforms that don't use hashtags
-    if spec.hashtag_max == 0:
-        return []
-
-    # Use midpoint of allowed range as target count
-    target_count = (spec.hashtag_min + spec.hashtag_max) // 2
-    target_count = max(target_count, spec.hashtag_min)
-
-    chain = build_hashtag_chain(llm)
-    result = await chain.ainvoke(
-        {
-            "product": product,
-            "description": description,
-            "target_audience": target_audience,
-            "platform_name": spec.name,
-            "tone": tone,
-            "hashtag_count": target_count,
-        }
-    )
-
-    hashtags = result.get("hashtags", [])
-
-    # Enforce platform limits
-    hashtags = hashtags[: spec.hashtag_max]
-
-    return hashtags
 
 # ==============================================================================
 # Added by Teacher Agent: ad-copy

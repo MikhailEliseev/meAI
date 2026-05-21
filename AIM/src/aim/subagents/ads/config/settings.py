@@ -24,6 +24,13 @@ class AdsSettings(BaseSettings):
     yandex_direct_client_id: str
     yandex_direct_client_login: Optional[str] = None
 
+    # VK Ads API
+    vk_ads_access_token: Optional[str] = None
+    vk_ads_account_id: Optional[int] = None
+
+    # Telegram Ads API
+    telegram_ads_bot_token: Optional[str] = None
+
     # Facebook Ads API (optional)
     facebook_ads_access_token: Optional[str] = None
     facebook_ads_app_id: Optional[str] = None
