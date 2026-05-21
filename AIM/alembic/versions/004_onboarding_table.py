@@ -1,7 +1,7 @@
 """Add onboarding table
 
 Revision ID: 004
-Revises: 003
+Revises: 003_email_automation
 Create Date: 2026-05-17 01:40:00.000000
 
 """
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import sqlite
 
 # revision identifiers, used by Alembic.
 revision: str = '004'
-down_revision: Union[str, None] = '003'
+down_revision: Union[str, None] = '003_email_automation'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

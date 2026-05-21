@@ -1,7 +1,7 @@
 """add_leads_table
 
 Revision ID: c8de5ad75fa5
-Revises: 003_email_automation
+Revises: 002_user_feedback
 Create Date: 2026-05-16 20:26:36.673230+00:00
 
 """
