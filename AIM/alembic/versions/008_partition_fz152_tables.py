@@ -48,20 +48,20 @@ def _partition_fz152_audit_log_up() -> None:
         ) PARTITION BY RANGE (timestamp)
     """)
 
-    op.execute("CREATE TABLE fz152_audit_log_default PARTITION OF fz152_audit_log DEFAULT")
+    op.execute("CREATE TABLE IF NOT EXISTS fz152_audit_log_default PARTITION OF fz152_audit_log DEFAULT")
 
     for year in YEARS:
         op.execute(f"""
-            CREATE TABLE fz152_audit_log_{year}
+            CREATE TABLE IF NOT EXISTS fz152_audit_log_{year}
             PARTITION OF fz152_audit_log
             FOR VALUES FROM ('{year}-01-01') TO ('{year + 1}-01-01')
         """)
 
-    op.execute("CREATE INDEX idx_fz152_lead_action ON fz152_audit_log (lead_id, action)")
-    op.execute("CREATE INDEX idx_fz152_action_timestamp ON fz152_audit_log (action, timestamp)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_fz152_lead_action ON fz152_audit_log (lead_id, action)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_fz152_action_timestamp ON fz152_audit_log (action, timestamp)")
 
     # Create sequence for id and wire it as default
-    op.execute("CREATE SEQUENCE fz152_audit_log_id_seq OWNED BY fz152_audit_log.id")
+    op.execute("CREATE SEQUENCE IF NOT EXISTS fz152_audit_log_id_seq OWNED BY fz152_audit_log.id")
     op.execute("""
         ALTER TABLE fz152_audit_log
         ALTER COLUMN id SET DEFAULT nextval('fz152_audit_log_id_seq')
@@ -148,19 +148,19 @@ def _partition_documents_up() -> None:
         ) PARTITION BY RANGE (uploaded_at)
     """)
 
-    op.execute("CREATE TABLE documents_default PARTITION OF documents DEFAULT")
+    op.execute("CREATE TABLE IF NOT EXISTS documents_default PARTITION OF documents DEFAULT")
 
     for year in YEARS:
         op.execute(f"""
-            CREATE TABLE documents_{year}
+            CREATE TABLE IF NOT EXISTS documents_{year}
             PARTITION OF documents
             FOR VALUES FROM ('{year}-01-01') TO ('{year + 1}-01-01')
         """)
 
-    op.execute("CREATE INDEX ix_documents_lead_id ON documents (lead_id)")
-    op.execute("CREATE INDEX ix_documents_document_type ON documents (document_type)")
-    op.execute("CREATE INDEX ix_documents_status ON documents (status)")
-    op.execute("CREATE INDEX ix_documents_uploaded_at ON documents (uploaded_at)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_documents_lead_id ON documents (lead_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_documents_document_type ON documents (document_type)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_documents_status ON documents (status)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_documents_uploaded_at ON documents (uploaded_at)")
 
     op.execute("""
         INSERT INTO documents
