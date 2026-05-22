@@ -76,3 +76,5 @@ class ClientProfile:
     estimated_revenue: Optional[int] = None
     company_name: Optional[str] = None
     inn: Optional[str] = None
+    city_lat: Optional[float] = None
+    city_lon: Optional[float] = None

@@ -88,6 +88,15 @@ class CompetitorMatcher:
 
         if not client.city:
             logger.warning("CompetitorMatcher: no city detected for %s", url)
+        else:
+            # Geocode city for distance-based scoring
+            coords = await self.osm.geocode(client.city)
+            if coords:
+                client.city_lat, client.city_lon = coords
+                logger.info(
+                    "CompetitorMatcher: city center %s = (%.4f, %.4f)",
+                    client.city, client.city_lat, client.city_lon,
+                )
 
         # 2. Two-tier discovery: DaData + OpenStreetMap
         dadata_candidates, osm_candidates = await asyncio.gather(
@@ -296,6 +305,13 @@ class CompetitorMatcher:
 
         for r in results:
             if _name_similarity(name, r.legal_name) > 0.3:
+                # Preserve OSM coordinates if DaData doesn't have them
+                if r.geo_lat is None and r.geo_lon is None:
+                    r.geo_lat = place.get("lat")
+                    r.geo_lon = place.get("lon")
+                # Tag as OSM-discovered (even though enriched via DaData)
+                if r.data_source == "dadata":
+                    r.data_source = "osm+dadata"
                 return r
 
         # No DaData match — build a profile from OSM data alone
@@ -359,7 +375,10 @@ class CompetitorMatcher:
         client_revenue = client.estimated_revenue or 30_000_000
 
         # Run scoring concurrently (all independent)
-        tasks = [_score_one(client, c, client_revenue) for c in candidates]
+        tasks = [
+            _score_one(client, c, client_revenue, client.city_lat, client.city_lon)
+            for c in candidates
+        ]
         results = await asyncio.gather(*tasks)
 
         for match in results:
@@ -379,6 +398,8 @@ async def _score_one(
     client: ClientProfile,
     candidate: CompanyProfile,
     client_revenue: int,
+    city_lat: float | None = None,
+    city_lon: float | None = None,
 ) -> CompetitorMatch:
     """Score a single candidate against the client profile."""
     # Revenue match
@@ -387,11 +408,17 @@ async def _score_one(
     rev_for_score = comp_rev if comp_rev else _estimate_revenue(candidate)
     revenue_match = _score_revenue_match(client_revenue, rev_for_score)
 
-    # Location score
-    location_score = _score_location(client, candidate)
+    # Location score — uses actual distance when coordinates available
+    location_score = _score_location(client, candidate, city_lat, city_lon)
 
     # Service overlap — rough: compare OKVED codes to service keywords
     service_overlap = _score_services(client, candidate)
+
+    # OSM discovery bonus: +0.04 for competitors found via OpenStreetMap.
+    # These are the "hidden gems" (brand-named clinics) the system was
+    # designed to catch. Small nudge helps them break scoring ties against
+    # identically-scored DaData candidates.
+    osm_bonus = 0.04 if "osm" in candidate.data_source else 0.0
 
     # Weighted total
     total = (
@@ -399,6 +426,7 @@ async def _score_one(
         + location_score * W_LOCATION
         + service_overlap * W_SERVICES
         + data_quality * W_DATA
+        + osm_bonus
     )
     total = round(min(total, 1.0), 4)
 
@@ -431,16 +459,28 @@ def _score_revenue_match(client_rev: int, comp_rev: int) -> float:
     return max(0.0, 1.0 - min(diff, 1.0))
 
 
-def _score_location(client: ClientProfile, candidate: CompanyProfile) -> float:
-    """Score geographic proximity. Returns 0-1, higher = closer."""
-    # If we have coordinates for both, use haversine
-    if (client.estimated_revenue is not None
-            and candidate.geo_lat is not None
-            and candidate.geo_lon is not None):
-        # We don't have client coordinates, so we use city matching as fallback
-        pass
+def _score_location(
+    client: ClientProfile,
+    candidate: CompanyProfile,
+    city_lat: float | None = None,
+    city_lon: float | None = None,
+) -> float:
+    """Score geographic proximity. Returns 0-1, higher = closer.
 
-    # City match: same city = 0.9, different city = 0.3
+    When candidate has coordinates and city center is known, uses actual
+    haversine distance — this differentiates competitors within the same city
+    instead of giving them all the same score.
+    """
+    # ── Actual distance when coordinates available ─────────────────
+    if (candidate.geo_lat is not None
+            and candidate.geo_lon is not None
+            and city_lat is not None
+            and city_lon is not None):
+        distance_km = _haversine(city_lat, city_lon, candidate.geo_lat, candidate.geo_lon)
+        # Score decays from 1.0 (0 km) to 0.0 (≥50 km)
+        return round(max(0.0, 1.0 - min(distance_km / MAX_DISTANCE_KM, 1.0)), 4)
+
+    # ── Fallback: city-name matching ───────────────────────────────
     if not client.city:
         return 0.5  # neutral
 
@@ -453,7 +493,7 @@ def _score_location(client: ClientProfile, candidate: CompanyProfile) -> float:
     )
     full_address = candidate.legal_address or ""
     if full_address and _city_word.search(full_address):
-        return 0.9
+        return 0.7  # same city by address, but no coords → lower confidence
 
     # Strategy B: extract city from address and compare
     candidate_city = _extract_city(candidate.legal_address)
@@ -463,18 +503,10 @@ def _score_location(client: ClientProfile, candidate: CompanyProfile) -> float:
         )
 
     if candidate_city and client.city.lower() == candidate_city.lower():
-        return 0.9
+        return 0.7
     if candidate_city and client.city.lower() in candidate_city.lower():
-        return 0.7
+        return 0.5
     if candidate_city and candidate_city.lower() in client.city.lower():
-        return 0.7
-
-    # If client has coords and candidate has coords, compute distance
-    # (We don't have client coords from website extraction currently)
-    if (candidate.geo_lat is not None
-            and candidate.geo_lon is not None
-            and client.city):
-        # Approximate: same city = likely within 10-20 km
         return 0.5
 
     return 0.3  # different city or unknown
