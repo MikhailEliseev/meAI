@@ -18,12 +18,14 @@ import httpx
 logger = logging.getLogger(__name__)
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+NOMINATIM_TIMEOUT = 10.0  # per search-term query
 OVERPASS_URLS = [
     "https://overpass.kumi.systems/api/interpreter",
     "https://overpass.osm.rambler.ru/api/interpreter",
     "https://overpass.openstreetmap.ru/api/interpreter",
 ]
-REQUEST_TIMEOUT = 30.0
+REQUEST_TIMEOUT = 15.0
+OVERPASS_TIMEOUT = 10.0  # per-instance — fast fail if unresponsive
 USER_AGENT = "AIM-CompetitorMatcher/1.0 (me@iamaim.ru)"
 
 # Medical amenities we care about
@@ -128,7 +130,7 @@ class OSMDiscovery:
                 resp = await client.post(
                     url,
                     data={"data": query},
-                    timeout=30,
+                    timeout=OVERPASS_TIMEOUT,
                     headers={"Accept": "application/json"},
                 )
                 resp.raise_for_status()
@@ -163,7 +165,7 @@ class OSMDiscovery:
                     "limit": 30,
                     "accept-language": "ru",
                     "addressdetails": 1,
-                })
+                }, timeout=NOMINATIM_TIMEOUT)
                 resp.raise_for_status()
                 data = resp.json()
             except Exception as e:
