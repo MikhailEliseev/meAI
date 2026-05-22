@@ -6,7 +6,10 @@ Scores candidates by:
   service_overlap (0.25) — same services
   data_quality    (0.15) — real financials > estimates
 
-Uses DaData for company search, falls back to industry benchmarks for unknown revenue.
+Two-tier discovery:
+  Tier 1: DaData — finds companies by legal name (prefix search)
+  Tier 2: OpenStreetMap — finds organizations by amenity type (dentist/clinic)
+           Catches brand-named clinics like "Никор-Мед" that DaData misses.
 """
 
 import asyncio
@@ -14,6 +17,7 @@ import logging
 import math
 from typing import Optional
 
+from .osm_discovery import OSMDiscovery, get_osm_discovery
 from .rusprofile.client import DaDataClient, get_dadata_client
 from .rusprofile.models import ClientProfile, CompanyProfile, CompetitorMatch
 from .service_extractor import extract_client_profile
@@ -44,8 +48,13 @@ SPECIALIZATION_REVENUE = {
 class CompetitorMatcher:
     """Find and score competitors for a client clinic."""
 
-    def __init__(self, dadata: DaDataClient | None = None):
+    def __init__(
+        self,
+        dadata: DaDataClient | None = None,
+        osm: OSMDiscovery | None = None,
+    ):
         self.dadata = dadata or get_dadata_client()
+        self.osm = osm or get_osm_discovery()
 
     # ── Main entry point ───────────────────────────────────────────
 
@@ -80,11 +89,27 @@ class CompetitorMatcher:
         if not client.city:
             logger.warning("CompetitorMatcher: no city detected for %s", url)
 
-        # 2. Search DaData for medical companies
-        candidates = await self._search_candidates(client)
+        # 2. Two-tier discovery: DaData + OpenStreetMap
+        dadata_candidates, osm_candidates = await asyncio.gather(
+            self._search_candidates(client),
+            self._search_osm_candidates(client),
+        )
+
+        # Merge, preferring DaData when same company found in both
+        candidates = await self._merge_candidates(
+            dadata_candidates, osm_candidates, client
+        )
+
         if not candidates:
             logger.warning("CompetitorMatcher: no candidates found for %s", url)
             return []
+
+        logger.info(
+            "CompetitorMatcher: %d total candidates (DaData=%d, OSM=%d)",
+            len(candidates),
+            len(dadata_candidates),
+            len(osm_candidates),
+        )
 
         # 3. Score and rank
         scored = await self._score_candidates(client, candidates, count)
@@ -204,6 +229,122 @@ class CompetitorMatcher:
             candidates.append(p)
 
         return candidates[:25]
+
+    # ── OSM discovery ──────────────────────────────────────────────
+
+    async def _search_osm_candidates(
+        self, client: ClientProfile
+    ) -> list[CompanyProfile]:
+        """Find competitors via OpenStreetMap by amenity type.
+
+        OSM tags organizations by what they DO (amenity=dentist), not by
+        legal name. This catches brand-named clinics like "Никор-Мед"
+        that DaData prefix search misses.
+        """
+        city = client.city
+        if not city:
+            return []
+
+        try:
+            osm_places = await self.osm.find_medical_places(city=city)
+        except Exception as e:
+            logger.error("OSM discovery failed for %s: %s", city, e)
+            return []
+
+        if not osm_places:
+            return []
+
+        # Filter to relevant amenity types for this specialization
+        spec = client.specialization
+        relevant = _filter_osm_by_specialization(osm_places, spec)
+
+        # Try to enrich with DaData: look up each by name + city
+        profiles: list[CompanyProfile] = []
+        for place in relevant[:15]:
+            try:
+                profile = await self._lookup_osm_on_dadata(place)
+                if profile:
+                    profiles.append(profile)
+            except Exception as e:
+                logger.debug("Failed to enrich OSM place %s: %s", place.get("name"), e)
+
+        logger.info("OSM: enriched %d/%d places via DaData", len(profiles), len(relevant))
+        return profiles
+
+    async def _lookup_osm_on_dadata(self, place: dict) -> CompanyProfile | None:
+        """Try to find an OSM place on DaData for financial data.
+
+        Searches by the first word of the name (brand name) in the city.
+        """
+        name = place.get("name", "")
+        city = place.get("city", "")
+        if not name:
+            return None
+
+        # Search by first 1-2 words of the name (brand core)
+        words = name.split()
+        brand_core = " ".join(words[:2]) if len(words) >= 2 else words[0]
+
+        try:
+            results = await self.dadata.find_medical_companies(
+                query=brand_core,
+                city=city,
+                count=5,
+            )
+        except Exception:
+            return None
+
+        for r in results:
+            if _name_similarity(name, r.legal_name) > 0.3:
+                return r
+
+        # No DaData match — build a profile from OSM data alone
+        return CompanyProfile(
+            inn="",
+            legal_name=name,
+            brand_name=name,
+            employee_count=None,
+            okved_main=_osm_amenity_to_okved(place.get("amenity", "")),
+            okved_secondary=[],
+            legal_address=_format_osm_address(place),
+            actual_addresses=[_format_osm_address(place)],
+            geo_lat=place.get("lat"),
+            geo_lon=place.get("lon"),
+            data_source="osm",
+            confidence=0.5,
+        )
+
+    async def _merge_candidates(
+        self,
+        dadata: list[CompanyProfile],
+        osm: list[CompanyProfile],
+        client: ClientProfile,
+    ) -> list[CompanyProfile]:
+        """Merge DaData and OSM candidates, deduplicating by name similarity."""
+        merged: dict[str, CompanyProfile] = {}
+
+        # DaData first (higher priority — has financial data)
+        for p in dadata:
+            if p.inn:
+                merged[p.inn] = p
+            else:
+                merged[p.legal_name.lower()] = p
+
+        # OSM: add if no similar DaData company exists
+        for p in osm:
+            key = p.inn if p.inn else p.legal_name.lower()
+            if key in merged:
+                continue
+            # Check for name similarity with existing
+            is_dup = False
+            for existing in merged.values():
+                if _name_similarity(p.legal_name, existing.legal_name) > 0.6:
+                    is_dup = True
+                    break
+            if not is_dup:
+                merged[key] = p
+
+        return list(merged.values())
 
     # ── Scoring ────────────────────────────────────────────────────
 
@@ -495,3 +636,66 @@ def _build_reason(m: CompetitorMatch) -> str:
         parts.append("оценочные данные")
 
     return ", ".join(parts)
+
+
+# ── OSM helpers ────────────────────────────────────────────────────
+
+# Map OSM amenity types to specialization-based filtering priority.
+# For a dental client, we want dentists first, then clinics, then doctors.
+_AMENITY_PRIORITY: dict[str, dict[str, int]] = {
+    "стоматология": {"dentist": 3, "clinic": 1, "doctors": 0},
+    "косметология": {"clinic": 3, "doctors": 1, "dentist": 0},
+    "многопрофильная клиника": {"clinic": 3, "doctors": 2, "dentist": 1},
+    "пластическая хирургия": {"clinic": 3, "doctors": 2, "dentist": 0},
+    "офтальмология": {"clinic": 3, "doctors": 2, "dentist": 0},
+    "диагностический центр": {"doctors": 3, "clinic": 2, "dentist": 0},
+    "педиатрия": {"clinic": 3, "doctors": 2, "dentist": 0},
+}
+
+
+def _filter_osm_by_specialization(
+    places: list[dict], specialization: str
+) -> list[dict]:
+    """Filter OSM places by relevance to the client's specialization.
+
+    For dentistry: keep all dentists + clinics. For cosmetics: keep clinics.
+    """
+    priority = _AMENITY_PRIORITY.get(specialization, {})
+    if not priority:
+        return places  # Unknown spec — keep all
+
+    # Keep places with priority > 0, sort by priority desc
+    filtered = [p for p in places if priority.get(p.get("amenity", ""), 0) > 0]
+    filtered.sort(key=lambda p: priority.get(p.get("amenity", ""), 0), reverse=True)
+    return filtered
+
+
+# OKVED mapping for OSM amenity types (used when DaData lookup fails)
+_AMENITY_OKVED_MAP: dict[str, str] = {
+    "dentist": "86.23",   # Стоматологическая практика
+    "clinic": "86.21",    # Общая врачебная практика
+    "doctors": "86.21",   # Общая врачебная практика
+}
+
+
+def _osm_amenity_to_okved(amenity: str) -> str:
+    """Map OSM amenity to nearest OKVED code."""
+    return _AMENITY_OKVED_MAP.get(amenity, "86.90")
+
+
+def _format_osm_address(place: dict) -> str:
+    """Format OSM place as a DaData-like address string."""
+    parts = []
+    city = place.get("city", "")
+    if city:
+        parts.append(f"г {city}")
+    street = place.get("street", "")
+    if street:
+        parts.append(street)
+    housenumber = place.get("housenumber", "")
+    if housenumber:
+        if street:
+            parts[-1] = f"{street} {housenumber}"
+        else:
+            parts.append(housenumber)
+    return ", ".join(parts) if parts else ""
