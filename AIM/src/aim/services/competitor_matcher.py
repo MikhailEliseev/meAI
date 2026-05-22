@@ -5,13 +5,13 @@ budgetary healthcare institutions (ГАУЗ, ГБУЗ, городские пол
 районные больницы, etc.) are filtered out at discovery time.
 
 Scores candidates by:
-  service_overlap     (0.30) — same services (TF-IDF + Jaccard)
+  service_overlap     (0.25) — same services (TF-IDF + Jaccard)
   specialization_purity (0.15) — mono vs multi-profile matching
-  revenue_match       (0.15) — similar scale
+  popularity          (0.17) — ratings + reviews (real-world presence)
   location_score      (0.15) — nearby (≤50 km)
-  data_quality        (0.10) — real financials > estimates
-  popularity          (0.10) — ratings + reviews
-  visibility          (0.05) — search presence + maps listing
+  revenue_match       (0.10) — similar scale
+  visibility          (0.10) — search presence + maps listing
+  data_quality        (0.08) — real financials > estimates
 
 Three-tier discovery:
   Tier 1: DaData — finds companies by legal name (prefix search)
@@ -24,6 +24,7 @@ Three-tier discovery:
 import asyncio
 import logging
 import math
+import os
 import time
 from typing import Optional
 
@@ -37,14 +38,23 @@ from .yandex_maps import YandexMapsClient, get_yandex_maps_client
 
 logger = logging.getLogger(__name__)
 
+# ── Blacklist ───────────────────────────────────────────────────────
+# Comma-separated company names that should NEVER appear as competitors.
+# These are typically the user's own projects/clients.
+_BLACKLIST_NAMES: set[str] = set()
+_bl = os.environ.get("COMPETITOR_BLACKLIST_NAMES", "")
+if _bl:
+    _BLACKLIST_NAMES = {n.strip().lower() for n in _bl.split(",") if n.strip()}
+    logger.info("Competitor blacklist loaded: %d names", len(_BLACKLIST_NAMES))
+
 # ── Scoring weights ────────────────────────────────────────────────
-W_REVENUE = 0.15
+W_REVENUE = 0.10
 W_LOCATION = 0.15
-W_SERVICES = 0.30
+W_SERVICES = 0.25
 W_SPECIALIZATION = 0.15
-W_DATA = 0.10
-W_POPULARITY = 0.10
-W_VISIBILITY = 0.05
+W_DATA = 0.08
+W_POPULARITY = 0.17
+W_VISIBILITY = 0.10
 
 MAX_DISTANCE_KM = 50.0  # beyond this, location_score = 0
 
@@ -163,6 +173,20 @@ class CompetitorMatcher:
                 "CompetitorMatcher: filtered %d state/municipal orgs, %d commercial remain",
                 filtered_count, len(candidates),
             )
+
+        # Filter out blacklisted companies (user's own projects/clients)
+        if _BLACKLIST_NAMES:
+            pre_bl = len(commercial)
+            commercial = [
+                c for c in commercial
+                if c.legal_name.lower() not in _BLACKLIST_NAMES
+                and not any(bl in c.legal_name.lower() for bl in _BLACKLIST_NAMES if len(bl) > 5)
+            ]
+            if len(commercial) < pre_bl:
+                logger.info(
+                    "CompetitorMatcher: filtered %d blacklisted orgs",
+                    pre_bl - len(commercial),
+                )
 
         if not candidates:
             logger.warning("CompetitorMatcher: no candidates found for %s", url)
@@ -681,6 +705,7 @@ class CompetitorMatcher:
             geo_lon=org.get("lon"),
             rating=org.get("rating"),
             reviews_count=org.get("reviews_count"),
+            source_specialization=specialization,
             data_source="yandex",
             confidence=0.55,
         )
@@ -1042,7 +1067,7 @@ def _score_popularity(candidate: CompanyProfile) -> float:
     reviews = candidate.reviews_count or 0
 
     if rating is None and reviews == 0:
-        return 0.5  # neutral — no data
+        return 0.15  # no popularity data = negative signal, real businesses have reviews
 
     # Rating component (0.6 weight)
     if rating is not None and rating > 0:
@@ -1079,7 +1104,7 @@ def _score_visibility(candidate: CompanyProfile) -> float:
     elif ds == "osm+dadata":
         return 0.6   # OSM + legal enrichment
     elif ds == "osm":
-        return 0.4   # OSM-only, basic
+        return 0.2   # OSM-only, weak signal — easy to create entries
     elif ds == "dadata":
         return 0.3   # legal-only
     return 0.3
@@ -1454,14 +1479,17 @@ def _client_specializations(client: ClientProfile) -> set[str]:
 
 
 def _candidate_specializations(candidate: CompanyProfile) -> set[str]:
-    """Extract the set of specializations from a candidate profile."""
+    """Extract the set of specializations from a candidate profile.
+
+    CRITICAL: source_specialization is the search query that FOUND this
+    candidate — it's what we were LOOKING FOR, not what the candidate IS.
+    We only trust it when confirmed by OKVED codes or name keywords.
+    Otherwise a neurology center found by broad OSM search gets wrongly
+    tagged as "стоматология" just because that's what we searched for.
+    """
     specs: set[str] = set()
 
-    # Source specialization is the strongest signal
-    if candidate.source_specialization:
-        specs.add(candidate.source_specialization)
-
-    # OKVED-based
+    # OKVED-based (strongest objective signal)
     all_codes = [candidate.okved_main] + candidate.okved_secondary
     for code in all_codes:
         if not code:
@@ -1488,6 +1516,19 @@ def _candidate_specializations(candidate: CompanyProfile) -> set[str]:
             if kw in name:
                 specs.add(spec)
                 break
+
+    # Source specialization: only trust if confirmed by OKVED or name
+    if candidate.source_specialization:
+        if not specs:
+            # No OKVED/name signals — source_specialization is our only hint
+            # but we treat it with lower confidence (it'll be scored lower in purity)
+            specs.add(candidate.source_specialization)
+        elif candidate.source_specialization in specs:
+            # Confirmed by other signals — reinforce
+            pass
+        else:
+            # source_specialization conflicts with OKVED/name — trust OKVED/name
+            pass
 
     return specs
 
