@@ -52,8 +52,8 @@ W_REVENUE = 0.10
 W_LOCATION = 0.15
 W_SERVICES = 0.25
 W_SPECIALIZATION = 0.15
-W_DATA = 0.08
-W_POPULARITY = 0.17
+W_DATA = 0.14
+W_POPULARITY = 0.11
 W_VISIBILITY = 0.10
 
 MAX_DISTANCE_KM = 50.0  # beyond this, location_score = 0
@@ -227,6 +227,31 @@ class CompetitorMatcher:
             await self._geocode_dadata_candidates(top_dadata)
             # Re-score with actual coordinates
             scored = await self._score_candidates(client, candidates, count)
+
+        # 5. Ensure source diversity: at least 1 candidate with INN (→ rusprofile financials)
+        top = scored[:count]
+        has_inn = any(m.profile.inn and m.profile.inn.strip() for m in top)
+        if not has_inn:
+            inn_candidates = [
+                m for m in scored
+                if m.profile.inn and m.profile.inn.strip()
+                and m not in top
+            ]
+            if inn_candidates:
+                # Replace the lowest-scoring non-INN candidate
+                inn_best = inn_candidates[0]  # already sorted by score desc
+                sorted_top = sorted(top, key=lambda m: m.total_score)
+                replaced = sorted_top[0]
+                top.remove(replaced)
+                top.append(inn_best)
+                top.sort(key=lambda m: m.total_score, reverse=True)
+                logger.info(
+                    "CompetitorMatcher: diversity swap — replaced %s (score=%.4f, src=%s) "
+                    "with %s (score=%.4f, inn=%s)",
+                    replaced.profile.legal_name[:40], replaced.total_score, replaced.profile.data_source,
+                    inn_best.profile.legal_name[:40], inn_best.total_score, inn_best.profile.inn,
+                )
+            scored = top
 
         t_total = time.monotonic()
         logger.info(
