@@ -4,18 +4,63 @@ Finds medical organizations by amenity type (dentist/clinic/doctors),
 not by legal name. Catches brand-named clinics like "Никор-Мед" that
 DaData prefix search misses.
 
+CRITICAL: Filters out municipal/state healthcare institutions.
+We work ONLY in commercial medicine.
+
 Primary: Overpass API (detailed tags — website, phone, amenity type).
 Fallback: Nominatim search (broader coverage, less detail, same OSM data).
 
 Free, no API key required. Data from OpenStreetMap contributors.
 """
 
+import asyncio
 import logging
+import re as _re_osm
 from typing import Optional
 
 import httpx
 
 logger = logging.getLogger(__name__)
+
+# ── State/municipal clinic name markers ───────────────────────────
+# Quick filter applied to OSM place names before DaData enrichment,
+# so we don't waste API calls on state healthcare institutions.
+
+_STATE_NAME_PATTERNS_OSM: list[str] = [
+    "городская поликлиника", "городская больница",
+    "городская стоматологическая поликлиника", "городская стоматология",
+    "муниципальная", "детская городская поликлиника",
+    "детская городская больница", "детская стоматологическая поликлиника",
+    "центральная районная больница", "районная больница", "районная поликлиника",
+    "областная больница", "областная клиническая больница",
+    "краевая больница", "краевая клиническая больница",
+    "республиканская больница", "республиканская клиническая больница",
+    "женская консультация", "диспансер", "станция скорой",
+    "бюро судебно-медицинской", "дом ребёнка",
+    "центр гигиены и эпидемиологии",
+]
+
+_STATE_PREFIXES_OSM = (
+    "ГАУЗ", "ГБУЗ", "ГУЗ", "МУЗ", "МБУЗ",
+    "ФГБУ", "ФГАУ", "ФКУЗ", "ГКУЗ",
+)
+
+
+def _is_state_osm_place(name: str) -> bool:
+    """Quick check: does this OSM place name look like a state/municipal clinic?"""
+    if not name:
+        return False
+    upper = name.upper()
+    for prefix in _STATE_PREFIXES_OSM:
+        if upper.startswith(prefix) or f'"{prefix}' in upper or f'«{prefix}' in upper:
+            return True
+    lower = name.lower()
+    for marker in _STATE_NAME_PATTERNS_OSM:
+        if marker in lower:
+            return True
+    if _re_osm.search(r"поликлиника\s+№\s*\d+", lower):
+        return True
+    return False
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 NOMINATIM_TIMEOUT = 10.0  # per search-term query
@@ -119,13 +164,17 @@ class OSMDiscovery:
     async def _find_via_overpass(
         self, city: str, lat: float, lon: float, radius: int,
     ) -> list[dict]:
-        """Try Overpass API across multiple public instances."""
+        """Try Overpass API across multiple public instances in parallel.
+
+        Was sequential (3 URLs × 10s timeout = up to 30s worst case).
+        Now parallel via asyncio.gather — max 10s worst case.
+        """
         query = _build_overpass_query(lat, lon, radius)
         client = await self._get_client()
 
-        data = None
         last_error = None
-        for url in OVERPASS_URLS:
+
+        async def _try_one(url: str) -> tuple[str, dict | None, str | None]:
             try:
                 resp = await client.post(
                     url,
@@ -134,11 +183,22 @@ class OSMDiscovery:
                     headers={"Accept": "application/json"},
                 )
                 resp.raise_for_status()
-                data = resp.json()
-                break
+                return url, resp.json(), None
             except Exception as e:
-                last_error = f"{type(e).__name__}: {e}"
-                logger.debug("Overpass %s failed: %s", url, last_error)
+                err = f"{type(e).__name__}: {e}"
+                logger.debug("Overpass %s failed: %s", url, err)
+                return url, None, err
+
+        tasks = [_try_one(url) for url in OVERPASS_URLS]
+        results = await asyncio.gather(*tasks)
+
+        data = None
+        for url, result, error in results:
+            if result is not None:
+                data = result
+                break
+            if error:
+                last_error = error
 
         if data is None:
             logger.warning(
@@ -155,6 +215,7 @@ class OSMDiscovery:
         results: list[dict] = []
         seen_names: set[str] = set()
 
+        state_filtered = 0
         for search_term, amenity in NOMINATIM_SEARCH_TERMS.items():
             if len(results) >= 60:
                 break
@@ -177,6 +238,10 @@ class OSMDiscovery:
                 if not name or len(name) < 3:
                     continue
 
+                if _is_state_osm_place(name):
+                    state_filtered += 1
+                    continue
+
                 name_key = name.lower()
                 if name_key in seen_names:
                     continue
@@ -196,6 +261,11 @@ class OSMDiscovery:
                     "city": city,
                 })
 
+        if state_filtered > 0:
+            logger.info(
+                "OSM Nominatim: filtered %d state/municipal places in %s",
+                state_filtered, city,
+            )
         return results
 
 
@@ -204,10 +274,15 @@ def _parse_overpass_response(data: dict, city: str) -> list[dict]:
     results: list[dict] = []
     seen_names: set[str] = set()
 
+    state_filtered = 0
     for element in data.get("elements", []):
         tags = element.get("tags", {})
         name = tags.get("name", "").strip()
         if not name or name == "???":
+            continue
+
+        if _is_state_osm_place(name):
+            state_filtered += 1
             continue
 
         amenity = tags.get("amenity", "")
@@ -239,6 +314,8 @@ def _parse_overpass_response(data: dict, city: str) -> list[dict]:
             "city": city,
         })
 
+    if state_filtered > 0:
+        logger.info("OSM Overpass: filtered %d state/municipal places in %s", state_filtered, city)
     return results
 
 
