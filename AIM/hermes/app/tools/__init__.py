@@ -36,10 +36,11 @@ def register_all_tools() -> None:
     - get_lead_pipeline    -> GET  http://app:8000/api/sales/pipeline
     - update_knowledge     -> PUT  http://app:8000/api/sales/knowledge/update
 
-    Pre-Sale tools (3):
+    Pre-Sale tools (4):
     - find_competitors     -> POST http://app:8000/api/competitors/find
     - present_competitors  -> POST http://app:8000/api/competitors/save
     - run_ci_analysis      -> POST http://app:8000/api/competitors/analyze
+    - find_company_financials -> GET http://app:8000/api/companies/financials
     """
     from . import run_seo_audit          # noqa: F401
     from . import run_content_analysis   # noqa: F401
@@ -54,8 +55,9 @@ def register_all_tools() -> None:
     from . import find_competitors       # noqa: F401
     from . import present_competitors    # noqa: F401
     from . import run_ci_analysis        # noqa: F401
+    from . import find_company_financials # noqa: F401
 
-    logger.info("Registered 13 AIM operations tools in toolset 'aim-operations'")
+    logger.info("Registered 14 AIM operations tools in toolset 'aim-operations'")
 
 
 __all__ = ["register_all_tools"]
