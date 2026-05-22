@@ -1,13 +1,13 @@
 """Yandex Maps organization search — Tier 3 competitor discovery.
 
-Uses Yandex Organization Search API (search-maps.yandex.ru/v1)
-with type=biz to find medical organizations by specialization + city.
-Returns organizations that people actually see on the map.
+Two search methods:
+  1. Playwright headless browser (PRIMARY) — navigates Yandex Maps web search,
+     extracts business cards via JavaScript. No API key needed.
+  2. Organization Search API (FALLBACK) — search-maps.yandex.ru/v1 with type=biz.
+     Only works with a key that has the Organization Search product enabled.
 
 Also uses Yandex Geocoder API (geocode-maps.yandex.ru/v1) to get
 city center coordinates for spatial filtering.
-
-Ratings enrichment via Yandex Maps organization cards (HTML scraping).
 
 API key: developer.tech.yandex.ru → "JavaScript API и HTTP Геокодер"
 Free tier: 25,000 requests/day for Geocoder, 1,000 requests/day for Search.
@@ -19,6 +19,8 @@ from typing import Optional
 
 import httpx
 from bs4 import BeautifulSoup
+
+from .yandex_maps_search import YandexMapsSearchClient, get_yandex_search_client
 
 logger = logging.getLogger(__name__)
 
@@ -64,15 +66,27 @@ MEDICAL_SEARCH_TERMS = {
 
 
 class YandexMapsClient:
-    """Async client for Yandex Maps organization search."""
+    """Async client for Yandex Maps organization search.
 
-    def __init__(self, api_key: str | None = None):
+    Uses Playwright web search as primary method (no API key needed),
+    with HTTP Organization Search API as fallback.
+    """
+
+    def __init__(
+        self,
+        api_key: str | None = None,
+        search_client: YandexMapsSearchClient | None = None,
+    ):
         self.api_key = api_key or YANDEX_MAPS_KEY
         self._client: httpx.AsyncClient | None = None
+        self._search = search_client or get_yandex_search_client()
 
     @property
     def configured(self) -> bool:
-        return bool(self.api_key) and len(self.api_key) > 10
+        # Playwright search always works — no API key needed.
+        # The API key is only needed for Geocoder (which works)
+        # and Organization Search (which requires a specific product key).
+        return True
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
@@ -83,6 +97,8 @@ class YandexMapsClient:
         if self._client:
             await self._client.aclose()
             self._client = None
+        if self._search:
+            await self._search.close()
 
     async def geocode(self, query: str) -> tuple[float, float] | None:
         """Geocode an address or city name to coordinates.
@@ -126,12 +142,50 @@ class YandexMapsClient:
         city: str = "",
         results: int = 50,
     ) -> list[dict]:
-        """Find organizations via Yandex Organization Search API (type=biz).
+        """Find organizations via Yandex Maps web search (Playwright).
 
-        Returns list of dicts with: name, address, lat, lon, yandex_url.
+        Primary method: Playwright headless browser → Yandex Maps search page
+        → JavaScript extraction of business cards. No API key needed.
+
+        Fallback: HTTP Organization Search API (only if Playwright is
+        unavailable AND a valid Organization Search key is configured).
+
+        Returns list of dicts with: name, address, lat, lon, yandex_url,
+        rating, reviews_count, phone, categories.
         """
-        if not self.configured:
-            logger.warning("Yandex Maps not configured — skipping org search")
+        # ── Primary: Playwright web search ─────────────────────────
+        try:
+            web_orgs = await self._search.search_organizations(
+                query=query,
+                city=city,
+                results=results,
+            )
+            if web_orgs:
+                orgs = [_convert_web_result(o) for o in web_orgs]
+                logger.info(
+                    "Yandex Maps (Playwright): found %d orgs for '%s' in %s",
+                    len(orgs), query, city,
+                )
+                return orgs
+        except Exception as e:
+            logger.warning("Yandex Maps Playwright search failed: %s", e)
+
+        # ── Fallback: HTTP API ─────────────────────────────────────
+        return await self._find_organizations_api(query, city, results)
+
+    async def _find_organizations_api(
+        self,
+        query: str,
+        city: str = "",
+        results: int = 50,
+    ) -> list[dict]:
+        """Fallback: Yandex Organization Search API (search-maps.yandex.ru/v1).
+
+        Only works with an API key that has the Organization Search product
+        enabled. The standard Geocoder key returns HTTP 403.
+        """
+        if not self.api_key or len(self.api_key) < 10:
+            logger.warning("Yandex Maps API key not configured — skipping API search")
             return []
 
         full_query = f"{query}, {city}" if city else query
@@ -148,7 +202,7 @@ class YandexMapsClient:
             resp.raise_for_status()
             data = resp.json()
         except Exception as e:
-            logger.error("Yandex Org Search failed for query=%s: %s", full_query, e)
+            logger.error("Yandex Org Search API failed for query=%s: %s", full_query, e)
             return []
 
         orgs: list[dict] = []
@@ -167,26 +221,21 @@ class YandexMapsClient:
                 continue
             seen_names.add(name_key)
 
-            # Extract coordinates (Organization Search uses geometry)
             geometry = feature.get("geometry", {})
             coords = geometry.get("coordinates", [])
             lon, lat = None, None
             if len(coords) == 2:
                 lon, lat = float(coords[0]), float(coords[1])
 
-            # Address
             address = company_meta.get("address", "")
 
-            # Phone
             phones = company_meta.get("Phones", [])
             phone = phones[0].get("formatted", "") if phones else ""
 
-            # Categories
             categories = [
                 c.get("name", "") for c in company_meta.get("Categories", [])
             ]
 
-            # Build Yandex Maps URL
             yandex_url = ""
             if lat and lon:
                 slug = name.lower().replace(" ", "_").replace('"', '').replace("'", "")
@@ -200,10 +249,10 @@ class YandexMapsClient:
                 "phone": phone,
                 "categories": categories,
                 "yandex_url": yandex_url,
-                "source": "yandex_maps",
+                "source": "yandex_maps_api",
             })
 
-        logger.info("Yandex Maps: found %d orgs for %s in %s", len(orgs), query, city)
+        logger.info("Yandex Maps API: found %d orgs for '%s' in %s", len(orgs), query, city)
         return orgs
 
     async def find_medical_orgs(
@@ -236,11 +285,14 @@ class YandexMapsClient:
     async def enrich_with_ratings(self, org: dict) -> dict:
         """Try to scrape rating and review count from Yandex Maps org page.
 
-        This is a lightweight attempt — returns original org unchanged on failure.
-        A full implementation would use the Yandex Maps JavaScript API
-        organization card endpoint.
+        Playwright results already include rating and reviews_count, so this
+        is only needed for API-sourced results. Skips if ratings already present.
         """
-        url = org.get("yandex_url", "")
+        # Already have ratings from Playwright search — skip
+        if org.get("rating") and org.get("reviews_count"):
+            return org
+
+        url = org.get("yandex_url") or org.get("url", "")
         if not url:
             return org
 
@@ -252,7 +304,6 @@ class YandexMapsClient:
 
             soup = BeautifulSoup(resp.text, "html.parser")
 
-            # Try to find rating in structured data or page content
             rating_el = soup.select_one('[itemprop="ratingValue"]')
             if rating_el and rating_el.get("content"):
                 org["rating"] = float(rating_el["content"])
@@ -265,6 +316,28 @@ class YandexMapsClient:
             pass  # ratings are optional enrichment
 
         return org
+
+
+def _convert_web_result(web: dict) -> dict:
+    """Convert Playwright web search result to the standard org dict format.
+
+    Playwright format:  name, rating, ratings_count, address, category,
+                        working_status, url, lat, lon, source
+    Standard format:    name, address, lat, lon, yandex_url, rating,
+                        reviews_count, phone, categories, source
+    """
+    return {
+        "name": web.get("name", ""),
+        "address": web.get("address", ""),
+        "lat": web.get("lat"),
+        "lon": web.get("lon"),
+        "yandex_url": web.get("url", ""),
+        "rating": web.get("rating"),
+        "reviews_count": web.get("ratings_count"),
+        "phone": "",
+        "categories": [web.get("category", "")] if web.get("category") else [],
+        "source": "yandex_maps_web",
+    }
 
 
 def _extract_features(data: dict) -> list[dict]:

@@ -46,7 +46,10 @@ class CompetitorJson(BaseModel):
     revenue_match: float = 0.0
     location_score: float = 0.0
     service_overlap: float = 0.0
+    specialization_purity: float = 0.0
     data_quality: float = 0.7
+    popularity_score: float = 0.0
+    visibility_score: float = 0.0
     total_score: float = 0.0
     match_reason: str = ""
     services: list[str] = []
@@ -166,7 +169,10 @@ def _competitor_to_json(m: CompetitorMatch) -> CompetitorJson:
         revenue_match=m.revenue_match,
         location_score=m.location_score,
         service_overlap=m.service_overlap,
+        specialization_purity=m.specialization_purity,
         data_quality=m.data_quality,
+        popularity_score=m.popularity_score,
+        visibility_score=m.visibility_score,
         total_score=m.total_score,
         match_reason=m.match_reason,
         services=m.services,
@@ -201,6 +207,9 @@ def _json_to_match(j: CompetitorJson) -> CompetitorMatch:
         revenue_match=j.revenue_match,
         location_score=j.location_score,
         service_overlap=j.service_overlap,
+        specialization_purity=j.specialization_purity,
+        popularity_score=j.popularity_score,
+        visibility_score=j.visibility_score,
         data_quality=j.data_quality,
         total_score=j.total_score,
         match_reason=j.match_reason,

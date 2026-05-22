@@ -79,6 +79,9 @@ sendgrid>=6.0.0
 # Task Scheduling
 apscheduler>=3.10.0
 
+# Competitor Discovery: TF-IDF service matching
+scikit-learn>=1.5.0
+
 # Phase 12: YooKassa Payment Integration
 async-yookassa>=1.0.0
 scipy>=1.14.0

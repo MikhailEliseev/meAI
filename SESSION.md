@@ -44,6 +44,33 @@ Home, About, Blog, Services, Contact, Privacy Policy, Case Studies, Health endpo
 
 ---
 
+## Competitor Scoring Fix — 2026-05-22 14:15 GMT+3
+
+### Problem
+Все конкуренты в одном городе с одинаковым OKVED и без фин. данных получали идентичные scores (~0.68), делая top-3 ранжирование случайным.
+
+### Root Cause
+Бинарный location_score (0.9 для same-city, 0.3 для different-city) + одинаковый revenue_match + одинаковый service_overlap = все scores идентичны.
+
+### Fix (commit `8f4bb82`)
+1. **Distance-based location scoring** — haversine distance от центра города (Nominatim geocoding). Score = 1 − min(distance/50km, 1.0)
+2. **OSM discovery bonus** (+0.04) — конкуренты, найденные через OpenStreetMap, получают небольшой буст
+3. **OSM coordinate preservation** — когда DaData enrichment находит компанию, OSM-координаты копируются в профиль
+4. **data_source tagging** — "osm+dadata" для enriched, "osm" для pure-OSM (проверка "osm" in data_source)
+5. **Fallback city-match снижен** — 0.9 → 0.7 (без координат меньше уверенности)
+
+### Result
+- До: 0.6866 для всех конкурентов
+- После: разброс 0.7276–0.7424 (Орёл), каждый конкурент имеет уникальную позицию
+- OSM-конкуренты появляются в топе (data_source="osm")
+- DaData-only конкуренты без координат: 0.6338 (честно проигрывают)
+
+### Files changed
+- `AIM/src/aim/services/competitor_matcher.py` — scoring logic
+- `AIM/src/aim/services/rusprofile/models.py` — +city_lat, +city_lon
+
+---
+
 ## Phase 18: Hermes Learning Bus — Implementation (Plan 18-01)
 
 **Date:** 2026-05-20 10:30 GMT+3
@@ -463,6 +490,38 @@ Telegram → TelegramMonitor → EventBus → SalesAdminMagister
 - [[api_keys]] — Linear, Яндекс, OmniRoute, SEMrush
 - [[telegram_bot]] — Bot token, admin chat, webhook
 - [[internal_secrets]] — HERMES_API_KEY, ENCRYPTION_KEY, DB
+
+---
+
+## Telegram Bot Deployed — 2026-05-21 20:45 GMT+3
+
+### Status: ✅ ONLINE
+
+**Bot Token:** `8902680776:AAEnHTeRfX81vqAMEbWIrccnxExJKcENVSM`
+**Webhook:** `https://iamaim.ru/telegram/webhook`
+**Proxy:** `http://193.111.152.14:7451` (сервер в NL, Telegram API заблокирован на 443)
+
+### Что сделано:
+- `TELEGRAM_BOT_TOKEN` залит в `.env` и `.env.production` на сервере
+- Hermes контейнер пересобран с новым кодом
+- Webhook установлен через `setWebhook` API (подтверждён: `getWebhookInfo`)
+- Пофикшен конфликт webhook vs polling — `start_polling()` теперь пропускается при наличии `TELEGRAM_WEBHOOK_URL`
+- Commit: `5786af2`
+
+### Как работает:
+```
+Клиент пишет боту в Telegram
+  → Telegram API POST на https://iamaim.ru/telegram/webhook
+  → Hermes telegram_gateway._call_hermes_agent()
+  → mode = PRESALE (новый) / ACTIVE (существующий) / ADMIN (Михаил)
+  → DeepSeek V4 Pro через OmniRoute
+  → Ответ отправляется через sendMessage (прокси 193.111.152.14:7451)
+```
+
+### Проверено:
+- Тестовый Update → `{"status":"replied"}`
+- Hermes ответил через DeepSeek: `session=tg:999`, 295 chars, 4.0s
+- Ошибок `getUpdates 409 Conflict` больше нет
 
 ### Метрики тестового прогона
 
