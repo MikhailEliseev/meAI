@@ -1,7 +1,8 @@
 """Competitor Discovery API Endpoints
 
-POST /api/competitors/find  — find top-3 competitors for a clinic URL
-POST /api/competitors/save  — save competitor selection to pre-sale folder
+POST /api/competitors/find    — find top-3 competitors for a clinic URL
+POST /api/competitors/save    — save competitor selection to pre-sale folder
+POST /api/competitors/analyze — CI marketing analysis (SWOT, features, pricing, tactics)
 """
 
 import logging
@@ -10,6 +11,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
+from aim.services.ci_marketing_analysis import CiMarketingAnalyzer
 from aim.services.competitor_matcher import CompetitorMatcher
 from aim.services.pre_sale_folder import PreSaleFolder
 from aim.services.rusprofile.models import CompetitorMatch
@@ -75,6 +77,28 @@ class SaveCompetitorsResponse(BaseModel):
     lead_id: str
     saved_to: str
     count: int
+
+
+class AnalyzeCompetitorsRequest(BaseModel):
+    url: str = Field(..., description="Client clinic website URL")
+    specialization: str = Field(..., description="Client specialization (e.g. 'стоматология')")
+    city: str = Field(..., description="Client city")
+    services: list[str] = Field(..., description="Client services list")
+    competitors: list[CompetitorJson] = Field(..., description="3 confirmed competitors")
+    client_revenue: Optional[int] = Field(None, description="Estimated client annual revenue (RUB)")
+    client_rating: Optional[float] = Field(None, description="Client rating if known")
+
+
+class AnalyzeCompetitorsResponse(BaseModel):
+    success: bool = True
+    chat_summary: str = ""
+    feature_matrix: dict = {}
+    pricing_comparison: dict = {}
+    positioning_map: dict = {}
+    steal_worthy_tactics: list[dict] = []
+    top_recommendation: str = ""
+    duration_seconds: float = 0.0
+    error: Optional[str] = None
 
 
 # ── Endpoints ──────────────────────────────────────────────────────
@@ -144,6 +168,65 @@ async def save_competitors(body: SaveCompetitorsRequest) -> SaveCompetitorsRespo
         saved_to=f"pre-sale/competitors/",
         count=count,
     )
+
+
+@router.post("/analyze", response_model=AnalyzeCompetitorsResponse, status_code=status.HTTP_200_OK)
+async def analyze_competitors(body: AnalyzeCompetitorsRequest) -> AnalyzeCompetitorsResponse:
+    """Run CI marketing analysis on confirmed competitors.
+
+    Takes client info + 3 confirmed competitors, scrapes their websites,
+    and produces SWOT, feature matrix, pricing comparison, positioning map,
+    and steal-worthy tactics. Fast (<12s), deterministic, no LLM.
+    """
+    try:
+        matches = [_json_to_match(c) for c in body.competitors]
+
+        analyzer = CiMarketingAnalyzer(timeout=10.0)
+        result = await analyzer.analyze(
+            url=body.url,
+            specialization=body.specialization,
+            city=body.city,
+            services=body.services,
+            competitors=matches,
+            client_revenue=body.client_revenue,
+            client_rating=body.client_rating,
+        )
+
+        tactics_json = [
+            {
+                "source": t.source_competitor,
+                "tactic": t.tactic_description,
+                "why": t.why_it_works,
+                "how": t.how_to_implement,
+                "effort": t.estimated_effort,
+                "impact": t.expected_impact,
+            }
+            for t in result.steal_worthy_tactics
+        ]
+
+        logger.info(
+            "ci_analysis_complete: url=%s duration=%.1fs tactics=%d features=%d",
+            body.url, result.analysis_duration_seconds,
+            len(tactics_json), len(result.feature_matrix),
+        )
+
+        return AnalyzeCompetitorsResponse(
+            success=True,
+            chat_summary=result.chat_summary,
+            feature_matrix=result.feature_matrix,
+            pricing_comparison=result.pricing_comparison,
+            positioning_map=result.positioning_map,
+            steal_worthy_tactics=tactics_json,
+            top_recommendation=result.top_recommendation,
+            duration_seconds=result.analysis_duration_seconds,
+        )
+
+    except Exception as e:
+        logger.exception("analyze_competitors_failed")
+        return AnalyzeCompetitorsResponse(
+            success=False,
+            error=str(e),
+        )
 
 
 # ── Serialization helpers ──────────────────────────────────────────

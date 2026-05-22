@@ -122,6 +122,11 @@ class PreSaleFolder:
         self.ensure()
         self._write(f"competitors/research/{inn}.json", profile)
 
+    def save_ci_analysis_report(self, report: dict) -> None:
+        """Save CI marketing analysis report (SWOT, features, pricing, tactics)."""
+        self.ensure()
+        self._write("competitors/research/ci_analysis_report.json", report)
+
     # ── Decisions ──────────────────────────────────────────────────
 
     def log_approval_event(self, event: str, detail: dict | None = None) -> None:
