@@ -236,7 +236,15 @@ async def _fetch_page(url: str) -> Optional[str]:
         async with httpx.AsyncClient(
             timeout=REQUEST_TIMEOUT,
             follow_redirects=True,
-            headers={"User-Agent": "meAI-Hermes/1.0 (Pre-Sale Bot)"},
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/125.0.0.0 Safari/537.36"
+                ),
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
+            },
         ) as client:
             response = await client.get(url)
             response.raise_for_status()
@@ -322,8 +330,15 @@ def _extract_city_from_url(url: str) -> str:
     # Common patterns: msk.clinic.ru, spb.clinic.ru, clinic-msk.ru
     city_prefixes = {
         "msk": "Москва", "spb": "Санкт-Петербург", "nsk": "Новосибирск",
-        "ekb": "Екатеринбург", "kzn": "Казань", "nn": "Нижний Новгород",
+        "ekb": "Екатеринбург", "kzn": "Казань", "kazan": "Казань",
+        "nn": "Нижний Новгород", "nn52": "Нижний Новгород",
         "sochi": "Сочи", "krd": "Краснодар", "ufa": "Уфа",
+        "samara": "Самара", "nsk": "Новосибирск", "perm": "Пермь",
+        "voronezh": "Воронеж", "kemerovo": "Кемерово", "tomsk": "Томск",
+        "omsk": "Омск", "irkutsk": "Иркутск", "vladivostok": "Владивосток",
+        "kaliningrad": "Калининград", "murmansk": "Мурманск",
+        "tyumen": "Тюмень", "yaroslavl": "Ярославль",
+        "chelyabinsk": "Челябинск", "novosibirsk": "Новосибирск",
     }
 
     for prefix, city in city_prefixes.items():
