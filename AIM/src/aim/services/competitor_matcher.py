@@ -94,6 +94,7 @@ class CompetitorMatcher:
 
         # 1. Extract client profile from website
         raw = await extract_client_profile(url)
+        t_extract = time.monotonic()
         client = ClientProfile(
             url=url,
             specialization=raw["specialization"],
@@ -118,6 +119,12 @@ class CompetitorMatcher:
                     client.city, client.city_lat, client.city_lon,
                 )
 
+        t_geocode = time.monotonic()
+        logger.info(
+            "CompetitorMatcher: extract_profile=%.1fs, geocode=%.1fs",
+            t_extract - t0, t_geocode - t_extract,
+        )
+
         # 2. Three-tier discovery: DaData + OpenStreetMap + Yandex Maps
         dadata_candidates, osm_candidates, yandex_candidates = await asyncio.gather(
             self._search_candidates(client),
@@ -126,8 +133,9 @@ class CompetitorMatcher:
         )
         t_discovery = time.monotonic()
         logger.info(
-            "CompetitorMatcher: discovery took %.1fs (DaData=%d, OSM=%d, Yandex=%d)",
-            t_discovery - t0, len(dadata_candidates), len(osm_candidates), len(yandex_candidates),
+            "CompetitorMatcher: tiers=%.1fs (DaData=%d, OSM=%d, Yandex=%d) [after extract=%.1fs + geocode=%.1fs]",
+            t_discovery - t_geocode, len(dadata_candidates), len(osm_candidates), len(yandex_candidates),
+            t_extract - t0, t_geocode - t_extract,
         )
 
         # Merge: DaData first, then OSM, then Yandex
