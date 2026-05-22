@@ -200,6 +200,17 @@ class CompetitorMatcher:
             len(yandex_candidates),
         )
 
+        # 2.5. Enrich candidates with real financials from rusprofile.ru
+        # Only enrich candidates that have an INN (DaData provides INN, OSM/Yandex may not)
+        t_enrich_start = time.monotonic()
+        enriched_count = await self._enrich_with_rusprofile(candidates[:10])
+        if enriched_count:
+            t_enrich = time.monotonic()
+            logger.info(
+                "CompetitorMatcher: rusprofile enriched %d/%d candidates in %.1fs",
+                enriched_count, min(len(candidates), 10), t_enrich - t_enrich_start,
+            )
+
         # 3. Score and rank (first pass — without geocoding DaData)
         scored = await self._score_candidates(client, candidates, count)
         t_score1 = time.monotonic()
@@ -406,6 +417,72 @@ class CompetitorMatcher:
         addr = _re_addr.sub(r"\s*,\s*", ", ", addr)
         addr = _re_addr.sub(r"\s+", " ", addr).strip(", ")
         return addr
+
+    # ── Rusprofile enrichment ────────────────────────────────────────
+
+    async def _enrich_with_rusprofile(
+        self, candidates: list[CompanyProfile]
+    ) -> int:
+        """Fetch real tax-filed financials from rusprofile.ru for candidates with INN.
+
+        Updates CompanyProfile.revenue_year and CompanyProfile.financial_year
+        in-place. Returns count of successfully enriched candidates.
+
+        Real rusprofile data is preferred over DaData estimates because it's
+        tax-filed — the revenue numbers companies report to ФНС.
+        """
+        enriched = 0
+        for c in candidates:
+            if not c.inn or not c.inn.isdigit():
+                continue
+            if c.has_real_financials() and c.revenue_year and c.revenue_year > 0:
+                continue  # already has real financial data
+
+            try:
+                from aim.services.rusprofile.parser import get_rusprofile_client
+
+                rp = get_rusprofile_client()
+                company = await rp.get_by_inn(c.inn)
+                if company is None:
+                    continue
+
+                # Extract latest revenue and profit
+                latest_year = None
+                latest_revenue = None
+                latest_profit = None
+                for year in sorted(company.revenue.keys(), reverse=True):
+                    rev = company.revenue.get(year)
+                    if rev and rev > 0:
+                        latest_year = year
+                        latest_revenue = rev
+                        break
+                for year in sorted(company.profit.keys(), reverse=True):
+                    prf = company.profit.get(year)
+                    if prf is not None:
+                        latest_profit = prf
+                        break
+
+                if latest_revenue is not None and latest_revenue > 0:
+                    c.revenue_year = latest_revenue
+                    c.financial_year = latest_year
+                    c.profit_year = latest_profit
+                    c.data_source = "rusprofile"
+                    enriched += 1
+                    logger.debug(
+                        "rusprofile: %s (INN %s) — revenue=%d RUB (%d)",
+                        company.short_name or c.legal_name[:40],
+                        c.inn,
+                        latest_revenue,
+                        latest_year,
+                    )
+
+            except Exception as e:
+                logger.warning(
+                    "rusprofile enrichment failed for INN %s: %s",
+                    c.inn, e,
+                )
+
+        return enriched
 
     async def _geocode_dadata_candidates(
         self, candidates: list[CompanyProfile]
@@ -790,7 +867,7 @@ class CompetitorMatcher:
 
         # Generate human-readable match reasons
         for m in scored[:top_n]:
-            m.match_reason = _build_reason(m)
+            m.match_reason = _build_reason(m, client_revenue)
 
         return scored[:top_n]
 
@@ -805,7 +882,15 @@ async def _score_one(
     """Score a single candidate against the client profile."""
     # Revenue match
     comp_rev = candidate.revenue_year
-    data_quality = 0.85 if candidate.has_real_financials() else 0.4
+    # rusprofile data is tax-filed → highest quality (0.95)
+    # DaData financials are estimates → medium (0.85)
+    # No financial data → low (0.4)
+    if candidate.data_source == "rusprofile":
+        data_quality = 0.95
+    elif candidate.has_real_financials():
+        data_quality = 0.85
+    else:
+        data_quality = 0.4
     rev_for_score = comp_rev if comp_rev else _estimate_revenue(candidate)
     revenue_match = _score_revenue_match(client_revenue, rev_for_score)
 
@@ -1533,11 +1618,35 @@ def _candidate_specializations(candidate: CompanyProfile) -> set[str]:
     return specs
 
 
-def _build_reason(m: CompetitorMatch) -> str:
-    """Build a human-readable reason string for the match."""
-    parts: list[str] = []
+def _build_reason(m: CompetitorMatch, client_revenue: int = 0) -> str:
+    """Build a human-readable reason string for the match.
 
-    if m.revenue_match >= 0.7:
+    When competitor has real financial data and is bigger, flags as aspirational:
+    "крупнее вас — посмотрите что они делают чтобы зарабатывать больше"
+    """
+    parts: list[str] = []
+    c = m.profile
+
+    # Revenue comparison — prefer real (rusprofile) data
+    comp_rev = c.revenue_year
+    if comp_rev and comp_rev > 0 and client_revenue > 0:
+        if comp_rev > client_revenue * 1.5:
+            multiple = comp_rev / client_revenue
+            if multiple >= 5:
+                parts.append(f"крупнее в {multiple:.0f}× — вот кто задаёт рынок")
+            elif multiple >= 3:
+                parts.append(f"крупнее в {multiple:.0f}× — ориентир для роста")
+            else:
+                parts.append(f"крупнее в {multiple:.1f}× — посмотрите их тактики")
+        elif comp_rev > client_revenue * 1.1:
+            parts.append("чуть крупнее вас")
+        elif comp_rev > client_revenue * 0.9:
+            parts.append("схожий масштаб")
+        elif comp_rev > client_revenue * 0.5:
+            parts.append("меньше вас")
+        else:
+            parts.append("значительно меньше")
+    elif m.revenue_match >= 0.7:
         parts.append("схожий масштаб")
     elif m.revenue_match >= 0.4:
         parts.append("сравнимый масштаб")
@@ -1556,7 +1665,9 @@ def _build_reason(m: CompetitorMatch) -> str:
     else:
         parts.append("услуги отличаются")
 
-    if m.data_quality >= 0.8:
+    if c.data_source == "rusprofile":
+        parts.append("данные из ФНС")
+    elif m.data_quality >= 0.8:
         parts.append("реальные данные")
     else:
         parts.append("оценочные данные")

@@ -73,14 +73,19 @@ async def handle_find_competitors(url=None, **kwargs) -> str:
             # Compact for LLM consumption — strip noisy fields
             compact = []
             for i, c in enumerate(competitors, 1):
+                profile = c.get("profile", {})
                 compact.append({
                     "rank": i,
-                    "inn": c["inn"],
-                    "legal_name": c["legal_name"],
-                    "brand_name": c.get("brand_name"),
-                    "revenue_year": c.get("revenue_year"),
+                    "inn": profile.get("inn", c.get("inn", "")),
+                    "legal_name": c.get("legal_name", profile.get("legal_name", "")),
+                    "brand_name": c.get("brand_name") or profile.get("brand_name"),
+                    "revenue_year": c.get("revenue_year") or profile.get("revenue_year"),
+                    "profit_year": c.get("profit_year") or profile.get("profit_year"),
+                    "financial_year": c.get("financial_year") or profile.get("financial_year"),
+                    "data_source": c.get("data_source", profile.get("data_source", "estimate")),
                     "services": c.get("services", []),
                     "total_score": c.get("total_score"),
+                    "revenue_match": c.get("revenue_match"),
                     "match_reason": c.get("match_reason", ""),
                 })
             return json.dumps({"competitors": compact}, ensure_ascii=False, indent=2)

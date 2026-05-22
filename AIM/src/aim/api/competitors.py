@@ -34,6 +34,7 @@ class CompetitorJson(BaseModel):
     brand_name: Optional[str] = None
     revenue_year: Optional[int] = None
     profit_year: Optional[int] = None
+    financial_year: Optional[int] = None
     revenue_trend: Optional[str] = None
     employee_count: Optional[int] = None
     okved_main: Optional[str] = None
@@ -240,6 +241,7 @@ def _competitor_to_json(m: CompetitorMatch) -> CompetitorJson:
         brand_name=p.brand_name,
         revenue_year=p.revenue_year,
         profit_year=p.profit_year,
+        financial_year=p.financial_year,
         revenue_trend=p.revenue_trend,
         employee_count=p.employee_count,
         okved_main=p.okved_main,
@@ -273,6 +275,7 @@ def _json_to_match(j: CompetitorJson) -> CompetitorMatch:
         brand_name=j.brand_name,
         revenue_year=j.revenue_year,
         profit_year=j.profit_year,
+        financial_year=j.financial_year,
         revenue_trend=j.revenue_trend,
         employee_count=j.employee_count,
         okved_main=j.okved_main,
