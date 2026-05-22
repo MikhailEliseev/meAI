@@ -23,12 +23,7 @@ from typing import Optional
 import httpx
 from bs4 import BeautifulSoup
 
-from .competitor_matcher import (
-    _MULTI_SPEC_SIGNALS,
-    _NAME_SPEC,
-    _okved_to_services,
-    _SPEC_RELATED,
-)
+from .competitor_matcher import _MULTI_SPEC_SIGNALS
 from .rusprofile.models import CompetitorMatch
 
 logger = logging.getLogger(__name__)
@@ -222,8 +217,6 @@ class CompetitorPageScraper:
         # Services on page
         all_spec_keywords: set[str] = set()
         for keywords in _MULTI_SPEC_SIGNALS.values():
-            all_spec_keywords.update(keywords)
-        for keywords in _NAME_SPEC.values():
             all_spec_keywords.update(keywords)
         for kw in all_spec_keywords:
             if kw in page_lower:
