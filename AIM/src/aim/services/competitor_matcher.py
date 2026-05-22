@@ -213,6 +213,7 @@ class CompetitorMatcher:
           2. Generic medical terms (e.g. "медицинский центр", "клиника", "мед")
           3. City-only fallback with medical filter
         """
+        t0 = time.monotonic()
         spec = client.specialization or "медицинская клиника"
         city = client.city
 
@@ -333,10 +334,11 @@ class CompetitorMatcher:
             candidates.append(p)
 
         logger.info(
-            "DaData: %d candidates, %d tagged with specialization='%s'",
+            "DaData: %d candidates, %d tagged with specialization='%s' (took %.1fs)",
             len(candidates),
             sum(1 for c in candidates if c.source_specialization == spec),
             spec,
+            time.monotonic() - t0,
         )
         return candidates[:25]
 
@@ -471,7 +473,8 @@ class CompetitorMatcher:
 
         OSM tags organizations by what they DO (amenity=dentist), not by
         legal name. This catches brand-named clinics like "Никор-Мед"
-        that DaData prefix search misses.
+        that DaData prefix search misses."""
+        t0 = time.monotonic()
         """
         city = client.city
         if not city:
@@ -502,7 +505,7 @@ class CompetitorMatcher:
         enrich_results = await asyncio.gather(*enrich_tasks)
         profiles = [p for p in enrich_results if p is not None]
 
-        logger.info("OSM: enriched %d/%d places via DaData", len(profiles), len(relevant))
+        logger.info("OSM: enriched %d/%d places via DaData (took %.1fs)", len(profiles), len(relevant), time.monotonic() - t0)
         return profiles
 
     async def _lookup_osm_on_dadata(
@@ -572,6 +575,7 @@ class CompetitorMatcher:
         Yandex Maps returns organizations people actually see and interact
         with on the map — a strong signal of real-world presence.
         """
+        t0 = time.monotonic()
         city = client.city
         spec = client.specialization
         if not city or not spec:
@@ -591,6 +595,7 @@ class CompetitorMatcher:
             return []
 
         if not yandex_orgs:
+            logger.debug("Yandex Maps: 0 orgs found (took %.1fs)", time.monotonic() - t0)
             return []
 
         # Enrich with ratings (optional — non-blocking)
@@ -614,7 +619,7 @@ class CompetitorMatcher:
         enrich_results = await asyncio.gather(*enrich_tasks)
         profiles = [p for p in enrich_results if p is not None]
 
-        logger.info("Yandex Maps: enriched %d/%d orgs via DaData", len(profiles), len(yandex_orgs))
+        logger.info("Yandex Maps: enriched %d/%d orgs via DaData (took %.1fs)", len(profiles), len(yandex_orgs), time.monotonic() - t0)
         return profiles
 
     async def _lookup_yandex_on_dadata(
