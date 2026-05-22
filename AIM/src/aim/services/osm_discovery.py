@@ -1,14 +1,16 @@
-"""OpenStreetMap competitor discovery via Overpass API.
+"""OpenStreetMap competitor discovery via Overpass API + Nominatim fallback.
 
 Finds medical organizations by amenity type (dentist/clinic/doctors),
 not by legal name. Catches brand-named clinics like "Никор-Мед" that
 DaData prefix search misses.
 
+Primary: Overpass API (detailed tags — website, phone, amenity type).
+Fallback: Nominatim search (broader coverage, less detail, same OSM data).
+
 Free, no API key required. Data from OpenStreetMap contributors.
 """
 
 import logging
-import traceback
 from typing import Optional
 
 import httpx
@@ -17,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 OVERPASS_URLS = [
-    "https://overpass.osm.ch/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
-    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    "https://overpass.osm.rambler.ru/api/interpreter",
+    "https://overpass.openstreetmap.ru/api/interpreter",
 ]
 REQUEST_TIMEOUT = 30.0
 USER_AGENT = "AIM-CompetitorMatcher/1.0 (me@iamaim.ru)"
@@ -29,6 +31,15 @@ MEDICAL_AMENITIES = {
     "dentist": "стоматология",
     "clinic": "клиника",
     "doctors": "врачи",
+}
+
+# Russian search terms for Nominatim fallback (maps to amenity key)
+NOMINATIM_SEARCH_TERMS = {
+    "стоматология": "dentist",
+    "стоматологическая клиника": "dentist",
+    "клиника": "clinic",
+    "медицинский центр": "clinic",
+    "врачи": "doctors",
 }
 
 # Radius around city center to search (meters)
@@ -72,7 +83,6 @@ class OSMDiscovery:
                 "Nominatim geocoding failed for %s: %s %s",
                 city, type(e).__name__, e,
             )
-            logger.debug("Full traceback:", exc_info=True)
         return None
 
     async def find_medical_places(
@@ -84,8 +94,8 @@ class OSMDiscovery:
     ) -> list[dict]:
         """Find medical organizations near a city.
 
-        Returns list of dicts with: name, amenity, lat, lon, website,
-        phone, street, housenumber, city (inferred).
+        Tries Overpass first (rich tags: website, phone, amenity type),
+        falls back to Nominatim (name + coordinates).
         """
         if lat is None or lon is None:
             coords = await self.geocode(city)
@@ -93,9 +103,24 @@ class OSMDiscovery:
                 return []
             lat, lon = coords
 
-        query = _build_overpass_query(lat, lon, radius)
+        # Try Overpass first
+        results = await self._find_via_overpass(city, lat, lon, radius)
 
+        # Fallback to Nominatim
+        if not results:
+            logger.info("OSM Overpass returned 0 results for %s — trying Nominatim", city)
+            results = await self._find_via_nominatim(city)
+
+        logger.info("OSM: found %d medical places in %s", len(results), city)
+        return results
+
+    async def _find_via_overpass(
+        self, city: str, lat: float, lon: float, radius: int,
+    ) -> list[dict]:
+        """Try Overpass API across multiple public instances."""
+        query = _build_overpass_query(lat, lon, radius)
         client = await self._get_client()
+
         data = None
         last_error = None
         for url in OVERPASS_URLS:
@@ -108,56 +133,111 @@ class OSMDiscovery:
                 )
                 resp.raise_for_status()
                 data = resp.json()
-                break  # success — stop trying
+                break
             except Exception as e:
                 last_error = f"{type(e).__name__}: {e}"
                 logger.debug("Overpass %s failed: %s", url, last_error)
 
         if data is None:
-            logger.error(
+            logger.warning(
                 "All Overpass URLs failed for %s (tried %d). Last error: %s",
                 city, len(OVERPASS_URLS), last_error,
             )
             return []
 
+        return _parse_overpass_response(data, city)
+
+    async def _find_via_nominatim(self, city: str) -> list[dict]:
+        """Fallback: search OSM via Nominatim by medical category + city."""
+        client = await self._get_client()
         results: list[dict] = []
         seen_names: set[str] = set()
 
-        for element in data.get("elements", []):
-            tags = element.get("tags", {})
-            name = tags.get("name", "").strip()
-            if not name or name == "???":
+        for search_term, amenity in NOMINATIM_SEARCH_TERMS.items():
+            if len(results) >= 60:
+                break
+            try:
+                resp = await client.get(NOMINATIM_URL, params={
+                    "q": f"{search_term}, {city}",
+                    "format": "json",
+                    "limit": 30,
+                    "accept-language": "ru",
+                    "addressdetails": 1,
+                })
+                resp.raise_for_status()
+                data = resp.json()
+            except Exception as e:
+                logger.debug("Nominatim search failed for %s: %s", search_term, e)
                 continue
 
-            amenity = tags.get("amenity", "")
-            if amenity not in MEDICAL_AMENITIES:
-                continue
+            for place in data:
+                name = place.get("display_name", "").split(",")[0].strip()
+                if not name or len(name) < 3:
+                    continue
 
-            # Deduplicate by name (many clinics have multiple nodes)
-            name_key = name.lower()
-            if name_key in seen_names:
-                continue
-            seen_names.add(name_key)
+                name_key = name.lower()
+                if name_key in seen_names:
+                    continue
+                seen_names.add(name_key)
 
-            el_lat = element.get("lat") or (element.get("center", {}).get("lat") if "center" in element else None)
-            el_lon = element.get("lon") or (element.get("center", {}).get("lon") if "center" in element else None)
+                addr = place.get("address", {})
+                results.append({
+                    "name": name,
+                    "amenity": amenity,
+                    "amenity_label": MEDICAL_AMENITIES.get(amenity, amenity),
+                    "lat": float(place["lat"]) if place.get("lat") else None,
+                    "lon": float(place["lon"]) if place.get("lon") else None,
+                    "website": "",
+                    "phone": "",
+                    "street": addr.get("road", addr.get("street", "")),
+                    "housenumber": addr.get("house_number", ""),
+                    "city": city,
+                })
 
-            result = {
-                "name": name,
-                "amenity": amenity,
-                "amenity_label": MEDICAL_AMENITIES.get(amenity, amenity),
-                "lat": el_lat,
-                "lon": el_lon,
-                "website": _normalize_website(tags.get("website", tags.get("contact:website", ""))),
-                "phone": tags.get("phone", tags.get("contact:phone", "")),
-                "street": tags.get("addr:street", ""),
-                "housenumber": tags.get("addr:housenumber", ""),
-                "city": city,
-            }
-            results.append(result)
-
-        logger.info("OSM: found %d medical places in %s", len(results), city)
         return results
+
+
+def _parse_overpass_response(data: dict, city: str) -> list[dict]:
+    """Parse Overpass API JSON response into competitor dicts."""
+    results: list[dict] = []
+    seen_names: set[str] = set()
+
+    for element in data.get("elements", []):
+        tags = element.get("tags", {})
+        name = tags.get("name", "").strip()
+        if not name or name == "???":
+            continue
+
+        amenity = tags.get("amenity", "")
+        if amenity not in MEDICAL_AMENITIES:
+            continue
+
+        name_key = name.lower()
+        if name_key in seen_names:
+            continue
+        seen_names.add(name_key)
+
+        el_lat = element.get("lat") or (
+            element.get("center", {}).get("lat") if "center" in element else None
+        )
+        el_lon = element.get("lon") or (
+            element.get("center", {}).get("lon") if "center" in element else None
+        )
+
+        results.append({
+            "name": name,
+            "amenity": amenity,
+            "amenity_label": MEDICAL_AMENITIES.get(amenity, amenity),
+            "lat": el_lat,
+            "lon": el_lon,
+            "website": _normalize_website(tags.get("website", tags.get("contact:website", ""))),
+            "phone": tags.get("phone", tags.get("contact:phone", "")),
+            "street": tags.get("addr:street", ""),
+            "housenumber": tags.get("addr:housenumber", ""),
+            "city": city,
+        })
+
+    return results
 
 
 def _build_overpass_query(lat: float, lon: float, radius: int) -> str:
