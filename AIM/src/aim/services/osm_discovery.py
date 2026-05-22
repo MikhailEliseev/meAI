@@ -16,7 +16,11 @@ import httpx
 logger = logging.getLogger(__name__)
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
-OVERPASS_URL = "https://overpass.kumi.systems/api/interpreter"
+OVERPASS_URLS = [
+    "https://overpass.osm.ch/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+]
 REQUEST_TIMEOUT = 30.0
 USER_AGENT = "AIM-CompetitorMatcher/1.0 (me@iamaim.ru)"
 
@@ -92,21 +96,28 @@ class OSMDiscovery:
         query = _build_overpass_query(lat, lon, radius)
 
         client = await self._get_client()
-        try:
-            resp = await client.post(
-                OVERPASS_URL,
-                data={"data": query},
-                timeout=30,
-                headers={"Accept": "application/json"},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-        except Exception as e:
+        data = None
+        last_error = None
+        for url in OVERPASS_URLS:
+            try:
+                resp = await client.post(
+                    url,
+                    data={"data": query},
+                    timeout=30,
+                    headers={"Accept": "application/json"},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                break  # success — stop trying
+            except Exception as e:
+                last_error = f"{type(e).__name__}: {e}"
+                logger.debug("Overpass %s failed: %s", url, last_error)
+
+        if data is None:
             logger.error(
-                "Overpass query failed for %s: %s %s",
-                city, type(e).__name__, e,
+                "All Overpass URLs failed for %s (tried %d). Last error: %s",
+                city, len(OVERPASS_URLS), last_error,
             )
-            logger.debug("Full traceback:", exc_info=True)
             return []
 
         results: list[dict] = []
