@@ -237,14 +237,24 @@ def _score_location(client: ClientProfile, candidate: CompanyProfile) -> float:
         # We don't have client coordinates, so we use city matching as fallback
         pass
 
-    # City match: same city = 0.8, different city with matching prefix = 0.4
+    # City match: same city = 0.9, different city = 0.3
     if not client.city:
         return 0.5  # neutral
 
-    # Try to get candidate city from address
+    # Strategy A: does the full address contain the client city as a whole word?
+    # Handles "г Москва, г Зеленоград" when client city is "Зеленоград".
+    import re as _re
+    _city_word = _re.compile(
+        r"\b" + _re.escape(client.city) + r"\b",
+        _re.IGNORECASE,
+    )
+    full_address = candidate.legal_address or ""
+    if full_address and _city_word.search(full_address):
+        return 0.9
+
+    # Strategy B: extract city from address and compare
     candidate_city = _extract_city(candidate.legal_address)
     if not candidate_city:
-        # Use address value
         candidate_city = _extract_city(
             candidate.actual_addresses[0] if candidate.actual_addresses else ""
         )
@@ -352,13 +362,23 @@ def _estimate_revenue(profile: CompanyProfile) -> int:
 
 
 def _extract_city(address: str | None) -> str:
-    """Extract city name from address string."""
+    """Extract the most specific city from an address string.
+
+    For "г Москва, г Зеленоград, к 829" returns "Зеленоград".
+    For "Калининградская обл, г Зеленоградск" returns "Зеленоградск".
+    """
     if not address:
         return ""
-    # DaData format: "г Москва, ул Тверская, д 1"
-    # or "Москва, ..."
     import re
-    m = re.match(r"(?:г\.?\s*)?([А-ЯЁ][а-яё]+(?:[\s-][А-ЯЁ][а-яё]+)?)", address)
+    # Find all "г. CityName" patterns — take the last (most specific)
+    city_markers = re.findall(
+        r"\bг\.?\s+([А-ЯЁ][а-яё]+(?:[\s-][А-ЯЁ][а-яё]+)?)\b",
+        address,
+    )
+    if city_markers:
+        return city_markers[-1]
+    # Fallback: first capitalized word that looks like a city
+    m = re.match(r"([А-ЯЁ][а-яё]+(?:[\s-][А-ЯЁ][а-яё]+)?)", address)
     if m:
         return m.group(1)
     return ""
