@@ -890,11 +890,11 @@ class CompetitorMatcher:
                 m.profile.has_real_financials(),
             )
 
-        # Generate human-readable match reasons
-        for m in scored[:top_n]:
+        # Generate human-readable match reasons for top candidates
+        for m in scored[:max(top_n, 10)]:
             m.match_reason = _build_reason(m, client_revenue)
 
-        return scored[:top_n]
+        return scored  # return ALL — caller handles top-N slicing + diversity
 
 
 async def _score_one(
