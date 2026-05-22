@@ -31,9 +31,6 @@ RUN apt-get update && apt-get install -y \
     libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2 libxshmfence1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Chromium browser for Playwright (Yandex Maps search)
-RUN /root/.local/bin/playwright install chromium
-
 # Copy Python packages from builder
 COPY --from=builder /root/.local /root/.local
 
@@ -52,6 +49,9 @@ RUN mkdir -p data/production logs AIM/data AIM/reports
 # Set Python path
 ENV PATH=/root/.local/bin:$PATH
 ENV PYTHONPATH=/app/AIM/src:/app/src
+
+# Install Chromium browser for Playwright (Yandex Maps search)
+RUN playwright install chromium
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
