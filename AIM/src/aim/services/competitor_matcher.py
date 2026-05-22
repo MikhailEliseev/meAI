@@ -473,9 +473,9 @@ class CompetitorMatcher:
 
         OSM tags organizations by what they DO (amenity=dentist), not by
         legal name. This catches brand-named clinics like "Никор-Мед"
-        that DaData prefix search misses."""
-        t0 = time.monotonic()
+        that DaData prefix search misses.
         """
+        t0 = time.monotonic()
         city = client.city
         if not city:
             return []
