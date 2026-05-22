@@ -296,22 +296,25 @@ def _shared_services(client: ClientProfile, candidate: CompanyProfile) -> list[s
 
 # ── OKVED → service mapping ────────────────────────────────────────
 
-_OKVED_SERVICE_MAP: dict[str, str] = {
-    "86.10": "стационар",
-    "86.21": "терапия",
-    "86.22": "хирургия",
-    "86.23": "стоматология",
-    "86.90": "диагностика",
-    "86.90.9": "диагностика",
-    "86.90.1": "косметология",
-    "86.90.2": "косметология",
-    "86.90.3": "дерматология",
-    "86.90.4": "массаж",
-    "86.90.5": "физиотерапия",
-    "86.90.6": "реабилитация",
-    "86.90.7": "психотерапия",
-    "96.02": "косметология",
-    "96.04": "массаж",
+# OKVED → service keywords. Some codes expand to multiple services
+# because the OKVED category inherently covers them.
+# e.g. 86.23 "Стоматологическая практика" = therapy + surgery + hygiene
+_OKVED_SERVICE_MAP: dict[str, list[str]] = {
+    "86.10": ["стационар"],
+    "86.21": ["терапия"],
+    "86.22": ["хирургия"],
+    "86.23": ["стоматология", "терапия", "хирургия", "гигиена"],
+    "86.90": ["диагностика"],
+    "86.90.9": ["диагностика"],
+    "86.90.1": ["косметология"],
+    "86.90.2": ["косметология"],
+    "86.90.3": ["дерматология"],
+    "86.90.4": ["массаж"],
+    "86.90.5": ["физиотерапия"],
+    "86.90.6": ["реабилитация"],
+    "86.90.7": ["психотерапия"],
+    "96.02": ["косметология"],
+    "96.04": ["массаж"],
 }
 
 
@@ -321,10 +324,9 @@ def _okved_to_services(okved_main: str | None, okved_secondary: list[str]) -> li
     for code in [okved_main] + okved_secondary:
         if not code:
             continue
-        svc = _OKVED_SERVICE_MAP.get(code) or _OKVED_SERVICE_MAP.get(code[:5])
-        if svc:
-            services.add(svc)
-        # 86.x codes = general medical
+        svc_list = _OKVED_SERVICE_MAP.get(code) or _OKVED_SERVICE_MAP.get(code[:5])
+        if svc_list:
+            services.update(svc_list)
         elif code.startswith("86."):
             services.add("терапия")
     return list(services)
