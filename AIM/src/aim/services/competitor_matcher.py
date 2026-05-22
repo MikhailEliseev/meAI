@@ -251,7 +251,7 @@ class CompetitorMatcher:
                     replaced.profile.legal_name[:40], replaced.total_score, replaced.profile.data_source,
                     inn_best.profile.legal_name[:40], inn_best.total_score, inn_best.profile.inn,
                 )
-            scored = top
+        scored = top
 
         t_total = time.monotonic()
         logger.info(
