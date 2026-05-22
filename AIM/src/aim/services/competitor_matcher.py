@@ -1,34 +1,50 @@
 """Competitor matching algorithm — finds top-3 competitors for a client clinic.
 
-Scores candidates by:
-  revenue_match   (0.35) — similar scale
-  location_score  (0.25) — nearby (≤50 km)
-  service_overlap (0.25) — same services
-  data_quality    (0.15) — real financials > estimates
+CRITICAL: We work ONLY in commercial medicine. Municipal, state, and
+budgetary healthcare institutions (ГАУЗ, ГБУЗ, городские поликлиники,
+районные больницы, etc.) are filtered out at discovery time.
 
-Two-tier discovery:
+Scores candidates by:
+  service_overlap     (0.30) — same services (TF-IDF + Jaccard)
+  specialization_purity (0.15) — mono vs multi-profile matching
+  revenue_match       (0.15) — similar scale
+  location_score      (0.15) — nearby (≤50 km)
+  data_quality        (0.10) — real financials > estimates
+  popularity          (0.10) — ratings + reviews
+  visibility          (0.05) — search presence + maps listing
+
+Three-tier discovery:
   Tier 1: DaData — finds companies by legal name (prefix search)
   Tier 2: OpenStreetMap — finds organizations by amenity type (dentist/clinic)
            Catches brand-named clinics like "Никор-Мед" that DaData misses.
+  Tier 3: Yandex Maps — finds organizations by what people search for
+           Adds ratings, reviews, and real-world popularity signals.
 """
 
 import asyncio
 import logging
 import math
+import time
 from typing import Optional
+
+import httpx
 
 from .osm_discovery import OSMDiscovery, get_osm_discovery
 from .rusprofile.client import DaDataClient, get_dadata_client
 from .rusprofile.models import ClientProfile, CompanyProfile, CompetitorMatch
 from .service_extractor import extract_client_profile
+from .yandex_maps import YandexMapsClient, get_yandex_maps_client
 
 logger = logging.getLogger(__name__)
 
 # ── Scoring weights ────────────────────────────────────────────────
-W_REVENUE = 0.35
-W_LOCATION = 0.25
-W_SERVICES = 0.25
-W_DATA = 0.15
+W_REVENUE = 0.15
+W_LOCATION = 0.15
+W_SERVICES = 0.30
+W_SPECIALIZATION = 0.15
+W_DATA = 0.10
+W_POPULARITY = 0.10
+W_VISIBILITY = 0.05
 
 MAX_DISTANCE_KM = 50.0  # beyond this, location_score = 0
 
@@ -52,9 +68,11 @@ class CompetitorMatcher:
         self,
         dadata: DaDataClient | None = None,
         osm: OSMDiscovery | None = None,
+        yandex: YandexMapsClient | None = None,
     ):
         self.dadata = dadata or get_dadata_client()
         self.osm = osm or get_osm_discovery()
+        self.yandex = yandex or get_yandex_maps_client()
 
     # ── Main entry point ───────────────────────────────────────────
 
@@ -72,6 +90,8 @@ class CompetitorMatcher:
         Returns:
             List of CompetitorMatch, sorted by total_score descending.
         """
+        t0 = time.monotonic()
+
         # 1. Extract client profile from website
         raw = await extract_client_profile(url)
         client = ClientProfile(
@@ -98,30 +118,78 @@ class CompetitorMatcher:
                     client.city, client.city_lat, client.city_lon,
                 )
 
-        # 2. Two-tier discovery: DaData + OpenStreetMap
-        dadata_candidates, osm_candidates = await asyncio.gather(
+        # 2. Three-tier discovery: DaData + OpenStreetMap + Yandex Maps
+        dadata_candidates, osm_candidates, yandex_candidates = await asyncio.gather(
             self._search_candidates(client),
             self._search_osm_candidates(client),
+            self._search_yandex_candidates(client),
+        )
+        t_discovery = time.monotonic()
+        logger.info(
+            "CompetitorMatcher: discovery took %.1fs (DaData=%d, OSM=%d, Yandex=%d)",
+            t_discovery - t0, len(dadata_candidates), len(osm_candidates), len(yandex_candidates),
         )
 
-        # Merge, preferring DaData when same company found in both
+        # Merge: DaData first, then OSM, then Yandex
         candidates = await self._merge_candidates(
             dadata_candidates, osm_candidates, client
         )
+        candidates = await self._merge_candidates(
+            candidates, yandex_candidates, client
+        )
+
+        # Filter out municipal/state healthcare institutions.
+        # We work ONLY in commercial medicine.
+        commercial: list[CompanyProfile] = []
+        filtered_count = 0
+        for c in candidates:
+            if _is_state_healthcare(c.legal_name):
+                filtered_count += 1
+                logger.debug("Filtered state/municipal: %s", c.legal_name)
+            else:
+                commercial.append(c)
+        candidates = commercial
+
+        if filtered_count > 0:
+            logger.info(
+                "CompetitorMatcher: filtered %d state/municipal orgs, %d commercial remain",
+                filtered_count, len(candidates),
+            )
 
         if not candidates:
             logger.warning("CompetitorMatcher: no candidates found for %s", url)
             return []
 
         logger.info(
-            "CompetitorMatcher: %d total candidates (DaData=%d, OSM=%d)",
+            "CompetitorMatcher: %d total candidates (DaData=%d, OSM=%d, Yandex=%d)",
             len(candidates),
             len(dadata_candidates),
             len(osm_candidates),
+            len(yandex_candidates),
         )
 
-        # 3. Score and rank
+        # 3. Score and rank (first pass — without geocoding DaData)
         scored = await self._score_candidates(client, candidates, count)
+        t_score1 = time.monotonic()
+
+        # 4. Geocode top DaData candidates to refine location scores
+        # Only geocode top-5 who lack coordinates (saves ~20s vs geocoding all 25)
+        top_dadata = [
+            m.profile for m in scored[:5]
+            if m.profile.data_source == "dadata"
+            and m.profile.geo_lat is None
+            and m.profile.legal_address
+        ]
+        if top_dadata:
+            await self._geocode_dadata_candidates(top_dadata)
+            # Re-score with actual coordinates
+            scored = await self._score_candidates(client, candidates, count)
+
+        t_total = time.monotonic()
+        logger.info(
+            "CompetitorMatcher: scoring=%.1fs, geocode=%d candidates/%.1fs, total=%.1fs",
+            t_score1 - t_discovery, len(top_dadata), t_total - t_score1, t_total - t0,
+        )
 
         return scored
 
@@ -143,47 +211,48 @@ class CompetitorMatcher:
         queries: list[str] = []
 
         # ── Tier 1: Specialization-based ──────────────────────────
-        queries.append(spec)
+        spec_queries: list[str] = []
+        spec_queries.append(spec)
         if spec == "стоматология":
-            queries.extend([
+            spec_queries.extend([
                 "стоматологическая клиника",
                 "стоматологический центр",
                 "стоматологическая практика",
                 "стоматолог",
             ])
         elif spec == "косметология":
-            queries.extend([
+            spec_queries.extend([
                 "косметологический центр",
                 "центр косметологии",
                 "косметолог",
                 "косметологическая клиника",
             ])
         elif spec == "многопрофильная клиника":
-            queries.extend([
+            spec_queries.extend([
                 "медицинский центр",
                 "многопрофильный медицинский центр",
                 "клиника",
             ])
         elif spec == "пластическая хирургия":
-            queries.extend([
+            spec_queries.extend([
                 "пластическая хирургия",
                 "хирургическая клиника",
                 "центр хирургии",
             ])
         elif spec == "офтальмология":
-            queries.extend([
+            spec_queries.extend([
                 "офтальмологическая клиника",
                 "офтальмологический центр",
                 "офтальмолог",
             ])
         elif spec == "диагностический центр":
-            queries.extend([
+            spec_queries.extend([
                 "диагностический центр",
                 "медицинский центр",
                 "диагностика",
             ])
         elif spec == "педиатрия":
-            queries.extend([
+            spec_queries.extend([
                 "педиатрия",
                 "детская клиника",
                 "детский медицинский центр",
@@ -192,24 +261,29 @@ class CompetitorMatcher:
         # ── Tier 2: Generic medical terms ─────────────────────────
         # Catches brands where legal name doesn't include specialization,
         # e.g. "Никор-Мед", "Мед-Профи", "Здоровье", "Гиппократ", etc.
-        generic_medical = [
+        generic_queries = [
             "медицинский центр",
             "клиника",
             "медицина",
             "мед",
         ]
-        queries.extend(generic_medical)
 
         # ── Tier 3: City-only (broad sweep) ────────────────────────
-        # When city is known, search city name alone — DaData will return
-        # companies by address, then _is_medical filters by OKVED.
+        city_queries: list[str] = []
         if city:
-            queries.append(city)
+            city_queries.append(city)
 
-        raw_all: list[CompanyProfile] = []
-        seen_inn: set[str] = set()
+        # Build query list: spec queries first (tagged), then generic + city
+        all_queries: list[tuple[str, bool]] = []
+        for q in spec_queries:
+            all_queries.append((q, True))   # tagged with client specialization
+        for q in generic_queries:
+            all_queries.append((q, False))  # not specialization-tagged
+        for q in city_queries:
+            all_queries.append((q, False))
 
-        for q in queries[:10]:  # max 10 queries for coverage
+        async def _search_one_query(q: str, is_spec_query: bool) -> list[CompanyProfile]:
+            """Run a single DaData query and tag results."""
             q_city = ""
             if city and city.lower() not in q.lower():
                 q_city = city
@@ -220,11 +294,24 @@ class CompetitorMatcher:
                     count=20,
                 )
                 for p in batch:
-                    if p.inn and p.inn not in seen_inn:
-                        seen_inn.add(p.inn)
-                        raw_all.append(p)
+                    if is_spec_query:
+                        p.source_specialization = spec
+                return batch
             except Exception as e:
                 logger.error("DaData search failed for query=%s: %s", q, e)
+                return []
+
+        # Run all queries in parallel (was sequential — 10 queries × ~1-2s = 10-20s)
+        tasks = [_search_one_query(q, is_spec) for q, is_spec in all_queries[:10]]
+        batches = await asyncio.gather(*tasks)
+
+        raw_all: list[CompanyProfile] = []
+        seen_inn: set[str] = set()
+        for batch in batches:
+            for p in batch:
+                if p.inn and p.inn not in seen_inn:
+                    seen_inn.add(p.inn)
+                    raw_all.append(p)
 
         # Filter out the client's own company
         candidates = []
@@ -237,7 +324,135 @@ class CompetitorMatcher:
                 continue
             candidates.append(p)
 
+        logger.info(
+            "DaData: %d candidates, %d tagged with specialization='%s'",
+            len(candidates),
+            sum(1 for c in candidates if c.source_specialization == spec),
+            spec,
+        )
         return candidates[:25]
+
+    # ── Geocoding ──────────────────────────────────────────────────
+
+    _NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+
+    @staticmethod
+    def _normalize_address_for_nominatim(addr: str) -> str:
+        """Strip Russian address abbreviations that Nominatim doesn't parse.
+
+        "г Москва, ул Раевского, д 3, стр 1, кв 85" → "Москва, Раевского, 3"
+        """
+        import re as _re_addr
+
+        # Remove city prefix: "г Москва" → "Москва"
+        addr = _re_addr.sub(r"^г\.?\s+", "", addr)
+
+        # Remove district/subcity prefixes that Nominatim chokes on
+        addr = _re_addr.sub(r",?\s*р-н\s+\S+", "", addr)
+
+        # Remove street-type words: "ул Раевского" → "Раевского"
+        addr = _re_addr.sub(
+            r"(?:улица|ул|проспект|пр-т|проезд|пр-д|переулок|пер|"
+            r"площадь|пл|набережная|наб|бульвар|бул|б-р|шоссе|ш|"
+            r"микрорайон|мкр)\.?\s+",
+            "", addr,
+        )
+
+        # Remove "д N" (house marker) — keep just the number
+        addr = _re_addr.sub(r"д\.?\s*", "", addr)
+
+        # Remove everything after house number that's not useful for geocoding:
+        # "стр N", "к N", "корп N", "кв N", "оф N", "пом N"
+        addr = _re_addr.sub(
+            r",?\s*(?:стр|с|корп|к|кв|оф|офис|пом|помещение)\.?\s*\d+[а-яА-Я]?",
+            "", addr,
+        )
+
+        # Clean up: collapse multiple commas/spaces
+        addr = _re_addr.sub(r"\s*,\s*", ", ", addr)
+        addr = _re_addr.sub(r"\s+", " ", addr).strip(", ")
+        return addr
+
+    async def _geocode_dadata_candidates(
+        self, candidates: list[CompanyProfile]
+    ) -> None:
+        """Geocode DaData candidates that lack coordinates via Nominatim.
+
+        DaData returns legal_addresses but no geo_lat/geo_lon. Without
+        coordinates, location scores are flat (0.7 for same city). Geocoding
+        gives us actual distances, differentiating competitors within the city.
+
+        Uses Nominatim (free, no API key) with 1 req/s rate limit.
+        """
+        if not candidates:
+            return
+
+        # Collect unique addresses that need geocoding
+        needs_geo: list[tuple[int, str, str]] = []  # (index, raw_addr, clean_addr)
+        seen_clean: set[str] = set()
+        for i, c in enumerate(candidates):
+            if c.geo_lat is not None and c.geo_lon is not None:
+                continue
+            addr = c.legal_address
+            if not addr:
+                continue
+            clean = self._normalize_address_for_nominatim(addr)
+            if not clean or clean in seen_clean:
+                continue
+            seen_clean.add(clean)
+            needs_geo.append((i, addr, clean))
+
+        if not needs_geo:
+            return
+
+        # Build clean_addr → coordinates cache for dedup
+        addr_cache: dict[str, tuple[float, float]] = {}
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            for idx, raw_addr, clean_addr in needs_geo:
+                if clean_addr in addr_cache:
+                    candidates[idx].geo_lat, candidates[idx].geo_lon = addr_cache[clean_addr]
+                    continue
+
+                try:
+                    resp = await client.get(
+                        self._NOMINATIM_URL,
+                        params={
+                            "q": clean_addr,
+                            "format": "json",
+                            "limit": 1,
+                        },
+                        headers={
+                            "User-Agent": "AIM-CompetitorDiscovery/1.0 (me@iamaim.ru)",
+                        },
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+                    if data:
+                        lat = float(data[0]["lat"])
+                        lon = float(data[0]["lon"])
+                        addr_cache[clean_addr] = (lat, lon)
+                        candidates[idx].geo_lat = lat
+                        candidates[idx].geo_lon = lon
+                        logger.debug(
+                            "Geocoded: %s → (%.4f, %.4f)", raw_addr[:50], lat, lon
+                        )
+
+                    # Rate limit: 1 req/s for Nominatim
+                    await asyncio.sleep(1.1)
+                except Exception as e:
+                    logger.warning(
+                        "Nominatim geocoding failed for %s: %s", raw_addr[:50], e
+                    )
+                    await asyncio.sleep(1.1)
+
+        geocoded = sum(
+            1 for c in candidates if c.geo_lat is not None and c.geo_lon is not None
+        )
+        logger.info(
+            "Geocoded %d/%d DaData candidates via Nominatim",
+            geocoded, len(candidates),
+        )
 
     # ── OSM discovery ──────────────────────────────────────────────
 
@@ -267,23 +482,28 @@ class CompetitorMatcher:
         spec = client.specialization
         relevant = _filter_osm_by_specialization(osm_places, spec)
 
-        # Try to enrich with DaData: look up each by name + city
-        profiles: list[CompanyProfile] = []
-        for place in relevant[:15]:
+        # Enrich OSM places with DaData in parallel (was sequential — 15 lookups × ~1s = 15s)
+        async def _enrich_one(place: dict) -> CompanyProfile | None:
             try:
-                profile = await self._lookup_osm_on_dadata(place)
-                if profile:
-                    profiles.append(profile)
+                return await self._lookup_osm_on_dadata(place, spec)
             except Exception as e:
                 logger.debug("Failed to enrich OSM place %s: %s", place.get("name"), e)
+                return None
+
+        enrich_tasks = [_enrich_one(p) for p in relevant[:15]]
+        enrich_results = await asyncio.gather(*enrich_tasks)
+        profiles = [p for p in enrich_results if p is not None]
 
         logger.info("OSM: enriched %d/%d places via DaData", len(profiles), len(relevant))
         return profiles
 
-    async def _lookup_osm_on_dadata(self, place: dict) -> CompanyProfile | None:
+    async def _lookup_osm_on_dadata(
+        self, place: dict, specialization: str = ""
+    ) -> CompanyProfile | None:
         """Try to find an OSM place on DaData for financial data.
 
         Searches by the first word of the name (brand name) in the city.
+        Tags the profile with the client's specialization for service matching.
         """
         name = place.get("name", "")
         city = place.get("city", "")
@@ -312,6 +532,9 @@ class CompetitorMatcher:
                 # Tag as OSM-discovered (even though enriched via DaData)
                 if r.data_source == "dadata":
                     r.data_source = "osm+dadata"
+                # Tag with client specialization for service matching
+                if specialization and not r.source_specialization:
+                    r.source_specialization = specialization
                 return r
 
         # No DaData match — build a profile from OSM data alone
@@ -326,8 +549,127 @@ class CompetitorMatcher:
             actual_addresses=[_format_osm_address(place)],
             geo_lat=place.get("lat"),
             geo_lon=place.get("lon"),
+            source_specialization=specialization,
             data_source="osm",
             confidence=0.5,
+        )
+
+    # ── Yandex Maps discovery ────────────────────────────────────────
+
+    async def _search_yandex_candidates(
+        self, client: ClientProfile
+    ) -> list[CompanyProfile]:
+        """Find competitors via Yandex Maps organization search.
+
+        Yandex Maps returns organizations people actually see and interact
+        with on the map — a strong signal of real-world presence.
+        """
+        city = client.city
+        spec = client.specialization
+        if not city or not spec:
+            return []
+
+        if not self.yandex.configured:
+            logger.debug("Yandex Maps not configured — skipping Tier 3")
+            return []
+
+        try:
+            yandex_orgs = await self.yandex.find_medical_orgs(
+                specialization=spec,
+                city=city,
+            )
+        except Exception as e:
+            logger.error("Yandex Maps search failed for %s: %s", city, e)
+            return []
+
+        if not yandex_orgs:
+            return []
+
+        # Enrich with ratings (optional — non-blocking)
+        enriched_orgs = await asyncio.gather(
+            *[self.yandex.enrich_with_ratings(org) for org in yandex_orgs[:15]],
+            return_exceptions=True,
+        )
+
+        # Enrich Yandex orgs with DaData in parallel (was sequential)
+        async def _enrich_yandex_one(result) -> CompanyProfile | None:
+            if isinstance(result, Exception):
+                logger.debug("Yandex ratings enrichment failed: %s", result)
+                return None
+            try:
+                return await self._lookup_yandex_on_dadata(result, spec)
+            except Exception as e:
+                logger.debug("Failed to enrich Yandex org %s: %s", result.get("name"), e)
+                return None
+
+        enrich_tasks = [_enrich_yandex_one(r) for r in enriched_orgs]
+        enrich_results = await asyncio.gather(*enrich_tasks)
+        profiles = [p for p in enrich_results if p is not None]
+
+        logger.info("Yandex Maps: enriched %d/%d orgs via DaData", len(profiles), len(yandex_orgs))
+        return profiles
+
+    async def _lookup_yandex_on_dadata(
+        self, org: dict, specialization: str = ""
+    ) -> CompanyProfile | None:
+        """Try to find a Yandex Maps org on DaData for financial data."""
+        name = org.get("name", "")
+        city = ""
+        if not name:
+            return None
+
+        # Extract city from address
+        address = org.get("address", "")
+        import re as _re
+        city_match = _re.search(r"г\.?\s+([А-ЯЁ][а-яё]+(?:[\s-][А-ЯЁ][а-яё]+)?)", address)
+        if city_match:
+            city = city_match.group(1)
+
+        # Search by first 1-2 words of the name
+        words = name.split()
+        brand_core = " ".join(words[:2]) if len(words) >= 2 else words[0]
+
+        try:
+            results = await self.dadata.find_medical_companies(
+                query=brand_core,
+                city=city,
+                count=5,
+            )
+        except Exception:
+            results = []
+
+        for r in results:
+            if _name_similarity(name, r.legal_name) > 0.3:
+                # Preserve Yandex coordinates if DaData doesn't have them
+                if r.geo_lat is None and r.geo_lon is None:
+                    r.geo_lat = org.get("lat")
+                    r.geo_lon = org.get("lon")
+                # Carry Yandex rating/reviews to the profile
+                if r.rating is None and org.get("rating"):
+                    r.rating = org.get("rating")
+                if r.reviews_count is None and org.get("reviews_count"):
+                    r.reviews_count = org.get("reviews_count")
+                # Tag as Yandex-discovered
+                if r.data_source == "dadata":
+                    r.data_source = "yandex+dadata"
+                return r
+
+        # No DaData match — build profile from Yandex data
+        return CompanyProfile(
+            inn="",
+            legal_name=name,
+            brand_name=name,
+            employee_count=None,
+            okved_main=_specialization_to_okved(specialization),
+            okved_secondary=[],
+            legal_address=address,
+            actual_addresses=[address] if address else [],
+            geo_lat=org.get("lat"),
+            geo_lon=org.get("lon"),
+            rating=org.get("rating"),
+            reviews_count=org.get("reviews_count"),
+            data_source="yandex",
+            confidence=0.55,
         )
 
     async def _merge_candidates(
@@ -336,7 +678,7 @@ class CompetitorMatcher:
         osm: list[CompanyProfile],
         client: ClientProfile,
     ) -> list[CompanyProfile]:
-        """Merge DaData and OSM candidates, deduplicating by name similarity."""
+        """Merge candidates from different sources, deduplicating by name similarity."""
         merged: dict[str, CompanyProfile] = {}
 
         # DaData first (higher priority — has financial data)
@@ -387,6 +729,27 @@ class CompetitorMatcher:
 
         scored.sort(key=lambda m: m.total_score, reverse=True)
 
+        # Log top candidates for debugging
+        for i, m in enumerate(scored[:10]):
+            logger.info(
+                "Score #%d: %s | total=%.4f rev=%.2f loc=%.2f svc=%.2f spec=%.2f data=%.2f pop=%.2f vis=%.2f "
+                "src=%s spec=%s okved=%s fin=%s",
+                i + 1,
+                m.profile.legal_name[:60],
+                m.total_score,
+                m.revenue_match,
+                m.location_score,
+                m.service_overlap,
+                m.specialization_purity,
+                m.data_quality,
+                _score_popularity(m.profile),
+                _score_visibility(m.profile),
+                m.profile.data_source,
+                m.profile.source_specialization,
+                m.profile.okved_main,
+                m.profile.has_real_financials(),
+            )
+
         # Generate human-readable match reasons
         for m in scored[:top_n]:
             m.match_reason = _build_reason(m)
@@ -414,19 +777,24 @@ async def _score_one(
     # Service overlap — rough: compare OKVED codes to service keywords
     service_overlap = _score_services(client, candidate)
 
-    # OSM discovery bonus: +0.04 for competitors found via OpenStreetMap.
-    # These are the "hidden gems" (brand-named clinics) the system was
-    # designed to catch. Small nudge helps them break scoring ties against
-    # identically-scored DaData candidates.
-    osm_bonus = 0.04 if "osm" in candidate.data_source else 0.0
+    # Specialization purity: mono vs multi-profile matching
+    specialization_purity = _score_specialization_purity(client, candidate)
+
+    # Popularity: ratings + reviews from Yandex Maps / 2GIS / OSM
+    popularity_score = _score_popularity(candidate)
+
+    # Visibility: search presence + maps listing
+    visibility_score = _score_visibility(candidate)
 
     # Weighted total
     total = (
         revenue_match * W_REVENUE
         + location_score * W_LOCATION
         + service_overlap * W_SERVICES
+        + specialization_purity * W_SPECIALIZATION
         + data_quality * W_DATA
-        + osm_bonus
+        + popularity_score * W_POPULARITY
+        + visibility_score * W_VISIBILITY
     )
     total = round(min(total, 1.0), 4)
 
@@ -440,6 +808,9 @@ async def _score_one(
         revenue_match=round(revenue_match, 4),
         location_score=round(location_score, 4),
         service_overlap=round(service_overlap, 4),
+        specialization_purity=round(specialization_purity, 4),
+        popularity_score=round(popularity_score, 4),
+        visibility_score=round(visibility_score, 4),
         data_quality=round(data_quality, 4),
         total_score=total,
         match_reason="",
@@ -513,29 +884,213 @@ def _score_location(
 
 
 def _score_services(client: ClientProfile, candidate: CompanyProfile) -> float:
-    """Score service overlap using OKVED codes as proxy."""
+    """Score service overlap using TF-IDF cosine similarity + Jaccard.
+
+    Unlike exact set intersection (which is binary — either matches or not),
+    TF-IDF captures partial overlaps: "лазерная эпиляция" and "косметология"
+    share enough context to get a non-zero score.
+
+    Final score = 0.7 * cosine_similarity + 0.3 * jaccard
+    """
     if not client.services:
         return 0.5  # neutral
 
-    # Map OKVED codes to our service keywords
-    candidate_services = _okved_to_services(
+    candidate_services = _candidate_services(client, candidate)
+    if not candidate_services:
+        return 0.1
+
+    client_text = " ".join(sorted(client.services))
+    cand_text = " ".join(sorted(candidate_services))
+
+    # Compute TF-IDF cosine similarity
+    cosine_sim = _tfidf_cosine(client_text, cand_text)
+
+    # Compute Jaccard on the original sets
+    client_set = set(client.services)
+    cand_set = set(candidate_services)
+    jaccard = len(client_set & cand_set) / max(len(client_set | cand_set), 1)
+
+    return round(0.7 * cosine_sim + 0.3 * jaccard, 4)
+
+
+# Lazy-initialized TfidfVectorizer shared across all calls
+_tfidf_vectorizer: "TfidfVectorizer | None" = None
+
+
+def _get_tfidf() -> "TfidfVectorizer":
+    """Get or create the shared TfidfVectorizer with a medical vocabulary."""
+    global _tfidf_vectorizer
+    if _tfidf_vectorizer is None:
+        from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore[import-untyped]
+
+        _tfidf_vectorizer = TfidfVectorizer(
+            analyzer="word",
+            token_pattern=r"(?u)\b\w+\b",
+            ngram_range=(1, 2),  # unigrams + bigrams for phrases
+        )
+    return _tfidf_vectorizer
+
+
+def _tfidf_cosine(text_a: str, text_b: str) -> float:
+    """Compute TF-IDF cosine similarity between two short texts."""
+    if not text_a or not text_b:
+        return 0.0
+
+    try:
+        from sklearn.metrics.pairwise import cosine_similarity  # type: ignore[import-untyped]
+
+        vec = _get_tfidf()
+        tfidf_matrix = vec.fit_transform([text_a, text_b])
+        sim = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+        return float(sim)
+    except Exception:
+        # Fallback: simple word overlap
+        words_a = set(text_a.split())
+        words_b = set(text_b.split())
+        if not words_a or not words_b:
+            return 0.0
+        return len(words_a & words_b) / max(len(words_a | words_b), 1)
+
+
+def _candidate_services(client: ClientProfile, candidate: CompanyProfile) -> list[str]:
+    """Build candidate services from all available signals."""
+    services: set[str] = set()
+
+    # 1. Source specialization — the search query that found this candidate
+    if candidate.source_specialization:
+        spec = candidate.source_specialization
+        services.add(spec)
+        # Add related services for known specializations
+        _SPEC_RELATED: dict[str, list[str]] = {
+            "косметология": [
+                "косметология", "дерматология", "лазерная эпиляция",
+                "инъекционная косметология", "аппаратная косметология",
+                "уход за кожей", "эстетическая медицина",
+            ],
+            "стоматология": [
+                "стоматология", "терапия", "хирургия", "ортопедия",
+                "ортодонтия", "имплантация", "гигиена",
+            ],
+            "пластическая хирургия": [
+                "пластическая хирургия", "хирургия", "косметология",
+                "дерматология", "реабилитация",
+            ],
+            "офтальмология": [
+                "офтальмология", "диагностика", "хирургия",
+            ],
+            "педиатрия": [
+                "педиатрия", "терапия", "диагностика",
+            ],
+            "диагностический центр": [
+                "диагностика", "терапия",
+            ],
+            "многопрофильная клиника": [
+                "терапия", "хирургия", "диагностика", "гинекология",
+                "дерматология", "косметология", "педиатрия",
+            ],
+        }
+        for related in _SPEC_RELATED.get(spec, [spec]):
+            services.add(related)
+
+    # 2. OKVED codes
+    okved_services = _okved_to_services(
         candidate.okved_main, candidate.okved_secondary
     )
+    services.update(okved_services)
 
-    if not candidate_services:
-        return 0.3
+    # 3. Name analysis — specialization keywords in the company name
+    name = candidate.legal_name.lower()
+    _NAME_SPEC_KEYWORDS: dict[str, list[str]] = {
+        "косметология": ["косметологи", "косметолог", "космет", "эстети", "beauty", "лазерн"],
+        "стоматология": ["стоматологи", "стоматолог", "дентал", "dental", "дент"],
+        "пластическая хирургия": ["пластическ", "хирург"],
+        "офтальмология": ["офтальмологи", "офтальмолог", "глаз", "зрение"],
+        "педиатрия": ["педиатри", "педиатр", "детск"],
+        "диагностический центр": ["диагност", "мрт", "кт", "узи"],
+    }
+    for spec, keywords in _NAME_SPEC_KEYWORDS.items():
+        for kw in keywords:
+            if kw in name:
+                services.add(spec)
+                break
 
-    overlap = len(set(client.services) & set(candidate_services))
-    return min(overlap / max(len(client.services), 1), 1.0)
+    return list(services)
+
+
+def _score_popularity(candidate: CompanyProfile) -> float:
+    """Score competitor popularity from ratings + review counts.
+
+    rating_score:  3.0 → 0.0, 5.0 → 1.0 (linear)
+    review_score:  log-scale, maxes out at 200 reviews
+
+    Returns 0.5 (neutral) when no popularity data is available.
+    """
+    rating = candidate.rating
+    reviews = candidate.reviews_count or 0
+
+    if rating is None and reviews == 0:
+        return 0.5  # neutral — no data
+
+    # Rating component (0.6 weight)
+    if rating is not None and rating > 0:
+        rating_score = max(0.0, (rating - 3.0) / 2.0)
+    else:
+        rating_score = 0.5  # neutral
+
+    # Review count component (0.4 weight) — log scale
+    if reviews > 0:
+        review_score = min(math.log(reviews + 1) / math.log(200), 1.0)
+    else:
+        review_score = 0.0
+
+    return round(0.6 * rating_score + 0.4 * review_score, 4)
+
+
+def _score_visibility(candidate: CompanyProfile) -> float:
+    """Score competitor's search visibility and maps presence.
+
+    Currently uses data_source as a proxy signal:
+      - "yandex+dadata" → strong presence (on Yandex Maps + DaData)
+      - "yandex" → maps-only presence
+      - "osm+dadata" → OSM listing + DaData enrichment
+      - "osm" → OSM-only, basic presence
+      - "dadata" → legal-only, no consumer-facing presence
+
+    Returns 0-1 scale.
+    """
+    ds = candidate.data_source
+    if ds == "yandex+dadata":
+        return 0.9   # best of both worlds
+    elif ds == "yandex":
+        return 0.7   # maps presence confirmed
+    elif ds == "osm+dadata":
+        return 0.6   # OSM + legal enrichment
+    elif ds == "osm":
+        return 0.4   # OSM-only, basic
+    elif ds == "dadata":
+        return 0.3   # legal-only
+    return 0.3
+
+
+def _specialization_to_okved(specialization: str) -> str:
+    """Map client specialization to the closest OKVED code."""
+    mapping = {
+        "стоматология": "86.23",
+        "косметология": "96.02",
+        "многопрофильная клиника": "86.21",
+        "пластическая хирургия": "86.22",
+        "офтальмология": "86.21",
+        "диагностический центр": "86.90",
+        "педиатрия": "86.21",
+    }
+    return mapping.get(specialization, "86.90")
 
 
 def _shared_services(client: ClientProfile, candidate: CompanyProfile) -> list[str]:
     """Return the list of services shared between client and candidate."""
     if not client.services:
         return []
-    candidate_services = _okved_to_services(
-        candidate.okved_main, candidate.okved_secondary
-    )
+    candidate_services = _candidate_services(client, candidate)
     return list(set(client.services) & set(candidate_services))
 
 
@@ -639,6 +1194,291 @@ def _name_similarity(a: str, b: str) -> float:
     return len(wa & wb) / max(len(wa), len(wb))
 
 
+_STATE_HEALTHCARE_PATTERNS: dict[str, str] = {
+    # State legal-form prefixes (the strongest signal)
+    "ГАУЗ": "Государственное автономное учреждение здравоохранения",
+    "ГБУЗ": "Государственное бюджетное учреждение здравоохранения",
+    "ГУЗ": "Государственное учреждение здравоохранения",
+    "МУЗ": "Муниципальное учреждение здравоохранения",
+    "МБУЗ": "Муниципальное бюджетное учреждение здравоохранения",
+    "ФГБУ": "Федеральное государственное бюджетное учреждение",
+    "ФГАУ": "Федеральное государственное автономное учреждение",
+    "ФКУЗ": "Федеральное казённое учреждение здравоохранения",
+    "ГКУЗ": "Государственное казённое учреждение здравоохранения",
+}
+
+# Substrings that strongly indicate state/municipal healthcare,
+# checked case-insensitively against the full name.
+_STATE_NAME_MARKERS: list[str] = [
+    "городская поликлиника",
+    "городская больница",
+    "городская стоматологическая поликлиника",
+    "городская стоматология",
+    "муниципальная поликлиника",
+    "муниципальная больница",
+    "детская городская поликлиника",
+    "детская городская больница",
+    "детская стоматологическая поликлиника",
+    "детская поликлиника",           # e.g. "Детская поликлиника 111"
+    "детская больница",              # e.g. "Детская больница № 5"
+    "центральная районная больница",
+    "районная больница",
+    "районная поликлиника",
+    "областная больница",
+    "областная клиническая больница",
+    "областная поликлиника",
+    "краевая больница",
+    "краевая клиническая больница",
+    "республиканская больница",
+    "республиканская клиническая больница",
+    "женская консультация",
+    "кожно-венерологический диспансер",
+    "противотуберкулёзный диспансер",
+    "противотуберкулезный диспансер",
+    "психоневрологический диспансер",
+    "наркологический диспансер",
+    "онкологический диспансер",
+    "врачебно-физкультурный диспансер",
+    "психиатрическая больница",      # state psychiatric hospitals
+    "инфекционная больница",
+    "туберкулёзная больница",
+    "туберкулезная больница",
+    "центр гигиены и эпидемиологии",
+    "станция скорой медицинской помощи",
+    "бюро судебно-медицинской экспертизы",
+    "дом ребёнка",
+]
+
+
+def _is_state_healthcare(name: str) -> bool:
+    """Check if an organization is a state/municipal healthcare institution.
+
+    We work ONLY in commercial medicine. This filter removes:
+      - ГАУЗ/ГБУЗ/ГУЗ/МУЗ/МБУЗ — state/municipal healthcare institutions
+      - городская/районная/областная поликлиника/больница
+      - Numbered polyclinics: «Городская поликлиника № 12»
+      - State dispensaries (туберкулёзный, психоневрологический, etc.)
+      - ЦРБ, женские консультации, станции скорой помощи
+
+    Does NOT filter:
+      - ООО, АО, ЗАО, ИП with «клиника», «стоматология», «медицинский центр»
+      - Commercial brands that happen to contain «город» in address context
+    """
+    if not name:
+        return False
+
+    upper = name.upper()
+
+    # ── 1. State legal-form prefix (the strongest signal) ──────────
+    for prefix in _STATE_HEALTHCARE_PATTERNS:
+        if upper.startswith(prefix) or f'"{prefix}' in upper or f'«{prefix}' in upper:
+            return True
+
+    # ── 2. Commercial legal form — if present, it overrides markers ─
+    # ООО, АО, ЗАО, ИП are commercial legal forms. Even if the name
+    # contains "городская" (as part of address, not ownership), it's commercial.
+    _COMMERCIAL_FORMS = ("ООО", "АО ", "АО\"", "ЗАО", "ИП ", "ПАО", "ОАО")
+    has_commercial_form = any(
+        upper.startswith(cf) or f'"{cf}' in upper or f'«{cf}' in upper
+        for cf in _COMMERCIAL_FORMS
+    )
+
+    # ── 3. Name-based markers ──────────────────────────────────────
+    lower = name.lower()
+    for marker in _STATE_NAME_MARKERS:
+        if marker in lower:
+            # If the org has a commercial form AND the marker word,
+            # it's probably a commercial clinic near a landmark or
+            # a former state clinic now privatized — let it through.
+            # Only filter if NO commercial form is present.
+            if not has_commercial_form:
+                return True
+
+    # ── 4. Numbered polyclinics & hospitals ───────────────────────
+    # «Городская поликлиника № 12», «Стоматологическая поликлиника № 3»,
+    # «Поликлиника 52 филиал 2», «Детская поликлиника 111»,
+    # «Психиатрическая больница № 14»
+    # These are МУЗ/ГБУЗ even without the explicit legal-form prefix.
+    import re as _re_state
+    if _re_state.search(r"поликлиника\s+(?:№\s*)?\d+", lower):
+        if not has_commercial_form:
+            return True
+    if _re_state.search(r"больница\s+(?:№\s*)?\d+", lower):
+        if not has_commercial_form:
+            return True
+
+    return False
+
+
+def _score_specialization_purity(
+    client: ClientProfile, candidate: CompanyProfile
+) -> float:
+    """Score how well the candidate's profile breadth matches the client's.
+
+    Key insight: a mono-profile clinic (only cosmetology) competes with other
+    mono cosmetology clinics, NOT with multi-profile medical centers. Similarly,
+    a multi-profile clinic competes with other multi-profile clinics that offer
+    a similar range of services.
+
+    Returns 1.0 for perfect match, 0.0 for complete mismatch.
+    """
+    # Determine client's profile type
+    client_is_multi = _is_multi_profile_client(client)
+    client_specs = _client_specializations(client)
+
+    # Determine candidate's profile type
+    candidate_is_multi = _is_multi_profile_candidate(candidate)
+    candidate_specs = _candidate_specializations(candidate)
+
+    if not client_specs:
+        return 0.5  # unknown — neutral
+
+    # Count overlapping specializations
+    overlap = len(client_specs & candidate_specs)
+    jaccard = overlap / max(len(client_specs | candidate_specs), 1)
+
+    if client_is_multi and candidate_is_multi:
+        # Both multi-profile: reward specialization overlap
+        return round(0.6 + 0.4 * jaccard, 4)
+
+    if not client_is_multi and not candidate_is_multi:
+        # Both mono-profile: high score if same spec, low if different
+        if overlap > 0:
+            return round(0.8 + 0.2 * jaccard, 4)
+        else:
+            return 0.15  # mono but different fields — weak match
+
+    # Mixed: mono vs multi — significant penalty
+    if client_is_multi and not candidate_is_multi:
+        # Multi client, mono candidate: candidate is narrower
+        # Score by whether candidate's spec is one of client's areas
+        if overlap > 0:
+            return round(0.3 + 0.2 * jaccard, 4)
+        return 0.1
+
+    # Mono client, multi candidate: candidate is broader
+    if overlap > 0:
+        return round(0.25 + 0.2 * jaccard, 4)
+    return 0.1
+
+
+# Specializations that indicate a multi-profile clinic when combined
+_MULTI_SPEC_SIGNALS: dict[str, set[str]] = {
+    "стоматология": {"стоматология"},
+    "косметология": {"косметология", "дерматология"},
+    "пластическая хирургия": {"пластическая хирургия", "хирургия"},
+    "офтальмология": {"офтальмология"},
+    "педиатрия": {"педиатрия"},
+    "гинекология": {"гинекология"},
+    "диагностика": {"диагностика", "мрт", "кт", "узи"},
+    "терапия": {"терапия"},
+    "хирургия": {"хирургия"},
+    "реабилитация": {"реабилитация"},
+    "неврология": {"неврология"},
+    "кардиология": {"кардиология"},
+    "урология": {"урология"},
+    "эндокринология": {"эндокринология"},
+    "дерматология": {"дерматология", "косметология"},
+}
+
+
+def _is_multi_profile_client(client: ClientProfile) -> bool:
+    """Check if the client is a multi-profile clinic."""
+    if client.specialization == "многопрофильная клиника":
+        return True
+    if not client.services:
+        return False
+
+    # Map services to specialization buckets
+    matched_specs: set[str] = set()
+    for svc in client.services:
+        for spec, keywords in _MULTI_SPEC_SIGNALS.items():
+            if svc.lower() in keywords or any(kw in svc.lower() for kw in keywords):
+                matched_specs.add(spec)
+                break
+
+    # 2+ distinct specializations → multi-profile
+    return len(matched_specs) >= 2
+
+
+def _is_multi_profile_candidate(candidate: CompanyProfile) -> bool:
+    """Check if the candidate is a multi-profile clinic."""
+    # Explicit "многопрофильная" tag
+    if candidate.source_specialization == "многопрофильная клиника":
+        return True
+
+    name_lower = candidate.legal_name.lower()
+    if "многопрофильн" in name_lower:
+        return True
+
+    # Check OKVED codes: multiple distinct medical categories
+    all_codes = [candidate.okved_main] + candidate.okved_secondary
+    all_codes = [c for c in all_codes if c]
+    if not all_codes:
+        return False
+
+    distinct_categories: set[str] = set()
+    for code in all_codes:
+        code_prefix = code[:4] if len(code) >= 4 else code
+        distinct_categories.add(code_prefix)
+
+    return len(distinct_categories) >= 2
+
+
+def _client_specializations(client: ClientProfile) -> set[str]:
+    """Extract the set of specializations from the client profile."""
+    specs: set[str] = set()
+    if client.specialization:
+        specs.add(client.specialization)
+    if not client.services:
+        return specs
+    for svc in client.services:
+        for spec, keywords in _MULTI_SPEC_SIGNALS.items():
+            if svc.lower() in keywords or any(kw in svc.lower() for kw in keywords):
+                specs.add(spec)
+                break
+    return specs
+
+
+def _candidate_specializations(candidate: CompanyProfile) -> set[str]:
+    """Extract the set of specializations from a candidate profile."""
+    specs: set[str] = set()
+
+    # Source specialization is the strongest signal
+    if candidate.source_specialization:
+        specs.add(candidate.source_specialization)
+
+    # OKVED-based
+    all_codes = [candidate.okved_main] + candidate.okved_secondary
+    for code in all_codes:
+        if not code:
+            continue
+        okved_services = _okved_to_services(code, [])
+        for svc in okved_services:
+            for spec, keywords in _MULTI_SPEC_SIGNALS.items():
+                if svc in keywords:
+                    specs.add(spec)
+                    break
+
+    # Name-based
+    name = candidate.legal_name.lower()
+    _NAME_SPEC: dict[str, list[str]] = {
+        "косметология": ["косметолог", "космет", "эстети", "beauty", "лазерн"],
+        "стоматология": ["стоматолог", "дентал", "dental", "дент"],
+        "пластическая хирургия": ["пластическ", "хирург"],
+        "офтальмология": ["офтальмолог", "глаз", "зрение"],
+        "педиатрия": ["педиатр", "детск"],
+        "диагностика": ["диагност", "мрт", "кт", "узи"],
+    }
+    for spec, keywords in _NAME_SPEC.items():
+        for kw in keywords:
+            if kw in name:
+                specs.add(spec)
+                break
+
+    return specs
+
+
 def _build_reason(m: CompetitorMatch) -> str:
     """Build a human-readable reason string for the match."""
     parts: list[str] = []
@@ -666,6 +1506,15 @@ def _build_reason(m: CompetitorMatch) -> str:
         parts.append("реальные данные")
     else:
         parts.append("оценочные данные")
+
+    # Popularity signals
+    profile = m.profile
+    if profile.rating and profile.rating >= 4.0:
+        parts.append(f"рейтинг {profile.rating:.1f}")
+    if profile.reviews_count and profile.reviews_count >= 100:
+        parts.append(f"{profile.reviews_count}+ отзывов")
+    elif profile.reviews_count and profile.reviews_count >= 20:
+        parts.append(f"{profile.reviews_count} отзыва")
 
     return ", ".join(parts)
 
