@@ -34,6 +34,13 @@ class CompanyProfile:
     geo_lat: Optional[float] = None
     geo_lon: Optional[float] = None
 
+    # Consumer signals (from Yandex Maps, 2GIS, etc.)
+    rating: Optional[float] = None
+    reviews_count: Optional[int] = None
+
+    # What specialization query found this candidate (e.g. "косметология", "стоматология")
+    source_specialization: str = ""
+
     # Source metadata
     data_source: str = "dadata"
     confidence: float = 0.7
@@ -59,6 +66,9 @@ class CompetitorMatch:
     revenue_match: float = 0.0
     location_score: float = 0.0
     service_overlap: float = 0.0
+    specialization_purity: float = 0.0
+    popularity_score: float = 0.0
+    visibility_score: float = 0.0
     data_quality: float = 0.7
     total_score: float = 0.0
 
