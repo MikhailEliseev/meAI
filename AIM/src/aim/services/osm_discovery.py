@@ -8,6 +8,7 @@ Free, no API key required. Data from OpenStreetMap contributors.
 """
 
 import logging
+import traceback
 from typing import Optional
 
 import httpx
@@ -15,7 +16,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+OVERPASS_URL = "https://overpass.kumi.systems/api/interpreter"
 REQUEST_TIMEOUT = 30.0
 USER_AGENT = "AIM-CompetitorMatcher/1.0 (me@iamaim.ru)"
 
@@ -63,7 +64,11 @@ class OSMDiscovery:
             if data:
                 return float(data[0]["lat"]), float(data[0]["lon"])
         except Exception as e:
-            logger.error("Nominatim geocoding failed for %s: %s", city, e)
+            logger.error(
+                "Nominatim geocoding failed for %s: %s %s",
+                city, type(e).__name__, e,
+            )
+            logger.debug("Full traceback:", exc_info=True)
         return None
 
     async def find_medical_places(
@@ -88,11 +93,20 @@ class OSMDiscovery:
 
         client = await self._get_client()
         try:
-            resp = await client.post(OVERPASS_URL, data={"data": query}, timeout=30)
+            resp = await client.post(
+                OVERPASS_URL,
+                data={"data": query},
+                timeout=30,
+                headers={"Accept": "application/json"},
+            )
             resp.raise_for_status()
             data = resp.json()
         except Exception as e:
-            logger.error("Overpass query failed for %s: %s", city, e)
+            logger.error(
+                "Overpass query failed for %s: %s %s",
+                city, type(e).__name__, e,
+            )
+            logger.debug("Full traceback:", exc_info=True)
             return []
 
         results: list[dict] = []
