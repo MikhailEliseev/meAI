@@ -202,7 +202,7 @@ def _detect_specialization(text_lower: str, url: str) -> str:
 def _detect_city(text: str) -> str:
     """Detect city from page text."""
     # Strategy 1: "в Городе" pattern (common in titles/headers: "стоматология в Орле")
-    city_preposition = re.match(
+    city_preposition = re.search(
         r".*?\bв\s+(гор\.?\s*)?([А-ЯЁ][а-яё]+(?:[\s-][А-ЯЁ][а-яё]+)?)\b",
         text[:5000],
         re.IGNORECASE,
