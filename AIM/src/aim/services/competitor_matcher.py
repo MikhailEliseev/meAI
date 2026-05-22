@@ -96,32 +96,94 @@ class CompetitorMatcher:
     async def _search_candidates(self, client: ClientProfile) -> list[CompanyProfile]:
         """Search DaData for potential competitors.
 
-        Uses multiple queries for diversity — single query returns many
-        identically-named companies from different cities.
+        DaData suggest/party searches by company NAME, not OKVED. Companies
+        like "Никор-Мед" or "Мед-Профи" won't appear in "стоматология" queries.
+        We use three tiers of queries for coverage:
+          1. Specialization-specific (e.g. "стоматология", "стоматологическая клиника")
+          2. Generic medical terms (e.g. "медицинский центр", "клиника", "мед")
+          3. City-only fallback with medical filter
         """
         spec = client.specialization or "медицинская клиника"
         city = client.city
 
-        # Query variants for broader coverage
-        queries = [spec]
-        if city:
-            queries.append(f"{spec} {city}")
+        queries: list[str] = []
+
+        # ── Tier 1: Specialization-based ──────────────────────────
+        queries.append(spec)
         if spec == "стоматология":
-            queries.extend(["стоматологическая клиника", "стоматологический центр"])
+            queries.extend([
+                "стоматологическая клиника",
+                "стоматологический центр",
+                "стоматологическая практика",
+                "стоматолог",
+            ])
         elif spec == "косметология":
-            queries.extend(["косметологический центр", "центр косметологии"])
+            queries.extend([
+                "косметологический центр",
+                "центр косметологии",
+                "косметолог",
+                "косметологическая клиника",
+            ])
         elif spec == "многопрофильная клиника":
-            queries.extend(["медицинский центр", "многопрофильный медицинский центр"])
+            queries.extend([
+                "медицинский центр",
+                "многопрофильный медицинский центр",
+                "клиника",
+            ])
+        elif spec == "пластическая хирургия":
+            queries.extend([
+                "пластическая хирургия",
+                "хирургическая клиника",
+                "центр хирургии",
+            ])
+        elif spec == "офтальмология":
+            queries.extend([
+                "офтальмологическая клиника",
+                "офтальмологический центр",
+                "офтальмолог",
+            ])
+        elif spec == "диагностический центр":
+            queries.extend([
+                "диагностический центр",
+                "медицинский центр",
+                "диагностика",
+            ])
+        elif spec == "педиатрия":
+            queries.extend([
+                "педиатрия",
+                "детская клиника",
+                "детский медицинский центр",
+            ])
+
+        # ── Tier 2: Generic medical terms ─────────────────────────
+        # Catches brands where legal name doesn't include specialization,
+        # e.g. "Никор-Мед", "Мед-Профи", "Здоровье", "Гиппократ", etc.
+        generic_medical = [
+            "медицинский центр",
+            "клиника",
+            "медицина",
+            "мед",
+        ]
+        queries.extend(generic_medical)
+
+        # ── Tier 3: City-only (broad sweep) ────────────────────────
+        # When city is known, search city name alone — DaData will return
+        # companies by address, then _is_medical filters by OKVED.
+        if city:
+            queries.append(city)
 
         raw_all: list[CompanyProfile] = []
         seen_inn: set[str] = set()
 
-        for q in queries[:4]:  # max 4 queries
+        for q in queries[:10]:  # max 10 queries for coverage
+            q_city = ""
+            if city and city.lower() not in q.lower():
+                q_city = city
             try:
                 batch = await self.dadata.find_medical_companies(
                     query=q,
-                    city="" if city in q else city,  # don't double-add city
-                    count=10,
+                    city=q_city,
+                    count=20,
                 )
                 for p in batch:
                     if p.inn and p.inn not in seen_inn:
@@ -141,7 +203,7 @@ class CompetitorMatcher:
                 continue
             candidates.append(p)
 
-        return candidates[:15]
+        return candidates[:25]
 
     # ── Scoring ────────────────────────────────────────────────────
 
