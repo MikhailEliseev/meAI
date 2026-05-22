@@ -71,7 +71,7 @@ class Tactic:
 
 @dataclass
 class CiAnalysisResult:
-    chat_summary: str
+    chat_summary: str = ""
     feature_matrix: dict = field(default_factory=dict)
     pricing_comparison: dict = field(default_factory=dict)
     positioning_map: dict = field(default_factory=dict)
