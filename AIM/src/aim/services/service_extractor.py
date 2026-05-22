@@ -82,13 +82,104 @@ _RUSSIAN_CITIES: list[str] = [
 
 _CITY_PATTERNS: list[tuple[re.Pattern, str]] = []
 
+# Prepositional case forms for cities with non-trivial declension.
+# Key = nominative, Value = list of common forms (prepositional, genitive, etc.)
+_CITY_DECLENSIONS: dict[str, list[str]] = {
+    "Орёл": ["Орле", "Орла"],
+    "Санкт-Петербург": ["Санкт-Петербурге", "Петербурге"],
+    "Екатеринбург": ["Екатеринбурге"],
+    "Тверь": ["Твери"],
+    "Казань": ["Казани"],
+    "Астрахань": ["Астрахани"],
+    "Рязань": ["Рязани"],
+    "Пенза": ["Пензе"],
+    "Тула": ["Туле"],
+    "Уфа": ["Уфе"],
+    "Пермь": ["Перми"],
+    "Самара": ["Самаре"],
+    "Москва": ["Москве"],
+    "Кострома": ["Костроме"],
+    "Вологда": ["Вологде"],
+    "Калуга": ["Калуге"],
+    "Тюмень": ["Тюмени"],
+    "Челябинск": ["Челябинске"],
+    "Новосибирск": ["Новосибирске"],
+    "Красноярск": ["Красноярске"],
+    "Хабаровск": ["Хабаровске"],
+    "Иркутск": ["Иркутске"],
+    "Якутск": ["Якутске"],
+    "Мурманск": ["Мурманске"],
+    "Архангельск": ["Архангельске"],
+    "Смоленск": ["Смоленске"],
+    "Брянск": ["Брянске"],
+    "Курск": ["Курске"],
+    "Псков": ["Пскове"],
+    "Томск": ["Томске"],
+    "Омск": ["Омске"],
+    "Курган": ["Кургане"],
+    "Тамбов": ["Тамбове"],
+    "Саратов": ["Саратове"],
+    "Ростов-на-Дону": ["Ростове-на-Дону"],
+    "Нижний Новгород": ["Нижнем Новгороде"],
+    "Нижний Тагил": ["Нижнем Тагиле"],
+    "Владивосток": ["Владивостоке"],
+    "Владикавказ": ["Владикавказе"],
+    "Ставрополь": ["Ставрополе"],
+    "Севастополь": ["Севастополе"],
+    "Симферополь": ["Симферополе"],
+    "Калининград": ["Калининграде"],
+    "Краснодар": ["Краснодаре"],
+    "Волгоград": ["Волгограде"],
+    "Белгород": ["Белгороде"],
+    "Оренбург": ["Оренбурге"],
+    "Сургут": ["Сургуте"],
+    "Ярославль": ["Ярославле"],
+    "Киров": ["Кирове"],
+    "Липецк": ["Липецке"],
+    "Ижевск": ["Ижевске"],
+    "Барнаул": ["Барнауле"],
+    "Ульяновск": ["Ульяновске"],
+    "Череповец": ["Череповце"],
+    "Кемерово": ["Кемерове"],
+    "Новокузнецк": ["Новокузнецке"],
+    "Саранск": ["Саранске"],
+    "Чебоксары": ["Чебоксарах"],
+    "Иваново": ["Иванове"],
+    "Сочи": ["Сочи"],
+    "Махачкала": ["Махачкале"],
+    "Воронеж": ["Воронеже"],
+    "Нижневартовск": ["Нижневартовске"],
+    "Волжский": ["Волжском"],
+}
+
+
+def _generate_declined_forms(city: str) -> list[str]:
+    """Generate common declined forms for a city using heuristic rules."""
+    forms: list[str] = []
+    if city in _CITY_DECLENSIONS:
+        forms.extend(_CITY_DECLENSIONS[city])
+
+    # Heuristic prepositional case generation
+    if city.endswith(("ск", "бург", "град")):
+        forms.append(city + "е")
+    elif city.endswith("ь"):
+        forms.append(city[:-1] + "и")
+    elif city.endswith("а"):
+        forms.append(city[:-1] + "е")
+    elif city.endswith(("ж", "ч", "ш", "щ", "ц", "й", "в", "н", "м", "л", "р", "д", "т", "п", "б", "з", "с", "к", "г", "х")):
+        forms.append(city + "е")
+
+    return [f for f in forms if f != city]
+
 
 def _build_city_patterns():
-    """Compile city regex patterns once."""
+    """Compile city regex patterns once, including declined forms."""
     if _CITY_PATTERNS:
         return
     for city in sorted(_RUSSIAN_CITIES, key=len, reverse=True):
         _CITY_PATTERNS.append((re.compile(re.escape(city), re.IGNORECASE), city))
+        for form in _generate_declined_forms(city):
+            _CITY_PATTERNS.append((re.compile(re.escape(form), re.IGNORECASE), city))
 
 
 _build_city_patterns()
@@ -203,18 +294,18 @@ def _detect_city(text: str) -> str:
     """Detect city from page text."""
     # Strategy 1: "в Городе" pattern (common in titles/headers: "стоматология в Орле")
     city_preposition = re.search(
-        r".*?\bв\s+(гор\.?\s*)?([А-ЯЁ][а-яё]+(?:[\s-][А-ЯЁ][а-яё]+)?)\b",
+        r"\bв\s+(?:гор\.?\s*)?([А-ЯЁ][а-яё]+(?:[\s-][А-ЯЁ][а-яё]+)?)\b",
         text[:5000],
         re.IGNORECASE,
     )
     if city_preposition:
-        candidate = city_preposition.group(2)
-        # Validate against known cities (with ё→е normalisation)
+        candidate = city_preposition.group(1)
+        # Try exact match first (with ё→е normalisation), then fuzzy
         for city in _RUSSIAN_CITIES:
-            if _norm(candidate) == _norm(city):
+            if _city_matches(candidate, city):
                 return city
 
-    # Strategy 2: Direct city name match in first 5000 chars
+    # Strategy 2: Direct city name match (including declined forms) in first 5000 chars
     text_head = text[:5000]
     for pattern, city in _CITY_PATTERNS:
         if pattern.search(text_head):
@@ -272,3 +363,31 @@ def _extract_company_name(html: str) -> Optional[str]:
 def _norm(s: str) -> str:
     """Normalise Cyrillic string: ё→е, lowercase."""
     return s.replace("ё", "е").replace("Ё", "Е").lower()
+
+
+def _city_matches(candidate: str, city: str) -> bool:
+    """Check if a (possibly declined) candidate matches a nominative city name.
+
+    Handles Russian prepositional case:  "Орле" → "Орёл"
+    """
+    c = _norm(candidate)
+    n = _norm(city)
+    if c == n:
+        return True
+    # Subset: "Петербург" in "Санкт-Петербург"
+    if len(c) >= 4 and (c in n or n in c):
+        return True
+    # Strip common Russian case endings and compare stems
+    for ending in ("е", "и", "у", "ю", "ой", "ей", "ом", "ем", "а", "я", "ы"):
+        if c.endswith(ending) and len(c) > len(ending) + 1:
+            stem = c[:-len(ending)]
+            if n.startswith(stem) or stem.startswith(n) or stem in n:
+                return True
+        if n.endswith(ending) and len(n) > len(ending) + 1:
+            stem = n[:-len(ending)]
+            if c.startswith(stem) or stem.startswith(c) or stem in c:
+                return True
+    # ё↔е alternation: "орле" vs "орел" — same chars, different order
+    if len(c) <= 6 and set(c) == set(n):
+        return True
+    return False
