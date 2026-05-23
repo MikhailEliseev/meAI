@@ -83,6 +83,7 @@ class CIScoutAgent(Agent):
             task: Задача с payload:
                 - niche: ниша (обязательно)
                 - geo: город (обязательно)
+                - competitors: список URL (первый — клиентский сайт)
                 - target_audience: целевая аудитория (опционально)
                 - price_segment: ценовой сегмент (опционально)
 
@@ -95,11 +96,21 @@ class CIScoutAgent(Agent):
             target_audience = task.payload.get("target_audience", "")
             price_segment = task.payload.get("price_segment", "mid")
 
+            # Извлекаем URL клиента из списка competitors (первый URL)
+            competitors_list = task.payload.get("competitors", [])
+            client_url = ""
+            if competitors_list:
+                first = competitors_list[0]
+                if isinstance(first, str):
+                    client_url = first
+                elif isinstance(first, dict):
+                    client_url = first.get("url", "")
+
             # Логирование начала
             pass
 
             # Шаг 1: Multi-source discovery
-            competitors = await self._discover_competitors(niche, geo)
+            competitors = await self._discover_competitors(niche, geo, client_url)
 
             # Шаг 2: Build competitor profiles
             profiles = await self._build_profiles(competitors, niche, geo)
@@ -157,9 +168,14 @@ class CIScoutAgent(Agent):
                 completed_at=datetime.now()
             )
 
-    async def _discover_competitors(self, niche: str, geo: str) -> List[Dict[str, str]]:
+    async def _discover_competitors(
+        self, niche: str, geo: str, client_url: str = ""
+    ) -> List[Dict[str, str]]:
         """
-        Найти реальных конкурентов через SerpAPI + SEMrush.
+        Найти реальных конкурентов через SerpAPI + SEMrush → DaData fallback.
+
+        Когда SerpAPI/SEMrush ключи не настроены, использует DaData-based
+        CompetitorMatcher (тот же, что работает в /api/competitors/find).
 
         Returns:
             Список словарей [{name, url}, ...]
@@ -179,14 +195,13 @@ class CIScoutAgent(Agent):
                 f"клиника {niche} {geo} запись онлайн",
             ]
 
-            for query in search_queries[:6]:  # Ограничиваем до 6 запросов для скорости
+            for query in search_queries[:6]:
                 try:
                     results = await self._serpapi_search(query)
                     for r in results:
                         url = r.get("url", "")
                         name = r.get("title", "")
                         if url and name and "http" in url:
-                            # Извлекаем домен
                             domain = self._extract_domain(url)
                             if domain not in discovered:
                                 discovered[domain] = {
@@ -198,9 +213,9 @@ class CIScoutAgent(Agent):
                     print(f"[CI Scout] SerpAPI query failed: {query[:50]}... — {e}")
                     continue
 
-                await asyncio.sleep(0.5)  # Rate limit между запросами
+                await asyncio.sleep(0.5)
 
-        # Метод 2: SEMrush Domain Competitors (если есть ключ)
+        # Метод 2: SEMrush Domain Competitors
         if self.semrush_api_key and len(discovered) < 5:
             try:
                 semrush_competitors = await self._semrush_discover_competitors(niche, geo)
@@ -215,8 +230,98 @@ class CIScoutAgent(Agent):
             except Exception as e:
                 print(f"[CI Scout] SEMrush discovery failed: {e}")
 
+        # Метод 3: DaData fallback — когда SerpAPI/SEMrush не настроены или не дали результатов
+        if not discovered:
+            print("[CI Scout] SerpAPI/SEMrush не дали результатов — использую DaData fallback")
+            try:
+                dadata_competitors = await self._dadata_discover_competitors(niche, geo, client_url)
+                for comp in dadata_competitors:
+                    domain = comp.get("domain", "")
+                    if domain and domain not in discovered:
+                        discovered[domain] = {
+                            "name": comp.get("name", domain),
+                            "url": comp.get("url", f"https://{domain}"),
+                            "source": "dadata",
+                        }
+            except Exception as e:
+                print(f"[CI Scout] DaData fallback failed: {e}")
+
         result = list(discovered.values())
-        print(f"[CI Scout] Найдено {len(result)} реальных конкурентов (SerpAPI + SEMrush)")
+        source_labels = set(c.get("source", "?") for c in result)
+        print(f"[CI Scout] Найдено {len(result)} конкурентов (источники: {', '.join(source_labels)})")
+        return result
+
+    async def _dadata_discover_competitors(
+        self, niche: str, geo: str, client_url: str = ""
+    ) -> List[Dict[str, str]]:
+        """
+        DaData-based competitor discovery — используется как fallback когда
+        SerpAPI/SEMrush ключи не настроены.
+
+        Использует CompetitorMatcher (тот же, что и /api/competitors/find).
+        """
+        from aim.services.competitor_matcher import CompetitorMatcher
+
+        result: List[Dict[str, str]] = []
+
+        # Если есть client_url, используем полноценный CompetitorMatcher.find_competitors()
+        if client_url:
+            try:
+                matcher = CompetitorMatcher()
+                matches = await matcher.find_competitors(url=client_url, count=10)
+                for m in matches:
+                    p = m.profile
+                    # Получаем website из профиля или генерируем из legal_name
+                    website = m.website or ""
+                    if not website and p.legal_name:
+                        # Пробуем собрать домен из названия
+                        domain_hint = p.legal_name.lower()
+                        domain_hint = domain_hint.replace('"', '').replace('«', '').replace('»', '')
+                        domain_hint = domain_hint.replace(' ', '-').replace('_', '-')
+                        domain_hint = ''.join(c for c in domain_hint if c.isalnum() or c in '-.')
+                        if domain_hint:
+                            website = f"https://{domain_hint}.ru"
+
+                    result.append({
+                        "name": p.brand_name or p.legal_name,
+                        "url": website,
+                        "domain": website.replace("https://", "").replace("http://", "").rstrip("/"),
+                    })
+                print(f"[CI Scout] DaData (CompetitorMatcher): нашёл {len(result)} через find_competitors()")
+                return result
+            except Exception as e:
+                print(f"[CI Scout] CompetitorMatcher.find_competitors() failed: {e}")
+
+        # Fallback: используем только _search_candidates() без полного пайплайна
+        try:
+            from aim.services.rusprofile.models import ClientProfile
+            from aim.services.competitor_matcher import CompetitorMatcher
+
+            matcher = CompetitorMatcher()
+            client = ClientProfile(
+                url=client_url or "https://unknown.ru",
+                specialization=niche if niche and niche != "medical" else "стоматология",
+                city=geo if geo and geo != "ru" else "",
+                services=[],
+            )
+            candidates = await matcher._search_candidates(client)
+            for c in candidates:
+                name = c.brand_name or c.legal_name
+                if not name:
+                    continue
+                domain_hint = name.lower().replace('"', '').replace('«', '').replace('»', '')
+                domain_hint = domain_hint.replace(' ', '-').replace('_', '-')
+                domain_hint = ''.join(ch for ch in domain_hint if ch.isalnum() or ch in '-.')
+                domain = f"{domain_hint}.ru" if domain_hint else ""
+                result.append({
+                    "name": name,
+                    "url": f"https://{domain}" if domain else "",
+                    "domain": domain,
+                })
+            print(f"[CI Scout] DaData (_search_candidates): нашёл {len(result)}")
+        except Exception as e:
+            print(f"[CI Scout] DaData _search_candidates failed: {e}")
+
         return result
 
     async def _serpapi_search(self, query: str) -> List[Dict[str, str]]:
