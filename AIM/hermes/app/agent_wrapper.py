@@ -400,10 +400,10 @@ def _apply_markdown_formatting(text: str) -> str:
     t = text.strip()
 
     # ── Step 1: Bold-ify key metric patterns ─────────────────────────
-    # Pattern: "Качество сайта: X из 100"
+    # Pattern: "Качество сайта: X из 100" (case-insensitive, colon or dash)
     t = re.sub(
-        r'(Качество сайта:\s*\d+\s*из\s*\d+)',
-        r'**\1**',
+        r'(?i)(качество\s+сайта\s*[:—–-]\s*\d+\s*из\s*\d+)',
+        lambda m: f'**{m.group(1)}**',
         t,
     )
     # Pattern: "~X млн ₽/год" or "~X.X млн ₽/год"
@@ -512,7 +512,9 @@ def run_agent_sync(
         # Append this turn to history
         history.append({"role": "user", "content": message})
         reply_text = response.get("final_response", response.get("response", response.get("content", str(response))))
-        reply_text = _apply_markdown_formatting(str(reply_text))
+        raw_text = str(reply_text)
+        reply_text = _apply_markdown_formatting(raw_text)
+        logger.debug(f"Formatting applied: {len(raw_text)} chars → {len(reply_text)} chars")
         history.append({"role": "assistant", "content": reply_text})
 
         # Cache under REAL session_id so frontend can resume across requests
