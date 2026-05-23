@@ -15,6 +15,7 @@ is preserved across requests.
 import asyncio
 import logging
 import os
+import re
 import time
 from pathlib import Path
 from typing import Optional
@@ -380,6 +381,103 @@ def _create_agent(session_id: str | None, mode: str):
     )
 
 
+def _apply_markdown_formatting(text: str) -> str:
+    """Post-process model output to apply markdown formatting.
+
+    The model (deepseek-v4-pro) ignores markdown instructions in the system
+    prompt, so we apply formatting heuristically here before streaming to client.
+
+    Rules:
+    1. Wrap key metrics in **bold**
+    2. Put ▸ items on separate lines (with leading newline)
+    3. Wrap --- separator with double newlines (renders as <hr>)
+    4. Split into logical paragraphs after sentence-terminal punctuation
+       when a new topic/section starts
+    """
+    if not text or not text.strip():
+        return text
+
+    t = text.strip()
+
+    # ── Step 1: Bold-ify key metric patterns ─────────────────────────
+    # Pattern: "Качество сайта: X из 100"
+    t = re.sub(
+        r'(Качество сайта:\s*\d+\s*из\s*\d+)',
+        r'**\1**',
+        t,
+    )
+    # Pattern: "~X млн ₽/год" or "~X.X млн ₽/год"
+    t = re.sub(
+        r'(~\d[\d.]*\s*(?:млн|тыс\.?)\s*₽/год)',
+        r'**\1**',
+        t,
+    )
+    # Pattern: "X–Y новых пациентов" or "X–Y пациентов"
+    t = re.sub(
+        r'(\d+[–-]\d+\s+(?:новых\s+)?пациентов(?:\s+в\s+месяц)?)',
+        r'**\1**',
+        t,
+    )
+    # Pattern: "Через X–Y месяцев" or "Через X месяцев"
+    t = re.sub(
+        r'(Через\s+\d+[–-]\d+\s+месяцев)',
+        r'**\1**',
+        t,
+    )
+    # Pattern: "X – Y ₽" or "X–Y ₽" (cost per patient) — keep trailing context
+    t = re.sub(
+        r'(\d[\d\s]*[–-]\s*\d[\d\s]*\s*₽)(\s*за\s+пациента)?',
+        lambda m: f'**{m.group(1)}**{m.group(2) or ""}',
+        t,
+    )
+    # Pattern: "Выручка: ~X млн ₽/год"
+    t = re.sub(
+        r'(Выручка:\s*~\d[\d.]*\s*(?:млн|тыс\.?)\s*₽/год)',
+        r'**\1**',
+        t,
+    )
+
+    # ── Step 2: Put each ▸ item on its own line ──────────────────────
+    # Add newline before ▸ (but not if it's already on a new line)
+    t = re.sub(r'(?<!\n)▸\s', r'\n▸ ', t)
+
+    # ── Step 3: Wrap --- with double newlines ────────────────────────
+    # " --- " or " ---" or "--- " → "\n\n---\n\n"
+    t = re.sub(r'\s*---\s*', r'\n\n---\n\n', t)
+
+    # ── Step 4: Split into logical paragraphs ────────────────────────
+    # Add paragraph breaks after sentence endings when followed by
+    # a section-starting word (capital letter, key phrase)
+    section_starters = [
+        r'(?<=\.)\s+(?=Конкуренция)',
+        r'(?<=\.)\s+(?=Теперь)',
+        r'(?<=\.)\s+(?=Ваш прогноз)',
+        r'(?<=\.)\s+(?=Вот что)',
+        r'(?<=\.)\s+(?=Этих тр)',
+        r'(?<=\.)\s+(?=Скажите)',
+        r'(?<=\.)\s+(?=Можете)',
+        r'(?<=\.)\s+(?=По вашим)',
+        r'(?<=\.)\s+(?=Если)',
+        r'(?<=\.)\s+(?=Почему)',
+        r'(?<=\.)\s+(?=Это )',
+        r'(?<=\.)\s+(?=Фундамент)',
+        r'(?<=\.)\s+(?=Я наш)',
+        r'(?<=\.)\s+(?=Подобрать)',
+    ]
+    for pattern in section_starters:
+        t = re.sub(pattern, r'\n\n', t)
+
+    # ── Step 5: Clean up ────────────────────────────────────────────
+    # Collapse multiple blank lines
+    t = re.sub(r'\n{3,}', r'\n\n', t)
+    # Remove trailing whitespace on each line
+    t = '\n'.join(line.rstrip() for line in t.split('\n'))
+    # Ensure no leading/trailing whitespace
+    t = t.strip()
+
+    return t
+
+
 def run_agent_sync(
     message: str,
     session_id: str | None = None,
@@ -414,6 +512,7 @@ def run_agent_sync(
         # Append this turn to history
         history.append({"role": "user", "content": message})
         reply_text = response.get("final_response", response.get("response", response.get("content", str(response))))
+        reply_text = _apply_markdown_formatting(str(reply_text))
         history.append({"role": "assistant", "content": reply_text})
 
         # Cache under REAL session_id so frontend can resume across requests
