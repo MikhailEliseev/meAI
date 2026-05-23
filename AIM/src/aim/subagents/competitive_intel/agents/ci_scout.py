@@ -271,21 +271,15 @@ class CIScoutAgent(Agent):
                 matches = await matcher.find_competitors(url=client_url, count=10)
                 for m in matches:
                     p = m.profile
-                    # Получаем website из профиля или генерируем из legal_name
                     website = m.website or ""
-                    if not website and p.legal_name:
-                        # Пробуем собрать домен из названия
-                        domain_hint = p.legal_name.lower()
-                        domain_hint = domain_hint.replace('"', '').replace('«', '').replace('»', '')
-                        domain_hint = domain_hint.replace(' ', '-').replace('_', '-')
-                        domain_hint = ''.join(c for c in domain_hint if c.isalnum() or c in '-.')
-                        if domain_hint:
-                            website = f"https://{domain_hint}.ru"
+                    domain = ""
+                    if website:
+                        domain = website.replace("https://", "").replace("http://", "").rstrip("/")
 
                     result.append({
                         "name": p.brand_name or p.legal_name,
                         "url": website,
-                        "domain": website.replace("https://", "").replace("http://", "").rstrip("/"),
+                        "domain": domain,
                     })
                 print(f"[CI Scout] DaData (CompetitorMatcher): нашёл {len(result)} через find_competitors()")
                 return result
@@ -309,14 +303,10 @@ class CIScoutAgent(Agent):
                 name = c.brand_name or c.legal_name
                 if not name:
                     continue
-                domain_hint = name.lower().replace('"', '').replace('«', '').replace('»', '')
-                domain_hint = domain_hint.replace(' ', '-').replace('_', '-')
-                domain_hint = ''.join(ch for ch in domain_hint if ch.isalnum() or ch in '-.')
-                domain = f"{domain_hint}.ru" if domain_hint else ""
                 result.append({
                     "name": name,
-                    "url": f"https://{domain}" if domain else "",
-                    "domain": domain,
+                    "url": "",
+                    "domain": "",
                 })
             print(f"[CI Scout] DaData (_search_candidates): нашёл {len(result)}")
         except Exception as e:
