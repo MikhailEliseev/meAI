@@ -25,6 +25,8 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from .voice_transcriber import transcribe_voice
+
 logger = logging.getLogger(__name__)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -145,6 +147,17 @@ async def telegram_webhook(request: Request):
                             "✅ Ваш чат привязан к аккаунту AIM. Оператор готов ответить на ваши вопросы."
                         )
                         return {"status": "bound", "lead_id": lead_id}
+
+        # Detect voice message — download + transcribe before processing
+        voice = update.message.get("voice")
+        if chat_id and voice and not text:
+            file_id = voice.get("file_id")
+            if file_id:
+                await _send_telegram_message(chat_id, "🎤 Расшифровываю голосовое сообщение...")
+                text = transcribe_voice(file_id)
+                if not text:
+                    await _send_telegram_message(chat_id, "❌ Не удалось расшифровать голосовое сообщение")
+                    return {"status": "transcription_failed"}
 
         # Process message via Hermes AIAgent with session memory (D-17: unified chat)
         if chat_id and text:
@@ -276,6 +289,17 @@ def _polling_loop_sync():
                 text = message.get("text", "")
                 chat = message.get("chat", {})
                 chat_id = chat.get("id")
+
+                # Detect voice message — download + transcribe before processing
+                voice = message.get("voice")
+                if chat_id and voice and not text:
+                    file_id = voice.get("file_id")
+                    if file_id:
+                        _send_telegram_message_sync(chat_id, "🎤 Расшифровываю голосовое сообщение...")
+                        text = transcribe_voice(file_id)
+                        if not text:
+                            _send_telegram_message_sync(chat_id, "❌ Не удалось расшифровать голосовое сообщение")
+                            continue
 
                 if not chat_id or not text:
                     continue
