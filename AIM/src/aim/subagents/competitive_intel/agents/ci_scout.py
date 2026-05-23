@@ -646,6 +646,7 @@ class CIScoutAgent(Agent):
             }
             prof = profile_by_name.get(name, {})
             item["url"] = prof.get("url", "")
+            item["website"] = prof.get("url", "")  # some agents use "website" field
             item["source"] = prof.get("source", "unknown")
             return item
 
