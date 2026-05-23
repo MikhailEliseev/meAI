@@ -106,6 +106,9 @@ async def handle_run_seo_audit(url=None, **kwargs) -> str:
     unpacked = _normalize_args(url, {"url": ""})
     if unpacked:
         url = unpacked["url"]
+    # Auto-prepend https:// if URL has no protocol
+    if url and not url.startswith(("http://", "https://")):
+        url = "https://" + url
     logger.info("Running SEO audit for URL: %s", url)
     try:
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:

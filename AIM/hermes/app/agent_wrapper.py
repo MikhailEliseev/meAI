@@ -261,10 +261,16 @@ def _presale_prompt() -> str:
 
 ### Доступные инструменты (эти 5):
 - run_seo_audit — SEO-аудит сайта (сразу при получении URL)
-- find_competitors — поиск конкурентов (принимает named_competitors — список названий)
+- find_competitors — поиск конкурентов (уже включает revenue_year, profit_year и другие финансы)
 - present_competitors — сохранить выбор конкурентов
 - run_ci_analysis — SWOT, фичи, цены, тактики (сразу после present_competitors)
 - collect_contact — сбор контакта (только в конце)
+
+### ⚠️ ВАЖНО про find_company_financials:
+Этот инструмент НЕ нужен в обычном флоу! find_competitors УЖЕ возвращает revenue_year и profit_year (реальные данные из налоговой). Вызывай find_company_financials ТОЛЬКО если:
+- У тебя есть конкретный ИНН (10-12 цифр) или ОГРН (13-15 цифр)
+- Ты хочешь детализировать финансы КОНКРЕТНОЙ компании
+- НЕ вызывай его «на всякий случай» после find_competitors — там уже всё есть
 
 ### Контекст веб-чата:
 - Клиент на сайте iamaim.ru, видит полностраничный чат
@@ -313,6 +319,10 @@ def _admin_prompt() -> str:
 show_project_status, show_all_leads, collect_contact, run_seo_audit,
 run_content_analysis, run_ads_report, search_telegram_chats, send_telegram_message,
     qualify_lead, escalate_to_manager, get_lead_pipeline, update_knowledge
+
+### ⚠️ ПРО find_company_financials:
+Вызывай ТОЛЬКО если у тебя есть конкретный ИНН (10-12 цифр) или ОГРН (13-15 цифр).
+Без ИНН/ОГРН инструмент вернёт ошибку. find_competitors уже включает revenue_year и profit_year.
 """
 
 
