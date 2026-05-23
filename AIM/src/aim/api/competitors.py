@@ -26,6 +26,10 @@ router = APIRouter(prefix="/api/competitors", tags=["competitors"])
 class FindCompetitorsRequest(BaseModel):
     url: str = Field(..., description="Client clinic website URL")
     count: int = Field(default=3, ge=1, le=5, description="Number of competitors to return")
+    named_competitors: Optional[list[str]] = Field(
+        default=None,
+        description="Optional list of competitor names or URLs to look up directly via DaData",
+    )
 
 
 class CompetitorJson(BaseModel):
@@ -113,7 +117,9 @@ async def find_competitors(body: FindCompetitorsRequest) -> FindCompetitorsRespo
     """
     try:
         matcher = CompetitorMatcher()
-        matches = await matcher.find_competitors(url=body.url, count=body.count)
+        matches = await matcher.find_competitors(
+            url=body.url, count=body.count, named_competitors=body.named_competitors,
+        )
 
         competitors = [_competitor_to_json(m) for m in matches]
 

@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 def _normalize_args(first_param, defaults):
     if isinstance(first_param, dict):
-        return {k: first_param.get(k, defaults[k]) for k in defaults}
+        return {k: first_param.get(k, defaults.get(k)) for k in defaults}
     return None
 
 
@@ -28,7 +28,7 @@ AIM_API_BASE = "http://app:8000"
 REQUEST_TIMEOUT = 60.0  # longer — service extractor fetches website
 
 
-async def handle_find_competitors(url=None, **kwargs) -> str:
+async def handle_find_competitors(url=None, named_competitors=None, **kwargs) -> str:
     """Find top-3 competitors for a clinic website.
 
     Extracts client services, specialization, and city from the website,
@@ -37,25 +37,32 @@ async def handle_find_competitors(url=None, **kwargs) -> str:
 
     Args:
         url: Client clinic website URL (e.g., "https://clinic.ru")
+        named_competitors: Optional list of competitor names or URLs
 
     Returns:
         JSON string with 3 competitors: inn, legal_name, revenue, services,
         match scores (revenue_match, location_score, service_overlap),
         and human-readable match_reason for each.
     """
-    unpacked = _normalize_args(url, {"url": ""})
+    defaults = {"url": "", "named_competitors": None}
+    unpacked = _normalize_args(url, defaults)
     if unpacked:
         url = unpacked["url"]
+        named_competitors = unpacked.get("named_competitors")
 
     if not url:
         return json.dumps({"error": "url is required"})
 
-    logger.info("Finding competitors for URL: %s", url)
+    logger.info("Finding competitors for URL: %s, named: %s", url, named_competitors)
     try:
+        payload: dict = {"url": url, "count": 3}
+        if named_competitors:
+            payload["named_competitors"] = named_competitors
+
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
             response = await client.post(
                 f"{AIM_API_BASE}/api/competitors/find",
-                json={"url": url, "count": 3},
+                json=payload,
             )
             response.raise_for_status()
             data = response.json()
@@ -123,6 +130,8 @@ registry.register(
                 "Extracts services, city, and specialization from the site, "
                 "searches DaData for similar medical companies, scores them "
                 "by revenue match, location, and service overlap. "
+                "Optionally accepts named_competitors — a list of competitor "
+                "names or URLs to look up directly via DaData. "
                 "Returns 3 competitors with match reasons for the client to review."
             ),
             "parameters": {
@@ -131,6 +140,11 @@ registry.register(
                     "url": {
                         "type": "string",
                         "description": "Client clinic website URL (e.g., 'https://clinic.ru')",
+                    },
+                    "named_competitors": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional list of competitor names or URLs to look up via DaData",
                     },
                 },
                 "required": ["url"],

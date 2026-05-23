@@ -212,7 +212,7 @@ async def extract_client_profile(url: str) -> dict:
 
     services = _detect_services(text_lower)
     specialization = _detect_specialization(text_lower, url)
-    city = _detect_city(text) or _extract_city_from_url(url)
+    city = _extract_city_from_schema(html) or _detect_city(text) or _extract_city_from_url(url)
     company_name = _extract_company_name(html)
 
     logger.info(
@@ -268,24 +268,57 @@ def _extract_text(html: str) -> str:
         return re.sub(r"\s+", " ", clean)
 
 
+_NEGATION_MARKERS: list[str] = [
+    "противопоказани",
+    "не используем",
+    "не применяем",
+    "не проводим",
+    "не делаем",
+    "отказались от",
+    "нельзя",
+    "запрещен",
+    "не рекомендуется",
+    "не показан",
+    "не является",
+]
+
+
 def _detect_services(text_lower: str) -> list[str]:
-    """Detect medical services from page text."""
+    """Detect medical services from page text, excluding negation contexts."""
     found: list[str] = []
     for service, patterns in _MEDICAL_SERVICES.items():
+        service_detected = False
         for pattern in patterns:
-            if pattern in text_lower:
+            idx = text_lower.find(pattern)
+            while idx != -1:
+                ctx_start = max(0, idx - 30)
+                ctx_end = min(len(text_lower), idx + len(pattern) + 20)
+                context = text_lower[ctx_start:ctx_end]
+
+                negated = any(marker in context for marker in _NEGATION_MARKERS)
+                if not negated:
+                    service_detected = True
+                    break
+
+                idx = text_lower.find(pattern, idx + 1)
+
+            if service_detected:
                 found.append(service)
                 break
+
     return found
 
 
 def _detect_specialization(text_lower: str, url: str) -> str:
-    """Detect clinic specialization from content and URL."""
-    # Check content first
+    """Detect clinic specialization — dominance-based (most keyword matches wins)."""
+    match_counts: dict[str, int] = {}
     for spec, patterns in _SPECIALIZATIONS.items():
-        for pattern in patterns:
-            if pattern in text_lower:
-                return spec
+        count = sum(1 for p in patterns if p in text_lower)
+        if count > 0:
+            match_counts[spec] = count
+
+    if match_counts:
+        return max(match_counts, key=match_counts.get)
 
     # Fallback: check URL
     url_lower = url.lower()
@@ -299,25 +332,82 @@ def _detect_specialization(text_lower: str, url: str) -> str:
     return ""
 
 
+def _extract_city_from_schema(html: str) -> str:
+    """Extract city from JSON-LD / schema.org markup (addressLocality)."""
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, "html.parser")
+        for script in soup.find_all("script", type="application/ld+json"):
+            try:
+                import json
+                data = json.loads(script.string or "")
+                if isinstance(data, dict):
+                    # @graph pattern: {"@graph": [{...}, {...}]}
+                    items = data.get("@graph", [data])
+                    if isinstance(items, dict):
+                        items = [items]
+                    for item in items:
+                        addr = _extract_locality_from_ld(item)
+                        if addr:
+                            return addr
+                        # Also check nested @graph
+                        for sub in item.get("@graph", []):
+                            addr = _extract_locality_from_ld(sub)
+                            if addr:
+                                return addr
+            except (json.JSONDecodeError, TypeError, AttributeError):
+                continue
+    except Exception:
+        pass
+    return ""
+
+
+def _extract_locality_from_ld(data: dict) -> str:
+    """Extract addressLocality from a JSON-LD node, resolving parentOrg if needed."""
+    addr = data.get("address", {})
+    if isinstance(addr, str):
+        # Inline address string — try to extract city
+        for city in _RUSSIAN_CITIES:
+            if city.lower() in addr.lower():
+                return city
+    if isinstance(addr, dict):
+        locality = addr.get("addressLocality", "")
+        if isinstance(locality, str) and locality:
+            return _match_city_name(locality)
+    # Check parentOrganization recursively
+    parent = data.get("parentOrganization")
+    if isinstance(parent, dict):
+        return _extract_locality_from_ld(parent)
+    if isinstance(parent, list) and parent:
+        return _extract_locality_from_ld(parent[0])
+    return ""
+
+
 def _detect_city(text: str) -> str:
-    """Detect city from page text."""
+    """Detect city from full page text (no char limit)."""
     # Strategy 1: "в Городе" pattern (common in titles/headers: "стоматология в Орле")
     city_preposition = re.search(
         r"\bв\s+(?:гор\.?\s*)?([А-ЯЁ][а-яё]+(?:[\s-][А-ЯЁ][а-яё]+)?)\b",
-        text[:5000],
+        text,
         re.IGNORECASE,
     )
     if city_preposition:
         candidate = city_preposition.group(1)
-        # Try exact match first (with ё→е normalisation), then fuzzy
         for city in _RUSSIAN_CITIES:
             if _city_matches(candidate, city):
                 return city
 
-    # Strategy 2: Direct city name match (including declined forms) in first 5000 chars
-    text_head = text[:5000]
+    # Strategy 2: Direct city name match (including declined forms) — full text
     for pattern, city in _CITY_PATTERNS:
-        if pattern.search(text_head):
+        if pattern.search(text):
+            return city
+    return ""
+
+
+def _match_city_name(name: str) -> str:
+    """Match a schema.org city name against known Russian cities."""
+    for city in _RUSSIAN_CITIES:
+        if _city_matches(name, city):
             return city
     return ""
 

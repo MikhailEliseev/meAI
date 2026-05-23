@@ -5,13 +5,13 @@ budgetary healthcare institutions (ГАУЗ, ГБУЗ, городские пол
 районные больницы, etc.) are filtered out at discovery time.
 
 Scores candidates by:
-  service_overlap     (0.25) — same services (TF-IDF + Jaccard)
+  service_overlap     (0.12) — same services (Jaccard)
   specialization_purity (0.15) — mono vs multi-profile matching
-  popularity          (0.17) — ratings + reviews (real-world presence)
+  popularity          (0.18) — ratings + reviews (real-world presence)
   location_score      (0.15) — nearby (≤50 km)
   revenue_match       (0.10) — similar scale
-  visibility          (0.10) — search presence + maps listing
-  data_quality        (0.08) — real financials > estimates
+  visibility          (0.12) — search presence + maps listing
+  data_quality        (0.18) — real financials > estimates
 
 Three-tier discovery:
   Tier 1: DaData — finds companies by legal name (prefix search)
@@ -50,11 +50,11 @@ if _bl:
 # ── Scoring weights ────────────────────────────────────────────────
 W_REVENUE = 0.10
 W_LOCATION = 0.15
-W_SERVICES = 0.25
+W_SERVICES = 0.12
 W_SPECIALIZATION = 0.15
-W_DATA = 0.14
-W_POPULARITY = 0.11
-W_VISIBILITY = 0.10
+W_DATA = 0.18
+W_POPULARITY = 0.18
+W_VISIBILITY = 0.12
 
 MAX_DISTANCE_KM = 50.0  # beyond this, location_score = 0
 
@@ -90,12 +90,16 @@ class CompetitorMatcher:
         self,
         url: str,
         count: int = 3,
+        named_competitors: Optional[list[str]] = None,
     ) -> list[CompetitorMatch]:
         """Find top-N competitors for a clinic website.
 
         Args:
             url: Client's website URL
             count: Number of competitors to return (default 3)
+            named_competitors: Optional list of competitor names/URLs to
+                look up directly via DaData. When provided, these are enriched
+                and scored alongside discovered competitors.
 
         Returns:
             List of CompetitorMatch, sorted by total_score descending.
@@ -148,13 +152,44 @@ class CompetitorMatcher:
             t_extract - t0, t_geocode - t_extract,
         )
 
-        # Merge: DaData first, then OSM, then Yandex
+        # 2.5. Look up named competitors via DaData (by name)
+        named_profiles: list[CompanyProfile] = []
+        if named_competitors:
+            for name in named_competitors:
+                # Strip URL prefix if user passed a URL instead of name
+                clean_name = name.strip()
+                if clean_name.startswith("http"):
+                    clean_name = clean_name.split("//")[-1].split("/")[0]  # extract domain
+                    # Remove www. prefix
+                    if clean_name.startswith("www."):
+                        clean_name = clean_name[4:]
+                profiles = await self.dadata.search_company(clean_name, count=3)
+                if profiles:
+                    # Mark as named competitor for traceability
+                    for p in profiles:
+                        p._named_competitor = True
+                    named_profiles.extend(profiles)
+                    logger.info(
+                        "CompetitorMatcher: named_competitor '%s' => %d DaData matches",
+                        clean_name, len(profiles),
+                    )
+                else:
+                    logger.warning(
+                        "CompetitorMatcher: named_competitor '%s' not found in DaData",
+                        clean_name,
+                    )
+
+        # Merge: DaData first, then OSM, then Yandex, then named
         candidates = await self._merge_candidates(
             dadata_candidates, osm_candidates, client
         )
         candidates = await self._merge_candidates(
             candidates, yandex_candidates, client
         )
+        if named_profiles:
+            candidates = await self._merge_candidates(
+                candidates, named_profiles, client
+            )
 
         # Filter out municipal/state healthcare institutions.
         # We work ONLY in commercial medicine.
@@ -1032,13 +1067,11 @@ def _score_location(
 
 
 def _score_services(client: ClientProfile, candidate: CompanyProfile) -> float:
-    """Score service overlap using TF-IDF cosine similarity + Jaccard.
+    """Score service overlap using pure Jaccard similarity.
 
-    Unlike exact set intersection (which is binary — either matches or not),
-    TF-IDF captures partial overlaps: "лазерная эпиляция" and "косметология"
-    share enough context to get a non-zero score.
-
-    Final score = 0.7 * cosine_similarity + 0.3 * jaccard
+    Pure Jaccard is chosen over TF-IDF because candidate services are
+    short constructed strings (5-10 words), not document-length text.
+    TF-IDF on tiny strings degrades to keyword overlap with extra math.
     """
     if not client.services:
         return 0.5  # neutral
@@ -1047,57 +1080,11 @@ def _score_services(client: ClientProfile, candidate: CompanyProfile) -> float:
     if not candidate_services:
         return 0.1
 
-    client_text = " ".join(sorted(client.services))
-    cand_text = " ".join(sorted(candidate_services))
-
-    # Compute TF-IDF cosine similarity
-    cosine_sim = _tfidf_cosine(client_text, cand_text)
-
-    # Compute Jaccard on the original sets
     client_set = set(client.services)
     cand_set = set(candidate_services)
     jaccard = len(client_set & cand_set) / max(len(client_set | cand_set), 1)
 
-    return round(0.7 * cosine_sim + 0.3 * jaccard, 4)
-
-
-# Lazy-initialized TfidfVectorizer shared across all calls
-_tfidf_vectorizer: "TfidfVectorizer | None" = None
-
-
-def _get_tfidf() -> "TfidfVectorizer":
-    """Get or create the shared TfidfVectorizer with a medical vocabulary."""
-    global _tfidf_vectorizer
-    if _tfidf_vectorizer is None:
-        from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore[import-untyped]
-
-        _tfidf_vectorizer = TfidfVectorizer(
-            analyzer="word",
-            token_pattern=r"(?u)\b\w+\b",
-            ngram_range=(1, 2),  # unigrams + bigrams for phrases
-        )
-    return _tfidf_vectorizer
-
-
-def _tfidf_cosine(text_a: str, text_b: str) -> float:
-    """Compute TF-IDF cosine similarity between two short texts."""
-    if not text_a or not text_b:
-        return 0.0
-
-    try:
-        from sklearn.metrics.pairwise import cosine_similarity  # type: ignore[import-untyped]
-
-        vec = _get_tfidf()
-        tfidf_matrix = vec.fit_transform([text_a, text_b])
-        sim = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-        return float(sim)
-    except Exception:
-        # Fallback: simple word overlap
-        words_a = set(text_a.split())
-        words_b = set(text_b.split())
-        if not words_a or not words_b:
-            return 0.0
-        return len(words_a & words_b) / max(len(words_a | words_b), 1)
+    return round(jaccard, 4)
 
 
 def _candidate_services(client: ClientProfile, candidate: CompanyProfile) -> list[str]:
