@@ -1983,3 +1983,121 @@ Telegram → TelegramMonitor → EventBus → SalesAdminMagister
 
 **Время завершения:** 2026-05-21T19:50 GMT+3
 
+---
+
+## Checkpoint #24: Pre-Sale CI Marketing Analysis (2026-05-22)
+
+**Что сделано:**
+- ✅ Создан `ci_marketing_analysis.py` — 7 engines для конкурентного анализа (850+ lines)
+- ✅ Rule-based, deterministic, <1s (без LLM)
+- ✅ Интегрирован ai-marketing-claude methodology (SWOT, positioning maps, feature comparison, steal-worthy tactics)
+- ✅ `POST /api/competitors/analyze` endpoint
+- ✅ Hermes tool `run_ci_analysis` (toolset "aim-operations", теперь 13 tools)
+- ✅ PreSaleFolder.save_ci_analysis_report()
+- ✅ PRESALE prompts обновлены (agent_wrapper.py + SOUL.md)
+- ✅ Задеплоено на сервер + integration test пройден
+
+**Ключевые файлы:**
+- `AIM/src/aim/services/ci_marketing_analysis.py` — 7 engines (Scraper, FeatureMapper, PricingAnalyzer, PositioningMapper, SwotEngine, TacticExtractor, ReportFormatter)
+- `AIM/src/aim/api/competitors.py` — `POST /api/competitors/analyze`
+- `AIM/hermes/app/tools/run_ci_analysis.py` — Hermes tool handler
+- `AIM/hermes/app/tools/__init__.py` — 12→13 tools
+- `AIM/hermes/skills/aim/SOUL.md` — PRESALE + ADMIN sections updated
+- `AIM/hermes/app/agent_wrapper.py` — step 5.5 in presale flow
+- `AIM/src/aim/services/pre_sale_folder.py` — save_ci_analysis_report()
+
+**7 Engines:**
+1. **CompetitorPageScraper** — параллельный скрейпинг 3 сайтов (httpx + BeautifulSoup)
+2. **FeatureMapper** — OKVED + keywords → 21-dimension feature matrix
+3. **PricingAnalyzer** — DaData revenue + scraping → price tiers
+4. **PositioningMapper** — X=price (1-10), Y=specialization breadth (1-10)
+5. **SwotEngine** — rule-based SWOT per competitor + aggregate
+6. **TacticExtractor** — pattern detection (онлайн-запись, цены, отзывы, контент)
+7. **ReportFormatter** — chat_summary (markdown) + full JSON report
+
+**Fallback:**
+- Если сайты недоступны → rule-based анализ из DaData/Yandex данных
+- Если все 3 недоступны → graceful degradation, переход к сбору контакта
+
+**Pre-Sale Flow (обновлённый):**
+```
+1. run_seo_audit(url)
+2. WOW-цифры
+3. Предложить найти конкурентов
+4. find_competitors(url) → топ-3
+5. present_competitors() → клиент подтверждает
+5.5 run_ci_analysis(url, competitors) → SWOT, фичи, цены, тактики
+6. collect_contact()
+```
+
+**Integration Test:**
+- `POST https://iamaim.ru/api/competitors/analyze` → `success: true`
+- 0.17s response time (fallback mode, все сайты недоступны)
+- Все 7 секций анализа присутствуют
+
+**Коммиты:**
+- `32148b5` feat(sales): Phase 13 Sub-Phase 6 — CI Marketing Analysis for Pre-Sale
+- `c83b29f` fix: remove non-existent imports from ci_marketing_analysis.py
+- `7108806` fix: CiAnalysisResult.chat_summary default value
+
+**Баг-фиксы при деплое:**
+- ImportError: `_NAME_SPEC`, `_okved_to_services` (as dict), `_SPEC_RELATED` — удалены несуществующие импорты
+- CiAnalysisResult.__init__() missing 'chat_summary' — добавлено default value
+
+**Контекст для продолжения:**
+- Phase 13 полностью завершён (6 sub-phases, 6 commits, ~3,500 lines)
+- CI Marketing Analysis работает в pre-sale flow
+- Осталась 1 низкоприоритетная задача: #37 Fix Yandex Maps API key
+- 43/45 планов (95%), остался только Phase 13-02 (marketing campaigns) — deferred post-MVP
+
+**Следующий шаг:**
+1. Fix Yandex Maps API key (#37)
+2. Или взять Phase 13-02 (marketing campaigns)
+3. Или любой другой приоритет
+
+**Время завершения:** 2026-05-22
+
+---
+
+## Checkpoint #25: Phase 19 — Competitor Discovery Quality (2026-05-23)
+
+**Что сделано:**
+- ✅ C1: Специализация — dominance-based (max keyword matches) вместо first-match-wins
+- ✅ C3: Негативная фильтрация услуг (±30/±20 char context window)
+- ✅ S1+S2: Ребалансировка весов (W_POPULARITY=0.18, W_SERVICES=0.12, W_DATA=0.18, W_VISIBILITY=0.12)
+- ✅ M1: Чистый Jaccard вместо TF-IDF+Jaccard (_get_tfidf, _tfidf_cosine, _tfidf_vectorizer — удалены)
+- ✅ S3: JSON-LD/schema.org city extraction + full-page search (без text[:5000])
+- ✅ S4: named_competitors в API (FindCompetitorsRequest) + CompetitorMatcher + Hermes tool
+- ✅ 63 новых теста (26 service_extractor + 37 competitor_matcher_scoring) — все проходят
+
+**Ключевые файлы:**
+- `AIM/src/aim/services/service_extractor.py` — C1, C3, S3
+- `AIM/src/aim/services/competitor_matcher.py` — S1, S2, M1, S4
+- `AIM/src/aim/api/competitors.py` — S4 (API)
+- `AIM/hermes/app/tools/find_competitors.py` — S4 (Hermes)
+- `AIM/tests/services/test_service_extractor.py` — 26 tests
+- `AIM/tests/services/test_competitor_matcher_scoring.py` — 37 tests
+
+**Весовая схема (финальная):**
+```
+W_REVENUE       = 0.10
+W_LOCATION      = 0.15
+W_SERVICES      = 0.12  (↓ 0.25)
+W_SPECIALIZATION= 0.15
+W_DATA          = 0.18  (↑ 0.14)
+W_POPULARITY    = 0.18  (↑ 0.11)
+W_VISIBILITY    = 0.12  (↑ 0.10)
+SUM             = 1.00
+```
+
+**Контекст для продолжения:**
+- Phase 19 полностью завершён — все 8 проблем исправлены
+- 63 теста проходят, TF-IDF код удалён
+- named_competitors передаётся через весь стек (Hermes → API → Matcher → DaData)
+- _score_location: 0.7 для same-city по адресу, 1.0 только при haversine 0km
+- city_lat/city_lon передаются как явные параметры в _score_location (не из client атрибутов)
+
+**Следующий шаг:** Push на сервер и integration test
+
+**Время завершения:** 2026-05-23T15:30 GMT+3
+
