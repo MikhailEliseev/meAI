@@ -236,11 +236,15 @@ class CIScoutAgent(Agent):
             try:
                 dadata_competitors = await self._dadata_discover_competitors(niche, geo, client_url)
                 for comp in dadata_competitors:
+                    name = comp.get("name", "")
+                    url = comp.get("url", "")
                     domain = comp.get("domain", "")
-                    if domain and domain not in discovered:
-                        discovered[domain] = {
-                            "name": comp.get("name", domain),
-                            "url": comp.get("url", f"https://{domain}"),
+                    # Use name as dedup key when domain is missing
+                    dedup_key = domain if domain else name
+                    if dedup_key and dedup_key not in discovered:
+                        discovered[dedup_key] = {
+                            "name": name,
+                            "url": url,
                             "source": "dadata",
                         }
             except Exception as e:
