@@ -52,6 +52,9 @@ async def handle_find_competitors(url=None, named_competitors=None, **kwargs) ->
 
     if not url:
         return json.dumps({"error": "url is required"})
+    # Auto-prepend https:// if URL has no protocol
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
 
     logger.info("Finding competitors for URL: %s, named: %s", url, named_competitors)
     try:

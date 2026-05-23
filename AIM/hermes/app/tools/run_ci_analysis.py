@@ -83,6 +83,9 @@ async def handle_run_ci_analysis(
         return json.dumps({"error": "url is required"})
     if not competitors or len(competitors) == 0:
         return json.dumps({"error": "at least one competitor is required"})
+    # Auto-prepend https:// if URL has no protocol
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
 
     logger.info(
         "Running CI analysis for URL: %s (%s, %s) with %d competitors",

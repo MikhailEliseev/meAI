@@ -85,6 +85,9 @@ scikit-learn>=1.5.0
 # Playwright — Yandex Maps web search (headless Chromium)
 playwright>=1.40.0
 
+# Web scraping — text extraction (used by ci-content agent)
+trafilatura>=2.0.0
+
 # Phase 12: YooKassa Payment Integration
 async-yookassa>=1.0.0
 scipy>=1.14.0
