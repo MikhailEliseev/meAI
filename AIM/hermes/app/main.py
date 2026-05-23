@@ -21,6 +21,7 @@ import os
 
 import asyncio
 import json
+import re
 
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -309,11 +310,18 @@ async def chat_stream(
                 await asyncio.sleep(0.15)
                 yield f"data: {json.dumps({'type': 'step-end', 'step': tc_name}, ensure_ascii=False)}\n\n"
 
-            # Stream reply word-by-word (character-by-character is too slow)
-            words = reply.split()
-            for word in words:
-                yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': word + ' '}, ensure_ascii=False)}\n\n"
-                await asyncio.sleep(0.03)
+            # Stream reply token-by-token, preserving paragraph/line breaks
+            # reply.split() destroys \n\n needed for markdown (--- hr, paragraph spacing)
+            tokens = re.split(r'( +|\t+|\n+)', reply)
+            for token in tokens:
+                if not token:
+                    continue
+                if token.startswith('\n'):
+                    # Preserve newlines for markdown (paragraph breaks, line breaks)
+                    yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': token}, ensure_ascii=False)}\n\n"
+                else:
+                    yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': token}, ensure_ascii=False)}\n\n"
+                await asyncio.sleep(0.02)
 
             # Finish signal
             yield f"data: {json.dumps({'type': 'finish', 'session_id': result.get('session_id')}, ensure_ascii=False)}\n\n"
