@@ -898,7 +898,7 @@ class CIAuditorAgent(Agent):
 
             # Рассчитать средний score для каждого dimension
             for dimension, checks in audit["dimensions"].items():
-                scores = [check["score"] for check in checks.values()]
+                scores = [check["score"] for check in checks.values() if check["score"] is not None]
                 dimension_scores[dimension] = sum(scores) / len(scores) if scores else 0
 
             # Рассчитать общий weighted score
