@@ -119,7 +119,7 @@ class CIScoutAgent(Agent):
             clustered = await self._cluster_competitors(profiles, target_audience, price_segment)
 
             # Шаг 4: Select TOP-5-10
-            top_selected = await self._select_top_competitors(clustered)
+            top_selected = await self._select_top_competitors(clustered, profiles)
 
             # Шаг 5: Market insights
             insights = await self._generate_insights(clustered, top_selected)
@@ -612,7 +612,8 @@ class CIScoutAgent(Agent):
 
     async def _select_top_competitors(
         self,
-        clusters: Dict[str, List[str]]
+        clusters: Dict[str, List[str]],
+        profiles: List[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Выбрать TOP-5-10 конкурентов для глубокого анализа.
@@ -626,43 +627,55 @@ class CIScoutAgent(Agent):
 
         Args:
             clusters: кластеры конкурентов
+            profiles: профили конкурентов (для извлечения URL и других данных)
 
         Returns:
-            Список TOP конкурентов
+            Список TOP конкурентов с url, name, cluster, reason
         """
+        # Build name→profile lookup for URL/other data
+        profile_by_name: Dict[str, Dict[str, Any]] = {}
+        if profiles:
+            for p in profiles:
+                profile_by_name[p.get("name", "")] = p
+
+        def _build_item(name: str, cluster: str, reason: str) -> Dict[str, Any]:
+            item: Dict[str, Any] = {
+                "name": name,
+                "cluster": cluster,
+                "reason": reason,
+            }
+            prof = profile_by_name.get(name, {})
+            item["url"] = prof.get("url", "")
+            item["source"] = prof.get("source", "unknown")
+            return item
+
         top = []
 
         # Все прямые конкуренты
         for name in clusters["direct"]:
-            top.append({
-                "name": name,
-                "cluster": "direct",
-                "reason": "Прямой конкурент (тот же ценовой сегмент)"
-            })
+            top.append(_build_item(name, "direct", "Прямой конкурент (тот же ценовой сегмент)"))
 
         # Минимум 1 лидер
         if clusters["leader"]:
-            top.append({
-                "name": clusters["leader"][0],
-                "cluster": "leader",
-                "reason": "Лидер рынка (высокий рейтинг, много отзывов)"
-            })
+            top.append(_build_item(clusters["leader"][0], "leader",
+                                   "Лидер рынка (высокий рейтинг, много отзывов)"))
 
         # Минимум 1 нишевой
         if clusters["niche"]:
-            top.append({
-                "name": clusters["niche"][0],
-                "cluster": "niche",
-                "reason": "Нишевой игрок (узкая специализация)"
-            })
+            top.append(_build_item(clusters["niche"][0], "niche",
+                                   "Нишевой игрок (узкая специализация)"))
 
         # Добавить emerging если есть место
         if len(top) < 10 and clusters["emerging"]:
-            top.append({
-                "name": clusters["emerging"][0],
-                "cluster": "emerging",
-                "reason": "Новый игрок (активно растёт)"
-            })
+            top.append(_build_item(clusters["emerging"][0], "emerging",
+                                   "Новый игрок (активно растёт)"))
+
+        # Fill remaining slots from indirect cluster
+        for name in clusters.get("indirect", []):
+            if len(top) >= 10:
+                break
+            top.append(_build_item(name, "indirect",
+                                   "Косвенный конкурент (смежная услуга или другая ЦА)"))
 
         print(f"[CI Scout] Выбрано {len(top)} конкурентов для глубокого анализа")
 
