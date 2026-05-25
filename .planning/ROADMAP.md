@@ -346,22 +346,33 @@ Plans:
 - [x] 18-01-PLAN.md — Hermes Knowledge Bus: EventBus listener + vault structure + knowledge endpoints
 - [x] 18-02-PLAN.md — Teacher ↔ Hermes pipeline + Magisters context query + activation sequence
 
-### Phase 19: Competitor Discovery Quality
+### Phase 19: Competitor Discovery Quality ✅
 **Goal**: Исправить проблемы валидности подбора конкурентов, выявленные при полном аудите пайплайна. Специализация (first-match-wins → dominance-based), сервисы конкурентов (constructed → scraped/weight-adjusted), подсветка ложных срабатываний, named_competitors support, ребалансировка весов скоринга.
 **Requirements**: C1..C3, S1..S4, M1 (from CONTEXT.md)
 **Depends on**: Phase 18
-**Success Criteria** (what must be TRUE):
-  1. Specialization detection uses dominance-based approach (max keyword matches, not first-match-wins)
-  2. Service detection filters negation/negative contexts
-  3. Scoring weights rebalanced: popularity ↑ (0.11→0.18), service_overlap ↓ (0.25→0.12)
-  4. API supports `named_competitors` field (by-name search + enrichment)
-  5. City detection expanded to JSON-LD/schema.org + full page search (beyond first 5000 chars)
-  6. All existing tests pass + new tests for each fix
-  7. End-to-end: стоматология «Все Свои» в Москве находит релевантных конкурентов с реальными финансами
 **Plans**: 1 plan
 
 Plans:
 - [x] 19-01 — Competitor discovery quality fixes (8 issues across 4 files)
+
+### Phase 20: Apify Competitor Intelligence
+**Goal**: Полная перестройка архитектуры поиска конкурентов с Yandex/OSM/DomainGuess на Apify scraping platform. Google Maps Scraper → первичный источник, Instagram Scraper → социальные сигналы, Website Content Crawler → реальные услуги с сайтов, DaData + rusprofile → только финансы.
+**Requirements**: APIFY-01..APIFY-08 (from CONTEXT.md)
+**Depends on**: Phase 19
+**Success Criteria** (what must be TRUE):
+  1. Apify Google Maps — первичный источник конкурентов (заменяет Yandex Maps + OSM)
+  2. Website Content Crawler извлекает реальные услуги с сайтов (вместо constructed)
+  3. Instagram Scraper даёт followers count и bio для каждого конкурента
+  4. DaData + rusprofile используется ТОЛЬКО для финансового обогащения
+  5. Время поиска < 60s (через параллельные Apify запросы)
+  6. Website есть у 80%+ конкурентов (сейчас ~10%)
+  7. Старые сломанные файлы удалены (yandex_maps_search, yandex_web_search, social_discovery)
+  8. ApifyClient с resilience-паттернами (retry, circuit breaker, rate limiting)
+  9. Все тесты проходят, интеграционный тест на yutskovskaya.ru
+
+Plans:
+- [ ] 20-01-PLAN.md — Full Apify rebuild: Google Maps Scraper + Website Content Crawler + Instagram Scraper + CompetitorMatcher rewrite + cleanup
+**Plans**: 1 plan
 
 ## Progress
 
@@ -390,5 +401,6 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 17. No More Mock Data | v4.2 | 1/1 | Complete | 2026-05-20 |
 | 18. Hermes Learning Bus | v4.3 | 2/2 | Complete | 2026-05-20 |
 | 19. Competitor Discovery Quality | v4.4 | 1/1 | Complete | 2026-05-23 |
+| 20. Apify Competitor Intelligence | v5.0 | 0/1 | Planned | — |
 
-**Overall:** 44/48 plans complete (92%)
+**Overall:** 44/49 plans complete (90%)
