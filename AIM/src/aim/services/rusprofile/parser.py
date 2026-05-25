@@ -143,7 +143,7 @@ class RusprofileClient:
             logger.error("rusprofile fetch failed for %s: %s", identifier, e)
             return None
 
-        # Step 2: Extract canonical URL and get print version
+        # Step 2: Extract canonical URL and get both print + regular versions
         canonical = _extract_canonical(response.text)
         if not canonical:
             logger.warning("Could not find canonical URL for %s", identifier)
@@ -152,15 +152,27 @@ class RusprofileClient:
         print_url = f"{canonical}?print=1"
         rusprofile_id = canonical.rstrip("/").split("/")[-1]
 
+        # Fetch print page (metadata: name, INN, director, etc.)
         try:
-            response = await client.get(print_url)
-            response.raise_for_status()
+            print_resp = await client.get(print_url)
+            print_resp.raise_for_status()
         except httpx.HTTPError as e:
             logger.error("rusprofile print page failed: %s", e)
             return None
 
-        # Step 3: Parse
-        company = _parse_print_page(response.text)
+        print_html = print_resp.text
+
+        # Fetch regular page (for financial data — unmasked revenue)
+        finance_html = ""
+        try:
+            fin_resp = await client.get(canonical)
+            fin_resp.raise_for_status()
+            finance_html = fin_resp.text
+        except httpx.HTTPError as e:
+            logger.debug("rusprofile regular page failed: %s (will try print page finance)", e)
+
+        # Step 3: Parse metadata from print page, financials from regular (or print fallback)
+        company = _parse_print_page(print_html, finance_html=finance_html)
         company.rusprofile_id = rusprofile_id
         return company
 
@@ -228,27 +240,21 @@ def _parse_search_results(html: str) -> list[dict]:
     return results
 
 
-def _parse_print_page(html: str) -> RusprofileCompany:
+def _parse_print_page(html: str, finance_html: str = "") -> RusprofileCompany:
     """Parse rusprofile print page into RusprofileCompany.
 
     rusprofile.ru (as of mid-2026) loads financial data via JavaScript.
     The print page (?print=1) exposes a preview tile with the latest year's
     revenue (unmasked), while profit and company value are behind a login wall.
 
+    The *regular* page (finance_html) often has fully unmasked financial data
+    including profit, company value, and historical trends. We try it first,
+    and fall back to the print page's preview tile.
+
     We parse BOTH the raw HTML (for financial widgets) and the stripped text
     (for metadata like INN/OGRN/director).
     """
     c = RusprofileCompany()
-
-    # DEBUG: check if financial keywords exist in raw HTML
-    _fin_idx = html.find("Основные показатели")
-    _fin_cols_idx = html.find("finance-columns")
-    _fin_col_idx = html.find("finance-col")
-    _rev_idx = html.find("Выручка")
-    logger.info(
-        "rusprofile _parse_print_page: html_len=%d, fin_section=%d, fin_cols=%d, fin_col=%d, revenue=%d",
-        len(html), _fin_idx, _fin_cols_idx, _fin_col_idx, _rev_idx,
-    )
 
     # ── 1. Metadata from stripped text ──────────────────────────────
     text = re.sub(r"<[^>]+>", "\n", html)
@@ -355,7 +361,11 @@ def _parse_print_page(html: str) -> RusprofileCompany:
                 c.trademark_count = int(m.group(1))
 
     # ── 2. Financial data from raw HTML ─────────────────────────────
-    _parse_finance_widget(html, c)
+    # Try regular page first (unmasked data), then print page (preview tile)
+    if finance_html:
+        _parse_finance_widget(finance_html, c)
+    if not c.revenue:
+        _parse_finance_widget(html, c)
 
     # ── 3. Revenue trend from stripped text ─────────────────────────
     _parse_revenue_trend(lines, c)
@@ -364,153 +374,210 @@ def _parse_print_page(html: str) -> RusprofileCompany:
 
 
 def _parse_finance_widget(html: str, c: RusprofileCompany) -> None:
-    """Extract financial preview from the rusprofile print-page widget.
+    """Extract financial data from rusprofile page.
 
-    The widget has this structure (mid-2026):
-      <p>Основные показатели за NNNN год:</p>
-      <div class="finance-col">
-        <div>Выручка</div>
-        <div><span class="num">1,0</span><span class="num-text">млн руб.</span></div>
-        <span class="diff"><span class="arr">&uarr;</span>+180 %</span>
-      </div>
-      <!-- Прибыль and Стоимость are behind <span class="under_mask"> -->
+    Tries TWO formats (rusprofile changes HTML structure frequently):
 
-    Revenue is publicly visible; profit and company value require login.
+    1. NEW format (2026-05+): <div class="finance-columns">
+       - Year in "Основные показатели за XXXX год" (may be masked: 3838 → 2020)
+       - Revenue: unmasked <span class="num"> in finance-col
+       - Profit/Value: may be behind <span class="under_mask"> (login wall)
+
+    2. OLD format (pre-2026-05): <table> after "Финансовая отчетность"
+       - <div class="dt-text">YYYY</div> per row
+       - <div class="dt-text">Выручка/Прибыль/Стоимость:</div> per cell
+       - Units: млн/тыс руб., arrows: arrow-up/arrow-down.svg
     """
-    # Extract the "Основные показатели за XXXX год" block
-    # Find the finance columns section
-    fin_section = re.search(
-        r'Основные показатели за\s+(\d{4})\s+год.*?<div class="finance-col[^"]*">\s*<div[^>]*>\s*Выручка\s*</div>',
-        html, re.DOTALL,
-    )
-    year = 0
-    if fin_section:
-        year = int(fin_section.group(1))
-        logger.info("rusprofile fin_section matched: year=%d", year)
-    else:
-        logger.info("rusprofile fin_section NOT matched")
-
-    # Find ALL finance-col blocks in the finance-columns section
-    # The finance-columns div contains 3 finance-col divs (revenue, profit, value)
-    fin_cols_match = re.search(
-        r'<div class="finance-columns[^"]*">(.*?)</div>\s*<div class="finance-chart',
-        html, re.DOTALL,
-    )
-    if not fin_cols_match:
-        logger.info("rusprofile fin_cols_match NOT found — returning empty")
+    if _parse_finance_columns(html, c):
         return
+    _parse_finance_table(html, c)
 
-    fin_html = fin_cols_match.group(1)
-    logger.info("rusprofile fin_cols_match found: len=%d", len(fin_html))
 
-    # Extract individual finance-col blocks
-    all_cols = re.findall(r'<div class="finance-col[^"]*">(.*?)</div>\s*</div>', fin_html, re.DOTALL)
-    logger.info("rusprofile all_cols regex1: %d matches", len(all_cols))
-    if not all_cols:
-        # Try simpler pattern — each col ends with </div>
-        all_cols = re.findall(
-            r'<div class="finance-col[^"]*">(.*?)</div>\s*(?=<div class="finance-col|<div class="finance-chart|$)',
-            fin_html, re.DOTALL,
+def _decode_year(raw_year: str) -> int:
+    """Decode rusprofile masked year. Masked years are > 3000, offset by 1818.
+
+    Returns 0 for clearly invalid years (sanitation against parsing garbage).
+    """
+    try:
+        y = int(raw_year)
+    except (ValueError, TypeError):
+        return 0
+    if y > 3000:
+        y -= 1818
+    # Valid financial years: 2015-2030
+    if y < 2015 or y > 2030:
+        return 0
+    return y
+
+
+def _parse_finance_columns(html: str, c: RusprofileCompany) -> bool:
+    """Parse NEW finance-columns format. Returns True if data was extracted."""
+    # Find the finance tile — look for "Основные показатели за" text
+    year_match = re.search(
+        r'Основные показатели за\s+(\d{4})\s+год',
+        html,
+    )
+    if not year_match:
+        # Try in print page format
+        year_match = re.search(r'Основные показатели за\s+(\d{4})\s+год', html)
+
+    # Find finance-columns block — go back to the opening <div
+    fc_marker = html.find('class="finance-columns')
+    if fc_marker == -1:
+        # Try alternative: "finance-columns" without class= prefix
+        fc_marker = html.find('finance-columns')
+    if fc_marker == -1:
+        return False
+
+    # Back up to find the opening <div tag
+    block_start = html.rfind('<div', fc_marker - 100, fc_marker)
+    if block_start == -1:
+        return False
+
+    # Extract the year
+    year = _decode_year(year_match.group(1)) if year_match else 0
+
+    # Get the finance-columns block (up to 3000 chars from block start)
+    block = html[block_start: block_start + 3000]
+
+    # Split on each finance-col opening tag
+    cols_raw = re.split(r'<div class="finance-col[^"]*">', block)
+    if len(cols_raw) < 2:
+        return False
+    cols = cols_raw[1:]  # first element is everything before first finance-col
+
+    for col_html in cols:
+        # Detect metric type from data-tab_name
+        tab_match = re.search(r'data-tab_name="tab_(\w+)"', col_html)
+        if not tab_match:
+            continue
+        metric = tab_match.group(1)  # revenue, profit, value
+
+        # Check if data is behind login wall — only skip if actual masked span exists
+        if '<span class="under_mask">' in col_html:
+            logger.debug("rusprofile: skipping %s (under_mask detected)", metric)
+            continue
+
+        # Extract numeric value — handle both "млн руб.", "тыс. руб.", and plain "руб."
+        # Units may contain &nbsp; HTML entities
+        num_match = re.search(
+            r'<span class="num">([\d\s,]+)</span>\s*'
+            r'<span class="num-text">(млн|тыс|руб)',
+            col_html,
         )
-        logger.info("rusprofile all_cols regex2: %d matches", len(all_cols))
-
-    for i, col_html in enumerate(all_cols):
-        # Determine which metric this is
-        has_revenue = "Выручка" in col_html or "tab_revenue" in col_html
-        has_profit = "Прибыль" in col_html or "tab_profit" in col_html
-        has_value = "Стоимость" in col_html or "tab_value" in col_html
-
-        if has_revenue:
-            metric = "revenue"
-        elif has_profit:
-            metric = "profit"
-        elif has_value:
-            metric = "value"
-        else:
-            logger.info("rusprofile col[%d]: unknown metric, skipping", i)
+        if not num_match:
+            logger.debug("rusprofile: skipping %s (no num match)", metric)
             continue
 
-        is_masked = "under_mask" in col_html or "quetip" in col_html
-        logger.info(
-            "rusprofile col[%d]: metric=%s, masked=%s, col_len=%d",
-            i, metric, is_masked, len(col_html),
-        )
+        raw_num = num_match.group(1)
+        unit = num_match.group(2)
 
-        # Skip if masked (requires login)
-        if is_masked:
-            # Still try to extract the growth percentage
-            _extract_financial_growth(col_html, c, metric, year)
-            continue
-
-        # Extract numeric value: <span class="num">1,0</span>
-        num_m = re.search(r'<span class="num">([\d\s,]+)</span>', col_html)
-        if not num_m:
-            logger.info("rusprofile col[%d]: num_m NOT matched", i)
-            # Value is hidden — only extract growth if available
-            _extract_financial_growth(col_html, c, metric, year)
-            continue
-
-        raw_num = num_m.group(1).replace(" ", "").replace(",", ".")
         try:
-            amount = float(raw_num)
+            amount = float(raw_num.replace(" ", "").replace(",", "."))
         except ValueError:
-            logger.info("rusprofile col[%d]: float conversion failed for '%s'", i, raw_num)
             continue
-
-        # Extract unit: <span class="num-text">млн&nbsp;руб.</span>
-        unit_m = re.search(r'<span class="num-text">(млн|тыс)', col_html)
-        unit = unit_m.group(1) if unit_m else ""
-        logger.info("rusprofile col[%d]: amount=%s, unit=%s", i, raw_num, unit)
 
         if unit == "млн":
             amount *= 1_000_000
         elif unit == "тыс":
             amount *= 1_000
+        # unit == "руб": amount stays as-is
+
+        # Extract trend (arrow direction + percentage change)
+        trend_str = ""
+        arr_match = re.search(r'<span class="arr">(&[a-z]+;)</span>', col_html)
+        pct_match = re.search(r'([+-]\d+)\s*%', col_html)
+        if arr_match:
+            arrow_html = arr_match.group(1)
+            direction = "↑" if "uarr" in arrow_html else "↓"
+            change = pct_match.group(1) if pct_match else ""
+            trend_str = f"{direction}{change}%"
 
         if metric == "revenue":
             c.revenue[year] = int(amount)
-            c.financial_year = year
+            c.financial_year = max(c.financial_year, year)
+            if trend_str:
+                c.revenue_trend = trend_str
         elif metric == "profit":
             c.profit[year] = int(amount)
-        elif metric == "value":
+            if trend_str:
+                c.profit_trend = trend_str
+        elif metric in ("value", "costs"):
             c.value[year] = int(amount)
+            if trend_str:
+                c.value_trend = trend_str
 
-        # Extract growth percentage
-        _extract_financial_growth(col_html, c, metric, year)
+    if c.revenue:
+        logger.debug(
+            "rusprofile finance (columns): revenue=%s, profit=%s, value=%s, year=%d",
+            c.revenue, c.profit, c.value, c.financial_year,
+        )
+        return True
+    return False
 
 
-def _extract_financial_growth(
-    col_html: str, c: RusprofileCompany, metric: str, year: int,
-) -> None:
-    """Extract growth percentage and direction from a finance-col block.
-
-    Sets c.revenue_trend, c.profit_trend, or leaves them unchanged.
-    Growth format: <span class="arr">&uarr;</span>+180 %
-    """
-    diff_m = re.search(
-        r'<span class="diff[^"]*">\s*<span class="arr">(&[a-z]+;)</span>\s*([+-]\d+)\s*%',
-        col_html,
-    )
-    if not diff_m:
+def _parse_finance_table(html: str, c: RusprofileCompany) -> None:
+    """Parse OLD table-based finance format (pre-2026-05)."""
+    fin_idx = html.find("Финансовая отчетность")
+    if fin_idx == -1:
+        logger.debug("rusprofile: 'Финансовая отчетность' not found")
         return
 
-    arrow_entity = diff_m.group(1)
-    change_pct = diff_m.group(2)
+    table_match = re.search(
+        r'<table>\s*<tbody>(.*?)</tbody>\s*</table>',
+        html[fin_idx: fin_idx + 3000],
+        re.DOTALL,
+    )
+    if not table_match:
+        logger.debug("rusprofile: no <table> after 'Финансовая отчетность'")
+        return
 
-    direction = ""
-    if "uarr" in arrow_entity:
-        direction = "↑"
-    elif "darr" in arrow_entity:
-        direction = "↓"
+    tbody = table_match.group(1)
+    rows = re.findall(r'<tr>(.*?)</tr>', tbody, re.DOTALL)
+    for row_html in rows:
+        year_match = re.search(r'<div class="dt-text">(\d{4})</div>', row_html)
+        if not year_match:
+            continue
+        year = int(year_match.group(1))
 
-    trend_str = f"{direction}{change_pct}%"
+        cells = re.findall(
+            r'<div class="dt-text">(Выручка|Прибыль|Стоимость):</div>\s*'
+            r'<span class="num">([\d\s,]+)</span>\s*'
+            r'(млн|тыс)\.?\s*руб\.?'
+            r'(?:\s*<img[^>]*arrow-(up|down)\.svg[^>]*>)?',
+            row_html,
+        )
 
-    if metric == "revenue":
-        c.revenue_trend = trend_str
-    elif metric == "profit":
-        c.profit_trend = trend_str
-    elif metric == "value":
-        c.value_trend = trend_str
+        for metric_name, raw_num, unit, arrow_dir in cells:
+            try:
+                amount = float(raw_num.replace(" ", "").replace(",", "."))
+            except ValueError:
+                continue
+
+            if unit == "млн":
+                amount *= 1_000_000
+            elif unit == "тыс":
+                amount *= 1_000
+
+            if metric_name == "Выручка":
+                c.revenue[year] = int(amount)
+                c.financial_year = max(c.financial_year, year)
+                if arrow_dir:
+                    c.revenue_trend = f"{'↑' if arrow_dir == 'up' else '↓'}"
+            elif metric_name == "Прибыль":
+                c.profit[year] = int(amount)
+                if arrow_dir:
+                    c.profit_trend = f"{'↑' if arrow_dir == 'up' else '↓'}"
+            elif metric_name == "Стоимость":
+                c.value[year] = int(amount)
+                if arrow_dir:
+                    c.value_trend = f"{'↑' if arrow_dir == 'up' else '↓'}"
+
+    logger.debug(
+        "rusprofile finance (table): revenue=%s, profit=%s, value=%s, year=%d",
+        c.revenue, c.profit, c.value, c.financial_year,
+    )
+
 
 
 def _parse_revenue_trend(lines: list[str], c: RusprofileCompany) -> None:

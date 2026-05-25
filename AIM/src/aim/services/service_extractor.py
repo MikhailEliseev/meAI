@@ -453,7 +453,7 @@ def _extract_company_name(html: str) -> Optional[str]:
         title = soup.find("title")
         if title:
             t = title.get_text(strip=True)
-            for sep in [" — ", " – ", " | ", ": "]:
+            for sep in [" — ", " – ", " | ", ": ", " - "]:
                 if sep in t:
                     t = t.split(sep)[0]
             # If title looks like an SEO phrase (long, contains "в городе"),

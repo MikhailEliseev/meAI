@@ -34,6 +34,13 @@ class CompanyProfile:
     geo_lat: Optional[float] = None
     geo_lon: Optional[float] = None
 
+    # Digital presence
+    website: Optional[str] = None
+    social_links: dict[str, str] = field(default_factory=dict)
+
+    # Services extracted from competitor's website (populated after scraping)
+    scraped_services: list[str] = field(default_factory=list)
+
     # Consumer signals (from Yandex Maps, 2GIS, etc.)
     rating: Optional[float] = None
     reviews_count: Optional[int] = None
@@ -60,6 +67,7 @@ class CompetitorMatch:
 
     profile: CompanyProfile
     website: Optional[str] = None
+    social_links: dict[str, str] = field(default_factory=dict)
     services: list[str] = field(default_factory=list)
 
     # Scoring components (0.0 – 1.0)

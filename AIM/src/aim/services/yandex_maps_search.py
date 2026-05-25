@@ -89,6 +89,21 @@ _EXTRACT_JS = """
     const statusMatch = text.match(/(Открыто|Закрыто|Круглосуточно)/);
     const workingStatus = statusMatch ? statusMatch[1] : '';
 
+    // Website: find external link (not yandex /org/, /category/, /gallery/, /reviews/)
+    let website = null;
+    const allLinks = li.querySelectorAll('a[href]');
+    allLinks.forEach(a => {
+      if (website) return;  // already found
+      const h = a.getAttribute('href') || '';
+      if (!h || h.startsWith('/') || h.includes('yandex.ru')) return;
+      if (h.includes('/org/') || h.includes('/category/') ||
+          h.includes('/gallery/') || h.includes('/reviews/')) return;
+      // Must look like a real website (has a TLD)
+      if (/^https?:\\/\\/[^\\s]+\\.[a-z]{2,}/.test(h)) {
+        website = h;
+      }
+    });
+
     // Coordinates: new Yandex Maps uses ID-based URLs (/org/name/123456/),
     // not coordinate-based (/org/name/37.62,55.76). Try both patterns.
     let lat = null, lon = null;
@@ -98,6 +113,7 @@ _EXTRACT_JS = """
     cards.push({ name, rating, ratings_count: ratingsCount, address, category,
       working_status: workingStatus,
       url: url.startsWith('/') ? 'https://yandex.ru' + url : url,
+      website: website,
       lat, lon,
       source: 'yandex_maps_web' });
   });
@@ -310,10 +326,30 @@ class YandexMapsSearchClient:
 
             try:
                 logger.debug("YandexMapsSearch: navigating to %s", url)
-                await page.goto(url, wait_until="networkidle", timeout=30000)
 
-                # Wait for search results <li> elements to appear
-                await page.wait_for_selector("li", timeout=15000)
+                # Use domcontentloaded instead of networkidle — faster and less
+                # likely to hang on slow/blocked resources (analytics, maps tiles)
+                await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+
+                # Wait for search results to appear. Yandex Maps can be slow
+                # for smaller cities or when under load. Try multiple selectors.
+                loaded = False
+                for selector in [
+                    "li",                              # generic list items
+                    ".search-snippet-view",            # old Yandex Maps
+                    ".business-card-view",             # new Yandex Maps
+                    "[data-testid='snippet']",         # fallback
+                ]:
+                    try:
+                        await page.wait_for_selector(selector, timeout=10000)
+                        loaded = True
+                        break
+                    except Exception:
+                        continue
+
+                if not loaded:
+                    # Last resort: just wait and hope JS rendered
+                    await asyncio.sleep(5)
 
                 # Extra wait for JS hydration
                 await asyncio.sleep(2)
