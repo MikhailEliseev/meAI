@@ -207,7 +207,7 @@ class CompetitorPageScraper:
         result.has_online_booking = any(p in page_lower for p in _BOOKING_PATTERNS)
 
         # Social links
-        from aim.services.social_discovery import extract_social_links
+        from aim.services.scraping_service import extract_social_links
         result.social_links = extract_social_links(str(soup), url)
 
         # Services on page
