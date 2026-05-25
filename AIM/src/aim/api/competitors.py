@@ -271,7 +271,7 @@ def _competitor_to_json(m: CompetitorMatch) -> CompetitorJson:
         match_reason=m.match_reason,
         services=m.services,
         website=m.website,
-        social_links=m.social_links or p.social_links,
+        social_links=m.social_links or p.social_links or {},
     )
 
 
