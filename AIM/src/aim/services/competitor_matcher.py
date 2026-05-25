@@ -25,6 +25,7 @@ import asyncio
 import logging
 import math
 import os
+import re
 import time
 from typing import Optional
 
@@ -38,6 +39,27 @@ from .yandex_maps import YandexMapsClient, get_yandex_maps_client
 
 logger = logging.getLogger(__name__)
 
+# ── Megalopolis cities ──────────────────────────────────────────────
+# Auto-discovery (OSM Overpass + Yandex Maps) is unreliable for these cities
+# because the 15km radius contains too many datapoints. Skip open-data
+# discovery and ask the user for named competitors instead.
+
+MEGAPOLIS_CITIES: set[str] = {
+    "Москва", "Санкт-Петербург", "СПб",
+}
+
+
+def is_megalopolis(city: str) -> bool:
+    """Check if city is too large for reliable open-data competitor discovery."""
+    if not city:
+        return False
+    city_clean = city.strip().removeprefix("г ").removeprefix("г. ")
+    for mc in MEGAPOLIS_CITIES:
+        if mc.lower() in city_clean.lower():
+            return True
+    return False
+
+
 # ── Blacklist ───────────────────────────────────────────────────────
 # Comma-separated company names that should NEVER appear as competitors.
 # These are typically the user's own projects/clients.
@@ -48,6 +70,9 @@ if _bl:
     logger.info("Competitor blacklist loaded: %d names", len(_BLACKLIST_NAMES))
 
 # ── Scoring weights ────────────────────────────────────────────────
+# Location is dominant for medical clinics — patients don't travel far.
+# MAX_DISTANCE_KM = 7 km: beyond this, location_score drops to 0.
+# For dental/cosmetic clinics, patients rarely go beyond their district.
 W_REVENUE = 0.10
 W_LOCATION = 0.15
 W_SERVICES = 0.12
@@ -56,7 +81,7 @@ W_DATA = 0.18
 W_POPULARITY = 0.18
 W_VISIBILITY = 0.12
 
-MAX_DISTANCE_KM = 50.0  # beyond this, location_score = 0
+MAX_DISTANCE_KM = 7.0  # beyond this, location_score = 0
 
 # Revenue fallback by specialization (RUB/year), used when both DaData
 # and client website lack financial data.
@@ -71,6 +96,37 @@ SPECIALIZATION_REVENUE = {
 }
 
 
+def _searchable_name(profile: CompanyProfile) -> str:
+    """Return the best name for web search — short brand name, not legal entity.
+
+    "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ СТОМАТОЛОГИЯ" → "Стоматология"
+    "ООО СТОМАТОЛОГИЯ Н ДЕНТ" → "Стоматология Н Дент"
+    """
+    # Prefer brand_name if it's meaningfully different from legal_name
+    name = profile.legal_name or ""
+    if profile.brand_name and len(profile.brand_name) >= 3:
+        name = profile.brand_name
+
+    # Strip legal-form prefixes
+    for prefix in (
+        "общество с ограниченной ответственностью",
+        "obschestvo s ogranichennoy otvetstvennostyu",
+        "публичное акционерное общество",
+        "непубличное акционерное общество",
+        "акционерное общество",
+        "индивидуальный предприниматель",
+        "ооо", "ooo", "ао", "ao", "зао", "zao", "ип", "ip",
+        "пао", "pao", "нао", "nao",
+    ):
+        if name.lower().startswith(prefix):
+            name = name[len(prefix):]
+            break
+
+    # Clean up: remove leading/trailing quotes, whitespace, punctuation
+    name = name.strip().strip('«»"\'')
+    return name.strip() or profile.legal_name
+
+
 class CompetitorMatcher:
     """Find and score competitors for a client clinic."""
 
@@ -83,6 +139,25 @@ class CompetitorMatcher:
         self.dadata = dadata or get_dadata_client()
         self.osm = osm or get_osm_discovery()
         self.yandex = yandex or get_yandex_maps_client()
+        self._inn_browser = None
+        self._inn_playwright = None
+        self._inn_lock = None
+        self.last_is_megalopolis = False
+
+    async def close(self):
+        """Clean up Playwright browser and other resources."""
+        if self._inn_browser:
+            try:
+                await self._inn_browser.close()
+            except Exception:
+                pass
+            self._inn_browser = None
+        if self._inn_playwright:
+            try:
+                await self._inn_playwright.stop()
+            except Exception:
+                pass
+            self._inn_playwright = None
 
     # ── Main entry point ───────────────────────────────────────────
 
@@ -140,11 +215,27 @@ class CompetitorMatcher:
         )
 
         # 2. Three-tier discovery: DaData + OpenStreetMap + Yandex Maps
-        dadata_candidates, osm_candidates, yandex_candidates = await asyncio.gather(
-            self._search_candidates(client),
-            self._search_osm_candidates(client),
-            self._search_yandex_candidates(client),
-        )
+        # For megalopolises (Москва, СПб), skip only OSM Overpass —
+        # the 15km radius query times out on megacity datapoints.
+        # Yandex Maps search works fine regardless of city size.
+        self.last_is_megalopolis = is_megalopolis(client.city or "")
+        if self.last_is_megalopolis:
+            logger.info(
+                "CompetitorMatcher: megalopolis detected (%s) — skipping OSM, "
+                "using DaData + Yandex Maps",
+                client.city,
+            )
+            dadata_candidates, yandex_candidates = await asyncio.gather(
+                self._search_candidates(client),
+                self._search_yandex_candidates(client),
+            )
+            osm_candidates: list[CompanyProfile] = []
+        else:
+            dadata_candidates, osm_candidates, yandex_candidates = await asyncio.gather(
+                self._search_candidates(client),
+                self._search_osm_candidates(client),
+                self._search_yandex_candidates(client),
+            )
         t_discovery = time.monotonic()
         logger.info(
             "CompetitorMatcher: tiers=%.1fs (DaData=%d, OSM=%d, Yandex=%d) [after extract=%.1fs + geocode=%.1fs]",
@@ -153,38 +244,113 @@ class CompetitorMatcher:
         )
 
         # 2.5. Look up named competitors via DaData (by name)
+        # Two-tier approach:
+        #   Tier 1: DaData suggest/party by name (fast, works when brand ≈ legal name)
+        #   Tier 2: INN scraping (for aesthetic clinics where brand ≠ legal name)
+        #           Scrape ИНН from website → DaData findById/party → rusprofile enrichment
         named_profiles: list[CompanyProfile] = []
         if named_competitors:
+            _web_client_for_named = None  # lazy init only if needed
             for name in named_competitors:
-                # Strip URL prefix if user passed a URL instead of name
-                clean_name = name.strip()
-                if clean_name.startswith("http"):
-                    clean_name = clean_name.split("//")[-1].split("/")[0]  # extract domain
-                    # Remove www. prefix
+                raw_input = name.strip()
+                is_url = raw_input.startswith("http")
+
+                if is_url:
+                    # Preserve full URL for INN scraping
+                    competitor_url = raw_input
+                    clean_name = raw_input.split("//")[-1].split("/")[0]
                     if clean_name.startswith("www."):
                         clean_name = clean_name[4:]
+                else:
+                    competitor_url = None
+                    clean_name = raw_input
+
+                # ── Tier 1: DaData search by name ──────────────────
                 profiles = await self.dadata.search_company(clean_name, count=3)
                 if profiles:
-                    # Mark as named competitor for traceability
                     for p in profiles:
                         p._named_competitor = True
+                        if competitor_url:
+                            p.website = p.website or competitor_url
                     named_profiles.extend(profiles)
                     logger.info(
                         "CompetitorMatcher: named_competitor '%s' => %d DaData matches",
                         clean_name, len(profiles),
                     )
-                else:
-                    logger.warning(
-                        "CompetitorMatcher: named_competitor '%s' not found in DaData",
-                        clean_name,
+                    continue
+
+                # ── Tier 2: INN scraping fallback ──────────────────
+                logger.info(
+                    "CompetitorMatcher: named_competitor '%s' not in DaData by name, "
+                    "trying INN scraping", clean_name,
+                )
+
+                # Step A: determine website URL for INN scraping
+                inn_url = competitor_url
+                if not inn_url:
+                    if _web_client_for_named is None:
+                        from aim.services.yandex_web_search import get_web_search_client
+                        _web_client_for_named = get_web_search_client()
+                    inn_url = await _web_client_for_named.search_website(
+                        clean_name, city=client.city or "",
                     )
 
-        # Merge: DaData first, then OSM, then Yandex, then named
+                if not inn_url:
+                    logger.warning(
+                        "CompetitorMatcher: named_competitor '%s' — no website to scrape INN from",
+                        clean_name,
+                    )
+                    continue
+
+                # Step B: scrape INN from website (static HTTP, then Playwright)
+                inn: Optional[str] = None
+                try:
+                    async with httpx.AsyncClient(
+                        timeout=httpx.Timeout(8.0),
+                        follow_redirects=True,
+                        verify=False,
+                    ) as _inn_client:
+                        inn = await self._extract_inn_from_one_site(_inn_client, inn_url)
+                except Exception:
+                    pass
+
+                if not inn:
+                    try:
+                        browser = await self._ensure_inn_browser()
+                        inn = await self._extract_inn_with_playwright(browser, inn_url)
+                    except Exception as e:
+                        logger.debug("INN playwright extraction failed for %s: %s", inn_url, e)
+
+                if not inn:
+                    logger.warning(
+                        "CompetitorMatcher: named_competitor '%s' — INN not found on %s",
+                        clean_name, inn_url,
+                    )
+                    continue
+
+                # Step C: look up company by INN in DaData
+                profile = await self.dadata.get_company_by_inn(inn)
+                if profile:
+                    profile._named_competitor = True
+                    profile.website = profile.website or inn_url
+                    named_profiles.append(profile)
+                    logger.info(
+                        "CompetitorMatcher: named_competitor '%s' => INN %s => %s (revenue=%s)",
+                        clean_name, inn, profile.legal_name[:60],
+                        profile.revenue_year or "?",
+                    )
+                else:
+                    logger.warning(
+                        "CompetitorMatcher: named_competitor '%s' — INN %s not found in DaData",
+                        clean_name, inn,
+                    )
+
+        # Merge: Yandex first (website + rating + coords), then OSM, then DaData (INN + financials only), then named
         candidates = await self._merge_candidates(
-            dadata_candidates, osm_candidates, client
+            yandex_candidates, osm_candidates, client
         )
         candidates = await self._merge_candidates(
-            candidates, yandex_candidates, client
+            candidates, dadata_candidates, client
         )
         if named_profiles:
             candidates = await self._merge_candidates(
@@ -223,6 +389,31 @@ class CompetitorMatcher:
                     pre_bl - len(commercial),
                 )
 
+        # Hard distance filter: exclude candidates farther than HARD_DISTANCE_KM
+        # from the client city center. Medical clinics are hyper-local —
+        # a dental clinic in Zelenograd does NOT compete with one in central Moscow.
+        HARD_DISTANCE_KM = 15.0
+        if client.city_lat and client.city_lon:
+            pre_filter = len(candidates)
+            filtered_candidates: list[CompanyProfile] = []
+            for c in candidates:
+                if c.geo_lat is not None and c.geo_lon is not None:
+                    d = _haversine(client.city_lat, client.city_lon, c.geo_lat, c.geo_lon)
+                    if d > HARD_DISTANCE_KM:
+                        logger.debug(
+                            "CompetitorMatcher: distance filter — %s (%.1f km > %.0f km)",
+                            c.legal_name[:50], d, HARD_DISTANCE_KM,
+                        )
+                        continue
+                filtered_candidates.append(c)
+            candidates = filtered_candidates
+            removed = pre_filter - len(candidates)
+            if removed:
+                logger.info(
+                    "CompetitorMatcher: distance filter removed %d/%d candidates > %.0f km",
+                    removed, pre_filter, HARD_DISTANCE_KM,
+                )
+
         if not candidates:
             logger.warning("CompetitorMatcher: no candidates found for %s", url)
             return []
@@ -235,15 +426,161 @@ class CompetitorMatcher:
             len(yandex_candidates),
         )
 
-        # 2.5. Enrich candidates with real financials from rusprofile.ru
-        # Only enrich candidates that have an INN (DaData provides INN, OSM/Yandex may not)
+        # 2.4. Website verification + fallback
+        # Verify existing OSM/Yandex websites, then search for missing ones
+        from aim.services.yandex_web_search import get_web_search_client, _is_irrelevant_site
+
+        web_client = get_web_search_client()
+
+        # Step A: verify websites from OSM/Yandex (these can be wrong)
+        with_website = [
+            c for c in candidates
+            if c.website and c.data_source in ("osm", "yandex")
+        ]
+        if with_website:
+            t_verify_start = time.monotonic()
+            verify_tasks = [
+                _verify_website(candidate, web_client, client.city)
+                for candidate in with_website
+            ]
+            await asyncio.gather(*verify_tasks)
+            t_verify = time.monotonic()
+            logger.info(
+                "CompetitorMatcher: verified %d osm/yandex websites in %.1fs",
+                len(with_website), t_verify - t_verify_start,
+            )
+
+        # Step B: search for candidates still without a website
+        missing_website = [c for c in candidates if not c.website and c.legal_name]
+        if missing_website:
+            t_web_start = time.monotonic()
+            # Search up to 5 candidates in parallel (rate limit friendly)
+            batch = missing_website[:5]
+            tasks = [
+                web_client.search_website(_searchable_name(c), client.city)
+                for c in batch
+            ]
+            found_websites = await asyncio.gather(*tasks)
+            for candidate, website in zip(batch, found_websites):
+                if website:
+                    candidate.website = website
+                    logger.debug(
+                        "CompetitorMatcher: web search found website for %s → %s",
+                        candidate.legal_name[:30], website,
+                    )
+            t_web = time.monotonic()
+            hits = sum(1 for w in found_websites if w)
+            if hits:
+                logger.info(
+                    "CompetitorMatcher: web search resolved %d/%d websites in %.1fs",
+                    hits, len(batch), t_web - t_web_start,
+                )
+            else:
+                logger.info(
+                    "CompetitorMatcher: web search found 0/%d websites in %.1fs",
+                    len(batch), t_web - t_web_start,
+                )
+
+        # 2.4.5. Social media enrichment — discover social links for candidates with websites
+        with_website = [c for c in candidates if c.website and not c.social_links]
+        if with_website:
+            t_social_start = time.monotonic()
+            from aim.services.social_discovery import get_social_discovery_client
+
+            social_client = get_social_discovery_client()
+            batch = with_website[:5]
+            tasks = [social_client.discover(c.website) for c in batch]
+            found_socials = await asyncio.gather(*tasks)
+            for candidate, links in zip(batch, found_socials):
+                if links:
+                    candidate.social_links = links
+                    logger.debug(
+                        "CompetitorMatcher: social links for %s: %s",
+                        candidate.legal_name[:30], list(links.keys()),
+                    )
+            t_social = time.monotonic()
+            hits = sum(1 for s in found_socials if s)
+            if hits:
+                logger.info(
+                    "CompetitorMatcher: social discovery found links for %d/%d in %.1fs",
+                    hits, len(batch), t_social - t_social_start,
+                )
+
+        # 2.4.6. Service scraping — extract real services from competitor websites
+        with_website = [c for c in candidates if c.website and not c.scraped_services]
+        if with_website:
+            t_scrape_start = time.monotonic()
+            from .service_extractor import _fetch_page, _extract_text, _detect_services
+
+            async def _scrape_one(candidate):
+                try:
+                    html = await _fetch_page(candidate.website)
+                    if html:
+                        text = _extract_text(html)
+                        services = _detect_services(text.lower())
+                        candidate.scraped_services = services
+                        if services:
+                            logger.debug(
+                                "CompetitorMatcher: scraped %d services from %s → %s",
+                                len(services), candidate.legal_name[:30], services,
+                            )
+                except Exception as e:
+                    logger.warning(
+                        "CompetitorMatcher: service scrape failed for %s (%s): %s",
+                        candidate.legal_name[:30], candidate.website, e,
+                    )
+
+            batch = with_website[:8]
+            await asyncio.gather(*[_scrape_one(c) for c in batch])
+            t_scrape = time.monotonic()
+            hits = sum(1 for c in batch if c.scraped_services)
+            if hits:
+                logger.info(
+                    "CompetitorMatcher: scraped services for %d/%d candidates in %.1fs",
+                    hits, len(batch), t_scrape - t_scrape_start,
+                )
+            else:
+                logger.info(
+                    "CompetitorMatcher: service scrape found 0/%d in %.1fs",
+                    len(batch), t_scrape - t_scrape_start,
+                )
+
+        # 2.5a. Extract INN from competitor websites (mandatory for Russian medical orgs)
+        # Many competitors come from Yandex Web Search / OSM with website but no INN.
+        # Russian medical websites are legally required to display ИНН in footer/about.
+        web_inn_candidates = [
+            c for c in candidates
+            if c.website and not (c.inn and c.inn.isdigit())
+        ]
+        if web_inn_candidates:
+            t_inn_start = time.monotonic()
+            inn_extracted = await self._extract_inn_from_websites(web_inn_candidates)
+            if inn_extracted:
+                logger.info(
+                    "CompetitorMatcher: extracted INN from %d websites in %.1fs",
+                    inn_extracted,
+                    time.monotonic() - t_inn_start,
+                )
+
+        # 2.5b. Enrich candidates with real financials from rusprofile.ru
+        # DaData provides INN, but Yandex/OSM candidates dominate the top of the
+        # unsorted candidate list. Enrich INN-carrying candidates specifically,
+        # not just the first 10 in arrival order.
         t_enrich_start = time.monotonic()
-        enriched_count = await self._enrich_with_rusprofile(candidates[:10])
+        inn_for_enrich = [c for c in candidates if c.inn and c.inn.isdigit()]
+        enrich_batch = inn_for_enrich[:10]
+        if enrich_batch:
+            logger.info(
+                "CompetitorMatcher: rusprofile enriching %d/%d INN-tagged candidates "
+                "(total candidates=%d)",
+                len(enrich_batch), len(inn_for_enrich), len(candidates),
+            )
+        enriched_count = await self._enrich_with_rusprofile(enrich_batch)
         if enriched_count:
             t_enrich = time.monotonic()
             logger.info(
                 "CompetitorMatcher: rusprofile enriched %d/%d candidates in %.1fs",
-                enriched_count, min(len(candidates), 10), t_enrich - t_enrich_start,
+                enriched_count, len(enrich_batch), t_enrich - t_enrich_start,
             )
 
         # 3. Score and rank (first pass — without geocoding DaData)
@@ -273,25 +610,116 @@ class CompetitorMatcher:
                 and m not in top
             ]
             if inn_candidates:
-                # Replace the lowest-scoring non-INN candidate
-                inn_best = inn_candidates[0]  # already sorted by score desc
-                sorted_top = sorted(top, key=lambda m: m.total_score)
+                # Prefer INN candidates that also have digital presence
+                def _digital_rank(m: CompetitorMatch) -> int:
+                    return (1 if m.website else 0) + (1 if m.social_links else 0)
+
+                inn_best = max(inn_candidates, key=lambda m: (_digital_rank(m), m.total_score))
+
+                # Replace candidate with lowest digital presence first,
+                # then by lowest score as tiebreaker
+                sorted_top = sorted(top, key=lambda m: (_digital_rank(m), m.total_score))
                 replaced = sorted_top[0]
                 top.remove(replaced)
                 top.append(inn_best)
                 top.sort(key=lambda m: m.total_score, reverse=True)
                 logger.info(
-                    "CompetitorMatcher: diversity swap — replaced %s (score=%.4f, src=%s) "
-                    "with %s (score=%.4f, inn=%s)",
-                    replaced.profile.legal_name[:40], replaced.total_score, replaced.profile.data_source,
-                    inn_best.profile.legal_name[:40], inn_best.total_score, inn_best.profile.inn,
+                    "CompetitorMatcher: diversity swap (INN) — replaced %s (score=%.4f, src=%s, web=%s) "
+                    "with %s (score=%.4f, inn=%s, web=%s)",
+                    replaced.profile.legal_name[:40],
+                    replaced.total_score,
+                    replaced.profile.data_source,
+                    bool(replaced.website),
+                    inn_best.profile.legal_name[:40],
+                    inn_best.total_score,
+                    inn_best.profile.inn,
+                    bool(inn_best.website),
+                )
+
+        # 5.5. Ensure at least 1 candidate has REAL financial data (rusprofile)
+        # Rusprofile enrichment happens before scoring, so enriched candidates
+        # have data_source="rusprofile" and revenue_year>0. Prefer candidates
+        # with real tax-filed financials over estimates.
+        has_real_fin = any(
+            m.profile.has_real_financials() and m.profile.data_source == "rusprofile"
+            for m in top
+        )
+        if not has_real_fin:
+            rusprofile_candidates = [
+                m for m in scored
+                if m.profile.has_real_financials()
+                and m.profile.data_source == "rusprofile"
+                and m not in top
+            ]
+            if rusprofile_candidates:
+                # Pick the best rusprofile candidate by score
+                rp_best = max(rusprofile_candidates, key=lambda m: m.total_score)
+
+                # Replace the candidate with lowest data quality
+                # (worst financial data, or weakest overall)
+                def _data_weakness(m: CompetitorMatch) -> float:
+                    s = m.total_score
+                    if not m.profile.inn or not m.profile.inn.strip():
+                        s -= 0.1  # penalize no-INN candidates
+                    if not m.profile.has_real_financials():
+                        s -= 0.05  # penalize no-financials
+                    return s
+
+                replaced = min(top, key=_data_weakness)
+                top.remove(replaced)
+                top.append(rp_best)
+                top.sort(key=lambda m: m.total_score, reverse=True)
+                logger.info(
+                    "CompetitorMatcher: diversity swap (rusprofile) — replaced %s "
+                    "(score=%.4f, src=%s, fin=%s) with %s (score=%.4f, inn=%s, rev=%s RUB)",
+                    replaced.profile.legal_name[:40],
+                    replaced.total_score,
+                    replaced.profile.data_source,
+                    replaced.profile.has_real_financials(),
+                    rp_best.profile.legal_name[:40],
+                    rp_best.total_score,
+                    rp_best.profile.inn,
+                    rp_best.profile.revenue_rub,
                 )
         scored = top
 
+        # 6. Targeted website search for final top-N without websites
+        # Web search during merge phase (step 2.4B) only covers first 5
+        # missing_website candidates — final top-N may differ after scoring.
+        t_post_web = 0.0
+        final_missing = [m for m in scored if not m.website and m.profile.legal_name]
+        if final_missing and client.city:
+            t_web2_start = time.monotonic()
+            web_client = get_web_search_client()
+            tasks = [
+                web_client.search_website(_searchable_name(m.profile), client.city)
+                for m in final_missing
+            ]
+            found_websites = await asyncio.gather(*tasks)
+            hits = 0
+            for match, website in zip(final_missing, found_websites):
+                if website:
+                    match.profile.website = website
+                    match.website = website
+                    hits += 1
+                    logger.debug(
+                        "CompetitorMatcher: post-scoring web → %s for '%s'",
+                        website, match.profile.legal_name[:30],
+                    )
+            t_web2 = time.monotonic()
+            t_post_web = t_web2 - t_web2_start
+            if hits:
+                logger.info(
+                    "CompetitorMatcher: post-scoring web search resolved %d/%d in %.1fs",
+                    hits, len(final_missing), t_post_web,
+                )
+
         t_total = time.monotonic()
+        t_post_scoring = t_total - t_score1
+        # t_post_scoring includes: geocode (0-N candidates), diversity swaps, post-scoring web search
         logger.info(
-            "CompetitorMatcher: scoring=%.1fs, geocode=%d candidates/%.1fs, total=%.1fs",
-            t_score1 - t_discovery, len(top_dadata), t_total - t_score1, t_total - t0,
+            "CompetitorMatcher: scoring=%.1fs, geocode=%d candidates, post_web=%.1fs, post_scoring=%.1fs, total=%.1fs",
+            t_score1 - t_discovery, len(top_dadata), t_post_web, t_post_scoring, t_total - t0,
         )
 
         return scored
@@ -478,6 +906,214 @@ class CompetitorMatcher:
         addr = _re_addr.sub(r"\s+", " ", addr).strip(", ")
         return addr
 
+    # ── INN extraction from websites ──────────────────────────────────
+
+    _INN_RE = re.compile(
+        r'(?:ИНН|INN|инн|inn)\s*[:;]?\s*(\d{10,12})',
+        re.IGNORECASE,
+    )
+    # Pages likely to contain INN
+    _INN_PATHS = [
+        "", "/about", "/contacts", "/kontakty", "/kontakti",
+        "/about-us", "/o-klinike", "/o-nas", "/license", "/licenses",
+        "/docs", "/documents", "/rekvizity", "/requisites",
+    ]
+
+    async def _extract_inn_from_websites(
+        self, candidates: list[CompanyProfile]
+    ) -> int:
+        """Try to extract INN from competitor websites.
+
+        Russian medical organizations are legally required to display ИНН
+        on their websites (footer, contacts, or about page).
+
+        Two-tier approach:
+          1. Static HTTP GET (fast — works for server-rendered sites)
+          2. Playwright headless browser (slow — for JS-rendered sites)
+        """
+        extracted = 0
+        still_missing: list[CompanyProfile] = []
+
+        # ── Tier 1: Static HTTP (fast path) ────────────────────────
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(8.0),
+            follow_redirects=True,
+            verify=False,
+        ) as client:
+            for c in candidates:
+                if c.inn and c.inn.isdigit():
+                    continue
+                try:
+                    inn = await self._extract_inn_from_one_site(client, c.website)
+                    if inn:
+                        c.inn = inn
+                        extracted += 1
+                        logger.debug("INN extracted (static): %s from %s", inn, c.website)
+                    else:
+                        still_missing.append(c)
+                except Exception:
+                    still_missing.append(c)
+
+        # ── Tier 2: Playwright for JS-rendered sites ───────────────
+        if still_missing:
+            # Limit Playwright to 3 candidates (headless browser is expensive)
+            pw_batch = still_missing[:3]
+            try:
+                browser = await self._ensure_inn_browser()
+                for c in pw_batch:
+                    try:
+                        inn = await self._extract_inn_with_playwright(browser, c.website)
+                        if inn:
+                            c.inn = inn
+                            extracted += 1
+                            logger.debug("INN extracted (playwright): %s from %s", inn, c.website)
+                    except Exception:
+                        continue
+            except Exception as e:
+                logger.warning("INN Playwright extraction failed: %s", e)
+
+        return extracted
+
+    async def _ensure_inn_browser(self):
+        """Lazily start Playwright browser for INN extraction."""
+        if self._inn_browser is not None:
+            return self._inn_browser
+
+        if self._inn_lock is None:
+            self._inn_lock = asyncio.Lock()
+
+        async with self._inn_lock:
+            if self._inn_browser is not None:
+                return self._inn_browser
+
+            from playwright.async_api import async_playwright
+
+            self._inn_playwright = await async_playwright().start()
+            self._inn_browser = await self._inn_playwright.chromium.launch(
+                headless=True,
+                args=[
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu",
+                    "--disable-blink-features=AutomationControlled",
+                ],
+            )
+            logger.info("CompetitorMatcher: Playwright browser started for INN extraction")
+            return self._inn_browser
+
+    async def _extract_inn_with_playwright(self, browser, base_url: str) -> Optional[str]:
+        """Extract INN from a JS-rendered website using Playwright.
+
+        Loads the homepage and checks for INN in the rendered DOM text.
+        Also tries /contacts and /about pages if homepage yields nothing.
+        """
+        from urllib.parse import urljoin
+
+        context = await browser.new_context(
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/131.0.0.0 Safari/537.36"
+            ),
+            locale="ru-RU",
+        )
+
+        try:
+            for path in self._INN_PATHS[:3]:  # homepage, /contacts, /about
+                url = urljoin(base_url, path)
+                page = await context.new_page()
+                try:
+                    await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+                    # Wait a moment for JS to render
+                    try:
+                        await page.wait_for_timeout(2000)
+                    except Exception:
+                        pass
+
+                    text = await page.inner_text("body")
+                    for m in self._INN_RE.finditer(text):
+                        raw_inn = m.group(1)
+                        if self._is_valid_inn(raw_inn):
+                            return raw_inn
+
+                except Exception:
+                    if path == "":
+                        return None
+                    continue
+                finally:
+                    await page.close()
+
+        finally:
+            await context.close()
+
+        return None
+
+    async def _extract_inn_from_one_site(
+        self, client: httpx.AsyncClient, base_url: str
+    ) -> Optional[str]:
+        """Try multiple paths on a site until INN is found (static HTTP)."""
+        from urllib.parse import urljoin
+
+        for path in self._INN_PATHS[:4]:  # only first 4 paths (incl. homepage)
+            url = urljoin(base_url, path)
+            try:
+                resp = await client.get(url)
+                if resp.status_code >= 400:
+                    if path == "":
+                        return None
+                    continue
+
+                html = resp.text
+
+                # Search for INN near labels
+                for m in self._INN_RE.finditer(html):
+                    raw_inn = m.group(1)
+                    if self._is_valid_inn(raw_inn):
+                        return raw_inn
+
+                # Also try in visible text (strip HTML)
+                if not path:
+                    text = re.sub(r"<[^>]+>", " ", html)
+                    text = re.sub(r"&[a-z]+;", " ", text)
+                    text = re.sub(r"\s+", " ", text)
+                    for m in self._INN_RE.finditer(text):
+                        raw_inn = m.group(1)
+                        if self._is_valid_inn(raw_inn):
+                            return raw_inn
+
+            except Exception:
+                if path == "":
+                    return None
+                continue
+
+        return None
+
+    @staticmethod
+    def _is_valid_inn(inn: str) -> bool:
+        """Basic INN validation: length + checksum."""
+        if len(inn) == 10:
+            # Legal entity: checksum via weights [2,4,10,3,5,9,4,6,8,0]
+            weights = [2, 4, 10, 3, 5, 9, 4, 6, 8, 0]
+            try:
+                digits = [int(d) for d in inn]
+                checksum = sum(d * w for d, w in zip(digits, weights)) % 11 % 10
+                return checksum == digits[-1]
+            except (ValueError, IndexError):
+                return False
+        elif len(inn) == 12:
+            # Sole proprietor: double checksum
+            weights1 = [7, 2, 4, 10, 3, 5, 9, 4, 6, 8, 0]
+            weights2 = [3, 7, 2, 4, 10, 3, 5, 9, 4, 6, 8, 0]
+            try:
+                digits = [int(d) for d in inn]
+                cs1 = sum(d * w for d, w in zip(digits[:11], weights1)) % 11 % 10
+                cs2 = sum(d * w for d, w in zip(digits[:12], weights2)) % 11 % 10
+                return cs1 == digits[10] and cs2 == digits[11]
+            except (ValueError, IndexError):
+                return False
+        return False
+
     # ── Rusprofile enrichment ────────────────────────────────────────
 
     async def _enrich_with_rusprofile(
@@ -492,9 +1128,17 @@ class CompetitorMatcher:
         tax-filed — the revenue numbers companies report to ФНС.
         """
         enriched = 0
-        for c in candidates:
-            if not c.inn or not c.inn.isdigit():
-                continue
+        inn_candidates = [c for c in candidates if c.inn and c.inn.isdigit()]
+        if not inn_candidates:
+            logger.info(
+                "rusprofile: no candidates with valid INN among %d (names: %s)",
+                len(candidates),
+                [(c.legal_name[:30], c.data_source) for c in candidates[:5]],
+            )
+            return 0
+
+        logger.info("rusprofile: checking %d candidates with INN", len(inn_candidates))
+        for c in inn_candidates:
             if c.has_real_financials() and c.revenue_year and c.revenue_year > 0:
                 continue  # already has real financial data
 
@@ -504,6 +1148,10 @@ class CompetitorMatcher:
                 rp = get_rusprofile_client()
                 company = await rp.get_by_inn(c.inn)
                 if company is None:
+                    logger.debug(
+                        "rusprofile: no data for INN %s (%s)",
+                        c.inn, c.legal_name[:40],
+                    )
                     continue
 
                 # Extract latest revenue and profit
@@ -701,6 +1349,9 @@ class CompetitorMatcher:
                 if r.geo_lat is None and r.geo_lon is None:
                     r.geo_lat = place.get("lat")
                     r.geo_lon = place.get("lon")
+                # Carry OSM website to the profile
+                if r.website is None and place.get("website"):
+                    r.website = place.get("website")
                 # Tag as OSM-discovered (even though enriched via DaData)
                 if r.data_source == "dadata":
                     r.data_source = "osm+dadata"
@@ -721,6 +1372,7 @@ class CompetitorMatcher:
             actual_addresses=[_format_osm_address(place)],
             geo_lat=place.get("lat"),
             geo_lon=place.get("lon"),
+            website=place.get("website"),
             source_specialization=specialization,
             data_source="osm",
             confidence=0.5,
@@ -818,11 +1470,13 @@ class CompetitorMatcher:
                 if r.geo_lat is None and r.geo_lon is None:
                     r.geo_lat = org.get("lat")
                     r.geo_lon = org.get("lon")
-                # Carry Yandex rating/reviews to the profile
+                # Carry Yandex rating/reviews/website to the profile
                 if r.rating is None and org.get("rating"):
                     r.rating = org.get("rating")
                 if r.reviews_count is None and org.get("reviews_count"):
                     r.reviews_count = org.get("reviews_count")
+                if r.website is None and org.get("website"):
+                    r.website = org.get("website")
                 # Tag as Yandex-discovered
                 if r.data_source == "dadata":
                     r.data_source = "yandex+dadata"
@@ -842,6 +1496,7 @@ class CompetitorMatcher:
             geo_lon=org.get("lon"),
             rating=org.get("rating"),
             reviews_count=org.get("reviews_count"),
+            website=org.get("website"),
             source_specialization=specialization,
             data_source="yandex",
             confidence=0.55,
@@ -849,30 +1504,86 @@ class CompetitorMatcher:
 
     async def _merge_candidates(
         self,
-        dadata: list[CompanyProfile],
-        osm: list[CompanyProfile],
+        primary: list[CompanyProfile],
+        secondary: list[CompanyProfile],
         client: ClientProfile,
     ) -> list[CompanyProfile]:
-        """Merge candidates from different sources, deduplicating by name similarity."""
+        """Merge candidates from two sources with smart field preservation.
+
+        Primary source wins on digital presence (website, social_links, rating).
+        Secondary source adds INN + financials without overwriting digital signals.
+        Deduplication by INN first, then name similarity.
+        """
         merged: dict[str, CompanyProfile] = {}
 
-        # DaData first (higher priority — has financial data)
-        for p in dadata:
-            if p.inn:
-                merged[p.inn] = p
-            else:
-                merged[p.legal_name.lower()] = p
+        # Primary first
+        for p in primary:
+            key = p.inn if p.inn else p.legal_name.lower()
+            merged[key] = p
 
-        # OSM: add if no similar DaData company exists
-        for p in osm:
+        # Secondary: merge without overwriting digital presence
+        for p in secondary:
             key = p.inn if p.inn else p.legal_name.lower()
             if key in merged:
+                existing = merged[key]
+                # Smart merge: preserve digital presence from primary,
+                # enrich with financials and INN from secondary
+                if not existing.inn and p.inn:
+                    existing.inn = p.inn
+                if not existing.ogrn and p.ogrn:
+                    existing.ogrn = p.ogrn
+                if not existing.employee_count and p.employee_count:
+                    existing.employee_count = p.employee_count
+                if not existing.okved_main and p.okved_main:
+                    existing.okved_main = p.okved_main
+                if not existing.okved_secondary and p.okved_secondary:
+                    existing.okved_secondary = p.okved_secondary
+                if not existing.legal_address and p.legal_address:
+                    existing.legal_address = p.legal_address
+                if not existing.registration_date and p.registration_date:
+                    existing.registration_date = p.registration_date
+                # Financials: secondary (DaData) usually has better data
+                if not existing.revenue_year and p.revenue_year:
+                    existing.revenue_year = p.revenue_year
+                    existing.profit_year = p.profit_year
+                    existing.financial_year = p.financial_year
+                    existing.revenue_trend = p.revenue_trend
+                # Digital presence: NEVER overwrite with empty
+                existing.website = existing.website or p.website
+                if not existing.social_links and p.social_links:
+                    existing.social_links = p.social_links
+                if existing.rating is None and p.rating is not None:
+                    existing.rating = p.rating
+                if existing.reviews_count is None and p.reviews_count is not None:
+                    existing.reviews_count = p.reviews_count
+                # Geo: keep from primary if already set
+                if existing.geo_lat is None and p.geo_lat is not None:
+                    existing.geo_lat = p.geo_lat
+                    existing.geo_lon = p.geo_lon
+                # Boost confidence when multiple sources agree
+                existing.confidence = max(existing.confidence, p.confidence)
+                if existing.data_source != p.data_source:
+                    existing.data_source = f"{existing.data_source}+{p.data_source}"
                 continue
+
             # Check for name similarity with existing
             is_dup = False
             for existing in merged.values():
                 if _name_similarity(p.legal_name, existing.legal_name) > 0.6:
                     is_dup = True
+                    # Merge digital presence into existing
+                    existing.website = existing.website or p.website
+                    if not existing.social_links and p.social_links:
+                        existing.social_links = p.social_links
+                    if existing.rating is None and p.rating is not None:
+                        existing.rating = p.rating
+                    if existing.reviews_count is None and p.reviews_count is not None:
+                        existing.reviews_count = p.reviews_count
+                    if existing.geo_lat is None and p.geo_lat is not None:
+                        existing.geo_lat = p.geo_lat
+                        existing.geo_lon = p.geo_lon
+                    if not existing.inn and p.inn:
+                        existing.inn = p.inn
                     break
             if not is_dup:
                 merged[key] = p
@@ -969,6 +1680,16 @@ async def _score_one(
     # Visibility: search presence + maps listing
     visibility_score = _score_visibility(candidate)
 
+    # ── Location penalty for popularity & visibility ─────────────────
+    # When a candidate is clearly in a different city (loc ≤ 0.15),
+    # their Yandex ratings and website are irrelevant — patients
+    # don't travel across Moscow for routine dental care.
+    # Scale popularity & visibility by (loc / 0.3), clamped to [0, 1].
+    if location_score < 0.3:
+        loc_scale = location_score / 0.3  # 0.10 → 0.33, 0.15 → 0.50
+        popularity_score *= loc_scale
+        visibility_score *= loc_scale
+
     # Weighted total
     total = (
         revenue_match * W_REVENUE
@@ -986,7 +1707,8 @@ async def _score_one(
 
     return CompetitorMatch(
         profile=candidate,
-        website=None,  # to be enriched later if needed
+        website=candidate.website,
+        social_links=candidate.social_links,
         services=shared,
         revenue_match=round(revenue_match, 4),
         location_score=round(location_score, 4),
@@ -1021,47 +1743,87 @@ def _score_location(
 ) -> float:
     """Score geographic proximity. Returns 0-1, higher = closer.
 
-    When candidate has coordinates and city center is known, uses actual
-    haversine distance — this differentiates competitors within the same city
-    instead of giving them all the same score.
+    CRITICAL: Address check comes FIRST — coordinates from Yandex/OSM
+    can be wrong (search center, not actual address). We verify the
+    candidate's address mentions the client's city before trusting coords.
     """
-    # ── Actual distance when coordinates available ─────────────────
+    import re as _re
+
+    # ── Step 1: Address-based city verification ─────────────────────
+    # This catches cases where Yandex returns a central-Moscow clinic
+    # with coordinates shifted to the search center (e.g. Zelenograd).
+    if client.city:
+        _city_word = _re.compile(
+            r"\b" + _re.escape(client.city) + r"\b",
+            _re.IGNORECASE,
+        )
+        full_address = candidate.legal_address or ""
+
+        # Does the address contain the client's city?
+        addr_has_city = bool(full_address and _city_word.search(full_address))
+
+        if not addr_has_city:
+            # Try actual_addresses as well
+            for act_addr in (candidate.actual_addresses or []):
+                if _city_word.search(act_addr):
+                    addr_has_city = True
+                    break
+
+        if not addr_has_city:
+            # Try extracting city from address
+            candidate_city = _extract_city(full_address)
+            if not candidate_city and candidate.actual_addresses:
+                candidate_city = _extract_city(candidate.actual_addresses[0])
+
+            if candidate_city:
+                client_city_lower = client.city.lower()
+                if client_city_lower == candidate_city.lower():
+                    addr_has_city = True
+                elif client_city_lower in candidate_city.lower():
+                    addr_has_city = True
+
+        # If address clearly does NOT contain client city
+        if not addr_has_city and full_address:
+            # Special case: Зеленоград — must explicitly mention it
+            if client.city.lower() in ("зеленоград",):
+                _moscow_central_markers = [
+                    "цветной бульвар", "трубная", "сухаревская", "арбат",
+                    "тверск", "краснопресненск", "таганск", "басман",
+                    "замосквореч", "якиманк", "хамовник", "пресненск",
+                    "мещанск", "красносельск",
+                ]
+                addr_lower = full_address.lower()
+                if any(m in addr_lower for m in _moscow_central_markers):
+                    return 0.1  # clearly wrong location
+                if _re.search(r'\bмосква\b', addr_lower) and 'зеленоград' not in addr_lower:
+                    return 0.05  # different city — Moscow ≠ Zelenograd
+
+            # Fall through to coords check — address alone may misclassify
+            # nearby satellite cities (Химки, Мытищи for Москва; Пушкин for СПб).
+            # Let coordinates provide a partial score if they're available.
+
+    # ── Step 2: Coordinate-based distance ──────────────────────────
     if (candidate.geo_lat is not None
             and candidate.geo_lon is not None
             and city_lat is not None
             and city_lon is not None):
         distance_km = _haversine(city_lat, city_lon, candidate.geo_lat, candidate.geo_lon)
-        # Score decays from 1.0 (0 km) to 0.0 (≥50 km)
-        return round(max(0.0, 1.0 - min(distance_km / MAX_DISTANCE_KM, 1.0)), 4)
+        base_score = max(0.0, 1.0 - min(distance_km / MAX_DISTANCE_KM, 1.0))
+        if not addr_has_city and full_address:
+            # Wrong city by address → cap the coordinate-based score
+            # Nearby (within 50km) gets 0.4, further gets proportional penalty
+            if distance_km < 50:
+                base_score = max(base_score, 0.4)
+            else:
+                base_score = min(base_score, 0.1)
+        return round(base_score, 4)
 
-    # ── Fallback: city-name matching ───────────────────────────────
+    # ── Step 3: Fallback scoring ────────────────────────────────────
     if not client.city:
         return 0.5  # neutral
 
-    # Strategy A: does the full address contain the client city as a whole word?
-    # Handles "г Москва, г Зеленоград" when client city is "Зеленоград".
-    import re as _re
-    _city_word = _re.compile(
-        r"\b" + _re.escape(client.city) + r"\b",
-        _re.IGNORECASE,
-    )
-    full_address = candidate.legal_address or ""
-    if full_address and _city_word.search(full_address):
-        return 0.7  # same city by address, but no coords → lower confidence
-
-    # Strategy B: extract city from address and compare
-    candidate_city = _extract_city(candidate.legal_address)
-    if not candidate_city:
-        candidate_city = _extract_city(
-            candidate.actual_addresses[0] if candidate.actual_addresses else ""
-        )
-
-    if candidate_city and client.city.lower() == candidate_city.lower():
-        return 0.7
-    if candidate_city and client.city.lower() in candidate_city.lower():
-        return 0.5
-    if candidate_city and candidate_city.lower() in client.city.lower():
-        return 0.5
+    if addr_has_city:
+        return 0.7  # same city by address, no coords
 
     return 0.3  # different city or unknown
 
@@ -1088,14 +1850,23 @@ def _score_services(client: ClientProfile, candidate: CompanyProfile) -> float:
 
 
 def _candidate_services(client: ClientProfile, candidate: CompanyProfile) -> list[str]:
-    """Build candidate services from all available signals."""
+    """Build candidate services from all available signals.
+
+    Priority:
+      1. Scraped services (real services from competitor's website)
+      2. Source specialization + OKVED (from search query + registry data)
+      3. Name analysis (keyword matching in company name)
+    """
+    # 1. Real scraped services — highest quality signal
+    if candidate.scraped_services:
+        return candidate.scraped_services
+
     services: set[str] = set()
 
-    # 1. Source specialization — the search query that found this candidate
+    # 2. Source specialization — the search query that found this candidate
     if candidate.source_specialization:
         spec = candidate.source_specialization
         services.add(spec)
-        # Add related services for known specializations
         _SPEC_RELATED: dict[str, list[str]] = {
             "косметология": [
                 "косметология", "дерматология", "лазерная эпиляция",
@@ -1757,3 +2528,65 @@ def _format_osm_address(place: dict) -> str:
         else:
             parts.append(housenumber)
     return ", ".join(parts) if parts else ""
+
+
+# ── Website verification ────────────────────────────────────────────
+
+async def _verify_website(
+    candidate: CompanyProfile,
+    web_client,
+    city: str = "",
+) -> None:
+    """Verify a candidate's website from OSM/Yandex is actually relevant.
+
+    Fetches the page and checks for medical content. If irrelevant,
+    clears the website and tries web search as fallback.
+    """
+    import httpx
+
+    website = candidate.website
+    if not website:
+        return
+
+    try:
+        async with httpx.AsyncClient(timeout=8.0, follow_redirects=True) as client:
+            resp = await client.get(
+                website if website.startswith("http") else f"https://{website}",
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                },
+            )
+            if resp.status_code >= 500:
+                return  # server error, keep as-is (might be temporary)
+
+            html = resp.text
+    except Exception:
+        return  # network error, keep as-is
+
+    # Check relevance
+    from aim.services.yandex_web_search import _is_irrelevant_site
+
+    if _is_irrelevant_site(html, candidate.legal_name):
+        logger.info(
+            "WebsiteVerify: ✗ %s for '%s' is irrelevant (not a medical site), removing",
+            website, candidate.legal_name[:40],
+        )
+        candidate.website = None
+
+        # Try web search as fallback
+        if city and candidate.legal_name:
+            try:
+                found = await web_client.search_website(_searchable_name(candidate), city)
+                if found:
+                    candidate.website = found
+                    logger.info(
+                        "WebsiteVerify: web search fallback → %s for '%s'",
+                        found, candidate.legal_name[:40],
+                    )
+            except Exception:
+                pass
+    else:
+        logger.debug(
+            "WebsiteVerify: ✓ %s for '%s' looks relevant",
+            website, candidate.legal_name[:40],
+        )

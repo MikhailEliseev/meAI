@@ -69,8 +69,9 @@ OVERPASS_URLS = [
     "https://overpass.osm.rambler.ru/api/interpreter",
     "https://overpass.openstreetmap.ru/api/interpreter",
 ]
-REQUEST_TIMEOUT = 15.0
-OVERPASS_TIMEOUT = 10.0  # per-instance — fast fail if unresponsive
+OVERPASS_PRIMARY = "https://overpass.kumi.systems/api/interpreter"
+REQUEST_TIMEOUT = 60.0
+OVERPASS_TIMEOUT = 45.0  # production queries take 30-60s on large areas
 USER_AGENT = "AIM-CompetitorMatcher/1.0 (me@iamaim.ru)"
 
 # Medical amenities we care about
@@ -164,50 +165,77 @@ class OSMDiscovery:
     async def _find_via_overpass(
         self, city: str, lat: float, lon: float, radius: int,
     ) -> list[dict]:
-        """Try Overpass API across multiple public instances in parallel.
+        """Try Overpass API — primary (kumi.systems) first, then fallback mirrors.
 
-        Was sequential (3 URLs × 10s timeout = up to 30s worst case).
-        Now parallel via asyncio.gather — max 10s worst case.
+        kumi.systems is the only public Overpass instance that reliably handles
+        production queries. The rambler.ru and openstreetmap.ru mirrors are
+        tried only if the primary fails.
         """
         query = _build_overpass_query(lat, lon, radius)
         client = await self._get_client()
 
-        last_error = None
+        # Try primary first (kumi.systems) — production queries take 30-60s
+        try:
+            resp = await client.post(
+                OVERPASS_PRIMARY,
+                data={"data": query},
+                timeout=OVERPASS_TIMEOUT,
+                headers={"Accept": "application/json"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            if data and data.get("elements"):
+                logger.info(
+                    "Overpass kumi.systems: %d elements for %s",
+                    len(data["elements"]), city,
+                )
+                return _parse_overpass_response(data, city)
+            logger.info(
+                "Overpass kumi.systems: empty result for %s (0 elements)", city,
+            )
+            return []
+        except Exception as e:
+            logger.warning(
+                "Overpass primary (%s) failed for %s: %s: %s",
+                OVERPASS_PRIMARY, city, type(e).__name__, e,
+            )
 
-        async def _try_one(url: str) -> tuple[str, dict | None, str | None]:
+        # Fallback: try secondary mirrors in parallel with shorter timeout.
+        # These mirrors rarely work — we only try them as a last resort.
+        secondary_urls = [u for u in OVERPASS_URLS if u != OVERPASS_PRIMARY]
+        _SECONDARY_TIMEOUT = 15.0
+        last_error = str(e)
+
+        async def _try_secondary(url: str) -> tuple[str, dict | None, str | None]:
             try:
                 resp = await client.post(
                     url,
                     data={"data": query},
-                    timeout=OVERPASS_TIMEOUT,
+                    timeout=_SECONDARY_TIMEOUT,
                     headers={"Accept": "application/json"},
                 )
                 resp.raise_for_status()
                 return url, resp.json(), None
-            except Exception as e:
-                err = f"{type(e).__name__}: {e}"
+            except Exception as ex:
+                err = f"{type(ex).__name__}: {ex}"
                 logger.debug("Overpass %s failed: %s", url, err)
                 return url, None, err
 
-        tasks = [_try_one(url) for url in OVERPASS_URLS]
+        tasks = [_try_secondary(url) for url in secondary_urls]
         results = await asyncio.gather(*tasks)
 
-        data = None
         for url, result, error in results:
-            if result is not None:
-                data = result
-                break
+            if result is not None and result.get("elements"):
+                logger.info("Overpass %s: %d elements for %s", url, len(result["elements"]), city)
+                return _parse_overpass_response(result, city)
             if error:
                 last_error = error
 
-        if data is None:
-            logger.warning(
-                "All Overpass URLs failed for %s (tried %d). Last error: %s",
-                city, len(OVERPASS_URLS), last_error,
-            )
-            return []
-
-        return _parse_overpass_response(data, city)
+        logger.warning(
+            "All Overpass URLs failed for %s. Last error: %s",
+            city, last_error,
+        )
+        return []
 
     async def _find_via_nominatim(self, city: str) -> list[dict]:
         """Fallback: search OSM via Nominatim by medical category + city."""

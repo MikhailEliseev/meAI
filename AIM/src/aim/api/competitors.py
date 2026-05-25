@@ -61,12 +61,14 @@ class CompetitorJson(BaseModel):
     match_reason: str = ""
     services: list[str] = []
     website: Optional[str] = None
+    social_links: dict[str, str] = {}
 
 
 class FindCompetitorsResponse(BaseModel):
     success: bool = True
     url: str
     competitors: list[CompetitorJson]
+    is_megalopolis: bool = False
     error: Optional[str] = None
 
 
@@ -123,12 +125,13 @@ async def find_competitors(body: FindCompetitorsRequest) -> FindCompetitorsRespo
 
         competitors = [_competitor_to_json(m) for m in matches]
 
-        logger.info("competitors_found: url=%s count=%d", body.url, len(competitors))
+        logger.info("competitors_found: url=%s count=%d megalopolis=%s", body.url, len(competitors), matcher.last_is_megalopolis)
 
         return FindCompetitorsResponse(
             success=True,
             url=body.url,
             competitors=competitors,
+            is_megalopolis=matcher.last_is_megalopolis,
         )
 
     except Exception as e:
@@ -268,6 +271,7 @@ def _competitor_to_json(m: CompetitorMatch) -> CompetitorJson:
         match_reason=m.match_reason,
         services=m.services,
         website=m.website,
+        social_links=m.social_links or p.social_links,
     )
 
 
@@ -291,10 +295,13 @@ def _json_to_match(j: CompetitorJson) -> CompetitorMatch:
         geo_lon=j.geo_lon,
         data_source=j.data_source,
         confidence=j.confidence,
+        website=j.website,
+        social_links=j.social_links,
     )
     return CompetitorMatch(
         profile=profile,
         website=j.website,
+        social_links=j.social_links,
         services=j.services,
         revenue_match=j.revenue_match,
         location_score=j.location_score,

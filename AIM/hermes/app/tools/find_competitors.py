@@ -78,7 +78,8 @@ async def handle_find_competitors(url=None, named_competitors=None, **kwargs) ->
                 })
 
             competitors = data.get("competitors", [])
-            logger.info("Found %d competitors for URL: %s", len(competitors), url)
+            is_megalopolis = data.get("is_megalopolis", False)
+            logger.info("Found %d competitors for URL: %s (megalopolis=%s)", len(competitors), url, is_megalopolis)
 
             # Compact for LLM consumption — strip noisy fields
             compact = []
@@ -97,8 +98,20 @@ async def handle_find_competitors(url=None, named_competitors=None, **kwargs) ->
                     "total_score": c.get("total_score"),
                     "revenue_match": c.get("revenue_match"),
                     "match_reason": c.get("match_reason", ""),
+                    "website": c.get("website"),
+                    "social_links": c.get("social_links", {}),
                 })
-            return json.dumps({"competitors": compact}, ensure_ascii=False, indent=2)
+
+            result: dict = {"competitors": compact}
+            if is_megalopolis:
+                result["is_megalopolis"] = True
+                result["suggestion"] = (
+                    "Это крупный город (Москва/СПб). Автоматический поиск конкурентов "
+                    "по открытым данным даёт ограниченные результаты. Попроси пользователя "
+                    "назвать его конкурентов — он точно знает своих главных соперников. "
+                    "Передай их имена в параметр named_competitors при следующем вызове."
+                )
+            return json.dumps(result, ensure_ascii=False, indent=2)
 
     except httpx.HTTPStatusError as e:
         logger.error("AIM API returned error for find_competitors: %s", e)

@@ -42,7 +42,7 @@ class ScrapedPageData:
     ctas: list[str] = field(default_factory=list)
     pricing_indicators: list[str] = field(default_factory=list)
     trust_signals: list[str] = field(default_factory=list)
-    social_links: list[str] = field(default_factory=list)
+    social_links: dict[str, str] = field(default_factory=dict)
     services_on_page: list[str] = field(default_factory=list)
     visible_phone: bool = False
     has_online_booking: bool = False
@@ -207,12 +207,8 @@ class CompetitorPageScraper:
         result.has_online_booking = any(p in page_lower for p in _BOOKING_PATTERNS)
 
         # Social links
-        for a in soup.find_all("a", href=True):
-            href = a["href"].lower()
-            for domain in _SOCIAL_DOMAINS:
-                if domain in href:
-                    result.social_links.append(domain)
-                    break
+        from aim.services.social_discovery import extract_social_links
+        result.social_links = extract_social_links(str(soup), url)
 
         # Services on page
         all_spec_keywords: set[str] = set()
@@ -294,7 +290,7 @@ class FeatureMapper:
                     elif feature == "Телефон на сайте":
                         has_feature = page.visible_phone
                     elif feature == "Соцсети":
-                        has_feature = len(page.social_links) > 0
+                        has_feature = bool(page.social_links)
                     elif feature == "Лицензия/сертификаты":
                         has_feature = len(page.trust_signals) > 0
 
@@ -468,7 +464,7 @@ class SwotEngine:
             if scraped.word_count > 2000:
                 weaknesses.append(f"У {comp_name} большой сайт ({scraped.word_count}+ слов) — сильный контент")
             if scraped.social_links:
-                platforms = ", ".join(scraped.social_links[:3])
+                platforms = ", ".join(list(scraped.social_links.keys())[:3])
                 weaknesses.append(f"{comp_name} активен в соцсетях: {platforms}")
 
         # ── Opportunities (competitor weaknesses to exploit) ──
@@ -620,7 +616,7 @@ class TacticExtractor:
 
             # Tactic: Social presence
             if len(page.social_links) >= 2:
-                platforms = ", ".join(page.social_links[:3])
+                platforms = ", ".join(list(page.social_links.keys())[:3])
                 tactics.append(Tactic(
                     source_competitor=comp_name,
                     tactic_description=f"Активность в соцсетях: {platforms}",
