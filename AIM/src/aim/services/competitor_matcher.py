@@ -13,12 +13,13 @@ Scores candidates by:
   visibility          (0.12) — search presence + maps listing
   data_quality        (0.18) — real financials > estimates
 
-Three-tier discovery:
-  Tier 1: DaData — finds companies by legal name (prefix search)
-  Tier 2: OpenStreetMap — finds organizations by amenity type (dentist/clinic)
-           Catches brand-named clinics like "Никор-Мед" that DaData misses.
-  Tier 3: Yandex Maps — finds organizations by what people search for
-           Adds ratings, reviews, and real-world popularity signals.
+Discovery pipeline (Apify-first):
+  1. Apify Google Maps — finds competitors by specialization + city
+     Returns: name, website, rating, reviews, coordinates, social links
+  2. DaData — enriches Google Maps results with INN + financial estimates
+     (NO LONGER used for primary competitor discovery)
+  3. rusprofile — real tax-filed financials for INN-carrying competitors
+  4. Direct scraping — extracts real services from competitor websites
 """
 
 import asyncio
@@ -31,11 +32,11 @@ from typing import Optional
 
 import httpx
 
-from .osm_discovery import OSMDiscovery, get_osm_discovery
+from .apify_google_maps import discover_competitors_google_maps
 from .rusprofile.client import DaDataClient, get_dadata_client
 from .rusprofile.models import ClientProfile, CompanyProfile, CompetitorMatch
+from .scraping_service import scrape_services_batch
 from .service_extractor import extract_client_profile
-from .yandex_maps import YandexMapsClient, get_yandex_maps_client
 
 logger = logging.getLogger(__name__)
 
@@ -130,15 +131,8 @@ def _searchable_name(profile: CompanyProfile) -> str:
 class CompetitorMatcher:
     """Find and score competitors for a client clinic."""
 
-    def __init__(
-        self,
-        dadata: DaDataClient | None = None,
-        osm: OSMDiscovery | None = None,
-        yandex: YandexMapsClient | None = None,
-    ):
+    def __init__(self, dadata: DaDataClient | None = None):
         self.dadata = dadata or get_dadata_client()
-        self.osm = osm or get_osm_discovery()
-        self.yandex = yandex or get_yandex_maps_client()
         self._inn_browser = None
         self._inn_playwright = None
         self._inn_lock = None
@@ -169,15 +163,14 @@ class CompetitorMatcher:
     ) -> list[CompetitorMatch]:
         """Find top-N competitors for a clinic website.
 
-        Args:
-            url: Client's website URL
-            count: Number of competitors to return (default 3)
-            named_competitors: Optional list of competitor names/URLs to
-                look up directly via DaData. When provided, these are enriched
-                and scored alongside discovered competitors.
-
-        Returns:
-            List of CompetitorMatch, sorted by total_score descending.
+        Apify-first pipeline:
+          1. Extract client profile (specialization, city, services)
+          2. Apify Google Maps → discover competitors (name, website, rating, coords)
+          3. Geocode client city center
+          4. DaData enrichment → INN + legal data for Google Maps candidates
+          5. Scrape real services from competitor websites
+          6. rusprofile → real tax-filed financials
+          7. Score and return top-N
         """
         t0 = time.monotonic()
 
@@ -194,13 +187,11 @@ class CompetitorMatcher:
                 raw["specialization"], 30_000_000
             ),
         )
-        logger.info("CompetitorMatcher: client profile built — %s", client)
+        logger.info("CompetitorMatcher: client profile — %s", client)
 
-        if not client.city:
-            logger.warning("CompetitorMatcher: no city detected for %s", url)
-        else:
-            # Geocode city for distance-based scoring
-            coords = await self.osm.geocode(client.city)
+        # Geocode client city center
+        if client.city:
+            coords = await self._geocode_city(client.city)
             if coords:
                 client.city_lat, client.city_lon = coords
                 logger.info(
@@ -214,656 +205,286 @@ class CompetitorMatcher:
             t_extract - t0, t_geocode - t_extract,
         )
 
-        # 2. Three-tier discovery: DaData + OpenStreetMap + Yandex Maps
-        # For megalopolises (Москва, СПб), skip only OSM Overpass —
-        # the 15km radius query times out on megacity datapoints.
-        # Yandex Maps search works fine regardless of city size.
+        if not client.specialization or not client.city:
+            logger.error("CompetitorMatcher: missing specialization or city — cannot search")
+            return []
+
+        # 2. Apify Google Maps — primary competitor discovery
         self.last_is_megalopolis = is_megalopolis(client.city or "")
-        if self.last_is_megalopolis:
-            logger.info(
-                "CompetitorMatcher: megalopolis detected (%s) — skipping OSM, "
-                "using DaData + Yandex Maps",
-                client.city,
-            )
-            dadata_candidates, yandex_candidates = await asyncio.gather(
-                self._search_candidates(client),
-                self._search_yandex_candidates(client),
-            )
-            osm_candidates: list[CompanyProfile] = []
-        else:
-            dadata_candidates, osm_candidates, yandex_candidates = await asyncio.gather(
-                self._search_candidates(client),
-                self._search_osm_candidates(client),
-                self._search_yandex_candidates(client),
-            )
+        gm_candidates = await discover_competitors_google_maps(
+            specialization=client.specialization,
+            city=client.city,
+            count=50,
+        )
         t_discovery = time.monotonic()
         logger.info(
-            "CompetitorMatcher: tiers=%.1fs (DaData=%d, OSM=%d, Yandex=%d) [after extract=%.1fs + geocode=%.1fs]",
-            t_discovery - t_geocode, len(dadata_candidates), len(osm_candidates), len(yandex_candidates),
-            t_extract - t0, t_geocode - t_extract,
+            "CompetitorMatcher: google_maps=%.1fs (%d candidates)",
+            t_discovery - t_geocode, len(gm_candidates),
         )
 
-        # 2.5. Look up named competitors via DaData (by name)
-        # Two-tier approach:
-        #   Tier 1: DaData suggest/party by name (fast, works when brand ≈ legal name)
-        #   Tier 2: INN scraping (for aesthetic clinics where brand ≠ legal name)
-        #           Scrape ИНН from website → DaData findById/party → rusprofile enrichment
-        named_profiles: list[CompanyProfile] = []
+        # Filter out client's own company
+        gm_candidates = [
+            c for c in gm_candidates
+            if not (client.company_name and client.company_name.lower() in c.legal_name.lower())
+        ]
+
+        # 3. Enrich Google Maps candidates with DaData (INN + financials)
+        if gm_candidates:
+            gm_candidates = await self._enrich_gm_with_dadata(gm_candidates, client)
+        t_dadata = time.monotonic()
+        logger.info(
+            "CompetitorMatcher: dadata_enrich=%.1fs",
+            t_dadata - t_discovery,
+        )
+
+        # 3.5. Merge named competitors
         if named_competitors:
-            _web_client_for_named = None  # lazy init only if needed
-            for name in named_competitors:
-                raw_input = name.strip()
-                is_url = raw_input.startswith("http")
+            named_profiles = await self._lookup_named_competitors(named_competitors, client)
+            gm_candidates = gm_candidates + named_profiles
 
-                if is_url:
-                    # Preserve full URL for INN scraping
-                    competitor_url = raw_input
-                    clean_name = raw_input.split("//")[-1].split("/")[0]
-                    if clean_name.startswith("www."):
-                        clean_name = clean_name[4:]
-                else:
-                    competitor_url = None
-                    clean_name = raw_input
+        # 4. Merge duplicates (same name/INN)
+        candidates = self._dedup_candidates(gm_candidates)
 
-                # ── Tier 1: DaData search by name ──────────────────
-                profiles = await self.dadata.search_company(clean_name, count=3)
-                if profiles:
-                    for p in profiles:
-                        p._named_competitor = True
-                        if competitor_url:
-                            p.website = p.website or competitor_url
-                    named_profiles.extend(profiles)
-                    logger.info(
-                        "CompetitorMatcher: named_competitor '%s' => %d DaData matches",
-                        clean_name, len(profiles),
-                    )
-                    continue
-
-                # ── Tier 2: INN scraping fallback ──────────────────
-                logger.info(
-                    "CompetitorMatcher: named_competitor '%s' not in DaData by name, "
-                    "trying INN scraping", clean_name,
-                )
-
-                # Step A: determine website URL for INN scraping
-                inn_url = competitor_url
-                if not inn_url:
-                    if _web_client_for_named is None:
-                        from aim.services.yandex_web_search import get_web_search_client
-                        _web_client_for_named = get_web_search_client()
-                    inn_url = await _web_client_for_named.search_website(
-                        clean_name, city=client.city or "",
-                    )
-
-                if not inn_url:
-                    logger.warning(
-                        "CompetitorMatcher: named_competitor '%s' — no website to scrape INN from",
-                        clean_name,
-                    )
-                    continue
-
-                # Step B: scrape INN from website (static HTTP, then Playwright)
-                inn: Optional[str] = None
-                try:
-                    async with httpx.AsyncClient(
-                        timeout=httpx.Timeout(8.0),
-                        follow_redirects=True,
-                        verify=False,
-                    ) as _inn_client:
-                        inn = await self._extract_inn_from_one_site(_inn_client, inn_url)
-                except Exception:
-                    pass
-
-                if not inn:
-                    try:
-                        browser = await self._ensure_inn_browser()
-                        inn = await self._extract_inn_with_playwright(browser, inn_url)
-                    except Exception as e:
-                        logger.debug("INN playwright extraction failed for %s: %s", inn_url, e)
-
-                if not inn:
-                    logger.warning(
-                        "CompetitorMatcher: named_competitor '%s' — INN not found on %s",
-                        clean_name, inn_url,
-                    )
-                    continue
-
-                # Step C: look up company by INN in DaData
-                profile = await self.dadata.get_company_by_inn(inn)
-                if profile:
-                    profile._named_competitor = True
-                    profile.website = profile.website or inn_url
-                    named_profiles.append(profile)
-                    logger.info(
-                        "CompetitorMatcher: named_competitor '%s' => INN %s => %s (revenue=%s)",
-                        clean_name, inn, profile.legal_name[:60],
-                        profile.revenue_year or "?",
-                    )
-                else:
-                    logger.warning(
-                        "CompetitorMatcher: named_competitor '%s' — INN %s not found in DaData",
-                        clean_name, inn,
-                    )
-
-        # Merge: Yandex first (website + rating + coords), then OSM, then DaData (INN + financials only), then named
-        candidates = await self._merge_candidates(
-            yandex_candidates, osm_candidates, client
-        )
-        candidates = await self._merge_candidates(
-            candidates, dadata_candidates, client
-        )
-        if named_profiles:
-            candidates = await self._merge_candidates(
-                candidates, named_profiles, client
-            )
-
-        # Filter out municipal/state healthcare institutions.
-        # We work ONLY in commercial medicine.
-        commercial: list[CompanyProfile] = []
-        filtered_count = 0
-        for c in candidates:
-            if _is_state_healthcare(c.legal_name):
-                filtered_count += 1
-                logger.debug("Filtered state/municipal: %s", c.legal_name)
-            else:
-                commercial.append(c)
-        candidates = commercial
-
-        if filtered_count > 0:
-            logger.info(
-                "CompetitorMatcher: filtered %d state/municipal orgs, %d commercial remain",
-                filtered_count, len(candidates),
-            )
-
-        # Filter out blacklisted companies (user's own projects/clients)
+        # 5. Filter state healthcare
+        candidates = [c for c in candidates if not _is_state_healthcare(c.legal_name)]
         if _BLACKLIST_NAMES:
-            pre_bl = len(commercial)
-            commercial = [
-                c for c in commercial
+            candidates = [
+                c for c in candidates
                 if c.legal_name.lower() not in _BLACKLIST_NAMES
-                and not any(bl in c.legal_name.lower() for bl in _BLACKLIST_NAMES if len(bl) > 5)
             ]
-            if len(commercial) < pre_bl:
-                logger.info(
-                    "CompetitorMatcher: filtered %d blacklisted orgs",
-                    pre_bl - len(commercial),
-                )
 
-        # Hard distance filter: exclude candidates farther than HARD_DISTANCE_KM
-        # from the client city center. Medical clinics are hyper-local —
-        # a dental clinic in Zelenograd does NOT compete with one in central Moscow.
+        # 6. Hard distance filter
         HARD_DISTANCE_KM = 15.0
         if client.city_lat and client.city_lon:
-            pre_filter = len(candidates)
-            filtered_candidates: list[CompanyProfile] = []
+            filtered: list[CompanyProfile] = []
             for c in candidates:
                 if c.geo_lat is not None and c.geo_lon is not None:
                     d = _haversine(client.city_lat, client.city_lon, c.geo_lat, c.geo_lon)
                     if d > HARD_DISTANCE_KM:
-                        logger.debug(
-                            "CompetitorMatcher: distance filter — %s (%.1f km > %.0f km)",
-                            c.legal_name[:50], d, HARD_DISTANCE_KM,
-                        )
                         continue
-                filtered_candidates.append(c)
-            candidates = filtered_candidates
-            removed = pre_filter - len(candidates)
+                filtered.append(c)
+            removed = len(candidates) - len(filtered)
             if removed:
-                logger.info(
-                    "CompetitorMatcher: distance filter removed %d/%d candidates > %.0f km",
-                    removed, pre_filter, HARD_DISTANCE_KM,
-                )
+                logger.info("CompetitorMatcher: distance filter removed %d candidates > %.0f km", removed, HARD_DISTANCE_KM)
+            candidates = filtered
 
         if not candidates:
             logger.warning("CompetitorMatcher: no candidates found for %s", url)
             return []
 
-        logger.info(
-            "CompetitorMatcher: %d total candidates (DaData=%d, OSM=%d, Yandex=%d)",
-            len(candidates),
-            len(dadata_candidates),
-            len(osm_candidates),
-            len(yandex_candidates),
-        )
-
-        # 2.4. Website verification + fallback
-        # Verify existing OSM/Yandex websites, then search for missing ones
-        from aim.services.yandex_web_search import get_web_search_client, _is_irrelevant_site
-
-        web_client = get_web_search_client()
-
-        # Step A: verify websites from OSM/Yandex (these can be wrong)
-        with_website = [
-            c for c in candidates
-            if c.website and c.data_source in ("osm", "yandex")
-        ]
-        if with_website:
-            t_verify_start = time.monotonic()
-            verify_tasks = [
-                _verify_website(candidate, web_client, client.city)
-                for candidate in with_website
-            ]
-            await asyncio.gather(*verify_tasks)
-            t_verify = time.monotonic()
-            logger.info(
-                "CompetitorMatcher: verified %d osm/yandex websites in %.1fs",
-                len(with_website), t_verify - t_verify_start,
-            )
-
-        # Step B: search for candidates still without a website
-        missing_website = [c for c in candidates if not c.website and c.legal_name]
-        if missing_website:
-            t_web_start = time.monotonic()
-            # Search up to 5 candidates in parallel (rate limit friendly)
-            batch = missing_website[:5]
-            tasks = [
-                web_client.search_website(_searchable_name(c), client.city)
-                for c in batch
-            ]
-            found_websites = await asyncio.gather(*tasks)
-            for candidate, website in zip(batch, found_websites):
-                if website:
-                    candidate.website = website
-                    logger.debug(
-                        "CompetitorMatcher: web search found website for %s → %s",
-                        candidate.legal_name[:30], website,
-                    )
-            t_web = time.monotonic()
-            hits = sum(1 for w in found_websites if w)
-            if hits:
-                logger.info(
-                    "CompetitorMatcher: web search resolved %d/%d websites in %.1fs",
-                    hits, len(batch), t_web - t_web_start,
-                )
-            else:
-                logger.info(
-                    "CompetitorMatcher: web search found 0/%d websites in %.1fs",
-                    len(batch), t_web - t_web_start,
-                )
-
-        # 2.4.5. Social media enrichment — discover social links for candidates with websites
-        with_website = [c for c in candidates if c.website and not c.social_links]
-        if with_website:
-            t_social_start = time.monotonic()
-            from aim.services.social_discovery import get_social_discovery_client
-
-            social_client = get_social_discovery_client()
-            batch = with_website[:5]
-            tasks = [social_client.discover(c.website) for c in batch]
-            found_socials = await asyncio.gather(*tasks)
-            for candidate, links in zip(batch, found_socials):
-                if links:
-                    candidate.social_links = links
-                    logger.debug(
-                        "CompetitorMatcher: social links for %s: %s",
-                        candidate.legal_name[:30], list(links.keys()),
-                    )
-            t_social = time.monotonic()
-            hits = sum(1 for s in found_socials if s)
-            if hits:
-                logger.info(
-                    "CompetitorMatcher: social discovery found links for %d/%d in %.1fs",
-                    hits, len(batch), t_social - t_social_start,
-                )
-
-        # 2.4.6. Service scraping — extract real services from competitor websites
-        with_website = [c for c in candidates if c.website and not c.scraped_services]
-        if with_website:
+        # 7. Scrape real services from competitor websites
+        websites = [c.website for c in candidates if c.website and not c.scraped_services]
+        if websites:
             t_scrape_start = time.monotonic()
-            from .service_extractor import _fetch_page, _extract_text, _detect_services
-
-            async def _scrape_one(candidate):
-                try:
-                    html = await _fetch_page(candidate.website)
-                    if html:
-                        text = _extract_text(html)
-                        services = _detect_services(text.lower())
-                        candidate.scraped_services = services
-                        if services:
-                            logger.debug(
-                                "CompetitorMatcher: scraped %d services from %s → %s",
-                                len(services), candidate.legal_name[:30], services,
-                            )
-                except Exception as e:
-                    logger.warning(
-                        "CompetitorMatcher: service scrape failed for %s (%s): %s",
-                        candidate.legal_name[:30], candidate.website, e,
-                    )
-
-            batch = with_website[:8]
-            await asyncio.gather(*[_scrape_one(c) for c in batch])
+            scraped = await scrape_services_batch(websites[:8], max_concurrent=5)
+            for c in candidates:
+                if c.website and c.website in scraped:
+                    c.scraped_services = scraped[c.website]
             t_scrape = time.monotonic()
-            hits = sum(1 for c in batch if c.scraped_services)
+            hits = sum(1 for c in candidates if c.scraped_services)
             if hits:
-                logger.info(
-                    "CompetitorMatcher: scraped services for %d/%d candidates in %.1fs",
-                    hits, len(batch), t_scrape - t_scrape_start,
-                )
-            else:
-                logger.info(
-                    "CompetitorMatcher: service scrape found 0/%d in %.1fs",
-                    len(batch), t_scrape - t_scrape_start,
-                )
+                logger.info("CompetitorMatcher: scraped services for %d/%d candidates in %.1fs", hits, len(websites[:8]), t_scrape - t_scrape_start)
 
-        # 2.5a. Extract INN from competitor websites (mandatory for Russian medical orgs)
-        # Many competitors come from Yandex Web Search / OSM with website but no INN.
-        # Russian medical websites are legally required to display ИНН in footer/about.
-        web_inn_candidates = [
-            c for c in candidates
-            if c.website and not (c.inn and c.inn.isdigit())
-        ]
-        if web_inn_candidates:
+        # 8. Extract INN from competitor websites
+        no_inn = [c for c in candidates if c.website and not (c.inn and c.inn.isdigit())]
+        if no_inn:
             t_inn_start = time.monotonic()
-            inn_extracted = await self._extract_inn_from_websites(web_inn_candidates)
+            inn_extracted = await self._extract_inn_from_websites(no_inn)
             if inn_extracted:
-                logger.info(
-                    "CompetitorMatcher: extracted INN from %d websites in %.1fs",
-                    inn_extracted,
-                    time.monotonic() - t_inn_start,
-                )
+                logger.info("CompetitorMatcher: extracted INN from %d websites in %.1fs", inn_extracted, time.monotonic() - t_inn_start)
 
-        # 2.5b. Enrich candidates with real financials from rusprofile.ru
-        # DaData provides INN, but Yandex/OSM candidates dominate the top of the
-        # unsorted candidate list. Enrich INN-carrying candidates specifically,
-        # not just the first 10 in arrival order.
-        t_enrich_start = time.monotonic()
-        inn_for_enrich = [c for c in candidates if c.inn and c.inn.isdigit()]
-        enrich_batch = inn_for_enrich[:10]
-        if enrich_batch:
-            logger.info(
-                "CompetitorMatcher: rusprofile enriching %d/%d INN-tagged candidates "
-                "(total candidates=%d)",
-                len(enrich_batch), len(inn_for_enrich), len(candidates),
-            )
-        enriched_count = await self._enrich_with_rusprofile(enrich_batch)
-        if enriched_count:
-            t_enrich = time.monotonic()
-            logger.info(
-                "CompetitorMatcher: rusprofile enriched %d/%d candidates in %.1fs",
-                enriched_count, len(enrich_batch), t_enrich - t_enrich_start,
-            )
+        # 9. rusprofile enrichment
+        inn_batch = [c for c in candidates if c.inn and c.inn.isdigit()][:10]
+        if inn_batch:
+            t_enrich_start = time.monotonic()
+            enriched_count = await self._enrich_with_rusprofile(inn_batch)
+            if enriched_count:
+                logger.info("CompetitorMatcher: rusprofile enriched %d/%d in %.1fs", enriched_count, len(inn_batch), time.monotonic() - t_enrich_start)
 
-        # 3. Score and rank (first pass — without geocoding DaData)
+        # 10. Score and rank
         scored = await self._score_candidates(client, candidates, count)
-        t_score1 = time.monotonic()
 
-        # 4. Geocode top DaData candidates to refine location scores
-        # Only geocode top-5 who lack coordinates (saves ~20s vs geocoding all 25)
-        top_dadata = [
-            m.profile for m in scored[:5]
-            if m.profile.data_source == "dadata"
-            and m.profile.geo_lat is None
-            and m.profile.legal_address
-        ]
-        if top_dadata:
-            await self._geocode_dadata_candidates(top_dadata)
-            # Re-score with actual coordinates
-            scored = await self._score_candidates(client, candidates, count)
-
-        # 5. Ensure source diversity: at least 1 candidate with INN (→ rusprofile financials)
+        # 11. Source diversity — ensure INN and real financials in top-N
         top = scored[:count]
         has_inn = any(m.profile.inn and m.profile.inn.strip() for m in top)
         if not has_inn:
             inn_candidates = [
                 m for m in scored
-                if m.profile.inn and m.profile.inn.strip()
-                and m not in top
+                if m.profile.inn and m.profile.inn.strip() and m not in top
             ]
             if inn_candidates:
-                # Prefer INN candidates that also have digital presence
-                def _digital_rank(m: CompetitorMatch) -> int:
-                    return (1 if m.website else 0) + (1 if m.social_links else 0)
-
-                inn_best = max(inn_candidates, key=lambda m: (_digital_rank(m), m.total_score))
-
-                # Replace candidate with lowest digital presence first,
-                # then by lowest score as tiebreaker
-                sorted_top = sorted(top, key=lambda m: (_digital_rank(m), m.total_score))
-                replaced = sorted_top[0]
-                top.remove(replaced)
+                inn_best = max(inn_candidates, key=lambda m: m.total_score)
+                weakest = min(top, key=lambda m: (1 if m.website else 0, m.total_score))
+                top.remove(weakest)
                 top.append(inn_best)
                 top.sort(key=lambda m: m.total_score, reverse=True)
-                logger.info(
-                    "CompetitorMatcher: diversity swap (INN) — replaced %s (score=%.4f, src=%s, web=%s) "
-                    "with %s (score=%.4f, inn=%s, web=%s)",
-                    replaced.profile.legal_name[:40],
-                    replaced.total_score,
-                    replaced.profile.data_source,
-                    bool(replaced.website),
-                    inn_best.profile.legal_name[:40],
-                    inn_best.total_score,
-                    inn_best.profile.inn,
-                    bool(inn_best.website),
-                )
+                logger.info("CompetitorMatcher: diversity swap (INN) — replaced %s with %s", weakest.profile.legal_name[:30], inn_best.profile.legal_name[:30])
 
-        # 5.5. Ensure at least 1 candidate has REAL financial data (rusprofile)
-        # Rusprofile enrichment happens before scoring, so enriched candidates
-        # have data_source="rusprofile" and revenue_year>0. Prefer candidates
-        # with real tax-filed financials over estimates.
         has_real_fin = any(
             m.profile.has_real_financials() and m.profile.data_source == "rusprofile"
             for m in top
         )
         if not has_real_fin:
-            rusprofile_candidates = [
+            rp_candidates = [
                 m for m in scored
                 if m.profile.has_real_financials()
                 and m.profile.data_source == "rusprofile"
                 and m not in top
             ]
-            if rusprofile_candidates:
-                # Pick the best rusprofile candidate by score
-                rp_best = max(rusprofile_candidates, key=lambda m: m.total_score)
-
-                # Replace the candidate with lowest data quality
-                # (worst financial data, or weakest overall)
-                def _data_weakness(m: CompetitorMatch) -> float:
-                    s = m.total_score
-                    if not m.profile.inn or not m.profile.inn.strip():
-                        s -= 0.1  # penalize no-INN candidates
-                    if not m.profile.has_real_financials():
-                        s -= 0.05  # penalize no-financials
-                    return s
-
-                replaced = min(top, key=_data_weakness)
-                top.remove(replaced)
+            if rp_candidates:
+                rp_best = max(rp_candidates, key=lambda m: m.total_score)
+                weakest = min(top, key=lambda m: (
+                    m.total_score - 0.1 * bool(not m.profile.inn) - 0.05 * bool(not m.profile.has_real_financials())
+                ))
+                top.remove(weakest)
                 top.append(rp_best)
                 top.sort(key=lambda m: m.total_score, reverse=True)
-                logger.info(
-                    "CompetitorMatcher: diversity swap (rusprofile) — replaced %s "
-                    "(score=%.4f, src=%s, fin=%s) with %s (score=%.4f, inn=%s, rev=%s RUB)",
-                    replaced.profile.legal_name[:40],
-                    replaced.total_score,
-                    replaced.profile.data_source,
-                    replaced.profile.has_real_financials(),
-                    rp_best.profile.legal_name[:40],
-                    rp_best.total_score,
-                    rp_best.profile.inn,
-                    rp_best.profile.revenue_rub,
-                )
+                logger.info("CompetitorMatcher: diversity swap (rusprofile) — replaced %s with %s", weakest.profile.legal_name[:30], rp_best.profile.legal_name[:30])
         scored = top
 
-        # 6. Targeted website search for final top-N without websites
-        # Web search during merge phase (step 2.4B) only covers first 5
-        # missing_website candidates — final top-N may differ after scoring.
-        t_post_web = 0.0
-        final_missing = [m for m in scored if not m.website and m.profile.legal_name]
-        if final_missing and client.city:
-            t_web2_start = time.monotonic()
-            web_client = get_web_search_client()
-            tasks = [
-                web_client.search_website(_searchable_name(m.profile), client.city)
-                for m in final_missing
-            ]
-            found_websites = await asyncio.gather(*tasks)
-            hits = 0
-            for match, website in zip(final_missing, found_websites):
-                if website:
-                    match.profile.website = website
-                    match.website = website
-                    hits += 1
-                    logger.debug(
-                        "CompetitorMatcher: post-scoring web → %s for '%s'",
-                        website, match.profile.legal_name[:30],
-                    )
-            t_web2 = time.monotonic()
-            t_post_web = t_web2 - t_web2_start
-            if hits:
-                logger.info(
-                    "CompetitorMatcher: post-scoring web search resolved %d/%d in %.1fs",
-                    hits, len(final_missing), t_post_web,
-                )
-
         t_total = time.monotonic()
-        t_post_scoring = t_total - t_score1
-        # t_post_scoring includes: geocode (0-N candidates), diversity swaps, post-scoring web search
-        logger.info(
-            "CompetitorMatcher: scoring=%.1fs, geocode=%d candidates, post_web=%.1fs, post_scoring=%.1fs, total=%.1fs",
-            t_score1 - t_discovery, len(top_dadata), t_post_web, t_post_scoring, t_total - t0,
-        )
+        logger.info("CompetitorMatcher: total=%.1fs (extract=%.1fs geocode=%.1fs gm=%.1fs dadata=%.1fs)", t_total - t0, t_extract - t0, t_geocode - t_extract, t_discovery - t_geocode, t_dadata - t_discovery)
 
         return scored
 
-    # ── Candidate search ───────────────────────────────────────────
+    # ── Candidate discovery ────────────────────────────────────────
 
-    async def _search_candidates(self, client: ClientProfile) -> list[CompanyProfile]:
-        """Search DaData for potential competitors.
-
-        DaData suggest/party searches by company NAME, not OKVED. Companies
-        like "Никор-Мед" or "Мед-Профи" won't appear in "стоматология" queries.
-        We use three tiers of queries for coverage:
-          1. Specialization-specific (e.g. "стоматология", "стоматологическая клиника")
-          2. Generic medical terms (e.g. "медицинский центр", "клиника", "мед")
-          3. City-only fallback with medical filter
-        """
-        t0 = time.monotonic()
-        spec = client.specialization or "медицинская клиника"
-        city = client.city
-
-        queries: list[str] = []
-
-        # ── Tier 1: Specialization-based ──────────────────────────
-        spec_queries: list[str] = []
-        spec_queries.append(spec)
-        if spec == "стоматология":
-            spec_queries.extend([
-                "стоматологическая клиника",
-                "стоматологический центр",
-                "стоматологическая практика",
-                "стоматолог",
-            ])
-        elif spec == "косметология":
-            spec_queries.extend([
-                "косметологический центр",
-                "центр косметологии",
-                "косметолог",
-                "косметологическая клиника",
-            ])
-        elif spec == "многопрофильная клиника":
-            spec_queries.extend([
-                "медицинский центр",
-                "многопрофильный медицинский центр",
-                "клиника",
-            ])
-        elif spec == "пластическая хирургия":
-            spec_queries.extend([
-                "пластическая хирургия",
-                "хирургическая клиника",
-                "центр хирургии",
-            ])
-        elif spec == "офтальмология":
-            spec_queries.extend([
-                "офтальмологическая клиника",
-                "офтальмологический центр",
-                "офтальмолог",
-            ])
-        elif spec == "диагностический центр":
-            spec_queries.extend([
-                "диагностический центр",
-                "медицинский центр",
-                "диагностика",
-            ])
-        elif spec == "педиатрия":
-            spec_queries.extend([
-                "педиатрия",
-                "детская клиника",
-                "детский медицинский центр",
-            ])
-
-        # ── Tier 2: Generic medical terms ─────────────────────────
-        # Catches brands where legal name doesn't include specialization,
-        # e.g. "Никор-Мед", "Мед-Профи", "Здоровье", "Гиппократ", etc.
-        generic_queries = [
-            "медицинский центр",
-            "клиника",
-            "медицина",
-            "мед",
-        ]
-
-        # ── Tier 3: City-only (broad sweep) ────────────────────────
-        city_queries: list[str] = []
-        if city:
-            city_queries.append(city)
-
-        # Build query list: spec queries first (tagged), then generic + city
-        all_queries: list[tuple[str, bool]] = []
-        for q in spec_queries:
-            all_queries.append((q, True))   # tagged with client specialization
-        for q in generic_queries:
-            all_queries.append((q, False))  # not specialization-tagged
-        for q in city_queries:
-            all_queries.append((q, False))
-
-        async def _search_one_query(q: str, is_spec_query: bool) -> list[CompanyProfile]:
-            """Run a single DaData query and tag results."""
-            q_city = ""
-            if city and city.lower() not in q.lower():
-                q_city = city
-            try:
-                batch = await self.dadata.find_medical_companies(
-                    query=q,
-                    city=q_city,
-                    count=20,
+    async def _geocode_city(self, city: str) -> tuple[float, float] | None:
+        """Geocode city name to coordinates via Nominatim."""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(
+                    self._NOMINATIM_URL,
+                    params={"q": f"{city}, Россия", "format": "json", "limit": 1},
+                    headers={"User-Agent": "AIM-CompetitorDiscovery/2.0 (me@iamaim.ru)"},
                 )
-                for p in batch:
-                    if is_spec_query:
-                        p.source_specialization = spec
-                return batch
+                resp.raise_for_status()
+                data = resp.json()
+                if data:
+                    return float(data[0]["lat"]), float(data[0]["lon"])
+        except Exception as e:
+            logger.warning("Geocode failed for city %s: %s", city, e)
+        return None
+
+    async def _enrich_gm_with_dadata(
+        self, gm_candidates: list[CompanyProfile], client: ClientProfile
+    ) -> list[CompanyProfile]:
+        """Enrich Google Maps candidates with DaData (INN + legal data + financials).
+
+        Matches Google Maps names to DaData legal entities by name similarity.
+        DaData is used ONLY for enrichment here — not for primary discovery.
+        """
+        enriched: list[CompanyProfile] = []
+
+        async def _enrich_one(c: CompanyProfile) -> CompanyProfile:
+            name = c.legal_name
+            if not name:
+                return c
+
+            # Extract first 1-2 words as brand core for DaData search
+            words = name.split()
+            brand_core = " ".join(words[:2]) if len(words) >= 2 else words[0]
+
+            try:
+                results = await self.dadata.find_medical_companies(
+                    query=brand_core,
+                    city=client.city,
+                    count=3,
+                )
             except Exception as e:
-                logger.error("DaData search failed for query=%s: %s", q, e)
-                return []
+                logger.debug("DaData lookup failed for %s: %s", brand_core, e)
+                return c
 
-        # Run all queries in parallel (was sequential — 10 queries × ~1-2s = 10-20s)
-        tasks = [_search_one_query(q, is_spec) for q, is_spec in all_queries[:10]]
-        batches = await asyncio.gather(*tasks)
+            for r in results:
+                if _name_similarity(name, r.legal_name) > 0.3:
+                    # Transfer DaData enrichment to Google Maps profile
+                    if not c.inn and r.inn:
+                        c.inn = r.inn
+                    if not c.ogrn and r.ogrn:
+                        c.ogrn = r.ogrn
+                    if not c.okved_main and r.okved_main:
+                        c.okved_main = r.okved_main
+                    if not c.okved_secondary and r.okved_secondary:
+                        c.okved_secondary = r.okved_secondary
+                    if not c.legal_address and r.legal_address:
+                        c.legal_address = r.legal_address
+                    if not c.employee_count and r.employee_count:
+                        c.employee_count = r.employee_count
+                    if not c.revenue_year and r.revenue_year:
+                        c.revenue_year = r.revenue_year
+                        c.profit_year = r.profit_year
+                        c.financial_year = r.financial_year
+                    # Keep Google Maps digital presence (website, social, rating)
+                    c.website = c.website or r.website
+                    if not c.social_links and r.social_links:
+                        c.social_links = r.social_links
+                    # Tag as enriched
+                    c.data_source = "apify_google_maps+dadata"
+                    c.source_specialization = client.specialization
+                    break
 
-        raw_all: list[CompanyProfile] = []
-        seen_inn: set[str] = set()
-        for batch in batches:
-            for p in batch:
-                if p.inn and p.inn not in seen_inn:
-                    seen_inn.add(p.inn)
-                    raw_all.append(p)
+            return c
 
-        # Filter out the client's own company
-        candidates = []
-        for p in raw_all:
-            if client.company_name and client.company_name.lower() in p.legal_name.lower():
+        # DaData lookup in parallel (was sequential)
+        tasks = [_enrich_one(c) for c in gm_candidates[:30]]
+        enriched = await asyncio.gather(*tasks)
+
+        # Tag remaining (non-enriched) with specialization
+        for c in enriched:
+            if not c.source_specialization:
+                c.source_specialization = client.specialization
+
+        return list(enriched)
+
+    async def _lookup_named_competitors(
+        self, named_competitors: list[str], client: ClientProfile
+    ) -> list[CompanyProfile]:
+        """Look up named competitors via DaData by name or URL."""
+        named_profiles: list[CompanyProfile] = []
+        for name in named_competitors:
+            raw_input = name.strip()
+            is_url = raw_input.startswith("http")
+            if is_url:
+                clean_name = raw_input.split("//")[-1].split("/")[0]
+                clean_name = clean_name.removeprefix("www.")
+            else:
+                clean_name = raw_input
+
+            profiles = await self.dadata.search_company(clean_name, count=3)
+            if profiles:
+                for p in profiles:
+                    p._named_competitor = True
+                    if is_url:
+                        p.website = p.website or raw_input
+                    p.source_specialization = client.specialization
+                named_profiles.extend(profiles)
+                logger.info("CompetitorMatcher: named '%s' → %d DaData matches", clean_name, len(profiles))
+        return named_profiles
+
+    @staticmethod
+    def _dedup_candidates(candidates: list[CompanyProfile]) -> list[CompanyProfile]:
+        """Deduplicate candidates by INN first, then name similarity."""
+        merged: dict[str, CompanyProfile] = {}
+        for p in candidates:
+            key = p.inn if p.inn else p.legal_name.lower()
+            if key in merged:
+                existing = merged[key]
+                # Merge: keep best of each field
+                existing.website = existing.website or p.website
+                if not existing.social_links and p.social_links:
+                    existing.social_links = p.social_links
+                if existing.rating is None and p.rating is not None:
+                    existing.rating = p.rating
+                if existing.reviews_count is None and p.reviews_count is not None:
+                    existing.reviews_count = p.reviews_count
+                if not existing.inn and p.inn:
+                    existing.inn = p.inn
+                if not existing.revenue_year and p.revenue_year:
+                    existing.revenue_year = p.revenue_year
+                existing.confidence = max(existing.confidence, p.confidence)
                 continue
-            if p.legal_name and client.company_name and _name_similarity(
-                client.company_name, p.legal_name
-            ) > 0.9:
-                continue
-            candidates.append(p)
-
-        logger.info(
-            "DaData: %d candidates, %d tagged with specialization='%s' (took %.1fs)",
-            len(candidates),
-            sum(1 for c in candidates if c.source_specialization == spec),
-            spec,
-            time.monotonic() - t0,
-        )
-        return candidates[:25]
+            merged[key] = p
+        return list(merged.values())
 
     # ── Geocoding ──────────────────────────────────────────────────
 
@@ -1273,322 +894,7 @@ class CompetitorMatcher:
             geocoded, len(candidates),
         )
 
-    # ── OSM discovery ──────────────────────────────────────────────
-
-    async def _search_osm_candidates(
-        self, client: ClientProfile
-    ) -> list[CompanyProfile]:
-        """Find competitors via OpenStreetMap by amenity type.
-
-        OSM tags organizations by what they DO (amenity=dentist), not by
-        legal name. This catches brand-named clinics like "Никор-Мед"
-        that DaData prefix search misses.
-        """
-        t0 = time.monotonic()
-        city = client.city
-        if not city:
-            return []
-
-        try:
-            osm_places = await self.osm.find_medical_places(city=city)
-        except Exception as e:
-            logger.error("OSM discovery failed for %s: %s", city, e)
-            return []
-
-        if not osm_places:
-            return []
-
-        # Filter to relevant amenity types for this specialization
-        spec = client.specialization
-        relevant = _filter_osm_by_specialization(osm_places, spec)
-
-        # Enrich OSM places with DaData in parallel (was sequential — 15 lookups × ~1s = 15s)
-        async def _enrich_one(place: dict) -> CompanyProfile | None:
-            try:
-                return await self._lookup_osm_on_dadata(place, spec)
-            except Exception as e:
-                logger.debug("Failed to enrich OSM place %s: %s", place.get("name"), e)
-                return None
-
-        enrich_tasks = [_enrich_one(p) for p in relevant[:15]]
-        enrich_results = await asyncio.gather(*enrich_tasks)
-        profiles = [p for p in enrich_results if p is not None]
-
-        logger.info("OSM: enriched %d/%d places via DaData (took %.1fs)", len(profiles), len(relevant), time.monotonic() - t0)
-        return profiles
-
-    async def _lookup_osm_on_dadata(
-        self, place: dict, specialization: str = ""
-    ) -> CompanyProfile | None:
-        """Try to find an OSM place on DaData for financial data.
-
-        Searches by the first word of the name (brand name) in the city.
-        Tags the profile with the client's specialization for service matching.
-        """
-        name = place.get("name", "")
-        city = place.get("city", "")
-        if not name:
-            return None
-
-        # Search by first 1-2 words of the name (brand core)
-        words = name.split()
-        brand_core = " ".join(words[:2]) if len(words) >= 2 else words[0]
-
-        try:
-            results = await self.dadata.find_medical_companies(
-                query=brand_core,
-                city=city,
-                count=5,
-            )
-        except Exception:
-            return None
-
-        for r in results:
-            if _name_similarity(name, r.legal_name) > 0.3:
-                # Preserve OSM coordinates if DaData doesn't have them
-                if r.geo_lat is None and r.geo_lon is None:
-                    r.geo_lat = place.get("lat")
-                    r.geo_lon = place.get("lon")
-                # Carry OSM website to the profile
-                if r.website is None and place.get("website"):
-                    r.website = place.get("website")
-                # Tag as OSM-discovered (even though enriched via DaData)
-                if r.data_source == "dadata":
-                    r.data_source = "osm+dadata"
-                # Tag with client specialization for service matching
-                if specialization and not r.source_specialization:
-                    r.source_specialization = specialization
-                return r
-
-        # No DaData match — build a profile from OSM data alone
-        return CompanyProfile(
-            inn="",
-            legal_name=name,
-            brand_name=name,
-            employee_count=None,
-            okved_main=_osm_amenity_to_okved(place.get("amenity", "")),
-            okved_secondary=[],
-            legal_address=_format_osm_address(place),
-            actual_addresses=[_format_osm_address(place)],
-            geo_lat=place.get("lat"),
-            geo_lon=place.get("lon"),
-            website=place.get("website"),
-            source_specialization=specialization,
-            data_source="osm",
-            confidence=0.5,
-        )
-
-    # ── Yandex Maps discovery ────────────────────────────────────────
-
-    async def _search_yandex_candidates(
-        self, client: ClientProfile
-    ) -> list[CompanyProfile]:
-        """Find competitors via Yandex Maps organization search.
-
-        Yandex Maps returns organizations people actually see and interact
-        with on the map — a strong signal of real-world presence.
-        """
-        t0 = time.monotonic()
-        city = client.city
-        spec = client.specialization
-        if not city or not spec:
-            return []
-
-        if not self.yandex.configured:
-            logger.debug("Yandex Maps not configured — skipping Tier 3")
-            return []
-
-        try:
-            yandex_orgs = await self.yandex.find_medical_orgs(
-                specialization=spec,
-                city=city,
-            )
-        except Exception as e:
-            logger.error("Yandex Maps search failed for %s: %s", city, e)
-            return []
-
-        if not yandex_orgs:
-            logger.debug("Yandex Maps: 0 orgs found (took %.1fs)", time.monotonic() - t0)
-            return []
-
-        # Enrich with ratings (optional — non-blocking)
-        enriched_orgs = await asyncio.gather(
-            *[self.yandex.enrich_with_ratings(org) for org in yandex_orgs[:15]],
-            return_exceptions=True,
-        )
-
-        # Enrich Yandex orgs with DaData in parallel (was sequential)
-        async def _enrich_yandex_one(result) -> CompanyProfile | None:
-            if isinstance(result, Exception):
-                logger.debug("Yandex ratings enrichment failed: %s", result)
-                return None
-            try:
-                return await self._lookup_yandex_on_dadata(result, spec)
-            except Exception as e:
-                logger.debug("Failed to enrich Yandex org %s: %s", result.get("name"), e)
-                return None
-
-        enrich_tasks = [_enrich_yandex_one(r) for r in enriched_orgs]
-        enrich_results = await asyncio.gather(*enrich_tasks)
-        profiles = [p for p in enrich_results if p is not None]
-
-        logger.info("Yandex Maps: enriched %d/%d orgs via DaData (took %.1fs)", len(profiles), len(yandex_orgs), time.monotonic() - t0)
-        return profiles
-
-    async def _lookup_yandex_on_dadata(
-        self, org: dict, specialization: str = ""
-    ) -> CompanyProfile | None:
-        """Try to find a Yandex Maps org on DaData for financial data."""
-        name = org.get("name", "")
-        city = ""
-        if not name:
-            return None
-
-        # Extract city from address
-        address = org.get("address", "")
-        import re as _re
-        city_match = _re.search(r"г\.?\s+([А-ЯЁ][а-яё]+(?:[\s-][А-ЯЁ][а-яё]+)?)", address)
-        if city_match:
-            city = city_match.group(1)
-
-        # Search by first 1-2 words of the name
-        words = name.split()
-        brand_core = " ".join(words[:2]) if len(words) >= 2 else words[0]
-
-        try:
-            results = await self.dadata.find_medical_companies(
-                query=brand_core,
-                city=city,
-                count=5,
-            )
-        except Exception:
-            results = []
-
-        for r in results:
-            if _name_similarity(name, r.legal_name) > 0.3:
-                # Preserve Yandex coordinates if DaData doesn't have them
-                if r.geo_lat is None and r.geo_lon is None:
-                    r.geo_lat = org.get("lat")
-                    r.geo_lon = org.get("lon")
-                # Carry Yandex rating/reviews/website to the profile
-                if r.rating is None and org.get("rating"):
-                    r.rating = org.get("rating")
-                if r.reviews_count is None and org.get("reviews_count"):
-                    r.reviews_count = org.get("reviews_count")
-                if r.website is None and org.get("website"):
-                    r.website = org.get("website")
-                # Tag as Yandex-discovered
-                if r.data_source == "dadata":
-                    r.data_source = "yandex+dadata"
-                return r
-
-        # No DaData match — build profile from Yandex data
-        return CompanyProfile(
-            inn="",
-            legal_name=name,
-            brand_name=name,
-            employee_count=None,
-            okved_main=_specialization_to_okved(specialization),
-            okved_secondary=[],
-            legal_address=address,
-            actual_addresses=[address] if address else [],
-            geo_lat=org.get("lat"),
-            geo_lon=org.get("lon"),
-            rating=org.get("rating"),
-            reviews_count=org.get("reviews_count"),
-            website=org.get("website"),
-            source_specialization=specialization,
-            data_source="yandex",
-            confidence=0.55,
-        )
-
-    async def _merge_candidates(
-        self,
-        primary: list[CompanyProfile],
-        secondary: list[CompanyProfile],
-        client: ClientProfile,
-    ) -> list[CompanyProfile]:
-        """Merge candidates from two sources with smart field preservation.
-
-        Primary source wins on digital presence (website, social_links, rating).
-        Secondary source adds INN + financials without overwriting digital signals.
-        Deduplication by INN first, then name similarity.
-        """
-        merged: dict[str, CompanyProfile] = {}
-
-        # Primary first
-        for p in primary:
-            key = p.inn if p.inn else p.legal_name.lower()
-            merged[key] = p
-
-        # Secondary: merge without overwriting digital presence
-        for p in secondary:
-            key = p.inn if p.inn else p.legal_name.lower()
-            if key in merged:
-                existing = merged[key]
-                # Smart merge: preserve digital presence from primary,
-                # enrich with financials and INN from secondary
-                if not existing.inn and p.inn:
-                    existing.inn = p.inn
-                if not existing.ogrn and p.ogrn:
-                    existing.ogrn = p.ogrn
-                if not existing.employee_count and p.employee_count:
-                    existing.employee_count = p.employee_count
-                if not existing.okved_main and p.okved_main:
-                    existing.okved_main = p.okved_main
-                if not existing.okved_secondary and p.okved_secondary:
-                    existing.okved_secondary = p.okved_secondary
-                if not existing.legal_address and p.legal_address:
-                    existing.legal_address = p.legal_address
-                if not existing.registration_date and p.registration_date:
-                    existing.registration_date = p.registration_date
-                # Financials: secondary (DaData) usually has better data
-                if not existing.revenue_year and p.revenue_year:
-                    existing.revenue_year = p.revenue_year
-                    existing.profit_year = p.profit_year
-                    existing.financial_year = p.financial_year
-                    existing.revenue_trend = p.revenue_trend
-                # Digital presence: NEVER overwrite with empty
-                existing.website = existing.website or p.website
-                if not existing.social_links and p.social_links:
-                    existing.social_links = p.social_links
-                if existing.rating is None and p.rating is not None:
-                    existing.rating = p.rating
-                if existing.reviews_count is None and p.reviews_count is not None:
-                    existing.reviews_count = p.reviews_count
-                # Geo: keep from primary if already set
-                if existing.geo_lat is None and p.geo_lat is not None:
-                    existing.geo_lat = p.geo_lat
-                    existing.geo_lon = p.geo_lon
-                # Boost confidence when multiple sources agree
-                existing.confidence = max(existing.confidence, p.confidence)
-                if existing.data_source != p.data_source:
-                    existing.data_source = f"{existing.data_source}+{p.data_source}"
-                continue
-
-            # Check for name similarity with existing
-            is_dup = False
-            for existing in merged.values():
-                if _name_similarity(p.legal_name, existing.legal_name) > 0.6:
-                    is_dup = True
-                    # Merge digital presence into existing
-                    existing.website = existing.website or p.website
-                    if not existing.social_links and p.social_links:
-                        existing.social_links = p.social_links
-                    if existing.rating is None and p.rating is not None:
-                        existing.rating = p.rating
-                    if existing.reviews_count is None and p.reviews_count is not None:
-                        existing.reviews_count = p.reviews_count
-                    if existing.geo_lat is None and p.geo_lat is not None:
-                        existing.geo_lat = p.geo_lat
-                        existing.geo_lon = p.geo_lon
-                    if not existing.inn and p.inn:
-                        existing.inn = p.inn
-                    break
-            if not is_dup:
-                merged[key] = p
-
-        return list(merged.values())
+    # (Discovery methods removed — replaced by Apify Google Maps pipeline)
 
     # ── Scoring ────────────────────────────────────────────────────
 
@@ -1955,26 +1261,20 @@ def _score_popularity(candidate: CompanyProfile) -> float:
 def _score_visibility(candidate: CompanyProfile) -> float:
     """Score competitor's search visibility and maps presence.
 
-    Currently uses data_source as a proxy signal:
-      - "yandex+dadata" → strong presence (on Yandex Maps + DaData)
-      - "yandex" → maps-only presence
-      - "osm+dadata" → OSM listing + DaData enrichment
-      - "osm" → OSM-only, basic presence
+    Uses data_source as a proxy signal:
+      - "apify_google_maps+dadata" → Google Maps + DaData enrichment (best)
+      - "apify_google_maps" → Google Maps listing with website/socials
       - "dadata" → legal-only, no consumer-facing presence
 
     Returns 0-1 scale.
     """
     ds = candidate.data_source
-    if ds == "yandex+dadata":
-        return 0.9   # best of both worlds
-    elif ds == "yandex":
-        return 0.7   # maps presence confirmed
-    elif ds == "osm+dadata":
-        return 0.6   # OSM + legal enrichment
-    elif ds == "osm":
-        return 0.2   # OSM-only, weak signal — easy to create entries
+    if ds == "apify_google_maps+dadata":
+        return 0.95  # Google Maps + full legal enrichment
+    elif ds == "apify_google_maps":
+        return 0.85  # Google Maps — real consumer presence, website, reviews
     elif ds == "dadata":
-        return 0.3   # legal-only
+        return 0.3   # legal-only, no consumer-facing presence
     return 0.3
 
 
@@ -2467,126 +1767,3 @@ def _build_reason(m: CompetitorMatch, client_revenue: int = 0) -> str:
     return ", ".join(parts)
 
 
-# ── OSM helpers ────────────────────────────────────────────────────
-
-# Map OSM amenity types to specialization-based filtering priority.
-# For a dental client, we want dentists first, then clinics, then doctors.
-_AMENITY_PRIORITY: dict[str, dict[str, int]] = {
-    "стоматология": {"dentist": 3, "clinic": 1, "doctors": 0},
-    "косметология": {"clinic": 3, "doctors": 1, "dentist": 0},
-    "многопрофильная клиника": {"clinic": 3, "doctors": 2, "dentist": 1},
-    "пластическая хирургия": {"clinic": 3, "doctors": 2, "dentist": 0},
-    "офтальмология": {"clinic": 3, "doctors": 2, "dentist": 0},
-    "диагностический центр": {"doctors": 3, "clinic": 2, "dentist": 0},
-    "педиатрия": {"clinic": 3, "doctors": 2, "dentist": 0},
-}
-
-
-def _filter_osm_by_specialization(
-    places: list[dict], specialization: str
-) -> list[dict]:
-    """Filter OSM places by relevance to the client's specialization.
-
-    For dentistry: keep all dentists + clinics. For cosmetics: keep clinics.
-    """
-    priority = _AMENITY_PRIORITY.get(specialization, {})
-    if not priority:
-        return places  # Unknown spec — keep all
-
-    # Keep places with priority > 0, sort by priority desc
-    filtered = [p for p in places if priority.get(p.get("amenity", ""), 0) > 0]
-    filtered.sort(key=lambda p: priority.get(p.get("amenity", ""), 0), reverse=True)
-    return filtered
-
-
-# OKVED mapping for OSM amenity types (used when DaData lookup fails)
-_AMENITY_OKVED_MAP: dict[str, str] = {
-    "dentist": "86.23",   # Стоматологическая практика
-    "clinic": "86.21",    # Общая врачебная практика
-    "doctors": "86.21",   # Общая врачебная практика
-}
-
-
-def _osm_amenity_to_okved(amenity: str) -> str:
-    """Map OSM amenity to nearest OKVED code."""
-    return _AMENITY_OKVED_MAP.get(amenity, "86.90")
-
-
-def _format_osm_address(place: dict) -> str:
-    """Format OSM place as a DaData-like address string."""
-    parts = []
-    city = place.get("city", "")
-    if city:
-        parts.append(f"г {city}")
-    street = place.get("street", "")
-    if street:
-        parts.append(street)
-    housenumber = place.get("housenumber", "")
-    if housenumber:
-        if street:
-            parts[-1] = f"{street} {housenumber}"
-        else:
-            parts.append(housenumber)
-    return ", ".join(parts) if parts else ""
-
-
-# ── Website verification ────────────────────────────────────────────
-
-async def _verify_website(
-    candidate: CompanyProfile,
-    web_client,
-    city: str = "",
-) -> None:
-    """Verify a candidate's website from OSM/Yandex is actually relevant.
-
-    Fetches the page and checks for medical content. If irrelevant,
-    clears the website and tries web search as fallback.
-    """
-    import httpx
-
-    website = candidate.website
-    if not website:
-        return
-
-    try:
-        async with httpx.AsyncClient(timeout=8.0, follow_redirects=True) as client:
-            resp = await client.get(
-                website if website.startswith("http") else f"https://{website}",
-                headers={
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                },
-            )
-            if resp.status_code >= 500:
-                return  # server error, keep as-is (might be temporary)
-
-            html = resp.text
-    except Exception:
-        return  # network error, keep as-is
-
-    # Check relevance
-    from aim.services.yandex_web_search import _is_irrelevant_site
-
-    if _is_irrelevant_site(html, candidate.legal_name):
-        logger.info(
-            "WebsiteVerify: ✗ %s for '%s' is irrelevant (not a medical site), removing",
-            website, candidate.legal_name[:40],
-        )
-        candidate.website = None
-
-        # Try web search as fallback
-        if city and candidate.legal_name:
-            try:
-                found = await web_client.search_website(_searchable_name(candidate), city)
-                if found:
-                    candidate.website = found
-                    logger.info(
-                        "WebsiteVerify: web search fallback → %s for '%s'",
-                        found, candidate.legal_name[:40],
-                    )
-            except Exception:
-                pass
-    else:
-        logger.debug(
-            "WebsiteVerify: ✓ %s for '%s' looks relevant",
-            website, candidate.legal_name[:40],
-        )
