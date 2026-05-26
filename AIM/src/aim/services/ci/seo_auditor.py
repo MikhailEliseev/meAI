@@ -101,10 +101,15 @@ class SeoAuditor:
             # H1-H3
             result.h1_count = len(soup.find_all("h1"))
             result.h2_count = len(soup.find_all("h2"))
+            result.h3_count = len(soup.find_all("h3"))
             if result.h1_count == 0:
                 result.issues.append("Missing H1 tag")
             elif result.h1_count > 1:
                 result.issues.append(f"Multiple H1 tags ({result.h1_count})")
+            if result.h2_count == 0:
+                result.issues.append("No H2 tags found")
+            if result.h3_count == 0:
+                result.issues.append("No H3 tags found (recommended for structure)")
 
             # Viewport
             viewport = soup.find("meta", attrs={"name": "viewport"})
@@ -214,6 +219,10 @@ class SeoAuditor:
             score -= 5
         if not r.has_og_tags:
             score -= 5
+        if not r.has_robots_txt:
+            score -= 3
+        if not r.has_sitemap:
+            score -= 3
         if r.broken_links:
             score -= min(len(r.broken_links) * 2, 15)
         return max(0, score)

@@ -16,6 +16,7 @@ class SeoAuditResult:
     meta_description_length: int = 0
     h1_count: int = 0
     h2_count: int = 0
+    h3_count: int = 0
     has_viewport: bool = False
     has_ssl: bool = False
     has_canonical: bool = False
