@@ -133,9 +133,12 @@ class SeoAuditor:
                     "Missing Open Graph tags (social sharing)"
                 )
 
+            # Parse base URL once for reuse across robots.txt, sitemap, and link checks
+            base = urllib.parse.urlparse(url)
+            base_domain = base.netloc
+
             # robots.txt
             try:
-                base = urllib.parse.urlparse(url)
                 robots_url = f"{base.scheme}://{base.netloc}/robots.txt"
                 robots_resp = self._client.get(robots_url)
                 result.has_robots_txt = robots_resp.status_code == 200
@@ -146,7 +149,6 @@ class SeoAuditor:
 
             # sitemap.xml
             try:
-                base = urllib.parse.urlparse(url)
                 sitemap_url = f"{base.scheme}://{base.netloc}/sitemap.xml"
                 sitemap_resp = self._client.get(sitemap_url)
                 result.has_sitemap = sitemap_resp.status_code == 200
@@ -159,13 +161,24 @@ class SeoAuditor:
             result.pages_scraped = 1
             links = soup.find_all("a", href=True)
             internal_links = []
-            base_domain = urllib.parse.urlparse(url).netloc
             for link in links[:30]:
                 href = link["href"]
-                if href.startswith("/") or base_domain in href:
-                    if href.startswith("/"):
-                        href = f"{base.scheme}://{base_domain}{href}"
+                if href.startswith("/"):
+                    href = f"{base.scheme}://{base_domain}{href}"
                     internal_links.append(href)
+                elif "://" in href:
+                    # Absolute URL — check if same domain via proper hostname extraction
+                    try:
+                        if urllib.parse.urlparse(href).netloc == base_domain:
+                            internal_links.append(href)
+                    except Exception:
+                        pass
+                else:
+                    # Relative URL (e.g., "about.html", "./page")
+                    resolved = urllib.parse.urljoin(
+                        f"{base.scheme}://{base_domain}/", href
+                    )
+                    internal_links.append(resolved)
 
             for link in internal_links[:10]:
                 try:
