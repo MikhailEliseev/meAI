@@ -2,9 +2,8 @@
 run_ci_analysis — Hermes tool: CI Marketing Analysis
 
 POST http://app:8000/api/competitors/analyze
-Runs LLM-powered marketing analysis using parallel data collection (SEO, social media,
-financials, website features). Replaces the old rule-based SWOT/pricing/positioning
-pipeline.
+Runs LLM-powered CI analysis with parallel data collection (SEO, social media,
+financials, website scraping). Progress messages are logged during collection.
 
 Registered in Hermes internal registry under toolset "aim-operations".
 """
@@ -50,6 +49,9 @@ async def handle_run_ci_analysis(
     - Top strategic recommendation
 
     Use after find_competitors confirmed the competitor list.
+
+    Note: Progress messages are logged during data collection. The caller sees
+    the final result after all data is collected (~10-30s).
 
     Args:
         url: Client clinic website URL
