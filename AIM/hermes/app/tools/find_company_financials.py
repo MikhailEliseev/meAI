@@ -1,9 +1,10 @@
 """
-find_company_financials — Hermes tool: Real Financial Data from rusprofile.ru
+find_company_financials — Hermes tool: Real Financial Data from bo.nalog.gov.ru (ГИР БО)
 
 GET http://app:8000/api/companies/financials?inn=...
-Fetches tax-filed revenue, profit, and company value from rusprofile.ru
-by INN or OGRN. No API key needed — public data scraping.
+Fetches official tax-filed P&L (форма 0710002) from ФНС public API —
+revenue, net profit, gross profit, operating profit, multi-year history.
+No API key needed — official government open data.
 
 Registered in Hermes internal registry under toolset "aim-operations".
 """
@@ -25,23 +26,23 @@ def _normalize_args(first_param, defaults):
 
 
 AIM_API_BASE = "http://app:8000"
-REQUEST_TIMEOUT = 20.0  # rusprofile pages take a bit longer
+REQUEST_TIMEOUT = 10.0  # nalog API is fast (public JSON endpoint)
 
 
 async def handle_find_company_financials(inn=None, ogrn=None, **kwargs) -> str:
     """Fetch real tax-filed financial data for a Russian company.
 
-    Retrieves annual revenue, profit, and company value from rusprofile.ru
-    public data. Also returns company metadata: name, director, registration
-    date, tax regime, OKVED codes, MSP category.
+    Retrieves official P&L (форма 0710002) from bo.nalog.gov.ru (ГИР БО)
+    — the official ФНС public API. Returns annual revenue, net profit,
+    gross profit, operating profit, and multi-year history with trends.
 
     Args:
         inn: Company INN (10-12 digit taxpayer ID) — preferred
         ogrn: Company OGRN (13-15 digit state registration number) — fallback
 
     Returns:
-        JSON with revenue/profit/value by year, company name, director,
-        tax regime, MSP category, and other metadata.
+        JSON with revenue, profit, gross_profit, operating_profit by year,
+        company name, status, OKVED, and revenue trend.
     """
     unpacked = _normalize_args(inn, {"inn": "", "ogrn": ""})
     if unpacked:
@@ -94,19 +95,17 @@ async def handle_find_company_financials(inn=None, ogrn=None, **kwargs) -> str:
                     "ogrn": company.get("ogrn"),
                     "name": company.get("short_name") or company.get("full_name"),
                     "full_name": company.get("full_name"),
-                    "director": company.get("director"),
                     "status": company.get("status"),
-                    "registration_date": company.get("registration_date"),
+                    "okved_main": company.get("okved_main"),
+                    "legal_address": company.get("legal_address"),
                     "latest_revenue": latest_revenue,
                     "latest_profit": latest_profit,
                     "revenue_by_year": revenue,
                     "profit_by_year": profit,
-                    "tax_regime": company.get("tax_regime"),
-                    "msp_category": company.get("msp_category"),
-                    "okved_main": company.get("okved_main"),
-                    "license_count": company.get("license_count"),
-                    "trademark_count": company.get("trademark_count"),
-                    "legal_address": company.get("legal_address"),
+                    "gross_profit_by_year": company.get("gross_profit", {}),
+                    "operating_profit_by_year": company.get("operating_profit", {}),
+                    "revenue_trend": company.get("revenue_trend"),
+                    "data_source": company.get("data_source"),
                 },
             }, ensure_ascii=False, indent=2)
 
@@ -146,11 +145,11 @@ registry.register(
         "function": {
             "name": "find_company_financials",
             "description": (
-                "Get real tax-filed financial data for a Russian company from rusprofile.ru. "
-                "Returns annual revenue, profit, company value by year, plus metadata: "
-                "company name, director, tax regime, OKVED codes, MSP category. "
-                "Use this when you need to know a competitor's actual revenue "
-                "(tax-filed, not estimated). Requires INN or OGRN."
+                "Get real tax-filed financial data for a Russian company from bo.nalog.gov.ru (ГИР БО). "
+                "Returns official P&L: annual revenue, net profit, gross profit, operating profit "
+                "by year, plus company metadata (name, status, OKVED). "
+                "Use this when you need a competitor's actual tax-filed revenue "
+                "(not estimated). Requires INN or OGRN."
             ),
             "parameters": {
                 "type": "object",
@@ -171,6 +170,6 @@ registry.register(
     handler=handle_find_company_financials,
     check_fn=lambda: True,
     is_async=True,
-    description="Get real tax-filed financial data (revenue, profit, value) from rusprofile.ru by INN",
+    description="Get real tax-filed financial data (revenue, profit, P&L) from bo.nalog.gov.ru by INN",
     emoji="💰",
 )

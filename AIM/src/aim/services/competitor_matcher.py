@@ -18,7 +18,7 @@ Discovery pipeline (Apify-first):
      Returns: name, website, rating, reviews, coordinates, social links
   2. DaData — enriches Google Maps results with INN + financial estimates
      (NO LONGER used for primary competitor discovery)
-  3. rusprofile — real tax-filed financials for INN-carrying competitors
+  3. bo.nalog.gov.ru (ГИР БО) — real tax-filed financials from ФНС
   4. Direct scraping — extracts real services from competitor websites
 """
 
@@ -34,6 +34,7 @@ import httpx
 
 from .apify_google_maps import discover_competitors_google_maps
 from . import get_apify_client
+from .nalog import BfoNalogClient
 from .rusprofile.client import DaDataClient, get_dadata_client
 from .rusprofile.models import ClientProfile, CompanyProfile, CompetitorMatch
 from .scraping_service import scrape_services_batch, extract_inn_batch
@@ -172,7 +173,7 @@ class CompetitorMatcher:
           3. Geocode client city center
           4. DaData enrichment → INN + legal data for Google Maps candidates
           5. Scrape real services from competitor websites
-          6. rusprofile → real tax-filed financials
+          6. bo.nalog.gov.ru → real tax-filed financials
           7. Score and return top-N
         """
         t0 = time.monotonic()
@@ -232,7 +233,7 @@ class CompetitorMatcher:
             if not _is_self_match(c, client)
         ]
 
-        # 3. Extract INN from competitor websites → rusprofile for real revenue
+        # 3. Extract INN from competitor websites → nalog for real revenue
         if gm_candidates:
             gm_candidates = await self._enrich_gm_via_inn(gm_candidates, client)
         t_inn = time.monotonic()
@@ -297,13 +298,13 @@ class CompetitorMatcher:
             if inn_extracted:
                 logger.info("CompetitorMatcher: extracted INN from %d websites in %.1fs", inn_extracted, time.monotonic() - t_inn_start)
 
-        # 9. rusprofile enrichment
+        # 9. bo.nalog.gov.ru enrichment (official ФНС financial data)
         inn_batch = [c for c in candidates if c.inn and c.inn.isdigit()][:10]
         if inn_batch:
             t_enrich_start = time.monotonic()
-            enriched_count = await self._enrich_with_rusprofile(inn_batch)
+            enriched_count = await self._enrich_with_nalog(inn_batch)
             if enriched_count:
-                logger.info("CompetitorMatcher: rusprofile enriched %d/%d in %.1fs", enriched_count, len(inn_batch), time.monotonic() - t_enrich_start)
+                logger.info("CompetitorMatcher: nalog enriched %d/%d in %.1fs", enriched_count, len(inn_batch), time.monotonic() - t_enrich_start)
 
         # 10. Score and rank
         scored = await self._score_candidates(client, candidates, count)
@@ -342,7 +343,7 @@ class CompetitorMatcher:
                 top.remove(weakest)
                 top.append(rp_best)
                 top.sort(key=lambda m: m.total_score, reverse=True)
-                logger.info("CompetitorMatcher: diversity swap (rusprofile) — replaced %s with %s", weakest.profile.legal_name[:30], rp_best.profile.legal_name[:30])
+                logger.info("CompetitorMatcher: diversity swap (nalog) — replaced %s with %s", weakest.profile.legal_name[:30], rp_best.profile.legal_name[:30])
         scored = top
 
         t_total = time.monotonic()
@@ -376,11 +377,11 @@ class CompetitorMatcher:
 
         Flow:
           1. Extract INN from each competitor's website (footer scraping)
-          2. For candidates with INN → rusprofile for real revenue
+          2. For candidates with INN → bo.nalog.gov.ru for real revenue
           3. For candidates without INN → rusprofile name search (fallback)
 
         DaData is NOT used here — INN from the website is more reliable
-        and gives us access to real tax-filed financial data via rusprofile.
+        and gives us access to real tax-filed financial data via ФНС.
         """
         if not gm_candidates:
             return []
@@ -775,113 +776,92 @@ class CompetitorMatcher:
 
     # ── Rusprofile enrichment ────────────────────────────────────────
 
-    async def _enrich_with_rusprofile(
+    async def _enrich_with_nalog(
         self, candidates: list[CompanyProfile]
     ) -> int:
-        """Fetch real tax-filed financials from rusprofile.ru for candidates with INN.
+        """Fetch real tax-filed financials from bo.nalog.gov.ru (ГИР БО) for candidates with INN.
 
-        Updates CompanyProfile.revenue_year and CompanyProfile.financial_year
+        Updates CompanyProfile.revenue_year, profit_year, and financial_year
         in-place. Returns count of successfully enriched candidates.
 
-        Real rusprofile data is preferred over DaData estimates because it's
-        tax-filed — the revenue numbers companies report to ФНС.
+        Uses the official ФНС public API — free, no authentication required.
+        Values from bo.nalog.gov.ru are in thousands of rubles (тыс. руб.)
+        and are converted to actual RUB by multiplying by 1000.
         """
         enriched = 0
         inn_candidates = [c for c in candidates if c.inn and c.inn.isdigit()]
         if not inn_candidates:
             logger.info(
-                "rusprofile: no candidates with valid INN among %d (names: %s)",
+                "nalog: no candidates with valid INN among %d (names: %s)",
                 len(candidates),
                 [(c.legal_name[:30], c.data_source) for c in candidates[:5]],
             )
             return 0
 
-        logger.info("rusprofile: checking %d candidates with INN", len(inn_candidates))
+        logger.info("nalog: checking %d candidates with INN", len(inn_candidates))
         batch_with_inn = 0
         batch_with_revenue = 0
-        for c in inn_candidates:
-            if c.has_real_financials() and c.revenue_year and c.revenue_year > 0:
-                continue  # already has real financial data
 
-            batch_with_inn += 1
-            try:
-                from aim.services.rusprofile.parser import get_rusprofile_client
-
-                rp = get_rusprofile_client()
-
-                # Build search name: brand_name preferred, legal_name fallback
-                search_name = c.brand_name or c.legal_name
-                # Append city for better disambiguation
-                city = c.legal_address or ""
-                if search_name and city:
-                    # Extract city name from address if possible
-                    city_clean = city.split(",")[0].strip() if "," in city else city[:30]
-                    if city_clean and city_clean.lower() not in search_name.lower():
-                        search_name = f"{search_name} {city_clean}"
-
-                # Retry once on timeout (rusprofile can be slow)
-                company = None
-                for attempt in (1, 2):
-                    try:
-                        company = await rp.get_by_inn(c.inn, name=search_name)
-                        break
-                    except Exception as e:
-                        if attempt == 1:
-                            logger.debug("rusprofile retry for INN %s: %s", c.inn, e)
-                            await asyncio.sleep(1.0)
-                        else:
-                            raise
-
-                if company is None:
-                    logger.debug(
-                        "rusprofile: no data for INN %s (%s)",
-                        c.inn, c.legal_name[:40],
-                    )
+        nalog = BfoNalogClient(timeout=10.0)
+        try:
+            for c in inn_candidates:
+                if c.has_real_financials() and c.revenue_year and c.revenue_year > 0:
                     continue
 
-                # Extract latest revenue and profit
-                latest_year = None
-                latest_revenue = None
-                latest_profit = None
-                for year in sorted(company.revenue.keys(), reverse=True):
-                    rev = company.revenue.get(year)
-                    if rev and rev > 0:
-                        latest_year = year
-                        latest_revenue = rev
-                        break
-                for year in sorted(company.profit.keys(), reverse=True):
-                    prf = company.profit.get(year)
-                    if prf is not None:
-                        latest_profit = prf
-                        break
+                batch_with_inn += 1
+                try:
+                    results = nalog.search(c.inn)
+                    if not results:
+                        logger.debug(
+                            "nalog: no data for INN %s (%s)",
+                            c.inn, c.legal_name[:40],
+                        )
+                        continue
 
-                if latest_revenue is not None and latest_revenue > 0 and latest_year and latest_year >= 2000:
-                    c.revenue_year = latest_revenue
-                    c.financial_year = latest_year
-                    c.profit_year = latest_profit
+                    org = results[0]
+                    fs = nalog.get_latest_financials(org.id)
+                    if fs is None or fs.revenue is None or fs.revenue <= 0:
+                        logger.debug(
+                            "nalog: no financial statements for INN %s (%s)",
+                            c.inn, c.legal_name[:40],
+                        )
+                        continue
+
+                    # Convert from thousands of rubles to actual RUB
+                    c.revenue_year = fs.revenue_rub
+                    c.profit_year = fs.net_profit_rub
+                    c.financial_year = int(fs.period) if fs.period.isdigit() else None
                     c.revenue_source = "tax_filed"
-                    # Preserve discovery source (apify_google_maps, dadata) —
-                    # rusprofile is financial enrichment, not a discovery source.
+                    c.revenue_trend = fs.revenue_trend or None
+
                     if not c.data_source or c.data_source in ("apify_google_maps", "apify_google_maps+dadata"):
-                        c.data_source = c.data_source + "+rusprofile" if c.data_source else "rusprofile"
+                        c.data_source = c.data_source + "+nalog" if c.data_source else "nalog"
+
+                    # Use the short name from nalog if the legal_name is generic
+                    if org.short_name and c.legal_name and len(org.short_name) > len(c.legal_name):
+                        c.brand_name = c.brand_name or c.legal_name
+                        c.legal_name = org.short_name
+
                     enriched += 1
                     batch_with_revenue += 1
                     logger.debug(
-                        "rusprofile: %s (INN %s) — revenue=%d RUB (%d)",
-                        company.short_name or c.legal_name[:40],
+                        "nalog: %s (INN %s) — revenue=%d RUB (%d)",
+                        org.short_name or c.legal_name[:40],
                         c.inn,
-                        latest_revenue,
-                        latest_year,
+                        c.revenue_year,
+                        c.financial_year,
                     )
 
-            except Exception as e:
-                logger.warning(
-                    "rusprofile enrichment failed for INN %s: %s",
-                    c.inn, e,
-                )
+                except Exception as e:
+                    logger.warning(
+                        "nalog enrichment failed for INN %s: %s",
+                        c.inn, e,
+                    )
+        finally:
+            nalog.close()
 
         logger.info(
-            "rusprofile batch: %d INN checked, %d enriched (%d%% hit rate)",
+            "nalog batch: %d INN checked, %d enriched (%d%% hit rate)",
             batch_with_inn, batch_with_revenue,
             round(batch_with_revenue * 100 / max(batch_with_inn, 1)),
         )
@@ -2018,7 +1998,7 @@ def _build_reason(m: CompetitorMatch, client_revenue: int = 0) -> str:
     parts: list[str] = []
     c = m.profile
 
-    # Revenue comparison — prefer real (rusprofile) data
+    # Revenue comparison — prefer real (nalog) data
     comp_rev = c.revenue_year
     if comp_rev and comp_rev > 0 and client_revenue > 0:
         if comp_rev > client_revenue * 1.5:
