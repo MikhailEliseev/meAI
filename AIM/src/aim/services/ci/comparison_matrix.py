@@ -3,8 +3,9 @@
 
 import json
 from datetime import datetime, timezone
+from typing import Optional
 
-from .models import CompetitorFull, ComparisonMatrix
+from .models import CompetitorFull, ComparisonMatrix, SeoAuditResult, SocialScanResult
 
 
 class ComparisonMatrixBuilder:
@@ -19,28 +20,42 @@ class ComparisonMatrixBuilder:
         client_url: str,
         client_features: dict,
         competitors_full: list[CompetitorFull],
+        client_name: str = "",
+        client_seo: Optional[SeoAuditResult] = None,
+        client_social: Optional[SocialScanResult] = None,
     ) -> ComparisonMatrix:
-        client = {
+        client: dict = {
             "url": client_url,
             "features": [k for k, v in client_features.items() if v] if client_features else [],
             "missing": [k for k, v in client_features.items() if not v] if client_features else [],
         }
+        if client_name:
+            client["name"] = client_name
+        if client_seo is not None:
+            client["seo"] = {
+                "score": client_seo.score,
+                "issues": client_seo.issues[:8],
+            }
+        if client_social is not None:
+            client["social"] = client_social.as_dict()
 
         competitors = []
-        for cf in competitors_full:
+        for idx, cf in enumerate(competitors_full, start=1):
             comp = {
+                "id": idx,
                 "name": cf.name,
                 "url": cf.url,
+                "scraped_at": cf.scraped_at if cf.scraped_at else datetime.now(timezone.utc).isoformat(),
                 "financials": self._compact_financials(cf),
                 "seo": self._compact_seo(cf),
                 "social": self._compact_social(cf),
+                "positioning": cf.positioning[:120] if cf.positioning else "",
                 "website": {
                     "features": cf.website_features,
                     "missing": cf.website_missing,
-                    "doctors": cf.doctors_count,
-                    "directions": cf.directions_claimed,
+                    "doctors_count": cf.doctors_count,
+                    "directions_claimed": cf.directions_claimed,
                     "pricing_visible": cf.pricing_visible,
-                    "positioning": cf.positioning[:120] if cf.positioning else "",
                 },
             }
             competitors.append(comp)
