@@ -13,6 +13,7 @@ meAI — CEO-архитектор, который строит **AIM** (AI-first
 - ✅ **v2.0 AI Enhancement** — Phase 10 (shipped 2026-05-16)
 - ✅ **v2.1 Client Acquisition** — Phase 11 (shipped 2026-05-18)
 - ✅ **v3.0 Production** — Phase 12 (shipped 2026-05-18)
+- ✅ **v5.0 Competitor Intelligence** — Phase 20 (shipped 2026-05-26)
 - 📋 **v3.0 Marketing** — Phase 13 (planned)
 
 ## Phases
@@ -371,7 +372,7 @@ Plans:
   9. Все тесты проходят, интеграционный тест на yutskovskaya.ru
 
 Plans:
-- [ ] 20-01-PLAN.md — Full Apify rebuild: Google Maps Scraper + Website Content Crawler + Instagram Scraper + CompetitorMatcher rewrite + cleanup
+- [x] 20-01-PLAN.md — Full Apify rebuild: Google Maps Scraper + Website Content Crawler + Instagram Scraper + CompetitorMatcher rewrite + cleanup
 **Plans**: 1 plan
 
 ## Progress
@@ -401,6 +402,6 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 17. No More Mock Data | v4.2 | 1/1 | Complete | 2026-05-20 |
 | 18. Hermes Learning Bus | v4.3 | 2/2 | Complete | 2026-05-20 |
 | 19. Competitor Discovery Quality | v4.4 | 1/1 | Complete | 2026-05-23 |
-| 20. Apify Competitor Intelligence | v5.0 | 0/1 | Planned | — |
+| 20. Apify Competitor Intelligence | v5.0 | 1/1 | Complete | 2026-05-26 |
 
-**Overall:** 44/49 plans complete (90%)
+**Overall:** 45/49 plans complete (92%)
