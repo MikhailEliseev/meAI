@@ -136,6 +136,41 @@ _ADDR_MARKERS = [
 
 _SEPARATORS = (" | ", " · ", " • ", " — ", " – ", " - ", " / ", ". ")
 
+# Patterns that indicate a location suffix (city, district, street reference)
+_LOCATION_SUFFIX_RE = re.compile(
+    r'\s+(?:в|на|по)\s+\S+'  # "в Москве", "на Тенишевой", "по Ленинскому"
+    r'(?:\s+(?:проспекту|шоссе|улице|переулку|бульвару|набережной|проезду))?'
+    r'(?:\s+\S+)?'  # optional one more word
+    r'$',
+    re.IGNORECASE,
+)
+
+
+def _strip_address_suffix(text: str) -> str:
+    """Strip address markers and location suffixes from the end of brand text.
+
+    "Стоматология Миллидент ул. М. Салимжанова 15/8в" → "Стоматология Миллидент"
+    "Косметологическая клиника Дар-Ян в Москве" → "Косметологическая клиника Дар-Ян"
+    "NSVS Новый Стандарт на Тенишевой" → "NSVS Новый Стандарт"
+    """
+    text = text.strip()
+    if len(text) < 5:
+        return text
+
+    # Strip address markers (ул., д., пр-т, etc.)
+    for marker in _ADDR_MARKERS:
+        idx = text.lower().find(marker)
+        if idx > 3:
+            text = text[:idx].rstrip(", ")
+            break
+
+    # Strip location suffixes (в Москве, на Тенишевой, по Ленинскому проспекту)
+    m = _LOCATION_SUFFIX_RE.search(text)
+    if m and m.start() > 3:
+        text = text[:m.start()].rstrip(", ")
+
+    return text.strip()
+
 
 def _looks_like_address(text: str) -> bool:
     """Check if text is primarily an address, not a brand name.
@@ -200,6 +235,9 @@ def _clean_gm_title(title: str) -> str:
 
     "НОВОКЛИНИК, центр эстетической медицины и косметологии"
     → "НОВОКЛИНИК"
+
+    "Косметологическая клиника Дар-Ян в Москве"
+    → "Косметологическая клиника Дар-Ян"
     """
     if not title:
         return ""
@@ -210,19 +248,19 @@ def _clean_gm_title(title: str) -> str:
             parts = [p.strip() for p in title.split(sep)]
             for part in parts:
                 if not _looks_like_address(part) and len(part) >= 2:
-                    return part
-            return parts[0]
+                    return _strip_address_suffix(part)
+            return _strip_address_suffix(parts[0])
 
     # No pipe-style separator — try comma-splitting for "BRAND, description" patterns
     if ", " in title:
         parts = [p.strip() for p in title.split(", ")]
         for part in parts:
             if not _looks_like_address(part) and len(part) >= 2:
-                return part
-        return parts[0]
+                return _strip_address_suffix(part)
+        return _strip_address_suffix(parts[0])
 
-    # Single-part title — return as-is
-    return title.strip()
+    # Single-part title — strip address suffix
+    return _strip_address_suffix(title.strip())
 
 
 def _clean_gm_title_full(title: str) -> str:
@@ -236,6 +274,9 @@ def _clean_gm_title_full(title: str) -> str:
 
     "НОВОКЛИНИК, центр эстетической медицины и косметологии"
     → "НОВОКЛИНИК"
+
+    "Косметологическая клиника Дар-Ян в Москве"
+    → "Косметологическая клиника Дар-Ян"
     """
     if not title:
         return ""
@@ -246,23 +287,16 @@ def _clean_gm_title_full(title: str) -> str:
             parts = [p.strip() for p in title.split(sep)]
             meaningful = [p for p in parts if not _looks_like_address(p) and len(p) >= 2]
             if meaningful:
-                return meaningful[0]
-            return parts[0]
+                return _strip_address_suffix(meaningful[0])
+            return _strip_address_suffix(parts[0])
 
     # Try comma-splitting for "BRAND, description" patterns
     if ", " in title:
         parts = [p.strip() for p in title.split(", ")]
         meaningful = [p for p in parts if not _looks_like_address(p) and len(p) >= 2]
         if meaningful:
-            return meaningful[0]
-        return parts[0]
+            return _strip_address_suffix(meaningful[0])
+        return _strip_address_suffix(parts[0])
 
     # No separator — strip address suffix
-    title = title.strip()
-    for marker in _ADDR_MARKERS:
-        idx = title.lower().find(marker)
-        if idx > 3:
-            title = title[:idx].rstrip(", ")
-            break
-
-    return title
+    return _strip_address_suffix(title.strip())
