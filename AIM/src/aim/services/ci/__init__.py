@@ -7,11 +7,25 @@ from .models import (
     ComparisonMatrix,
     PipelineProgress,
 )
-from .seo_auditor import SeoAuditor
-from .social_scanner import SocialScanner
-from .pipeline_runner import PipelineRunner
-from .comparison_matrix import ComparisonMatrixBuilder
-from .dialogue_manager import DialogueManager
+
+# Lazy imports — each module is developed independently.
+# Modules that don't exist yet are silently skipped.
+_try_imports = {
+    "SeoAuditor": ".seo_auditor",
+    "SocialScanner": ".social_scanner",
+    "PipelineRunner": ".pipeline_runner",
+    "ComparisonMatrixBuilder": ".comparison_matrix",
+    "DialogueManager": ".dialogue_manager",
+}
+
+import importlib
+
+for _name, _mod in _try_imports.items():
+    try:
+        _module = importlib.import_module(_mod, package=__name__)
+        globals()[_name] = getattr(_module, _name)
+    except ModuleNotFoundError:
+        pass
 
 __all__ = [
     "SeoAuditResult",
