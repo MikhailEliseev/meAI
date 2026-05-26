@@ -26,6 +26,27 @@ class PipelineRunner:
         self._timeout = timeout
 
     @staticmethod
+    def _named_urls_to_competitors(urls: list[str]) -> list[dict]:
+        """Convert named competitor URLs to competitor dicts directly.
+
+        Extracts domain-based names, skipping URLs that fail validation.
+        No DaData/Apify needed — urls are used as-is.
+        """
+        result: list[dict] = []
+        for url in urls:
+            try:
+                PipelineRunner._validate_public_url(url)
+            except ValueError:
+                logger.warning("Skipping invalid competitor URL: %s", url)
+                continue
+            parsed = urlparse(url)
+            hostname = parsed.hostname or ""
+            # Remove www. prefix and use domain as name fallback
+            name = hostname.removeprefix("www.")
+            result.append({"name": name, "url": url, "inn": "", "services": []})
+        return result
+
+    @staticmethod
     def _validate_public_url(url: str) -> None:
         """Validate URL is public (http/https) and doesn't point to internal IPs.
 
@@ -100,7 +121,16 @@ class PipelineRunner:
         # Step 1: Find competitors
         await self._emit("searching", "Ищу конкурентов по вашему сайту...")
 
-        competitors = await self._find_competitors(client_url, named_competitors)
+        # When named_competitors are URLs, use them directly (no DaData needed)
+        if named_competitors and any(n.startswith(("http://", "https://")) for n in named_competitors):
+            competitors = self._named_urls_to_competitors(named_competitors)
+        else:
+            competitors = await self._find_competitors(client_url, named_competitors)
+
+        if not competitors and named_competitors:
+            # CompetitorMatcher failed (no DaData/Apify), use names directly
+            logger.info("PipelineRunner: falling back to raw names for %d competitors", len(named_competitors))
+            competitors = [{"name": n, "url": n if n.startswith(("http://", "https://")) else "", "inn": "", "services": []} for n in named_competitors]
 
         if not competitors:
             await self._emit("done", "Не смог найти конкурентов автоматически. Скиньте их сайты вручную.")
