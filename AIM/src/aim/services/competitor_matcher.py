@@ -1471,43 +1471,76 @@ async def _enrich_via_rusprofile_search(
     not marketing brand names ("Darmed"). rusprofile's own search handles both,
     so this is the critical fallback for INN discovery.
 
+    Tries multiple search strategies:
+    1. Full brand_name
+    2. Last 3 words (for "Косметологическая клиника Дар-Ян в Москве" → "Дар-Ян в Москве")
+    3. Last 2 words (→ "в Москве" — but rusprofile ignores prepositions)
+    4. Longest distinctive word (skip common prefixes like "клиника", "стоматология")
+
     Updates c.inn and other fields in-place when a match is found.
     """
     name = c.brand_name or c.legal_name
     if not name or len(name) < 3:
         return
 
+    # Build progressive search queries: full → shorter → keywords
+    queries = [name]
+    words = name.split()
+    if len(words) >= 3:
+        queries.append(" ".join(words[-3:]))  # last 3 words
+    if len(words) >= 2:
+        queries.append(" ".join(words[-2:]))  # last 2 words
+    # Longest distinctive word (not a common prefix)
+    _COMMON_PREFIXES = {
+        "клиника", "стоматология", "стоматологическая", "центр",
+        "косметология", "косметологическая", "современной",
+        "эстетической", "медицины", "аппаратной", "кабинет",
+        "москве", "казани", "санкт-петербурге", "россии",
+    }
+    distinctive = [w for w in words if w.lower() not in _COMMON_PREFIXES and len(w) >= 3]
+    distinctive.sort(key=len, reverse=True)
+    if distinctive:
+        queries.append(distinctive[0])  # longest distinctive word
+
     try:
         from aim.services.rusprofile.parser import get_rusprofile_client
 
         rp = get_rusprofile_client()
-        results = await rp.search(name)
     except Exception as e:
-        logger.debug("rusprofile search failed for '%s': %s", name, e)
+        logger.debug("rusprofile client unavailable: %s", e)
         return
 
-    if not results:
-        return
-
-    # Find best match by name similarity
     best_match = None
     best_score = 0.0
-    for r in results:
-        r_name = r.get("name", "")
-        if not r_name:
+    best_query = name
+
+    for query in queries:
+        try:
+            results = await rp.search(query)
+        except Exception as e:
+            logger.debug("rusprofile search failed for '%s': %s", query, e)
             continue
-        score = _name_similarity(name, r_name)
-        if score > best_score:
-            best_score = score
-            best_match = r
+
+        if not results:
+            continue
+
+        for r in results:
+            r_name = r.get("name", "")
+            if not r_name:
+                continue
+            score = _name_similarity(name, r_name)
+            if score > best_score:
+                best_score = score
+                best_match = r
+                best_query = query
 
     if best_match and best_score > 0.25:
         inn = best_match.get("inn", "")
         if inn and inn.isdigit():
             c.inn = inn
             logger.info(
-                "rusprofile search: matched '%s' → '%s' (INN %s, score=%.2f)",
-                name, best_match.get("name", "")[:50], inn, best_score,
+                "rusprofile search: matched '%s' → '%s' (INN %s, score=%.2f, query='%s')",
+                name, best_match.get("name", "")[:50], inn, best_score, best_query,
             )
         if not c.ogrn:
             ogrn = best_match.get("ogrn", "")
