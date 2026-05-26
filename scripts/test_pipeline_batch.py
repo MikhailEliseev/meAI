@@ -45,12 +45,16 @@ async def test_one(client: httpx.AsyncClient, url: str) -> dict:
                         "revenue": c.get("revenue_year"),
                         "score": c.get("total_score"),
                         "source": c.get("data_source"),
+                        "inn": c.get("inn"),
+                        "brand": c.get("brand_name", "")[:40],
                     }
                     for c in comps[:5]
                 }
                 print(f"  ✅ {url}: {len(comps)} competitors in {elapsed:.1f}s")
                 for c in comps[:5]:
-                    print(f"     - {c.get('legal_name', '?')[:60]} | revenue={c.get('revenue_year')} | score={c.get('total_score')}")
+                    inn = c.get('inn', '') or '-'
+                    brand = (c.get('brand_name', '') or '')[:30]
+                    print(f"     - {c.get('legal_name', '?')[:50]} | INN={inn} | revenue={c.get('revenue_year')} | score={c.get('total_score')}")
             else:
                 result["error"] = data.get("error", "unknown")
                 print(f"  ❌ {url}: API error — {result['error']}")
