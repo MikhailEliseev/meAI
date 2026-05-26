@@ -1411,9 +1411,18 @@ def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def _name_similarity(a: str, b: str) -> float:
-    """Crude name similarity: ratio of shared words."""
-    wa = set(a.lower().split())
-    wb = set(b.lower().split())
+    """Crude name similarity: ratio of shared words (punctuation-stripped)."""
+    import re as _re_ns
+
+    def _words(s: str) -> set[str]:
+        return {
+            w.strip('«»"\'.,;:!?()[]{}–—-')
+            for w in s.lower().split()
+            if len(w.strip('«»"\'.,;:!?()[]{}–—-')) >= 2
+        }
+
+    wa = _words(a)
+    wb = _words(b)
     if not wa or not wb:
         return 0.0
     return len(wa & wb) / max(len(wa), len(wb))
