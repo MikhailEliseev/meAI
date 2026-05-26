@@ -100,6 +100,7 @@ class PipelineRunner:
         self,
         client_url: str,
         named_competitors: Optional[list[str]] = None,
+        client_inn: str = "",
     ) -> list[CompetitorFull]:
         if not client_url:
             raise ValueError("client_url is required")
@@ -107,7 +108,7 @@ class PipelineRunner:
         self._validate_public_url(client_url)
 
         return await asyncio.wait_for(
-            self._run_inner(client_url, named_competitors),
+            self._run_inner(client_url, named_competitors, client_inn),
             timeout=self._timeout + 30,
         )
 
@@ -115,6 +116,7 @@ class PipelineRunner:
         self,
         client_url: str,
         named_competitors: Optional[list[str]] = None,
+        client_inn: str = "",
     ) -> list[CompetitorFull]:
         start = time.monotonic()
 
@@ -125,7 +127,7 @@ class PipelineRunner:
         if named_competitors and any(n.startswith(("http://", "https://")) for n in named_competitors):
             competitors = self._named_urls_to_competitors(named_competitors)
         else:
-            competitors = await self._find_competitors(client_url, named_competitors)
+            competitors = await self._find_competitors(client_url, named_competitors, client_inn)
 
         if not competitors and named_competitors:
             # CompetitorMatcher failed (no DaData/Apify), use names directly
@@ -193,7 +195,7 @@ class PipelineRunner:
         return collected
 
     async def _find_competitors(
-        self, client_url: str, named: Optional[list[str]]
+        self, client_url: str, named: Optional[list[str]], client_inn: str = "",
     ) -> list[dict]:
         """Find competitors using existing CompetitorMatcher.
 
@@ -216,6 +218,7 @@ class PipelineRunner:
                 url=client_url,
                 count=5,
                 named_competitors=named,
+                client_inn=client_inn,
             )
             return [
                 {
