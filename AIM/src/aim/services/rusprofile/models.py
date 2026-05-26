@@ -21,6 +21,7 @@ class CompanyProfile:
     profit_year: Optional[int] = None
     revenue_trend: Optional[str] = None  # "growing" | "stable" | "declining"
     financial_year: Optional[int] = None
+    revenue_source: str = "none"  # "tax_filed" | "estimated" | "none"
 
     # Operations
     employee_count: Optional[int] = None
@@ -58,7 +59,7 @@ class CompanyProfile:
         return self.revenue_year
 
     def has_real_financials(self) -> bool:
-        return self.revenue_year is not None and self.financial_year is not None
+        return self.revenue_source == "tax_filed" and self.revenue_year is not None
 
 
 @dataclass

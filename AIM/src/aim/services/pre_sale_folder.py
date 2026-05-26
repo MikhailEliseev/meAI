@@ -189,6 +189,7 @@ def _match_to_dict(m: CompetitorMatch) -> dict:
         "profit_year": p.profit_year,
         "revenue_trend": p.revenue_trend,
         "financial_year": p.financial_year,
+        "revenue_source": p.revenue_source,
         "employee_count": p.employee_count,
         "okved_main": p.okved_main,
         "okved_secondary": p.okved_secondary,
