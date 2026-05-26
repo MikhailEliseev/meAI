@@ -18,6 +18,7 @@ import logging
 import re
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
@@ -769,90 +770,125 @@ class CiMarketingAnalyzer:
     async def analyze(
         self,
         url: str,
-        specialization: str,
-        city: str,
-        services: list[str],
-        competitors: list[CompetitorMatch],
-        client_revenue: Optional[int] = None,
-        client_rating: Optional[float] = None,
+        specialization: str = "",
+        city: str = "",
+        services: list[str] | None = None,
+        competitors: list | None = None,
+        client_revenue: int | None = None,
+        client_rating: float | None = None,
     ) -> CiAnalysisResult:
-        """Run full CI marketing analysis.
+        """Run LLM-powered CI analysis using new parallel pipeline."""
+        start = time.monotonic()
 
-        Args:
-            url: Client clinic website URL
-            specialization: Client specialization (e.g. "стоматология")
-            city: Client city
-            services: Client services list
-            competitors: 3 confirmed CompetitorMatch objects
-            client_revenue: Estimated client annual revenue
-            client_rating: Client rating (if known)
-        """
-        t0 = time.monotonic()
+        try:
+            from .ci.pipeline_runner import PipelineRunner
+            from .ci.comparison_matrix import ComparisonMatrixBuilder
+            from .ci.dialogue_manager import DialogueManager
 
-        # 1. Scrape competitor websites (parallel)
-        scrape_urls = [m.website or f"https://{m.profile.legal_name.lower().replace(' ', '-')}.ru"
-                       for m in competitors]
-        scraped = await self.scraper.scrape_all(scrape_urls)
+            # 1. Run pipeline
+            runner = PipelineRunner()
+            named = [c.url if hasattr(c, 'url') else c.get('url', '') for c in (competitors or [])]
+            collected = await runner.run(client_url=url, named_competitors=named)
 
-        # Build competitor name → website map for display
-        for i, match in enumerate(competitors):
-            if i < len(scraped) and not scraped[i].url:
-                scraped[i].url = match.website or ""
+            # 2. Build matrix
+            builder = ComparisonMatrixBuilder()
+            client_features = {"booking": any("запись" in str(getattr(c, "features", [])) for c in (competitors or []))}
+            matrix = builder.build(url, client_features, collected)
 
-        # 2. Feature matrix
-        feature_matrix = self.feature_mapper.build_matrix(services, competitors, scraped)
+            # 3. Generate chat summary from matrix (structural — LLM used separately via DialogueManager)
+            chat_summary = self._chat_summary_from_matrix(matrix)
 
-        # 3. Pricing comparison
-        pricing = self.pricing_analyzer.build_comparison(client_revenue, competitors, scraped)
+            # 4. Build legacy-compatible response structures
+            feature_matrix = self._feature_matrix_legacy(matrix)
+            pricing = self._pricing_legacy(matrix)
+            positioning = self._positioning_legacy(matrix)
 
-        # 4. Positioning map
-        pos_map = self.positioning_mapper.build_map(services, competitors, pricing)
+            elapsed = time.monotonic() - start
 
-        # 5. SWOT per competitor
-        swot_per_competitor: list[tuple[str, SwotQuadrant]] = []
-        for i, match in enumerate(competitors):
-            comp_name = match.profile.legal_name or f"Конкурент {i+1}"
-            page = scraped[i] if i < len(scraped) else None
-            swot = self.swot_engine.for_competitor(
-                client_name=specialization or "Клиент",
-                client_services=services,
-                client_revenue=client_revenue,
-                client_rating=client_rating,
-                competitor=match,
-                scraped=page,
+            return CiAnalysisResult(
+                chat_summary=chat_summary,
+                feature_matrix=feature_matrix,
+                pricing_comparison=pricing,
+                positioning_map=positioning,
+                steal_worthy_tactics=[],
+                top_recommendation=self._top_rec_from_matrix(matrix),
+                scraped_at=datetime.now(timezone.utc).isoformat(),
+                analysis_duration_seconds=elapsed,
             )
-            swot_per_competitor.append((comp_name, swot))
 
-        # 6. Aggregate SWOT
-        aggregate_swot = self.swot_engine.aggregate(
-            specialization, services, competitors,
-            [s for _, s in swot_per_competitor],
+        except Exception as e:
+            logger.exception("CI analysis failed")
+            return CiAnalysisResult(
+                chat_summary=f"Не удалось провести анализ: {e}",
+                error=str(e),
+                analysis_duration_seconds=time.monotonic() - start,
+            )
+
+    def _chat_summary_from_matrix(self, matrix) -> str:
+        """Generate chat summary from matrix."""
+        comps = matrix.competitors
+        if not comps:
+            return "Не удалось найти конкурентов для анализа."
+
+        lines = ["## Анализ конкурентов\n"]
+        lines.append(f"Проанализировано: **{len(comps)} конкурентов**\n")
+
+        for c in comps:
+            rev = c.get("financials", {}).get("latest_revenue")
+            rev_str = f"**{rev:,.0f} ₽**".replace(",", " ") if rev else "нет данных"
+            seo = c.get("seo", {}).get("score", "?")
+            social_platforms = [
+                p for p, v in c.get("social", {}).items()
+                if isinstance(v, dict) and v.get("exists")
+            ]
+
+            lines.append(f"### {c['name']}")
+            lines.append(f"- Выручка: {rev_str}")
+            lines.append(f"- SEO: **{seo}/100**")
+            lines.append(f"- Соцсети: {', '.join(social_platforms) if social_platforms else 'не обнаружены'}")
+
+            issues = c.get("seo", {}).get("issues", [])
+            if issues:
+                lines.append(f"- Ошибки: {issues[0]}{', ' + issues[1] if len(issues) > 1 else ''}")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    def _feature_matrix_legacy(self, matrix) -> dict:
+        return {
+            "competitors": [
+                {"name": c["name"], "features": c.get("website", {}).get("features", [])}
+                for c in matrix.competitors
+            ]
+        }
+
+    def _pricing_legacy(self, matrix) -> dict:
+        return {
+            "competitors": [
+                {
+                    "name": c["name"],
+                    "has_pricing": c.get("website", {}).get("pricing_visible", False),
+                    "revenue": c.get("financials", {}).get("latest_revenue"),
+                }
+                for c in matrix.competitors
+            ]
+        }
+
+    def _positioning_legacy(self, matrix) -> dict:
+        return {
+            "competitors": [
+                {"name": c["name"], "positioning": c.get("positioning", "")}
+                for c in matrix.competitors
+            ]
+        }
+
+    def _top_rec_from_matrix(self, matrix) -> str:
+        comps = matrix.competitors
+        if not comps:
+            return "Соберите данные о конкурентах для получения рекомендаций."
+        worst_seo = min(comps, key=lambda c: c.get("seo", {}).get("score", 100) or 100)
+        return (
+            f"Главная возможность — обойти **{worst_seo['name']}** по SEO: "
+            f"у них {worst_seo.get('seo', {}).get('score', '?')}/100, "
+            f"исправьте ошибки которые мы нашли на их сайте, и вы выше."
         )
-
-        # 7. Steal-worthy tactics
-        tactics = self.tactic_extractor.extract(competitors, scraped, services)
-
-        # 8. Build result
-        result = CiAnalysisResult(
-            feature_matrix=feature_matrix,
-            pricing_comparison=pricing,
-            positioning_map=pos_map,
-            swot_per_competitor=swot_per_competitor,
-            aggregate_swot=aggregate_swot,
-            steal_worthy_tactics=tactics,
-            scraped_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            analysis_duration_seconds=time.monotonic() - t0,
-        )
-
-        # 9. Generate recommendations
-        result.top_recommendation = self.formatter.top_recommendation(result)
-        result.chat_summary = self.formatter.chat_summary(result)
-
-        logger.info(
-            "ci_marketing_analysis: done in %.1fs, %d tactics, %d features",
-            result.analysis_duration_seconds,
-            len(tactics),
-            len(feature_matrix),
-        )
-
-        return result

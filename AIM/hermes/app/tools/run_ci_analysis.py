@@ -2,9 +2,9 @@
 run_ci_analysis — Hermes tool: CI Marketing Analysis
 
 POST http://app:8000/api/competitors/analyze
-Scrapes competitor websites (found via find_competitors) and runs rule-based
-marketing analysis: SWOT, feature matrix, pricing comparison, positioning map,
-steal-worthy tactics.
+Runs LLM-powered marketing analysis using parallel data collection (SEO, social media,
+financials, website features). Replaces the old rule-based SWOT/pricing/positioning
+pipeline.
 
 Registered in Hermes internal registry under toolset "aim-operations".
 """
@@ -165,12 +165,12 @@ registry.register(
         "function": {
             "name": "run_ci_analysis",
             "description": (
-                "Run competitive intelligence marketing analysis on confirmed competitors "
-                "(found via find_competitors). Scrapes competitor websites, then produces "
-                "SWOT analysis, feature comparison matrix (21 dimensions), pricing tier "
-                "comparison, positioning map, and steal-worthy tactics. "
-                "Fast (<30s), deterministic, no LLM calls. "
-                "Shows the client exactly where they stand vs competitors and what to improve."
+                "Run full competitive intelligence analysis on selected competitors. "
+                "Analyzes SEO (basic audit, no paid APIs), social media presence "
+                "(Instagram, Telegram, VK, TikTok), tax-filed financials from "
+                "bo.nalog.gov.ru, and website features. Compares everything against "
+                "the client's own website. Returns detailed per-competitor breakdown "
+                "with scores, specific issues, and strategic recommendations."
             ),
             "parameters": {
                 "type": "object",
@@ -213,6 +213,6 @@ registry.register(
     handler=handle_run_ci_analysis,
     check_fn=lambda: True,
     is_async=True,
-    description="CI marketing analysis: SWOT, features, pricing, tactics for 3 competitors",
+    description="Full CI analysis: SEO + social + financials + website comparison",
     emoji="📊",
 )
