@@ -2,8 +2,9 @@
 run_ci_analysis — Hermes tool: CI Marketing Analysis
 
 POST http://app:8000/api/competitors/analyze
-Scrapes competitor websites and runs rule-based marketing analysis:
-SWOT, feature matrix, pricing comparison, positioning map, steal-worthy tactics.
+Scrapes competitor websites (found via find_competitors) and runs rule-based
+marketing analysis: SWOT, feature matrix, pricing comparison, positioning map,
+steal-worthy tactics.
 
 Registered in Hermes internal registry under toolset "aim-operations".
 """
@@ -25,7 +26,7 @@ def _normalize_args(first_param, defaults):
 
 
 AIM_API_BASE = "http://app:8000"
-REQUEST_TIMEOUT = 30.0  # parallel scraping of 3 websites + analysis
+REQUEST_TIMEOUT = 60.0  # parallel scraping of 3+ websites + analysis
 
 
 async def handle_run_ci_analysis(
@@ -40,13 +41,15 @@ async def handle_run_ci_analysis(
 ) -> str:
     """Run CI marketing analysis on confirmed competitors.
 
-    Scrapes 3 competitor websites in parallel, then produces:
+    Scrapes competitor websites in parallel, then produces:
     - SWOT analysis (per-competitor + aggregate)
     - Feature comparison matrix (21 dimensions)
     - Pricing tier comparison
     - Positioning map (price × specialization)
     - Steal-worthy tactics (what to copy from competitors)
     - Top strategic recommendation
+
+    Use after find_competitors confirmed the competitor list.
 
     Args:
         url: Client clinic website URL
@@ -162,10 +165,11 @@ registry.register(
         "function": {
             "name": "run_ci_analysis",
             "description": (
-                "Run competitive intelligence marketing analysis on 3 confirmed competitors. "
-                "Scrapes competitor websites, then produces SWOT analysis, feature comparison "
-                "matrix (21 dimensions), pricing tier comparison, positioning map, and "
-                "steal-worthy tactics. Fast (<12s), deterministic, no LLM calls. "
+                "Run competitive intelligence marketing analysis on confirmed competitors "
+                "(found via find_competitors). Scrapes competitor websites, then produces "
+                "SWOT analysis, feature comparison matrix (21 dimensions), pricing tier "
+                "comparison, positioning map, and steal-worthy tactics. "
+                "Fast (<30s), deterministic, no LLM calls. "
                 "Shows the client exactly where they stand vs competitors and what to improve."
             ),
             "parameters": {

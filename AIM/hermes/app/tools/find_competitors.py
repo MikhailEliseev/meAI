@@ -1,9 +1,13 @@
 """
-find_competitors — Hermes tool: Find Top-3 Competitors
+find_competitors — Hermes tool: Find Top Competitors
 
 POST http://app:8000/api/competitors/find
-Extracts services from client website, searches DaData for similar
-medical companies, scores by revenue/location/services, returns top-3.
+Extracts specialization & city from client website, searches Google Maps
+via Apify for competitors, enriches with DaData + rusprofile financials,
+scores by revenue/location/services/rating, returns top-5.
+
+Pipeline: website extraction → Google Maps (RESIDENTIAL proxy) →
+DaData enrichment → Playwright INN extraction → rusprofile financials → scoring
 
 Registered in Hermes internal registry under toolset "aim-operations".
 """
@@ -25,23 +29,25 @@ def _normalize_args(first_param, defaults):
 
 
 AIM_API_BASE = "http://app:8000"
-REQUEST_TIMEOUT = 60.0  # longer — service extractor fetches website
+REQUEST_TIMEOUT = 180.0  # full pipeline: Apify actor (90s) + Playwright (45s) + rusprofile (10s)
 
 
 async def handle_find_competitors(url=None, named_competitors=None, **kwargs) -> str:
-    """Find top-3 competitors for a clinic website.
+    """Find top competitors for a clinic website.
 
-    Extracts client services, specialization, and city from the website,
-    searches DaData for similar medical companies, scores them by
-    revenue match, location, and service overlap, and returns top-3.
+    Extracts specialization and city from the client website, searches
+    Google Maps via Apify for medical companies in the same city/specialization,
+    enriches with DaData + rusprofile financial data, scores by revenue match,
+    location proximity, service overlap, rating, and reviews.
 
     Args:
         url: Client clinic website URL (e.g., "https://clinic.ru")
         named_competitors: Optional list of competitor names or URLs
 
     Returns:
-        JSON string with 3 competitors: inn, legal_name, revenue, services,
-        match scores (revenue_match, location_score, service_overlap),
+        JSON string with up to 5 competitors: inn, legal_name, revenue, services,
+        rating, reviews_count, website, social_links, match scores
+        (revenue_match, location_score, service_overlap, total_score),
         and human-readable match_reason for each.
     """
     defaults = {"url": "", "named_competitors": None}
@@ -58,7 +64,7 @@ async def handle_find_competitors(url=None, named_competitors=None, **kwargs) ->
 
     logger.info("Finding competitors for URL: %s, named: %s", url, named_competitors)
     try:
-        payload: dict = {"url": url, "count": 3}
+        payload: dict = {"url": url, "count": 5}
         if named_competitors:
             payload["named_competitors"] = named_competitors
 
@@ -81,24 +87,28 @@ async def handle_find_competitors(url=None, named_competitors=None, **kwargs) ->
             is_megalopolis = data.get("is_megalopolis", False)
             logger.info("Found %d competitors for URL: %s (megalopolis=%s)", len(competitors), url, is_megalopolis)
 
-            # Compact for LLM consumption — strip noisy fields
+            # Compact for LLM consumption — keep key fields
             compact = []
             for i, c in enumerate(competitors, 1):
-                profile = c.get("profile", {})
                 compact.append({
                     "rank": i,
-                    "inn": profile.get("inn", c.get("inn", "")),
-                    "legal_name": c.get("legal_name", profile.get("legal_name", "")),
-                    "brand_name": c.get("brand_name") or profile.get("brand_name"),
-                    "revenue_year": c.get("revenue_year") or profile.get("revenue_year"),
-                    "profit_year": c.get("profit_year") or profile.get("profit_year"),
-                    "financial_year": c.get("financial_year") or profile.get("financial_year"),
-                    "data_source": c.get("data_source", profile.get("data_source", "estimate")),
+                    "inn": c.get("inn", ""),
+                    "legal_name": c.get("legal_name", ""),
+                    "brand_name": c.get("brand_name"),
+                    "revenue_year": c.get("revenue_year"),
+                    "profit_year": c.get("profit_year"),
+                    "financial_year": c.get("financial_year"),
+                    "data_source": c.get("data_source", "apify_google_maps"),
                     "services": c.get("services", []),
                     "total_score": c.get("total_score"),
                     "revenue_match": c.get("revenue_match"),
+                    "location_score": c.get("location_score"),
+                    "service_overlap": c.get("service_overlap"),
                     "match_reason": c.get("match_reason", ""),
                     "website": c.get("website"),
+                    "rating": c.get("rating"),
+                    "reviews_count": c.get("reviews_count"),
+                    "legal_address": c.get("legal_address"),
                     "social_links": c.get("social_links", {}),
                 })
 
@@ -106,9 +116,9 @@ async def handle_find_competitors(url=None, named_competitors=None, **kwargs) ->
             if is_megalopolis:
                 result["is_megalopolis"] = True
                 result["suggestion"] = (
-                    "Это крупный город (Москва/СПб). Автоматический поиск конкурентов "
-                    "по открытым данным даёт ограниченные результаты. Попроси пользователя "
-                    "назвать его конкурентов — он точно знает своих главных соперников. "
+                    "Это крупный город (Москва/СПб). Google Maps показывает много "
+                    "конкурентов, но для точного позиционирования стоит уточнить "
+                    "у клиента его прямых конкурентов. "
                     "Передай их имена в параметр named_competitors при следующем вызове."
                 )
             return json.dumps(result, ensure_ascii=False, indent=2)
@@ -142,13 +152,15 @@ registry.register(
         "function": {
             "name": "find_competitors",
             "description": (
-                "Find top-3 competitors for a client clinic website. "
-                "Extracts services, city, and specialization from the site, "
-                "searches DaData for similar medical companies, scores them "
-                "by revenue match, location, and service overlap. "
-                "Optionally accepts named_competitors — a list of competitor "
-                "names or URLs to look up directly via DaData. "
-                "Returns 3 competitors with match reasons for the client to review."
+                "Find top competitors for a client clinic website. "
+                "Extracts specialization and city from the site, searches Google Maps "
+                "via Apify for medical companies in the same area, enriches with "
+                "DaData + rusprofile financial data, scores by revenue match, "
+                "location proximity, service overlap, rating, and reviews. "
+                "Optionally accepts named_competitors — competitor names or URLs "
+                "to look up directly. "
+                "Returns up to 5 competitors with match reasons for the client to review. "
+                "⚠️ Takes ~90-120 seconds (full pipeline: Google Maps scraping + financial enrichment)."
             ),
             "parameters": {
                 "type": "object",
@@ -160,7 +172,7 @@ registry.register(
                     "named_competitors": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Optional list of competitor names or URLs to look up via DaData",
+                        "description": "Optional list of competitor names or URLs to look up",
                     },
                 },
                 "required": ["url"],
@@ -170,6 +182,6 @@ registry.register(
     handler=handle_find_competitors,
     check_fn=lambda: True,
     is_async=True,
-    description="Find top-3 competitors for a clinic website by revenue, services, and location",
+    description="Find top-5 competitors for a clinic via Google Maps + financial enrichment (90-120s)",
     emoji="🔎",
 )
