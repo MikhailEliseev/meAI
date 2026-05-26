@@ -2,10 +2,33 @@
 """ComparisonMatrix — build compact matrix from collector outputs for LLM context."""
 
 import json
+import re
 from datetime import datetime, timezone
 from typing import Optional
 
 from .models import CompetitorFull, ComparisonMatrix, SeoAuditResult, SocialScanResult
+
+# ---------------------------------------------------------------------------
+# Prompt injection sanitization
+# ---------------------------------------------------------------------------
+
+_PROMPT_INJECTION_PATTERNS = [
+    r"(?i)ignore\s+(all\s+)?(previous|above|prior)\s+(instructions?|directives?|commands?)",
+    r"(?i)system\s*:\s*",
+    r"(?i)<\|im_start\|>",
+    r"(?i)<\|im_end\|>",
+    r"(?i)you\s+are\s+now",
+    r"(?i)new\s+instructions?\s*:",
+]
+
+
+def _sanitize_text(text: str) -> str:
+    """Remove prompt injection patterns from user-sourced text."""
+    if not text:
+        return text
+    for pattern in _PROMPT_INJECTION_PATTERNS:
+        text = re.sub(pattern, "[filtered]", text)
+    return text
 
 
 class ComparisonMatrixBuilder:
@@ -43,13 +66,13 @@ class ComparisonMatrixBuilder:
         for idx, cf in enumerate(competitors_full, start=1):
             comp = {
                 "id": idx,
-                "name": cf.name,
+                "name": _sanitize_text(cf.name),
                 "url": cf.url,
                 "scraped_at": cf.scraped_at if cf.scraped_at else datetime.now(timezone.utc).isoformat(),
                 "financials": self._compact_financials(cf),
                 "seo": self._compact_seo(cf),
                 "social": self._compact_social(cf),
-                "positioning": cf.positioning[:120] if cf.positioning else "",
+                "positioning": _sanitize_text(cf.positioning[:120]) if cf.positioning else "",
                 "website": {
                     "features": cf.website_features,
                     "missing": cf.website_missing,
@@ -89,7 +112,7 @@ class ComparisonMatrixBuilder:
             return {"score": None, "issues": [], "error": "No data"}
         return {
             "score": cf.seo.score,
-            "issues": cf.seo.issues[:8],  # cap at 8 issues
+            "issues": [_sanitize_text(i) for i in cf.seo.issues[:8]],  # cap at 8 issues
         }
 
     def _compact_social(self, cf: CompetitorFull) -> dict:
