@@ -119,12 +119,37 @@ class SocialScanner:
             )
 
     def _find_telegram(self, name: str) -> Optional[SocialProfile]:
-        """Search Telegram channels by company name."""
+        """Search Telegram channels by company name.
+
+        Note: Telegram handles only support Latin characters (a-z, 0-9, _).
+        Russian/cyrillic company names will NOT match via direct handle lookup.
+        This is a known platform limitation — Telegram does not offer cyrillic handles.
+        """
         try:
             encoded = urllib.parse.quote(name)
             resp = self._client.get(f"https://t.me/s/{encoded}")
             if resp.status_code == 200 and len(resp.text) > 500:
                 soup = BeautifulSoup(resp.text, "html.parser")
+
+                # Check for "not found" indicators to avoid false positives
+                if soup.select_one(".tgme_page_not_found"):
+                    return SocialProfile(
+                        platform="telegram", handle="", exists=False
+                    )
+                body_text = soup.get_text().lower()
+                if any(
+                    indicator in body_text
+                    for indicator in (
+                        "page not found",
+                        "канал не найден",
+                        "channel not found",
+                        "user not found",
+                    )
+                ):
+                    return SocialProfile(
+                        platform="telegram", handle="", exists=False
+                    )
+
                 posts = soup.select(".tgme_widget_message_wrap")
                 topics = []
                 for post in posts[:10]:
@@ -174,7 +199,6 @@ class SocialScanner:
                 link = (
                     group.select_one("a[href*='public']")
                     or group.select_one("a[href*='club']")
-                    or group.select_one("a[href*='/']")
                 )
                 if link:
                     href = link.get("href", "")
