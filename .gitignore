@@ -43,7 +43,10 @@ Thumbs.db
 
 # Project specific
 data/
+!AIM/data/
+AIM/data/*
 !AIM/data/golden_dataset/
+!AIM/data/apify_keys.example.json
 !AIM/frontend/data/
 AIM/data/golden_dataset/results/
 .obsidian/
