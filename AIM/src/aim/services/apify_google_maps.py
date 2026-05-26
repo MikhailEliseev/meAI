@@ -3,8 +3,13 @@
 Replaces the broken Yandex Maps + OSM + DomainGuess pipeline with a single
 reliable Google Maps API that returns competitors with website, rating,
 reviews, coordinates, and social links — all in one call.
+
+Two actors supported with automatic fallback:
+  1. compass/crawler-google-places (primary — more features, social media)
+  2. solidcode/google-maps-scraper-2-5-per-1-000-results (fallback — $2.50/1K results)
 """
 
+import json
 import logging
 import re
 import time
@@ -16,8 +21,93 @@ from .rusprofile.models import CompanyProfile
 logger = logging.getLogger(__name__)
 
 _ACTOR_ID = "compass/crawler-google-places"
+_ALT_ACTOR_ID = "solidcode/google-maps-scraper-2-5-per-1-000-results"
 _DEFAULT_COUNT = 50
 _DEFAULT_TIMEOUT = timedelta(minutes=4)
+
+# Large-area GeoJSON polygons for major Russian cities.
+# Default city polygons in Apify are often too small (no agglomeration).
+# These polygons cover the city + suburbs/agglomeration (50-100 km radius).
+# Format: [longitude, latitude] pairs — GeoJSON spec.
+_CITY_POLYGONS: dict[str, list[list[tuple[float, float]]]] = {
+    "Москва": [[
+        [36.3, 56.35],   # NW — Зеленоград / Солнечногорск
+        [38.8, 56.35],   # NE — Ногинск / Черноголовка
+        [38.8, 55.15],   # SE — Подольск / Домодедово / Чехов
+        [36.3, 55.15],   # SW — Наро-Фоминск / Обнинск
+        [36.3, 56.35],   # close polygon
+    ]],
+    "Санкт-Петербург": [[
+        [29.5, 60.3],    # NW — Выборгское шоссе
+        [30.9, 60.3],    # NE — Всеволожск
+        [30.9, 59.65],   # SE — Пушкин / Колпино
+        [29.5, 59.65],   # SW — Петергоф / Стрельна
+        [29.5, 60.3],
+    ]],
+    "Казань": [[
+        [48.5, 56.0],    # NW
+        [49.7, 56.0],    # NE
+        [49.7, 55.5],    # SE
+        [48.5, 55.5],    # SW
+        [48.5, 56.0],
+    ]],
+    "Екатеринбург": [[
+        [60.0, 57.1],    # NW
+        [61.2, 57.1],    # NE
+        [61.2, 56.5],    # SE
+        [60.0, 56.5],    # SW
+        [60.0, 57.1],
+    ]],
+    "Новосибирск": [[
+        [82.3, 55.3],    # NW
+        [83.5, 55.3],    # NE
+        [83.5, 54.7],    # SE
+        [82.3, 54.7],    # SW
+        [82.3, 55.3],
+    ]],
+    "Краснодар": [[
+        [38.5, 45.25],   # NW
+        [39.3, 45.25],   # NE
+        [39.3, 44.85],   # SE
+        [38.5, 44.85],   # SW
+        [38.5, 45.25],
+    ]],
+    "Нижний Новгород": [[
+        [43.5, 56.5],    # NW
+        [44.3, 56.5],    # NE
+        [44.3, 56.1],    # SE
+        [43.5, 56.1],    # SW
+        [43.5, 56.5],
+    ]],
+    "Ростов-на-Дону": [[
+        [39.3, 47.45],   # NW
+        [40.1, 47.45],   # NE
+        [40.1, 47.05],   # SE
+        [39.3, 47.05],   # SW
+        [39.3, 47.45],
+    ]],
+}
+
+
+def _build_city_geolocation(city: str) -> dict | None:
+    """Build a customGeolocation GeoJSON dict for a city, or None if not found.
+
+    Tries exact match first, then prefix match (e.g. "Москва" matches "Москва, Россия").
+    """
+    if city in _CITY_POLYGONS:
+        coords = _CITY_POLYGONS[city]
+    else:
+        for key in _CITY_POLYGONS:
+            if key.lower() in city.lower() or city.lower() in key.lower():
+                coords = _CITY_POLYGONS[key]
+                break
+        else:
+            return None
+
+    return {
+        "type": "Polygon",
+        "coordinates": coords,
+    }
 
 
 async def discover_competitors_google_maps(
@@ -27,6 +117,9 @@ async def discover_competitors_google_maps(
     client: ApifyClient | None = None,
 ) -> list[CompanyProfile]:
     """Find competitors via Apify Google Maps Scraper.
+
+    Tries primary actor (compass/crawler-google-places) first,
+    falls back to solidcode/google-maps-scraper on failure.
 
     Args:
         specialization: e.g. "стоматология", "косметология"
@@ -39,48 +132,94 @@ async def discover_competitors_google_maps(
     """
     if client is None:
         raise ValueError("ApifyClient is required — create via get_apify_client() from aim.services")
-    apify = client
 
-    # Append country for correct geolocation — Google Maps needs this
+    # Try primary actor first
+    try:
+        profiles = await _discover_via_compass(client, specialization, city, count)
+        if profiles:
+            return profiles
+        logger.warning("Compass Google Maps returned 0 results, trying fallback actor...")
+    except Exception as e:
+        logger.warning("Compass Google Maps failed: %s — trying fallback actor...", e)
+
+    # Fallback to SolidCode
+    try:
+        profiles = await _discover_via_solidcode(client, specialization, city, count)
+        if profiles:
+            return profiles
+        logger.warning("SolidCode Google Maps also returned 0 results")
+    except Exception as e:
+        logger.error("SolidCode Google Maps also failed: %s", e)
+
+    return []
+
+
+async def _discover_via_compass(
+    apify: ApifyClient,
+    specialization: str,
+    city: str,
+    count: int,
+) -> list[CompanyProfile]:
+    """Primary actor: compass/crawler-google-places (social media included).
+
+    Uses custom geolocation polygons for major Russian cities to expand
+    search radius beyond the default (often too narrow) city boundaries.
+    Falls back to free-text location for unsupported cities.
+    """
     location = f"{city}, Россия" if city and "росси" not in city.lower() else city
-
     search_query = specialization
     if city and city.lower() not in specialization.lower():
         search_query = f"{specialization} {city}"
 
     t0 = time.monotonic()
 
+    # Build run input with expanded search area for supported cities
+    custom_geo_raw = _build_city_geolocation(city)
+
+    run_input: dict = {
+        "searchStringsArray": [search_query],
+        "maxResults": count,
+        "maxCrawledPlacesPerSearch": count,
+        "language": "ru",
+        "includeSocialMedia": True,
+        "includeReviews": False,
+        "proxyConfig": {"useApifyProxy": True, "apifyProxyGroups": ["RESIDENTIAL"]},
+    }
+
+    if custom_geo_raw:
+        run_input["customGeolocation"] = custom_geo_raw
+        logger.info(
+            "Compass GM: using custom polygon for %s (%.1f×%.1f km)",
+            city,
+            (custom_geo_raw["coordinates"][0][1][0] - custom_geo_raw["coordinates"][0][0][0]) * 111,
+            (custom_geo_raw["coordinates"][0][0][1] - custom_geo_raw["coordinates"][0][2][1]) * 111,
+        )
+    else:
+        run_input["locationQuery"] = location
+        logger.info("Compass GM: using free-text location '%s'", location)
+
     run = await apify.call_actor(
         actor_id=_ACTOR_ID,
-        run_input={
-            "searchStringsArray": [search_query],
-            "location": location,
-            "maxResults": count,
-            "language": "ru",
-            "includeSocialMedia": True,
-            "includeReviews": False,
-            "proxyConfig": {"useApifyProxy": True, "apifyProxyGroups": ["RESIDENTIAL"]},
-        },
+        run_input=run_input,
         run_timeout=_DEFAULT_TIMEOUT,
         memory_mbytes=2048,
     )
 
     if run.status != "SUCCEEDED":
         logger.error(
-            "Google Maps run %s failed: status=%s, message=%s",
-            run.id, run.status, getattr(run, "status_message", ""),
+            "Compass GM run %s failed: status=%s", run.id, run.status,
         )
         return []
 
     if not run.default_dataset_id:
-        logger.warning("Google Maps run %s returned no dataset", run.id)
+        logger.warning("Compass GM run %s returned no dataset", run.id)
         return []
 
     items = await apify.get_dataset_items(run.default_dataset_id)
     elapsed = time.monotonic() - t0
     logger.info(
-        "Google Maps: %d results for '%s' in %s (%.1fs, usage=%s)",
-        len(items), search_query, location, elapsed, run.usage,
+        "Compass GM: %d results for '%s' in %s (%.1fs)",
+        len(items), search_query, location, elapsed,
     )
 
     profiles: list[CompanyProfile] = []
@@ -88,8 +227,6 @@ async def discover_competitors_google_maps(
         title = item.get("title", "")
         if not title:
             continue
-
-        # Filter closed businesses
         if item.get("permanentlyClosed"):
             continue
 
@@ -101,7 +238,7 @@ async def discover_competitors_google_maps(
         clean_full = _clean_gm_title_full(title)
 
         profile = CompanyProfile(
-            inn="",  # will be filled by DaData enrichment
+            inn="",
             legal_name=clean_full,
             brand_name=clean_brand,
             website=website,
@@ -115,6 +252,86 @@ async def discover_competitors_google_maps(
             source_specialization=specialization,
             data_source="apify_google_maps",
             confidence=0.75,
+        )
+        profiles.append(profile)
+
+    return profiles
+
+
+async def _discover_via_solidcode(
+    apify: ApifyClient,
+    specialization: str,
+    city: str,
+    count: int,
+) -> list[CompanyProfile]:
+    """Fallback actor: solidcode/google-maps-scraper-2-5-per-1-000-results.
+
+    $2.50 per 1000 results. Different field names than Compass actor.
+    No social media field — that's the main tradeoff.
+    """
+    location = f"{city}, Россия" if city and "росси" not in city.lower() else city
+    search_query = f"{specialization} {city}" if city and city.lower() not in specialization.lower() else specialization
+
+    t0 = time.monotonic()
+
+    run = await apify.call_actor(
+        actor_id=_ALT_ACTOR_ID,
+        run_input={
+            "searchQueries": [search_query],
+            "locationName": location,
+            "maxResults": count,
+            "language": "ru",
+            "countryCode": "RU",
+        },
+        run_timeout=_DEFAULT_TIMEOUT,
+        memory_mbytes=1024,
+    )
+
+    if run.status != "SUCCEEDED":
+        logger.error(
+            "SolidCode GM run %s failed: status=%s", run.id, run.status,
+        )
+        return []
+
+    if not run.default_dataset_id:
+        logger.warning("SolidCode GM run %s returned no dataset", run.id)
+        return []
+
+    items = await apify.get_dataset_items(run.default_dataset_id)
+    elapsed = time.monotonic() - t0
+    logger.info(
+        "SolidCode GM: %d results for '%s' in %s (%.1fs)",
+        len(items), search_query, location, elapsed,
+    )
+
+    profiles: list[CompanyProfile] = []
+    for item in items:
+        # SolidCode uses "name" instead of "title"
+        title = item.get("name") or item.get("title", "")
+        if not title:
+            continue
+
+        if item.get("permanentlyClosed") or item.get("temporarilyClosed"):
+            continue
+
+        clean_brand = _clean_gm_title(title)
+        clean_full = _clean_gm_title_full(title)
+
+        profile = CompanyProfile(
+            inn="",
+            legal_name=clean_full,
+            brand_name=clean_brand,
+            website=item.get("website"),
+            social_links=None,  # SolidCode actor doesn't provide social media
+            geo_lat=item.get("latitude"),
+            geo_lon=item.get("longitude"),
+            rating=item.get("totalScore"),
+            reviews_count=item.get("reviewsCount"),
+            legal_address=item.get("address") or "",
+            actual_addresses=[item.get("address")] if item.get("address") else [],
+            source_specialization=specialization,
+            data_source="apify_google_maps",
+            confidence=0.70,  # slightly lower — no social media
         )
         profiles.append(profile)
 

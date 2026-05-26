@@ -20,7 +20,7 @@ class PipelineRunner:
     def __init__(
         self,
         on_progress: Optional[Callable[[PipelineProgress], Awaitable[None]]] = None,
-        timeout: float = 15.0,
+        timeout: float = 180.0,
     ) -> None:
         self._on_progress = on_progress
         self._timeout = timeout
