@@ -135,7 +135,7 @@ class RusprofileClient:
         client = await self._get_client()
         search_url = RUSPROFILE_SEARCH.format(identifier)
 
-        # Step 1: Search by INN/OGRN to get canonical URL
+        # Step 1: Search by INN/OGRN, parse all results
         try:
             response = await client.get(search_url)
             response.raise_for_status()
@@ -143,14 +143,27 @@ class RusprofileClient:
             logger.error("rusprofile fetch failed for %s: %s", identifier, e)
             return None
 
-        # Step 2: Extract canonical URL and get both print + regular versions
-        canonical = _extract_canonical(response.text)
-        if not canonical:
-            logger.warning("Could not find canonical URL for %s", identifier)
-            return None
+        # Step 2: Find exact INN/OGRN match among search results
+        results = _parse_search_results(response.text)
+        target = None
+        if inn:
+            target = next((r for r in results if r["inn"] == inn), None)
+        if target is None and ogrn:
+            target = next((r for r in results if r["ogrn"] == ogrn), None)
+        # Fallback: first result if no exact match
+        if target is None and results:
+            target = results[0]
+            logger.debug("rusprofile: no exact match for %s, using first result: %s",
+                         identifier, target["name"])
+        if target is None:
+            # Fallback: try direct URL with INN as ID (rusprofile sometimes resolves these)
+            logger.debug("rusprofile: no search results for %s, trying direct URL", identifier)
+            target = {"rusprofile_id": identifier}
+            # Will try below; if print page 404s, returns None
 
+        canonical = f"https://www.rusprofile.ru/id/{target['rusprofile_id']}"
+        rusprofile_id = target["rusprofile_id"]
         print_url = f"{canonical}?print=1"
-        rusprofile_id = canonical.rstrip("/").split("/")[-1]
 
         # Fetch print page (metadata: name, INN, director, etc.)
         try:
@@ -174,6 +187,15 @@ class RusprofileClient:
         # Step 3: Parse metadata from print page, financials from regular (or print fallback)
         company = _parse_print_page(print_html, finance_html=finance_html)
         company.rusprofile_id = rusprofile_id
+
+        # Sanity check: if we requested by INN, verify the parsed INN matches
+        if inn and company.inn and company.inn != inn:
+            logger.warning(
+                "rusprofile INN mismatch: requested %s, got %s (%s)",
+                inn, company.inn, company.short_name,
+            )
+            return None
+
         return company
 
 
