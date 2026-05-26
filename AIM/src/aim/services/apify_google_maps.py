@@ -8,9 +8,8 @@ reviews, coordinates, and social links — all in one call.
 import logging
 import time
 from datetime import timedelta
-from typing import Optional
 
-from .apify_client import ApifyClient, get_apify_client
+from .apify_client import ApifyClient
 from .rusprofile.models import CompanyProfile
 
 logger = logging.getLogger(__name__)
@@ -24,7 +23,7 @@ async def discover_competitors_google_maps(
     specialization: str,
     city: str,
     count: int = _DEFAULT_COUNT,
-    client: Optional[ApifyClient] = None,
+    client: ApifyClient | None = None,
 ) -> list[CompanyProfile]:
     """Find competitors via Apify Google Maps Scraper.
 
@@ -32,12 +31,14 @@ async def discover_competitors_google_maps(
         specialization: e.g. "стоматология", "косметология"
         city: e.g. "Казань" (will append ", Россия" for geolocation)
         count: max results (default 50)
-        client: optional ApifyClient instance (uses singleton if omitted)
+        client: ApifyClient instance (required — no default singleton).
 
     Returns:
         List of CompanyProfile objects with website, rating, reviews, coords.
     """
-    apify = client or get_apify_client()
+    if client is None:
+        raise ValueError("ApifyClient is required — create via get_apify_client() from aim.services")
+    apify = client
 
     # Append country for correct geolocation — Google Maps needs this
     location = f"{city}, Россия" if city and "росси" not in city.lower() else city

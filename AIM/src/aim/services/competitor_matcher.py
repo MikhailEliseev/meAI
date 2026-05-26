@@ -33,6 +33,7 @@ from typing import Optional
 import httpx
 
 from .apify_google_maps import discover_competitors_google_maps
+from . import get_apify_client
 from .rusprofile.client import DaDataClient, get_dadata_client
 from .rusprofile.models import ClientProfile, CompanyProfile, CompetitorMatch
 from .scraping_service import scrape_services_batch
@@ -215,6 +216,7 @@ class CompetitorMatcher:
             specialization=client.specialization,
             city=client.city,
             count=50,
+            client=get_apify_client(),
         )
         t_discovery = time.monotonic()
         logger.info(
