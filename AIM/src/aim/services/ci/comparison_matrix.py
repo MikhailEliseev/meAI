@@ -77,9 +77,10 @@ class ComparisonMatrixBuilder:
     def _compact_financials(self, cf: CompetitorFull) -> dict:
         fin = cf.financials
         revenue = fin.get("revenue", {})
+        profit = fin.get("profit", {})
         return {
-            "latest_revenue": max(revenue.values()) if revenue else None,
-            "latest_profit": max(fin.get("profit", {}).values()) if fin.get("profit") else None,
+            "latest_revenue": revenue[max(revenue.keys())] if revenue else None,
+            "latest_profit": profit[max(profit.keys())] if profit else None,
             "trend": fin.get("trend", ""),
         }
 
