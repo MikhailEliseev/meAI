@@ -226,10 +226,10 @@ class CompetitorMatcher:
             t_discovery - t_geocode, len(gm_candidates),
         )
 
-        # Filter out client's own company
+        # Filter out client's own company (self-match)
         gm_candidates = [
             c for c in gm_candidates
-            if not (client.company_name and client.company_name.lower() in c.legal_name.lower())
+            if not _is_self_match(c, client)
         ]
 
         # 3. Enrich Google Maps candidates with DaData (INN + financials)
@@ -381,51 +381,38 @@ class CompetitorMatcher:
         enriched: list[CompanyProfile] = []
 
         async def _enrich_one(c: CompanyProfile) -> CompanyProfile:
-            name = c.legal_name
+            # Use cleaned brand_name first (from Fix 1), fall back to legal_name
+            name = c.brand_name or c.legal_name
             if not name:
                 return c
 
-            # Extract first 1-2 words as brand core for DaData search
-            words = name.split()
-            brand_core = " ".join(words[:2]) if len(words) >= 2 else words[0]
+            # Build search queries from most specific to broadest
+            queries = _build_dadata_search_queries(name, c.legal_name, client.city)
 
-            try:
-                results = await self.dadata.find_medical_companies(
-                    query=brand_core,
-                    city=client.city,
-                    count=3,
-                )
-            except Exception as e:
-                logger.debug("DaData lookup failed for %s: %s", brand_core, e)
-                return c
+            for query in queries:
+                try:
+                    results = await self.dadata.find_medical_companies(
+                        query=query,
+                        city=client.city,
+                        count=3,
+                    )
+                except Exception as e:
+                    logger.debug("DaData lookup failed for '%s': %s", query, e)
+                    continue
 
-            for r in results:
-                if _name_similarity(name, r.legal_name) > 0.3:
-                    # Transfer DaData enrichment to Google Maps profile
-                    if not c.inn and r.inn:
-                        c.inn = r.inn
-                    if not c.ogrn and r.ogrn:
-                        c.ogrn = r.ogrn
-                    if not c.okved_main and r.okved_main:
-                        c.okved_main = r.okved_main
-                    if not c.okved_secondary and r.okved_secondary:
-                        c.okved_secondary = r.okved_secondary
-                    if not c.legal_address and r.legal_address:
-                        c.legal_address = r.legal_address
-                    if not c.employee_count and r.employee_count:
-                        c.employee_count = r.employee_count
-                    if not c.revenue_year and r.revenue_year:
-                        c.revenue_year = r.revenue_year
-                        c.profit_year = r.profit_year
-                        c.financial_year = r.financial_year
-                    # Keep Google Maps digital presence (website, social, rating)
-                    c.website = c.website or r.website
-                    if not c.social_links and r.social_links:
-                        c.social_links = r.social_links
-                    # Tag as enriched
-                    c.data_source = "apify_google_maps+dadata"
-                    c.source_specialization = client.specialization
-                    break
+                for r in results:
+                    if _name_similarity(name, r.legal_name) > 0.25:
+                        _apply_dadata_enrichment(c, r, client)
+                        break
+
+                if c.inn:
+                    break  # found INN, stop trying more queries
+
+            # ── DaData fallback: rusprofile search by name ──────────
+            # DaData needs legal entity names ("ООО Дармед"), but Google Maps
+            # gives brand names ("Darmed"). rusprofile's search handles both.
+            if not c.inn:
+                await _enrich_via_rusprofile_search(c, client)
 
             return c
 
@@ -763,15 +750,31 @@ class CompetitorMatcher:
             return 0
 
         logger.info("rusprofile: checking %d candidates with INN", len(inn_candidates))
+        batch_with_inn = 0
+        batch_with_revenue = 0
         for c in inn_candidates:
             if c.has_real_financials() and c.revenue_year and c.revenue_year > 0:
                 continue  # already has real financial data
 
+            batch_with_inn += 1
             try:
                 from aim.services.rusprofile.parser import get_rusprofile_client
 
                 rp = get_rusprofile_client()
-                company = await rp.get_by_inn(c.inn)
+
+                # Retry once on timeout (rusprofile can be slow)
+                company = None
+                for attempt in (1, 2):
+                    try:
+                        company = await rp.get_by_inn(c.inn)
+                        break
+                    except Exception as e:
+                        if attempt == 1:
+                            logger.debug("rusprofile retry for INN %s: %s", c.inn, e)
+                            await asyncio.sleep(1.0)
+                        else:
+                            raise
+
                 if company is None:
                     logger.debug(
                         "rusprofile: no data for INN %s (%s)",
@@ -804,6 +807,7 @@ class CompetitorMatcher:
                     if not c.data_source or c.data_source in ("apify_google_maps", "apify_google_maps+dadata"):
                         c.data_source = c.data_source + "+rusprofile" if c.data_source else "rusprofile"
                     enriched += 1
+                    batch_with_revenue += 1
                     logger.debug(
                         "rusprofile: %s (INN %s) — revenue=%d RUB (%d)",
                         company.short_name or c.legal_name[:40],
@@ -818,6 +822,11 @@ class CompetitorMatcher:
                     c.inn, e,
                 )
 
+        logger.info(
+            "rusprofile batch: %d INN checked, %d enriched (%d%% hit rate)",
+            batch_with_inn, batch_with_revenue,
+            round(batch_with_revenue * 100 / max(batch_with_inn, 1)),
+        )
         return enriched
 
     async def _geocode_dadata_candidates(
@@ -1408,6 +1417,194 @@ def _name_similarity(a: str, b: str) -> float:
     if not wa or not wb:
         return 0.0
     return len(wa & wb) / max(len(wa), len(wb))
+
+
+def _apply_dadata_enrichment(
+    c: CompanyProfile, r: CompanyProfile, client: ClientProfile
+) -> None:
+    """Copy enrichment fields from DaData result to Google Maps candidate.
+
+    Only overwrites fields that are empty/missing on the candidate.
+    Preserves the original apify_google_maps data_source tag.
+    """
+    if not c.inn:
+        c.inn = r.inn
+    if not c.ogrn:
+        c.ogrn = r.ogrn
+    if not c.okved_main:
+        c.okved_main = r.okved_main
+    if not c.okved_secondary:
+        c.okved_secondary = r.okved_secondary
+    if not c.legal_address:
+        c.legal_address = r.legal_address
+    if not c.employee_count:
+        c.employee_count = r.employee_count
+    if not c.revenue_year and r.revenue_year:
+        c.revenue_year = r.revenue_year
+    if not c.website:
+        c.website = r.website
+    if not c.social_links and r.social_links:
+        c.social_links = r.social_links
+    # Preserve discovery source — DaData is enrichment, not discovery
+    if c.data_source == "apify_google_maps":
+        c.data_source = "apify_google_maps+dadata"
+    if not c.source_specialization:
+        c.source_specialization = client.specialization
+    c.confidence = max(c.confidence, r.confidence)
+
+
+async def _enrich_via_rusprofile_search(
+    c: CompanyProfile, client: ClientProfile
+) -> None:
+    """Fallback: search rusprofile by brand name when DaData fails.
+
+    DaData's suggest/party endpoint indexes legal entity names ("ООО Дармед"),
+    not marketing brand names ("Darmed"). rusprofile's own search handles both,
+    so this is the critical fallback for INN discovery.
+
+    Updates c.inn and other fields in-place when a match is found.
+    """
+    name = c.brand_name or c.legal_name
+    if not name or len(name) < 3:
+        return
+
+    try:
+        from aim.services.rusprofile.parser import get_rusprofile_client
+
+        rp = get_rusprofile_client()
+        results = await rp.search(name)
+    except Exception as e:
+        logger.debug("rusprofile search failed for '%s': %s", name, e)
+        return
+
+    if not results:
+        return
+
+    # Find best match by name similarity
+    best_match = None
+    best_score = 0.0
+    for r in results:
+        r_name = r.get("name", "")
+        if not r_name:
+            continue
+        score = _name_similarity(name, r_name)
+        if score > best_score:
+            best_score = score
+            best_match = r
+
+    if best_match and best_score > 0.25:
+        inn = best_match.get("inn", "")
+        if inn and inn.isdigit():
+            c.inn = inn
+            logger.info(
+                "rusprofile search: matched '%s' → '%s' (INN %s, score=%.2f)",
+                name, best_match.get("name", "")[:50], inn, best_score,
+            )
+        if not c.ogrn:
+            ogrn = best_match.get("ogrn", "")
+            if ogrn:
+                c.ogrn = ogrn
+        if not c.legal_address:
+            addr = best_match.get("address", "")
+            if addr:
+                c.legal_address = addr
+
+
+def _build_dadata_search_queries(
+    brand_name: str, legal_name: str, city: str
+) -> list[str]:
+    """Build search queries for DaData enrichment, from most specific to broadest.
+
+    Uses cleaned brand_name first, then falls back to broader strategies.
+    Returns up to 3 distinct queries.
+    """
+    queries: list[str] = []
+    seen: set[str] = set()
+
+    def _add(q: str):
+        q_clean = q.strip().lower()
+        if q_clean and len(q_clean) >= 3 and q_clean not in seen:
+            seen.add(q_clean)
+            queries.append(q.strip())
+
+    # Strategy 1: Clean brand name (most specific)
+    if brand_name and len(brand_name) >= 3:
+        _add(brand_name)
+
+    # Strategy 2: First meaningful word (skip legal forms, single chars)
+    legal_forms = {"ооо", "ао", "зао", "ип", "пао", "нао", "оао",
+                   "ooo", "ao", "zao", "ip", "pao"}
+    words = brand_name.split() if brand_name else legal_name.split()
+    for w in words:
+        w_clean = w.strip('«»"\'.,;:!?()[]{}')
+        if len(w_clean) >= 3 and w_clean.lower() not in legal_forms:
+            _add(w_clean)
+            break
+
+    # Strategy 3: Full legal name without separators (broadest)
+    if legal_name and legal_name != brand_name:
+        _add(legal_name)
+
+    return queries
+
+
+def _extract_domain(url: str) -> str:
+    """Extract clean domain from URL for comparison.
+
+    "https://www.clinic.ru/about" → "clinic.ru"
+    """
+    if not url:
+        return ""
+    domain = url.split("//")[-1].split("/")[0]
+    domain = domain.removeprefix("www.")
+    return domain.lower()
+
+
+def _is_self_match(candidate: CompanyProfile, client: ClientProfile) -> bool:
+    """Check if a candidate is the client's own clinic (self-match).
+
+    Uses three detection methods:
+      1. Domain match — same website domain
+      2. Name overlap — significant word overlap in names
+      3. Same brand — cleaned brand_name matches client name
+    """
+    # 1. Domain match (strongest signal)
+    if client.url and candidate.website:
+        client_domain = _extract_domain(client.url)
+        cand_domain = _extract_domain(candidate.website)
+        if client_domain and cand_domain and client_domain == cand_domain:
+            logger.info("Self-match filtered (domain): %s ↔ %s", client_domain, candidate.legal_name[:50])
+            return True
+
+    # 2. Name overlap — significant shared words
+    if client.company_name:
+        client_words = set(client.company_name.lower().split())
+        cand_words = set(candidate.legal_name.lower().split())
+        # Filter out legal-form words and short words
+        skip_words = {"ооо", "ао", "зао", "ип", "пао", "нао", "оао",
+                      "ooo", "ao", "zao", "ip", "pao"}
+        client_words = {w for w in client_words if w not in skip_words and len(w) >= 2}
+        cand_words = {w for w in cand_words if w not in skip_words and len(w) >= 2}
+        if client_words and cand_words:
+            overlap = len(client_words & cand_words)
+            if overlap >= min(len(client_words), 3):
+                logger.info("Self-match filtered (name): %s ↔ %s", client.company_name, candidate.legal_name[:50])
+                return True
+
+    # 3. Brand name match
+    if client.company_name and candidate.brand_name:
+        client_clean = client.company_name.lower().strip()
+        cand_clean = candidate.brand_name.lower().strip()
+        if client_clean == cand_clean:
+            logger.info("Self-match filtered (brand): %s", client.company_name)
+            return True
+        # Substring match (bidirectional)
+        if len(client_clean) >= 5 and len(cand_clean) >= 5:
+            if client_clean in cand_clean or cand_clean in client_clean:
+                logger.info("Self-match filtered (brand substring): %s ↔ %s", client.company_name, candidate.brand_name)
+                return True
+
+    return False
 
 
 _STATE_HEALTHCARE_PATTERNS: dict[str, str] = {
