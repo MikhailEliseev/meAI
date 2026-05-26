@@ -255,6 +255,10 @@ class PipelineRunner:
         if not url:
             return None
         try:
+            self._validate_public_url(url)
+        except ValueError:
+            return None
+        try:
             await self._emit(
                 "seo",
                 f"Проверяю SEO ошибки на сайте {name}..." if name else "Проверяю SEO ошибки на сайте...",
@@ -300,6 +304,11 @@ class PipelineRunner:
         """
         url = comp.get("url", "")
         if not url:
+            return None
+
+        try:
+            self._validate_public_url(url)
+        except ValueError:
             return None
 
         try:
@@ -436,29 +445,29 @@ def _detect_features(soup) -> list[str]:
 
 
 def _count_doctors(soup) -> int:
-    """Count doctor/staff profile elements by CSS classes and card patterns."""
+    """Count unique doctor/staff profile elements by CSS classes and card patterns."""
     doctor_selectors = [
         "doctor", "specialist", "employee", "staff", "vrach",
         "врач", "специалист", "сотрудник", "доктор",
     ]
 
-    count = 0
+    seen: set[int] = set()
     for selector in doctor_selectors:
-        elements = soup.find_all(
-            class_=lambda c: (
-                c and selector in c.lower()
+        for el in soup.find_all(
+            class_=lambda c, s=selector: (
+                c and s in c.lower()
                 if isinstance(c, str)
                 else False
             )
-        )
-        count += len(elements)
-        elements = soup.find_all(
-            attrs={"data-role": lambda v: v and selector in v.lower()}
-        )
-        count += len(elements)
+        ):
+            seen.add(id(el))
+        for el in soup.find_all(
+            attrs={"data-role": lambda v, s=selector: v and s in v.lower()}
+        ):
+            seen.add(id(el))
 
     # Fallback: detect repeating card patterns with person-related content
-    if count == 0:
+    if not seen:
         cards = soup.find_all("article") or soup.find_all(
             "li", class_=lambda c: (
                 c and "card" in c.lower() if c else False
@@ -471,9 +480,9 @@ def _count_doctors(soup) -> int:
         for card in cards:
             text = card.get_text().lower()
             if any(kw in text for kw in person_keywords):
-                count += 1
+                seen.add(id(card))
 
-    return count
+    return len(seen)
 
 
 def _count_directions(soup) -> int:

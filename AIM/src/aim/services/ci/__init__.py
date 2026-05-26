@@ -19,6 +19,9 @@ _try_imports = {
 }
 
 import importlib
+import logging
+
+_logger = logging.getLogger(__name__)
 
 for _name, _mod in _try_imports.items():
     try:
@@ -26,6 +29,8 @@ for _name, _mod in _try_imports.items():
         globals()[_name] = getattr(_module, _name)
     except ModuleNotFoundError:
         pass
+    except ImportError as e:
+        _logger.warning("CI module %s failed to import: %s", _name, e)
 
 __all__ = [
     "SeoAuditResult",

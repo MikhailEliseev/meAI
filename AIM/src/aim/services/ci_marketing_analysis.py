@@ -787,7 +787,7 @@ class CiMarketingAnalyzer:
 
             # 1. Run pipeline
             runner = PipelineRunner()
-            named = [c.url if hasattr(c, 'url') else c.get('url', '') for c in (competitors or [])]
+            named = [getattr(c, 'url', None) or getattr(c, 'website', '') for c in (competitors or [])]
             collected = await runner.run(client_url=url, named_competitors=named)
 
             # 2. Build matrix

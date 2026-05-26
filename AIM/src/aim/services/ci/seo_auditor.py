@@ -238,6 +238,12 @@ class SeoAuditor:
             score -= 3
         if r.broken_links:
             score -= min(len(r.broken_links) * 2, 15)
+        if r.load_time_ms:
+            lt = r.load_time_ms
+            if lt > 3000:
+                score -= 15
+            elif lt > 1500:
+                score -= 5
         return max(0, score)
 
     def _cache_get(self, key: str) -> Optional[SeoAuditResult]:
