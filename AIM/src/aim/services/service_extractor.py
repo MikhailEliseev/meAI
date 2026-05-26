@@ -214,6 +214,7 @@ async def extract_client_profile(url: str) -> dict:
     specialization = _detect_specialization(text_lower, url)
     city = _extract_city_from_schema(html) or _detect_city(text) or _extract_city_from_url(url)
     company_name = _extract_company_name(html)
+    inn = _extract_inn(html)
 
     logger.info(
         "Service extraction: url=%s services=%s specialization=%s city=%s",
@@ -225,6 +226,7 @@ async def extract_client_profile(url: str) -> dict:
         "specialization": specialization,
         "city": city,
         "company_name": company_name,
+        "inn": inn,
     }
 
 
@@ -461,6 +463,53 @@ def _extract_company_name(html: str) -> Optional[str]:
             if len(t) > 40 or re.search(r"\bв\s+г(?:ор\.?\s*)?[А-ЯЁ]", t, re.IGNORECASE):
                 return None
             return t.strip()
+    except Exception:
+        pass
+    return None
+
+
+def _extract_inn(html: str) -> Optional[str]:
+    """Extract INN (10 or 12 digits) from website HTML.
+
+    Looks in: footer sections, schema.org markup, text near "ИНН" label.
+    Returns the first valid INN found, or None.
+    """
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, "html.parser")
+
+        # 1. Look for text "ИНН" followed by digits (footer, requisites)
+        text = soup.get_text()
+        inn_match = re.search(r"ИНН\s*[:/\s]*\s*(\d{10}|\d{12})", text)
+        if inn_match:
+            return inn_match.group(1)
+
+        # 2. Look in schema.org Organization markup
+        for script in soup.find_all("script", type="application/ld+json"):
+            try:
+                import json
+                data = json.loads(script.string or "")
+                if isinstance(data, dict):
+                    tax_id = data.get("taxID") or ""
+                    if re.match(r"^\d{10}$|^\d{12}$", tax_id):
+                        return tax_id
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        # 3. Look for elements with class/id containing "inn" or "реквизит"
+        for el in soup.find_all(
+            class_=lambda c: c and any(
+                kw in c.lower() for kw in ["inn", "реквизит", "requisite", "footer"]
+            ) if c else False
+        ):
+            el_text = el.get_text()
+            m = re.search(r"(\d{10}|\d{12})", el_text)
+            if m:
+                digits = m.group(1)
+                # Validate: skip phone numbers (start with 7 or 8)
+                if digits[0] not in ("7", "8"):
+                    return digits
+
     except Exception:
         pass
     return None

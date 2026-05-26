@@ -76,13 +76,13 @@ if _bl:
 # Location is dominant for medical clinics — patients don't travel far.
 # MAX_DISTANCE_KM = 7 km: beyond this, location_score drops to 0.
 # For dental/cosmetic clinics, patients rarely go beyond their district.
-W_REVENUE = 0.10
+W_REVENUE = 0.22
 W_LOCATION = 0.15
 W_SERVICES = 0.12
-W_SPECIALIZATION = 0.15
-W_DATA = 0.18
-W_POPULARITY = 0.18
-W_VISIBILITY = 0.12
+W_SPECIALIZATION = 0.13
+W_DATA = 0.15
+W_POPULARITY = 0.13
+W_VISIBILITY = 0.10
 
 MAX_DISTANCE_KM = 7.0  # beyond this, location_score = 0
 MEGALOPOLIS_DISTANCE_KM = 25.0  # wider radius for Москва, СПб
@@ -164,6 +164,7 @@ class CompetitorMatcher:
         url: str,
         count: int = 3,
         named_competitors: Optional[list[str]] = None,
+        client_inn: str = "",
     ) -> list[CompetitorMatch]:
         """Find top-N competitors for a clinic website.
 
@@ -175,6 +176,16 @@ class CompetitorMatcher:
           5. Scrape real services from competitor websites
           6. bo.nalog.gov.ru → real tax-filed financials
           7. Score and return top-N
+
+        When named_competitors is provided without a usable website profile,
+        skips Google Maps and goes straight to named competitor lookup.
+
+        Args:
+            url: Client clinic website URL.
+            count: Number of competitors to return.
+            named_competitors: Optional list of competitor names or URLs.
+            client_inn: Optional client INN for accurate revenue lookup on nalog.
+                        When provided, skips website INN extraction.
         """
         t0 = time.monotonic()
 
@@ -192,6 +203,77 @@ class CompetitorMatcher:
             ),
         )
         logger.info("CompetitorMatcher: client profile — %s", client)
+
+        # 1.5. Look up client's real revenue on nalog (replaces specialization estimate)
+        # Priority: passed client_inn > website INN extraction > name search
+        effective_inn = client_inn.strip() if client_inn else (raw.get("inn") or "").strip()
+        client_revenue_found = False
+        if effective_inn and effective_inn.isdigit():
+            try:
+                nalog = BfoNalogClient(timeout=30.0)
+                try:
+                    nalog_results = nalog.search(effective_inn)
+                    if nalog_results:
+                        fs = nalog.get_latest_financials(nalog_results[0].id)
+                        if fs and fs.revenue and fs.revenue > 0:
+                            client.estimated_revenue = fs.revenue_rub or (fs.revenue * 1000)
+                            client_revenue_found = True
+                            logger.info(
+                                "CompetitorMatcher: client revenue from nalog = %d ₽ (INN %s)",
+                                client.estimated_revenue, effective_inn,
+                            )
+                finally:
+                    nalog.close()
+            except Exception:
+                logger.debug("CompetitorMatcher: nalog client lookup failed", exc_info=True)
+
+        if not client_revenue_found and client.company_name:
+            try:
+                nalog = BfoNalogClient(timeout=30.0)
+                try:
+                    nalog_results = nalog.search(client.company_name[:100])
+                    if nalog_results:
+                        fs = nalog.get_latest_financials(nalog_results[0].id)
+                        if fs and fs.revenue and fs.revenue > 0:
+                            client.estimated_revenue = fs.revenue_rub or (fs.revenue * 1000)
+                            logger.info(
+                                "CompetitorMatcher: client revenue from nalog (name) = %d ₽",
+                                client.estimated_revenue,
+                            )
+                finally:
+                    nalog.close()
+            except Exception:
+                logger.debug("CompetitorMatcher: nalog client name lookup failed", exc_info=True)
+
+        # If named competitors provided, skip Google Maps and go straight to lookup.
+        # The user explicitly told us who their competitors are — no need to search.
+        if named_competitors:
+            logger.info(
+                "CompetitorMatcher: named-only mode (%d names, no Google Maps)",
+                len(named_competitors),
+            )
+            profiles = await self._lookup_named_competitors(named_competitors, client)
+            candidates = self._dedup_candidates(profiles)
+            candidates = [c for c in candidates if not _is_state_healthcare(c.legal_name)]
+
+            if not candidates:
+                logger.warning("CompetitorMatcher: no named candidates found")
+                return []
+
+            # Extract INN from websites for named candidates
+            no_inn = [c for c in candidates if c.website and not (c.inn and c.inn.isdigit())]
+            if no_inn:
+                await self._extract_inn_from_websites(no_inn)
+
+            # Enrich with nalog financials
+            inn_batch = [c for c in candidates if c.inn and c.inn.isdigit()][:10]
+            if inn_batch:
+                await self._enrich_with_nalog(inn_batch)
+
+            scored = await self._score_candidates(client, candidates, count)
+            t_total = time.monotonic()
+            logger.info("CompetitorMatcher: named-only total=%.1fs", t_total - t0)
+            return scored
 
         # Geocode client city center
         if client.city:
@@ -802,7 +884,7 @@ class CompetitorMatcher:
         batch_with_inn = 0
         batch_with_revenue = 0
 
-        nalog = BfoNalogClient(timeout=10.0)
+        nalog = BfoNalogClient(timeout=30.0)
         try:
             for c in inn_candidates:
                 if c.has_real_financials() and c.revenue_year and c.revenue_year > 0:
@@ -1085,14 +1167,33 @@ async def _score_one(
 # ── Scoring components ─────────────────────────────────────────────
 
 def _score_revenue_match(client_rev: int, comp_rev: int) -> float:
-    """Score how close the competitor's revenue is to the client's.
+    """Score revenue proximity with aspiration bias.
 
-    Returns 1.0 when identical, 0.0 when difference >= 100%.
+    Peak (1.0) at 1.5x-3.0x the client's revenue — aspirational competitors
+    worth learning from. Equal revenue = 0.7 (respectable but not aspirational).
+    Below 0.3x or above 10x = near zero (too small or different league).
     """
-    if client_rev <= 0:
+    if client_rev <= 0 or comp_rev <= 0:
         return 0.5  # unknown = neutral
-    diff = abs(client_rev - comp_rev) / client_rev
-    return max(0.0, 1.0 - min(diff, 1.0))
+
+    ratio = comp_rev / client_rev
+
+    if ratio < 0.3:
+        return 0.05  # too small to matter
+    elif ratio < 0.7:
+        return 0.3 + (ratio - 0.3) / 0.4 * 0.4  # 0.3→0.7 maps to 0.3→0.7
+    elif ratio < 1.0:
+        return 0.7 + (ratio - 0.7) / 0.3 * 0.1  # 0.7→1.0 maps to 0.7→0.8
+    elif ratio <= 1.5:
+        return 0.8 + (ratio - 1.0) / 0.5 * 0.2  # 1.0→1.5 maps to 0.8→1.0
+    elif ratio <= 3.0:
+        return 1.0  # sweet spot: 1.5x-3x = aspirational peak
+    elif ratio <= 5.0:
+        return 1.0 - (ratio - 3.0) / 2.0 * 0.4  # 3.0→5.0 maps to 1.0→0.6
+    elif ratio <= 10.0:
+        return 0.6 - (ratio - 5.0) / 5.0 * 0.4  # 5.0→10.0 maps to 0.6→0.2
+    else:
+        return 0.1  # 10x+ = different league
 
 
 def _score_location(
