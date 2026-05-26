@@ -102,8 +102,8 @@ class ComparisonMatrixBuilder:
         revenue = fin.get("revenue", {})
         profit = fin.get("profit", {})
         return {
-            "latest_revenue": revenue[max(revenue.keys())] if revenue else None,
-            "latest_profit": profit[max(profit.keys())] if profit else None,
+            "latest_revenue": revenue[max(revenue.keys(), key=int)] if revenue else None,
+            "latest_profit": profit[max(profit.keys(), key=int)] if profit else None,
             "trend": fin.get("trend", ""),
         }
 
