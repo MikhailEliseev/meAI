@@ -90,11 +90,24 @@ class SocialScanner:
                 username = user_info.get("username", "")
                 full_name = user_info.get("full_name", "")
                 if name.lower() in full_name.lower() or name.lower() in username.lower():
+                    # Extract follower count, media count, and bio
+                    followers = user_info.get("follower_count", 0) or 0
+                    media_count = user_info.get("media_count", 0) or 0
+                    biography = user_info.get("biography", "") or ""
+
+                    # Derive topics from biography
+                    topics: list[str] = []
+                    if biography:
+                        topics = self._extract_bio_topics(biography)
+
                     return SocialProfile(
                         platform="instagram",
                         handle=f"@{username}",
                         url=f"https://instagram.com/{username}",
                         exists=True,
+                        subscribers=int(followers),
+                        posts_last_month=min(int(media_count), 9999),
+                        top_topics=topics,
                     )
 
             return SocialProfile(platform="instagram", handle="", exists=False)
@@ -119,11 +132,15 @@ class SocialScanner:
                     if text_el:
                         topics.append(text_el.get_text(strip=True)[:100])
 
+                # Try to extract subscriber count from tgme_page_extra
+                subscribers = self._parse_tg_subscribers(soup)
+
                 return SocialProfile(
                     platform="telegram",
                     handle=f"@{encoded}",
                     url=f"https://t.me/{encoded}",
                     exists=True,
+                    subscribers=subscribers,
                     posts_last_month=len(posts),
                     top_topics=self._extract_topics(topics),
                 )
@@ -163,11 +180,22 @@ class SocialScanner:
                     href = link.get("href", "")
                     group_name = link.get_text(strip=True)
                     if name.lower()[:5] in group_name.lower():
+                        # Try to extract member count
+                        subscribers = self._parse_vk_subscribers(group)
+
+                        # Try to extract group description for topics
+                        desc_el = group.select_one(".labeled_desc, .search_row_info")
+                        top_topics: list[str] = []
+                        if desc_el:
+                            top_topics = self._extract_bio_topics(desc_el.get_text(strip=True))
+
                         return SocialProfile(
                             platform="vk",
                             handle=href.replace("/", ""),
                             url=f"https://vk.com{href}" if href.startswith("/") else href,
                             exists=True,
+                            subscribers=subscribers,
+                            top_topics=top_topics,
                         )
 
             return SocialProfile(platform="vk", handle="", exists=False)
@@ -189,11 +217,19 @@ class SocialScanner:
                 username_match = re.search(r'"uniqueId":"([^"]+)"', resp.text)
                 if username_match:
                     username = username_match.group(1)
+
+                    # Try to extract follower count
+                    followers = 0
+                    follower_match = re.search(r'"followerCount":(\d+)', resp.text)
+                    if follower_match:
+                        followers = int(follower_match.group(1))
+
                     return SocialProfile(
                         platform="tiktok",
                         handle=f"@{username}",
                         url=f"https://tiktok.com/@{username}",
                         exists=True,
+                        subscribers=followers,
                     )
 
             return SocialProfile(platform="tiktok", handle="", exists=False)
@@ -207,6 +243,81 @@ class SocialScanner:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _parse_tg_subscribers(soup: BeautifulSoup) -> int:
+        """Extract subscriber count from Telegram channel page.
+
+        Looks for tgme_page_extra div which contains text like
+        '1 234 subscribers' or '56.7K subscribers'.
+        """
+        try:
+            extra = soup.select_one(".tgme_page_extra")
+            if extra:
+                text = extra.get_text(strip=True)
+                # Parse "1 234 subscribers" or "56.7K subscribers"
+                match = re.search(r"([\d\s.,]+[KkMm]?)\s*subscriber", text)
+                if match:
+                    raw = match.group(1).replace(",", ".").replace(" ", "")
+                    return SocialScanner._parse_abbreviated_count(raw)
+        except Exception:
+            pass
+        return 0
+
+    @staticmethod
+    def _parse_vk_subscribers(group_tag) -> int:
+        """Extract member/subscriber count from VK search result group element.
+
+        Looks for text patterns like '1 234 подписчика' or '56.7K участников'
+        in sibling elements or the group description.
+        """
+        try:
+            text = group_tag.get_text(" ", strip=True)
+            # VK shows: "12 345 подписчиков", "1.2K участников", "1 234 члена"
+            match = re.search(
+                r"([\d\s.,]+[KkМ]?)\s*(?:подписчик|участник|член|subscriber|member)",
+                text,
+            )
+            if match:
+                raw = match.group(1).replace(",", ".").replace(" ", "")
+                return SocialScanner._parse_abbreviated_count(raw)
+        except Exception:
+            pass
+        return 0
+
+    @staticmethod
+    def _parse_abbreviated_count(raw: str) -> int:
+        """Parse abbreviated count strings like '1.2K', '56M', '1234' into int."""
+        raw = raw.upper().replace("М", "M").replace("К", "K")
+        try:
+            if raw.endswith("K"):
+                return int(float(raw[:-1]) * 1_000)
+            elif raw.endswith("M"):
+                return int(float(raw[:-1]) * 1_000_000)
+            else:
+                return int(raw)
+        except (ValueError, TypeError):
+            return 0
+
+    @staticmethod
+    def _extract_bio_topics(bio_text: str, max_topics: int = 5) -> list[str]:
+        """Extract short topic phrases from a bio/description text.
+
+        Splits on punctuation and newlines, filters very short fragments,
+        returns at most max_topics items.
+        """
+        if not bio_text:
+            return []
+        topics: list[str] = []
+        # Split on common delimiters: period, comma, newline, emoji separators
+        fragments = re.split(r"[.,\n;|•·•●■♦▪▸►▶]|\s{2,}", bio_text)
+        for fragment in fragments:
+            clean = fragment.strip()
+            if 15 <= len(clean) <= 100:
+                topics.append(clean)
+                if len(topics) >= max_topics:
+                    break
+        return topics
 
     def _extract_topics(self, texts: list[str], max_topics: int = 5) -> list[str]:
         """Extract common topics from post texts (simple keyword extraction)."""
