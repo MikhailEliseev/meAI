@@ -9,17 +9,17 @@ See: .planning/ROADMAP.md (updated 2026-05-19)
 
 ## Current Position
 
-Phase: 13 ◆ Landing Page & Marketing — Wave 1 done, Wave 2 pending
-Status: **Phase 13 partial** — 2/4 done (13-01, 13-04), 2 pending (13-02, 13-03), requires tokens
-Last activity: 2026-05-20 — Phase 13-04 shipped (A/B engine + Attribution + ROI + Middleware, 31 tests)
+Phase: 13 ◆ Landing Page & Marketing — Wave 1 done, Wave 2 pending  
+Status: **Phases 19-20 done ✅ (Competitor Intelligence rebuild).** Phase 13 partial — 2/4 done, 2 pending (tokens needed)  
+Last activity: 2026-05-26 — Phase 20 shipped (Apify rebuild + bugfixes + chat markdown fix)  
 
-Progress: [████████░] 91% — 43/47 plans complete
+Progress: [████████░] 92% — 45/49 plans complete
 
 ## Performance Metrics
 
 **Velocity:**
-- Total phases: 15
-- Total plans executed: 37+
+- Total phases: 17
+- Total plans executed: 45
 
 **By Phase:**
 
@@ -37,8 +37,10 @@ Progress: [████████░] 91% — 43/47 plans complete
 | 16. Hermes Knowledge Training | 2 | Complete ✅ (SOUL.md 753 lines, 22/22 checks pass) |
 | 17. No More Mock Data | 1 | Complete ✅ (deprecated files removed, import hygiene guard, 15/15 CI tests) |
 | 18. Hermes Knowledge Bus | 2 | Complete ✅ (EventBus listener, TeacherSync, knowledge endpoints, LLM ingest) |
+| 19. Competitor Discovery Quality | 1 | Complete ✅ (8 fixes across 4 files: name scoring, services, specialization, social links) |
+| 20. Apify Competitor Intelligence | 1 | Complete ✅ (Google Maps Scraper + ApifyKeyPool + bugfixes + tests) |
 
-*Updated 2026-05-20*
+*Updated 2026-05-26*
 
 ## Pending Plans (Phase 13)
 
@@ -117,6 +119,6 @@ None — infrastructure ready for production deploy.
 
 ## Session Continuity
 
-Last session: 2026-05-20 ~22:00 GMT+3
-Stopped at: Phase 13-04 complete (31 tests), Wave 1 shipped. Wave 2 (13-02, 13-03) needs tokens.
+Last session: 2026-05-26 ~12:00 GMT+3
+Stopped at: Phase 20 complete. Chat markdown fix deployed. ROADMAP updated. All systems healthy.
 Next: 13-02 (Yandex Direct) or 13-03 (VK Ads + Telegram Ads) — depends on available tokens

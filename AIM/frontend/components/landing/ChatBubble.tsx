@@ -45,7 +45,7 @@ export function ChatBubble({ role, content, timestamp, isStreaming }: ChatBubble
         )}
       >
         {isAgent ? (
-          <div className="prose prose-sm prose-stone max-w-none [&_table]:text-xs [&_th]:text-xs [&_td]:text-xs [&_pre]:text-xs">
+          <div className="prose prose-sm prose-invert max-w-none [&_table]:text-xs [&_th]:text-xs [&_td]:text-xs [&_pre]:text-xs [&_strong]:text-ink [&_em]:text-text-muted [&_h2]:text-ink [&_h3]:text-ink [&_p]:text-ink/90 [&_li]:text-ink/90 [&_hr]:border-border-hairline">
             <Streamdown remend={isStreaming ? {} : undefined}>{content}</Streamdown>
           </div>
         ) : (
