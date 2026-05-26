@@ -162,7 +162,7 @@ class SocialScanner:
 
                 return SocialProfile(
                     platform="telegram",
-                    handle=f"@{encoded}",
+                    handle=f"@{name}",
                     url=f"https://t.me/{encoded}",
                     exists=True,
                     subscribers=subscribers,
