@@ -36,7 +36,7 @@ from .apify_google_maps import discover_competitors_google_maps
 from . import get_apify_client
 from .rusprofile.client import DaDataClient, get_dadata_client
 from .rusprofile.models import ClientProfile, CompanyProfile, CompetitorMatch
-from .scraping_service import scrape_services_batch
+from .scraping_service import scrape_services_batch, extract_inn_batch
 from .service_extractor import extract_client_profile
 
 logger = logging.getLogger(__name__)
@@ -232,13 +232,13 @@ class CompetitorMatcher:
             if not _is_self_match(c, client)
         ]
 
-        # 3. Enrich Google Maps candidates with DaData (INN + financials)
+        # 3. Extract INN from competitor websites → rusprofile for real revenue
         if gm_candidates:
-            gm_candidates = await self._enrich_gm_with_dadata(gm_candidates, client)
-        t_dadata = time.monotonic()
+            gm_candidates = await self._enrich_gm_via_inn(gm_candidates, client)
+        t_inn = time.monotonic()
         logger.info(
-            "CompetitorMatcher: dadata_enrich=%.1fs",
-            t_dadata - t_discovery,
+            "CompetitorMatcher: inn_extraction=%.1fs (%d candidates)",
+            t_inn - t_discovery, len(gm_candidates),
         )
 
         # 3.5. Merge named competitors
@@ -325,14 +325,13 @@ class CompetitorMatcher:
                 logger.info("CompetitorMatcher: diversity swap (INN) — replaced %s with %s", weakest.profile.legal_name[:30], inn_best.profile.legal_name[:30])
 
         has_real_fin = any(
-            m.profile.has_real_financials() and m.profile.data_source == "rusprofile"
+            m.profile.revenue_source == "tax_filed"
             for m in top
         )
         if not has_real_fin:
             rp_candidates = [
                 m for m in scored
-                if m.profile.has_real_financials()
-                and m.profile.data_source == "rusprofile"
+                if m.profile.revenue_source == "tax_filed"
                 and m not in top
             ]
             if rp_candidates:
@@ -347,7 +346,7 @@ class CompetitorMatcher:
         scored = top
 
         t_total = time.monotonic()
-        logger.info("CompetitorMatcher: total=%.1fs (extract=%.1fs geocode=%.1fs gm=%.1fs dadata=%.1fs)", t_total - t0, t_extract - t0, t_geocode - t_extract, t_discovery - t_geocode, t_dadata - t_discovery)
+        logger.info("CompetitorMatcher: total=%.1fs (extract=%.1fs geocode=%.1fs gm=%.1fs inn=%.1fs)", t_total - t0, t_extract - t0, t_geocode - t_extract, t_discovery - t_geocode, t_inn - t_discovery)
 
         return scored
 
@@ -370,13 +369,60 @@ class CompetitorMatcher:
             logger.warning("Geocode failed for city %s: %s", city, e)
         return None
 
+    async def _enrich_gm_via_inn(
+        self, gm_candidates: list[CompanyProfile], client: ClientProfile
+    ) -> list[CompanyProfile]:
+        """Enrich Google Maps candidates by extracting INN from their websites.
+
+        Flow:
+          1. Extract INN from each competitor's website (footer scraping)
+          2. For candidates with INN → rusprofile for real revenue
+          3. For candidates without INN → rusprofile name search (fallback)
+
+        DaData is NOT used here — INN from the website is more reliable
+        and gives us access to real tax-filed financial data via rusprofile.
+        """
+        if not gm_candidates:
+            return []
+
+        # 1. Extract INN from competitor websites in parallel
+        websites = [c.website for c in gm_candidates if c.website]
+        inn_map = await extract_inn_batch(websites, max_concurrent=8)
+
+        inn_count = 0
+        for c in gm_candidates:
+            if not c.website:
+                continue
+            inn, source_page = inn_map.get(c.website, (None, None))
+            if inn:
+                c.inn = inn
+                c.confidence = max(c.confidence, 0.85)
+                inn_count += 1
+                logger.debug("INN extracted: %s → %s from %s", c.legal_name[:40], inn, source_page)
+
+        logger.info(
+            "_enrich_gm_via_inn: INN found for %d/%d candidates",
+            inn_count, len(gm_candidates),
+        )
+
+        # 2. For candidates without INN, try rusprofile name search as fallback
+        for c in gm_candidates:
+            if not c.inn:
+                await _enrich_via_rusprofile_search(c, client)
+
+        # 3. Tag with specialization
+        for c in gm_candidates:
+            if not c.source_specialization:
+                c.source_specialization = client.specialization
+
+        return gm_candidates
+
     async def _enrich_gm_with_dadata(
         self, gm_candidates: list[CompanyProfile], client: ClientProfile
     ) -> list[CompanyProfile]:
-        """Enrich Google Maps candidates with DaData (INN + legal data + financials).
+        """[DEPRECATED] Enrich via DaData — kept for named competitors only.
 
-        Matches Google Maps names to DaData legal entities by name similarity.
-        DaData is used ONLY for enrichment here — not for primary discovery.
+        Use _enrich_gm_via_inn() for Google Maps candidates instead.
         """
         enriched: list[CompanyProfile] = []
 
@@ -472,6 +518,7 @@ class CompetitorMatcher:
                     existing.inn = p.inn
                 if not existing.revenue_year and p.revenue_year:
                     existing.revenue_year = p.revenue_year
+                    existing.revenue_source = p.revenue_source
                 existing.confidence = max(existing.confidence, p.confidence)
                 continue
             merged[key] = p
@@ -762,11 +809,21 @@ class CompetitorMatcher:
 
                 rp = get_rusprofile_client()
 
+                # Build search name: brand_name preferred, legal_name fallback
+                search_name = c.brand_name or c.legal_name
+                # Append city for better disambiguation
+                city = c.legal_address or ""
+                if search_name and city:
+                    # Extract city name from address if possible
+                    city_clean = city.split(",")[0].strip() if "," in city else city[:30]
+                    if city_clean and city_clean.lower() not in search_name.lower():
+                        search_name = f"{search_name} {city_clean}"
+
                 # Retry once on timeout (rusprofile can be slow)
                 company = None
                 for attempt in (1, 2):
                     try:
-                        company = await rp.get_by_inn(c.inn)
+                        company = await rp.get_by_inn(c.inn, name=search_name)
                         break
                     except Exception as e:
                         if attempt == 1:
@@ -802,6 +859,7 @@ class CompetitorMatcher:
                     c.revenue_year = latest_revenue
                     c.financial_year = latest_year
                     c.profit_year = latest_profit
+                    c.revenue_source = "tax_filed"
                     # Preserve discovery source (apify_google_maps, dadata) —
                     # rusprofile is financial enrichment, not a discovery source.
                     if not c.data_source or c.data_source in ("apify_google_maps", "apify_google_maps+dadata"):
@@ -975,12 +1033,12 @@ async def _score_one(
     """Score a single candidate against the client profile."""
     # Revenue match
     comp_rev = candidate.revenue_year
-    # rusprofile data is tax-filed → highest quality (0.95)
-    # DaData financials are estimates → medium (0.85)
-    # No financial data → low (0.4)
-    if candidate.data_source == "rusprofile":
+    # tax_filed = real ФНС data → highest quality (0.95)
+    # estimated = DaData/specialization fallback → medium (0.85)
+    # none = no financial data → low (0.4)
+    if candidate.revenue_source == "tax_filed":
         data_quality = 0.95
-    elif candidate.has_real_financials():
+    elif candidate.revenue_source == "estimated":
         data_quality = 0.85
     else:
         data_quality = 0.4
@@ -1450,6 +1508,7 @@ def _apply_dadata_enrichment(
         c.employee_count = r.employee_count
     if not c.revenue_year and r.revenue_year:
         c.revenue_year = r.revenue_year
+        c.revenue_source = "estimated"
     if not c.website:
         c.website = r.website
     if not c.social_links and r.social_links:
@@ -1997,7 +2056,7 @@ def _build_reason(m: CompetitorMatch, client_revenue: int = 0) -> str:
     else:
         parts.append("услуги отличаются")
 
-    if c.data_source == "rusprofile":
+    if c.revenue_source == "tax_filed":
         parts.append("данные из ФНС")
     elif m.data_quality >= 0.8:
         parts.append("реальные данные")
