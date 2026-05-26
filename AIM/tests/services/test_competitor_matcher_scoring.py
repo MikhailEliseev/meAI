@@ -193,6 +193,27 @@ class TestLocationScoring:
         score = _score_location(client, cand, city_lat=55.75, city_lon=37.62)
         assert score < 0.3  # far away
 
+    def test_megalopolis_wider_radius(self):
+        """Moscow clinics 10 km apart should still score well (25 km radius)."""
+        client = _make_client(city="Москва")
+        # Two Moscow clinics ~10 km apart (center vs outskirts)
+        cand = _make_candidate(
+            legal_address="г. Москва, ул. Профсоюзная, 100",
+            geo_lat=55.65, geo_lon=37.55,
+        )
+        score = _score_location(client, cand, city_lat=55.75, city_lon=37.62)
+        assert score > 0.5  # 10 km within 25 km radius → ~0.6
+
+    def test_non_megalopolis_tighter_radius(self):
+        """Non-megalopolis city: 10 km should score 0 (7 km limit)."""
+        client = _make_client(city="Тула")
+        cand = _make_candidate(
+            legal_address="г. Тула, ул. Ленина, 10",
+            geo_lat=54.20, geo_lon=37.62,
+        )
+        score = _score_location(client, cand, city_lat=54.30, city_lon=37.62)
+        assert score == 0.0  # ~11 km > 7 km → 0
+
 
 # ── State healthcare filter ───────────────────────────────────────────
 

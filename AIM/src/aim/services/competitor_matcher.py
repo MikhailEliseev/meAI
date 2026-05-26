@@ -84,6 +84,8 @@ W_POPULARITY = 0.18
 W_VISIBILITY = 0.12
 
 MAX_DISTANCE_KM = 7.0  # beyond this, location_score = 0
+MEGALOPOLIS_DISTANCE_KM = 25.0  # wider radius for Москва, СПб
+MEGALOPOLISES = {"Москва", "Санкт-Петербург"}
 
 # Revenue fallback by specialization (RUB/year), used when both DaData
 # and client website lack financial data.
@@ -793,11 +795,14 @@ class CompetitorMatcher:
                         latest_profit = prf
                         break
 
-                if latest_revenue is not None and latest_revenue > 0:
+                if latest_revenue is not None and latest_revenue > 0 and latest_year and latest_year >= 2000:
                     c.revenue_year = latest_revenue
                     c.financial_year = latest_year
                     c.profit_year = latest_profit
-                    c.data_source = "rusprofile"
+                    # Preserve discovery source (apify_google_maps, dadata) —
+                    # rusprofile is financial enrichment, not a discovery source.
+                    if not c.data_source or c.data_source in ("apify_google_maps", "apify_google_maps+dadata"):
+                        c.data_source = c.data_source + "+rusprofile" if c.data_source else "rusprofile"
                     enriched += 1
                     logger.debug(
                         "rusprofile: %s (INN %s) — revenue=%d RUB (%d)",
@@ -1116,7 +1121,10 @@ def _score_location(
             and city_lat is not None
             and city_lon is not None):
         distance_km = _haversine(city_lat, city_lon, candidate.geo_lat, candidate.geo_lon)
-        base_score = max(0.0, 1.0 - min(distance_km / MAX_DISTANCE_KM, 1.0))
+        # Megalopolises need wider radius — clinics can be 15-20 km apart
+        # and still compete for the same patients
+        max_dist = MEGALOPOLIS_DISTANCE_KM if (client.city and client.city in MEGALOPOLISES) else MAX_DISTANCE_KM
+        base_score = max(0.0, 1.0 - min(distance_km / max_dist, 1.0))
         if not addr_has_city and full_address:
             # Wrong city by address → cap the coordinate-based score
             # Nearby (within 50km) gets 0.4, further gets proportional penalty
