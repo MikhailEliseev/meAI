@@ -91,6 +91,10 @@ class CompetitorFull:
     positioning: str = ""
     gm_rating: float = 0.0
     gm_reviews_count: int = 0
+    yandex_rating: float = 0.0
+    yandex_reviews_count: int = 0
+    prodoctorov_rating: float = 0.0
+    prodoctorov_reviews_count: int = 0
     scraped_at: str = ""
 
 

@@ -47,8 +47,9 @@ SYSTEM_PROMPT_TEMPLATE = """Ты — Hermes, AI-аналитик агентст�
 3. ЖИВОЙ ДИАЛОГ: не лекция. Задавай вопросы, предлагай копнуть глубже. «Интересно посмотреть их цены?», «Сравнить соцсети с вашими?»
 4. КОНКРЕТИКА: показывай слабые места конкурентов с цифрами. Не «у них плохое SEO», а «40% страниц не проиндексировано, нет SSL, H1 отсутствует на 12 страницах».
 5. GOOGLE MAPS: у каждого конкурента есть gm_rating (рейтинг 0-5) и gm_reviews_count (количество отзывов). Это ключевой показатель видимости — чем больше отзывов и выше рейтинг, тем выше конкурент в локальной выдаче. Всегда сравнивай с клиентом: «У них 235 отзывов с рейтингом 4.8, у вас — 67 с 4.2».
+5b. РОССИЙСКИЕ ОТЗЫВЫ: у конкурентов также есть yandex_rating, yandex_reviews_count (Яндекс.Карты) и prodoctorov_rating, prodoctorov_reviews_count (ПроДокторов). В России основная масса отзывов — именно на этих площадках, Google Maps — лишь вершина айсберга. Всегда показывай полную картину: «На Google Maps у них 235 отзывов, но на Яндексе — 890, а на ПроДокторове — 156. Это значит, что пациенты активно оставляют отзывы именно на российских площадках.»
 6. НА РУССКОМ: отвечай на русском языке, живым экспертным тоном. Можно использовать «смотрите», «вот это поворот», «а знаете что интересно».
-7. СТРУКТУРА: HOOK → выбор конкурента → разбор (GM-видимость → финансы → SEO → соцсети → сайт → слабость) → follow-up → итог.
+7. СТРУКТУРА: HOOK → выбор конкурента → разбор (GM-видимость → Яндекс/ПроДокторов → финансы → SEO → соцсети → сайт → слабость) → follow-up → итог.
 8. ПОЛЬЗА: цель диалога — чтобы клиент ушёл с конкретными инсайтами о конкурентах и пониманием, куда двигаться.
 
 === ФОРМАТ ОТВЕТА ===
@@ -143,6 +144,18 @@ class DialogueManager:
                 parts.append(f"Google Maps: {gm_rating:.1f}★ ({gm_reviews} отзывов)")
             elif gm_rating:
                 parts.append(f"Google Maps: {gm_rating:.1f}★")
+
+            # Yandex Maps — biggest Russian platform
+            ya_rating = c.get("yandex_rating", 0)
+            ya_reviews = c.get("yandex_reviews_count", 0)
+            if ya_rating and ya_reviews:
+                parts.append(f"Яндекс: {ya_rating:.1f}★ ({ya_reviews} отзывов)")
+
+            # ProDoctorov — medical-specific
+            pd_rating = c.get("prodoctorov_rating", 0)
+            pd_reviews = c.get("prodoctorov_reviews_count", 0)
+            if pd_rating and pd_reviews:
+                parts.append(f"ПроДокторов: {pd_rating:.1f}★ ({pd_reviews} отзывов)")
 
             # Revenue — strongest number
             fin = c.get("financials", {})
@@ -268,6 +281,16 @@ class DialogueManager:
                 lines.append(f"Сайт: {url}")
             if gm_rating:
                 lines.append(f"Google Maps: **{gm_rating:.1f}★** ({gm_reviews} отзывов)")
+
+            ya_rating = c.get("yandex_rating", 0)
+            ya_reviews = c.get("yandex_reviews_count", 0)
+            if ya_rating:
+                lines.append(f"Яндекс.Карты: **{ya_rating:.1f}★** ({ya_reviews} отзывов)")
+
+            pd_rating = c.get("prodoctorov_rating", 0)
+            pd_reviews = c.get("prodoctorov_reviews_count", 0)
+            if pd_rating:
+                lines.append(f"ПроДокторов: **{pd_rating:.1f}★** ({pd_reviews} отзывов)")
             lines.append("")
 
             # Financials
