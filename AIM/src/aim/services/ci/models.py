@@ -89,6 +89,8 @@ class CompetitorFull:
     directions_claimed: int = 0
     pricing_visible: bool = False
     positioning: str = ""
+    gm_rating: float = 0.0
+    gm_reviews_count: int = 0
     scraped_at: str = ""
 
 
