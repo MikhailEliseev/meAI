@@ -1,9 +1,9 @@
 """
 run_ci_analysis — Hermes tool: CI Marketing Analysis
 
-POST http://app:8000/api/competitors/analyze
-Runs LLM-powered CI analysis with parallel data collection (SEO, social media,
-financials, website scraping). Progress messages are logged during collection.
+POST http://app:8000/api/competitors/analyze/stream (SSE)
+Consumes real-time progress events and pushes them to the global
+progress queue so the frontend sees live updates during collection.
 
 Registered in Hermes internal registry under toolset "aim-operations".
 """
@@ -25,7 +25,7 @@ def _normalize_args(first_param, defaults):
 
 
 AIM_API_BASE = "http://app:8000"
-REQUEST_TIMEOUT = 60.0  # parallel scraping of 3+ websites + analysis
+REQUEST_TIMEOUT = 90.0  # SSE streaming + parallel scraping
 
 
 async def handle_run_ci_analysis(
@@ -48,10 +48,11 @@ async def handle_run_ci_analysis(
     - Steal-worthy tactics (what to copy from competitors)
     - Top strategic recommendation
 
-    Use after find_competitors confirmed the competitor list.
+    Uses SSE streaming endpoint — progress events are pushed to the
+    global tool_progress_queue in real-time so the frontend sees:
+    "🔍 Ищу конкурентов…", "💰 Смотрю финансовую отчётность…", etc.
 
-    Note: Progress messages are logged during data collection. The caller sees
-    the final result after all data is collected (~10-30s).
+    Use after find_competitors confirmed the competitor list.
 
     Args:
         url: Client clinic website URL
@@ -88,19 +89,27 @@ async def handle_run_ci_analysis(
         return json.dumps({"error": "url is required"})
     if not competitors or len(competitors) == 0:
         return json.dumps({"error": "at least one competitor is required"})
-    # Auto-prepend https:// if URL has no protocol
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
     logger.info(
-        "Running CI analysis for URL: %s (%s, %s) with %d competitors",
+        "Running CI analysis (SSE stream) for URL: %s (%s, %s) with %d competitors",
         url, specialization, city, len(competitors),
     )
 
+    # Import push_tool_progress for real-time progress events
+    try:
+        from app.main import push_tool_progress
+    except ImportError:
+        push_tool_progress = lambda stage, msg, comp="": logger.info("[tool-progress] %s: %s", stage, msg)
+
+    result_data: dict = {}
+
     try:
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
-            response = await client.post(
-                f"{AIM_API_BASE}/api/competitors/analyze",
+            async with client.stream(
+                "POST",
+                f"{AIM_API_BASE}/api/competitors/analyze/stream",
                 json={
                     "url": url,
                     "specialization": specialization or "",
@@ -110,33 +119,64 @@ async def handle_run_ci_analysis(
                     "client_revenue": client_revenue,
                     "client_rating": client_rating,
                 },
-            )
-            response.raise_for_status()
-            data = response.json()
+            ) as response:
+                response.raise_for_status()
 
-            if not data.get("success"):
-                logger.warning("run_ci_analysis returned error: %s", data.get("error"))
-                return json.dumps({
-                    "error": "CI analysis failed",
-                    "detail": data.get("error", "Unknown error"),
-                })
+                buffer = ""
+                async for chunk in response.aiter_bytes():
+                    buffer += chunk.decode("utf-8", errors="replace")
+                    while "\n\n" in buffer:
+                        line, buffer = buffer.split("\n\n", 1)
+                        # Parse SSE frame: "data: {...}"
+                        for raw_line in line.split("\n"):
+                            raw_line = raw_line.strip()
+                            if not raw_line.startswith("data: "):
+                                continue
+                            try:
+                                event = json.loads(raw_line[6:])
+                            except json.JSONDecodeError:
+                                continue
 
-            logger.info(
-                "CI analysis complete: duration=%.1fs tactics=%d features=%d",
-                data.get("duration_seconds", 0),
-                len(data.get("steal_worthy_tactics", [])),
-                len(data.get("feature_matrix", {})),
-            )
+                            event_type = event.get("type", "")
 
+                            if event_type == "progress":
+                                # Push to global queue for real-time SSE relay
+                                push_tool_progress(
+                                    event.get("stage", ""),
+                                    event.get("message", ""),
+                                    event.get("competitor", ""),
+                                )
+
+                            elif event_type == "result":
+                                result_data = event.get("data", {})
+
+                            elif event_type == "error":
+                                logger.error("SSE stream error: %s", event.get("message"))
+                                return json.dumps({
+                                    "error": "CI analysis failed",
+                                    "detail": event.get("message", "Unknown error"),
+                                })
+
+        if not result_data:
             return json.dumps({
-                "chat_summary": data.get("chat_summary", ""),
-                "feature_matrix": data.get("feature_matrix", {}),
-                "pricing_comparison": data.get("pricing_comparison", {}),
-                "positioning_map": data.get("positioning_map", {}),
-                "steal_worthy_tactics": data.get("steal_worthy_tactics", []),
-                "top_recommendation": data.get("top_recommendation", ""),
-                "duration_seconds": data.get("duration_seconds", 0),
-            }, ensure_ascii=False, indent=2)
+                "error": "CI analysis failed",
+                "detail": "No result received from SSE stream",
+            })
+
+        logger.info(
+            "CI analysis complete: duration=%.1fs",
+            result_data.get("duration_seconds", 0),
+        )
+
+        return json.dumps({
+            "chat_summary": result_data.get("chat_summary", ""),
+            "feature_matrix": result_data.get("feature_matrix", {}),
+            "pricing_comparison": result_data.get("pricing_comparison", {}),
+            "positioning_map": result_data.get("positioning_map", {}),
+            "steal_worthy_tactics": result_data.get("steal_worthy_tactics", []),
+            "top_recommendation": result_data.get("top_recommendation", ""),
+            "duration_seconds": result_data.get("duration_seconds", 0),
+        }, ensure_ascii=False, indent=2)
 
     except httpx.HTTPStatusError as e:
         logger.error("AIM API returned error for run_ci_analysis: %s", e)

@@ -5,10 +5,12 @@ POST /api/competitors/save    — save competitor selection to pre-sale folder
 POST /api/competitors/analyze — CI marketing analysis (SWOT, features, pricing, tactics)
 """
 
+import json
 import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from aim.services.ci_marketing_analysis import CiMarketingAnalyzer
@@ -238,6 +240,89 @@ async def analyze_competitors(body: AnalyzeCompetitorsRequest) -> AnalyzeCompeti
             success=False,
             error=str(e),
         )
+
+
+@router.post("/analyze/stream")
+async def analyze_competitors_stream(body: AnalyzeCompetitorsRequest):
+    """SSE streaming variant — emits progress events during data collection.
+
+    Same analysis as /analyze but streams real-time progress via Server-Sent Events.
+    Each progress event has: stage, message, competitor_name.
+
+    Final event is a "result" type with the full CiAnalysisResult JSON.
+    """
+
+    async def generate():
+        matches = [_json_to_match(c) for c in body.competitors]
+        analyzer = CiMarketingAnalyzer(timeout=10.0)
+        result_container = {}
+
+        async def on_progress(stage: str, message: str, competitor_name: str):
+            yield f"data: {json.dumps({'type': 'progress', 'stage': stage, 'message': message, 'competitor': competitor_name}, ensure_ascii=False)}\n\n"
+
+        # We can't mix yield from callback with return value easily,
+        # so use a queue-based approach
+        import asyncio as _asyncio
+        queue: _asyncio.Queue = _asyncio.Queue()
+
+        async def progress_callback(stage: str, message: str, competitor_name: str):
+            await queue.put({"type": "progress", "stage": stage, "message": message, "competitor": competitor_name})
+
+        async def run_analysis():
+            try:
+                result = await analyzer.analyze(
+                    url=body.url,
+                    specialization=body.specialization,
+                    city=body.city,
+                    services=body.services,
+                    competitors=matches,
+                    client_revenue=body.client_revenue,
+                    client_rating=body.client_rating,
+                    on_progress=progress_callback,
+                )
+                await queue.put({"type": "result", "data": {
+                    "success": True,
+                    "chat_summary": result.chat_summary,
+                    "feature_matrix": result.feature_matrix,
+                    "pricing_comparison": result.pricing_comparison,
+                    "positioning_map": result.positioning_map,
+                    "steal_worthy_tactics": [
+                        {
+                            "source": t.source_competitor,
+                            "tactic": t.tactic_description,
+                            "why": t.why_it_works,
+                            "how": t.how_to_implement,
+                            "effort": t.estimated_effort,
+                            "impact": t.expected_impact,
+                        }
+                        for t in result.steal_worthy_tactics
+                    ],
+                    "top_recommendation": result.top_recommendation,
+                    "duration_seconds": result.analysis_duration_seconds,
+                }})
+            except Exception as e:
+                logger.exception("analyze_competitors_stream_failed")
+                await queue.put({"type": "error", "message": str(e)})
+
+        task = _asyncio.create_task(run_analysis())
+
+        while True:
+            event = await queue.get()
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+            if event["type"] in ("result", "error"):
+                break
+
+        await task
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ── Serialization helpers ──────────────────────────────────────────

@@ -41,6 +41,47 @@ from .agent_wrapper import run_agent
 from .telegram_gateway import router as telegram_router, start_polling, stop_polling
 from .knowledge_router import router as knowledge_router
 
+# ── Tool progress queue (thread-safe, for real-time SSE streaming) ──
+# Tool handlers push progress events here. The SSE generator reads them
+# concurrently while the agent runs in a background task.
+_tool_progress_queue: asyncio.Queue | None = None
+_main_event_loop: asyncio.AbstractEventLoop | None = None
+
+
+def set_tool_progress_queue(q: asyncio.Queue) -> None:
+    """Set the active progress queue for the current SSE request."""
+    global _tool_progress_queue
+    _tool_progress_queue = q
+
+
+def clear_tool_progress_queue() -> None:
+    """Clear the active progress queue after the SSE request completes."""
+    global _tool_progress_queue
+    _tool_progress_queue = None
+
+
+def push_tool_progress(stage: str, message: str, competitor: str = "") -> None:
+    """Push a progress event from any thread (thread-safe).
+
+    Tool handlers call this during long-running operations.
+    Uses call_soon_threadsafe to safely cross from tool thread to event loop.
+    Falls back to logging if no active queue or loop.
+    """
+    q = _tool_progress_queue
+    if q is None:
+        logger.info("[tool-progress] %s: %s", stage, message)
+        return
+    event = {"type": "tool-progress", "stage": stage, "message": message, "competitor": competitor}
+    loop = _main_event_loop
+    if loop is None:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            logger.info("[tool-progress] %s: %s (no event loop)", stage, message)
+            return
+    loop.call_soon_threadsafe(q.put_nowait, event)
+
+
 # ── Metrics ──────────────────────────────────────────────────────────
 _metrics = {
     "requests_total": 0,
@@ -274,11 +315,13 @@ async def chat_stream(
 ):
     """SSE streaming chat endpoint for the frontend full-page chat.
 
-    Runs the AI agent (non-streaming, OmniRoute limitation), buffers the
-    response, then streams it word-by-word via Server-Sent Events.
+    Runs the AI agent in a background task. While the agent works, tool handlers
+    push progress events via push_tool_progress(), which are streamed as
+    "tool-progress" SSE events in real-time.
 
     Emits events:
-      - step-start / step-end: tool call progress
+      - tool-progress: real-time progress during tool execution (stage, message, competitor)
+      - step-start / step-end: tool call lifecycle
       - text-delta: word-by-word reply
       - finish: session_id + completion signal
     """
@@ -292,39 +335,68 @@ async def chat_stream(
     t0 = time.time()
 
     async def generate():
+        global _main_event_loop
+        _main_event_loop = asyncio.get_running_loop()
+
+        # Create a progress queue for this request
+        queue: asyncio.Queue = asyncio.Queue()
+        set_tool_progress_queue(queue)
+
+        agent_result: dict = {}
+
         try:
-            result = await run_agent(
-                message=body.message,
-                session_id=body.session_id,
-                mode=mode,
-            )
-            reply = result.get("reply", "")
+            # Start agent in background task
+            async def run_agent_task():
+                nonlocal agent_result
+                agent_result = await run_agent(
+                    message=body.message,
+                    session_id=body.session_id,
+                    mode=mode,
+                )
+
+            agent_task = asyncio.create_task(run_agent_task())
+
+            # Yield progress events while agent runs
+            while not agent_task.done():
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=0.1)
+                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                except asyncio.TimeoutError:
+                    continue
+
+            # Drain remaining queue events
+            while not queue.empty():
+                try:
+                    event = queue.get_nowait()
+                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                except asyncio.QueueEmpty:
+                    break
+
+            reply = agent_result.get("reply", "")
             if isinstance(reply, dict):
                 reply = reply.get("response", reply.get("content", str(reply)))
             reply = str(reply)
 
-            # Emit tool call progress events
-            for tc in result.get("tool_calls", []):
+            # Emit tool call lifecycle events
+            for tc in agent_result.get("tool_calls", []):
                 tc_name = tc.get("name", tc.get("function", {}).get("name", "unknown"))
                 yield f"data: {json.dumps({'type': 'step-start', 'step': tc_name}, ensure_ascii=False)}\n\n"
                 await asyncio.sleep(0.15)
                 yield f"data: {json.dumps({'type': 'step-end', 'step': tc_name}, ensure_ascii=False)}\n\n"
 
             # Stream reply token-by-token, preserving paragraph/line breaks
-            # reply.split() destroys \n\n needed for markdown (--- hr, paragraph spacing)
             tokens = re.split(r'( +|\t+|\n+)', reply)
             for token in tokens:
                 if not token:
                     continue
                 if token.startswith('\n'):
-                    # Preserve newlines for markdown (paragraph breaks, line breaks)
                     yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': token}, ensure_ascii=False)}\n\n"
                 else:
                     yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': token}, ensure_ascii=False)}\n\n"
                 await asyncio.sleep(0.02)
 
             # Finish signal
-            yield f"data: {json.dumps({'type': 'finish', 'session_id': result.get('session_id')}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'finish', 'session_id': agent_result.get('session_id')}, ensure_ascii=False)}\n\n"
 
         except Exception as e:
             _metrics["errors_total"] += 1
@@ -332,6 +404,7 @@ async def chat_stream(
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)}, ensure_ascii=False)}\n\n"
 
         finally:
+            clear_tool_progress_queue()
             _metrics["chat_sessions_active"] = max(0, _metrics["chat_sessions_active"] - 1)
 
     elapsed = time.time() - t0

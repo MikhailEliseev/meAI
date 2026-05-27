@@ -776,8 +776,13 @@ class CiMarketingAnalyzer:
         competitors: list | None = None,
         client_revenue: int | None = None,
         client_rating: float | None = None,
+        on_progress = None,
     ) -> CiAnalysisResult:
-        """Run LLM-powered CI analysis using new parallel pipeline."""
+        """Run LLM-powered CI analysis using new parallel pipeline.
+
+        If on_progress is provided, it's called as:
+            await on_progress(stage: str, message: str, competitor_name: str)
+        """
         start = time.monotonic()
 
         try:
@@ -785,8 +790,12 @@ class CiMarketingAnalyzer:
             from .ci.comparison_matrix import ComparisonMatrixBuilder
             from .ci.dialogue_manager import DialogueManager
 
-            # 1. Run pipeline
-            runner = PipelineRunner()
+            # 1. Run pipeline (with progress callback if provided)
+            async def _progress_wrapper(progress):
+                if on_progress:
+                    await on_progress(progress.stage, progress.message, progress.competitor_name)
+
+            runner = PipelineRunner(on_progress=_progress_wrapper if on_progress else None)
             named = [getattr(c, 'url', None) or getattr(c, 'website', '') for c in (competitors or [])]
             collected = await runner.run(client_url=url, named_competitors=named)
 
