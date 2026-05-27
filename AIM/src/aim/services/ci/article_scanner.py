@@ -108,17 +108,18 @@ class ArticleScanner:
             result.total_found = len(result.articles)
             self._cache_set(name, result)
 
-        # Apply medical relevance filter post-cache (specialty varies per call)
-        if specialty:
-            filtered_articles = self._filter_by_medical_relevance(
-                result.articles, specialty
-            )
-            result = ArticleSearchResult(
-                query_name=result.query_name,
-                sources_searched=list(result.sources_searched),
-            )
-            result.articles = filtered_articles
-            result.total_found = len(filtered_articles)
+        # Always apply medical relevance filter — a doctor wouldn't publish
+        # in geology, economics, or engineering journals regardless of specialty.
+        # When specialty IS provided, articles matching it get an extra boost.
+        filtered_articles = self._filter_by_medical_relevance(
+            result.articles, specialty
+        )
+        result = ArticleSearchResult(
+            query_name=result.query_name,
+            sources_searched=list(result.sources_searched),
+        )
+        result.articles = filtered_articles
+        result.total_found = len(filtered_articles)
 
         return result
 
@@ -416,6 +417,13 @@ class ArticleScanner:
         "вестник", "науковий вісник", "научный вестник", "научной мысли",
         "agrotechnological", "agro", "food processing",
         "еколог", "ecology", "техносфер", "technosphere",
+        # Housing / Urban studies
+        "жилищ", "housing", "urban studies", "урбанист",
+        # Thermal / Power engineering
+        "термоэлектр", "thermoelectr", "теплоэнергет", "теплофиз",
+        "теплов", "энергосбережен", "энергетик", "power engineering",
+        # Materials science (non-bio)
+        "материаловед", "materials science", "порошков", "металловед",
     )
 
     # Medical/healthcare keywords. If a journal or title contains any of these,

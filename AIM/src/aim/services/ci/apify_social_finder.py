@@ -68,18 +68,20 @@ def _extract_platform_and_handle(url: str) -> tuple[str, str] | None:
             if platform == "instagram":
                 if handle_part.startswith("p/") or handle_part.startswith("reel/"):
                     return None
-                # Skip story highlights, explore, etc.
+                # Skip story highlights, explore, popular, public collections, etc.
                 if handle_part.startswith("stories/") or handle_part in (
                     "explore", "direct", "accounts",
+                    "popular", "public",
                 ):
                     return None
 
-            # Skip VK videos, wall posts, clips — not profiles
+            # Skip VK videos, wall posts, clips, albums — not profiles
             if platform == "vk":
                 if any(handle_part.startswith(p) for p in (
                     "video-", "video@", "clip-", "clip@",
                     "wall-", "wall@", "photo-", "photo@",
                     "topic-", "topic@", "market-", "market@",
+                    "album-", "album@", "event-", "event@",
                 )):
                     return None
                 # Keep only the profile part (e.g. "ortopunkt" from "ortopunkt/wall")
