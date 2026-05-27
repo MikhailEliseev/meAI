@@ -68,6 +68,8 @@ class ComparisonMatrixBuilder:
                 "id": idx,
                 "name": _sanitize_text(cf.name),
                 "url": cf.url,
+                "gm_rating": cf.gm_rating,
+                "gm_reviews_count": cf.gm_reviews_count,
                 "scraped_at": cf.scraped_at if cf.scraped_at else datetime.now(timezone.utc).isoformat(),
                 "financials": self._compact_financials(cf),
                 "seo": self._compact_seo(cf),

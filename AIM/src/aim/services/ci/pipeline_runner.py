@@ -132,7 +132,7 @@ class PipelineRunner:
         if not competitors and named_competitors:
             # CompetitorMatcher failed (no DaData/Apify), use names directly
             logger.info("PipelineRunner: falling back to raw names for %d competitors", len(named_competitors))
-            competitors = [{"name": n, "url": n if n.startswith(("http://", "https://")) else "", "inn": "", "services": []} for n in named_competitors]
+            competitors = [{"name": n, "url": n if n.startswith(("http://", "https://")) else "", "inn": "", "services": [], "gm_rating": 0.0, "gm_reviews_count": 0} for n in named_competitors]
 
         if not competitors:
             await self._emit("done", "Не смог найти конкурентов автоматически. Скиньте их сайты вручную.")
@@ -148,6 +148,8 @@ class PipelineRunner:
                 name=comp.get("name", ""),
                 url=comp.get("url", ""),
                 inn=comp.get("inn", ""),
+                gm_rating=comp.get("gm_rating", 0.0),
+                gm_reviews_count=comp.get("gm_reviews_count", 0),
             )
 
             results = await asyncio.gather(
@@ -226,6 +228,8 @@ class PipelineRunner:
                     "url": m.website or m.profile.website or "",
                     "inn": m.profile.inn,
                     "services": list(m.services) if m.services else [],
+                    "gm_rating": m.profile.rating or 0.0,
+                    "gm_reviews_count": m.profile.reviews_count or 0,
                 }
                 for m in matches[:5]
             ]
