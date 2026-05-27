@@ -122,7 +122,7 @@ class PipelineRunner:
         start = time.monotonic()
 
         # Step 1: Find competitors
-        await self._emit("searching", "Ищу конкурентов по вашему сайту...")
+        await self._emit("searching", "🔍 Ищу конкурентов в вашем городе… Анализирую рынок, определяю специализацию…")
 
         # When named_competitors are URLs, use them directly (no DaData needed)
         if named_competitors and any(n.startswith(("http://", "https://")) for n in named_competitors):
@@ -136,11 +136,11 @@ class PipelineRunner:
             competitors = [{"name": n, "url": n if n.startswith(("http://", "https://")) else "", "inn": "", "services": [], "gm_rating": 0.0, "gm_reviews_count": 0} for n in named_competitors]
 
         if not competitors:
-            await self._emit("done", "Не смог найти конкурентов автоматически. Скиньте их сайты вручную.")
+            await self._emit("done", "⚠️ Не смог найти конкурентов автоматически. Отправьте их сайты вручную, и я продолжу анализ.")
             return []
 
         names = ", ".join(c["name"][:30] for c in competitors[:4])
-        await self._emit("collecting", f"Нашёл {len(competitors)} конкурентов: {names}. Собираю данные...")
+        await self._emit("collecting", f"🎯 Нашёл {len(competitors)} конкурентов: {names}. Начинаю глубокий сбор данных по каждому…")
 
         # Step 2: Collect data in parallel for each competitor
         collected: list[CompetitorFull] = []
@@ -199,10 +199,10 @@ class PipelineRunner:
             else:
                 logger.info("Skipping %s — all collectors empty", full.name)
 
-        await self._emit("matrix", "Сравниваю с вашим сайтом...")
+        await self._emit("matrix", "📊 Строю матрицу сравнения: сопоставляю ваш сайт с каждым конкурентом по 20+ параметрам…")
 
         elapsed = int(time.monotonic() - start)
-        await self._emit("done", f"Готово! Вот что я нашёл... (заняло {elapsed} сек)")
+        await self._emit("done", f"✨ Анализ завершён за {elapsed} сек! Все данные собраны, сейчас покажу результат…")
 
         return collected
 
@@ -262,7 +262,7 @@ class PipelineRunner:
         try:
             await self._emit(
                 "financials",
-                f"Смотрю финансовую отчётность {comp['name']}...",
+                f"💰 {comp['name']}: запрашиваю финансовую отчётность в базе ФНС (bo.nalog.gov.ru)…",
                 comp["name"],
             )
 
@@ -308,7 +308,7 @@ class PipelineRunner:
         try:
             await self._emit(
                 "seo",
-                f"Проверяю SEO ошибки на сайте {name}..." if name else "Проверяю SEO ошибки на сайте...",
+                f"🔎 {name}: сканирую сайт — проверяю SEO, заголовки, мета-теги, скорость загрузки, битые ссылки…" if name else "🔎 Сканирую сайт — проверяю SEO, заголовки, мета-теги…",
                 name,
             )
 
@@ -329,7 +329,7 @@ class PipelineRunner:
         if not company_name:
             return None
         try:
-            await self._emit("social", f"Ищу соцсети {company_name}...", company_name)
+            await self._emit("social", f"📱 {company_name}: ищу аккаунты в соцсетях — Instagram, Telegram, ВКонтакте, TikTok…", company_name)
 
             def _sync():
                 scanner = SocialScanner()
@@ -361,7 +361,7 @@ class PipelineRunner:
         try:
             await self._emit(
                 "scraping",
-                f"Анализирую сайт {comp['name']}...",
+                f"🌐 {comp['name']}: захожу на сайт — изучаю фичи, цены, список врачей, позиционирование…",
                 comp["name"],
             )
 
@@ -423,7 +423,7 @@ class PipelineRunner:
         if not company_name:
             return None
         try:
-            await self._emit("reviews", f"Собираю отзывы {company_name}...", company_name)
+            await self._emit("reviews", f"⭐ {company_name}: собираю отзывы на Яндекс.Картах и ПроДокторове — открываю страницы, извлекаю рейтинги…", company_name)
 
             async def _async_collect():
                 collector = SyncReviewCollector(timeout=15.0)

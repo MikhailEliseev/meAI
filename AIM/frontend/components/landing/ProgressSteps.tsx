@@ -20,7 +20,18 @@ export function ProgressSteps({ progress }: ProgressStepsProps) {
           <span className="text-white font-bold text-xs">AI</span>
         </div>
         <div className="bg-surface-2 rounded-lg px-4 py-3 border border-border-hairline flex-1">
-          <p className="text-sm text-text-muted mb-2">{progress.step}</p>
+          {progress.liveMessage ? (
+            <motion.p
+              key={progress.liveMessage}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-sm text-text-primary mb-2"
+            >
+              {progress.liveMessage}
+            </motion.p>
+          ) : (
+            <p className="text-sm text-text-muted mb-2">{progress.step}</p>
+          )}
           <div className="w-full bg-surface-3 rounded-full h-2">
             <motion.div
               className="h-2 rounded-full bg-accent"

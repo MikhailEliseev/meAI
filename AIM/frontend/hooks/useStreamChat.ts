@@ -44,16 +44,19 @@ export interface StreamProgress {
   step: string;
   stepIndex: number;
   totalSteps: number;
+  liveMessage?: string; // real-time tool progress message (e.g. "💰 Смотрю финансовую отчётность…")
 }
 
 export type StreamStatus = "ready" | "submitted" | "streaming" | "error";
 
 interface SSEEvent {
-  type: "step-start" | "step-end" | "text-delta" | "finish" | "error";
+  type: "step-start" | "step-end" | "text-delta" | "finish" | "error" | "tool-progress";
   step?: string;
   textDelta?: string;
   session_id?: string;
   message?: string;
+  stage?: string;
+  competitor?: string;
 }
 
 export function useStreamChat() {
@@ -167,7 +170,18 @@ export function useStreamChat() {
                   break;
 
                 case "step-end":
-                  // step completed, keep progress visible
+                  // step completed, clear live message
+                  setProgress((prev) => prev ? { ...prev, liveMessage: undefined } : null);
+                  break;
+
+                case "tool-progress":
+                  // Real-time progress from tool execution (e.g. CI pipeline)
+                  setProgress((prev) => ({
+                    step: prev?.step || event.stage || "analysing",
+                    stepIndex: prev?.stepIndex ?? 0,
+                    totalSteps: prev?.totalSteps ?? 1,
+                    liveMessage: event.message,
+                  }));
                   break;
 
                 case "text-delta":
