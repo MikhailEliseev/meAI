@@ -86,6 +86,7 @@ class ComparisonMatrixBuilder:
                     "directions_claimed": cf.directions_claimed,
                     "pricing_visible": cf.pricing_visible,
                 },
+                "doctors": self._compact_doctors(cf),
             }
             competitors.append(comp)
 
@@ -120,6 +121,41 @@ class ComparisonMatrixBuilder:
             "score": cf.seo.score,
             "issues": [_sanitize_text(i) for i in cf.seo.issues[:8]],  # cap at 8 issues
         }
+
+    def _compact_doctors(self, cf: CompetitorFull) -> list[dict]:
+        """Compact doctor leaders (top-3) for the LLM matrix."""
+        result: list[dict] = []
+        for d in cf.doctors[:3]:
+            total_followers = 0
+            platforms_found = 0
+            top_topics: list[str] = []
+            if d.social:
+                for p in d.social.profiles:
+                    total_followers += p.subscribers
+                    if p.exists:
+                        platforms_found += 1
+                        top_topics.extend(p.top_topics[:2])
+
+            articles_count = len(d.articles.articles) if d.articles else 0
+            top_journals: list[str] = []
+            if d.articles:
+                journals = [a.journal for a in d.articles.articles if a.journal]
+                top_journals = list(dict.fromkeys(journals))[:3]
+
+            result.append({
+                "name": _sanitize_text(d.name),
+                "specialty": d.specialty,
+                "influence_score": d.influence_score,
+                "is_leader": d.is_leader,
+                "social": {
+                    "total_followers": total_followers,
+                    "platforms_found": platforms_found,
+                    "top_topics": top_topics[:3],
+                },
+                "articles_count": articles_count,
+                "top_journals": top_journals,
+            })
+        return result
 
     def _compact_social(self, cf: CompetitorFull) -> dict:
         if cf.social is None:

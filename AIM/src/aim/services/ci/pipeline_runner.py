@@ -7,7 +7,7 @@ import time
 from typing import Callable, Awaitable, Optional
 from urllib.parse import urlparse
 
-from .models import CompetitorFull, PipelineProgress, SeoAuditResult, SocialScanResult
+from .models import CompetitorFull, DoctorInfo, PipelineProgress, SeoAuditResult, SocialScanResult
 from .review_collector import SyncReviewCollector
 from .seo_auditor import SeoAuditor
 from .social_scanner import SocialScanner
@@ -170,6 +170,8 @@ class PipelineRunner:
                 full.seo = seo
             if social and not isinstance(social, Exception):
                 full.social = social
+
+            doctor_names: list[dict] = []
             if website and not isinstance(website, Exception):
                 full.website_features = website.get("features", [])
                 full.website_missing = website.get("missing", [])
@@ -177,12 +179,23 @@ class PipelineRunner:
                 full.directions_claimed = website.get("directions_claimed", 0)
                 full.pricing_visible = website.get("pricing_visible", False)
                 full.positioning = website.get("positioning", "")
+                doctor_names = website.get("doctor_names", [])
 
             if reviews and not isinstance(reviews, Exception):
                 full.yandex_rating = reviews.get("yandex_rating", 0.0)
                 full.yandex_reviews_count = reviews.get("yandex_reviews_count", 0)
                 full.prodoctorov_rating = reviews.get("prodoctorov_rating", 0.0)
                 full.prodoctorov_reviews_count = reviews.get("prodoctorov_reviews_count", 0)
+
+            # Collect doctor profiles and compute influence scores
+            if doctor_names:
+                await self._emit(
+                    "doctors",
+                    f"👨‍⚕️ {full.name}: анализирую врачей-лидеров — "
+                    f"{len(doctor_names)} врачей, ищу соцсети и публикации…",
+                    full.name,
+                )
+                full.doctors = await self._collect_doctors(doctor_names, full.name)
 
             # Skip competitor when ALL collectors returned nothing useful
             has_data = bool(
@@ -391,6 +404,10 @@ class PipelineRunner:
                     pricing_visible = _detect_pricing(soup)
                     positioning = _extract_positioning(soup)
 
+                    from .doctor_extractor import extract_doctors as _extract_docs
+
+                    doctor_names = _extract_docs(soup, url)
+
                     return {
                         "features": features,
                         "missing": [],
@@ -398,6 +415,7 @@ class PipelineRunner:
                         "directions_claimed": directions_claimed,
                         "pricing_visible": pricing_visible,
                         "positioning": positioning,
+                        "doctor_names": doctor_names,
                     }
                 finally:
                     client.close()
@@ -453,6 +471,118 @@ class PipelineRunner:
         except Exception as e:
             logger.warning("Review collection failed for %s: %s", company_name, e)
             return None
+
+    async def _collect_doctors(
+        self, doctor_names: list[dict], company_name: str
+    ) -> list[DoctorInfo]:
+        """Enrich extracted doctor names with social + article data.
+
+        For each doctor (up to 5): batch Apify Google Search for social
+        profiles + SocialScanner (ProDoctorov) + ArticleScanner, then
+        compute influence_score and identify leaders.
+        """
+        from .apify_social_finder import ApifySocialFinder
+        from .article_scanner import ArticleScanner
+        from .doctor_extractor import compute_influence_score, identify_leaders
+
+        names_to_scan = doctor_names[:5]
+        all_names = [doc.get("name", "") for doc in names_to_scan]
+
+        # Batch Apify social search (one actor run for all doctors)
+        apify_results: dict[str, DoctorSocialResult] = {}
+        if all_names:
+            try:
+                await self._emit(
+                    "doctors",
+                    f"🔍 {company_name}: ищу соцсети {len(all_names)} врачей через Apify…",
+                    company_name,
+                )
+                apify_finder = ApifySocialFinder()
+                apify_results = await apify_finder.find_doctors(all_names)
+                for name, sr in apify_results.items():
+                    if sr.platforms_found > 0:
+                        logger.info(
+                            "Apify found %d platforms for %s: %s",
+                            sr.platforms_found, name,
+                            [(p.platform, p.handle) for p in sr.profiles if p.exists],
+                        )
+            except Exception as e:
+                logger.warning("Apify social batch failed for %s: %s", company_name, e)
+
+        async def _scan_one(doc: dict) -> DoctorInfo:
+            d = DoctorInfo(
+                name=doc.get("name", ""),
+                specialty=doc.get("specialty", ""),
+                photo_url=doc.get("photo_url", ""),
+                bio_url=doc.get("bio_url", ""),
+            )
+
+            async def _social():
+                try:
+                    scanner = SocialScanner()
+                    try:
+                        return await asyncio.to_thread(
+                            scanner.scan_doctor, d.name
+                        )
+                    finally:
+                        scanner.close()
+                except Exception as e:
+                    logger.warning("Doctor social failed for %s: %s", d.name, e)
+                    return None
+
+            async def _articles():
+                try:
+                    ascanner = ArticleScanner()
+                    try:
+                        return await asyncio.to_thread(
+                            ascanner.search_author, d.name
+                        )
+                    finally:
+                        ascanner.close()
+                except Exception as e:
+                    logger.warning("Doctor articles failed for %s: %s", d.name, e)
+                    return None
+
+            social, articles = await asyncio.gather(
+                _social(), _articles(), return_exceptions=True,
+            )
+
+            if social and not isinstance(social, Exception):
+                d.social = social
+            if articles and not isinstance(articles, Exception):
+                d.articles = articles
+
+            # Merge Apify results — replace SocialScanner placeholders
+            apify_social = apify_results.get(d.name)
+            if apify_social and apify_social.profiles:
+                if d.social is None:
+                    d.social = apify_social
+                else:
+                    for ap in apify_social.profiles:
+                        if not ap.exists:
+                            continue
+                        replaced = False
+                        for i, existing in enumerate(d.social.profiles):
+                            if existing.platform == ap.platform and not existing.exists:
+                                d.social.profiles[i] = ap
+                                replaced = True
+                                break
+                        if not replaced:
+                            d.social.profiles.append(ap)
+                    d.social.platforms_found = sum(
+                        1 for p in d.social.profiles if p.exists
+                    )
+
+            d.influence_score = compute_influence_score(d)
+            return d
+
+        doctors = await asyncio.gather(
+            *[_scan_one(doc) for doc in names_to_scan],
+            return_exceptions=True,
+        )
+
+        result = [d for d in doctors if isinstance(d, DoctorInfo)]
+        return identify_leaders(result)
 
     async def _collect_financials_async(self, inn: str) -> Optional[dict]:
         """Public test helper — same as _collect_financials but takes INN directly."""
