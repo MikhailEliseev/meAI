@@ -439,7 +439,7 @@ class SocialScanner:
             )
 
     def _find_doctor_vk(self, name: str) -> Optional[SocialProfile]:
-        """Find a doctor's personal VK profile by name."""
+        """Find a doctor's personal VK profile by name and scrape stats."""
         try:
             encoded = urllib.parse.quote(name)
             resp = self._client.get(
@@ -462,11 +462,32 @@ class SocialScanner:
                 href = link.get("href", "")
                 person_name = link.get_text(strip=True)
                 if name.lower()[:5] in person_name.lower():
+                    url = f"https://vk.com{href}" if href.startswith("/") else href
+                    handle = href.replace("/", "")
+
+                    # Try to extract friend/subscriber count from search snippet
+                    subscribers = self._parse_vk_subscribers(person)
+
+                    # Fetch the actual profile page for more stats
+                    profile_stats = self._scrape_vk_profile(url)
+                    if profile_stats:
+                        subscribers = profile_stats.get("subscribers", subscribers)
+                        return SocialProfile(
+                            platform="vk",
+                            handle=handle,
+                            url=url,
+                            exists=True,
+                            subscribers=subscribers,
+                            posts_last_month=profile_stats.get("posts_count", 0),
+                            top_topics=profile_stats.get("topics", []),
+                        )
+
                     return SocialProfile(
                         platform="vk",
-                        handle=href.replace("/", ""),
-                        url=f"https://vk.com{href}" if href.startswith("/") else href,
+                        handle=handle,
+                        url=url,
                         exists=True,
+                        subscribers=subscribers,
                     )
 
             return SocialProfile(platform="vk", handle="", exists=False)
@@ -676,7 +697,7 @@ class SocialScanner:
         )
 
     def _parse_vk_from_url(self, url: str, doctor_name: str) -> Optional[SocialProfile]:
-        """Extract VK handle from URL."""
+        """Extract VK handle from URL and scrape profile stats."""
         match = re.search(r"vk\.(?:com|ru)/([^/?\s]+)", url)
         if not match:
             return None
@@ -684,10 +705,24 @@ class SocialScanner:
         if handle in ("search", "feed", "im", "friends", "groups", "video", "music", "apps", "market"):
             return None
 
+        profile_url = f"https://vk.com/{handle}"
+        profile_stats = self._scrape_vk_profile(profile_url)
+
+        if profile_stats:
+            return SocialProfile(
+                platform="vk",
+                handle=handle,
+                url=profile_url,
+                exists=True,
+                subscribers=profile_stats.get("subscribers", 0),
+                posts_last_month=profile_stats.get("posts_count", 0),
+                top_topics=profile_stats.get("topics", []),
+            )
+
         return SocialProfile(
             platform="vk",
             handle=handle,
-            url=f"https://vk.com/{handle}",
+            url=profile_url,
             exists=True,
         )
 
@@ -829,6 +864,104 @@ class SocialScanner:
         except Exception:
             pass
         return 0
+
+    def _scrape_vk_profile(self, url: str) -> dict:
+        """Fetch a VK profile/page and extract subscriber/friend counts and bio.
+
+        VK is heavily JS-rendered, but the initial HTML often contains:
+        - Meta og:description with follower count
+        - Inline JSON blobs with page info
+        - Static counter elements for public pages
+
+        Returns dict with keys: subscribers, posts_count, topics.
+        Empty dict if nothing could be extracted.
+        """
+        try:
+            self._rate_limit(min_delay=1.0)
+            resp = self._client.get(url, headers={"Accept-Language": "ru-RU,ru;q=0.9"})
+            if resp.status_code != 200:
+                return {}
+
+            soup = BeautifulSoup(resp.text, "html.parser")
+
+            result: dict = {}
+
+            # Strategy 1: Look for subscriber count in meta tags
+            meta_desc = soup.select_one('meta[property="og:description"]')
+            if meta_desc:
+                desc = meta_desc.get("content", "")
+                # VK og:description for profiles often contains:
+                # "Имя Фамилия. 123 друга. 45 подписчиков."
+                # or "Название. 1 234 участника."
+                patterns = [
+                    (r"([\d\s]+)\s*подписчик", "subscribers"),
+                    (r"([\d\s]+)\s*участник", "subscribers"),
+                    (r"([\d\s]+)\s*друг", "friends"),
+                    (r"([\d\s]+)\s*friend", "friends"),
+                    (r"([\d\s]+)\s*follower", "subscribers"),
+                    (r"([\d\s]+)\s*member", "subscribers"),
+                ]
+                for pattern, key in patterns:
+                    match = re.search(pattern, desc, re.IGNORECASE)
+                    if match:
+                        raw = match.group(1).replace(",", ".").replace(" ", "")
+                        count = self._parse_abbreviated_count(raw)
+                        if count > 0:
+                            if key == "friends":
+                                # Friends ≈ subscribers for personal profiles
+                                result["subscribers"] = count
+                            else:
+                                result["subscribers"] = count
+                            break
+
+            # Strategy 2: Look for inline data in scripts
+            for script in soup.select("script"):
+                text = script.string or ""
+                # VK often embeds page info as JSON in inline scripts
+                if '"members_count"' in text or '"followers_count"' in text:
+                    try:
+                        # Extract the JSON object containing these fields
+                        members_m = re.search(r'"members_count":(\d+)', text)
+                        followers_m = re.search(r'"followers_count":(\d+)', text)
+                        if members_m:
+                            result["subscribers"] = int(members_m.group(1))
+                        elif followers_m:
+                            result["subscribers"] = int(followers_m.group(1))
+                    except Exception:
+                        pass
+
+            # Strategy 3: Look for visible counters (public pages)
+            counter_selectors = [
+                ".page_members_count",
+                ".group_members_count",
+                ".profile_friends_count",
+                ".header_subscribers_count",
+            ]
+            for selector in counter_selectors:
+                el = soup.select_one(selector)
+                if el:
+                    text = el.get_text(strip=True)
+                    digits = re.sub(r"[^\d]", "", text)
+                    if digits:
+                        result["subscribers"] = int(digits)
+                        break
+
+            # Try to extract bio/description for topics
+            bio_el = (
+                soup.select_one(".profile_short_desc")
+                or soup.select_one(".page_current_info")
+                or soup.select_one(".group_description")
+            )
+            if bio_el:
+                bio_text = bio_el.get_text(strip=True)
+                if bio_text and len(bio_text) > 15:
+                    result["topics"] = self._extract_bio_topics(bio_text)
+
+            return result
+
+        except Exception as e:
+            logger.debug("VK profile scrape failed for '%s': %s", url, e)
+            return {}
 
     @staticmethod
     def _parse_abbreviated_count(raw: str) -> int:
