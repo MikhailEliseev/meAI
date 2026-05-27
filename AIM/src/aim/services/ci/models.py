@@ -75,6 +75,59 @@ class SocialScanResult:
 
 
 @dataclass
+class ArticleInfo:
+    """Single journal article or publication."""
+    title: str
+    authors: list[str] = field(default_factory=list)
+    journal: str = ""
+    year: int = 0
+    doi: str = ""
+    url: str = ""
+    citations: int = 0
+    source: str = ""  # "elibrary" | "cyberleninka" | "pubmed" | "scholar"
+    abstract: str = ""
+
+
+@dataclass
+class ArticleSearchResult:
+    """Article search results for one person/clinic."""
+    query_name: str
+    total_found: int = 0
+    articles: list[ArticleInfo] = field(default_factory=list)
+    sources_searched: list[str] = field(default_factory=list)
+    error: str = ""
+
+
+@dataclass
+class DoctorSocialResult:
+    """Social media profiles for one doctor."""
+    doctor_name: str
+    profiles: list[SocialProfile] = field(default_factory=list)
+    platforms_found: int = 0
+    error: str = ""
+
+
+@dataclass
+class DoctorInfo:
+    """Comprehensive profile of a doctor at a competitor clinic.
+
+    Combines social media presence, publications, ProDoctorov ratings,
+    and review mentions into a single influence_score (0-100).
+    """
+    name: str
+    specialty: str = ""
+    photo_url: str = ""
+    bio_url: str = ""
+    social: Optional[DoctorSocialResult] = None
+    articles: Optional[ArticleSearchResult] = None
+    prodoctorov_rating: float = 0.0
+    prodoctorov_reviews: int = 0
+    review_mentions: int = 0
+    influence_score: float = 0.0  # 0-100
+    is_leader: bool = False
+
+
+@dataclass
 class CompetitorFull:
     """All collected data for one competitor."""
     name: str
@@ -96,6 +149,7 @@ class CompetitorFull:
     prodoctorov_rating: float = 0.0
     prodoctorov_reviews_count: int = 0
     scraped_at: str = ""
+    doctors: list[DoctorInfo] = field(default_factory=list)
 
 
 @dataclass

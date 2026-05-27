@@ -49,8 +49,9 @@ SYSTEM_PROMPT_TEMPLATE = """Ты — Hermes, AI-аналитик агентст�
 5. GOOGLE MAPS: у каждого конкурента есть gm_rating (рейтинг 0-5) и gm_reviews_count (количество отзывов). Это ключевой показатель видимости — чем больше отзывов и выше рейтинг, тем выше конкурент в локальной выдаче. Всегда сравнивай с клиентом: «У них 235 отзывов с рейтингом 4.8, у вас — 67 с 4.2».
 5b. РОССИЙСКИЕ ОТЗЫВЫ: у конкурентов также есть yandex_rating, yandex_reviews_count (Яндекс.Карты) и prodoctorov_rating, prodoctorov_reviews_count (ПроДокторов). В России основная масса отзывов — именно на этих площадках, Google Maps — лишь вершина айсберга. Всегда показывай полную картину: «На Google Maps у них 235 отзывов, но на Яндексе — 890, а на ПроДокторове — 156. Это значит, что пациенты активно оставляют отзывы именно на российских площадках.»
 6. НА РУССКОМ: отвечай на русском языке, живым экспертным тоном. Можно использовать «смотрите», «вот это поворот», «а знаете что интересно».
-7. СТРУКТУРА: HOOK → выбор конкурента → разбор (GM-видимость → Яндекс/ПроДокторов → финансы → SEO → соцсети → сайт → слабость) → follow-up → итог.
+7. СТРУКТУРА: HOOK → выбор конкурента → разбор (GM-видимость → Яндекс/ПроДокторов → врачи-лидеры → финансы → SEO → соцсети → сайт → слабость) → follow-up → итог.
 8. ПОЛЬЗА: цель диалога — чтобы клиент ушёл с конкретными инсайтами о конкурентах и пониманием, куда двигаться.
+8b. ВРАЧИ-ЛИДЕРЫ: у конкурентов есть поле doctors с influence_score и is_leader. Обращай внимание на врачей с influence_score > 50 — это персональные бренды внутри клиники, которые приводят собственный поток пациентов помимо бренда. При разборе конкурента обязательно упоминай топ-врачей: имя, специальность, influence score, соцсети, публикации. Это ключевая информация — клиенту важно знать, кто «тащит» клинику у конкурентов.
 
 === ФОРМАТ ОТВЕТА ===
 - Первое сообщение (HOOK): 1-2 ярких факта на каждого конкурента, заканчивается вопросом «По кому показать сравнение первым?»
@@ -187,6 +188,21 @@ class DialogueManager:
                 parts.append(f"соцсети почти не ведут ({platforms_found} платформ из 4)")
             else:
                 parts.append(f"активны в {platforms_found} соцсетях")
+
+            # Doctor leaders — include social platforms count
+            doctors = c.get("doctors", [])
+            leader_doctors = [d for d in doctors if d.get("is_leader")]
+            if leader_doctors:
+                leader_names = []
+                for d in leader_doctors[:3]:
+                    ds = d.get("social", {})
+                    dpf = ds.get("platforms_found", 0) if isinstance(ds, dict) else 0
+                    name = d["name"]
+                    if dpf > 0:
+                        leader_names.append(f"{name} ({dpf} соцсети)")
+                    else:
+                        leader_names.append(name)
+                parts.append(f"врачи-лидеры: {', '.join(leader_names)}")
 
             facts_parts.append(f"- {name}: {', '.join(parts)}")
 
@@ -358,6 +374,29 @@ class DialogueManager:
                 lines.append(f"- Направлений заявлено: {directions}")
             lines.append(f"- Цены видны: {'Да' if pricing else 'Нет'}")
             lines.append("")
+
+            # Doctor leaders
+            doctors = c.get("doctors", [])
+            if doctors:
+                lines.append("### Врачи-лидеры")
+                for d in doctors[:3]:
+                    name = d.get("name", "?")
+                    specialty = d.get("specialty", "")
+                    score = d.get("influence_score", 0)
+                    is_leader = d.get("is_leader", False)
+                    leader_mark = "⭐" if is_leader else "  "
+                    soc = d.get("social", {})
+                    followers = soc.get("total_followers", 0)
+                    art_count = d.get("articles_count", 0)
+                    detail_parts = [f"influence={score:.0f}/100"]
+                    if specialty:
+                        detail_parts.append(specialty)
+                    if followers:
+                        detail_parts.append(f"{followers} подписчиков")
+                    if art_count:
+                        detail_parts.append(f"{art_count} публикаций")
+                    lines.append(f"- {leader_mark} **{name}**: {' | '.join(detail_parts)}")
+                lines.append("")
 
             # Positioning
             positioning = c.get("positioning", "")
