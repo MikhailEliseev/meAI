@@ -22,8 +22,62 @@ logger = logging.getLogger(__name__)
 
 _ACTOR_ID = "compass/crawler-google-places"
 _ALT_ACTOR_ID = "solidcode/google-maps-scraper-2-5-per-1-000-results"
-_DEFAULT_COUNT = 50
-_DEFAULT_TIMEOUT = timedelta(minutes=4)
+_DEFAULT_COUNT = 60
+_DEFAULT_TIMEOUT = timedelta(minutes=10)
+
+# Multi-search queries — alternative search strings per specialization to
+# catch different tiers of competitors (premium, mid, niche). GM ranks places
+# by relevance, so a generic "косметология" query tends to surface smaller
+# high-volume clinics, not the big 300M+ medical centers.
+_MULTI_SEARCH_QUERIES: dict[str, list[str]] = {
+    "косметология": [
+        "центр эстетической медицины",
+        "лазерная косметология",
+        "аппаратная косметология",
+    ],
+    "стоматология": [
+        "стоматологическая клиника",
+        "имплантация зубов",
+        "эстетическая стоматология",
+    ],
+    "пластическая хирургия": [
+        "клиника пластической хирургии",
+        "эстетическая хирургия",
+        "реконструктивная хирургия",
+    ],
+    "дерматология": [
+        "центр дерматологии",
+        "лазерная дерматология",
+        "эстетическая дерматология",
+    ],
+    "гинекология": [
+        "центр гинекологии",
+        "репродуктивная медицина",
+        "эстетическая гинекология",
+    ],
+}
+
+
+def _build_search_queries(specialization: str, city: str) -> list[str]:
+    """Generate multiple search queries to catch competitors at different tiers.
+
+    Always includes the base query (specialization + city). Adds alternative
+    queries from _MULTI_SEARCH_QUERIES if the specialization is known.
+    All queries get city appended unless already present.
+    """
+    base = specialization
+    if city and city.lower() not in specialization.lower():
+        base = f"{specialization} {city}"
+
+    queries = [base]
+    alt_phrases = _MULTI_SEARCH_QUERIES.get(specialization.lower(), [])
+    for phrase in alt_phrases:
+        if city and city.lower() not in phrase.lower():
+            queries.append(f"{phrase} {city}")
+        else:
+            queries.append(phrase)
+
+    return queries
 
 # Large-area GeoJSON polygons for major Russian cities.
 # Default city polygons in Apify are often too small (no agglomeration).
@@ -133,23 +187,45 @@ async def discover_competitors_google_maps(
     if client is None:
         raise ValueError("ApifyClient is required — create via get_apify_client() from aim.services")
 
-    # Try primary actor first
-    try:
-        profiles = await _discover_via_compass(client, specialization, city, count)
-        if profiles:
-            return profiles
-        logger.warning("Compass Google Maps returned 0 results, trying fallback actor...")
-    except Exception as e:
-        logger.warning("Compass Google Maps failed: %s — trying fallback actor...", e)
+    # Multi-search (>1 query) → SolidCode first (fast, handles multi-query well)
+    # Single search → Compass first (slower but returns social media data)
+    queries = _build_search_queries(specialization, city)
+    use_multi = len(queries) > 1
 
-    # Fallback to SolidCode
-    try:
-        profiles = await _discover_via_solidcode(client, specialization, city, count)
-        if profiles:
-            return profiles
-        logger.warning("SolidCode Google Maps also returned 0 results")
-    except Exception as e:
-        logger.error("SolidCode Google Maps also failed: %s", e)
+    if use_multi:
+        # SolidCode primary for multi-search (Compass polygon is too slow)
+        try:
+            profiles = await _discover_via_solidcode(client, specialization, city, count)
+            if profiles:
+                return profiles
+            logger.warning("SolidCode returned 0 results, trying Compass fallback...")
+        except Exception as e:
+            logger.warning("SolidCode failed: %s — trying Compass fallback...", e)
+
+        try:
+            profiles = await _discover_via_compass(client, specialization, city, count)
+            if profiles:
+                return profiles
+            logger.warning("Compass fallback also returned 0 results")
+        except Exception as e:
+            logger.error("Compass fallback also failed: %s", e)
+    else:
+        # Compass primary for single search (social media + polygon)
+        try:
+            profiles = await _discover_via_compass(client, specialization, city, count)
+            if profiles:
+                return profiles
+            logger.warning("Compass returned 0 results, trying SolidCode fallback...")
+        except Exception as e:
+            logger.warning("Compass failed: %s — trying SolidCode fallback...", e)
+
+        try:
+            profiles = await _discover_via_solidcode(client, specialization, city, count)
+            if profiles:
+                return profiles
+            logger.warning("SolidCode fallback also returned 0 results")
+        except Exception as e:
+            logger.error("SolidCode fallback also failed: %s", e)
 
     return []
 
@@ -167,19 +243,21 @@ async def _discover_via_compass(
     Falls back to free-text location for unsupported cities.
     """
     location = f"{city}, Россия" if city and "росси" not in city.lower() else city
-    search_query = specialization
-    if city and city.lower() not in specialization.lower():
-        search_query = f"{specialization} {city}"
+    search_queries = _build_search_queries(specialization, city)
 
     t0 = time.monotonic()
 
     # Build run input with expanded search area for supported cities
     custom_geo_raw = _build_city_geolocation(city)
 
+    # Distribute result limit across search queries — multi-search multiplies
+    # the crawl volume, so we reduce per-query limits to keep total manageable.
+    per_query = max(count // len(search_queries), 8)
+
     run_input: dict = {
-        "searchStringsArray": [search_query],
+        "searchStringsArray": search_queries,
         "maxResults": count,
-        "maxCrawledPlacesPerSearch": count,
+        "maxCrawledPlacesPerSearch": per_query,
         "language": "ru",
         "includeSocialMedia": True,
         "includeReviews": False,
@@ -218,8 +296,8 @@ async def _discover_via_compass(
     items = await apify.get_dataset_items(run.default_dataset_id)
     elapsed = time.monotonic() - t0
     logger.info(
-        "Compass GM: %d results for '%s' in %s (%.1fs)",
-        len(items), search_query, location, elapsed,
+        "Compass GM: %d results for %d queries (%s) in %s (%.1fs)",
+        len(items), len(search_queries), search_queries[0], location, elapsed,
     )
 
     profiles: list[CompanyProfile] = []
@@ -270,14 +348,14 @@ async def _discover_via_solidcode(
     No social media field — that's the main tradeoff.
     """
     location = f"{city}, Россия" if city and "росси" not in city.lower() else city
-    search_query = f"{specialization} {city}" if city and city.lower() not in specialization.lower() else specialization
+    search_queries = _build_search_queries(specialization, city)
 
     t0 = time.monotonic()
 
     run = await apify.call_actor(
         actor_id=_ALT_ACTOR_ID,
         run_input={
-            "searchQueries": [search_query],
+            "searchQueries": search_queries,
             "locationName": location,
             "maxResults": count,
             "language": "ru",
@@ -300,8 +378,8 @@ async def _discover_via_solidcode(
     items = await apify.get_dataset_items(run.default_dataset_id)
     elapsed = time.monotonic() - t0
     logger.info(
-        "SolidCode GM: %d results for '%s' in %s (%.1fs)",
-        len(items), search_query, location, elapsed,
+        "SolidCode GM: %d results for %d queries (%s) in %s (%.1fs)",
+        len(items), len(search_queries), search_queries[0], location, elapsed,
     )
 
     profiles: list[CompanyProfile] = []
