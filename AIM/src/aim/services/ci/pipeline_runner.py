@@ -8,6 +8,7 @@ from typing import Callable, Awaitable, Optional
 from urllib.parse import urlparse
 
 from .models import CompetitorFull, PipelineProgress, SeoAuditResult, SocialScanResult
+from .review_collector import SyncReviewCollector
 from .seo_auditor import SeoAuditor
 from .social_scanner import SocialScanner
 
@@ -157,10 +158,11 @@ class PipelineRunner:
                 self._collect_seo(full.url, full.name),
                 self._collect_social(full.name),
                 self._collect_website(comp),
+                self._collect_reviews(full.name),
                 return_exceptions=True,
             )
 
-            financials, seo, social, website = results
+            financials, seo, social, website, reviews = results
 
             if isinstance(financials, dict):
                 full.financials = financials
@@ -176,6 +178,12 @@ class PipelineRunner:
                 full.pricing_visible = website.get("pricing_visible", False)
                 full.positioning = website.get("positioning", "")
 
+            if reviews and not isinstance(reviews, Exception):
+                full.yandex_rating = reviews.get("yandex_rating", 0.0)
+                full.yandex_reviews_count = reviews.get("yandex_reviews_count", 0)
+                full.prodoctorov_rating = reviews.get("prodoctorov_rating", 0.0)
+                full.prodoctorov_reviews_count = reviews.get("prodoctorov_reviews_count", 0)
+
             # Skip competitor when ALL collectors returned nothing useful
             has_data = bool(
                 full.financials
@@ -183,6 +191,8 @@ class PipelineRunner:
                 or full.social
                 or full.website_features
                 or full.positioning
+                or full.yandex_reviews_count
+                or full.prodoctorov_reviews_count
             )
             if has_data:
                 collected.append(full)
@@ -407,6 +417,42 @@ class PipelineRunner:
                 "pricing_visible": False,
                 "positioning": "",
             }
+
+    async def _collect_reviews(self, company_name: str) -> Optional[dict]:
+        """Collect reviews from Russian platforms (Yandex Maps, ProDoctorov)."""
+        if not company_name:
+            return None
+        try:
+            await self._emit("reviews", f"Собираю отзывы {company_name}...", company_name)
+
+            async def _async_collect():
+                collector = SyncReviewCollector(timeout=15.0)
+                try:
+                    result = await collector.collect(company_name)
+                    yandex_rating = 0.0
+                    yandex_reviews = 0
+                    prodoctorov_rating = 0.0
+                    prodoctorov_reviews = 0
+                    for p in result.platforms:
+                        if p.platform == "yandex_maps":
+                            yandex_rating = p.rating
+                            yandex_reviews = p.reviews_count
+                        elif p.platform == "prodoctorov":
+                            prodoctorov_rating = p.rating
+                            prodoctorov_reviews = p.reviews_count
+                    return {
+                        "yandex_rating": yandex_rating,
+                        "yandex_reviews_count": yandex_reviews,
+                        "prodoctorov_rating": prodoctorov_rating,
+                        "prodoctorov_reviews_count": prodoctorov_reviews,
+                    }
+                finally:
+                    await collector.close()
+
+            return await _async_collect()
+        except Exception as e:
+            logger.warning("Review collection failed for %s: %s", company_name, e)
+            return None
 
     async def _collect_financials_async(self, inn: str) -> Optional[dict]:
         """Public test helper — same as _collect_financials but takes INN directly."""
