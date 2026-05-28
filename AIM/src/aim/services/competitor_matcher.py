@@ -488,10 +488,24 @@ class CompetitorMatcher:
             inn_count, len(gm_candidates),
         )
 
-        # 2. For candidates without INN, try rusprofile name search as fallback
-        for c in gm_candidates:
-            if not c.inn:
-                await _enrich_via_rusprofile_search(c, client)
+        # 2. For candidates without INN, try rusprofile name search (parallel, with timeout)
+        without_inn = [c for c in gm_candidates if not c.inn]
+        if without_inn:
+            try:
+                await asyncio.wait_for(
+                    asyncio.gather(*(
+                        _enrich_via_rusprofile_search(c, client)
+                        for c in without_inn
+                    )),
+                    timeout=30.0,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "rusprofile enrichment timed out for %d candidates",
+                    len(without_inn),
+                )
+            except Exception as e:
+                logger.warning("rusprofile enrichment error: %s", e)
 
         # 3. Tag with specialization
         for c in gm_candidates:
@@ -1650,16 +1664,22 @@ async def _enrich_via_rusprofile_search(
         logger.debug("rusprofile client unavailable: %s", e)
         return
 
+    async def _search_one(query: str) -> list[dict]:
+        try:
+            return await asyncio.wait_for(rp.search(query), timeout=10.0)
+        except asyncio.TimeoutError:
+            logger.debug("rusprofile search timed out for '%s' (query='%s')", name, query)
+            return []
+        except Exception as e:
+            logger.debug("rusprofile search failed for '%s': %s", query, e)
+            return []
+
     best_match = None
     best_score = 0.0
     best_query = name
 
     for query in queries:
-        try:
-            results = await rp.search(query)
-        except Exception as e:
-            logger.debug("rusprofile search failed for '%s': %s", query, e)
-            continue
+        results = await _search_one(query)
 
         if not results:
             continue

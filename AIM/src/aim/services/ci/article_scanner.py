@@ -380,6 +380,7 @@ class ArticleScanner:
         "финанс", "фінанс", "маркетинг", "менеджмент", "бухгалтерск",
         "economics", "economy", "finance", "accounting", "marketing",
         "management journal", "business", "property relations",
+        "ekonomik", "ekonomika", "ekonomich", "predprinimatel", "finans", "bukhgaltersk",
         # Engineering / Manufacturing
         "машиностроен", "станкостроен", "приборостроен", "металлообработк",
         "manufacturing", "machining", "machine tool",
@@ -395,26 +396,37 @@ class ArticleScanner:
         "литературовед", "philology", "linguistics",
         # History / Archaeology
         "историческ", "археолог", "этнограф", "archaeology",
+        "istorichesk", "istoriya", "etnograf",
         # Law
         "юридическ", "правовед", "государство и право",
         "law review", "law journal", "jurisprudence", "legal ",
+        "yuridich", "yuridichesk", "pravoved", "gosudarstvo i pravo",
         # Construction / Architecture
         "строитель", "архитектур", "construction", "building materials",
+        "stroitel", "stroitelny", "arkhitektur",
         # Transport
         "транспорт", "авиацион", "космическ", "aviation", "space engineering",
         # Mining / Oil & Gas
         "металлург", "горнодобыва", "нефтегаз", "нефтян",
         "metallurgy", "mining", "oil & gas", "petroleum",
+        "metallurg", "gornodobyv", "neftegaz", "neftyan",
         # Sociology / Political science
         "социолог", "политолог", "философ", "sociology", "political",
-        "philosophy",
+        "philosophy", "sotsiolog", "politolog", "filosof",
         # Pedagogy / Education (non-medical)
         "педагогик", "педагогическ", "образование и наука",
         "науки и образования", "science and education",
         "образование в высшей", "безперервної освіти",
         "pedagogy", "education research",
+        "pedagogik", "pedagogich", "obrazovanie", "obrazovaniya", "nepreryvnogo", "bezperervnoi",
         # Generic academic journals (non-medical unless from medical institution)
         "вестник", "науковий вісник", "научный вестник", "научной мысли",
+        # Latin transliterations of Russian/Ukrainian journal names
+        "vestnik", "nauchny", "nauchnyi", "nauchnii", "naukovy", "naukovi", "naukovii",
+        "zapiski", "zapisky", "zapysky",
+        "seriya", "seriia", "seria",
+        "psikholog", "psiholog", "psykholoh", "psikhologii", "psihologii",
+        "verhnevolzh",
         "agrotechnological", "agro", "food processing",
         "еколог", "ecology", "техносфер", "technosphere",
         # Housing / Urban studies
@@ -424,6 +436,13 @@ class ArticleScanner:
         "теплов", "энергосбережен", "энергетик", "power engineering",
         # Materials science (non-bio)
         "материаловед", "materials science", "порошков", "металловед",
+        # Latin transliterations: basic sciences (when not bio/medical)
+        "khimi", "khimiy", "khimia", "khimichesk",
+        "fizik", "fizika", "fizichesk",
+        "matematik", "matematika", "matematichesk",
+        "tekhnolog", "tekhnika", "tekhnichesk", "tekhnicheskii",
+        "energetik", "energetika", "energetichesk",
+        "teplofiz", "teploenerget", "termoelektr",
     )
 
     # Medical/healthcare keywords. If a journal or title contains any of these,

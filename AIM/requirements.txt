@@ -93,6 +93,7 @@ trafilatura>=2.0.0
 
 # Telegram native search — doctor channel discovery (Telethon user client)
 telethon>=1.43.0
+python-socks>=2.0.0
 
 # Phase 12: YooKassa Payment Integration
 async-yookassa>=1.0.0
