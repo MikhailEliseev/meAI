@@ -343,6 +343,7 @@ async def chat_stream(
         set_tool_progress_queue(queue)
 
         agent_result: dict = {}
+        tool_names_seen: list[str] = []  # track unique tool stages from progress events
 
         try:
             # Start agent in background task
@@ -356,19 +357,30 @@ async def chat_stream(
 
             agent_task = asyncio.create_task(run_agent_task())
 
-            # Yield progress events while agent runs
+            # Phase A — Yield progress events while agent runs.
+            # Also collect unique tool stage names so we can emit
+            # step-start / step-end lifecycle markers in Phase C.
             while not agent_task.done():
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=0.1)
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                    # Track tool names from progress events
+                    if event.get("type") == "tool-progress":
+                        stage = event.get("stage", "")
+                        if stage and stage not in tool_names_seen:
+                            tool_names_seen.append(stage)
                 except asyncio.TimeoutError:
                     continue
 
-            # Drain remaining queue events
+            # Phase B — Drain remaining queue events
             while not queue.empty():
                 try:
                     event = queue.get_nowait()
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                    if event.get("type") == "tool-progress":
+                        stage = event.get("stage", "")
+                        if stage and stage not in tool_names_seen:
+                            tool_names_seen.append(stage)
                 except asyncio.QueueEmpty:
                     break
 
@@ -377,9 +389,13 @@ async def chat_stream(
                 reply = reply.get("response", reply.get("content", str(reply)))
             reply = str(reply)
 
-            # Emit tool call lifecycle events
-            for tc in agent_result.get("tool_calls", []):
-                tc_name = tc.get("name", tc.get("function", {}).get("name", "unknown"))
+            # Phase C — Emit tool lifecycle events (from observed progress stages).
+            # Falls back to agent_result["tool_calls"] if no progress events were seen.
+            step_names = tool_names_seen or [
+                tc.get("name", tc.get("function", {}).get("name", "unknown"))
+                for tc in agent_result.get("tool_calls", [])
+            ]
+            for tc_name in step_names:
                 yield f"data: {json.dumps({'type': 'step-start', 'step': tc_name}, ensure_ascii=False)}\n\n"
                 await asyncio.sleep(0.15)
                 yield f"data: {json.dumps({'type': 'step-end', 'step': tc_name}, ensure_ascii=False)}\n\n"
