@@ -834,7 +834,7 @@ class CiMarketingAnalyzer:
             )
 
     def _chat_summary_from_matrix(self, matrix) -> str:
-        """Generate chat summary from matrix."""
+        """Generate rich chat summary from matrix — all key data points for Hermes."""
         comps = matrix.competitors
         if not comps:
             return "Не удалось найти конкурентов для анализа."
@@ -843,22 +843,82 @@ class CiMarketingAnalyzer:
         lines.append(f"Проанализировано: **{len(comps)} конкурентов**\n")
 
         for c in comps:
-            rev = c.get("financials", {}).get("latest_revenue")
-            rev_str = f"**{rev:,.0f} ₽**".replace(",", " ") if rev else "нет данных"
-            seo = c.get("seo", {}).get("score", "?")
+            name = c.get("name", "Конкурент")
+            url = c.get("url", "")
+            lines.append(f"### {name}")
+            if url:
+                lines.append(f"Сайт: {url}")
+
+            # Ratings block — Google Maps + Yandex + ProDoctorov
+            rating_parts = []
+            gm_rating = c.get("gm_rating", 0)
+            gm_reviews = c.get("gm_reviews_count", 0)
+            if gm_rating and gm_reviews:
+                rating_parts.append(f"Google Maps: **{gm_rating:.1f}★** ({gm_reviews} отзывов)")
+
+            ya_rating = c.get("yandex_rating", 0)
+            ya_reviews = c.get("yandex_reviews_count", 0)
+            if ya_rating and ya_reviews:
+                rating_parts.append(f"Яндекс: **{ya_rating:.1f}★** ({ya_reviews} отзывов)")
+
+            pd_rating = c.get("prodoctorov_rating", 0)
+            pd_reviews = c.get("prodoctorov_reviews_count", 0)
+            if pd_rating and pd_reviews:
+                rating_parts.append(f"ПроДокторов: **{pd_rating:.1f}★** ({pd_reviews} отзывов)")
+
+            if rating_parts:
+                lines.append(f"Рейтинги: {' | '.join(rating_parts)}")
+
+            # Financials
+            fin = c.get("financials", {})
+            rev = fin.get("latest_revenue")
+            if rev:
+                rev_str = f"{rev:,.0f} ₽".replace(",", " ")
+                lines.append(f"Выручка: **{rev_str}**")
+            trend = fin.get("trend", "")
+            if trend:
+                lines.append(f"Тренд: {trend}")
+
+            # SEO
+            seo = c.get("seo", {})
+            seo_score = seo.get("score")
+            if seo_score is not None:
+                lines.append(f"SEO: **{seo_score}/100**")
+            issues = seo.get("issues", [])
+            if issues:
+                lines.append(f"Ошибки: {issues[0]}")
+                if len(issues) > 1:
+                    lines.append(f"  + {issues[1]}")
+
+            # Social
             social_platforms = [
                 p for p, v in c.get("social", {}).items()
                 if isinstance(v, dict) and v.get("exists")
             ]
+            lines.append(f"Соцсети: {', '.join(social_platforms) if social_platforms else 'не обнаружены'}")
 
-            lines.append(f"### {c['name']}")
-            lines.append(f"- Выручка: {rev_str}")
-            lines.append(f"- SEO: **{seo}/100**")
-            lines.append(f"- Соцсети: {', '.join(social_platforms) if social_platforms else 'не обнаружены'}")
+            # Website features
+            website = c.get("website", {})
+            features = website.get("features", [])
+            missing = website.get("missing", [])
+            if features:
+                lines.append(f"Фишки сайта: {', '.join(features)}")
+            if missing:
+                lines.append(f"Нет на сайте: {', '.join(missing)}")
 
-            issues = c.get("seo", {}).get("issues", [])
-            if issues:
-                lines.append(f"- Ошибки: {issues[0]}{', ' + issues[1] if len(issues) > 1 else ''}")
+            # Doctor leaders
+            doctors = c.get("doctors", [])
+            if doctors:
+                leader_doctors = [d for d in doctors if d.get("is_leader")]
+                if leader_doctors:
+                    doc_names = [f"**{d['name']}** (influence {d.get('influence_score', 0):.0f})" for d in leader_doctors[:3]]
+                    lines.append(f"Врачи-лидеры: {', '.join(doc_names)}")
+
+            # Positioning
+            positioning = c.get("positioning", "")
+            if positioning:
+                lines.append(f"Позиционирование: *{positioning[:150]}*")
+
             lines.append("")
 
         return "\n".join(lines)
