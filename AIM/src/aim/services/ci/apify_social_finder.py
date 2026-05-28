@@ -16,8 +16,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import urllib.parse
 from datetime import timedelta
 from typing import Optional
+
+import httpx
+from bs4 import BeautifulSoup
 
 from ...services import get_apify_client
 from .models import DoctorSocialResult, SocialProfile
@@ -83,6 +87,9 @@ def _extract_platform_and_handle(url: str) -> tuple[str, str] | None:
                     "topic-", "topic@", "market-", "market@",
                     "album-", "album@", "event-", "event@",
                 )):
+                    return None
+                # Also catch wall<NUMBERS>_<NUMBERS> (numeric wall posts)
+                if re.match(r"wall\d+_\d+", handle_part):
                     return None
                 # Keep only the profile part (e.g. "ortopunkt" from "ortopunkt/wall")
                 handle_part = handle_part.split("/")[0]
@@ -238,6 +245,9 @@ class ApifySocialFinder:
         except Exception as e:
             logger.warning("Apify social finder batch failed: %s", e)
 
+        # ---- Enrich profiles with actual subscriber counts ----
+        await self._enrich_subscriber_counts(results)
+
         # ---- Telegram native search (Google doesn't index Telegram well) ----
         try:
             tg_finder = TelegramChannelFinder()
@@ -269,6 +279,205 @@ class ApifySocialFinder:
             dr.platforms_found = sum(1 for p in dr.profiles if p.exists)
 
         return results
+
+    async def _enrich_subscriber_counts(
+        self, results: dict[str, DoctorSocialResult]
+    ) -> None:
+        """Enrich Apify-found profiles with actual subscriber/follower counts.
+
+        Apify Google Search returns profile URLs but no stats. This method
+        scrapes each profile page to extract real subscriber counts.
+
+        Runs Instagram and VK enrichment in parallel per doctor.
+        """
+        # Collect all profiles that need enrichment
+        instagram_handles: list[tuple[str, str]] = []  # (doctor_name, handle)
+        vk_urls: list[tuple[str, str]] = []  # (doctor_name, url)
+
+        for name, dr in results.items():
+            for p in dr.profiles:
+                if not p.exists or p.subscribers > 0:
+                    continue
+                if p.platform == "instagram" and p.handle:
+                    instagram_handles.append((name, p.handle.lstrip("@")))
+                elif p.platform == "vk" and p.url:
+                    vk_urls.append((name, p.url))
+
+        if not instagram_handles and not vk_urls:
+            return
+
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(8.0),
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+                ),
+                "Accept-Language": "ru-RU,ru;q=0.9",
+            },
+            follow_redirects=True,
+        ) as client:
+            # Enrich Instagram profiles via topsearch API (parallel)
+            if instagram_handles:
+                ig_tasks = [
+                    self._enrich_instagram(client, name, handle)
+                    for name, handle in instagram_handles
+                ]
+                ig_results = await asyncio.gather(*ig_tasks, return_exceptions=True)
+                for (name, handle), result in zip(instagram_handles, ig_results):
+                    if isinstance(result, Exception):
+                        logger.debug("IG enrich failed for @%s: %s", handle, result)
+                        continue
+                    if result:
+                        dr = results[name]
+                        for p in dr.profiles:
+                            if p.platform == "instagram" and p.handle.lstrip("@") == handle:
+                                p.subscribers = result.get("subscribers", 0)
+                                p.posts_last_month = result.get("posts_last_month", 0)
+                                p.top_topics = result.get("top_topics", [])
+                                break
+
+            # Enrich VK profiles via page scraping (parallel)
+            if vk_urls:
+                vk_tasks = [
+                    self._enrich_vk(client, name, url)
+                    for name, url in vk_urls
+                ]
+                vk_results = await asyncio.gather(*vk_tasks, return_exceptions=True)
+                for (name, url), result in zip(vk_urls, vk_results):
+                    if isinstance(result, Exception):
+                        logger.debug("VK enrich failed for %s: %s", url, result)
+                        continue
+                    if result and result.get("subscribers", 0) > 0:
+                        dr = results[name]
+                        for p in dr.profiles:
+                            if p.platform == "vk" and p.url == url:
+                                p.subscribers = result.get("subscribers", 0)
+                                if result.get("topics"):
+                                    p.top_topics = result["topics"]
+                                break
+
+    @staticmethod
+    async def _enrich_instagram(
+        client: httpx.AsyncClient, name: str, handle: str
+    ) -> dict | None:
+        """Fetch Instagram profile stats via topsearch API."""
+        try:
+            encoded = urllib.parse.quote(handle)
+            resp = await client.get(
+                f"https://www.instagram.com/web/search/topsearch/?query={encoded}",
+                headers={"X-Requested-With": "XMLHttpRequest"},
+            )
+            if resp.status_code != 200:
+                return None
+
+            data = resp.json()
+            users = data.get("users", [])
+            for user in users[:5]:
+                user_info = user.get("user", {})
+                username = user_info.get("username", "")
+                if username.lower() != handle.lower():
+                    continue
+
+                followers = user_info.get("follower_count", 0) or 0
+                media_count = user_info.get("media_count", 0) or 0
+                biography = user_info.get("biography", "") or ""
+
+                topics: list[str] = []
+                if biography:
+                    # Extract medical/cosmetology topics from bio
+                    topic_keywords = [
+                        "косметолог", "дерматолог", "врач", "доктор", "клиник",
+                        "cosmetolog", "dermatolog", "doctor", "clinic",
+                        "эстетист", "antiage", "омоложен", "ботулотоксин",
+                        "филлер", "filler", "botox", "пластическ",
+                    ]
+                    bio_lower = biography.lower()
+                    for kw in topic_keywords:
+                        if kw in bio_lower:
+                            topics.append(kw)
+
+                return {
+                    "subscribers": int(followers),
+                    "posts_last_month": min(int(media_count), 9999),
+                    "top_topics": topics[:5],
+                }
+
+            return None
+        except Exception as e:
+            logger.debug("IG enrich error for @%s: %s", handle, e)
+            return None
+
+    @staticmethod
+    async def _enrich_vk(
+        client: httpx.AsyncClient, name: str, url: str
+    ) -> dict | None:
+        """Scrape VK profile page for subscriber counts."""
+        try:
+            resp = await client.get(
+                url, headers={"Accept-Language": "ru-RU,ru;q=0.9"}
+            )
+            if resp.status_code != 200:
+                return None
+
+            soup = BeautifulSoup(resp.text, "html.parser")
+
+            result: dict = {"subscribers": 0}
+
+            # Strategy 1: og:description meta
+            meta_desc = soup.select_one('meta[property="og:description"]')
+            if meta_desc:
+                desc = meta_desc.get("content", "")
+                patterns = [
+                    (r"([\d\s]+)\s*подписчик", "subscribers"),
+                    (r"([\d\s]+)\s*участник", "subscribers"),
+                    (r"([\d\s]+)\s*друг", "friends"),
+                    (r"([\d\s]+)\s*follower", "subscribers"),
+                    (r"([\d\s]+)\s*member", "subscribers"),
+                ]
+                for pattern, key in patterns:
+                    match = re.search(pattern, desc, re.IGNORECASE)
+                    if match:
+                        raw = match.group(1).replace(" ", "").replace(",", ".")
+                        try:
+                            count = int(float(raw))
+                        except ValueError:
+                            count = 0
+                        if count > 0:
+                            result["subscribers"] = count
+                            break
+
+            # Strategy 2: inline JSON with members_count/followers_count
+            if not result.get("subscribers"):
+                for script in soup.select("script"):
+                    text = script.string or ""
+                    if '"members_count"' in text or '"followers_count"' in text:
+                        members_m = re.search(r'"members_count":(\d+)', text)
+                        followers_m = re.search(r'"followers_count":(\d+)', text)
+                        if members_m:
+                            result["subscribers"] = int(members_m.group(1))
+                        elif followers_m:
+                            result["subscribers"] = int(followers_m.group(1))
+                        break
+
+            # Strategy 3: CSS counter selectors
+            if not result.get("subscribers"):
+                for selector in (
+                    ".page_members_count", ".group_members_count",
+                    ".profile_friends_count", ".header_subscribers_count",
+                ):
+                    el = soup.select_one(selector)
+                    if el:
+                        text = el.get_text(strip=True)
+                        digits = re.sub(r"[^\d]", "", text)
+                        if digits:
+                            result["subscribers"] = int(digits)
+                            break
+
+            return result if result.get("subscribers", 0) > 0 else None
+        except Exception as e:
+            logger.debug("VK enrich error for %s: %s", url, e)
+            return None
 
     async def find_doctor(self, name: str) -> DoctorSocialResult:
         """Search for a single doctor's social profiles."""
