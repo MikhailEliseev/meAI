@@ -1,7 +1,9 @@
 """
 run_seo_audit — Hermes tool: SEO Audit
 
-POST http://app:8000/api/seo/audit
+POST http://app:8000/api/seo/audit → starts async CI pipeline
+GET  http://app:8000/api/seo/audit/{task_id} → polls until done
+
 Runs a full SEO audit on a client website: technical analysis, keyword positions,
 competitor comparison, backlink profile. Returns patient acquisition potential
 (3 key numbers: patients/month, time-to-result, cost-per-patient).
@@ -9,6 +11,7 @@ competitor comparison, backlink profile. Returns patient acquisition potential
 Registered in Hermes internal registry under toolset "aim-operations".
 """
 
+import asyncio
 import json
 import logging
 
@@ -27,14 +30,15 @@ def _normalize_args(first_param, defaults):
 
 
 AIM_API_BASE = "http://app:8000"
-REQUEST_TIMEOUT = 120.0  # seconds (CI pipeline: Apify + phases 1-9)
+REQUEST_TIMEOUT = 300.0  # full async pipeline: start + polling
+POLL_INTERVAL = 2.0       # seconds between status checks
 
 
 def _compact_audit_result(data: dict) -> dict:
     """Extract only LLM-essential metrics from the full CI result (18K → ~2K)."""
     findings = data.get("findings", {})
 
-    # Helper: safely slice any iterable (list/dict/set/str)
+    # Helper: safely slice any iterable
     def _take(obj, n):
         if isinstance(obj, list):
             return obj[:n]
@@ -90,9 +94,7 @@ def _compact_audit_result(data: dict) -> dict:
 async def handle_run_seo_audit(url=None, **kwargs) -> str:
     """Run a full SEO audit on a client website.
 
-    Performs technical SEO analysis, keyword position tracking,
-    competitor comparison, and backlink profile analysis.
-    Returns patient acquisition potential metrics.
+    Starts async CI pipeline, polls until complete, returns compact result.
 
     Args:
         url: Website URL to audit (e.g., "https://clinic.ru")
@@ -115,20 +117,66 @@ async def handle_run_seo_audit(url=None, **kwargs) -> str:
 
     try:
         push_tool_progress("seo", f"🔍 Захожу на сайт {url}…")
+
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+            # Step 1: Start async audit
             push_tool_progress("seo", "⚙️ Запускаю технический аудит…")
-            response = await client.post(
+            start_response = await client.post(
                 f"{AIM_API_BASE}/api/seo/audit",
                 json={"url": url},
             )
-            response.raise_for_status()
-            push_tool_progress("seo", "📊 Собираю WOW-цифры…")
-            data = response.json()
-            compact = _compact_audit_result(data)
-            logger.info("SEO audit completed for URL: %s (compacted %d→%d chars)",
-                         url, len(json.dumps(data)), len(json.dumps(compact)))
-            push_tool_progress("seo", "✅ SEO-аудит готов!")
-            return json.dumps(compact, ensure_ascii=False, indent=2)
+            start_response.raise_for_status()
+            start_data = start_response.json()
+            task_id = start_data.get("task_id")
+            if not task_id:
+                return json.dumps({"error": "No task_id returned from SEO API"})
+
+            logger.info("SEO audit task started: %s", task_id)
+
+            # Step 2: Poll until done
+            status_url = f"{AIM_API_BASE}/api/seo/audit/{task_id}"
+            progress_messages = [
+                "📊 Анализирую структуру сайта…",
+                "🔗 Проверяю техническое SEO…",
+                "🏗️ Изучаю архитектуру и контент…",
+                "📊 Собираю WOW-цифры…",
+            ]
+            poll_count = 0
+
+            while True:
+                await asyncio.sleep(POLL_INTERVAL)
+                poll_count += 1
+
+                status_response = await client.get(status_url)
+                status_response.raise_for_status()
+                status_data = status_response.json()
+
+                st = status_data.get("status", "unknown")
+                progress_msg = status_data.get("progress", "")
+
+                if st == "done":
+                    push_tool_progress("seo", "✅ SEO-аудит готов!")
+                    data = status_data.get("result", {})
+                    compact = _compact_audit_result(data)
+                    logger.info("SEO audit completed (task %s): %d polls, compacted %d chars",
+                                task_id, poll_count, len(json.dumps(compact)))
+                    return json.dumps(compact, ensure_ascii=False, indent=2)
+
+                if st == "error":
+                    err = status_data.get("error", "Unknown error")
+                    logger.error("SEO audit failed (task %s): %s", task_id, err)
+                    return json.dumps({
+                        "error": "SEO audit failed",
+                        "detail": err,
+                    })
+
+                # Rotate progress messages every few polls
+                if progress_msg:
+                    push_tool_progress("seo", progress_msg)
+                else:
+                    idx = (poll_count // 3) % len(progress_messages)
+                    push_tool_progress("seo", progress_messages[idx])
+
     except httpx.HTTPStatusError as e:
         logger.error("AIM API returned error for SEO audit: %s", e)
         return json.dumps({

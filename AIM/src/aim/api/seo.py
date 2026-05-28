@@ -1,14 +1,16 @@
 """
 SEO Audit API Endpoint
 
-POST /api/seo/audit — Full SEO audit via CIOrchestrator.
+POST /api/seo/audit — Start async SEO audit (background CI pipeline)
+GET  /api/seo/audit/{task_id} — Poll audit status + results
+
 Wires Hermes tool run_seo_audit → Competitive Intelligence pipeline.
 """
-
 import logging
 import os
 import asyncio
 import time
+from dataclasses import dataclass, field
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
@@ -16,6 +18,19 @@ from fastapi import APIRouter, HTTPException
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/seo", tags=["seo"])
+
+# ── Background task store ─────────────────────────────────────────
+@dataclass
+class AuditTask:
+    task_id: str
+    status: str = "pending"  # pending → running → done / error
+    result: Optional[dict] = None
+    error: Optional[str] = None
+    started_at: float = 0.0
+    finished_at: float = 0.0
+    progress: str = ""
+
+_tasks: dict[str, AuditTask] = {}
 
 # Lazy-initialized orchestrator
 _orchestrator = None
@@ -35,7 +50,7 @@ async def _get_orchestrator():
         from meai.events.event_bus import EventBus
         from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
 
-        database_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./AIM/data/aim.db")
+        database_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/aim.db")
         event_bus = EventBus()
         await event_bus.initialize()
 
@@ -49,41 +64,28 @@ async def _get_orchestrator():
         return _orchestrator
 
 
-@router.post("/audit")
-async def run_seo_audit(payload: dict):
-    """Run full SEO audit via Competitive Intelligence pipeline.
-
-    Request body:
-        {
-            "url": "https://clinic.ru",
-            "competitors": ["https://competitor1.ru", "https://competitor2.ru"],  // optional
-            "niche": "стоматология",                                              // optional
-            "tier": "deep"                                                         // optional: quick/deep/full
-        }
-
-    Returns CI analysis with tech stack, content, SEO metrics, strategy.
-    """
-    url = payload.get("url", "")
-    # Hermes-agent may pass url as dict: {"url": "https://clinic.ru"}
-    if isinstance(url, dict):
-        url = url.get("url", "")
-    url = url.strip() if isinstance(url, str) else ""
-    if not url:
-        raise HTTPException(status_code=400, detail="url is required")
-
-    competitors = payload.get("competitors", [])
-    niche = payload.get("niche", "medical")
-    tier = payload.get("tier", "deep")
-
-    # Ensure client URL is first in competitors list
-    all_urls = [url] + [c for c in competitors if c != url]
-
+async def _run_audit_background(task: AuditTask, payload: dict):
+    """Execute CI pipeline in background, update task store on completion."""
     try:
+        task.status = "running"
+        task.started_at = time.time()
+
         orchestrator = await _get_orchestrator()
+        task.progress = "Запускаю анализ конкурентов…"
+
+        url = payload.get("url", "")
+        if isinstance(url, dict):
+            url = url.get("url", "")
+        url = url.strip() if isinstance(url, str) else ""
+
+        competitors = payload.get("competitors", [])
+        niche = payload.get("niche", "medical")
+        tier = payload.get("tier", "deep")
+        all_urls = [url] + [c for c in competitors if c != url]
 
         result = await orchestrator.execute_ci_analysis(
             task_data={
-                "task_id": f"seo-audit-{int(time.time())}",
+                "task_id": task.task_id,
                 "niche": niche,
                 "geo": "ru",
                 "tier": tier,
@@ -93,12 +95,74 @@ async def run_seo_audit(payload: dict):
             }
         )
 
-        logger.info("SEO audit completed: %d phases, %d competitors",
+        task.result = result
+        task.status = "done"
+        task.finished_at = time.time()
+        logger.info("SEO audit completed: %d phases, %d competitors (task %s)",
                      len(result.get("phases_executed", [])),
-                     result.get("competitors_analyzed", 0))
-
-        return result
+                     result.get("competitors_analyzed", 0),
+                     task.task_id)
 
     except Exception as e:
-        logger.exception("SEO audit failed")
-        raise HTTPException(status_code=500, detail=f"SEO audit failed: {str(e)}")
+        logger.exception("SEO audit failed (task %s)", task.task_id)
+        task.error = str(e)
+        task.status = "error"
+        task.finished_at = time.time()
+
+
+@router.post("/audit")
+async def start_seo_audit(payload: dict):
+    """Start async SEO audit via Competitive Intelligence pipeline.
+
+    Request body:
+        {
+            "url": "https://clinic.ru",
+            "competitors": ["https://competitor1.ru"],
+            "niche": "стоматология",
+            "tier": "deep"
+        }
+
+    Returns task_id immediately. Poll GET /api/seo/audit/{task_id} for results.
+    """
+    url = payload.get("url", "")
+    if isinstance(url, dict):
+        url = url.get("url", "")
+    url = url.strip() if isinstance(url, str) else ""
+    if not url:
+        raise HTTPException(status_code=400, detail="url is required")
+
+    task_id = f"seo-audit-{int(time.time())}"
+    task = AuditTask(task_id=task_id)
+    _tasks[task_id] = task
+
+    # Fire and forget — background task updates _tasks dict
+    asyncio.create_task(_run_audit_background(task, payload))
+
+    logger.info("SEO audit started: task=%s url=%s", task_id, url)
+
+    return {
+        "task_id": task_id,
+        "status": "pending",
+        "status_url": f"/api/seo/audit/{task_id}",
+    }
+
+
+@router.get("/audit/{task_id}")
+async def get_audit_status(task_id: str):
+    """Poll audit task status. Returns result when done."""
+    task = _tasks.get(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+
+    response: dict = {
+        "task_id": task.task_id,
+        "status": task.status,
+        "progress": task.progress,
+    }
+
+    if task.status == "done" and task.result:
+        response["result"] = task.result
+    elif task.status == "error":
+        response["error"] = task.error
+
+    return response
