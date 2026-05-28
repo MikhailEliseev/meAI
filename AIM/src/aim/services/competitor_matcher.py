@@ -249,35 +249,27 @@ class CompetitorMatcher:
             except Exception:
                 logger.debug("CompetitorMatcher: nalog client name lookup failed", exc_info=True)
 
-        # If named competitors provided, skip Google Maps and go straight to lookup.
-        # The user explicitly told us who their competitors are — no need to search.
+        # Split named competitors: names → two-stage search (fuzzy + web fallback),
+        # URLs → DaData lookup. We still run Google Maps below for fuzzy context.
+        named_names: list[str] = []
+        named_urls: list[str] = []
         if named_competitors:
-            logger.info(
-                "CompetitorMatcher: named-only mode (%d names, no Google Maps)",
-                len(named_competitors),
-            )
-            profiles = await self._lookup_named_competitors(named_competitors, client)
-            candidates = self._dedup_candidates(profiles)
-            candidates = [c for c in candidates if not _is_state_healthcare(c.legal_name)]
-
-            if not candidates:
-                logger.warning("CompetitorMatcher: no named candidates found")
-                return []
-
-            # Extract INN from websites for named candidates
-            no_inn = [c for c in candidates if c.website and not (c.inn and c.inn.isdigit())]
-            if no_inn:
-                await self._extract_inn_from_websites(no_inn)
-
-            # Enrich with nalog financials
-            inn_batch = [c for c in candidates if c.inn and c.inn.isdigit()][:10]
-            if inn_batch:
-                await self._enrich_with_nalog(inn_batch)
-
-            scored = await self._score_candidates(client, candidates, count)
-            t_total = time.monotonic()
-            logger.info("CompetitorMatcher: named-only total=%.1fs", t_total - t0)
-            return scored
+            for nc in named_competitors:
+                raw = nc.strip()
+                if raw.startswith("http"):
+                    named_urls.append(raw)
+                else:
+                    named_names.append(raw)
+            if named_names:
+                logger.info(
+                    "CompetitorMatcher: %d named competitors → two-stage search",
+                    len(named_names),
+                )
+            if named_urls:
+                logger.info(
+                    "CompetitorMatcher: %d named URLs → DaData lookup",
+                    len(named_urls),
+                )
 
         # Geocode client city center
         if client.city:
@@ -328,10 +320,49 @@ class CompetitorMatcher:
             t_inn - t_discovery, len(gm_candidates),
         )
 
-        # 3.5. Merge named competitors
-        if named_competitors:
-            named_profiles = await self._lookup_named_competitors(named_competitors, client)
-            gm_candidates = gm_candidates + named_profiles
+        # 3.5. Named competitors via two-stage search (fuzzy + web fallback)
+        if named_names:
+            from .named_competitor_search import find_named_competitors, search_web_for_competitor
+
+            t_named = time.monotonic()
+            named_matches = await find_named_competitors(
+                queries=named_names,
+                category_profiles=gm_candidates,
+                city=client.city or "",
+                specialization=client.specialization or "",
+                web_search_callback=search_web_for_competitor,
+            )
+            for match in named_matches:
+                if match.found_via != "none":
+                    profile = CompanyProfile(
+                        inn="",
+                        brand_name=match.brand_name or None,
+                        legal_name=match.legal_name or match.brand_name or match.query,
+                        website=match.website,
+                        rating=match.rating if match.rating > 0 else None,
+                        reviews_count=match.reviews_count if match.reviews_count > 0 else None,
+                        legal_address=match.address or None,
+                        source_specialization=client.specialization,
+                    )
+                    gm_candidates.append(profile)
+                    logger.info(
+                        "CompetitorMatcher: named '%s' → %s (via %s, fuzzy=%.0f)",
+                        match.query,
+                        match.brand_name or match.website or "?",
+                        match.found_via,
+                        match.fuzzy_score,
+                    )
+            t_named_end = time.monotonic()
+            logger.info(
+                "CompetitorMatcher: named_search=%.1fs (%d found / %d queries)",
+                t_named_end - t_named,
+                sum(1 for m in named_matches if m.found_via != "none"),
+                len(named_matches),
+            )
+
+        if named_urls:
+            url_profiles = await self._lookup_named_competitors(named_urls, client)
+            gm_candidates.extend(url_profiles)
 
         # 4. Merge duplicates (same name/INN)
         candidates = self._dedup_candidates(gm_candidates)

@@ -46,6 +46,10 @@ httpx>=0.27.0
 # Apify Platform (Phase 20 — competitor discovery)
 apify-client>=3.0.0
 
+# Named competitor search (Phase 19)
+rapidfuzz>=3.0.0
+ddgs>=9.0.0
+
 # Monitoring
 prometheus-client>=0.20.0
 structlog>=24.1.0
