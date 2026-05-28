@@ -63,17 +63,23 @@ async def handle_find_competitors(url=None, named_competitors=None, **kwargs) ->
         url = "https://" + url
 
     logger.info("Finding competitors for URL: %s, named: %s", url, named_competitors)
+
+    from app.main import push_tool_progress
+
     try:
         payload: dict = {"url": url, "count": 5}
         if named_competitors:
             payload["named_competitors"] = named_competitors
 
+        push_tool_progress("competitors", f"🔎 Извлекаю специализацию и город из {url}…")
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+            push_tool_progress("competitors", "🗺️ Ищу конкурентов через Google Maps (Apify)…")
             response = await client.post(
                 f"{AIM_API_BASE}/api/competitors/find",
                 json=payload,
             )
             response.raise_for_status()
+            push_tool_progress("competitors", "💰 Обогащаю финансовыми данными (rusprofile)…")
             data = response.json()
 
             if not data.get("success"):
@@ -86,6 +92,7 @@ async def handle_find_competitors(url=None, named_competitors=None, **kwargs) ->
             competitors = data.get("competitors", [])
             is_megalopolis = data.get("is_megalopolis", False)
             logger.info("Found %d competitors for URL: %s (megalopolis=%s)", len(competitors), url, is_megalopolis)
+            push_tool_progress("competitors", f"✅ Найдено конкурентов: {len(competitors)}")
 
             # Compact for LLM consumption — keep key fields
             compact = []
