@@ -122,7 +122,15 @@ class PipelineRunner:
         start = time.monotonic()
 
         # Step 1: Find competitors
-        await self._emit("searching", "🔍 Ищу конкурентов в вашем городе… Анализирую рынок, определяю специализацию…")
+        if named_competitors:
+            names_preview = ", ".join(n[:35] for n in named_competitors[:3])
+            await self._emit(
+                "searching",
+                f"🔎 Ищу заданных конкурентов: {names_preview}… "
+                f"Сопоставляю с рынком через Google Maps, проверяю сайты через веб-поиск…",
+            )
+        else:
+            await self._emit("searching", "🔍 Ищу конкурентов в вашем городе… Анализирую рынок, определяю специализацию…")
 
         # When named_competitors are URLs, use them directly (no DaData needed)
         if named_competitors and any(n.startswith(("http://", "https://")) for n in named_competitors):
