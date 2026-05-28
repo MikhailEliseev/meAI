@@ -42,6 +42,10 @@ from .service_extractor import extract_client_profile
 
 logger = logging.getLogger(__name__)
 
+# Limit concurrent rusprofile requests through proxy (193.111.152.14:7451 drops
+# connections when hit with 32+ parallel queries from asyncio.gather).
+_RUSPROFILE_SEMAPHORE = asyncio.Semaphore(5)
+
 # ── Megalopolis cities ──────────────────────────────────────────────
 # Auto-discovery (OSM Overpass + Yandex Maps) is unreliable for these cities
 # because the 15km radius contains too many datapoints. Skip open-data
@@ -489,15 +493,21 @@ class CompetitorMatcher:
         )
 
         # 2. For candidates without INN, try rusprofile name search (parallel, with timeout)
+        # Semaphore limits concurrency through the shared HTTP proxy
         without_inn = [c for c in gm_candidates if not c.inn]
         if without_inn:
+
+            async def _enrich_with_semaphore(c: CompanyProfile) -> None:
+                async with _RUSPROFILE_SEMAPHORE:
+                    await _enrich_via_rusprofile_search(c, client)
+
             try:
                 await asyncio.wait_for(
                     asyncio.gather(*(
-                        _enrich_via_rusprofile_search(c, client)
+                        _enrich_with_semaphore(c)
                         for c in without_inn
                     )),
-                    timeout=30.0,
+                    timeout=90.0,
                 )
             except asyncio.TimeoutError:
                 logger.warning(
