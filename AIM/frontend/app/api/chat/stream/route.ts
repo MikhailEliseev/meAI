@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 
 const HERMES_URL = process.env.HERMES_URL || "http://hermes:8000";
 const HERMES_API_KEY = process.env.HERMES_API_KEY || "";
-const HERMES_TIMEOUT_MS = 60000; // 60s for full audit + streaming
+const HERMES_TIMEOUT_MS = 300000; // 300s for async CI pipeline (start + polling)
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
