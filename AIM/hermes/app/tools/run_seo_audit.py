@@ -27,7 +27,7 @@ def _normalize_args(first_param, defaults):
 
 
 AIM_API_BASE = "http://app:8000"
-REQUEST_TIMEOUT = 30.0  # seconds
+REQUEST_TIMEOUT = 120.0  # seconds (CI pipeline: Apify + phases 1-9)
 
 
 def _compact_audit_result(data: dict) -> dict:
@@ -110,17 +110,24 @@ async def handle_run_seo_audit(url=None, **kwargs) -> str:
     if url and not url.startswith(("http://", "https://")):
         url = "https://" + url
     logger.info("Running SEO audit for URL: %s", url)
+
+    from app.main import push_tool_progress
+
     try:
+        push_tool_progress("seo", f"🔍 Захожу на сайт {url}…")
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+            push_tool_progress("seo", "⚙️ Запускаю технический аудит…")
             response = await client.post(
                 f"{AIM_API_BASE}/api/seo/audit",
                 json={"url": url},
             )
             response.raise_for_status()
+            push_tool_progress("seo", "📊 Собираю WOW-цифры…")
             data = response.json()
             compact = _compact_audit_result(data)
             logger.info("SEO audit completed for URL: %s (compacted %d→%d chars)",
                          url, len(json.dumps(data)), len(json.dumps(compact)))
+            push_tool_progress("seo", "✅ SEO-аудит готов!")
             return json.dumps(compact, ensure_ascii=False, indent=2)
     except httpx.HTTPStatusError as e:
         logger.error("AIM API returned error for SEO audit: %s", e)
