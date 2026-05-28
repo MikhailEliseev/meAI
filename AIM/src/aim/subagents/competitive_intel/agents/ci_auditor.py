@@ -8,6 +8,7 @@ CI Auditor Agent - Deep Competitor Website Audit
 - Marketing (каналы, воронки, лид-магниты)
 """
 
+import asyncio
 import os
 from typing import Any, Dict, List, Optional
 from datetime import datetime
@@ -266,24 +267,33 @@ class CIAuditorAgent(Agent):
                     pagespeed = await self._fetch_pagespeed(client, url)
 
                 for check_key, check_name in checks.items():
-                    score, status, details = await self._score_real_check(
-                        check_key, url, final_url, html, soup, pagespeed, resp, client
-                    )
-                    results[check_key] = {
-                        "name": check_name,
-                        "score": score,
-                        "status": status,
-                        "details": details,
-                    }
+                    try:
+                        score, status, details = await self._score_real_check(
+                            check_key, url, final_url, html, soup, pagespeed, resp, client
+                        )
+                        results[check_key] = {
+                            "name": check_name,
+                            "score": score,
+                            "status": status,
+                            "details": details,
+                        }
+                    except Exception as e:
+                        results[check_key] = {
+                            "name": check_name,
+                            "score": None,
+                            "status": "error",
+                            "details": f"Audit failed: {str(e)[:200]}",
+                        }
 
         except Exception as e:
             for check_key, check_name in checks.items():
-                results[check_key] = {
-                    "name": check_name,
-                    "score": None,
-                    "status": "error",
-                    "details": f"Audit failed: {str(e)[:200]}",
-                }
+                if check_key not in results:
+                    results[check_key] = {
+                        "name": check_name,
+                        "score": None,
+                        "status": "error",
+                        "details": f"Audit failed: {str(e)[:200]}",
+                    }
 
         return results
 
@@ -359,7 +369,10 @@ class CIAuditorAgent(Agent):
 
         scorer = scorer_map.get(check_key)
         if scorer:
-            return scorer(soup, html, url, final_url, pagespeed, response, client)
+            result = scorer(soup, html, url, final_url, pagespeed, response, client)
+            if asyncio.iscoroutine(result):
+                return await result
+            return result
         return (None, "unavailable", "No scorer implemented")
 
     # ── Technical scorers ──────────────────────────────────────────
@@ -407,7 +420,7 @@ class CIAuditorAgent(Agent):
         else:
             return (30, "poor", "No viewport meta tag — likely not mobile-friendly")
 
-    def _score_https(self, soup, html, url, final_url, response, client) -> tuple:
+    def _score_https(self, soup, html, url, final_url, pagespeed, response, client) -> tuple:
         is_https = final_url.startswith("https://")
         hsts = response.headers.get("strict-transport-security", "")
         if is_https and hsts:
