@@ -702,8 +702,8 @@ class CIOrchestrator(Agent):
         logger.info(f"Starting report generation for task {task_id}")
 
         try:
-            # Generate reports directory
-            reports_dir = Path("AIM/reports") / task_id
+            # Generate reports directory (absolute path from module location)
+            reports_dir = Path(__file__).resolve().parents[5] / "reports" / task_id
             reports_dir.mkdir(parents=True, exist_ok=True)
 
             # Generate simple HTML report
