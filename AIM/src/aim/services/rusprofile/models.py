@@ -9,12 +9,21 @@ class CompanyProfile:
     """Company profile from DaData / SPARK / rusprofile.
 
     Primary key: inn (taxpayer identification number).
+    Supports multi-entity clinics: inns list collects all legal entities
+    found on a clinic website (different INNs under different licenses).
     """
 
     inn: str
     ogrn: Optional[str] = None
     legal_name: str = ""
     brand_name: Optional[str] = None
+
+    # Multi-entity support: some clinics operate under multiple legal entities
+    # with different INNs (e.g. two licenses under two ООО).
+    # inns = ALL valid INNs found on the website; inn = primary (best-scoring).
+    inns: list[str] = field(default_factory=list)
+    licenses: list[dict] = field(default_factory=list)
+    is_multi_entity: bool = False
 
     # Financials (annual, RUB)
     revenue_year: Optional[int] = None

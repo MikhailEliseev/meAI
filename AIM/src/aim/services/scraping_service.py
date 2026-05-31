@@ -171,11 +171,15 @@ _INN_PAGES = [
     "/about",               # about page
     "/o-kompanii",          # Russian variant
     "/o-nas",               # "about us" Russian variant
+    "/o-klinike",           # "about clinic"
     "/policy",              # privacy policy
     "/privacy",             # privacy policy alt
     "/pravovaya-informatsiya",  # legal information
     "/docs",                # documents
     "/rekvizity",           # company details
+    "/license",             # license page
+    "/licenses",            # license page alt
+    "/licenzii",            # Russian variant
 ]
 
 # Known third-party INNs — these are NOT clinic INNs
@@ -206,6 +210,104 @@ _CLINIC_INN_MARKERS = [
     "косметолог", "ooо", "ао", "зао",
 ]
 
+# ── License extraction ──────────────────────────────────────────────
+# Russian medical licenses follow these patterns:
+#   Л041-01137-77/00307723  (new format, Moscow)
+#   ЛО-77-01-012345         (old format)
+#   ЛО-50-01-009876         (Moscow region old format)
+#   ФС-77-01-012345         (Federal Service format)
+
+_LICENSE_NUMBER_RE = re.compile(
+    r"(?:Лицензи[яи]\s*(?:на\s+(?:осуществление\s+)?медицинскую\s+деятельность\s*)?)?"
+    r"(?:[№#]\s*)?"
+    r"([ЛФ]0?\d{1,4}[-–—]\d{2,4}[-–—]?\d{2,4}[-–—]?\d{2,4}[-–—/]\d{5,10})",
+    re.IGNORECASE,
+)
+
+_LICENSE_DATE_RE = re.compile(
+    r"(?:от|выдана|дата выдачи)\s*[:\s]*(\d{1,2}[./]\d{1,2}[./]\d{2,4})",
+    re.IGNORECASE,
+)
+
+_LICENSE_ENTITY_NEAR_RE = re.compile(
+    r'(?:ООО|АО|ЗАО|ИП|ПАО)\s*[«"]([^«»""]{3,80})[»""]',
+    re.IGNORECASE,
+)
+
+_LICENSE_AUTHORITY_RE = re.compile(
+    r"(?:выдана?\s*|лицензирующий\s+орган[:\s]*|Департамент[а]?\s+здравоохранения[:\s]*)"
+    r"([^.]+?(?:здрав|надзор|Росздравнадзор|Минздрав|лицензирования)[^.]*)",
+    re.IGNORECASE,
+)
+
+
+def _extract_licenses_from_html(html: str, page_path: str = "") -> list[dict]:
+    """Extract medical license details from HTML content.
+
+    Finds license numbers, dates, legal entity names, INNs, and
+    issuing authorities from Russian clinic websites.
+
+    Returns a list of dicts:
+        [{number, date, legal_name, inn, authority, page_source}]
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    text = soup.get_text(separator=" ", strip=True)
+
+    # Find all license matches first
+    lic_matches = [(m.group(1).strip(), m.start(), m.end()) for m in _LICENSE_NUMBER_RE.finditer(text)]
+
+    licenses: list[dict] = []
+    seen_numbers: set[str] = set()
+
+    for i, (lic_number, lic_start, lic_end) in enumerate(lic_matches):
+        if lic_number in seen_numbers:
+            continue
+        seen_numbers.add(lic_number)
+
+        # Context: from license match to next license match (or +400 chars)
+        next_start = lic_matches[i + 1][1] if i + 1 < len(lic_matches) else len(text)
+        ctx = text[lic_start:min(next_start, lic_end + 400)]
+
+        # Date — look in the text AFTER the license number
+        date_match = _LICENSE_DATE_RE.search(ctx)
+        lic_date = date_match.group(1) if date_match else ""
+
+        # Legal entity — find the FIRST entity AFTER this license match
+        entity_match = _LICENSE_ENTITY_NEAR_RE.search(ctx)
+        legal_name = entity_match.group(1) if entity_match else ""
+
+        # INN — find the FIRST INN AFTER this license match
+        inn_match = _INN_RE.search(ctx)
+        inn = ""
+        if inn_match:
+            inn_raw = (inn_match.group(1) or inn_match.group(2) or "").strip()
+            inn_raw = inn_raw.split("/")[0].strip()
+            inn = re.sub(r"\D", "", inn_raw)
+            if len(inn) not in (10, 12):
+                inn = ""
+
+        # Authority
+        auth_match = _LICENSE_AUTHORITY_RE.search(ctx)
+        authority = auth_match.group(1).strip() if auth_match else ""
+
+        licenses.append({
+            "number": lic_number,
+            "date": lic_date,
+            "legal_name": legal_name,
+            "inn": inn,
+            "authority": authority,
+            "page_source": page_path,
+        })
+
+    if licenses:
+        logger.debug(
+            "_extract_licenses: %d license(s) from %s: %s",
+            len(licenses), page_path,
+            [(l["number"], l["legal_name"], l["inn"]) for l in licenses],
+        )
+
+    return licenses
+
 
 async def _fetch_page(client: httpx.AsyncClient, url: str, path: str) -> str | None:
     """Fetch a single page, return text or None on failure."""
@@ -219,26 +321,26 @@ async def _fetch_page(client: httpx.AsyncClient, url: str, path: str) -> str | N
     return None
 
 
-def _extract_inn_from_html(html: str, page_path: str = "") -> str | None:
-    """Search HTML for INN patterns and return the best candidate.
+def _extract_inn_from_html(html: str, page_path: str = "", min_score: float = -3.0) -> list[str]:
+    """Search HTML for INN patterns and return ALL valid candidates.
 
     Collects ALL INNs found on the page, scores each by context,
-    and returns the highest-scoring valid INN.
+    and returns all INNs with score >= min_score, deduplicated,
+    sorted by score descending.
+
+    A medical clinic may have multiple legal entities (different INNs)
+    listed on the same website — e.g. two licenses under different ООО.
 
     Scoring:
       - Starts at 5.0 (neutral)
       - +2: Found in <footer> (most reliable location)
-      - +1: Near clinic markers (ОГРН, КПП, ОКВЭД, клиника, etc.)
-      - +3: Near legal entity markers (ООО, АО, ЗАО)
-      - -5: Known third-party INN (Яндекс, Сбер, CloudPayments)
+      - +1.5: Near clinic markers (ОГРН, КПП, ОКВЭД, клиника, etc.)
       - -3: Near third-party markers (яндекс, сбер, веб-студия)
+      - -50: Known third-party INN (Яндекс, Сбер, CloudPayments) — hard reject
       - +2: High-priority page (/about, /contacts, /rekvizity)
       - -2: Low-priority page (/policy, /privacy)
     """
     soup = BeautifulSoup(html, "html.parser")
-
-    # Collect all candidate INNs with their context
-    candidates: list[tuple[str, int]] = []  # (inn, context_window_start)
 
     # Build search texts with metadata
     search_blocks: list[tuple[str, int, bool]] = []  # (text, priority, is_footer)
@@ -257,40 +359,51 @@ def _extract_inn_from_html(html: str, page_path: str = "") -> str | None:
     if body:
         search_blocks.append((body.get_text(separator=" ", strip=True), 2, False))
 
-    # Find ALL INN matches across all blocks
-    all_matches: list[tuple[str, str, int, bool]] = []  # (inn, context_text, priority, is_footer)
+    # Find ALL INN matches across all blocks — collect (inn, score) pairs
+    scored: dict[str, float] = {}  # inn → best score seen
     for text, priority, is_footer in search_blocks:
         for m in _INN_RE.finditer(text):
             inn = (m.group(1) or m.group(2) or "").strip()
             inn = inn.split("/")[0].strip()
             inn_digits = re.sub(r"\D", "", inn)
             if len(inn_digits) in (10, 12):
-                # Extract context window: 150 chars around the match
                 ctx_start = max(0, m.start() - 150)
                 ctx_end = min(len(text), m.end() + 150)
                 context = text[ctx_start:ctx_end]
-                all_matches.append((inn_digits, context, priority, is_footer))
+                score = _score_inn_candidate(inn_digits, context, page_path, is_footer, priority)
+                # Keep the best score for each INN (same INN may appear in multiple blocks)
+                if inn_digits not in scored or score > scored[inn_digits]:
+                    scored[inn_digits] = score
 
-    if not all_matches:
-        return None
+    if not scored:
+        return []
 
-    # Score each candidate
-    best_inn = None
-    best_score = -999.0
+    # Return all INNs with score >= min_score, sorted by score descending
+    valid = [
+        inn for inn, score in scored.items()
+        if score >= min_score
+    ]
+    valid.sort(key=lambda inn: scored[inn], reverse=True)
 
-    for inn, context, priority, is_footer in all_matches:
-        score = _score_inn_candidate(inn, context, page_path, is_footer, priority)
+    if not valid:
+        logger.debug(
+            "_extract_inn_from_html: %d INN(s) found but all below min_score=%.1f (best=%s score=%.1f)",
+            len(scored), min_score,
+            max(scored, key=scored.get), max(scored.values()),
+        )
+        return []
 
-        if score > best_score:
-            best_score = score
-            best_inn = inn
+    logger.debug(
+        "_extract_inn_from_html: %d INN(s) found, %d valid after filtering: %s",
+        len(scored), len(valid), [(inn, scored[inn]) for inn in valid],
+    )
+    return valid
 
-    if best_score < -3.0:
-        # All candidates look like third-party INNs — don't return garbage
-        logger.debug("_extract_inn_from_html: all INN candidates scored < -3 (best=%.1f), rejecting", best_score)
-        return None
 
-    return best_inn
+def _extract_primary_inn_from_html(html: str, page_path: str = "") -> str | None:
+    """Backward-compatible wrapper: return only the best INN."""
+    inns = _extract_inn_from_html(html, page_path)
+    return inns[0] if inns else None
 
 
 def _score_inn_candidate(
@@ -335,27 +448,29 @@ def _score_inn_candidate(
     return score
 
 
-async def extract_inn_from_website(url: str) -> tuple[str | None, str | None]:
-    """Extract INN (tax ID) from a Russian clinic website.
+async def extract_inn_from_website(url: str) -> tuple[list[str], list[dict], str | None]:
+    """Extract ALL INNs and licenses from a Russian clinic website.
 
-    Fetches homepage + key pages, collects ALL INN candidates across all pages,
-    scores each by context quality, and returns the best one.
+    Fetches homepage + key pages, collects ALL INN candidates and medical
+    licenses across all pages. A clinic may have multiple legal entities
+    (different INNs) — all are returned.
 
     Args:
         url: Website URL (with or without scheme)
 
     Returns:
-        (inn, source_url) — INN (10 or 12 digits) and the page it was found on,
-        or (None, None) if not found.
+        (inns, licenses, best_source_url) — all valid INNs, all licenses found,
+        and the page URL where the best INN was found.
     """
     if not url:
-        return None, None
+        return [], [], None
 
     if not url.startswith("http"):
         url = f"https://{url}"
 
-    # Collect all (inn, page_url, score) candidates across all pages
-    candidates: list[tuple[str, str, float]] = []  # (inn, page_url, score)
+    # Collect (inn, page_url, score) across all pages
+    inn_candidates: list[tuple[str, str, float]] = []
+    all_licenses: list[dict] = []
 
     async with httpx.AsyncClient(
         timeout=_TIMEOUT,
@@ -365,15 +480,16 @@ async def extract_inn_from_website(url: str) -> tuple[str | None, str | None]:
         # Check homepage first
         html = await _fetch_page(client, url, "/")
         if html:
-            inn = _extract_inn_from_html(html, page_path="/")
-            if inn:
-                candidates.append((inn, url, 10.0))  # homepage found → high priority
+            inns = _extract_inn_from_html(html, page_path="/")
+            for inn in inns:
+                inn_candidates.append((inn, url, 10.0))
                 logger.debug("extract_inn: found INN=%s on %s (homepage)", inn, url)
+            all_licenses.extend(_extract_licenses_from_html(html, page_path="/"))
 
-        # If homepage found a good INN with clinic markers, return immediately
-        for inn, page_url, score in candidates:
-            if score > 7.0:
-                return inn, page_url
+            # If homepage found good INNs with clinic markers, proceed quickly
+            if any(score > 7.0 for _, _, score in inn_candidates):
+                # Still scan other pages for licenses and additional INNs
+                pass
 
         # Try additional pages in parallel
         tasks = [_fetch_page(client, url, path) for path in _INN_PAGES[1:]]
@@ -384,27 +500,56 @@ async def extract_inn_from_website(url: str) -> tuple[str | None, str | None]:
                 continue
             path = _INN_PAGES[i + 1]
             page_url = urljoin(url, path)
-            inn = _extract_inn_from_html(html, page_path=path)
-            if inn:
-                # Score this candidate in context of the page
+
+            inns = _extract_inn_from_html(html, page_path=path)
+            for inn in inns:
                 score = _score_inn_for_page(inn, html, path)
-                candidates.append((inn, page_url, score))
+                inn_candidates.append((inn, page_url, score))
                 logger.debug("extract_inn: candidate INN=%s score=%.1f on %s", inn, score, page_url)
 
-    if not candidates:
+            # Extract licenses from each page
+            licenses = _extract_licenses_from_html(html, page_path=path)
+            all_licenses.extend(licenses)
+
+    if not inn_candidates:
         logger.debug("extract_inn: no INN found on %s", url)
-        return None, None
+        return [], [], None
 
-    # Pick the highest-scoring candidate
-    best = max(candidates, key=lambda x: x[2])
-    best_inn, best_url, best_score = best
+    # Deduplicate INNs — keep best score per INN
+    best_scores: dict[str, tuple[str, float]] = {}  # inn → (source_url, score)
+    for inn, page_url, score in inn_candidates:
+        if inn not in best_scores or score > best_scores[inn][1]:
+            best_scores[inn] = (page_url, score)
 
-    if best_score < -3.0:
-        logger.debug("extract_inn: best candidate INN=%s scored %.1f — rejecting as third-party", best_inn, best_score)
-        return None, None
+    # Filter out third-party INNs (score < -3.0)
+    valid_inns = {
+        inn: (url, score)
+        for inn, (url, score) in best_scores.items()
+        if score >= -3.0
+    }
 
-    logger.debug("extract_inn: best INN=%s (score=%.1f) from %s", best_inn, best_score, best_url)
-    return best_inn, best_url
+    if not valid_inns:
+        logger.debug("extract_inn: all INN candidates scored < -3 on %s, rejecting", url)
+        return [], [], None
+
+    # Sort by score descending
+    sorted_inns = sorted(valid_inns.items(), key=lambda x: x[1][1], reverse=True)
+    all_inns = [inn for inn, _ in sorted_inns]
+    best_url = sorted_inns[0][1][0]
+
+    # Deduplicate licenses by number
+    seen_lic: set[str] = set()
+    unique_licenses: list[dict] = []
+    for lic in all_licenses:
+        if lic["number"] not in seen_lic:
+            seen_lic.add(lic["number"])
+            unique_licenses.append(lic)
+
+    logger.debug(
+        "extract_inn: %d INN(s) + %d license(s) from %s → INNs=%s",
+        len(all_inns), len(unique_licenses), url, all_inns,
+    )
+    return all_inns, unique_licenses, best_url
 
 
 def _score_inn_for_page(inn: str, html: str, page_path: str) -> float:
@@ -453,22 +598,22 @@ def _score_inn_for_page(inn: str, html: str, page_path: str) -> float:
 
 async def extract_inn_batch(
     urls: list[str], max_concurrent: int = 10
-) -> dict[str, tuple[str | None, str | None]]:
-    """Extract INN from multiple websites concurrently.
+) -> dict[str, tuple[list[str], list[dict], str | None]]:
+    """Extract INNs and licenses from multiple websites concurrently.
 
     Returns:
-        Dict mapping URL → (inn, source_page_url).
+        Dict mapping URL → (inns, licenses, best_source_url).
     """
     semaphore = asyncio.Semaphore(max_concurrent)
 
-    async def _extract_one(u: str) -> tuple[str, tuple[str | None, str | None]]:
+    async def _extract_one(u: str) -> tuple[str, tuple[list[str], list[dict], str | None]]:
         async with semaphore:
             return u, await extract_inn_from_website(u)
 
     tasks = [_extract_one(u) for u in urls if u]
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    output: dict[str, tuple[str | None, str | None]] = {}
+    output: dict[str, tuple[list[str], list[dict], str | None]] = {}
     for r in results:
         if isinstance(r, Exception):
             logger.warning("extract_inn_batch: %s", r)

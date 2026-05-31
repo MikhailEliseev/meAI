@@ -10,10 +10,9 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from aim.services.ci_marketing_analysis import CiMarketingAnalyzer
 from aim.services.competitor_matcher import CompetitorMatcher
 from aim.services.pre_sale_folder import PreSaleFolder
 from aim.services.rusprofile.models import CompetitorMatch
@@ -35,8 +34,8 @@ class FindCompetitorsRequest(BaseModel):
 
 
 class CompetitorJson(BaseModel):
-    inn: str
-    legal_name: str
+    inn: str = ""
+    legal_name: str = ""
     brand_name: Optional[str] = None
     revenue_year: Optional[int] = None
     profit_year: Optional[int] = None
@@ -64,6 +63,11 @@ class CompetitorJson(BaseModel):
     match_reason: str = ""
     services: list[str] = []
     website: Optional[str] = None
+
+    # Multi-entity support
+    inns: list[str] = []
+    licenses: list[dict] = []
+    is_multi_entity: bool = False
     social_links: dict[str, str] = {}
 
 
@@ -183,6 +187,53 @@ async def save_competitors(body: SaveCompetitorsRequest) -> SaveCompetitorsRespo
     )
 
 
+async def _run_quick_ci_analysis(
+    url: str,
+    competitors: list,
+    specialization: str = "",
+    city: str = "",
+    services: list[str] | None = None,
+    on_progress=None,
+):
+    """Run quick CI analysis via CIOrchestrator directly.
+
+    Extracts URLs from competitor objects and calls _run_quick_analysis.
+    """
+    from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+    from meai.events.event_bus import EventBus
+
+    named_urls = []
+    for c in (competitors or []):
+        if isinstance(c, str):
+            named_urls.append(c)
+        elif hasattr(c, 'url'):
+            named_urls.append(c.url)
+        elif hasattr(c, 'website'):
+            named_urls.append(c.website)
+        elif isinstance(c, dict):
+            named_urls.append(c.get("url", c.get("website", "")))
+        else:
+            named_urls.append(str(c))
+
+    event_bus = EventBus()
+    await event_bus.initialize()
+
+    try:
+        orchestrator = CIOrchestrator(
+            agent_id=f"quick-analysis-{id(event_bus)}",
+            event_bus=event_bus,
+        )
+        return await orchestrator._run_quick_analysis({
+            "url": url,
+            "competitors": named_urls,
+            "niche": specialization,
+            "geo": city,
+            "tier": "quick",
+        })
+    finally:
+        await event_bus.close()
+
+
 @router.post("/analyze", response_model=AnalyzeCompetitorsResponse, status_code=status.HTTP_200_OK)
 async def analyze_competitors(body: AnalyzeCompetitorsRequest) -> AnalyzeCompetitorsResponse:
     """Run CI marketing analysis on confirmed competitors.
@@ -193,16 +244,12 @@ async def analyze_competitors(body: AnalyzeCompetitorsRequest) -> AnalyzeCompeti
     """
     try:
         matches = [_json_to_match(c) for c in body.competitors]
-
-        analyzer = CiMarketingAnalyzer(timeout=10.0)
-        result = await analyzer.analyze(
+        result = await _run_quick_ci_analysis(
             url=body.url,
+            competitors=matches,
             specialization=body.specialization,
             city=body.city,
             services=body.services,
-            competitors=matches,
-            client_revenue=body.client_revenue,
-            client_rating=body.client_rating,
         )
 
         tactics_json = [
@@ -223,22 +270,34 @@ async def analyze_competitors(body: AnalyzeCompetitorsRequest) -> AnalyzeCompeti
             len(tactics_json), len(result.feature_matrix),
         )
 
-        return AnalyzeCompetitorsResponse(
-            success=True,
-            chat_summary=result.chat_summary,
-            feature_matrix=result.feature_matrix,
-            pricing_comparison=result.pricing_comparison,
-            positioning_map=result.positioning_map,
-            steal_worthy_tactics=tactics_json,
-            top_recommendation=result.top_recommendation,
-            duration_seconds=result.analysis_duration_seconds,
+        return JSONResponse(
+            content=AnalyzeCompetitorsResponse(
+                success=True,
+                chat_summary=result.chat_summary,
+                feature_matrix=result.feature_matrix,
+                pricing_comparison=result.pricing_comparison,
+                positioning_map=result.positioning_map,
+                steal_worthy_tactics=tactics_json,
+                top_recommendation=result.top_recommendation,
+                duration_seconds=result.analysis_duration_seconds,
+            ).model_dump(),
+            headers={
+                "X-Deprecated-API": "true",
+                "Migration": "/api/seo/audit (POST with tier=quick)",
+            },
         )
 
     except Exception as e:
         logger.exception("analyze_competitors_failed")
-        return AnalyzeCompetitorsResponse(
-            success=False,
-            error=str(e),
+        return JSONResponse(
+            content=AnalyzeCompetitorsResponse(
+                success=False,
+                error=str(e),
+            ).model_dump(),
+            headers={
+                "X-Deprecated-API": "true",
+                "Migration": "/api/seo/audit (POST with tier=quick)",
+            },
         )
 
 
@@ -254,14 +313,7 @@ async def analyze_competitors_stream(body: AnalyzeCompetitorsRequest):
 
     async def generate():
         matches = [_json_to_match(c) for c in body.competitors]
-        analyzer = CiMarketingAnalyzer(timeout=10.0)
-        result_container = {}
 
-        async def on_progress(stage: str, message: str, competitor_name: str):
-            yield f"data: {json.dumps({'type': 'progress', 'stage': stage, 'message': message, 'competitor': competitor_name}, ensure_ascii=False)}\n\n"
-
-        # We can't mix yield from callback with return value easily,
-        # so use a queue-based approach
         import asyncio as _asyncio
         queue: _asyncio.Queue = _asyncio.Queue()
 
@@ -270,15 +322,12 @@ async def analyze_competitors_stream(body: AnalyzeCompetitorsRequest):
 
         async def run_analysis():
             try:
-                result = await analyzer.analyze(
+                result = await _run_quick_ci_analysis(
                     url=body.url,
+                    competitors=matches,
                     specialization=body.specialization,
                     city=body.city,
                     services=body.services,
-                    competitors=matches,
-                    client_revenue=body.client_revenue,
-                    client_rating=body.client_rating,
-                    on_progress=progress_callback,
                 )
                 await queue.put({"type": "result", "data": {
                     "success": True,
@@ -359,16 +408,23 @@ def _competitor_to_json(m: CompetitorMatch) -> CompetitorJson:
         services=m.services,
         website=m.website,
         social_links=m.social_links or p.social_links or {},
+        inns=p.inns,
+        licenses=p.licenses,
+        is_multi_entity=p.is_multi_entity,
     )
 
 
 def _json_to_match(j: CompetitorJson) -> CompetitorMatch:
     """Convert API model back to CompetitorMatch for storage."""
+    import hashlib
     from aim.services.rusprofile.models import CompanyProfile
 
+    inn = j.inn if j.inn else f"manual-{hashlib.md5((j.website or j.brand_name or 'unknown').encode()).hexdigest()[:10]}"
+    legal_name = j.legal_name if j.legal_name else (j.brand_name or j.website or "Неизвестный конкурент")
+
     profile = CompanyProfile(
-        inn=j.inn,
-        legal_name=j.legal_name,
+        inn=inn,
+        legal_name=legal_name,
         brand_name=j.brand_name,
         revenue_year=j.revenue_year,
         profit_year=j.profit_year,
@@ -385,6 +441,9 @@ def _json_to_match(j: CompetitorJson) -> CompetitorMatch:
         confidence=j.confidence,
         website=j.website,
         social_links=j.social_links,
+        inns=j.inns,
+        licenses=j.licenses,
+        is_multi_entity=j.is_multi_entity,
     )
     return CompetitorMatch(
         profile=profile,
