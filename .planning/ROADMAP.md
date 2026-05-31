@@ -375,10 +375,30 @@ Plans:
 - [x] 20-01-PLAN.md — Full Apify rebuild: Google Maps Scraper + Website Content Crawler + Instagram Scraper + CompetitorMatcher rewrite + cleanup
 **Plans**: 1 plan
 
+### Phase 21: CI Pipeline Unification
+**Goal**: Унификация двух параллельных CI-пайплайнов (CiMarketingAnalyzer + CIOrchestrator) в единую архитектуру с tier-based routing (quick/deep/full), реальным EventBus-делегированием и унифицированными моделями данных.
+**Requirements**: H1, H6, L4 (from CI Pipeline Audit)
+**Depends on**: Phase 20
+**Success Criteria** (what must be TRUE):
+  1. Единый CIOrchestrator с tier-параметром (quick/deep)
+  2. CiMarketingAnalyzer → thin backward-compatible proxy
+  3. /api/competitors/analyze/stream → алиас на /api/seo/audit?tier=quick
+  4. Реальное EventBus-делегирование вместо прямых вызовов
+  5. Единые модели данных (UnifiedCiResult)
+  6. Все 49 CI-интеграционных тестов проходят
+**Plans**: 5 plans
+
+Plans:
+- [x] 21-01-PLAN.md — Async _get_agent() with EventBus injection + report_result bridge
+- [x] 21-02-PLAN.md — Remove EventBus fallback, pure EventBus delegation
+- [ ] 21-03-PLAN.md — Add analysis methods to CIOrchestrator + CiMarketingAnalyzer proxy + fix _tactic_impact_effort + AuditTask serialization
+- [ ] 21-04-PLAN.md — Make /api/competitors/analyze/stream a true alias via shared orchestrator singleton
+- [ ] 21-05-PLAN.md — Verify all 49 tests pass, fix remaining failures, confirm all gaps closed
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17
+Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -403,5 +423,6 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 18. Hermes Learning Bus | v4.3 | 2/2 | Complete | 2026-05-20 |
 | 19. Competitor Discovery Quality | v4.4 | 1/1 | Complete | 2026-05-23 |
 | 20. Apify Competitor Intelligence | v5.0 | 1/1 | Complete | 2026-05-26 |
+| 21. CI Pipeline Unification | v5.1 | 2/5 | In Progress | — |
 
-**Overall:** 45/49 plans complete (92%)
+**Overall:** 47/54 plans complete (87%)
