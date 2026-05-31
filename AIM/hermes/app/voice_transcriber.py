@@ -70,6 +70,7 @@ def _download_telegram_voice(file_id: str) -> bytes:
 def transcribe_voice(file_id: str) -> str:
     """Download voice message from Telegram and transcribe via AssemblyAI.
 
+    Uses direct HTTP calls with NL proxy (NOT AssemblyAI SDK, which bypasses proxy).
     Returns transcribed text, or empty string on failure.
     Errors are logged but not raised — voice is best-effort.
     """
@@ -83,34 +84,59 @@ def transcribe_voice(file_id: str) -> str:
         logger.error(f"Failed to download voice file {file_id}: {e}")
         return ""
 
+    proxy = _get_proxy_url()
+    headers = {"authorization": ASSEMBLYAI_API_KEY}
+
     try:
-        import assemblyai as aai
+        # Step 1: Upload audio to AssemblyAI
+        upload_url = "https://api.assemblyai.com/v2/upload"
+        with httpx.Client(timeout=60.0, proxy=proxy) as client:
+            resp = client.post(upload_url, headers=headers, content=audio_bytes)
+            resp.raise_for_status()
+            upload_result = resp.json()
 
-        aai.settings.api_key = ASSEMBLYAI_API_KEY
+        audio_url = upload_result.get("upload_url")
+        if not audio_url:
+            logger.error(f"AssemblyAI upload failed: {upload_result}")
+            return ""
 
-        # Write to temp file — AssemblyAI SDK needs a file path
-        with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as tmp:
-            tmp.write(audio_bytes)
-            tmp_path = tmp.name
+        logger.info(f"Voice uploaded to AssemblyAI: {len(audio_bytes)} bytes")
 
-        try:
-            transcriber = aai.Transcriber()
-            transcript = transcriber.transcribe(tmp_path)
+        # Step 2: Request transcription
+        transcript_url = "https://api.assemblyai.com/v2/transcript"
+        body = {"audio_url": audio_url, "language_code": "ru"}
+        with httpx.Client(timeout=30.0, proxy=proxy) as client:
+            resp = client.post(transcript_url, headers=headers, json=body)
+            resp.raise_for_status()
+            transcript_result = resp.json()
 
-            if transcript.status == aai.TranscriptStatus.error:
-                logger.error(f"AssemblyAI transcription error: {transcript.error}")
+        transcript_id = transcript_result.get("id")
+        if not transcript_id:
+            logger.error(f"AssemblyAI transcript request failed: {transcript_result}")
+            return ""
+
+        # Step 3: Poll for result (max 60 seconds)
+        poll_url = f"https://api.assemblyai.com/v2/transcript/{transcript_id}"
+        for attempt in range(20):
+            import time as time_mod
+            time_mod.sleep(3)
+            with httpx.Client(timeout=15.0, proxy=proxy) as client:
+                resp = client.get(poll_url, headers=headers)
+                resp.raise_for_status()
+                result = resp.json()
+
+            status = result.get("status")
+            if status == "completed":
+                text = result.get("text") or ""
+                logger.info(f"Voice transcribed: {len(text)} chars")
+                return text
+            elif status == "error":
+                logger.error(f"AssemblyAI transcription error: {result.get('error')}")
                 return ""
 
-            text = transcript.text or ""
-            logger.info(f"Voice transcribed: {len(text)} chars")
-            return text
-
-        finally:
-            Path(tmp_path).unlink(missing_ok=True)
-
-    except ImportError:
-        logger.error("assemblyai package not installed — run: pip install assemblyai")
+        logger.error("AssemblyAI transcription timed out after 60s")
         return ""
+
     except Exception as e:
         logger.error(f"AssemblyAI transcription failed: {e}")
         return ""
