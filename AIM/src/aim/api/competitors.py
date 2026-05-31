@@ -187,21 +187,8 @@ async def save_competitors(body: SaveCompetitorsRequest) -> SaveCompetitorsRespo
     )
 
 
-async def _run_quick_ci_analysis(
-    url: str,
-    competitors: list,
-    specialization: str = "",
-    city: str = "",
-    services: list[str] | None = None,
-    on_progress=None,
-):
-    """Run quick CI analysis via CIOrchestrator directly.
-
-    Extracts URLs from competitor objects and calls _run_quick_analysis.
-    """
-    from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
-    from meai.events.event_bus import EventBus
-
+def _extract_named_urls(competitors: list) -> list[str]:
+    """Extract URL strings from a mix of CompetitorMatch, dict, or str objects."""
     named_urls = []
     for c in (competitors or []):
         if isinstance(c, str):
@@ -214,72 +201,84 @@ async def _run_quick_ci_analysis(
             named_urls.append(c.get("url", c.get("website", "")))
         else:
             named_urls.append(str(c))
-
-    event_bus = EventBus()
-    await event_bus.initialize()
-
-    try:
-        orchestrator = CIOrchestrator(
-            agent_id=f"quick-analysis-{id(event_bus)}",
-            event_bus=event_bus,
-        )
-        return await orchestrator._run_quick_analysis({
-            "url": url,
-            "competitors": named_urls,
-            "niche": specialization,
-            "geo": city,
-            "tier": "quick",
-        })
-    finally:
-        await event_bus.close()
+    return [u for u in named_urls if u]
 
 
 @router.post("/analyze", response_model=AnalyzeCompetitorsResponse, status_code=status.HTTP_200_OK)
 async def analyze_competitors(body: AnalyzeCompetitorsRequest) -> AnalyzeCompetitorsResponse:
-    """Run CI marketing analysis on confirmed competitors.
+    """Run CI marketing analysis on confirmed competitors via shared CIOrchestrator.
 
-    Takes client info + 3 confirmed competitors, scrapes their websites,
-    and produces SWOT, feature matrix, pricing comparison, positioning map,
-    and steal-worthy tactics. Fast (<12s), deterministic, no LLM.
+    Reuses the SEO API's singleton CIOrchestrator via _get_orchestrator().
     """
     try:
-        matches = [_json_to_match(c) for c in body.competitors]
-        result = await _run_quick_ci_analysis(
-            url=body.url,
-            competitors=matches,
-            specialization=body.specialization,
-            city=body.city,
-            services=body.services,
-        )
+        from aim.api.seo import _get_orchestrator
 
-        tactics_json = [
-            {
-                "source": t.source_competitor,
-                "tactic": t.tactic_description,
-                "why": t.why_it_works,
-                "how": t.how_to_implement,
-                "effort": t.estimated_effort,
-                "impact": t.expected_impact,
-            }
-            for t in result.steal_worthy_tactics
-        ]
+        matches = [_json_to_match(c) for c in body.competitors]
+        named_urls = _extract_named_urls(matches)
+
+        orchestrator = await _get_orchestrator()
+        result = await orchestrator.execute_ci_analysis({
+            "task_id": f"analyze-{id(body)}",
+            "url": body.url,
+            "competitors": named_urls,
+            "niche": body.specialization,
+            "geo": body.city,
+            "tier": "quick",
+            "target_audience": "",
+            "price_segment": "mid",
+        })
+
+        # Map dict result to backwards-compatible response fields.
+        # execute_ci_analysis returns {findings, reports, errors, ...}
+        # — fields like chat_summary, feature_matrix are extracted from
+        # findings or default to empty if not produced by the current tier.
+        tactics_list = result.get("steal_worthy_tactics", [])
+        if not tactics_list:
+            # Backward-compat: if steal_worthy_tactics not at top level,
+            # try to extract from phase findings.
+            findings = result.get("findings", {})
+            tactics_list = findings.get("steal_worthy_tactics", [])
+
+        tactics_json = []
+        for t in tactics_list:
+            if isinstance(t, dict):
+                tactics_json.append({
+                    "source": t.get("source_competitor", t.get("source", "")),
+                    "tactic": t.get("tactic_description", t.get("tactic", "")),
+                    "why": t.get("why_it_works", t.get("why", "")),
+                    "how": t.get("how_to_implement", t.get("how", "")),
+                    "effort": t.get("estimated_effort", t.get("effort", "medium")),
+                    "impact": t.get("expected_impact", t.get("impact", "medium")),
+                })
+
+        feature_matrix = result.get("feature_matrix", {})
+        findings = result.get("findings", {})
+        if not feature_matrix and "phase_2" in findings:
+            # Try to extract feature_matrix from phase_2 (ci-auditor)
+            phase2 = findings["phase_2"]
+            if isinstance(phase2, dict):
+                fm = phase2.get("result", phase2).get("feature_matrix", {})
+                if fm:
+                    feature_matrix = fm
+
+        duration = result.get("execution_time_seconds", 0)
 
         logger.info(
-            "ci_analysis_complete: url=%s duration=%.1fs tactics=%d features=%d",
-            body.url, result.analysis_duration_seconds,
-            len(tactics_json), len(result.feature_matrix),
+            "ci_analysis_complete: url=%s duration=%ds tactics=%d features=%d",
+            body.url, duration,
+            len(tactics_json), len(feature_matrix),
         )
 
         return JSONResponse(
             content=AnalyzeCompetitorsResponse(
                 success=True,
-                chat_summary=result.chat_summary,
-                feature_matrix=result.feature_matrix,
-                pricing_comparison=result.pricing_comparison,
-                positioning_map=result.positioning_map,
+                chat_summary=result.get("chat_summary", ""),
+                feature_matrix=feature_matrix,
+                pricing_comparison=result.get("pricing_comparison", {}),
+                positioning_map=result.get("positioning_map", {}),
                 steal_worthy_tactics=tactics_json,
-                top_recommendation=result.top_recommendation,
-                duration_seconds=result.analysis_duration_seconds,
+                top_recommendation=result.get("top_recommendation", ""),
+                duration_seconds=duration,
             ).model_dump(),
             headers={
                 "X-Deprecated-API": "true",
@@ -303,52 +302,93 @@ async def analyze_competitors(body: AnalyzeCompetitorsRequest) -> AnalyzeCompeti
 
 @router.post("/analyze/stream")
 async def analyze_competitors_stream(body: AnalyzeCompetitorsRequest):
-    """SSE streaming variant — emits progress events during data collection.
+    """SSE streaming alias for /api/seo/audit?tier=quick.
 
-    Same analysis as /analyze but streams real-time progress via Server-Sent Events.
-    Each progress event has: stage, message, competitor_name.
-
-    Final event is a "result" type with the full CiAnalysisResult JSON.
+    Reuses the SEO API's singleton CIOrchestrator via _get_orchestrator().
+    Emits progress events during analysis and a final result event.
     """
 
     async def generate():
-        matches = [_json_to_match(c) for c in body.competitors]
-
+        from aim.api.seo import _get_orchestrator
         import asyncio as _asyncio
+
+        matches = [_json_to_match(c) for c in body.competitors]
+        named_urls = _extract_named_urls(matches)
+
         queue: _asyncio.Queue = _asyncio.Queue()
 
-        async def progress_callback(stage: str, message: str, competitor_name: str):
-            await queue.put({"type": "progress", "stage": stage, "message": message, "competitor": competitor_name})
+        async def progress_callback(phase_num: int, status: str, message: str):
+            """Bridge CIOrchestrator progress -> SSE events."""
+            await queue.put({
+                "type": "progress",
+                "stage": status,
+                "message": f"[Phase {phase_num}] {message}",
+                "phase": phase_num,
+                "competitor": "",
+            })
 
         async def run_analysis():
             try:
-                result = await _run_quick_ci_analysis(
-                    url=body.url,
-                    competitors=matches,
-                    specialization=body.specialization,
-                    city=body.city,
-                    services=body.services,
+                orchestrator = await _get_orchestrator()
+
+                task_data = {
+                    "task_id": f"stream-{id(body)}",
+                    "url": body.url,
+                    "competitors": named_urls,
+                    "niche": body.specialization,
+                    "geo": body.city,
+                    "tier": "quick",
+                    "target_audience": "",
+                    "price_segment": "mid",
+                }
+
+                result = await orchestrator.execute_ci_analysis(
+                    task_data,
+                    progress_callback=progress_callback,
                 )
-                await queue.put({"type": "result", "data": {
-                    "success": True,
-                    "chat_summary": result.chat_summary,
-                    "feature_matrix": result.feature_matrix,
-                    "pricing_comparison": result.pricing_comparison,
-                    "positioning_map": result.positioning_map,
-                    "steal_worthy_tactics": [
-                        {
-                            "source": t.source_competitor,
-                            "tactic": t.tactic_description,
-                            "why": t.why_it_works,
-                            "how": t.how_to_implement,
-                            "effort": t.estimated_effort,
-                            "impact": t.expected_impact,
-                        }
-                        for t in result.steal_worthy_tactics
-                    ],
-                    "top_recommendation": result.top_recommendation,
-                    "duration_seconds": result.analysis_duration_seconds,
-                }})
+
+                # Extract tactics with backward-compat dict handling
+                tactics_list = result.get("steal_worthy_tactics", [])
+                if not tactics_list:
+                    findings_inner = result.get("findings", {})
+                    tactics_list = findings_inner.get("steal_worthy_tactics", [])
+
+                tactics_json = []
+                for t in tactics_list:
+                    if isinstance(t, dict):
+                        tactics_json.append({
+                            "source": t.get("source_competitor", t.get("source", "")),
+                            "tactic": t.get("tactic_description", t.get("tactic", "")),
+                            "why": t.get("why_it_works", t.get("why", "")),
+                            "how": t.get("how_to_implement", t.get("how", "")),
+                            "effort": t.get("estimated_effort", t.get("effort", "medium")),
+                            "impact": t.get("expected_impact", t.get("impact", "medium")),
+                        })
+
+                # Extract feature_matrix from findings if not at top level
+                feature_matrix = result.get("feature_matrix", {})
+                findings_inner = result.get("findings", {})
+                if not feature_matrix and "phase_2" in findings_inner:
+                    phase2 = findings_inner["phase_2"]
+                    if isinstance(phase2, dict):
+                        fm = phase2.get("result", phase2).get("feature_matrix", {})
+                        if fm:
+                            feature_matrix = fm
+
+                await queue.put({
+                    "type": "result",
+                    "data": {
+                        "success": True,
+                        "chat_summary": result.get("chat_summary", ""),
+                        "feature_matrix": feature_matrix,
+                        "pricing_comparison": result.get("pricing_comparison", {}),
+                        "positioning_map": result.get("positioning_map", {}),
+                        "steal_worthy_tactics": tactics_json,
+                        "top_recommendation": result.get("top_recommendation", ""),
+                        "duration_seconds": result.get("execution_time_seconds", 0),
+                        "tier": result.get("tier", "quick"),
+                    },
+                })
             except Exception as e:
                 logger.exception("analyze_competitors_stream_failed")
                 await queue.put({"type": "error", "message": str(e)})
@@ -370,6 +410,8 @@ async def analyze_competitors_stream(body: AnalyzeCompetitorsRequest):
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
+            "X-Deprecated-API": "true",
+            "Migration": "/api/seo/audit (POST with tier=quick)",
         },
     )
 
