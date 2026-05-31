@@ -78,8 +78,8 @@ license: MIT
 🗺️ КАРТА ПОЗИЦИОНИРОВАНИЯ:
 [позиции конкурентов на рынке]
 
-🎯 ЧТО МОЖНО УКРАСТЬ У КОНКУРЕНТОВ:
-[список steal_worthy_tactics]
+🎯 ЛУЧШИЕ ПРАКТИКИ КОНКУРЕНТОВ (что стоит перенять):
+[список best_practices — лучшие практики конкурентов]
 
 💡 ГЛАВНАЯ РЕКОМЕНДАЦИЯ:
 [top_recommendation]
@@ -136,9 +136,9 @@ license: MIT
 - Вход: `lead_id` (string), `status` ("approved" или "client_suggested"), `competitors` (list), `client_urls` (list, опционально)
 - Когда: после того как клиент утвердил список конкурентов
 
-**run_ci_analysis** — глубокий CI-анализ утверждённых конкурентов: SWOT, матрица фич (21 измерение), сравнение цен, карта позиционирования, тактики «что украсть», главная рекомендация
+**run_ci_analysis** — глубокий CI-анализ утверждённых конкурентов: SWOT, матрица фич (21 измерение), сравнение цен, карта позиционирования, тактики «что перенять», главная рекомендация
 - Вход: `url` (string), `competitors` (list[object] — обязательно с полем `website`), `specialization` (string), `city` (string), `services` (list[string]), `client_revenue` (int), `client_rating` (float)
-- Выход: `chat_summary`, `feature_matrix`, `pricing_comparison`, `positioning_map`, `steal_worthy_tactics`, `top_recommendation`
+- Выход: `chat_summary`, `feature_matrix`, `pricing_comparison`, `positioning_map`, `best_practices`, `top_recommendation`
 - Когда: после утверждения конкурентов клиентом
 
 **find_company_financials** — детальные финансы компании по ИНН или ОГРН

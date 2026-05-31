@@ -65,7 +65,7 @@ async def handle_run_ci_analysis(
 
     Returns:
         JSON with chat_summary, feature_matrix, pricing_comparison,
-        positioning_map, steal_worthy_tactics, top_recommendation.
+        positioning_map, best_practices, top_recommendation.
     """
     unpacked = _normalize_args(url, {
         "url": "",
@@ -173,7 +173,7 @@ async def handle_run_ci_analysis(
             "feature_matrix": result_data.get("feature_matrix", {}),
             "pricing_comparison": result_data.get("pricing_comparison", {}),
             "positioning_map": result_data.get("positioning_map", {}),
-            "steal_worthy_tactics": result_data.get("steal_worthy_tactics", []),
+            "best_practices": result_data.get("steal_worthy_tactics", []),
             "top_recommendation": result_data.get("top_recommendation", ""),
             "duration_seconds": result_data.get("duration_seconds", 0),
         }, ensure_ascii=False, indent=2)
