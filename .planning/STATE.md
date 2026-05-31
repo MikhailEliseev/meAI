@@ -1,3 +1,19 @@
+---
+gsd_state_version: 1.0
+milestone: v2.1
+milestone_name: Client Acquisition
+status: completed
+stopped_at: Phase 21-04 complete. Competitors/analyze/stream now uses shared CIOrchestrator singleton. 4/6 Phase 21 plans done.
+last_updated: "2026-05-31T20:17:26.034Z"
+last_activity: 2026-05-31 — Phase 21-04 shipped (competitors/analyze/stream uses shared orchestrator singleton)
+progress:
+  total_phases: 18
+  completed_phases: 15
+  total_plans: 50
+  completed_plans: 48
+  percent: 80
+---
+
 # Project State
 
 ## Project Reference
@@ -9,17 +25,18 @@ See: .planning/ROADMAP.md (updated 2026-05-19)
 
 ## Current Position
 
-Phase: 13 ◆ Landing Page & Marketing — Wave 1 done, Wave 2 pending  
-Status: **Phases 19-20 done ✅ (Competitor Intelligence rebuild).** Phase 13 partial — 2/4 done, 2 pending (tokens needed)  
-Last activity: 2026-05-26 — Phase 20 shipped (Apify rebuild + bugfixes + chat markdown fix)  
+Phase: 21 ◆ CI Pipeline Unification — closing orchestration gaps  
+Status: **Plan 21-04 done ✅ (SSE stream alias via shared CIOrchestrator).** Phase 21 progress — 4/6 plans complete.  
+Last activity: 2026-05-31 — Phase 21-04 shipped (competitors/analyze/stream uses shared orchestrator singleton)  
 
-Progress: [████████░] 92% — 45/49 plans complete
+Progress: [████████░░] 80% — 48/50 plans complete
 
 ## Performance Metrics
 
 **Velocity:**
-- Total phases: 17
-- Total plans executed: 45
+
+- Total phases: 18
+- Total plans executed: 48
 
 **By Phase:**
 
@@ -39,12 +56,14 @@ Progress: [████████░] 92% — 45/49 plans complete
 | 18. Hermes Knowledge Bus | 2 | Complete ✅ (EventBus listener, TeacherSync, knowledge endpoints, LLM ingest) |
 | 19. Competitor Discovery Quality | 1 | Complete ✅ (8 fixes across 4 files: name scoring, services, specialization, social links) |
 | 20. Apify Competitor Intelligence | 1 | Complete ✅ (Google Maps Scraper + ApifyKeyPool + bugfixes + tests) |
+| 21. CI Pipeline Unification | 6 | 4/6 done (21-01, 21-02, 21-03, 21-04 ✅), 2 pending (21-05, 21-06) |
 
-*Updated 2026-05-26*
+*Updated 2026-05-31*
 
 ## Pending Plans (Phase 13)
 
 ### Wave 2 (depends on 13-04 — done ✅)
+
 - **13-02**: Fix Yandex Direct MOCK stats via TSV parsing + ФЗ-38 compliance + tests + DB sync — 4 tasks
 - **13-03**: VK Ads client + Telegram Ads client + tests + DB sync — 4 tasks
 
@@ -68,6 +87,7 @@ None — all phases complete.
 ### Blockers/Concerns
 
 None — infrastructure ready for production deploy.
+
 - `HERMES_API_KEY` must be generated on server: `openssl rand -hex 32`
 - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_API_ID`, `TELEGRAM_API_HASH` must be set in .env.production
 - `YOOKASSA_SHOP_ID` and `YOOKASSA_SECRET_KEY` must be set for real payments
@@ -84,6 +104,7 @@ None — infrastructure ready for production deploy.
 ## What's Built
 
 ### Landing & Client Acquisition
+
 - Landing page: Hero, TrustBadges, CaseStudies, Testimonials, Awards, ProcessSteps, FAQ, ContactForm
 - Sales chat: SalesChat, ChatBubble, ChatInput, UTMCapture
 - Lead capture: extraction, validation, encrypted storage, dossier management
@@ -91,12 +112,14 @@ None — infrastructure ready for production deploy.
 - Email automation: SendGrid sequences, queue, retry
 
 ### Payment & Onboarding
+
 - YooKassa integration: redirect flow, webhooks, IP validation
 - Payment UI: billing page, payment form
 - Onboarding: AI document processing, workflow automation
 - Контур.Диадок: electronic document signing
 
 ### AI Operations (Hermes)
+
 - Operator identity: SOUL.md with 3 modes (PRESALE/ACTIVE/ADMIN)
 - 8 Hermes tools: SEO audit, content analysis, ads report, project status, lead capture, lead list, Telegram search, Telegram send
 - FastAPI wrapper: /api/chat, /health, /metrics
@@ -106,12 +129,14 @@ None — infrastructure ready for production deploy.
 - TeacherSync pipeline: external research → wiki/patterns/ enrichment
 
 ### Marketing & Analytics
+
 - A/B testing engine: scipy-based chi² significance, sample size calculation, experiment tracking
 - Attribution pipeline: UTM → campaign matching via EventBus, lead→revenue tracking
 - ROI calculator: ROAS/ROI per channel, aggregated reports
 - A/B variant middleware: Next.js Edge, 50/50 split, sticky cookie (HttpOnly, SameSite=Lax)
 
 ### Infrastructure
+
 - Docker Compose: 12 services (postgres, app, frontend, hermes, redis, nginx, prometheus, grafana, postgres-exporter, alertmanager, node-exporter)
 - Monitoring: Prometheus, Grafana, Alertmanager (Telegram + Email alerts)
 - HermesDown alert: 60s downtime → critical → Telegram + Email
@@ -119,6 +144,6 @@ None — infrastructure ready for production deploy.
 
 ## Session Continuity
 
-Last session: 2026-05-26 ~12:00 GMT+3
-Stopped at: Phase 20 complete. Chat markdown fix deployed. ROADMAP updated. All systems healthy.
-Next: 13-02 (Yandex Direct) or 13-03 (VK Ads + Telegram Ads) — depends on available tokens
+Last session: 2026-05-31T20:17:25.986Z
+Stopped at: Phase 21-04 complete. Competitors/analyze/stream now uses shared CIOrchestrator singleton. 4/6 Phase 21 plans done.
+Next: 21-05 (remaining gap closure) or 21-06 (final validation)
