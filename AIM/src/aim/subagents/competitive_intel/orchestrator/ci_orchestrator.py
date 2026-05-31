@@ -81,6 +81,9 @@ class CIOrchestrator(Agent):
         # Completed results from EventBus delegation (correlation_id:agent_name → result)
         self._completed_results: Dict[str, Dict[str, Any]] = {}
 
+        # Phase-pending Events for dict-based completion signalling (avoids N transient subscribers)
+        self._phase_pending: Dict[str, asyncio.Event] = {}
+
         # Persistent subscriber: collects ALL ci.agent.completed events for audit trail
         self.event_bus.subscribe("ci.agent.completed", self._on_agent_completed)
 
@@ -195,11 +198,12 @@ class CIOrchestrator(Agent):
             return None
 
     async def _on_agent_completed(self, event: Event) -> None:
-        """Persistent handler for ci.agent.completed events — stores results for audit trail.
+        """Persistent handler for ci.agent.completed events — stores results for audit trail
+        and signals phase-pending waiters via dict-based approach.
 
         Collects ALL agent completion events regardless of which phase initiated them.
-        The transient per-phase callback in _execute_single_phase handles phase-specific
-        correlation_id matching; this persistent handler serves as the audit trail.
+        The dict-based _phase_pending replaces per-phase transient subscribers, eliminating
+        N-callback amplification during parallel phase execution (Phase 5 with 9 agents).
         """
         correlation_id = event.payload.get("correlation_id", "unknown")
         agent_name = event.payload.get("agent", "unknown")
@@ -211,6 +215,11 @@ class CIOrchestrator(Agent):
             "result": event.payload.get("result", {}),
             "timestamp": event.timestamp.isoformat() if hasattr(event.timestamp, 'isoformat') else str(event.timestamp),
         }
+
+        # Signal phase-specific waiters via dict-based approach (avoids N transient subscribers)
+        phase_event = self._phase_pending.pop(correlation_id, None)
+        if phase_event:
+            phase_event.set()
 
     async def execute_ci_analysis(
         self,
@@ -577,22 +586,21 @@ class CIOrchestrator(Agent):
             timestamp=datetime.now(timezone.utc),
         ))
 
-        # Wait for agent to complete via EventBus
-        # Agent's poll loop picks up task.request, executes via _execute_and_report(),
-        # and the bridged report_result() publishes ci.agent.completed Event.
-        # The transient callback below catches it.
+        # Wait for agent to complete via dict-based phase pending.
+        # _on_agent_completed signals the Event (single persistent subscriber),
+        # avoiding N transient subscribers during parallel phase execution.
         completion_event = asyncio.Event()
         completion_result: Dict[str, Any] = {}
 
-        async def on_agent_completed(event: Event):
-            if event.payload.get("correlation_id") == phase_correlation:
-                completion_result.update(event.payload)
-                completion_event.set()
-
-        self.event_bus.subscribe("ci.agent.completed", on_agent_completed)
+        self._phase_pending[phase_correlation] = completion_event
 
         try:
             await asyncio.wait_for(completion_event.wait(), timeout=60.0)
+            # Retrieve matching result from _completed_results
+            for key, val in self._completed_results.items():
+                if key.startswith(phase_correlation):
+                    completion_result.update(val)
+                    break
             return {
                 "phase": phase_num,
                 "agent": agent_name,
@@ -612,7 +620,7 @@ class CIOrchestrator(Agent):
                 "result": {},
             }
         finally:
-            self.event_bus.unsubscribe("ci.agent.completed", on_agent_completed)
+            self._phase_pending.pop(phase_correlation, None)
 
     async def _execute_parallel_phase(
         self,
