@@ -25,7 +25,7 @@ def _normalize_args(first_param, defaults):
 
 
 AIM_API_BASE = "http://app:8000"
-REQUEST_TIMEOUT = 90.0  # SSE streaming + parallel scraping
+REQUEST_TIMEOUT = 300.0  # SSE streaming + parallel scraping (large competitors can take 2-3 min)
 
 
 async def handle_run_ci_analysis(
@@ -183,13 +183,13 @@ async def handle_run_ci_analysis(
         return json.dumps({
             "error": "AIM API returned an error",
             "status": e.response.status_code,
-            "detail": str(e),
+            "detail": str(e) or type(e).__name__,
         })
     except httpx.RequestError as e:
-        logger.error("Cannot reach AIM API for run_ci_analysis: %s", e)
+        logger.error("Cannot reach AIM API for run_ci_analysis: %s (type=%s)", e, type(e).__name__)
         return json.dumps({
             "error": "Cannot reach AIM API",
-            "detail": str(e),
+            "detail": str(e) or type(e).__name__,
         })
     except Exception as e:
         logger.exception("Unexpected error in run_ci_analysis handler")
@@ -237,7 +237,13 @@ registry.register(
                     "competitors": {
                         "type": "array",
                         "items": {"type": "object"},
-                        "description": "List of 3 confirmed competitors from find_competitors result",
+                        "description": (
+                            "List of competitors. Each object MUST have 'website' field. "
+                            "If from find_competitors, include all fields. "
+                            "If named manually by user (when find_competitors failed), "
+                            "pass: {\"website\": \"https://competitor.ru\"} — "
+                            "brand_name and other fields are optional."
+                        ),
                     },
                     "client_revenue": {
                         "type": "integer",

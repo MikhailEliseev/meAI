@@ -6,20 +6,28 @@ GET  /api/seo/audit/{task_id} — Poll audit status + results
 
 Wires Hermes tool run_seo_audit → Competitive Intelligence pipeline.
 """
+import json
 import logging
 import os
 import asyncio
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/seo", tags=["seo"])
 
 # ── Background task store ─────────────────────────────────────────
+
+TASKS_FILE = Path(os.getenv("AIM_DATA_DIR", "AIM/data")) / "seo_audit_tasks.json"
+TASK_TTL_SECONDS = 86400  # 24 hours — auto-cleanup completed/errored tasks
+
+
 @dataclass
 class AuditTask:
     task_id: str
@@ -56,6 +64,53 @@ class AuditTask:
         )
 
 _tasks: dict[str, AuditTask] = {}
+
+
+def _load_tasks() -> None:
+    """Restore tasks from JSON file on startup."""
+    if not TASKS_FILE.exists():
+        return
+    try:
+        data = json.loads(TASKS_FILE.read_text())
+        now = time.time()
+        for td in data:
+            # Skip expired tasks
+            finished = td.get("finished_at", 0)
+            if finished and td.get("status") in ("done", "error") and (now - finished) > TASK_TTL_SECONDS:
+                continue
+            task = AuditTask.from_dict(td)
+            _tasks[task.task_id] = task
+        logger.info("Loaded %d SEO audit tasks from %s", len(_tasks), TASKS_FILE)
+    except Exception:
+        logger.exception("Failed to load SEO audit tasks, starting fresh")
+
+
+def _save_tasks() -> None:
+    """Persist current tasks to JSON file."""
+    try:
+        TASKS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        data = [t.to_dict() for t in _tasks.values()]
+        TASKS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+    except Exception:
+        logger.exception("Failed to persist SEO audit tasks")
+
+
+def _cleanup_expired() -> None:
+    """Remove expired completed/errored tasks from memory and disk."""
+    now = time.time()
+    expired = [
+        tid for tid, t in _tasks.items()
+        if t.status in ("done", "error") and t.finished_at and (now - t.finished_at) > TASK_TTL_SECONDS
+    ]
+    for tid in expired:
+        del _tasks[tid]
+    if expired:
+        _save_tasks()
+        logger.info("Cleaned up %d expired SEO audit tasks", len(expired))
+
+
+# Load on module import
+_load_tasks()
 
 # Lazy-initialized orchestrator
 _orchestrator = None
@@ -94,9 +149,11 @@ async def _run_audit_background(task: AuditTask, payload: dict):
     try:
         task.status = "running"
         task.started_at = time.time()
+        _save_tasks()
 
         orchestrator = await _get_orchestrator()
         task.progress = "Запускаю анализ конкурентов…"
+        _save_tasks()
 
         url = payload.get("url", "")
         if isinstance(url, dict):
@@ -106,13 +163,23 @@ async def _run_audit_background(task: AuditTask, payload: dict):
         competitors = payload.get("competitors", [])
         niche = payload.get("niche", "medical")
         tier = payload.get("tier", "deep")
+
+        # Extract city and specialization from client website
+        from aim.services.service_extractor import extract_client_profile
+        task.progress = "Извлекаю город и специализацию с сайта…"
+        profile = await extract_client_profile(url)
+        geo = profile.get("city") or "ru"
+        if niche == "medical":
+            niche = profile.get("specialization") or niche
+        logger.info("SEO audit: url=%s city=%s niche=%s", url, geo, niche)
+
         all_urls = [url] + [c for c in competitors if c != url]
 
         result = await orchestrator.execute_ci_analysis(
             task_data={
                 "task_id": task.task_id,
                 "niche": niche,
-                "geo": "ru",
+                "geo": geo,
                 "tier": tier,
                 "competitors": all_urls,
                 "target_audience": payload.get("target_audience", ""),
@@ -121,8 +188,11 @@ async def _run_audit_background(task: AuditTask, payload: dict):
         )
 
         task.result = result
+        task.result["niche"] = niche
+        task.result["geo"] = geo
         task.status = "done"
         task.finished_at = time.time()
+        _save_tasks()
         logger.info("SEO audit completed: %d phases, %d competitors (task %s)",
                      len(result.get("phases_executed", [])),
                      result.get("competitors_analyzed", 0),
@@ -133,22 +203,26 @@ async def _run_audit_background(task: AuditTask, payload: dict):
         task.error = str(e)
         task.status = "error"
         task.finished_at = time.time()
+        _save_tasks()
 
 
 @router.post("/audit")
 async def start_seo_audit(payload: dict):
-    """Start async SEO audit via Competitive Intelligence pipeline.
+    """Start SEO/CI audit via Competitive Intelligence pipeline.
 
     Request body:
         {
             "url": "https://clinic.ru",
             "competitors": ["https://competitor1.ru"],
             "niche": "стоматология",
-            "tier": "deep"
+            "tier": "deep"  // "quick" | "deep" | "full"
         }
 
-    Returns task_id immediately. Poll GET /api/seo/audit/{task_id} for results.
+    tier="quick": Returns AnalyzeCompetitorsResponse-format synchronously.
+    tier="deep"/"full": Returns task_id immediately. Poll GET /api/seo/audit/{task_id}.
     """
+    tier = payload.get("tier", "deep").lower()
+
     url = payload.get("url", "")
     if isinstance(url, dict):
         url = url.get("url", "")
@@ -156,14 +230,48 @@ async def start_seo_audit(payload: dict):
     if not url:
         raise HTTPException(status_code=400, detail="url is required")
 
+    # ── Quick tier: synchronous response ──
+    if tier == "quick":
+        import time as _time
+        start = _time.monotonic()
+
+        competitors = payload.get("competitors", [])
+        specialization = payload.get("specialization", payload.get("niche", "medical"))
+        city = payload.get("city", payload.get("geo", ""))
+
+        orchestrator = await _get_orchestrator()
+        result = await orchestrator.execute_ci_analysis({
+            "url": url,
+            "competitors": [url] + [c for c in competitors if c != url],
+            "niche": specialization,
+            "geo": city,
+            "tier": "quick",
+        })
+
+        return {
+            "success": True,
+            "chat_summary": result.get("chat_summary", ""),
+            "feature_matrix": result.get("feature_matrix", {}),
+            "pricing_comparison": result.get("pricing_comparison", {}),
+            "positioning_map": result.get("positioning_map", {}),
+            "steal_worthy_tactics": result.get("steal_worthy_tactics", []),
+            "top_recommendation": result.get("top_recommendation", ""),
+            "wow": result.get("wow"),
+            "duration_seconds": _time.monotonic() - start,
+            "error": result.get("error"),
+        }
+
+    # ── Deep/full tier: async fire-and-forget ──
     task_id = f"seo-audit-{int(time.time())}"
     task = AuditTask(task_id=task_id)
     _tasks[task_id] = task
+    _save_tasks()
+    _cleanup_expired()
 
     # Fire and forget — background task updates _tasks dict
     asyncio.create_task(_run_audit_background(task, payload))
 
-    logger.info("SEO audit started: task=%s url=%s", task_id, url)
+    logger.info("SEO audit started: task=%s url=%s tier=%s", task_id, url, tier)
 
     return {
         "task_id": task_id,
@@ -191,3 +299,67 @@ async def get_audit_status(task_id: str):
         response["error"] = task.error
 
     return response
+
+
+@router.post("/audit/stream")
+async def start_seo_audit_stream(payload: dict):
+    """SSE streaming for quick-tier CI analysis.
+
+    Emits progress events during data collection.
+    Final event: {"type": "result", "data": {...}}.
+
+    Only supports tier="quick". Deep tier uses poll-based /audit/{task_id}.
+    """
+    tier = payload.get("tier", "quick").lower()
+    if tier != "quick":
+        raise HTTPException(
+            status_code=400,
+            detail="Streaming only supported for tier=quick. Use POST /api/seo/audit for deep tier.",
+        )
+
+    url = payload.get("url", "")
+    if isinstance(url, dict):
+        url = url.get("url", "")
+    url = url.strip() if isinstance(url, str) else ""
+    if not url:
+        raise HTTPException(status_code=400, detail="url is required")
+
+    competitors = payload.get("competitors", [])
+
+    async def generate():
+        queue: asyncio.Queue = asyncio.Queue()
+
+        async def run_analysis():
+            try:
+                orchestrator = await _get_orchestrator()
+                result = await orchestrator.execute_ci_analysis({
+                    "url": url,
+                    "competitors": [url] + [c for c in competitors if c != url],
+                    "niche": payload.get("niche", payload.get("specialization", "medical")),
+                    "geo": payload.get("geo", payload.get("city", "")),
+                    "tier": "quick",
+                })
+                await queue.put({"type": "result", "data": result})
+            except Exception as e:
+                logger.exception("Streaming quick analysis failed")
+                await queue.put({"type": "error", "message": str(e)})
+
+        task = asyncio.create_task(run_analysis())
+
+        while True:
+            event = await queue.get()
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+            if event["type"] in ("result", "error"):
+                break
+
+        await task
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
