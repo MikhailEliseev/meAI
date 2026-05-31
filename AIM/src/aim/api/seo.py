@@ -30,6 +30,31 @@ class AuditTask:
     finished_at: float = 0.0
     progress: str = ""
 
+    def to_dict(self) -> dict:
+        """Serialize AuditTask to dict for JSON persistence."""
+        return {
+            "task_id": self.task_id,
+            "status": self.status,
+            "result": self.result,
+            "error": self.error,
+            "started_at": self.started_at,
+            "finished_at": self.finished_at,
+            "progress": self.progress,
+        }
+
+    @staticmethod
+    def from_dict(d: dict) -> "AuditTask":
+        """Deserialize AuditTask from dict (JSON persistence)."""
+        return AuditTask(
+            task_id=d.get("task_id", ""),
+            status=d.get("status", "pending"),
+            result=d.get("result"),
+            error=d.get("error"),
+            started_at=d.get("started_at", 0.0),
+            finished_at=d.get("finished_at", 0.0),
+            progress=d.get("progress", ""),
+        )
+
 _tasks: dict[str, AuditTask] = {}
 
 # Lazy-initialized orchestrator
