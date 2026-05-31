@@ -636,3 +636,201 @@ class TestUnifiedArchitecture:
         from aim.services.ci.models import SwotQuadrant
         s = SwotQuadrant(strengths=["s1"], weaknesses=["w1"])
         assert s.strengths == ["s1"]
+
+
+# ── Phase 21: EventBus delegation end-to-end ──────────────────────────
+
+import asyncio
+from datetime import datetime, timezone
+from meai.agents.base_agent import Agent, Task, TaskResult, TaskStatus
+from meai.events.event_bus import Message
+
+
+class _MinimalTaskAgent(Agent):
+    """Minimal Agent for testing _listen_for_tasks EventBus delegation."""
+
+    def __init__(self, agent_id="test-minimal", database_url="sqlite+aiosqlite:///:memory:"):
+        super().__init__(
+            agent_id=agent_id,
+            agent_type="test",
+            database_url=database_url,
+            vault_path="/tmp/test-minimal-vault",
+        )
+        self.executed_tasks: list[Task] = []
+
+    async def execute_task(self, task: Task) -> TaskResult:
+        self.executed_tasks.append(task)
+        return TaskResult(
+            subtask_id=task.subtask_id,
+            agent_id=self.agent_id,
+            action=task.action,
+            status="success",
+            result={"phase": task.data.get("phase", "test"), "ok": True},
+            error=None,
+            duration_seconds=0.05,
+            completed_at=datetime.now(timezone.utc),
+        )
+
+    def get_capabilities(self) -> list[str]:
+        return ["analyze"]
+
+
+class TestEventBusDelegation:
+    """Verify _listen_for_tasks() picks up task.request Messages and executes them."""
+
+    async def test_listen_for_tasks_picks_up_message(self):
+        """Agent polls EventBus, finds task.request, executes it."""
+        from meai.events.event_bus import EventBus
+
+        eb = EventBus("sqlite+aiosqlite:///:memory:")
+        await eb.initialize()
+
+        agent = _MinimalTaskAgent()
+        agent.event_bus = eb
+        await agent.initialize()
+
+        # Publish task.request Message
+        await eb.publish(Message(
+            from_agent="test-orchestrator",
+            to_agent=agent.agent_id,
+            message_type="task.request",
+            priority=1,
+            payload={
+                "correlation_id": "test-correlation-42",
+                "task": {
+                    "task_id": "task-1",
+                    "subtask_id": "phase-1",
+                    "parent_task_id": "task-1",
+                    "action": "analyze",
+                    "description": "Test phase",
+                    "priority": 1,
+                    "payload": {"niche": "test", "geo": "test"},
+                    "data": {"phase": 1},
+                },
+            },
+            timestamp=datetime.now(timezone.utc).isoformat(),
+        ))
+
+        # Wait for agent to pick up message and execute
+        await asyncio.sleep(1.0)
+
+        # Verify agent executed the task
+        assert len(agent.executed_tasks) == 1, f"Expected 1 executed task, got {len(agent.executed_tasks)}"
+        executed = agent.executed_tasks[0]
+        assert executed.action == "analyze"
+        assert executed.subtask_id == "phase-1"
+        assert executed.payload == {"niche": "test", "geo": "test"}
+
+        await agent.shutdown()
+        await eb.close()
+
+    async def test_listen_for_tasks_ignores_non_task_requests(self):
+        """Agent skips Messages that are not task.request."""
+        from meai.events.event_bus import EventBus
+
+        eb = EventBus("sqlite+aiosqlite:///:memory:")
+        await eb.initialize()
+
+        agent = _MinimalTaskAgent()
+        agent.event_bus = eb
+        await agent.initialize()
+
+        # Publish non-task.request messages
+        await eb.publish(Message(
+            from_agent="other",
+            to_agent=agent.agent_id,
+            message_type="agent.result",
+            priority=1,
+            payload={"some": "data"},
+            timestamp=datetime.now(timezone.utc).isoformat(),
+        ))
+
+        await asyncio.sleep(0.8)
+
+        # Agent should NOT execute anything
+        assert len(agent.executed_tasks) == 0, (
+            f"Agent executed {len(agent.executed_tasks)} tasks from non-task.request messages"
+        )
+
+        await agent.shutdown()
+        await eb.close()
+
+    async def test_orchestrator_full_delegation_flow(self):
+        """CIOrchestrator._execute_single_phase → task.request → agent → ci.agent.completed."""
+        from meai.events.event_bus import EventBus, Event
+        from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+
+        eb = EventBus("sqlite+aiosqlite:///:memory:")
+        await eb.initialize()
+
+        o = CIOrchestrator(agent_id="test-flow", event_bus=eb)
+        o._agent_instances["ci-scout"] = None  # force creation of our minimal agent
+
+        # Replace _get_agent to return minimal test agent with _bridged_report
+        async def _get_test_agent(agent_name):
+            agent = _MinimalTaskAgent(agent_id=f"test-flow-{agent_name}")
+            agent.event_bus = eb
+            agent._ci_correlation_id: str | None = None
+
+            _original_report = agent.report_result
+
+            async def _bridged_report(result):
+                await _original_report(result)
+                corr_id = getattr(agent, '_ci_correlation_id', 'unknown')
+                await eb.publish(Event(
+                    event_type="ci.agent.completed",
+                    payload={
+                        "correlation_id": corr_id,
+                        "agent": agent_name,
+                        "phase": None,
+                        "status": result.status if hasattr(result, 'status') else 'completed',
+                        "result": result.result if hasattr(result, 'result') else {},
+                    }
+                ))
+
+            agent.report_result = _bridged_report
+            await agent.initialize()
+            o._agent_instances[agent_name] = agent
+            return agent
+
+        o._get_agent = _get_test_agent
+
+        task_data = {
+            "task_id": "ci-flow-001",
+            "niche": "стоматология",
+            "geo": "Москва",
+            "competitors": ["https://example.com"],
+            "correlation_id": "ci-flow-001",
+        }
+
+        result = await o._execute_single_phase(
+            phase_num=1,
+            agent_name="ci-scout",
+            task_data=task_data,
+        )
+
+        assert result["phase"] == 1
+        assert result["agent"] == "ci-scout"
+        assert result["status"] == "success"
+        assert result["result"]["ok"] is True
+
+        await eb.close()
+
+    async def test_eventbus_delegation_timeout_when_no_agent(self):
+        """_execute_single_phase returns stub when agent is None."""
+        from meai.events.event_bus import EventBus
+        from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+
+        eb = EventBus("sqlite+aiosqlite:///:memory:")
+        await eb.initialize()
+
+        o = CIOrchestrator(agent_id="test-to", event_bus=eb)
+
+        result = await o._execute_single_phase(
+            phase_num=99,
+            agent_name="ci-nonexistent",
+            task_data={"task_id": "x", "niche": "x", "geo": "x"},
+        )
+
+        assert result["status"] == "stub"
+        await eb.close()
