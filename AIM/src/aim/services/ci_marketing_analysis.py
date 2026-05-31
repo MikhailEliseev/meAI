@@ -52,33 +52,8 @@ class ScrapedPageData:
     fetch_error: str = ""
 
 
-@dataclass
-class SwotQuadrant:
-    strengths: list[str] = field(default_factory=list)
-    weaknesses: list[str] = field(default_factory=list)
-    opportunities: list[str] = field(default_factory=list)
-    threats: list[str] = field(default_factory=list)
-
-
-@dataclass
-class Tactic:
-    source_competitor: str
-    tactic_description: str
-    why_it_works: str
-    how_to_implement: str
-    estimated_effort: str  # "Low" | "Medium" | "High"
-    expected_impact: str   # "Low" | "Medium" | "High"
-
-
-@dataclass
-class StealWorthyTactic:
-    """A tactic worth stealing — backward-compatible alias for Tactic."""
-    source_competitor: str
-    tactic_description: str
-    why_it_works: str = ""
-    how_to_implement: str = ""
-    estimated_effort: str = "Medium"
-    expected_impact: str = "Medium"
+# Re-export from ci.models — single canonical definition (CR-03 consolidation)
+from .ci.models import SwotQuadrant, StealWorthyTactic
 
 
 def _tactic_impact_effort(feature_name: str) -> tuple[str, str]:
@@ -612,8 +587,8 @@ class TacticExtractor:
         competitors: list[CompetitorMatch],
         scraped_pages: list[ScrapedPageData],
         client_services: list[str],
-    ) -> list[Tactic]:
-        tactics: list[Tactic] = []
+    ) -> list[StealWorthyTactic]:
+        tactics: list[StealWorthyTactic] = []
 
         for i, (match, page) in enumerate(zip(competitors, scraped_pages)):
             if page.fetch_error:
@@ -623,7 +598,7 @@ class TacticExtractor:
 
             # Tactic: Online booking
             if page.has_online_booking:
-                tactics.append(Tactic(
+                tactics.append(StealWorthyStealWorthyTactic(
                     source_competitor=comp_name,
                     tactic_description=f"Онлайн-запись как у {comp_name}",
                     why_it_works="Пациенты ценят удобство: запись 24/7 без звонков",
@@ -634,7 +609,7 @@ class TacticExtractor:
 
             # Tactic: Price transparency
             if page.has_price_page:
-                tactics.append(Tactic(
+                tactics.append(StealWorthyTactic(
                     source_competitor=comp_name,
                     tactic_description=f"Страница с ценами как у {comp_name}",
                     why_it_works="Прозрачные цены = доверие. Пациенты сравнивают цены до визита.",
@@ -645,7 +620,7 @@ class TacticExtractor:
 
             # Tactic: Content depth
             if page.word_count > 3000:
-                tactics.append(Tactic(
+                tactics.append(StealWorthyTactic(
                     source_competitor=comp_name,
                     tactic_description=f"Глубокий контент как у {comp_name} ({page.word_count} слов на сайте)",
                     why_it_works="Больше контента = больше позиций в поиске = больше пациентов",
@@ -657,7 +632,7 @@ class TacticExtractor:
             # Tactic: Social presence
             if len(page.social_links) >= 2:
                 platforms = ", ".join(list(page.social_links.keys())[:3])
-                tactics.append(Tactic(
+                tactics.append(StealWorthyTactic(
                     source_competitor=comp_name,
                     tactic_description=f"Активность в соцсетях: {platforms}",
                     why_it_works="Соцсети создают доверие и повторные визиты",
@@ -668,7 +643,7 @@ class TacticExtractor:
 
         # Deduplicate by tactic_description
         seen: set[str] = set()
-        uniq: list[Tactic] = []
+        uniq: list[StealWorthyTactic] = []
         for t in tactics:
             key = t.tactic_description.lower()
             if key not in seen:
