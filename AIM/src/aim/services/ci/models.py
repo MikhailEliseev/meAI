@@ -161,9 +161,105 @@ class ComparisonMatrix:
 
 
 @dataclass
+class WowMetrics:
+    """Estimated practice metrics (patients/month, time-to-result, cost-per-patient).
+
+    Used by WowEstimator in wow_estimator.py to provide ballpark numbers
+    for competitive comparison when real data is unavailable.
+    """
+    patients_per_month: Optional[int] = None
+    time_to_result_weeks: Optional[int] = None
+    cost_per_patient_rub: Optional[int] = None
+    is_estimated: bool = False
+    source: str = ""
+
+@dataclass
 class PipelineProgress:
     """Progress update emitted during collection."""
     stage: str  # "searching" | "collecting" | "financials" | "seo" | "social" | "scraping" | "matrix" | "done"
     message: str
     competitor_name: str = ""
     details: dict = field(default_factory=dict)
+
+
+@dataclass
+class SwotQuadrant:
+    """SWOT analysis quadrant result — strength/weakness/opportunity/threat lists."""
+    strengths: list[str] = field(default_factory=list)
+    weaknesses: list[str] = field(default_factory=list)
+    opportunities: list[str] = field(default_factory=list)
+    threats: list[str] = field(default_factory=list)
+
+
+@dataclass
+class StealWorthyTactic:
+    """A tactic worth stealing from a competitor — the source, the tactic, and why."""
+    source_competitor: str
+    tactic_description: str
+    why_it_works: str = ""
+    how_to_implement: str = ""
+    estimated_effort: str = "Medium"  # "Low" | "Medium" | "High"
+    expected_impact: str = "Medium"   # "Low" | "Medium" | "High"
+
+
+@dataclass
+class UnifiedCiResult:
+    """Phase 21 — unified result type that spans quick/deep/full tiers.
+
+    Replaces the three separate result types from the old Path 1/2/3 architecture
+    with a single dataclass that adapts behaviour based on tier.
+    """
+    tier: str = "quick"  # "quick" | "deep" | "full"
+    chat_summary: str = ""
+    feature_matrix: dict = field(default_factory=dict)
+    aggregate_swot: Optional[SwotQuadrant] = None
+    steal_worthy_tactics: list[StealWorthyTactic] = field(default_factory=list)
+    top_recommendation: str = ""
+    wow: dict = field(default_factory=dict)
+    error: str = ""
+    analysis_duration_seconds: float = 0.0
+    # Phase 21 tier-spanning fields
+    findings: dict = field(default_factory=dict)
+    phases_executed: list[int] = field(default_factory=list)
+    competitors_analyzed: int = 0
+    quality_score: dict = field(default_factory=dict)
+
+    @property
+    def is_quick(self) -> bool:
+        return self.tier == "quick"
+
+    def to_dict(self) -> dict:
+        """Serialize to dict for JSON output."""
+        result = {
+            "tier": self.tier,
+            "chat_summary": self.chat_summary,
+            "feature_matrix": self.feature_matrix,
+            "top_recommendation": self.top_recommendation,
+            "wow": self.wow,
+            "error": self.error,
+            "analysis_duration_seconds": self.analysis_duration_seconds,
+            "findings": self.findings,
+            "phases_executed": self.phases_executed,
+            "competitors_analyzed": self.competitors_analyzed,
+            "quality_score": self.quality_score,
+        }
+        if self.aggregate_swot is not None:
+            result["aggregate_swot"] = {
+                "strengths": self.aggregate_swot.strengths,
+                "weaknesses": self.aggregate_swot.weaknesses,
+                "opportunities": self.aggregate_swot.opportunities,
+                "threats": self.aggregate_swot.threats,
+            }
+        if self.steal_worthy_tactics:
+            result["steal_worthy_tactics"] = [
+                {
+                    "tactic": t.tactic_description,
+                    "source": t.source_competitor,
+                    "why": t.why_it_works,
+                    "how": t.how_to_implement,
+                    "effort": t.estimated_effort,
+                    "impact": t.expected_impact,
+                }
+                for t in self.steal_worthy_tactics
+            ]
+        return result

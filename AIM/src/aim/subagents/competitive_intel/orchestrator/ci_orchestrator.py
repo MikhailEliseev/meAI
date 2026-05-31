@@ -37,7 +37,12 @@ class CIOrchestrator(Agent):
         database_url: str = "sqlite+aiosqlite:///./data/meai.db",
         vault_path: str = "AIM/obsidian/ci-orchestrator"
     ):
-        super().__init__(agent_id, database_url, vault_path)
+        super().__init__(
+            agent_id=agent_id,
+            agent_type="ci-orchestrator",
+            database_url=database_url,
+            vault_path=vault_path,
+        )
         self.event_bus = event_bus
         self.vault = ObsidianVault(vault_path)
         self.state_file = "AIM/data/ci-state.json"
