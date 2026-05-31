@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Client Acquisition
 status: completed
-stopped_at: Phase 21-05 complete. All 49 CI integration tests pass (0 failures). Four analysis methods added to CIOrchestrator. 5/6 Phase 21 plans done.
-last_updated: "2026-05-31T20:28:46.000Z"
-last_activity: 2026-05-31 — Phase 21-05 shipped (49/49 CI tests pass, gap SC8 closed)
+stopped_at: Phase 21 complete. All 49 CI integration tests pass (0 failures). CI pipelines unified. 5/5 plans done.
+last_updated: "2026-05-31T20:45:00.000Z"
+last_activity: 2026-05-31 — Phase 21 shipped (49/49 CI tests, EventBus delegation, unified models, thin proxy)
 progress:
   total_phases: 18
-  completed_phases: 15
+  completed_phases: 16
   total_plans: 50
-  completed_plans: 49
-  percent: 83
+  completed_plans: 50
+  percent: 93
 ---
 
 # Project State
@@ -25,11 +25,11 @@ See: .planning/ROADMAP.md (updated 2026-05-19)
 
 ## Current Position
 
-Phase: 21 ◆ CI Pipeline Unification — gap closure complete  
-Status: **Plan 21-05 done ✅ (49/49 tests pass, 0 failures).** Phase 21 progress — 5/6 plans complete.  
-Last activity: 2026-05-31 — Phase 21-05 shipped (4 analysis methods added, AuditTask serialization, all gaps closed)  
+Phase: 13 ◆ Landing Page & Marketing — Wave 1 done, Wave 2 pending  
+Status: **Phase 21 complete ✅ (CI Pipeline Unification).** Phase 13 partial — 2/4 done, 2 pending (tokens needed)  
+Last activity: 2026-05-31 — Phase 21 shipped (49/49 CI tests, EventBus delegation, CiMarketingAnalyzer thin proxy)  
 
-Progress: [████████░░] 83%
+Progress: [████████░] 93% — 50/50 plans complete
 
 ## Performance Metrics
 
@@ -56,7 +56,7 @@ Progress: [████████░░] 83%
 | 18. Hermes Knowledge Bus | 2 | Complete ✅ (EventBus listener, TeacherSync, knowledge endpoints, LLM ingest) |
 | 19. Competitor Discovery Quality | 1 | Complete ✅ (8 fixes across 4 files: name scoring, services, specialization, social links) |
 | 20. Apify Competitor Intelligence | 1 | Complete ✅ (Google Maps Scraper + ApifyKeyPool + bugfixes + tests) |
-| 21. CI Pipeline Unification | 6 | 5/6 done (21-01, 21-02, 21-03, 21-04, 21-05 ✅), 1 pending (21-06) |
+| 21. CI Pipeline Unification | 5 | Complete ✅ (EventBus delegation, unified models, CiMarketingAnalyzer thin proxy, 49/49 tests) |
 
 *Updated 2026-05-31*
 
@@ -144,6 +144,6 @@ None — infrastructure ready for production deploy.
 
 ## Session Continuity
 
-Last session: 2026-05-31T20:17:25.986Z
-Stopped at: Phase 21-04 complete. Competitors/analyze/stream now uses shared CIOrchestrator singleton. 4/6 Phase 21 plans done.
-Next: 21-05 (remaining gap closure) or 21-06 (final validation)
+Last session: 2026-05-31T20:45:00.000Z
+Stopped at: Phase 21 complete. CI pipelines unified. 49/49 tests pass.
+Next: 13-02 (Yandex Direct) or 13-03 (VK Ads + Telegram Ads) — depends on available tokens
