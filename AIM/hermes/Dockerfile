@@ -1,6 +1,6 @@
 # Hermes Agent — AIM Operator container
 # Python 3.11 per D-02 (not 3.13 as in official Hermes Dockerfile)
-# Custom minimal build — no Node.js, no Playwright, no TUI, no browser
+# Fully capable build — web scraping, Instagram, browser automation
 
 FROM python:3.11-slim
 
@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     build-essential \
     git \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
 
 # App directory
@@ -23,9 +25,23 @@ RUN pip install --no-cache-dir -r requirements.txt && \
     "hermes-agent[web]>=0.14.0" \
     "hermes-agent[anthropic]>=0.14.0"
 
+# Web scraping & HTML parsing
+RUN pip install --no-cache-dir \
+    beautifulsoup4 \
+    lxml \
+    parsel
+
+# Instagram scraping (private API, no browser needed)
+RUN pip install --no-cache-dir \
+    instagrapi \
+    instaloader
+
+# Browser automation (Playwright + Chromium)
+RUN pip install --no-cache-dir playwright && \
+    playwright install --with-deps chromium
+
 # Patch AIAgent: remove stream_options which causes HTTP 400 from OmniRoute
 # when include_usage is requested but provider doesn't support it.
-# (Previously we also forced stream=False, but OmniRoute now handles streaming.)
 RUN find /usr/local/lib/python3.11/site-packages -name 'run_agent.py' -exec \
     sed -i '/"stream_options": {.*include_usage.*}/d' {} \;
 
@@ -45,12 +61,15 @@ ENV HERMES_HOME=/opt/data
 ENV PYTHONUNBUFFERED=1
 ENV HERMES_CONFIG_QUIET=1
 
+# Persistent pip packages path (for pip_install tool)
+ENV PYTHONPATH=/opt/data/pip-packages:$PYTHONPATH
+
 # OMNIROUTE CONFIG (D-05)
 ENV OMNIROUTE_URL=http://193.111.152.14:7451
 ENV OMNIROUTE_AUTH=U9pjtK:hxtlqz
 
-# Create data directory (Docker volume mount point per D-06)
-RUN mkdir -p /opt/data/sessions /opt/data/leads /opt/data/logs
+# Create data directories (Docker volume mount point per D-06)
+RUN mkdir -p /opt/data/sessions /opt/data/leads /opt/data/logs /opt/data/pip-packages
 
 # Volume for persistent data (D-06)
 VOLUME ["/opt/data"]

@@ -649,12 +649,21 @@ class CIOrchestrator(Agent):
             else:
                 agent_results[agent_name] = result
 
+        # Determine overall status for quality_score calculation
+        if len(errors) == len(agent_names):
+            parallel_status = "failed"
+        elif len(errors) > 0:
+            parallel_status = "partial"
+        else:
+            parallel_status = "success"
+
         return {
             "phase": phase_num,
             "parallel": True,
             "agents": agent_names,
             "results": agent_results,
-            "errors": errors
+            "errors": errors,
+            "status": parallel_status
         }
 
     def _calculate_quality_score(
@@ -666,19 +675,23 @@ class CIOrchestrator(Agent):
 
         # Count successful phases
         successful_phases = 0
+        partial_phases = 0
         failed_phases = 0
 
         for phase_key, phase_data in findings.items():
             status = phase_data.get("status", "unknown")
             if status == "success":
                 successful_phases += 1
+            elif status == "partial":
+                partial_phases += 1
             elif status == "failed" or status == "stub":
                 failed_phases += 1
 
         total_phases = len(phases_executed)
 
-        # Calculate completeness (0-100)
-        completeness = int((successful_phases / total_phases * 100)) if total_phases > 0 else 0
+        # Calculate completeness (0-100) — partial phases count as half
+        effective_successes = successful_phases + (partial_phases * 0.5)
+        completeness = int((effective_successes / total_phases * 100)) if total_phases > 0 else 0
 
         # Calculate confidence level
         if completeness >= 90:
@@ -696,6 +709,7 @@ class CIOrchestrator(Agent):
             "confidence": confidence,
             "completeness": completeness,
             "successful_phases": successful_phases,
+            "partial_phases": partial_phases,
             "failed_phases": failed_phases,
             "total_phases": total_phases
         }
