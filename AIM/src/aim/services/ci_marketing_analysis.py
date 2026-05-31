@@ -71,6 +71,40 @@ class Tactic:
 
 
 @dataclass
+class StealWorthyTactic:
+    """A tactic worth stealing — backward-compatible alias for Tactic."""
+    source_competitor: str
+    tactic_description: str
+    why_it_works: str = ""
+    how_to_implement: str = ""
+    estimated_effort: str = "Medium"
+    expected_impact: str = "Medium"
+
+
+def _tactic_impact_effort(feature_name: str) -> tuple[str, str]:
+    """Estimate impact and effort for a given feature name (Russian or English).
+
+    Used by TacticExtractor to classify website features for tactical scoring.
+    Returns (impact, effort) tuple where each is "Low" | "Medium" | "High".
+    """
+    feature_lower = feature_name.lower().strip()
+    # High impact features
+    high_impact = [
+        "онлайн-запись", "online booking", "запись на приём", "запись онлайн",
+        "личный кабинет", "калькулятор", "цены", "отзывы",
+        "reviews", "pricing", "calculator",
+    ]
+    for kw in high_impact:
+        if kw in feature_lower:
+            if kw in ("калькулятор", "личный кабинет", "calculator"):
+                return ("High", "Medium")
+            return ("High", "Low")
+    # Default
+    return ("Medium", "Low")
+
+
+
+@dataclass
 class CiAnalysisResult:
     chat_summary: str = ""
     feature_matrix: dict = field(default_factory=dict)
@@ -80,9 +114,14 @@ class CiAnalysisResult:
     aggregate_swot: Optional[SwotQuadrant] = None
     steal_worthy_tactics: list = field(default_factory=list)
     top_recommendation: str = ""
+    wow: Optional[dict] = None
     scraped_at: str = ""
     analysis_duration_seconds: float = 0.0
     error: str = ""
+    # Phase 21 fields
+    tier: str = "quick"
+    findings: dict = field(default_factory=dict)
+    phases_executed: list = field(default_factory=list)
 
 
 # ── Competitor page scraper ──────────────────────────────────────────
