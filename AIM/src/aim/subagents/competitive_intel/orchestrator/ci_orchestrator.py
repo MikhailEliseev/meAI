@@ -14,7 +14,7 @@ import asyncio
 import logging
 
 from meai.agents.base_agent import Agent, Task, TaskResult
-from meai.events.event_bus import Event, EventBus
+from meai.events.event_bus import Event, EventBus, Message
 from meai.memory.obsidian import ObsidianVault
 
 logger = logging.getLogger(__name__)
@@ -73,8 +73,19 @@ class CIOrchestrator(Agent):
         # Agent registry (lazy initialization)
         self._agent_instances = {}
 
-    def _get_agent(self, agent_name: str):
-        """Get or create agent instance (lazy initialization)"""
+        # Completed results from EventBus delegation (correlation_id:agent_name → result)
+        self._completed_results: Dict[str, Dict[str, Any]] = {}
+
+        # Persistent subscriber: collects ALL ci.agent.completed events for audit trail
+        self.event_bus.subscribe("ci.agent.completed", self._on_agent_completed)
+
+    async def _get_agent(self, agent_name: str):
+        """Get or create agent instance (lazy initialization with EventBus setup).
+
+        After Wave 1: agents share the orchestrator's EventBus, report_result is bridged
+        to publish ci.agent.completed Events, and agent.initialize() is called to start
+        DB connection and vault.
+        """
         if agent_name in self._agent_instances:
             return self._agent_instances[agent_name]
 
@@ -139,12 +150,62 @@ class CIOrchestrator(Agent):
                 # TW agents not implemented yet - return None
                 return None
 
+            # ── Wave 1: EventBus injection + report_result bridge + initialization ──
+
+            # Inject shared EventBus (replaces agent's own per-instance EventBus)
+            agent.event_bus = self.event_bus
+
+            # Track per-phase correlation_id for the bridge to use
+            agent._ci_correlation_id: Optional[str] = None
+
+            # Bridge report_result to publish ci.agent.completed Event on shared EventBus
+            _original_report = agent.report_result
+
+            async def _bridged_report(result):
+                await _original_report(result)
+                # Publish ci.agent.completed Event so the orchestrator's
+                # transient callback in _execute_single_phase can catch it
+                corr_id = getattr(agent, '_ci_correlation_id', 'unknown')
+                await self.event_bus.publish(Event(
+                    event_type="ci.agent.completed",
+                    payload={
+                        "correlation_id": corr_id,
+                        "agent": agent_name,
+                        "phase": None,  # Set by _execute_single_phase via agent._ci_correlation_id
+                        "status": result.status if hasattr(result, 'status') else 'completed',
+                        "result": result.result if hasattr(result, 'result') else {},
+                    }
+                ))
+
+            agent.report_result = _bridged_report
+
+            # Initialize agent (DB, vault, event bus)
+            await agent.initialize()
+
             self._agent_instances[agent_name] = agent
             return agent
 
         except ImportError as e:
             logger.warning(f"Failed to import agent {agent_name}: {e}")
             return None
+
+    async def _on_agent_completed(self, event: Event) -> None:
+        """Persistent handler for ci.agent.completed events — stores results for audit trail.
+
+        Collects ALL agent completion events regardless of which phase initiated them.
+        The transient per-phase callback in _execute_single_phase handles phase-specific
+        correlation_id matching; this persistent handler serves as the audit trail.
+        """
+        correlation_id = event.payload.get("correlation_id", "unknown")
+        agent_name = event.payload.get("agent", "unknown")
+        key = f"{correlation_id}:{agent_name}"
+        self._completed_results[key] = {
+            "agent": agent_name,
+            "phase": event.payload.get("phase"),
+            "status": event.payload.get("status"),
+            "result": event.payload.get("result", {}),
+            "timestamp": event.timestamp.isoformat() if hasattr(event.timestamp, 'isoformat') else str(event.timestamp),
+        }
 
     async def execute_ci_analysis(
         self,
@@ -321,8 +382,13 @@ class CIOrchestrator(Agent):
         agent_name: str,
         task_data: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Execute single agent phase"""
-        agent = self._get_agent(agent_name)
+        """Execute single agent phase via EventBus delegation.
+
+        Publishes a task.request Message targeting the agent and waits for the
+        ci.agent.completed Event with matching correlation_id. No fallback to
+        direct agent.execute_task() — EventBus delegation is the ONLY path.
+        """
+        agent = await self._get_agent(agent_name)
 
         if agent is None:
             # Agent not implemented - return stub result
@@ -358,28 +424,83 @@ class CIOrchestrator(Agent):
             "competitors": task_data.get("competitors", [])
         }
 
-        # Execute agent
-        result = await agent.execute_task(task)
-
-        # Publish agent completed event
         correlation_id = task_data.get("correlation_id", task_data.get("task_id", "unknown"))
+        phase_correlation = f"{correlation_id}-{phase_num}"
+
+        # Set correlation_id on agent so the bridged report_result can use it
+        agent._ci_correlation_id = phase_correlation
+
+        # ── EventBus delegation ──
+        # Publish audit trail event
         await self.event_bus.publish(Event(
-            event_type="ci.agent.completed",
+            event_type="ci.task.dispatched",
             payload={
-                "correlation_id": correlation_id,
+                "correlation_id": phase_correlation,
                 "agent": agent_name,
                 "phase": phase_num,
-                "status": result.status,
-                "result": result.result if hasattr(result, 'result') else {},
+                "task_action": "analyze",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         ))
 
-        return {
-            "phase": phase_num,
-            "agent": agent_name,
-            "status": result.status,
-            "result": result.result
-        }
+        # Publish task.request Message targeting the agent (EventBus delegation)
+        await self.event_bus.publish(Message(
+            from_agent=self.agent_id,
+            to_agent=agent.agent_id,
+            message_type="task.request",
+            priority=1,
+            payload={
+                "correlation_id": phase_correlation,
+                "task": {
+                    "task_id": task.task_id,
+                    "subtask_id": task.subtask_id,
+                    "parent_task_id": task.parent_task_id,
+                    "action": task.action,
+                    "description": task.description,
+                    "priority": task.priority,
+                    "payload": task.payload,
+                    "data": {"correlation_id": phase_correlation},
+                },
+            },
+            timestamp=datetime.now(timezone.utc),
+        ))
+
+        # Wait for agent to complete via EventBus
+        # Agent's poll loop picks up task.request, executes via _execute_and_report(),
+        # and the bridged report_result() publishes ci.agent.completed Event.
+        # The transient callback below catches it.
+        completion_event = asyncio.Event()
+        completion_result: Dict[str, Any] = {}
+
+        async def on_agent_completed(event: Event):
+            if event.payload.get("correlation_id") == phase_correlation:
+                completion_result.update(event.payload)
+                completion_event.set()
+
+        self.event_bus.subscribe("ci.agent.completed", on_agent_completed)
+
+        try:
+            await asyncio.wait_for(completion_event.wait(), timeout=60.0)
+            return {
+                "phase": phase_num,
+                "agent": agent_name,
+                "status": completion_result.get("status", "completed"),
+                "result": completion_result.get("result", {}),
+            }
+        except asyncio.TimeoutError:
+            logger.error(
+                "EventBus delegation timeout for %s phase %d after 60s",
+                agent_name, phase_num,
+            )
+            return {
+                "phase": phase_num,
+                "agent": agent_name,
+                "status": "timeout",
+                "error": f"Agent {agent_name} did not complete within 60s",
+                "result": {},
+            }
+        finally:
+            self.event_bus.unsubscribe("ci.agent.completed", on_agent_completed)
 
     async def _execute_parallel_phase(
         self,
