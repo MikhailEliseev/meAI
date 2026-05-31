@@ -138,7 +138,7 @@ def _compact_quick_result(data: dict) -> dict:
         "feature_matrix": feature_matrix,
         "pricing_comparison": pricing,
         "positioning_map": positioning,
-        "steal_worthy_tactics": data.get("steal_worthy_tactics", []) or [],
+        "best_practices": data.get("steal_worthy_tactics", []) or [],
         "top_recommendation": data.get("top_recommendation", ""),
         "chat_summary": data.get("chat_summary", ""),
         "meta": {
