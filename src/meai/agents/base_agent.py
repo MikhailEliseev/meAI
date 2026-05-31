@@ -4,7 +4,9 @@ All agents (SEO, Content, Ads) inherit from this base class.
 Provides common functionality for task execution, result reporting, and learning.
 """
 
+import asyncio
 import json
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -126,11 +128,17 @@ class Agent(ABC):
         # Create database tables
         await self._create_tables()
 
-        # Start listening for tasks
-        # In real implementation, would start background task listener
+        # Start background task listener (Phase 21: EventBus delegation)
+        self._listener_task = asyncio.create_task(self._listen_for_tasks())
 
     async def shutdown(self) -> None:
         """Shutdown agent"""
+        if hasattr(self, '_listener_task'):
+            self._listener_task.cancel()
+            try:
+                await self._listener_task
+            except asyncio.CancelledError:
+                pass
         await self.event_bus.close()
         await self.db.disconnect()
 
@@ -186,6 +194,56 @@ class Agent(ABC):
             )
 
             await session.commit()
+
+    async def _listen_for_tasks(self) -> None:
+        """Poll EventBus for task.request Messages and dispatch to _execute_and_report().
+
+        Phase 21 EventBus delegation: CIOrchestrator publishes task.request Messages
+        on the shared EventBus instead of calling agent.receive_task() directly.
+        This poll loop bridges the gap — picks up pending task.request Messages,
+        reconstructs Task objects, and spawns background execution.
+
+        Each task runs as a separate asyncio.Task so the poll loop stays responsive.
+        """
+        logger = logging.getLogger(__name__)
+
+        while True:
+            try:
+                messages = await self.event_bus.get_messages(
+                    agent_id=self.agent_id,
+                    status="pending",
+                    limit=10,
+                )
+                for msg in messages:
+                    if msg.message_type != "task.request":
+                        await self.event_bus.mark_processed(msg.message_id)
+                        continue
+
+                    await self.event_bus.mark_processed(msg.message_id)
+
+                    task_data = msg.payload.get("task", {})
+                    task = Task(
+                        task_id=task_data.get("task_id", "unknown"),
+                        subtask_id=task_data.get("subtask_id", "unknown"),
+                        parent_task_id=task_data.get("parent_task_id", "unknown"),
+                        action=task_data.get("action", "analyze"),
+                        description=task_data.get("description", ""),
+                        priority=task_data.get("priority", 1),
+                        status=TaskStatus.RECEIVED,
+                        created_at=datetime.now(timezone.utc),
+                        received_at=datetime.now(timezone.utc),
+                    )
+                    task.payload = task_data.get("payload", {})
+                    task.data = task_data.get("data", {})
+
+                    asyncio.create_task(self._execute_and_report(task))
+
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                logger.exception("_listen_for_tasks poll error")
+
+            await asyncio.sleep(0.5)
 
     @abstractmethod
     async def execute_task(self, task: Task) -> TaskResult:
