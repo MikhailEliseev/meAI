@@ -973,6 +973,273 @@ class CIOrchestrator(Agent):
             f"Ошибка в задаче {task.id}: {error}"
         )
 
+    # ── Phase 21: Matrix-based analysis methods ───────────────────────
+    # These methods operate on ComparisonMatrix-like objects (used by tests
+    # and the CiMarketingAnalyzer proxy) to extract tactics, SWOT, recommendations,
+    # and generate human-readable analysis summaries.
+
+    def _extract_tactics_from_matrix(self, matrix) -> List["StealWorthyTactic"]:
+        """Extract steal-worthy tactics from a comparison matrix.
+
+        Analyzes competitor features, SEO scores, pricing visibility, and website
+        gaps to produce actionable tactical recommendations sorted by impact.
+        """
+        from aim.services.ci.models import StealWorthyTactic
+        from aim.services.ci_marketing_analysis import _tactic_impact_effort
+
+        comps = getattr(matrix, "competitors", [])
+
+        if not comps:
+            return []
+
+        tactics: List[StealWorthyTactic] = []
+        client_features = getattr(matrix, "client", {}).get("features", [])
+        client_feat_set = set((f or "").lower() for f in client_features)
+
+        for comp in comps:
+            name = str(comp.get("name", "Конкурент"))
+            website = comp.get("website", {}) or {}
+            features = website.get("features", []) or []
+
+            # Feature-based tactics from competitors
+            for feat in features[:3]:
+                impact, effort = _tactic_impact_effort(feat)
+                tactics.append(StealWorthyTactic(
+                    source_competitor=name,
+                    tactic_description=f"Внедрить «{feat}» как у {name}",
+                    why_it_works=f"{name} использует «{feat}» для привлечения пациентов",
+                    expected_impact=impact,
+                    estimated_effort=effort,
+                ))
+
+            # Website gaps — features client is missing
+            missing = website.get("missing", []) or []
+            for feat in features:
+                if (feat or "").lower() not in client_feat_set:
+                    tactics.append(StealWorthyTactic(
+                        source_competitor=name,
+                        tactic_description=f"Добавить «{feat}» — есть у {name}",
+                        why_it_works=f"Пациенты ожидают «{feat}» — {name} уже предлагает это",
+                        expected_impact="High",
+                        estimated_effort="Medium",
+                    ))
+
+            # Pricing transparency — competitor hides prices
+            if website.get("pricing_visible") is False:
+                tactics.append(StealWorthyTactic(
+                    source_competitor=name,
+                    tactic_description="Прозрачные цены на сайте",
+                    why_it_works=f"{name} не показывает цены, клиенты ищут прозрачность",
+                    expected_impact="High",
+                    estimated_effort="Low",
+                ))
+
+        # SEO exploit — target competitor with weakest SEO
+        scored = [(c.get("seo", {}).get("score", 100) or 100, c) for c in comps]
+        if scored:
+            worst_score, worst_comp = min(scored, key=lambda x: x[0])
+            if worst_score < 60:
+                name = worst_comp.get("name", "конкурент")
+                tactics.append(StealWorthyTactic(
+                    source_competitor=name,
+                    tactic_description=f"SEO-оптимизация — обойти {name} в поиске",
+                    why_it_works=f"У {name} слабое SEO ({worst_score}/100)",
+                    expected_impact="High",
+                    estimated_effort="Medium",
+                ))
+
+        # Deduplicate by tactic_description
+        seen: set[str] = set()
+        uniq: List[StealWorthyTactic] = []
+        for t in tactics:
+            key = t.tactic_description
+            if key not in seen:
+                seen.add(key)
+                uniq.append(t)
+
+        # Sort by impact: High → Medium → Low
+        impact_order = {"High": 0, "Medium": 1, "Low": 2}
+        uniq.sort(key=lambda t: impact_order.get(t.expected_impact, 2))
+
+        return uniq[:8]
+
+    def _extract_swot_from_matrix(self, matrix) -> dict:
+        """Build SWOT analysis dict from comparison matrix data."""
+
+        comps = getattr(matrix, "competitors", [])
+
+        if not comps:
+            return {
+                "strengths": [
+                    "Вы лучше знаете локальный рынок",
+                    "Индивидуальный подход к пациентам",
+                    "Гибкость в принятии решений",
+                ],
+                "weaknesses": [
+                    "Ограниченный бюджет на маркетинг",
+                    "Меньше узнаваемость чем у конкурентов",
+                ],
+                "opportunities": [
+                    "Растущий спрос на медицинские услуги",
+                    "Возможность привлечь пациентов через онлайн",
+                ],
+                "threats": [
+                    "Конкуренты могут усилить рекламу",
+                    "Изменения в законодательстве",
+                ],
+            }
+
+        strengths: list[str] = []
+        weaknesses: list[str] = []
+        opportunities: list[str] = []
+        threats: list[str] = []
+
+        for comp in comps:
+            name = str(comp.get("name", "Конкурент"))
+            seo = comp.get("seo", {}) or {}
+            website = comp.get("website", {}) or {}
+            social = comp.get("social", {}) or {}
+            financials = comp.get("financials", {}) or {}
+
+            seo_score = seo.get("score", 100) or 100
+            seo_issues = seo.get("issues", []) or []
+
+            # Strengths — competitor weaknesses we can exploit
+            if seo_score < 70:
+                strengths.append(f"Слабое SEO у {name} — возможность обойти в поиске")
+            features = website.get("features", []) or []
+            if features:
+                strengths.append(f"Можно перенять фишки сайта {name}: {', '.join(features[:3])}")
+            doctors = comp.get("doctors", []) or []
+            if doctors:
+                strengths.append(f"Команда врачей у {name} — можно привлечь похожих специалистов")
+
+            # Weaknesses — competitor strengths to watch out for
+            if seo_score >= 80:
+                weaknesses.append(f"Сильное SEO у {name} ({seo_score}/100) — трудно обойти")
+            rev = financials.get("latest_revenue")
+            if rev and rev > 30_000_000:
+                weaknesses.append(f"{name} имеет значительную выручку ({rev:,.0f} руб)")
+            social_platforms = [p for p, v in social.items()
+                               if isinstance(v, dict) and v.get("exists")]
+            if len(social_platforms) >= 2:
+                weaknesses.append(f"{name} активен в соцсетях: {', '.join(social_platforms)}")
+
+            # Opportunities — competitor gaps we can fill
+            missing = website.get("missing", []) or []
+            if missing:
+                opportunities.append(f"{name} не хватает: {', '.join(missing[:3])} — предложите это")
+            if website.get("pricing_visible") is False:
+                opportunities.append(f"{name} скрывает цены — публикуйте свои")
+
+            # Threats — competitor advantages
+            ratings = [r for r in [
+                comp.get("gm_rating", 0),
+                comp.get("yandex_rating", 0),
+                comp.get("prodoctorov_rating", 0),
+            ] if r]
+            avg_rating = sum(ratings) / len(ratings) if ratings else 0.0
+            if avg_rating >= 4.0:
+                threats.append(f"Высокий рейтинг {name} ({avg_rating:.1f}) — сильная репутация")
+            trend = str(financials.get("trend", ""))
+            if "раст" in trend.lower():
+                threats.append(f"{name} растёт — усиление конкуренции")
+
+        # Ensure at least 1 item per quadrant
+        if not strengths:
+            strengths.append("Вы лучше знаете локальный рынок")
+        if not weaknesses:
+            weaknesses.append("Недостаточно данных для оценки конкурентов")
+        if not opportunities:
+            opportunities.append("Займите нишу с лучшим сервисом")
+        if not threats:
+            threats.append("Рынок может измениться — будьте гибкими")
+
+        return {
+            "strengths": strengths[:5],
+            "weaknesses": weaknesses[:5],
+            "opportunities": opportunities[:5],
+            "threats": threats[:5],
+        }
+
+    def _top_rec_from_matrix(self, matrix) -> str:
+        """Return the single most actionable recommendation from a matrix."""
+
+        comps = getattr(matrix, "competitors", [])
+
+        if not comps:
+            return "Соберите данные о конкурентах для получения рекомендаций."
+
+        # Target competitor with weakest SEO
+        scored = [(c.get("seo", {}).get("score", 100) or 100, c) for c in comps]
+        worst_score, worst_comp = min(scored, key=lambda x: x[0])
+        name = worst_comp.get("name", "конкурент")
+
+        return (
+            f"Главная возможность — обойти **{name}** по SEO: "
+            f"у них {worst_score}/100, "
+            f"исправьте ошибки которые мы нашли на их сайте, и вы выше."
+        )
+
+    def _generate_analysis_summary(
+        self,
+        matrix,
+        swot: dict,
+        tactics: list,
+        rec: str,
+        wow: dict,
+    ) -> str:
+        """Generate a human-readable analysis summary from matrix + derived data."""
+
+        comps = getattr(matrix, "competitors", [])
+
+        if not comps:
+            return "Не удалось найти конкурентов для анализа."
+
+        lines: list[str] = []
+
+        # Overview
+        lines.append("Обзор конкурентной среды")
+        lines.append(f"Проанализировано {len(comps)} конкурентов.")
+        lines.append("")
+
+        # Per competitor
+        lines.append("## По конкурентам")
+        for comp in comps:
+            name = comp.get("name", "Конкурент")
+            seo = comp.get("seo", {}) or {}
+            lines.append(f"**{name}**: SEO {seo.get('score', '?')}/100")
+        lines.append("")
+
+        # SWOT
+        lines.append("## SWOT-анализ")
+        if swot.get("strengths"):
+            lines.append("Сильные стороны: " + ", ".join(swot["strengths"][:3]))
+        if swot.get("weaknesses"):
+            lines.append("Слабые стороны: " + ", ".join(swot["weaknesses"][:3]))
+        lines.append("")
+
+        # Tactics section (only when non-empty)
+        if tactics:
+            lines.append("## Что можно внедрить")
+            for t in tactics[:5]:
+                lines.append(f"- {t.tactic_description} ({t.expected_impact} impact, {t.estimated_effort} effort)")
+            lines.append("")
+
+        # WOW section (only when wow has patients_per_month)
+        if wow and wow.get("patients_per_month"):
+            ppm = wow["patients_per_month"]
+            ttr = wow.get("time_to_result_weeks", "?")
+            lines.append("## Прогноз по пациентам")
+            lines.append(f"Ожидаемый прирост: {ppm} пациентов в месяц, результат через {ttr} недель")
+            lines.append("")
+
+        # Recommendation
+        lines.append("## Главная рекомендация")
+        lines.append(rec)
+
+        return "\n".join(lines)
+
     def get_capabilities(self) -> List[str]:
         """Возвращает список возможностей агента."""
         return [

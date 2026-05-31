@@ -71,7 +71,8 @@ def _tactic_impact_effort(feature_name: str) -> tuple[str, str]:
     ]
     for kw in high_impact:
         if kw in feature_lower:
-            if kw in ("калькулятор", "личный кабинет", "calculator"):
+            if kw in ("калькулятор", "личный кабинет", "calculator",
+                       "онлайн-запись", "online booking", "запись на приём", "запись онлайн"):
                 return ("High", "Medium")
             return ("High", "Low")
     # Default
