@@ -817,65 +817,55 @@ class CIOrchestrator(Agent):
 """
         return html
 
-    async def _execute_phase_stub(self, phase_num: int, task_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Stub for phase execution (to be implemented with real CI agents).
-
-        Args:
-            phase_num: Phase number to execute
-            task_data: Task data
-
-        Returns:
-            Phase results dict
-        """
-        # TODO: Implement real phase execution with CI agents
-        await asyncio.sleep(0.1)  # Simulate work
-        return {
-            "phase": phase_num,
-            "status": "completed",
-            "data": f"Phase {phase_num} results"
-        }
-
     async def execute_task(self, task: Task) -> TaskResult:
-        """
-        Выполнить задачу конкурентной разведки.
+        """Execute CI analysis task via execute_ci_analysis (Agent interface).
 
-        Args:
-            task: Задача с payload:
-                - niche: ниша (обязательно)
-                - geo: город (обязательно)
-                - target_audience: целевая аудитория (опционально)
-                - depth: quick/deep/full (опционально, default: deep)
-
-        Returns:
-            TaskResult с результатами анализа
+        Extracts analysis parameters from task payload and delegates to the
+        unified execute_ci_analysis() path. The old _execute_phases →
+        _delegate_to_agent stub chain has been removed — EventBus delegation
+        is the ONLY execution path.
         """
         try:
-            # Логирование начала
             await self._log_start(task)
 
-            # Определить tier
             tier = self._detect_tier(task.payload)
-
-            # Проверить stale data
             await self._check_stale_data()
 
-            # Выполнить фазы
-            results = await self._execute_phases(tier, task.payload)
+            task_data = {
+                "task_id": task.task_id,
+                "niche": task.payload.get("niche", ""),
+                "geo": task.payload.get("geo", ""),
+                "tier": tier,
+                "competitors": task.payload.get("competitors", []),
+                "target_audience": task.payload.get("target_audience", ""),
+                "price_segment": task.payload.get("price_segment", "mid"),
+            }
+            result = await self.execute_ci_analysis(task_data)
 
-            # Логирование завершения
-            await self._log_completion(task, results)
+            # Log completion using new result structure
+            phases_executed = result.get("phases_executed", [])
+            logger.info(
+                "Завершена задача %s: %d фаз выполнено",
+                task.task_id, len(phases_executed),
+            )
+            state = {
+                "last_run": datetime.now().isoformat(),
+                "last_task_id": task.task_id,
+                "last_tier": tier,
+            }
+            with open(self.state_file, 'w') as f:
+                json.dump(state, f, indent=2, ensure_ascii=False)
 
             return TaskResult(
-                task_id=task.id,
-                status="completed",
-                result=results
+                task_id=task.task_id,
+                status="completed" if not result.get("errors") else "failed",
+                result=result,
             )
 
         except Exception as e:
             await self._log_error(task, str(e))
             return TaskResult(
-                task_id=task.id,
+                task_id=task.task_id,
                 status="failed",
                 result={"error": str(e)}
             )
@@ -943,167 +933,6 @@ class CIOrchestrator(Agent):
         except FileNotFoundError:
             # Первый запуск
             pass
-
-    async def _execute_phases(self, tier: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Выполнить фазы анализа для выбранного tier.
-
-        Args:
-            tier: quick/deep/full
-            payload: данные задачи
-
-        Returns:
-            Агрегированные результаты всех фаз
-        """
-        phases = self.tiers[tier]["phases"]
-        results = {
-            "tier": tier,
-            "phases_executed": [],
-            "phase_results": {}
-        }
-
-        for phase in phases:
-            phase_result = await self._execute_phase(phase, payload, results)
-            results["phases_executed"].append(phase)
-            results["phase_results"][f"phase_{phase}"] = phase_result
-
-        return results
-
-    async def _execute_phase(
-        self,
-        phase: int,
-        payload: Dict[str, Any],
-        previous_results: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Выполнить одну фазу анализа.
-
-        Args:
-            phase: номер фазы (1-16)
-            payload: данные задачи
-            previous_results: результаты предыдущих фаз
-
-        Returns:
-            Результат фазы
-        """
-        agents = self.phase_agents.get(phase)
-
-        if not agents:
-            return {"status": "skipped", "reason": "no agents for phase"}
-
-        # Parallel execution for phase 5
-        if isinstance(agents, list):
-            return await self._execute_parallel_agents(agents, payload, previous_results)
-        else:
-            return await self._execute_single_agent(agents, payload, previous_results)
-
-    async def _execute_parallel_agents(
-        self,
-        agents: List[str],
-        payload: Dict[str, Any],
-        previous_results: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Выполнить несколько агентов параллельно (фаза 5).
-
-        Args:
-            agents: список agent_id
-            payload: данные задачи
-            previous_results: результаты предыдущих фаз
-
-        Returns:
-            Агрегированные результаты всех агентов
-        """
-        tasks = []
-        for agent_id in agents:
-            task = Task(
-                id=f"{self.agent_id}_{agent_id}_{datetime.now().timestamp()}",
-                type=f"ci_{agent_id.replace('-', '_')}",
-                payload={
-                    **payload,
-                    "previous_results": previous_results
-                }
-            )
-            tasks.append(self._delegate_to_agent(agent_id, task))
-
-        # Выполнить параллельно
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Агрегировать результаты
-        aggregated = {
-            "agents_executed": agents,
-            "results": {}
-        }
-
-        for agent_id, result in zip(agents, results):
-            if isinstance(result, Exception):
-                aggregated["results"][agent_id] = {
-                    "status": "failed",
-                    "error": str(result)
-                }
-            else:
-                aggregated["results"][agent_id] = result
-
-        return aggregated
-
-    async def _execute_single_agent(
-        self,
-        agent_id: str,
-        payload: Dict[str, Any],
-        previous_results: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Выполнить одного агента.
-
-        Args:
-            agent_id: ID агента
-            payload: данные задачи
-            previous_results: результаты предыдущих фаз
-
-        Returns:
-            Результат агента
-        """
-        task = Task(
-            id=f"{self.agent_id}_{agent_id}_{datetime.now().timestamp()}",
-            type=f"ci_{agent_id.replace('-', '_')}",
-            payload={
-                **payload,
-                "previous_results": previous_results
-            }
-        )
-
-        return await self._delegate_to_agent(agent_id, task)
-
-    async def _delegate_to_agent(self, agent_id: str, task: Task) -> Dict[str, Any]:
-        """
-        Делегировать задачу агенту через Event Bus.
-
-        Args:
-            agent_id: ID агента
-            task: задача
-
-        Returns:
-            Результат агента
-        """
-        # Отправить событие через Event Bus
-        await self.event_bus.publish(Event(
-            event_type=f"task.{agent_id}",
-            payload=task.to_dict(),
-        ))
-
-        # Логировать делегирование
-        await self.vault.log_operation(
-            "delegate",
-            f"Делегировал задачу {task.id} агенту {agent_id}"
-        )
-
-        # TODO: Ждать результат от агента через Event Bus
-        # Пока возвращаем заглушку
-        return {
-            "agent_id": agent_id,
-            "status": "delegated",
-            "task_id": task.id
-        }
 
     async def _log_start(self, task: Task):
         """Логировать начало выполнения задачи."""
