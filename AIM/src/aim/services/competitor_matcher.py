@@ -503,24 +503,32 @@ class CompetitorMatcher:
         if not gm_candidates:
             return []
 
-        # 1. Extract INN from competitor websites in parallel
+        # 1. Extract INN + licenses from competitor websites in parallel
         websites = [c.website for c in gm_candidates if c.website]
         inn_map = await extract_inn_batch(websites, max_concurrent=8)
 
         inn_count = 0
+        multi_entity_count = 0
         for c in gm_candidates:
             if not c.website:
                 continue
-            inn, source_page = inn_map.get(c.website, (None, None))
-            if inn:
-                c.inn = inn
+            inns, licenses, source_page = inn_map.get(c.website, ([], [], None))
+            if inns:
+                c.inn = inns[0]  # primary INN (backward compat)
+                c.inns = inns
+                c.licenses = licenses
                 c.confidence = max(c.confidence, 0.85)
                 inn_count += 1
-                logger.debug("INN extracted: %s → %s from %s", c.legal_name[:40], inn, source_page)
+                if len(inns) > 1:
+                    multi_entity_count += 1
+                logger.debug(
+                    "INN extracted: %s → %s (from %s, %d license(s))",
+                    c.legal_name[:40], c.inn, source_page, len(licenses),
+                )
 
         logger.info(
-            "_enrich_gm_via_inn: INN found for %d/%d candidates",
-            inn_count, len(gm_candidates),
+            "_enrich_gm_via_inn: INN found for %d/%d candidates (%d multi-entity)",
+            inn_count, len(gm_candidates), multi_entity_count,
         )
 
         # 2. For candidates without INN, try rusprofile name search (parallel, with timeout)
@@ -638,12 +646,38 @@ class CompetitorMatcher:
 
     @staticmethod
     def _dedup_candidates(candidates: list[CompanyProfile]) -> list[CompanyProfile]:
-        """Deduplicate candidates by INN first, then name similarity."""
+        """Deduplicate candidates by INN first (including multi-INN intersection), then name similarity."""
         merged: dict[str, CompanyProfile] = {}
+
+        def _make_key(profile: CompanyProfile) -> str:
+            """Generate a dedup key. For multi-entity profiles, use sorted INNs."""
+            if profile.inns:
+                return "inns:" + ",".join(sorted(profile.inns))
+            if profile.inn:
+                return "inn:" + profile.inn
+            return "name:" + profile.legal_name.lower()
+
         for p in candidates:
-            key = p.inn if p.inn else p.legal_name.lower()
-            if key in merged:
-                existing = merged[key]
+            # Check for multi-INN intersection with existing entries
+            matched_key = None
+            if p.inns:
+                for existing_key, existing in merged.items():
+                    if existing.inns and set(p.inns) & set(existing.inns):
+                        matched_key = existing_key
+                        break
+
+            if matched_key is None and p.inns:
+                # Check if any existing entry has just a single INN that matches one of ours
+                for existing_key, existing in merged.items():
+                    if existing.inn and existing.inn in p.inns:
+                        matched_key = existing_key
+                        break
+
+            if matched_key is None:
+                matched_key = _make_key(p)
+
+            if matched_key in merged:
+                existing = merged[matched_key]
                 # Merge: keep best of each field
                 existing.website = existing.website or p.website
                 if not existing.social_links and p.social_links:
@@ -657,9 +691,17 @@ class CompetitorMatcher:
                 if not existing.revenue_year and p.revenue_year:
                     existing.revenue_year = p.revenue_year
                     existing.revenue_source = p.revenue_source
+                # Merge multi-entity fields
+                if p.inns:
+                    combined = set(existing.inns) | set(p.inns)
+                    existing.inns = sorted(combined, key=lambda x: p.inns.index(x) if x in p.inns else 99)
+                if not existing.licenses and p.licenses:
+                    existing.licenses = p.licenses
+                if p.is_multi_entity:
+                    existing.is_multi_entity = True
                 existing.confidence = max(existing.confidence, p.confidence)
                 continue
-            merged[key] = p
+            merged[matched_key] = p
         return list(merged.values())
 
     # ── Geocoding ──────────────────────────────────────────────────
@@ -921,6 +963,10 @@ class CompetitorMatcher:
         Updates CompanyProfile.revenue_year, profit_year, and financial_year
         in-place. Returns count of successfully enriched candidates.
 
+        For multi-entity clinics (multiple INNs under different licenses),
+        queries each INN separately and aggregates revenue/profit by summing
+        across all legal entities.
+
         Uses the official ФНС public API — free, no authentication required.
         Values from bo.nalog.gov.ru are in thousands of rubles (тыс. руб.)
         and are converted to actual RUB by multiplying by 1000.
@@ -945,55 +991,98 @@ class CompetitorMatcher:
                 if c.has_real_financials() and c.revenue_year and c.revenue_year > 0:
                     continue
 
+                # Determine all INNs to query for this candidate
+                inns_to_check: list[str] = (
+                    c.inns if c.inns else [c.inn]
+                )
+
+                per_entity: list[dict] = []  # [{inn, revenue, profit, period, legal_name}]
                 batch_with_inn += 1
-                try:
-                    results = nalog.search(c.inn)
-                    if not results:
-                        logger.debug(
-                            "nalog: no data for INN %s (%s)",
-                            c.inn, c.legal_name[:40],
-                        )
-                        continue
 
-                    org = results[0]
-                    fs = nalog.get_latest_financials(org.id)
-                    if fs is None or fs.revenue is None or fs.revenue <= 0:
-                        logger.debug(
-                            "nalog: no financial statements for INN %s (%s)",
-                            c.inn, c.legal_name[:40],
-                        )
-                        continue
+                for inn in inns_to_check:
+                    try:
+                        results = nalog.search(inn)
+                        if not results:
+                            logger.debug(
+                                "nalog: no data for INN %s (candidate %s)",
+                                inn, c.legal_name[:40],
+                            )
+                            continue
 
-                    # Convert from thousands of rubles to actual RUB
-                    c.revenue_year = fs.revenue_rub
-                    c.profit_year = fs.net_profit_rub
-                    c.financial_year = int(fs.period) if fs.period.isdigit() else None
+                        org = results[0]
+                        fs = nalog.get_latest_financials(org.id)
+                        if fs is None or fs.revenue is None or fs.revenue <= 0:
+                            logger.debug(
+                                "nalog: no financial statements for INN %s (%s)",
+                                inn, org.short_name or c.legal_name[:40],
+                            )
+                            continue
+
+                        per_entity.append({
+                            "inn": inn,
+                            "revenue": fs.revenue_rub,
+                            "profit": fs.net_profit_rub,
+                            "period": fs.period,
+                            "legal_name": org.short_name or "",
+                        })
+
+                    except Exception as e:
+                        logger.warning(
+                            "nalog enrichment failed for INN %s: %s",
+                            inn, e,
+                        )
+
+                if not per_entity:
+                    continue
+
+                if len(per_entity) == 1:
+                    # Single entity — unchanged behavior
+                    entity = per_entity[0]
+                    c.revenue_year = entity["revenue"]
+                    c.profit_year = entity["profit"]
+                    c.financial_year = int(entity["period"]) if entity["period"].isdigit() else None
                     c.revenue_source = "tax_filed"
-                    c.revenue_trend = fs.revenue_trend or None
 
-                    if not c.data_source or c.data_source in ("apify_google_maps", "apify_google_maps+dadata"):
-                        c.data_source = c.data_source + "+nalog" if c.data_source else "nalog"
-
-                    # Use the short name from nalog if the legal_name is generic
-                    if org.short_name and c.legal_name and len(org.short_name) > len(c.legal_name):
+                    if entity["legal_name"] and c.legal_name and len(entity["legal_name"]) > len(c.legal_name):
                         c.brand_name = c.brand_name or c.legal_name
-                        c.legal_name = org.short_name
+                        c.legal_name = entity["legal_name"]
 
-                    enriched += 1
-                    batch_with_revenue += 1
-                    logger.debug(
-                        "nalog: %s (INN %s) — revenue=%d RUB (%d)",
-                        org.short_name or c.legal_name[:40],
-                        c.inn,
-                        c.revenue_year,
-                        c.financial_year,
-                    )
+                else:
+                    # Multi-entity: aggregate across all legal entities
+                    total_revenue = sum(e["revenue"] or 0 for e in per_entity)
+                    total_profit = sum(e["profit"] or 0 for e in per_entity)
+                    periods = {e["period"] for e in per_entity if e["period"]}
+                    best_period = max(periods) if periods else None
 
-                except Exception as e:
-                    logger.warning(
-                        "nalog enrichment failed for INN %s: %s",
-                        c.inn, e,
+                    c.revenue_year = total_revenue
+                    c.profit_year = total_profit
+                    c.financial_year = int(best_period) if best_period and best_period.isdigit() else None
+                    c.revenue_source = "tax_filed"
+                    c.is_multi_entity = True
+
+                    logger.info(
+                        "nalog multi-entity: %s — %d entities aggregated → revenue=%d RUB, profit=%d RUB",
+                        c.legal_name[:40], len(per_entity), total_revenue, total_profit,
                     )
+                    for e in per_entity:
+                        logger.debug(
+                            "  entity INN %s: revenue=%d, profit=%d (%s)",
+                            e["inn"], e["revenue"], e["profit"], e["legal_name"],
+                        )
+
+                if not c.data_source or c.data_source in ("apify_google_maps", "apify_google_maps+dadata"):
+                    c.data_source = c.data_source + "+nalog" if c.data_source else "nalog"
+
+                enriched += 1
+                batch_with_revenue += 1
+                logger.debug(
+                    "nalog: %s (INN %s) — revenue=%d RUB (%d)",
+                    c.legal_name[:40],
+                    c.inn,
+                    c.revenue_year,
+                    c.financial_year,
+                )
+
         finally:
             nalog.close()
 

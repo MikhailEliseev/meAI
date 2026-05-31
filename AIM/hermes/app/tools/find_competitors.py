@@ -45,7 +45,7 @@ async def handle_find_competitors(url=None, named_competitors=None, **kwargs) ->
         named_competitors: Optional list of competitor names or URLs
 
     Returns:
-        JSON string with up to 5 competitors: inn, legal_name, revenue, services,
+        JSON string with up to 5 competitors: inn, inns (multi-entity), licenses, revenue, services,
         rating, reviews_count, website, social_links, match scores
         (revenue_match, location_score, service_overlap, total_score),
         and human-readable match_reason for each.
@@ -100,6 +100,9 @@ async def handle_find_competitors(url=None, named_competitors=None, **kwargs) ->
                 compact.append({
                     "rank": i,
                     "inn": c.get("inn", ""),
+                    "inns": c.get("inns", []),
+                    "licenses": c.get("licenses", []),
+                    "is_multi_entity": c.get("is_multi_entity", False),
                     "legal_name": c.get("legal_name", ""),
                     "brand_name": c.get("brand_name"),
                     "revenue_year": c.get("revenue_year"),

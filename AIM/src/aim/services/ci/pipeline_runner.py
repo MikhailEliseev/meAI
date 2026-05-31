@@ -236,7 +236,7 @@ class PipelineRunner:
         name, url, inn, services.
         """
         try:
-            from AIM.src.aim.services.competitor_matcher import CompetitorMatcher
+            from aim.services.competitor_matcher import CompetitorMatcher
         except ImportError as e:
             logger.error(
                 "CompetitorMatcher module not available: %s. "
@@ -258,6 +258,9 @@ class PipelineRunner:
                     "name": m.profile.brand_name or m.profile.legal_name,
                     "url": m.website or m.profile.website or "",
                     "inn": m.profile.inn,
+                    "inns": m.profile.inns,
+                    "licenses": m.profile.licenses,
+                    "is_multi_entity": m.profile.is_multi_entity,
                     "services": list(m.services) if m.services else [],
                     "gm_rating": m.profile.rating or 0.0,
                     "gm_reviews_count": m.profile.reviews_count or 0,
@@ -276,10 +279,19 @@ class PipelineRunner:
                 pass
 
     async def _collect_financials(self, comp: dict) -> Optional[dict]:
-        """Fetch tax-filed financials from bo.nalog.gov.ru."""
+        """Fetch tax-filed financials from bo.nalog.gov.ru.
+
+        For multi-entity clinics, aggregates revenue/profit across all INNs.
+        """
+        inns = comp.get("inns", [])
         inn = comp.get("inn", "")
-        if not inn:
+        is_multi = comp.get("is_multi_entity", False)
+
+        # Determine INNs to check: use inns list if available, fall back to single inn
+        inns_to_check: list[str] = inns if inns else ([inn] if inn else [])
+        if not inns_to_check:
             return None
+
         try:
             await self._emit(
                 "financials",
@@ -288,27 +300,35 @@ class PipelineRunner:
             )
 
             def _sync_fetch():
-                from AIM.src.aim.services.nalog.bfo_client import BfoNalogClient
+                from aim.services.nalog.bfo_client import BfoNalogClient
 
                 client = BfoNalogClient()
                 try:
-                    results = client.search(inn)
-                    if not results:
+                    all_revenue: dict[str, int] = {}  # period → sum
+                    all_profit: dict[str, int] = {}
+                    trends: list[str] = []
+
+                    for inn_to_check in inns_to_check:
+                        results = client.search(inn_to_check)
+                        if not results:
+                            continue
+                        fs_list = client.get_financials(results[0].id)
+                        for fs in fs_list:
+                            if fs.revenue_rub is not None:
+                                all_revenue[fs.period] = all_revenue.get(fs.period, 0) + fs.revenue_rub
+                            if fs.net_profit_rub is not None:
+                                all_profit[fs.period] = all_profit.get(fs.period, 0) + fs.net_profit_rub
+                        if fs_list and fs_list[0].revenue_trend:
+                            trends.append(fs_list[0].revenue_trend)
+
+                    if not all_revenue and not all_profit:
                         return None
-                    fs_list = client.get_financials(results[0].id)
-                    revenue, profit = {}, {}
-                    for fs in fs_list:
-                        if fs.revenue_rub is not None:
-                            revenue[fs.period] = fs.revenue_rub
-                        if fs.net_profit_rub is not None:
-                            profit[fs.period] = fs.net_profit_rub
-                    # Return None when both revenue AND profit are empty
-                    if not revenue and not profit:
-                        return None
+
                     return {
-                        "revenue": revenue,
-                        "profit": profit,
-                        "trend": fs_list[0].revenue_trend if fs_list else "",
+                        "revenue": all_revenue,
+                        "profit": all_profit,
+                        "trend": trends[0] if trends else "",
+                        "is_multi_entity": len(inns_to_check) > 1 or is_multi,
                     }
                 finally:
                     client.close()
