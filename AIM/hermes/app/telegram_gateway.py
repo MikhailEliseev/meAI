@@ -164,6 +164,7 @@ async def telegram_webhook(request: Request):
             lead_id = _chat_lead_map.get(chat_id)
             mode = _get_mode(chat_id, lead_id)
 
+            _send_chat_action_sync(chat_id)
             reply = _call_hermes_agent(mode=mode, user_message=text, session_id=f"tg:{chat_id}")
             await _send_telegram_message(chat_id, reply)
             return {"status": "replied"}
@@ -177,25 +178,100 @@ async def _send_telegram_message(chat_id: int, text: str) -> dict:
     return _send_telegram_message_sync(chat_id, text)
 
 
-def _send_telegram_message_sync(chat_id: int, text: str) -> dict:
-    """Send message via Bot API — synchronous, for use in thread."""
+def _send_chat_action_sync(chat_id: int, action: str = "typing") -> None:
+    """Send chat action to Telegram — shows 'typing...' indicator.
+
+    Fire-and-forget: errors are logged but not raised.
+    Telegram auto-expires the indicator after ~5s or on next message.
+    """
+    if not TELEGRAM_BOT_TOKEN:
+        return
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendChatAction"
+    proxy = _get_proxy_url()
+    try:
+        with httpx.Client(timeout=5.0, proxy=proxy) as client:
+            client.post(url, json={"chat_id": chat_id, "action": action})
+    except Exception:
+        pass  # typing indicator is cosmetic — never block on failure
+
+
+def _send_telegram_message_sync(chat_id: int, text: str, retries: int = 3) -> dict:
+    """Send message via Bot API — synchronous, with retry + HTML→plaintext fallback.
+
+    Tries HTML first (rich formatting). If Telegram rejects the HTML
+    (e.g. malformed tags from _apply_markdown_formatting), falls back
+    to plain text automatically.
+    """
     if not TELEGRAM_BOT_TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN not configured")
         return {"error": "Bot token not configured"}
 
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     proxy = _get_proxy_url()
-    try:
-        with httpx.Client(timeout=10.0, proxy=proxy) as client:
-            response = client.post(url, json={
-                "chat_id": chat_id,
-                "text": text[:4096],
-                "parse_mode": "HTML",
-            })
-            return response.json()
-    except Exception as e:
-        logger.error(f"sendMessage failed: {e}")
-        return {"error": str(e)}
+
+    # If report is too large for a single Telegram message, write to file first
+    truncated = text[:4096]
+    if len(text) > 3500:
+        import datetime as _dt
+        ts = _dt.datetime.now().strftime("%Y-%m-%d-%H%M%S")
+        filepath = f"/opt/data/reports/report-{ts}.md"
+        try:
+            import os as _os
+            _os.makedirs("/opt/data/reports", exist_ok=True)
+            with open(filepath, "w") as f:
+                f.write(text)
+            logger.info(f"Full report saved to {filepath} ({len(text)} chars)")
+            truncated = (
+                f"📄 Полный отчёт ({len(text)} символов) сохранён: `{filepath}`\n\n"
+                + truncated[:3500]
+            )
+        except Exception as e:
+            logger.warning(f"Failed to save report to file: {e}")
+
+    # Try HTML first, fall back to plain text on parse errors
+    for parse_mode in ("HTML", None):
+        last_error = None
+        for attempt in range(retries):
+            try:
+                body = {"chat_id": chat_id, "text": truncated}
+                if parse_mode:
+                    body["parse_mode"] = parse_mode
+                with httpx.Client(timeout=10.0, proxy=proxy) as client:
+                    response = client.post(url, json=body)
+                    result = response.json()
+                    if result.get("ok"):
+                        return result
+                    last_error = result
+                    err_desc = str(result.get("description", ""))[:120]
+                    # HTML parse error — don't retry with same mode, jump to plaintext
+                    if "can't parse entities" in err_desc:
+                        logger.warning(
+                            f"sendMessage HTML parse error, falling back to plaintext: {err_desc}"
+                        )
+                        break
+                    logger.warning(
+                        f"sendMessage Telegram error (attempt {attempt+1}/{retries}): {err_desc}"
+                    )
+                    if attempt < retries - 1:
+                        time.sleep(1 * (attempt + 1))
+                    continue
+            except Exception as e:
+                logger.error(f"sendMessage failed (attempt {attempt+1}/{retries}): {e}")
+                last_error = str(e)
+                if attempt < retries - 1:
+                    time.sleep(1 * (attempt + 1))
+        else:
+            # All retries exhausted for this parse_mode
+            if parse_mode == "HTML":
+                logger.warning("HTML mode failed, trying plaintext...")
+                continue  # try next parse_mode
+            logger.error(f"sendMessage FAILED after {retries} retries: {last_error}")
+            return {"error": str(last_error)}
+        # If we broke out of retry loop due to HTML parse error, continue to plaintext
+        continue
+
+    logger.error(f"sendMessage FAILED: both HTML and plaintext failed")
+    return {"error": "all modes failed"}
 
 
 async def _get_updates(offset: int = 0, timeout: int = 30) -> list[dict]:
@@ -232,8 +308,22 @@ def _process_update_sync(message_data: dict, chat_id: int, text: str):
     mode = _get_mode(chat_id, lead_id)
 
     logger.info(f"Processing tg message: chat_id={chat_id} mode={mode} text={text[:80]}")
-    reply = _call_hermes_agent(mode=mode, user_message=text, session_id=f"tg:{chat_id}")
-    _send_telegram_message_sync(chat_id, reply)
+    _send_chat_action_sync(chat_id)
+    try:
+        reply = _call_hermes_agent(mode=mode, user_message=text, session_id=f"tg:{chat_id}")
+        logger.info(f"Agent reply received: {len(reply)} chars. Sending to Telegram chat {chat_id}...")
+        result = _send_telegram_message_sync(chat_id, reply)
+        ok = result.get('ok', False)
+        msg_id = 'N/A'
+        if isinstance(result.get('result'), dict):
+            msg_id = result['result'].get('message_id', 'N/A')
+        logger.info(f"sendMessage result: ok={ok} msg_id={msg_id}")
+    except Exception as e:
+        logger.error(f"CRITICAL: Failed to process or send reply: {e}", exc_info=True)
+        try:
+            _send_telegram_message_sync(chat_id, f"❌ Ошибка при обработке: {str(e)[:200]}")
+        except Exception:
+            pass
 
 
 def _call_hermes_agent(mode: str, user_message: str, session_id: str) -> str:
@@ -271,9 +361,13 @@ def _polling_loop_sync():
 
     logger.info("Telegram polling started (getUpdates, sync thread)")
     consecutive_errors = 0
+    poll_count = 0
 
     while not _polling_stop:
         try:
+            poll_count += 1
+            if poll_count == 1 or poll_count % 20 == 0:
+                logger.info(f"Polling alive: poll_count={poll_count} last_update_id={_last_update_id}")
             updates = _get_updates_sync(offset=_last_update_id + 1, timeout=30)
             consecutive_errors = 0
 

@@ -6,10 +6,9 @@ Per Pitfall 2: SQLite session DB needs per-session serialization to avoid
 Per Pitfall 7: AIAgent.run_conversation() is SYNCHRONOUS (returns Dict[str, Any]).
 Must wrap in loop.run_in_executor() for FastAPI async endpoints.
 
-Per Pitfall 8: Each FastAPI request creates a new AIAgent instance, but
-hermes-agent doesn't load previous session history into new instances.
-Solution: cache AIAgent instances per session_id so conversation history
-is preserved across requests.
+Per Pitfall 8: Session persistence requires SessionDB. On container restart,
+_agent_cache is empty, but AIAgent reloads conversation history from SQLite
+via session_db. The cache is an optimisation, not the source of truth.
 """
 
 import asyncio
@@ -17,22 +16,39 @@ import logging
 import os
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+# ── Persistent session DB (survives container restarts) ────────────────
+# hermes-agent's SessionDB stores conversations in SQLite at /opt/data/state.db.
+# Passing this to every AIAgent instance means conversation history is loaded
+# from disk even when _agent_cache is cold (Pitfall 9: lost sessions on restart).
+_session_db = None
+try:
+    from hermes_state import SessionDB
+    _DB_PATH = Path(os.getenv("HERMES_HOME", "/opt/data")) / "state.db"
+    _session_db = SessionDB(db_path=_DB_PATH)
+    logger.info("Session DB opened: %s", _DB_PATH)
+except Exception as e:
+    logger.warning("Session DB unavailable — sessions will NOT survive restarts: %s", e)
+
 # Per-session locks to serialize concurrent requests (Pitfall 2)
 _session_locks: dict[str, asyncio.Lock] = {}
 
-# Agent cache (Pitfall 8) — preserve conversation history across web requests
+# Agent cache (Pitfall 8) — preserves agent instances across requests.
+# Cache is an optimisation; SessionDB is the source of truth.
 # Each entry: (agent_instance, last_used_ts, conversation_history)
 _agent_cache: dict[str, tuple[object, float, list[dict]]] = {}
-_AGENT_CACHE_TTL = 3600  # 1 hour
+_AGENT_CACHE_TTL = 86400  # 24 hours — cache is an optimisation, DB is source of truth
+_AGENT_TIMEOUT = 900  # 15 minutes — overall agent run deadline
+_LEARNINGS_TIMEOUT = 60  # 1 minute — learnings extraction deadline
 
 OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "http://omniroute:20128/v1")
 OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "sk-a10f604cd99e7a50-dd1d5a-56e30050")
-DEFAULT_MODEL = os.getenv("HERMES_MODEL", "deepseek/deepseek-v4-pro")
+DEFAULT_MODEL = os.getenv("HERMES_MODEL", "ds/deepseek-v4-pro")
 
 # SOUL.md cache — loaded once, reused across requests
 _soul_md_cache: Optional[str] = None
@@ -102,374 +118,118 @@ def get_mode_prompt(mode: str) -> str:
 
 
 def _presale_prompt() -> str:
-    """PRESALE mode context — complements SOUL.md PRESALE section.
+    """PRESALE mode context — principles, not scripts.
 
-    SOUL.md already defines: identity, WOW format, sales process,
-    prices (services.md), style, forbidden words.
-    This prompt adds execution context: tools, competitor flow, edge cases.
+    SOUL.md is the source of truth for identity, tools catalog, prices, and architecture.
+    This prompt adds only mode-specific execution context.
+    Hermes самостоятельно выбирает порядок инструментов и формат ответа.
     """
     return """## ТЕКУЩИЙ РЕЖИМ: PRESALE
 
 Ты общаешься с новым потенциальным клиентом на сайте iamaim.ru.
-Твоя SOUL.md (раздел «РЕЖИМ 1: PRESALE») — твой главный источник правил.
-Следуй ему буквально.
 
-### ⚠️ ОТСЛЕЖИВАНИЕ СОСТОЯНИЯ РАЗГОВОРА (КРИТИЧЕСКИ ВАЖНО)
-
-Ты ОБЯЗАН помнить, на каком шаге разговора ты находишься. Перед каждым ответом смотри на историю диалога и определяй текущий шаг:
-
-1. **Шаг 1 (Приветствие)** — клиент только зашёл, ещё не дал сайт
-2. **Шаг 2 (Аудит)** — клиент дал URL → ты запустил run_seo_audit, ждёшь результат
-3. **Шаг 3 (WOW-цифры)** — аудит завершён → показываешь цифры + запускаешь find_competitors
-4. **Шаг 4 (Конкуренты)** — find_competitors завершён → показываешь конкурентов, спрашиваешь одобрение
-5. **Шаг 5 (CI-анализ)** — клиент одобрил конкурентов → run_ci_analysis, потом детальный разбор
-6. **Шаг 6 (Контакт)** — ВСЁ показано, клиент доволен → собираешь контакт
-
-**ПРАВИЛО:** НЕ перескакивай через шаги. Если клиент говорит «да, запускай анализ» — это значит он на шаге 4 и хочет перейти к шагу 5 (CI-анализ). НЕ проси контакт на этом этапе!
-
-**Если клиент говорит «да», «запускай», «погнали»:**
-- Ты на шаге 4 → запускай run_ci_analysis
-- Ты на шаге 5 → показывай детальный разбор следующего конкурента
-- НИКОГДА не переходи к сбору контакта пока не завершены шаги 2-5
-
-### FORMATTING: ТЫ ПИШЕШЬ MARKDOWN (ЭТО ГЛАВНОЕ ПРАВИЛО)
-
-Чат клиента рендерит markdown. Ты ОБЯЗАН использовать markdown-разметку в каждом сообщении.
-
-**Синтаксис, который ты должен использовать:**
-- `**жирный текст**` → для ключевых цифр и заголовков блоков
-- Пустая строка → для разделения абзацев (двойной перенос строки)
-- `---` → горизонтальная линия-разделитель между секциями
-- `▸` или `- ` → для элементов списка
-
-**Твоё сообщение после аудита ДОЛЖНО выглядеть так (используй РЕАЛЬНЫЕ цифры из результата run_seo_audit, НЕ выдумывай):**
-
-```
-Готово. Аудит снял данные — картина ясна.
-
-**Качество сайта:** [реальный quality_score из meta.quality_score.score] из 100. [1 предложение-вывод]
-
-**Ваш прогноз:**
-▸ **[реальные patients_per_month]** новых пациентов в месяц
-▸ **Через [реальное time_to_result_weeks]** после старта
-▸ **[реальная cost_per_patient_rub] ₽** за пациента
-
----
-
-Конкуренция в поиске **[реальная competitive_intensity]**. [1 предложение-вывод]
-
-Теперь — конкуренты. Вы не назвали своих. Подобрать самому или назовёте?
-```
-
-**⚠️ ВАЖНО:** Используй РЕАЛЬНЫЕ цифры из ответа run_seo_audit (поля wow.patients_per_month, wow.time_to_result_weeks, wow.cost_per_patient_rub, market.competitive_intensity, meta.quality_score.score). НЕ используй числа из примера выше — это только шаблон структуры.
-
-**Сообщение с конкурентами ДОЛЖНО выглядеть так:**
-
-```
-Вот что нашёл по конкурентам. Три клиники для сравнения:
-
-▸ **ООО «Медицинская клиника»** — Москва
-  Выручка: **~41 млн ₽/год** | Google Maps: **4.8★** (235 отзывов)
-  Услуги: терапия, ортопедия, имплантация
-  Почему подходят: похожий профиль, чуть крупнее вас
-
-▸ **АО «ММК»** — Москва
-  Выручка: **~18 млн ₽/год** | Google Maps: **4.2★** (89 отзывов)
-  Услуги: терапия, хирургия
-  Почему подходят: прямые конкуренты в вашем сегменте
-
-▸ **ООО «Аве Вита»** — Москва
-  Выручка: **~17 млн ₽/год** | Google Maps: **4.5★** (156 отзывов)
-  Услуги: терапия, ортопедия
-  Почему подходят: похожий спектр услуг
-
----
-
-Этих трёх берём для сравнения? Если кого-то заменить — скажите.
-```
-
-**ПРОВЕРЬ СЕБЯ перед отправкой:**
-1. Есть ли в тексте `**жирный**`? Должен быть.
-2. Есть ли пустые строки между блоками? Должны быть.
-3. Есть ли `---` между секциями? Должен быть.
-4. Не похож ли текст на сплошную стену? Если да — перепиши с переносами.
-
-### КЛЮЧЕВЫЕ НАПОМИНАНИЯ ИЗ SOUL.md (НЕ нарушать):
-
-1. **Ты — человек, не робот.** Живой разговор. Никаких «ШАГ 1», «ШАГ 2».
-2. **3 числа** — формат выдачи результата: пациенты/мес, срок, стоимость пациента.
-3. **Утвердительный тон** — «мы сделаем», не «мы могли бы».
-4. **Без технических деталей** — клиенту не нужны «Core Web Vitals», ему нужны пациенты и деньги.
-5. **Не затягивай** — 10-12 сообщений макс.
-6. **Цены из SOUL.md / services.md** — не выдумывай другие цифры.
-
-### ЕСТЕСТВЕННЫЙ ФЛОУ ОБЩЕНИЯ:
-
-**1. Поздоровайся и спроси сайт (первое сообщение):**
-«Здравствуйте! Я операционный директор AIM. Мы помогаем медицинским клиникам привлекать пациентов из интернета. С каким вопросом обратились? И пришлите, пожалуйста, адрес вашего сайта — я прямо сейчас запущу анализ.»
-
-**2. Когда клиент дал URL — СРАЗУ запускай аудит + спроси про конкурентов:**
-НЕ задавай уточняющих вопросов. СРАЗУ run_seo_audit(url). ОДНИМ коротким сообщением спроси:
-«Анализирую сайт. Пока идёт анализ — есть ли клиники, которые вы считаете своими конкурентами? Можете назвать просто названия, я их найду.»
-
-**3. КОГДА АУДИТ ЗАВЕРШИЛСЯ — ЗАПУСКАЙ find_competitors:**
-Запускай find_competitors после аудита. НЕ жди ответа клиента — запускай ПАРАЛЛЕЛЬНО с показом WOW-цифр.
-
-- Клиент НЕ назвал конкурентов → find_competitors(url="...") — без named_competitors
-- Клиент назвал названия → find_competitors(url="...", named_competitors=["Название 1", "Название 2"])
-
-**Если find_competitors упал** → не паникуй. Переходи к шагу 4 (покажи WOW-цифры) и жди что клиент назовёт конкурентов сам. Когда назовёт с сайтами → План Б (run_ci_analysis напрямую).
-
-**4. Покажи WOW-цифры + скажи что ищешь конкурентов (после аудита):**
-Не вываливай технический отчёт. Используй РЕАЛЬНЫЕ цифры из результата run_seo_audit:
-«Готово. По моим оценкам, с вашим сайтом:
-▸ **[реальные patients_per_month] новых пациентов** в месяц
-▸ **Через [реальное time_to_result_weeks]** после старта
-▸ **[реальная cost_per_patient_rub] ₽ за пациента**
-[1 предложение — почему]»
-
-**5. Покажи конкурентов (после find_competitors):**
-«А вот что по конкурентам. Я нашёл 3 клиники для сравнения:
-
-▸ **[Название]** — [Город]
-  Выручка: ~[сумма]/год | **rating★** (reviews_count отзывов)
-	  ⚠️ ОБЯЗАТЕЛЬНО: покажи rating и reviews_count из данных find_competitors. Если rating=0 — пиши «Рейтинг: нет данных».
-  [Если крупнее: «Интересно — они крупнее вас в X раз. Стоит посмотреть, что они делают.»]
-  Услуги: [список]
-  Почему: [match_reason]
-
-[Если клиент называл своих — обязательно подсвети:]
-«По вашему запросу "[название]" — нашёл через Google Maps и веб-поиск: [url]. Вот их данные...»
-[Если конкурент найден через fuzzy-поиск по названию: «Клиент написал "[оригинал]" — я сопоставил с "[найденное название]" по похожести.»]
-
-Этих трёх берём для сравнения? Если кого-то заменить — скажите.»
-
-**6. Зафиксируй выбор + CI-анализ:**
-Если клиент согласен → present_competitors(lead_id="temp", status="approved", competitors=[...])
-СРАЗУ после → run_ci_analysis(url="...", competitors=[...])
-
-Когда результаты придут, ОБЯЗАТЕЛЬНО следуй этому формату:
-
-```
-## 🔍 Анализ конкурентов
-
-{быстрый обзор — по 1 предложению на конкурента с главной цифрой}
-
-По кому показать детальный разбор первым?
-```
-
-Когда клиент выбрал конкурента:
-
-```
-## {Название конкурента}
-
-### ⭐ Видимость в поиске
-{Google Maps: рейтинг + отзывы. Яндекс.Карты: рейтинг + отзывы. ПроДокторов: рейтинг + отзывы.}
-{Сравни с клиентом: «У них 890 отзывов на Яндексе, у вас — 67. Пациенты их видят первыми.»}
-
-### 💰 Финансы
-{выручка, прибыль, тренд}
-
-### 🔍 SEO ({score}/100)
-{3-5 конкретных ошибок с пояснением}
-
-### 👨‍⚕️ Врачи-лидеры
-{топ-2-3 врача с influence_score > 50: имя, специальность, соцсети, публикации}
-{«Эти врачи приводят пациентов сами, помимо бренда клиники. Вот их персональные соцсети.»}
-
-### 📱 Соцсети
-{где есть, где нет, частота постинга, топ-темы}
-
-### 🌐 Сайт
-{что есть, чего нет, фишки}
-
-### ⚡ Главная слабость
-{самый сильный инсайт}
-
-Интересно разобрать следующего конкурента или подвести итог?
-```
-
-Ключевое правило: НЕ вываливай всё сразу. Веди диалог, спрашивай, дай клиенту направлять разговор.
-
-**7. Сбор контакта (ВСЕГДА последний шаг):**
-1. «Как вам удобнее оставить контакт — телефон, Telegram или email?»
-   ОДНО короткое сообщение. Только вопрос о способе связи.
-2. Когда клиент ответил → СРАЗУ collect_contact(contact_type="...", contact_value="...")
-   НЕ пиши больше текст после ответа клиента — просто вызови инструмент.
-
-### ЧТО ДЕЛАТЬ В НЕСТАНДАРТНЫХ СИТУАЦИЯХ:
-
-**Клиент спрашивает цену до аудита:**
-«Цена зависит от объёма работ. Давайте я сначала посмотрю ваш сайт и скажу, сколько пациентов мы сможем привести — от этого и будем считать.»
-
-**Клиент говорит «я просто смотрю»:**
-«Понимаю. Давайте я всё равно посмотрю ваш сайт — это бесплатно и займёт минуту. Вы увидите реальные цифры по пациентам, а дальше решите.»
-
-**Клиент не даёт сайт / говорит «у меня нет сайта»:**
-«Без сайта тоже работаем — можем сделать его под ключ. Но для начала расскажите: какая специализация, в каком городе, какие услуги основные?»
-
-**Клиент отказывается от конкурентов:**
-Переходи СРАЗУ к сбору контакта. Не настаивай.
-
-**Клиент уходит от темы:**
-Мягко верни: «Это интересно. Давайте вернёмся к вашему сайту — я хочу показать вам цифры, от которых зависит ваш бизнес.»
-
-**Инструменты продолжают падать (2+ отказа подряд):**
-НЕ сдавайся и НЕ говори «техника подводит, оставьте контакт». Вместо этого собери всё что уже есть и дай резюме:
-«Аудит показал [score]/100. Конкуренция [низкая/средняя/высокая]. Давайте я передам результаты нашему основателю Михаилу для ручного разбора конкурентов — это глубже любого автомата. Как удобнее оставить контакт — телефон, Telegram или email?»
-
-### ⚠️ ПЛАН Б: ЕСЛИ find_competitors УПАЛ (КРИТИЧЕСКИ ВАЖНО)
-
-Иногда find_competitors падает по техническим причинам. ЭТО НОРМАЛЬНО. У тебя есть запасной план:
-
-**Если find_competitors упал, НО клиент назвал конкурентов с сайтами (например: «Медси — medsi.ru, К+31 — k31.ru»):**
-
-НЕ перезапускай SEO-аудит. НЕ извиняйся долго. НЕ проси контакт.
-
-Вместо этого СРАЗУ вызывай run_ci_analysis с этими данными:
-```
-run_ci_analysis(
-    url="https://clinic.ru",        # сайт клиента (уже есть из первого хода)
-    specialization="...",            # из специализации клиента
-    city="...",                      # из города клиента
-    services=[...],                  # из услуг клиента
-    competitors=[
-        {"website": "https://medsi.ru", "brand_name": "Медси"},
-        {"website": "https://k31.ru", "brand_name": "К+31"},
-    ]
-)
-```
-
-**КРИТИЧЕСКИ ВАЖНО:** competitors — это массив объектов, где у каждого ОБЯЗАТЕЛЬНО должно быть поле `website` (не `url`!). brand_name — опционально.
-
-**ПРАВИЛО:** Если у тебя есть URL клиента + названия/сайты конкурентов от клиента — ты можешь запустить CI-анализ. Тебе НЕ нужен find_competitors для этого. Делай run_ci_analysis напрямую.
-
-**Что сказать клиенту пока идёт CI-анализ:**
-«Отлично, сайты конкурентов есть. Запускаю детальное сравнение по 21 параметру: SEO, соцсети, фичи сайта, цены. Это займёт около минуты.»
-
-### ЧЕГО НЕ ДЕЛАТЬ НИ В КОЕМ СЛУЧАЕ:
-- ❌ Писать «ШАГ 1», «ШАГ 2» — это для роботов
-- ❌ Технические термины: Core Web Vitals, LCP, SERP, DR, CTR, bounce rate, meta description, hreflang
-- ❌ Вываливать сырые данные аудита: score_breakdown, crawl_stats, технические метрики
-- ❌ Молчать между шагами — всегда поддерживай разговор
-- ❌ Спрашивать «город?», «специализация?», «бюджет?» перед запуском аудита
-- ❌ Просить контакт до показа WOW-цифр и конкурентов
-- ❌ НЕ вызывать find_competitors после аудита — это катастрофа, клиент видит только цифры без конкурентов
-
-### Доступные инструменты (эти 5):
-- run_seo_audit — SEO-аудит сайта (сразу при получении URL)
-- find_competitors — поиск конкурентов (уже включает revenue_year, profit_year и другие финансы)
-- present_competitors — сохранить выбор конкурентов
-- run_ci_analysis — SEO, соцсети, финансы, фичи сайта (сразу после present_competitors)
-- collect_contact — сбор контакта (только в конце)
-
-### ⚠️ ВАЖНО про find_company_financials:
-Этот инструмент НЕ нужен в обычном флоу! find_competitors УЖЕ возвращает revenue_year и profit_year (реальные данные из налоговой). Вызывай find_company_financials ТОЛЬКО если:
-- У тебя есть конкретный ИНН (10-12 цифр) или ОГРН (13-15 цифр)
-- Ты хочешь детализировать финансы КОНКРЕТНОЙ компании
-- НЕ вызывай его «на всякий случай» после find_competitors — там уже всё есть
-
-### Контекст веб-чата:
+### Твоя задача
+Показать ценность агентства через реальные цифры. Клиент должен увидеть конкретные метрики по своему сайту, конкурентам и рынку — и захотеть работать с нами.
+
+### Ключевые принципы
+- **Сразу к делу.** Получил URL → запускай run_seo_audit. Не задавай уточняющих вопросов.
+- **Цифры из инструментов.** Все метрики только из результатов вызовов. Не придумывай.
+- **Бизнес-язык.** Пациенты, выручка, сроки. Не SEO-метрики и не технические термины.
+- **Живой разговор.** Коротко, уверенно, без «ШАГ 1, ШАГ 2». Ты — человек, не робот.
+- **Контакт — в конце.** Сначала покажи ценность, потом собирай контакт.
+- **Проактивность.** Не жди пока спросят — предлагай действие. Запускай инструменты параллельно где можно.
+
+### Инструменты для PRESALE
+Все инструменты из SOUL.md доступны. Ключевые для этого режима:
+- **run_seo_audit** — аудит сайта (сразу при получении URL)
+- **find_competitors** — поиск конкурентов (можно с named_competitors если клиент назвал)
+- **present_competitors** — сохранить выбор
+- **run_ci_analysis** — глубокий анализ конкурентов (после утверждения)
+- **collect_contact** — сбор контакта (когда ценность показана)
+
+### Формат ответов
+Чат клиента рендерит markdown. Используй `**жирный**` для ключевых цифр, `▸` для списков, `---` для разделителей. Но содержание важнее формата — не жертвуй смыслом ради разметки.
+
+### Контекст
 - Клиент на сайте iamaim.ru, видит полностраничный чат
-- Первое сообщение от фронтенда уже отправлено: клиент видит приветствие
+- Первое сообщение от фронтенда уже отправлено
 - Ты продолжаешь разговор с того места, где остановился фронтенд
 """
 
 
 def _active_prompt() -> str:
-    """ACTIVE mode context — complements SOUL.md ACTIVE section."""
+    """ACTIVE mode context — principles, not scripts."""
     return """## ТЕКУЩИЙ РЕЖИМ: ACTIVE
 
 Ты общаешься с действующим клиентом, у которого активный проект в AIM.
-Твоя SOUL.md (раздел «РЕЖИМ 2: ACTIVE») — твой главный источник правил.
 
-### Ключевые напоминания из SOUL.md:
-1. **Бизнес-язык** — клиент видит пациентов, заявки, стоимость. Не технические детали.
-2. **KPI клиента** — все цифры привязаны к персональным KPI проекта.
-3. **Проактивность** — если клиент просит что-то сделать, сразу запускай инструмент.
-4. **Эскалация** — если вопрос вне компетенции: «Михаил свяжется с вами в течение часа».
-5. **Цены из services.md** — если клиент спрашивает о стоимости или новых услугах.
+### Ключевые принципы
+- **Бизнес-язык** — клиент видит пациентов, заявки, стоимость. Не технические детали.
+- **KPI клиента** — все цифры привязаны к персональным KPI проекта.
+- **Проактивность** — если клиент просит что-то сделать, сразу запускай инструмент.
+- **Эскалация** — если вопрос вне компетенции: «Михаил свяжется с вами в течение часа».
+- **Цены из SOUL.md / services.md** — не выдумывай другие цифры.
 
-### Доступные инструменты (ТОЛЬКО эти 4):
-- show_project_status — сводка по проекту (KPI, задачи, блокеры)
-- run_seo_audit — SEO-аудит
-- run_content_analysis — анализ контента
-- run_ads_report — отчёт по рекламе
+### Ключевые инструменты
+show_project_status, run_seo_audit, run_content_analysis, run_ads_report
 """
 
 
 def _admin_prompt() -> str:
-    """ADMIN mode context — complements SOUL.md ADMIN section."""
+    """ADMIN mode context — principles, not scripts."""
     return """## ТЕКУЩИЙ РЕЖИМ: ADMIN
 
 Ты общаешься с Михаилом Елисеевым — основателем агентства AIM.
-Твоя SOUL.md (раздел «РЕЖИМ 3: ADMIN») — твой главный источник правил.
 
-### Ключевые напоминания из SOUL.md:
-1. **Слушаться во всём** — любой запрос выполняй немедленно, без лишних вопросов.
-2. **Все 12 инструментов** доступны без ограничений по Tier.
-3. **Технические детали** — можно и нужно показывать метрики, статусы агентов, ошибки.
-4. **Скорость и полнота** — приоритет над формой.
-5. **Data-driven** — чётко, структурированно, с цифрами.
-
-### Доступны ВСЕ инструменты:
-show_project_status, show_all_leads, collect_contact, run_seo_audit,
-run_content_analysis, run_ads_report, search_telegram_chats, send_telegram_message,
-    qualify_lead, escalate_to_manager, get_lead_pipeline, update_knowledge
-
-### ⚠️ ПРО find_company_financials:
-Вызывай ТОЛЬКО если у тебя есть конкретный ИНН (10-12 цифр) или ОГРН (13-15 цифр).
-Без ИНН/ОГРН инструмент вернёт ошибку. find_competitors уже включает revenue_year и profit_year.
+### Ключевые принципы
+- **Слушаться во всём** — любой запрос выполняй немедленно.
+- **Одна задача = один ответ.** Сделал что просили → доложил результат. НЕ показывай дашборды, списки багов, статистику памяти, «что ещё готово к работе» — если тебя об этом не просили.
+- **Не отвлекайся.** «Сделай аудит» = сделай аудит и вернись с результатом. Не предлагай 5 других вещей «заодно» пока не завершил то что просили.
+- **Краткость.** Ответ пропорционален вопросу. На «ок» отвечай «ок». На сложный запрос — развёрнуто.
+- **Технические детали — только по запросу.** Метрики, статусы агентов, логи — только когда явно просят.
+- **Если ошибся — признай и исправь.** Не оправдывайся, не показывай «вот что ещё я нашёл». Просто исправь.
 """
 
 
 def _sales_admin_prompt() -> str:
-    """SALES_ADMIN mode context — for the autonomous Sales Admin Agent.
-
-    This mode is used by the SalesAdminMagister when auto-replying to patients.
-    It has access to qualification and escalation tools, and follows strict
-    medical communication rules.
-    """
+    """SALES_ADMIN mode context — virtual clinic administrator."""
     return """## ТЕКУЩИЙ РЕЖИМ: SALES_ADMIN
 
-Ты — виртуальный администратор клиники. Ты общаешься с пациентами в Telegram,
-квалифицируешь лидов и знаешь, когда позвать человека.
+Ты — виртуальный администратор клиники. Общаешься с пациентами в Telegram.
 
-### Твои обязанности:
-1. **Отвечать на вопросы пациентов** — услуги, цены, врачи, запись
-2. **Квалифицировать лиды** — оценивать готовность к записи
-3. **Эскалировать человеку** — когда не можешь ответить или что-то идёт не так
+### Твои обязанности
+- Отвечать на вопросы пациентов: услуги, цены, врачи, запись
+- Квалифицировать лидов (qualify_lead)
+- Эскалировать человеку когда нужно (escalate_to_manager)
 
-### Правила эскалации (КРИТИЧЕСКИ ВАЖНО):
+### Правила эскалации
+НЕМЕДЛЕННО эскалируй:
+- Пациент уже был в клинике: «я у вас был», «мои анализы», «моя карта»
+- Пациент просит человека: «позовите администратора», «соедините с врачом»
+- Пациент угрожает: «подам в суд», «жалобу напишу»
 
-**НЕМЕДЛЕННАЯ эскалация (вызывай escalate_to_manager):**
-- Пациент говорит что уже был в клинике: «я у вас был», «посмотрите мою историю», «мои анализы», «моя карта»
-- Пациент явно просит человека: «позовите администратора», «соедините с врачом», «дайте телефон»
-- Пациент угрожает: «подам в суд», «жалобу напишу», «роспотребнадзор»
-
-**Когда отвечать самому:**
-- Вопросы про услуги и цены (бери из знаний клиента)
-- Вопросы про врачей и специализации
-- Вопросы про запись и график работы
+Отвечай сам:
+- Вопросы про услуги и цены (из знаний клиента)
+- Вопросы про врачей и запись
 - Общие вопросы про клинику
 
-### Как отвечать:
-- Утвердительный тон — «у нас есть», «мы работаем», «запишем вас»
-- Без технических деталей — пациенту нужны ответы, не метрики
-- Коротко и по делу — 2-4 предложения
-- Всегда предлагай следующий шаг: «Записать вас на консультацию?»
-- НЕ выдумывай цены и услуги — только из знаний клиента
+### Как отвечать
+- Утвердительный тон, коротко (2-4 предложения)
+- Всегда предлагай следующий шаг: «Записать вас?»
+- НЕ выдумывай цены и услуги
 - НЕ давай медицинских советов — «это решит врач на приёме»
 
-### Доступные инструменты (ТОЛЬКО эти 3):
-- qualify_lead — оценить качество лида (score + tier)
-- escalate_to_manager — передать диалог человеку
-- get_lead_pipeline — посмотреть воронку (для отчётов)
+### Инструменты
+qualify_lead, escalate_to_manager, get_lead_pipeline
 """
 
 
 def _create_agent(session_id: str | None, mode: str):
-    """Create AIAgent with standard config. Shared by web and Telegram paths."""
+    """Create AIAgent with standard config. Shared by web and Telegram paths.
+
+    Passes persistent session_db so conversation history is loaded from
+    SQLite even after container restarts (Pitfall 9).
+    """
     from run_agent import AIAgent
 
     return AIAgent(
@@ -479,110 +239,104 @@ def _create_agent(session_id: str | None, mode: str):
         api_mode="openai_chat",
         model=DEFAULT_MODEL,
         session_id=session_id,
+        session_db=_session_db,
         load_soul_identity=True,
         ephemeral_system_prompt=get_mode_prompt(mode),
-        enabled_toolsets=["aim-operations"],
-        max_iterations=15,
+        enabled_toolsets=["aim-operations", "hermes-debug"],
+        max_iterations=50,
         quiet_mode=True,
-        request_overrides={"extra_body": {"thinking": {"type": "disabled"}}},
+        max_tokens=32000,
+        reasoning_config={"type": "enabled"},
     )
 
 
 def _apply_markdown_formatting(text: str) -> str:
-    """Post-process model output to apply markdown formatting.
+    """Minimal post-processing cleanup.
 
-    The model (deepseek-v4-pro) ignores markdown instructions in the system
-    prompt, so we apply formatting heuristically here before streaming to client.
-
-    Rules:
-    1. Wrap key metrics in **bold**
-    2. Put ▸ items on separate lines (with leading newline)
-    3. Wrap --- separator with double newlines (renders as <hr>)
-    4. Split into logical paragraphs after sentence-terminal punctuation
-       when a new topic/section starts
+    The model handles its own markdown formatting. We only do basic cleanup:
+    collapse excessive blank lines and trim whitespace.
     """
     if not text or not text.strip():
         return text
 
     t = text.strip()
-
-    # ── Step 1: Bold-ify key metric patterns ─────────────────────────
-    # Pattern: "Качество сайта: X из 100" (case-insensitive, colon or dash)
-    t = re.sub(
-        r'(?i)(качество\s+сайта\s*[:—–-]\s*\d+\s*из\s*\d+)',
-        lambda m: f'**{m.group(1)}**',
-        t,
-    )
-    # Pattern: "~X млн ₽/год" or "~X.X млн ₽/год"
-    t = re.sub(
-        r'(~\d[\d.]*\s*(?:млн|тыс\.?)\s*₽/год)',
-        r'**\1**',
-        t,
-    )
-    # Pattern: "X–Y новых пациентов" or "X–Y пациентов"
-    t = re.sub(
-        r'(\d+[–-]\d+\s+(?:новых\s+)?пациентов(?:\s+в\s+месяц)?)',
-        r'**\1**',
-        t,
-    )
-    # Pattern: "Через X–Y месяцев" or "Через X месяцев"
-    t = re.sub(
-        r'(Через\s+\d+[–-]\d+\s+месяцев)',
-        r'**\1**',
-        t,
-    )
-    # Pattern: "X – Y ₽" or "X–Y ₽" (cost per patient) — keep trailing context
-    t = re.sub(
-        r'(\d[\d\s]*[–-]\s*\d[\d\s]*\s*₽)(\s*за\s+пациента)?',
-        lambda m: f'**{m.group(1)}**{m.group(2) or ""}',
-        t,
-    )
-    # Pattern: "Выручка: ~X млн ₽/год"
-    t = re.sub(
-        r'(Выручка:\s*~\d[\d.]*\s*(?:млн|тыс\.?)\s*₽/год)',
-        r'**\1**',
-        t,
-    )
-
-    # ── Step 2: Put each ▸ item on its own line ──────────────────────
-    # Add newline before ▸ (but not if it's already on a new line)
-    t = re.sub(r'(?<!\n)▸\s', r'\n▸ ', t)
-
-    # ── Step 3: Wrap --- with double newlines ────────────────────────
-    # " --- " or " ---" or "--- " → "\n\n---\n\n"
-    t = re.sub(r'\s*---\s*', r'\n\n---\n\n', t)
-
-    # ── Step 4: Split into logical paragraphs ────────────────────────
-    # Add paragraph breaks after sentence endings when followed by
-    # a section-starting word (capital letter, key phrase)
-    section_starters = [
-        r'(?<=\.)\s+(?=Конкуренция)',
-        r'(?<=\.)\s+(?=Теперь)',
-        r'(?<=\.)\s+(?=Ваш прогноз)',
-        r'(?<=\.)\s+(?=Вот что)',
-        r'(?<=\.)\s+(?=Этих тр)',
-        r'(?<=\.)\s+(?=Скажите)',
-        r'(?<=\.)\s+(?=Можете)',
-        r'(?<=\.)\s+(?=По вашим)',
-        r'(?<=\.)\s+(?=Если)',
-        r'(?<=\.)\s+(?=Почему)',
-        r'(?<=\.)\s+(?=Это )',
-        r'(?<=\.)\s+(?=Фундамент)',
-        r'(?<=\.)\s+(?=Я наш)',
-        r'(?<=\.)\s+(?=Подобрать)',
-    ]
-    for pattern in section_starters:
-        t = re.sub(pattern, r'\n\n', t)
-
-    # ── Step 5: Clean up ────────────────────────────────────────────
-    # Collapse multiple blank lines
+    # Collapse 3+ blank lines into 2
     t = re.sub(r'\n{3,}', r'\n\n', t)
     # Remove trailing whitespace on each line
     t = '\n'.join(line.rstrip() for line in t.split('\n'))
-    # Ensure no leading/trailing whitespace
-    t = t.strip()
 
     return t
+
+
+def _build_learnings_prompt(tool_calls: list[dict]) -> str:
+    """Build a short, concrete learnings-extraction prompt for DeepSeek.
+
+    DeepSeek needs: short, one clear instruction, exact file path, minimal format.
+    """
+    today = time.strftime("%Y-%m-%d")
+    tools_used = ", ".join(tc["name"] for tc in tool_calls) if tool_calls else "none"
+    path = f"/opt/data/memories/learnings/{today}-learnings.md"
+
+    return f"""## SELF-LEARNING — выполни ОБЯЗАТЕЛЬНО
+
+Ты использовал инструменты: {tools_used}
+
+Запиши 1-3 КОНКРЕТНЫХ урока из этого разговора в файл {path}
+Через file_write.
+
+Формат (markdown, строго):
+```
+---
+date: {today}
+tools: {tools_used}
+---
+
+### Что сработало
+- (конкретно)
+
+### Что не сработало
+- (конкретно)
+
+### На будущее
+- (конкретное действие)
+```
+
+Пиши ТОЛЬКО то, что реально произошло. Не выдумывай.
+Если файл уже существует — прочитай его через file_read и допиши в конец, разделив маркером --- session ---.
+Сделай это СЕЙЧАС. Не отвечай текстом — просто вызови file_write."""
+
+
+def _try_extract_learnings(agent, history: list[dict], tool_calls: list[dict], mode: str) -> None:
+    """Fire a separate learnings-extraction turn after a session with tool usage.
+
+    Only for ADMIN mode (debugging/tool-improvement sessions produce the most
+    valuable learnings). Runs synchronously in the same thread — adds ~3-5s.
+
+    Errors are logged but never propagated — learnings failure must not break
+    the main conversation.
+    """
+    if not tool_calls:
+        return
+
+    # Only ADMIN sessions auto-extract learnings (PRESALE/ACTIVE learnings
+    # are handled by the model voluntarily reading learnings.md)
+    if mode != "ADMIN":
+        return
+
+    prompt = _build_learnings_prompt(tool_calls)
+
+    try:
+        logger.info("learnings: extracting for session %s (%d tools: %s)",
+                     agent.session_id, len(tool_calls),
+                     ", ".join(tc["name"] for tc in tool_calls[:5]))
+
+        response = agent.run_conversation(prompt, conversation_history=history)
+
+        reply = response.get("final_response", response.get("response", response.get("content", str(response))))
+        logger.info("learnings: extraction complete — %d chars", len(str(reply)))
+
+    except Exception as e:
+        logger.warning("learnings: extraction failed — %s", e)
 
 
 def run_agent_sync(
@@ -596,6 +350,9 @@ def run_agent_sync(
     Uses threading.Lock per session_id for SQLite concurrency safety (Pitfall 2).
     Caches AIAgent instances per session_id (Pitfall 8) so conversation history
     is preserved across web requests.
+
+    After the main turn completes with tool usage (ADMIN mode), automatically
+    triggers a learnings-extraction turn that writes to /opt/data/memories/learnings/.
     """
     import threading
 
@@ -614,7 +371,44 @@ def run_agent_sync(
         else:
             logger.info(f"Agent reused from cache: session={agent.session_id} history={len(history)} msgs")
 
-        response = agent.run_conversation(message, conversation_history=history if history else None)
+        # Run in a separate thread so we can enforce a hard deadline.
+        # hermes-agent hardcodes stream=True; OmniRoute's DeepSeek provider
+        # sometimes never sends the first token on streaming requests,
+        # which would block indefinitely without a timeout.
+        try:
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(
+                    agent.run_conversation,
+                    message,
+                    conversation_history=history if history else None,
+                )
+                response = future.result(timeout=_AGENT_TIMEOUT)
+        except FutureTimeoutError:
+            # Try to salvage — the future may have completed in the
+            # same instant the timeout fired (race condition).
+            if future.done() and not future.cancelled():
+                try:
+                    response = future.result(timeout=0)
+                    logger.warning(
+                        "Agent finished just after timeout (%ds): session=%s — using real response",
+                        _AGENT_TIMEOUT, agent.session_id,
+                    )
+                    # Fall through to normal response processing below
+                except Exception:
+                    response = None
+            else:
+                response = None
+
+            if response is None:
+                logger.error(
+                    "Agent timed out after %ds: session=%s",
+                    _AGENT_TIMEOUT, agent.session_id,
+                )
+                return {
+                    "reply": "Извини, я задумался и не успел ответить. Дай мне ещё секунду — повтори, пожалуйста.",
+                    "session_id": agent.session_id,
+                    "tool_calls": [],
+                }
 
         # Append this turn to history
         history.append({"role": "user", "content": message})
@@ -656,6 +450,10 @@ def run_agent_sync(
                         tool_calls.append({"name": str(name)})
                         logger.debug(f"  → found tool: {name}")
 
+        # Auto-extract learnings after tool-using ADMIN sessions
+        if tool_calls and mode == "ADMIN":
+            _try_extract_learnings(agent, history, tool_calls, mode)
+
         return {
             "reply": reply_text,
             "session_id": agent.session_id,
@@ -689,10 +487,24 @@ async def run_agent(
 
     async with lock:
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(
-            None,
-            lambda: run_agent_sync(message, session_id, mode),
-        )
+        try:
+            return await asyncio.wait_for(
+                loop.run_in_executor(
+                    None,
+                    lambda: run_agent_sync(message, session_id, mode),
+                ),
+                timeout=_AGENT_TIMEOUT + 10,  # 10s grace over internal timeout
+            )
+        except asyncio.TimeoutError:
+            logger.error(
+                "run_agent asyncio timeout after %ds: session=%s",
+                _AGENT_TIMEOUT + 10, session_id,
+            )
+            return {
+                "reply": "Извини, я задумался и не успел ответить. Дай мне ещё секунду — повтори, пожалуйста.",
+                "session_id": session_id,
+                "tool_calls": [],
+            }
 
 
 # Thread-level locks for sync calls (Telegram polling, webhook via executor)
