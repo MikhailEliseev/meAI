@@ -114,13 +114,14 @@ def _compact_quick_result(data: dict) -> dict:
     pricing = data.get("pricing_comparison", {}) or {}
     positioning = data.get("positioning_map", {}) or {}
 
-    # Extract competitors from feature_matrix keys (excluding the client's own URL)
+    # Extract competitors from feature_matrix keys
     competitors = []
     if isinstance(feature_matrix, dict):
-        competitors = [
-            {"name": name, "url": name}
-            for name in feature_matrix.keys()
-        ][:5]
+        for name, features in feature_matrix.items():
+            competitors.append({
+                "name": name,
+                "url": features.get("url", name) if isinstance(features, dict) else name,
+            })
 
     return {
         "wow": {
@@ -131,19 +132,21 @@ def _compact_quick_result(data: dict) -> dict:
         "market": {
             "competitive_intensity": positioning.get("competitive_intensity", "unknown"),
             "digital_maturity": positioning.get("digital_maturity", "unknown"),
-            "niche_size": "unknown",
+            "niche_size": positioning.get("market_size", "unknown"),
         },
-        "competitors": competitors,
-        "insights": data.get("steal_worthy_tactics", []) or [],
-        "opportunities": [],
-        "actions": [data.get("top_recommendation", "")] if data.get("top_recommendation") else [],
+        "competitors": competitors[:5],
+        "feature_matrix": feature_matrix,
+        "pricing_comparison": pricing,
+        "positioning_map": positioning,
+        "steal_worthy_tactics": data.get("steal_worthy_tactics", []) or [],
+        "top_recommendation": data.get("top_recommendation", ""),
+        "chat_summary": data.get("chat_summary", ""),
         "meta": {
             "tier": "quick",
-            "phases": 1,
+            "phases": len(data.get("phases_executed", [])),
             "time_seconds": data.get("duration_seconds"),
-            "quality_score": None,
+            "quality_score": data.get("quality_score"),
         },
-        "chat_summary": data.get("chat_summary", ""),
     }
 
 
