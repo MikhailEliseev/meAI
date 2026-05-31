@@ -115,8 +115,9 @@ async def on_startup():
     For cross-process communication, CI Orchestrator also sends events
     via HTTP POST /api/knowledge/ingest.
     """
-    from app.tools import register_all_tools
+    from app.tools import register_all_tools, register_debug_tools
     register_all_tools()
+    register_debug_tools()
     logger.info("Hermes FastAPI started — tools registered")
 
     vault = HermesKnowledgeVault()
@@ -357,10 +358,20 @@ async def chat_stream(
 
             agent_task = asyncio.create_task(run_agent_task())
 
+            # Hard deadline for the entire agent run (3 min).
+            # hermes-agent hardcodes stream=True; OmniRoute's DeepSeek
+            # sometimes never sends the first token → hangs without timeout.
+            _SSE_DEADLINE = time.time() + 190
+
             # Phase A — Yield progress events while agent runs.
             # Also collect unique tool stage names so we can emit
             # step-start / step-end lifecycle markers in Phase C.
             while not agent_task.done():
+                if time.time() > _SSE_DEADLINE:
+                    logger.error("SSE agent deadline exceeded — cancelling task")
+                    agent_task.cancel()
+                    yield f"data: {json.dumps({'type': 'error', 'message': 'Превышено время ожидания. Попробуй ещё раз.'}, ensure_ascii=False)}\n\n"
+                    break
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=0.1)
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
@@ -371,6 +382,12 @@ async def chat_stream(
                             tool_names_seen.append(stage)
                 except asyncio.TimeoutError:
                     continue
+
+            # If deadline killed the task, skip Phase B/C — bail out
+            if agent_task.cancelled():
+                clear_tool_progress_queue()
+                _metrics["chat_sessions_active"] = max(0, _metrics["chat_sessions_active"] - 1)
+                return
 
             # Phase B — Drain remaining queue events
             while not queue.empty():

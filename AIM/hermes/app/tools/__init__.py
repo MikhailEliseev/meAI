@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def register_all_tools() -> None:
-    """Register all 10 AIM operation tools in the Hermes registry.
+    """Register all AIM operation tools in the Hermes registry.
 
     Called once at FastAPI app startup. Each tool module imports itself
     and calls registry.register() at module level, so importing them
@@ -41,6 +41,9 @@ def register_all_tools() -> None:
     - present_competitors  -> POST http://app:8000/api/competitors/save
     - run_ci_analysis      -> POST http://app:8000/api/competitors/analyze
     - find_company_financials -> GET http://app:8000/api/companies/financials
+
+    Telegram tools (1):
+    - send_telegram_file   -> Bot API sendDocument/sendPhoto
     """
     from . import run_seo_audit          # noqa: F401
     from . import run_content_analysis   # noqa: F401
@@ -56,8 +59,22 @@ def register_all_tools() -> None:
     from . import present_competitors    # noqa: F401
     from . import run_ci_analysis        # noqa: F401
     from . import find_company_financials # noqa: F401
+    from . import send_telegram_file     # noqa: F401
 
-    logger.info("Registered 14 AIM operations tools in toolset 'aim-operations'")
+    logger.info("Registered 15 AIM operations tools in toolset 'aim-operations'")
 
 
-__all__ = ["register_all_tools"]
+def register_debug_tools() -> None:
+    """Register Hermes debug tools — shell_exec, file_read, api_debug, file_write,
+    pip_install, restart_myself, web_fetch, web_search, browser_screenshot, call_api.
+
+    Toolset "hermes-debug" gives Hermes full access to the container
+    for self-diagnostics, web access, package management, browser automation, and self-restart.
+    """
+    from . import shell_exec  # noqa: F401
+    from . import web_scraper  # noqa: F401
+    from . import external_api  # noqa: F401
+    logger.info("Registered 10 debug tools: shell_exec, file_read, api_debug, file_write, pip_install, restart_myself, web_fetch, web_search, browser_screenshot, call_api")
+
+
+__all__ = ["register_all_tools", "register_debug_tools"]

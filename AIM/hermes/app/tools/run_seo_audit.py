@@ -14,12 +14,18 @@ Registered in Hermes internal registry under toolset "aim-operations".
 import asyncio
 import json
 import logging
+import time
 
 import httpx
 
 from tools.registry import registry
 
 logger = logging.getLogger(__name__)
+
+# In-memory SEO audit cache: URL → (timestamp, result_json)
+# Prevents duplicate API calls within the same session (TTL = 10 min)
+_seo_cache: dict[str, tuple[float, str]] = {}
+_SEO_CACHE_TTL = 600  # 10 minutes
 
 
 def _normalize_args(first_param, defaults):
@@ -30,8 +36,71 @@ def _normalize_args(first_param, defaults):
 
 
 AIM_API_BASE = "http://app:8000"
-REQUEST_TIMEOUT = 300.0  # full async pipeline: start + polling
+REQUEST_TIMEOUT = 600.0  # full async pipeline: start + polling + competitor crawling
 POLL_INTERVAL = 2.0       # seconds between status checks
+
+
+def _compute_wow_numbers(findings: dict) -> dict:
+    """Compute WOW estimates from available phase data when phase_7 (strategist) is missing.
+
+    Uses phases 1-4 (scout, auditor, deep-analyzer, reputation) to produce rough but
+    data-driven estimates for patients/month, time-to-result, and cost-per-patient.
+    """
+    # Phase 1 — competitors found
+    phase1 = findings.get("phase_1", {})
+    scout_result = phase1.get("result", {}) if isinstance(phase1, dict) else {}
+    competitors = scout_result.get("top_for_analysis", [])
+    competitor_count = len(competitors) if isinstance(competitors, list) else 0
+
+    # Phase 2 — audit scores (average across competitors)
+    phase2 = findings.get("phase_2", {})
+    auditor_result = phase2.get("result", {}) if isinstance(phase2, dict) else {}
+    audit_scores = auditor_result.get("scores", {}) or {}
+    avg_competitor_score = 0
+    if isinstance(audit_scores, dict):
+        scores = [v for v in audit_scores.values() if isinstance(v, (int, float))]
+        if scores:
+            avg_competitor_score = sum(scores) / len(scores)
+
+    # Phase 4 — reputation data
+    phase4 = findings.get("phase_4", {})
+    rep_result = phase4.get("result", {}) if isinstance(phase4, dict) else {}
+    avg_rating = rep_result.get("avg_rating", 0) or 0
+
+    # Estimations based on competitive landscape signals
+    # More competitors + weak scores = more patients to capture
+    base_patients = 10 + competitor_count * 5
+    if avg_competitor_score < 50:
+        base_patients += 15
+    elif avg_competitor_score < 70:
+        base_patients += 5
+
+    # Time: weak competitors = faster results
+    if avg_competitor_score < 50:
+        time_weeks = 4
+    elif avg_competitor_score < 70:
+        time_weeks = 8
+    else:
+        time_weeks = 12
+
+    # Cost: more competitors = higher acquisition cost
+    if competitor_count <= 2:
+        cost = 800
+    elif competitor_count <= 5:
+        cost = 1200
+    else:
+        cost = 1800
+
+    # Adjust for low-rated competitors (easier to beat)
+    if avg_rating > 0 and avg_rating < 4.0:
+        cost = max(500, cost - 300)
+
+    return {
+        "patients_per_month": max(5, base_patients),
+        "time_to_result_weeks": time_weeks,
+        "cost_per_patient_rub": cost,
+        "is_estimated": True,
+    }
 
 
 def _compact_audit_result(data: dict) -> dict:
@@ -46,10 +115,15 @@ def _compact_audit_result(data: dict) -> dict:
             return {k: obj[k] for k in list(obj.keys())[:n]}
         return obj
 
-    # Phase 7 (ci-strategist) — 3 WOW numbers + insights
+    # Phase 7 (ci-strategist) — 3 WOW numbers + insights (only at deep/full tier)
     phase7 = findings.get("phase_7", {})
     strat_result = phase7.get("result", {}) if isinstance(phase7, dict) else {}
     estimates = strat_result.get("estimates", {}) or {}
+
+    # If phase_7 missing (quick tier), compute WOW from phases 1-4
+    if not estimates or not any(estimates.values()):
+        estimates = _compute_wow_numbers(findings)
+
     insights = _take(strat_result.get("insights", []), 5)
     opportunities = _take(strat_result.get("opportunities", []), 3)
     landscape = strat_result.get("landscape", {}) or {}
@@ -111,6 +185,18 @@ async def handle_run_seo_audit(url=None, **kwargs) -> str:
     # Auto-prepend https:// if URL has no protocol
     if url and not url.startswith(("http://", "https://")):
         url = "https://" + url
+
+    # Check cache — prevent duplicate API calls within the same session
+    cached = _seo_cache.get(url)
+    if cached is not None:
+        cached_ts, cached_result = cached
+        if time.time() - cached_ts < _SEO_CACHE_TTL:
+            logger.info("SEO audit cache HIT for URL: %s (age=%.0fs)", url, time.time() - cached_ts)
+            return cached_result
+        else:
+            del _seo_cache[url]
+            logger.info("SEO audit cache EXPIRED for URL: %s", url)
+
     logger.info("Running SEO audit for URL: %s", url)
 
     from app.main import push_tool_progress
@@ -123,7 +209,7 @@ async def handle_run_seo_audit(url=None, **kwargs) -> str:
             push_tool_progress("seo", "⚙️ Запускаю технический аудит…")
             start_response = await client.post(
                 f"{AIM_API_BASE}/api/seo/audit",
-                json={"url": url},
+                json={"url": url, "tier": "quick"},
             )
             start_response.raise_for_status()
             start_data = start_response.json()
@@ -158,9 +244,12 @@ async def handle_run_seo_audit(url=None, **kwargs) -> str:
                     push_tool_progress("seo", "✅ SEO-аудит готов!")
                     data = status_data.get("result", {})
                     compact = _compact_audit_result(data)
-                    logger.info("SEO audit completed (task %s): %d polls, compacted %d chars",
-                                task_id, poll_count, len(json.dumps(compact)))
-                    return json.dumps(compact, ensure_ascii=False, indent=2)
+                    result_json = json.dumps(compact, ensure_ascii=False, indent=2)
+                    # Cache the result
+                    _seo_cache[url] = (time.time(), result_json)
+                    logger.info("SEO audit completed (task %s): %d polls, compacted %d chars, cached",
+                                task_id, poll_count, len(result_json))
+                    return result_json
 
                 if st == "error":
                     err = status_data.get("error", "Unknown error")

@@ -53,14 +53,42 @@ _MEDICAL_SERVICES: dict[str, list[str]] = {
 
 
 # ── Specialization detection ────────────────────────────────────────
+# Patterns include common declensions (genitive, accusative) because
+# Russian clinic websites almost never use the nominative form.
+# E.g. "клиника пластической хирургии" (genitive) vs "пластическая хирургия" (nominative).
 _SPECIALIZATIONS: dict[str, list[str]] = {
-    "стоматология": ["стоматолог", "зубной", "зубов", "дантист", "dental"],
-    "косметология": ["косметолог", "косметология", "эстетическ"],
-    "многопрофильная клиника": ["многопрофильн", "медицинский центр", "клиника"],
-    "пластическая хирургия": ["пластическая хирургия", "пластический хирург"],
-    "диагностический центр": ["диагностический центр", "мрт", "кт", "томограф"],
-    "офтальмология": ["офтальмолог", "глазн", "коррекция зрения", "офтальмологическ"],
-    "педиатрия": ["педиатр", "детск"],
+    "стоматология": [
+        "стоматолог", "стоматологи", "стоматологии", "стоматологию",
+        "зубной", "зубов", "дантист", "dental",
+    ],
+    "косметология": [
+        "косметолог", "косметологи", "косметологии", "косметологию",
+        "косметология", "эстетическ",
+    ],
+    "многопрофильная клиника": [
+        "многопрофильн", "медицинский центр", "клиника",
+        "многопрофильной", "многопрофильную",
+        # Genitive/plural forms — catch "сеть клиник", "клиник и центров"
+        "клиник", "медицинских центр",
+        # "Сеть" + medical context = large multidisciplinary network
+        "сеть клиник", "сеть медицинских",
+    ],
+    "пластическая хирургия": [
+        "пластическая хирургия", "пластической хирургии", "пластическую хирургию",
+        "пластический хирург", "пластического хирурга",
+    ],
+    "диагностический центр": [
+        "диагностический центр", "диагностического центра",
+        "мрт", "кт", "томограф",
+    ],
+    "офтальмология": [
+        "офтальмолог", "офтальмологи", "офтальмологии",
+        "глазн", "коррекция зрения", "офтальмологическ",
+    ],
+    "педиатрия": [
+        "педиатр", "педиатры", "педиатрии", "педиатрию",
+        "детск",
+    ],
 }
 
 
@@ -196,7 +224,7 @@ async def extract_client_profile(url: str) -> dict:
 
     Returns:
         dict with keys: services (list[str]), specialization (str),
-        city (str), company_name (str|None)
+        city (str), company_name (str|None), site_structure (dict|None)
     """
     html = await _fetch_page(url)
     if not html:
@@ -205,20 +233,23 @@ async def extract_client_profile(url: str) -> dict:
             "specialization": "",
             "city": _extract_city_from_url(url),
             "company_name": None,
+            "site_structure": None,
         }
 
     text = _extract_text(html)
     text_lower = text.lower()
 
     services = _detect_services(text_lower)
-    specialization = _detect_specialization(text_lower, url)
+    site_structure = _analyze_site_structure(html)
+    specialization = _detect_specialization(text_lower, url, html, site_structure)
     city = _extract_city_from_schema(html) or _detect_city(text) or _extract_city_from_url(url)
     company_name = _extract_company_name(html)
     inn = _extract_inn(html)
 
     logger.info(
-        "Service extraction: url=%s services=%s specialization=%s city=%s",
+        "Service extraction: url=%s services=%s specialization=%s city=%s structure_departments=%s",
         url, services, specialization, city,
+        len(site_structure.get("departments", [])) if site_structure else 0,
     )
 
     return {
@@ -227,6 +258,7 @@ async def extract_client_profile(url: str) -> dict:
         "city": city,
         "company_name": company_name,
         "inn": inn,
+        "site_structure": site_structure,
     }
 
 
@@ -311,18 +343,263 @@ def _detect_services(text_lower: str) -> list[str]:
     return found
 
 
-def _detect_specialization(text_lower: str, url: str) -> str:
-    """Detect clinic specialization — dominance-based (most keyword matches wins)."""
-    match_counts: dict[str, int] = {}
+# Weights for different signal zones
+_TITLE_WEIGHT = 5
+_DOMAIN_WEIGHT = 3
+_BODY_WEIGHT = 1
+
+# Specializations where the primary niche is often drowned out by
+# secondary service mentions. If the dominant_spec appears in title/H1,
+# it overrides the noisy_spec even when noisy_spec has a higher body count.
+_PRIORITY_OVERRIDES: dict[str, str] = {
+    # пластическая хирургия > косметология (хирургические клиники всегда
+    # предлагают косметологию, но позиционируются как хирургия)
+    "пластическая хирургия": "косметология",
+    # стоматология > многопрофильная клиника (клиники с dental в названии
+    # часто имеют много общемедицинских услуг в теле страницы)
+    "стоматология": "многопрофильная клиника",
+}
+
+
+def _extract_domain_keywords(url: str) -> list[str]:
+    """Extract potential niche-bearing tokens from domain name."""
+    parsed = urlparse(url)
+    domain = parsed.netloc.lower()
+    domain = re.sub(r"\.(ru|com|org|net|рф|su|io|co|msk|spb|xn--[a-z0-9]+)$", "", domain)
+    domain = re.sub(r"^(www|m|online|portal)\\.", "", domain)
+    return [p for p in re.split(r"[-_.]", domain) if len(p) >= 3]
+
+
+def _extract_title_h1_meta(html: str) -> str:
+    """Extract concatenated lowercased text from title, H1, and meta description."""
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, "html.parser")
+        parts: list[str] = []
+
+        title_tag = soup.find("title")
+        if title_tag:
+            parts.append(title_tag.get_text())
+
+        h1_tag = soup.find("h1")
+        if h1_tag:
+            parts.append(h1_tag.get_text())
+
+        meta = soup.find("meta", attrs={"name": "description"})
+        if meta and meta.get("content"):
+            parts.append(meta["content"])
+
+        return " ".join(parts).lower()
+    except Exception:
+        return ""
+
+
+def _analyze_site_structure(html: str) -> dict:
+    """Parse navigation structure from HTML to detect site specialisation profile.
+
+    Extracts menu/nav links, groups them by matched specialisation category,
+    and determines whether the site structure reflects a specialised clinic
+    or a truly multidisciplinary one.
+
+    Returns:
+        dict with:
+        - departments: list of {"label": str, "href": str, "specializations": [str]}
+        - nav_specializations: dict[spec_name → count] (how many nav items per spec)
+        - total_nav_items: int
+        - is_multidisciplinary: bool (true if 3+ specialisations each have ≥15% of nav)
+    """
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, "html.parser")
+    except Exception:
+        return _empty_structure()
+
+    nav_items: list[dict] = []
+
+    # Collect navigation links from: <nav>, header, elements with menu/nav classes
+    selectors = [
+        soup.find_all("nav"),
+        soup.find_all("header"),
+        soup.find_all(class_=lambda c: c and any(
+            kw in c.lower() for kw in ["menu", "nav", "navigation", "sidebar"]
+        ) if c else False),
+        soup.find_all(id=lambda i: i and any(
+            kw in i.lower() for kw in ["menu", "nav", "navigation", "sidebar"]
+        ) if i else False),
+    ]
+
+    seen_hrefs: set[str] = set()
+    for group in selectors:
+        for container in group:
+            for link in container.find_all("a", href=True):
+                href = link.get("href", "").strip()
+                label = link.get_text(strip=True)
+                if not label or len(label) < 2:
+                    continue
+                # Skip non-navigation links (phone, email, social, etc.)
+                if any(kw in href.lower() for kw in ["tel:", "mailto:", "javascript:", "#"]):
+                    if not href.startswith("#") or len(href) <= 2:
+                        continue
+                # Deduplicate by href+label
+                key = f"{href}|{label}"
+                if key in seen_hrefs:
+                    continue
+                seen_hrefs.add(key)
+                nav_items.append({"label": label, "href": href})
+
+    if not nav_items:
+        # Fallback: grab all links from body (less reliable but better than nothing)
+        body = soup.find("body")
+        if body:
+            for link in body.find_all("a", href=True)[:80]:
+                label = link.get_text(strip=True)
+                href = link.get("href", "").strip()
+                if label and len(label) >= 2:
+                    key = f"{href}|{label}"
+                    if key not in seen_hrefs:
+                        seen_hrefs.add(key)
+                        nav_items.append({"label": label, "href": href})
+
+    # Match each nav item against specialisation patterns
+    label_lower_all = " | ".join(item["label"].lower() for item in nav_items)
+    spec_counts: dict[str, int] = {spec: 0 for spec in _SPECIALIZATIONS}
+    departments: list[dict] = []
+
+    for item in nav_items:
+        label_lower = item["label"].lower()
+        matched_specs: list[str] = []
+        for spec, patterns in _SPECIALIZATIONS.items():
+            for p in patterns:
+                if p in label_lower:
+                    matched_specs.append(spec)
+                    break
+        item_specs = list(set(matched_specs))
+        for s in item_specs:
+            spec_counts[s] = spec_counts.get(s, 0) + 1
+        departments.append({
+            "label": item["label"],
+            "href": item["href"],
+            "specializations": item_specs,
+        })
+
+    total = len(nav_items)
+    # A site is multidisciplinary if 3+ specializations each have ≥15% of nav items
+    threshold = max(1, total * 0.15)
+    significant_specs = [
+        spec for spec, count in spec_counts.items()
+        if count >= threshold and spec != "многопрофильная клиника"
+    ]
+    is_multidisciplinary = len(significant_specs) >= 3
+
+    return {
+        "departments": departments,
+        "nav_specializations": {k: v for k, v in spec_counts.items() if v > 0},
+        "total_nav_items": total,
+        "is_multidisciplinary": is_multidisciplinary,
+    }
+
+
+def _empty_structure() -> dict:
+    return {
+        "departments": [],
+        "nav_specializations": {},
+        "total_nav_items": 0,
+        "is_multidisciplinary": False,
+    }
+
+
+def _detect_specialization(
+    text_lower: str, url: str, html: str = "",
+    site_structure: dict | None = None,
+) -> str:
+    """Detect clinic specialization with position-weighted scoring + site structure.
+
+    Title/H1/meta keywords carry 5× weight over body text. This prevents
+    secondary niches (e.g. косметология mentioned in 20 service listings)
+    from outscoring the primary specialization (e.g. пластическая хирургия
+    in the page title).
+
+    Site structure analysis provides an additional signal: if the navigation
+    menu is overwhelmingly focused on one specialization (≥60% of nav items),
+    the site is specialised regardless of body-text scores.
+    """
+    high_signal = _extract_title_h1_meta(html) if html else ""
+    domain_keywords = _extract_domain_keywords(url)
+
+    scores: dict[str, float] = {}
     for spec, patterns in _SPECIALIZATIONS.items():
-        count = sum(1 for p in patterns if p in text_lower)
-        if count > 0:
-            match_counts[spec] = count
+        score = 0.0
+        score += sum(_TITLE_WEIGHT for p in patterns if p in high_signal)
+        score += sum(_BODY_WEIGHT for p in patterns if p in text_lower)
+        for dk in domain_keywords:
+            if any(dk in p or p in dk for p in patterns):
+                score += _DOMAIN_WEIGHT
+        if score > 0:
+            scores[spec] = score
 
-    if match_counts:
-        return max(match_counts, key=match_counts.get)
+    if not scores:
+        return _detect_specialization_from_url(url)
 
-    # Fallback: check URL
+    # ── Site structure signal ──────────────────────────────────────
+    # If 60%+ of navigation items fall under one specialisation,
+    # the site is functionally specialised — override multiprofile.
+    if site_structure and site_structure.get("nav_specializations"):
+        nav_specs = site_structure["nav_specializations"]
+        total_nav = site_structure.get("total_nav_items", 1)
+        for spec, nav_count in nav_specs.items():
+            if spec == "многопрофильная клиника":
+                continue
+            if nav_count >= total_nav * 0.6:
+                # Strong nav signal: boost this spec's score
+                scores[spec] = scores.get(spec, 0) + _TITLE_WEIGHT * 2
+                logger.info(
+                    "Site structure boost: %s (nav items=%d/%d, %.0f%%)",
+                    spec, nav_count, total_nav, nav_count / total_nav * 100,
+                )
+
+    best = max(scores, key=scores.get)
+
+    # Priority overrides: if dominant_spec appears in title/H1 and noisy_spec
+    # is leading only because of body-text volume, promote dominant_spec.
+    for dominant, noisy in _PRIORITY_OVERRIDES.items():
+        if best == noisy and dominant in scores:
+            dominant_patterns = _SPECIALIZATIONS.get(dominant, [])
+            if any(p in high_signal for p in dominant_patterns):
+                if scores[dominant] >= scores[noisy] * 0.3:
+                    return dominant
+
+    # "Многопрофильная клиника" — особый случай. Паттерн "клиника"
+    # матчится на ЛЮБОМ сайте, создавая ложное преимущество.
+    # Реальный сигнал — только "многопрофильн".
+    # Если "многопрофильн" НЕ в title/H1 → ищем специализацию-лидера.
+    if best == "многопрофильная клиника":
+        mnogo_in_title = "многопрофильн" in high_signal
+        mnogo_in_structure = (
+            site_structure
+            and site_structure.get("is_multidisciplinary")
+        ) if site_structure else False
+
+        # If the navigation structure confirms it's truly multidisciplinary,
+        # and the title says so too — keep "многопрофильная клиника"
+        if mnogo_in_title and mnogo_in_structure:
+            return best
+
+        # If neither title nor structure confirms multiprofile → find leader
+        if not mnogo_in_title:
+            candidates = [
+                (spec, sc) for spec, sc in scores.items()
+                if spec != "многопрофильная клиника"
+                and sc >= scores["многопрофильная клиника"] * 0.4
+                and any(p in high_signal for p in _SPECIALIZATIONS.get(spec, []))
+            ]
+            if candidates:
+                return max(candidates, key=lambda x: x[1])[0]
+
+    return best
+
+
+def _detect_specialization_from_url(url: str) -> str:
+    """Fallback niche detection from URL when page text yields nothing."""
     url_lower = url.lower()
     if "stomat" in url_lower or "dent" in url_lower:
         return "стоматология"
@@ -330,7 +607,6 @@ def _detect_specialization(text_lower: str, url: str) -> str:
         return "косметология"
     if "clinic" in url_lower or "med" in url_lower or "клиник" in url_lower:
         return "многопрофильная клиника"
-
     return ""
 
 
