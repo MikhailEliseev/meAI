@@ -391,7 +391,7 @@ Plans:
 Plans:
 - [x] 21-01-PLAN.md — Async _get_agent() with EventBus injection + report_result bridge
 - [x] 21-02-PLAN.md — Remove EventBus fallback, pure EventBus delegation
-- [ ] 21-03-PLAN.md — Add analysis methods to CIOrchestrator + CiMarketingAnalyzer proxy + fix _tactic_impact_effort + AuditTask serialization
+- [x] 21-03-PLAN.md — Add analysis methods to CIOrchestrator + CiMarketingAnalyzer proxy + fix _tactic_impact_effort + AuditTask serialization
 - [x] 21-04-PLAN.md — Make /api/competitors/analyze/stream a true alias via shared orchestrator singleton
 - [x] 21-05-PLAN.md — Verify all 49 tests pass, fix remaining failures, confirm all gaps closed
 
@@ -423,6 +423,6 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 18. Hermes Learning Bus | v4.3 | 2/2 | Complete | 2026-05-20 |
 | 19. Competitor Discovery Quality | v4.4 | 1/1 | Complete | 2026-05-23 |
 | 20. Apify Competitor Intelligence | v5.0 | 1/1 | Complete | 2026-05-26 |
-| 21. CI Pipeline Unification | v5.1 | 4/6 | In Progress|  |
+| 21. CI Pipeline Unification | v5.1 | 5/5 | Complete | 2026-05-31 |
 
-**Overall:** 47/54 plans complete (87%)
+**Overall:** 50/54 plans complete (93%)
