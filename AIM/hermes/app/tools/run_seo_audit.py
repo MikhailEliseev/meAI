@@ -103,6 +103,50 @@ def _compute_wow_numbers(findings: dict) -> dict:
     }
 
 
+def _compact_quick_result(data: dict) -> dict:
+    """Build compact result from quick-tier synchronous response.
+
+    Quick tier returns flat fields (chat_summary, feature_matrix, wow, etc.)
+    instead of the nested findings/{phase_N} structure of deep tier.
+    """
+    wow = data.get("wow") or {}
+    feature_matrix = data.get("feature_matrix", {}) or {}
+    pricing = data.get("pricing_comparison", {}) or {}
+    positioning = data.get("positioning_map", {}) or {}
+
+    # Extract competitors from feature_matrix keys (excluding the client's own URL)
+    competitors = []
+    if isinstance(feature_matrix, dict):
+        competitors = [
+            {"name": name, "url": name}
+            for name in feature_matrix.keys()
+        ][:5]
+
+    return {
+        "wow": {
+            "patients_per_month": wow.get("patients_per_month"),
+            "time_to_result_weeks": wow.get("time_to_result_weeks"),
+            "cost_per_patient_rub": wow.get("cost_per_patient_rub"),
+        },
+        "market": {
+            "competitive_intensity": positioning.get("competitive_intensity", "unknown"),
+            "digital_maturity": positioning.get("digital_maturity", "unknown"),
+            "niche_size": "unknown",
+        },
+        "competitors": competitors,
+        "insights": data.get("steal_worthy_tactics", []) or [],
+        "opportunities": [],
+        "actions": [data.get("top_recommendation", "")] if data.get("top_recommendation") else [],
+        "meta": {
+            "tier": "quick",
+            "phases": 1,
+            "time_seconds": data.get("duration_seconds"),
+            "quality_score": None,
+        },
+        "chat_summary": data.get("chat_summary", ""),
+    }
+
+
 def _compact_audit_result(data: dict) -> dict:
     """Extract only LLM-essential metrics from the full CI result (18K → ~2K)."""
     findings = data.get("findings", {})
@@ -205,7 +249,7 @@ async def handle_run_seo_audit(url=None, **kwargs) -> str:
         push_tool_progress("seo", f"🔍 Захожу на сайт {url}…")
 
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
-            # Step 1: Start async audit
+            # Step 1: Start audit (quick tier returns sync result, deep/full returns task_id)
             push_tool_progress("seo", "⚙️ Запускаю технический аудит…")
             start_response = await client.post(
                 f"{AIM_API_BASE}/api/seo/audit",
@@ -213,13 +257,26 @@ async def handle_run_seo_audit(url=None, **kwargs) -> str:
             )
             start_response.raise_for_status()
             start_data = start_response.json()
+
+            # Quick tier: synchronous response with success/error fields, no task_id
             task_id = start_data.get("task_id")
             if not task_id:
-                return json.dumps({"error": "No task_id returned from SEO API"})
+                if start_data.get("error"):
+                    logger.error("SEO audit quick tier failed: %s", start_data["error"])
+                    return json.dumps({
+                        "error": "SEO audit failed",
+                        "detail": start_data["error"],
+                    })
+                push_tool_progress("seo", "✅ SEO-аудит готов!")
+                compact = _compact_quick_result(start_data)
+                result_json = json.dumps(compact, ensure_ascii=False, indent=2)
+                _seo_cache[url] = (time.time(), result_json)
+                logger.info("SEO audit quick tier completed: compacted %d chars, cached", len(result_json))
+                return result_json
 
-            logger.info("SEO audit task started: %s", task_id)
+            logger.info("SEO audit task started (deep/full): %s", task_id)
 
-            # Step 2: Poll until done
+            # Step 2 (deep/full tier): Poll until done
             status_url = f"{AIM_API_BASE}/api/seo/audit/{task_id}"
             progress_messages = [
                 "📊 Анализирую структуру сайта…",
@@ -245,7 +302,6 @@ async def handle_run_seo_audit(url=None, **kwargs) -> str:
                     data = status_data.get("result", {})
                     compact = _compact_audit_result(data)
                     result_json = json.dumps(compact, ensure_ascii=False, indent=2)
-                    # Cache the result
                     _seo_cache[url] = (time.time(), result_json)
                     logger.info("SEO audit completed (task %s): %d polls, compacted %d chars, cached",
                                 task_id, poll_count, len(result_json))
