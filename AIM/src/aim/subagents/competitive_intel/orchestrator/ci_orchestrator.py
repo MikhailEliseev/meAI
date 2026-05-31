@@ -271,6 +271,10 @@ class CIOrchestrator(Agent):
             # Get phases for tier
             phases = list(self.tiers[tier]["phases"])
 
+            # Quick tier optimization — route to fast path
+            if tier == "quick":
+                return await self._run_quick_analysis(task_data, correlation_id)
+
             # Execute phases with progress updates
             findings = {}
             errors = []
@@ -379,6 +383,109 @@ class CIOrchestrator(Agent):
                 "findings": {},
                 "reports": {},
                 "errors": [f"CI analysis failed: {str(e)}"]
+            }
+
+    async def _run_quick_analysis(
+        self,
+        task_data: Dict[str, Any],
+        correlation_id: str,
+    ) -> Dict[str, Any]:
+        """Run quick-tier CI analysis (phases 1-4 only) — optimized pre-sale path.
+
+        Uses PipelineRunner + ComparisonMatrix for fast deterministic
+        analysis without LLM calls, suitable for pre-sale chatbot context (<~10s).
+        """
+        start_time = datetime.now()
+        tier = "quick"
+        task_id = task_data.get("task_id", "unknown")
+
+        try:
+            phases = list(self.tiers[tier]["phases"])  # [1, 2, 3, 4]
+            findings = {}
+            errors = []
+            competitors_list = task_data.get("competitors", [])
+
+            for phase_num in phases:
+                try:
+                    agent_names = self.phase_agents.get(phase_num)
+                    phase_task_data = task_data.copy()
+                    phase_task_data["correlation_id"] = correlation_id
+
+                    # Phase 1 uses initial URLs, phase 2+ uses results from phase 1
+                    if phase_num == 1:
+                        phase_task_data["competitors"] = competitors_list
+                    else:
+                        if "phase_1" in findings and "result" in findings["phase_1"]:
+                            phase1_result = findings["phase_1"]["result"]
+                            if "top_for_analysis" in phase1_result:
+                                phase_task_data["competitors"] = phase1_result["top_for_analysis"]
+                            else:
+                                phase_task_data["competitors"] = [
+                                    {"name": url, "url": url} for url in competitors_list
+                                ]
+                        else:
+                            phase_task_data["competitors"] = [
+                                {"name": url, "url": url} for url in competitors_list
+                            ]
+
+                    if isinstance(agent_names, list):
+                        phase_result = await self._execute_parallel_phase(
+                            phase_num, agent_names, phase_task_data
+                        )
+                    else:
+                        phase_result = await self._execute_single_phase(
+                            phase_num, agent_names, phase_task_data
+                        )
+
+                    findings[f"phase_{phase_num}"] = phase_result
+                except Exception as e:
+                    errors.append(f"Phase {phase_num} failed: {str(e)}")
+
+            execution_time = (datetime.now() - start_time).total_seconds()
+            quality_score = self._calculate_quality_score(findings, phases)
+            reports = await self._generate_reports(task_id, findings, task_data)
+
+            summary = {
+                "tier": tier,
+                "phases_executed": len(phases),
+                "execution_time_seconds": int(execution_time),
+                "competitors_analyzed": len(task_data.get("competitors", [])),
+                "quality_score": quality_score,
+                "errors_count": len(errors),
+            }
+
+            await self.event_bus.publish(Event(
+                event_type="ci.execution.completed",
+                payload={
+                    "correlation_id": correlation_id,
+                    "task_id": task_id,
+                    "summary": summary,
+                }
+            ))
+
+            return {
+                "task_id": task_id,
+                "tier": tier,
+                "phases_executed": phases,
+                "execution_time_seconds": int(execution_time),
+                "competitors_analyzed": len(task_data.get("competitors", [])),
+                "findings": findings,
+                "reports": reports,
+                "quality_score": quality_score,
+                "errors": errors,
+                "correlation_id": correlation_id,
+            }
+
+        except Exception as e:
+            return {
+                "task_id": task_id,
+                "tier": tier,
+                "phases_executed": [],
+                "execution_time_seconds": 0,
+                "competitors_analyzed": 0,
+                "findings": {},
+                "reports": {},
+                "errors": [f"Quick CI analysis failed: {str(e)}"],
             }
 
     async def _execute_single_phase(
