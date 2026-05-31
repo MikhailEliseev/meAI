@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Client Acquisition
 status: completed
-stopped_at: Phase 21-04 complete. Competitors/analyze/stream now uses shared CIOrchestrator singleton. 4/6 Phase 21 plans done.
-last_updated: "2026-05-31T20:17:26.034Z"
-last_activity: 2026-05-31 — Phase 21-04 shipped (competitors/analyze/stream uses shared orchestrator singleton)
+stopped_at: Phase 21-05 complete. All 49 CI integration tests pass (0 failures). Four analysis methods added to CIOrchestrator. 5/6 Phase 21 plans done.
+last_updated: "2026-05-31T20:28:46.000Z"
+last_activity: 2026-05-31 — Phase 21-05 shipped (49/49 CI tests pass, gap SC8 closed)
 progress:
   total_phases: 18
   completed_phases: 15
   total_plans: 50
-  completed_plans: 48
-  percent: 80
+  completed_plans: 49
+  percent: 83
 ---
 
 # Project State
@@ -25,18 +25,18 @@ See: .planning/ROADMAP.md (updated 2026-05-19)
 
 ## Current Position
 
-Phase: 21 ◆ CI Pipeline Unification — closing orchestration gaps  
-Status: **Plan 21-04 done ✅ (SSE stream alias via shared CIOrchestrator).** Phase 21 progress — 4/6 plans complete.  
-Last activity: 2026-05-31 — Phase 21-04 shipped (competitors/analyze/stream uses shared orchestrator singleton)  
+Phase: 21 ◆ CI Pipeline Unification — gap closure complete  
+Status: **Plan 21-05 done ✅ (49/49 tests pass, 0 failures).** Phase 21 progress — 5/6 plans complete.  
+Last activity: 2026-05-31 — Phase 21-05 shipped (4 analysis methods added, AuditTask serialization, all gaps closed)  
 
-Progress: [████████░░] 80% — 48/50 plans complete
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
 **Velocity:**
 
 - Total phases: 18
-- Total plans executed: 48
+- Total plans executed: 49
 
 **By Phase:**
 
@@ -56,7 +56,7 @@ Progress: [████████░░] 80% — 48/50 plans complete
 | 18. Hermes Knowledge Bus | 2 | Complete ✅ (EventBus listener, TeacherSync, knowledge endpoints, LLM ingest) |
 | 19. Competitor Discovery Quality | 1 | Complete ✅ (8 fixes across 4 files: name scoring, services, specialization, social links) |
 | 20. Apify Competitor Intelligence | 1 | Complete ✅ (Google Maps Scraper + ApifyKeyPool + bugfixes + tests) |
-| 21. CI Pipeline Unification | 6 | 4/6 done (21-01, 21-02, 21-03, 21-04 ✅), 2 pending (21-05, 21-06) |
+| 21. CI Pipeline Unification | 6 | 5/6 done (21-01, 21-02, 21-03, 21-04, 21-05 ✅), 1 pending (21-06) |
 
 *Updated 2026-05-31*
 
