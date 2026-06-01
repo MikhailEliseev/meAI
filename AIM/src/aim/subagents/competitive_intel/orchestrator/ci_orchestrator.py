@@ -550,7 +550,7 @@ class CIOrchestrator(Agent):
             url = c.get("url", c) if isinstance(c, dict) else str(c)
             feature_matrix[name] = {
                 "url": url,
-                "seo_score": auditor_result.get("seo_score", "?"),
+                "seo_score": _extract_auditor_seo_score(auditor_result, url),
                 "rating": rep_result.get("avg_rating") if isinstance(rep_result, dict) else None,
                 "pricing_visible": False,
                 "online_booking": False,
@@ -1487,3 +1487,54 @@ def _compute_wow_from_findings(findings: Dict[str, Any]) -> Dict[str, Any]:
         "cost_per_patient_rub": cost,
         "is_estimated": True,
     }
+
+
+def _extract_auditor_seo_score(auditor_result: Dict[str, Any], url: str = "") -> Any:
+    """Extract an overall SEO score from ci-auditor's nested result structure.
+
+    ci-auditor returns: {audits: [{dimensions: {technical: {check: {score}}, content: {check: {score}}}}]}
+    This flattens all dimension scores into a single 0-100 number.
+    Returns "?" if no scores found.
+    """
+    if not isinstance(auditor_result, dict):
+        return "?"
+
+    # Try direct seo_score first (if auditor starts returning it)
+    if "seo_score" in auditor_result:
+        return auditor_result["seo_score"]
+
+    audits = auditor_result.get("audits", [])
+    if not audits:
+        return "?"
+
+    # Find the audit matching this URL, or use the first one
+    target = None
+    for a in audits:
+        if isinstance(a, dict):
+            if url and a.get("url") == url:
+                target = a
+                break
+            if target is None:
+                target = a
+
+    if not target:
+        return "?"
+
+    dimensions = target.get("dimensions", {})
+    if not dimensions:
+        return "?"
+
+    all_scores = []
+    for dim_name, checks in dimensions.items():
+        if isinstance(checks, dict):
+            for check_key, check_data in checks.items():
+                if isinstance(check_data, dict):
+                    score = check_data.get("score")
+                    if isinstance(score, (int, float)):
+                        all_scores.append(score)
+
+    if not all_scores:
+        return "?"
+
+    avg = sum(all_scores) / len(all_scores)
+    return round(avg, 1)
