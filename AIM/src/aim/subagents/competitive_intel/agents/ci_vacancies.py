@@ -359,14 +359,15 @@ class CIVacanciesAgent(Agent):
         """
         print(f"[CI Vacancies] Анализ HR-активности рынка")
 
-        total_vacancies = sum(p["open_vacancies"] for p in vacancy_profiles)
-        avg_vacancies = total_vacancies / len(vacancy_profiles)
+        total_vacancies = sum(p["open_vacancies"] or 0 for p in vacancy_profiles)
+        avg_vacancies = total_vacancies / len(vacancy_profiles) if vacancy_profiles else 0
 
-        hiring_companies = sum(1 for p in vacancy_profiles if p["hiring_active"])
-        hiring_rate = (hiring_companies / len(vacancy_profiles)) * 100
+        hiring_companies = sum(1 for p in vacancy_profiles if p.get("hiring_active"))
+        hiring_rate = (hiring_companies / len(vacancy_profiles)) * 100 if vacancy_profiles else 0
 
-        # Средний размер команды
-        avg_team_size = sum(p["team_size_estimate"] for p in vacancy_profiles) / len(vacancy_profiles)
+        # Средний размер команды (пропускаем None)
+        team_sizes = [p["team_size_estimate"] for p in vacancy_profiles if p["team_size_estimate"] is not None]
+        avg_team_size = sum(team_sizes) / len(team_sizes) if team_sizes else 0
 
         # Самые востребованные категории
         category_demand = {}
@@ -403,25 +404,25 @@ class CIVacanciesAgent(Agent):
         """
         print(f"[CI Vacancies] Определение лидеров по найму")
 
-        # Сортировка по количеству вакансий
+        # Сортировка по количеству вакансий (None → 0)
         sorted_profiles = sorted(
             vacancy_profiles,
-            key=lambda x: x["open_vacancies"],
+            key=lambda x: x["open_vacancies"] or 0,
             reverse=True
         )
 
-        # TOP-3
-        leaders = sorted_profiles[:3]
-
-        return [
+        # TOP-3 (только где есть вакансии)
+        leaders = [
             {
                 "name": p["name"],
-                "open_vacancies": p["open_vacancies"],
+                "open_vacancies": p["open_vacancies"] or 0,
                 "growth_rate": p["growth_rate"],
                 "team_size": p["team_size_estimate"]
             }
-            for p in leaders if p["open_vacancies"] > 0
+            for p in sorted_profiles[:3] if (p["open_vacancies"] or 0) > 0
         ]
+
+        return leaders
 
     async def _analyze_salaries(
         self,
