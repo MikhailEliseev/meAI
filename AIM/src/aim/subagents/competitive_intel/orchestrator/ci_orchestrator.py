@@ -628,13 +628,19 @@ class CIOrchestrator(Agent):
             f"первые результаты через {wow.get('time_to_result_weeks', '?')} нед."
         )
 
+        # ── Steal-worthy tactics ──
+        steal_worthy = _extract_steal_worthy_tactics(findings)
+
+        # ── Top recommendation ──
+        top_rec = _extract_top_recommendation(findings, feature_matrix)
+
         return {
             "chat_summary": chat_summary,
             "feature_matrix": feature_matrix,
             "pricing_comparison": pricing_comparison,
             "positioning_map": positioning_map,
-            "steal_worthy_tactics": [],
-            "top_recommendation": "",
+            "steal_worthy_tactics": steal_worthy,
+            "top_recommendation": top_rec,
             "wow": wow,
         }
 
@@ -1483,6 +1489,96 @@ class CIOrchestrator(Agent):
             "traffic_analysis",
             "strategy_synthesis"
         ]
+
+
+def _extract_steal_worthy_tactics(findings: Dict[str, Any]) -> list:
+    """Extract steal-worthy tactics from ci-auditor findings.
+
+    Each tactic describes what to copy from which competitor and why.
+    """
+    tactics = []
+    phase2 = findings.get("phase_2", {})
+    if not isinstance(phase2, dict):
+        return tactics
+
+    auditor_result = phase2.get("result", {}) or {}
+    audits = auditor_result.get("audits", [])
+    if not audits:
+        return tactics
+
+    for audit in audits:
+        if not isinstance(audit, dict):
+            continue
+        url = audit.get("url", "")
+        name = audit.get("name", url)
+        dims = audit.get("dimensions", {})
+
+        for dim_name, checks in dims.items():
+            if not isinstance(checks, dict):
+                continue
+            for check_key, check_data in checks.items():
+                if not isinstance(check_data, dict):
+                    continue
+                score = check_data.get("score", 0) or 0
+                status = check_data.get("status", "")
+                if status == "pass" and isinstance(score, (int, float)) and score >= 80:
+                    check_label = check_data.get("check", check_key)
+                    tactic_desc = f"Внедрить «{check_label}» как у {name}"
+                    if any(t.get("tactic_description") == tactic_desc for t in tactics):
+                        continue
+                    tactics.append({
+                        "source_competitor": name,
+                        "tactic_description": tactic_desc,
+                        "why_it_works": f"{name} имеет {score}/100 по параметру «{check_label}»",
+                        "expected_impact": "High" if score >= 90 else "Medium",
+                        "estimated_effort": "Medium",
+                    })
+
+    # Sort: High impact first, then Medium
+    tactics.sort(key=lambda t: 0 if t["expected_impact"] == "High" else 1)
+    return tactics[:5]
+
+
+def _extract_top_recommendation(
+    findings: Dict[str, Any], feature_matrix: Dict[str, Any]
+) -> str:
+    """Generate the single most actionable recommendation from findings."""
+    if not feature_matrix:
+        return "Соберите данные о конкурентах для получения рекомендаций."
+
+    # Find competitor with weakest SEO
+    weakest = None
+    weakest_score = 999
+    for name, data in feature_matrix.items():
+        score = data.get("seo_score")
+        if isinstance(score, (int, float)) and score < weakest_score:
+            weakest_score = score
+            weakest = name
+
+    if weakest and weakest_score < 70:
+        return (
+            f"Главная возможность — обойти **{weakest}** по SEO: "
+            f"у них {weakest_score}/100, а у лидеров 70+. "
+            f"Исправьте ошибки на сайте, добавьте контент по услугам — и вы выше."
+        )
+
+    # Find competitor with best SEO as benchmark
+    best = None
+    best_score = 0
+    for name, data in feature_matrix.items():
+        score = data.get("seo_score")
+        if isinstance(score, (int, float)) and score > best_score:
+            best_score = score
+            best = name
+
+    if best:
+        return (
+            f"Ориентируйтесь на **{best}** (SEO {best_score}/100) — "
+            f"это ваш главный цифровой конкурент. Проанализируйте их стратегию "
+            f"и адаптируйте лучшие практики."
+        )
+
+    return "Проведите полный SEO-аудит для выявления точек роста."
 
 
 def _count_actual_competitors(findings: Dict[str, Any], task_data: Dict[str, Any]) -> int:

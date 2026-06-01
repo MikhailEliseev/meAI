@@ -408,24 +408,25 @@ class CIPricingAgent(Agent):
             segment = profile["price_segment"]
             segment_distribution[segment] = segment_distribution.get(segment, 0) + 1
 
-        # Средний чек по сегментам
+        # Средний чек по сегментам (пропускаем None)
         avg_check_by_segment = {}
         for segment in ["budget", "mid", "premium"]:
             segment_profiles = [p for p in pricing_profiles if p["price_segment"] == segment]
-            if segment_profiles:
-                avg_check = sum(p["avg_check"] for p in segment_profiles) / len(segment_profiles)
-                avg_check_by_segment[segment] = round(avg_check)
+            segment_checks = [p["avg_check"] for p in segment_profiles if p["avg_check"] is not None]
+            if segment_checks:
+                avg_check_by_segment[segment] = round(sum(segment_checks) / len(segment_checks))
 
         # Прозрачность цен на рынке
         transparent_count = sum(1 for p in pricing_profiles if p["price_transparency"])
-        transparency_rate = (transparent_count / len(pricing_profiles)) * 100
+        transparency_rate = (transparent_count / len(pricing_profiles)) * 100 if pricing_profiles else 0
 
         # Использование акций
         promotions_count = sum(1 for p in pricing_profiles if p["has_promotions"])
-        promotions_rate = (promotions_count / len(pricing_profiles)) * 100
+        promotions_rate = (promotions_count / len(pricing_profiles)) * 100 if pricing_profiles else 0
 
-        # Средний чек по рынку
-        market_avg_check = sum(p["avg_check"] for p in pricing_profiles) / len(pricing_profiles)
+        # Средний чек по рынку (только где есть цены)
+        market_checks = [p["avg_check"] for p in pricing_profiles if p["avg_check"] is not None]
+        market_avg_check = sum(market_checks) / len(market_checks) if market_checks else 0
 
         market_analysis = {
             "segment_distribution": segment_distribution,
@@ -453,16 +454,17 @@ class CIPricingAgent(Agent):
         """
         print(f"[CI Pricing] Определение ценовых лидеров")
 
-        # Самые дешёвые
-        sorted_by_price = sorted(pricing_profiles, key=lambda x: x["avg_check"])
+        # Самые дешёвые (None → бесконечность, отбрасываем)
+        with_prices = [p for p in pricing_profiles if p["avg_check"] is not None]
+        sorted_by_price = sorted(with_prices, key=lambda x: x["avg_check"])
         cheapest = sorted_by_price[:3]
 
         # Самые дорогие
-        most_expensive = sorted_by_price[-3:][::-1]
+        most_expensive = sorted_by_price[-3:][::-1] if len(sorted_by_price) >= 3 else sorted_by_price[::-1]
 
         # Лучшая прозрачность
         transparent = [p for p in pricing_profiles if p["price_transparency"]]
-        best_transparency = sorted(transparent, key=lambda x: len(x["prices"]), reverse=True)[:3]
+        best_transparency = sorted(transparent, key=lambda x: len(x.get("prices", {})) if isinstance(x.get("prices"), dict) else 0, reverse=True)[:3]
 
         return {
             "cheapest": [
@@ -510,8 +512,8 @@ class CIPricingAgent(Agent):
                 "transparency": profile["price_transparency"]
             })
 
-        # Ценовые разрывы (gaps)
-        all_checks = sorted([p["avg_check"] for p in pricing_profiles])
+        # Ценовые разрывы (gaps) — только где есть цены
+        all_checks = sorted([p["avg_check"] for p in pricing_profiles if p["avg_check"] is not None])
         gaps = []
         for i in range(len(all_checks) - 1):
             diff = all_checks[i + 1] - all_checks[i]
