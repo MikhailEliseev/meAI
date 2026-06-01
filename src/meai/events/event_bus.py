@@ -543,7 +543,7 @@ class EventBus:
                     "message_type": event.message_type,
                     "priority": event.priority,
                     "payload": json.dumps(event.payload),
-                    "timestamp": event.timestamp,
+                    "timestamp": event.timestamp.isoformat() if hasattr(event.timestamp, 'isoformat') else str(event.timestamp),
                     "status": "pending",
                 },
             )
