@@ -358,10 +358,10 @@ async def chat_stream(
 
             agent_task = asyncio.create_task(run_agent_task())
 
-            # Hard deadline for the entire agent run (5 min).
-            # hermes-agent hardcodes stream=True; OmniRoute's DeepSeek
-            # sometimes never sends the first token → hangs without timeout.
-            _SSE_DEADLINE = time.time() + 300
+            # Hard deadline for the entire agent run (7 min).
+            # find_competitors (Apify Google Maps + Playwright INN + nalog.ru)
+            # can take 4-6 minutes end-to-end.
+            _SSE_DEADLINE = time.time() + 420
 
             # Phase A — Yield progress events while agent runs.
             # Also collect unique tool stage names so we can emit
