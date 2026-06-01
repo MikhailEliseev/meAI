@@ -131,7 +131,7 @@ async def _get_orchestrator():
         from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
 
         database_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/aim.db")
-        event_bus = EventBus()
+        event_bus = EventBus(database_url=database_url)
         await event_bus.initialize()
 
         _orchestrator = CIOrchestrator(
