@@ -66,7 +66,8 @@ def register_all_tools() -> None:
 
 def register_debug_tools() -> None:
     """Register Hermes debug tools — shell_exec, file_read, api_debug, file_write,
-    pip_install, restart_myself, web_fetch, web_search, browser_screenshot, call_api.
+    pip_install, restart_myself, web_fetch, web_search, browser_screenshot, call_api,
+    bitrix_scrape.
 
     Toolset "hermes-debug" gives Hermes full access to the container
     for self-diagnostics, web access, package management, browser automation, and self-restart.
@@ -74,7 +75,8 @@ def register_debug_tools() -> None:
     from . import shell_exec  # noqa: F401
     from . import web_scraper  # noqa: F401
     from . import external_api  # noqa: F401
-    logger.info("Registered 10 debug tools: shell_exec, file_read, api_debug, file_write, pip_install, restart_myself, web_fetch, web_search, browser_screenshot, call_api")
+    from . import bitrix_scraper  # noqa: F401
+    logger.info("Registered 11 debug tools: shell_exec, file_read, api_debug, file_write, pip_install, restart_myself, web_fetch, web_search, browser_screenshot, call_api, bitrix_scrape")
 
 
 __all__ = ["register_all_tools", "register_debug_tools"]
