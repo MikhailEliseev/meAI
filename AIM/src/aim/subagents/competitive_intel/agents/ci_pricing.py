@@ -163,6 +163,12 @@ class CIPricingAgent(Agent):
         '/price', '/prices', '/pricing', '/price-list', '/prajs', '/price.html',
         '/prices.html', '/services', '/services/', '/uslugi', '/uslugi/',
         '/stoimost', '/stoimost/', '/tseny', '/tseny/',
+        '/cena', '/ceny', '/czeny', '/ceni', '/prajs-list', '/prajs-list/',
+        '/price-list/', '/prays', '/prays-list/',
+    ]
+
+    PRICING_LINK_KEYWORDS = [
+        'цена', 'цены', 'прайс', 'стоимость', 'price', 'pricing',
     ]
 
     PROMO_KEYWORDS = [
@@ -183,6 +189,7 @@ class CIPricingAgent(Agent):
                 resp.raise_for_status()
                 soup = BeautifulSoup(resp.text, 'html.parser')
 
+                # Priority 1: exact path match
                 for link in soup.find_all('a', href=True):
                     href = (link.get('href') or '').lower().strip().rstrip('/')
                     if not href or href.startswith('#') or href.startswith('javascript'):
@@ -190,6 +197,29 @@ class CIPricingAgent(Agent):
                     for path in self.PRICING_PAGE_PATHS:
                         if href == path.lstrip('/') or href.endswith(path.lstrip('/')):
                             return urljoin(base, link['href'])
+
+                # Priority 2: link text contains price keywords
+                for link in soup.find_all('a', href=True):
+                    href = link.get('href', '')
+                    text = link.get_text().lower()
+                    if not href or href.startswith('#') or href.startswith('javascript'):
+                        continue
+                    if any(kw in text for kw in self.PRICING_LINK_KEYWORDS):
+                        return urljoin(base, href)
+
+                # Priority 3: homepage fallback — check if homepage contains prices
+                text = soup.get_text()
+                raw_numbers = []
+                for pattern in self.PRICE_PATTERNS:
+                    for match in pattern.finditer(text):
+                        try:
+                            price = int(match.group(1).replace(' ', ''))
+                            if 100 <= price <= 10_000_000:
+                                raw_numbers.append(price)
+                        except (ValueError, IndexError):
+                            continue
+                if len(raw_numbers) >= 5:
+                    return base
 
                 return None
             except Exception as e:

@@ -646,6 +646,19 @@ class CIScoutAgent(Agent):
             for p in profiles:
                 profile_by_name[p.get("name", "")] = p
 
+        def _clean_url(raw_url: str) -> str:
+            """Strip UTM and other tracking params from URL."""
+            if not raw_url:
+                return raw_url
+            cleaned = re.sub(r"[?&]utm_[^&]+", "", raw_url)
+            cleaned = re.sub(r"[?&]yclid=[^&]+", "", cleaned)
+            cleaned = re.sub(r"[?&]gclid=[^&]+", "", cleaned)
+            cleaned = re.sub(r"[?&]fbclid=[^&]+", "", cleaned)
+            cleaned = re.sub(r"[?&]_openstat[^&]+", "", cleaned)
+            cleaned = re.sub(r"[?&]from=[^&]+", "", cleaned)
+            cleaned = cleaned.rstrip("?")
+            return cleaned
+
         def _build_item(name: str, cluster: str, reason: str) -> Dict[str, Any]:
             item: Dict[str, Any] = {
                 "name": name,
@@ -653,8 +666,10 @@ class CIScoutAgent(Agent):
                 "reason": reason,
             }
             prof = profile_by_name.get(name, {})
-            item["url"] = prof.get("url", "")
-            item["website"] = prof.get("url", "")  # some agents use "website" field
+            raw_url = prof.get("url", "")
+            clean = _clean_url(raw_url)
+            item["url"] = clean
+            item["website"] = clean  # some agents use "website" field
             item["source"] = prof.get("source", "unknown")
             return item
 

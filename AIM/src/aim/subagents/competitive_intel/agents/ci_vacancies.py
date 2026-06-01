@@ -260,6 +260,30 @@ class CIVacanciesAgent(Agent):
 
         return profile
 
+    # hh.ru area ID mapping
+    HH_AREA_IDS = {
+        "москва": "1",
+        "мск": "1",
+        "moscow": "1",
+        "санкт-петербург": "2",
+        "спб": "2",
+        "питер": "2",
+        "екатеринбург": "3",
+        "новосибирск": "4",
+        "казань": "88",
+        "нижний новгород": "66",
+        "краснодар": "53",
+        "ростов-на-дону": "76",
+        "ростов": "76",
+        "челябинск": "104",
+        "самара": "78",
+        "уфа": "99",
+        "омск": "68",
+        "пермь": "72",
+        "воронеж": "26",
+        "волгоград": "24",
+    }
+
     async def _find_employer_on_hh(
         self,
         client: httpx.AsyncClient,
@@ -270,10 +294,12 @@ class CIVacanciesAgent(Agent):
         url = "https://api.hh.ru/employers"
         params: dict[str, Any] = {"text": company_name, "per_page": 5}
         if area:
-            params["area"] = area
+            area_id = self.HH_AREA_IDS.get(area.lower().strip(), "")
+            if area_id:
+                params["area"] = area_id
         try:
             resp = await client.get(url, params=params,
-                                    headers={"User-Agent": "AIM-CI/1.0"})
+                                    headers={"User-Agent": "AIM-CI/1.0 (aim@iamaim.ru)"})
             resp.raise_for_status()
             data = resp.json()
             items = data.get("items", [])
@@ -284,7 +310,7 @@ class CIVacanciesAgent(Agent):
             if short_name and short_name != company_name:
                 params["text"] = short_name
                 resp = await client.get(url, params=params,
-                                        headers={"User-Agent": "AIM-CI/1.0"})
+                                        headers={"User-Agent": "AIM-CI/1.0 (aim@iamaim.ru)"})
                 resp.raise_for_status()
                 data = resp.json()
                 items = data.get("items", [])
@@ -307,7 +333,7 @@ class CIVacanciesAgent(Agent):
             "only_with_salary": "false",
         }
         resp = await client.get(url, params=params,
-                                headers={"User-Agent": "AIM-CI/1.0"})
+                                headers={"User-Agent": "AIM-CI/1.0 (aim@iamaim.ru)"})
         resp.raise_for_status()
         return resp.json()
 
