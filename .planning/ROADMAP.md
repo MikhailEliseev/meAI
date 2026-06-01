@@ -409,7 +409,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 22-01-PLAN.md — SOUL.md PRESALE redesign (7-step conversational flow) + _presale_prompt() sync + validation tests
+- [x] 22-01-PLAN.md — SOUL.md PRESALE redesign (7-step conversational flow) + _presale_prompt() sync + validation tests
 
 ## Progress
 
@@ -440,6 +440,6 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 19. Competitor Discovery Quality | v4.4 | 1/1 | Complete | 2026-05-23 |
 | 20. Apify Competitor Intelligence | v5.0 | 1/1 | Complete | 2026-05-26 |
 | 21. CI Pipeline Unification | v5.1 | 5/5 | Complete | 2026-05-31 |
-| 22. Hermes First Communication | v5.2 | 0/1 | Planned | — |
+| 22. Hermes First Communication | v5.2 | 1/1 | Complete   | 2026-06-01 |
 
 **Overall:** 50/55 plans complete (91%)
