@@ -472,6 +472,9 @@ class CIOrchestrator(Agent):
                 }
             ))
 
+            # Build presale-friendly fields from findings
+            presale = self._build_quick_summary(findings, task_data)
+
             return {
                 "task_id": task_id,
                 "tier": tier,
@@ -483,6 +486,7 @@ class CIOrchestrator(Agent):
                 "quality_score": quality_score,
                 "errors": errors,
                 "correlation_id": correlation_id,
+                **presale,
             }
 
         except Exception as e:
@@ -496,6 +500,94 @@ class CIOrchestrator(Agent):
                 "reports": {},
                 "errors": [f"Quick CI analysis failed: {str(e)}"],
             }
+
+    def _build_quick_summary(
+        self,
+        findings: Dict[str, Any],
+        task_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Build presale-friendly summary fields from phase findings.
+
+        Produces chat_summary, feature_matrix, wow, pricing_comparison,
+        positioning_map, and steal_worthy_tactics — even from partial/stub data.
+        """
+        niche = task_data.get("niche", "medical")
+        geo = task_data.get("geo", "")
+        competitors = task_data.get("competitors", [])
+
+        # ── Extract data from phases ──
+        phase1 = findings.get("phase_1", {})
+        scout_result = phase1.get("result", {}) if isinstance(phase1, dict) else {}
+        top_competitors = scout_result.get("top_for_analysis", []) if isinstance(scout_result, dict) else []
+
+        phase2 = findings.get("phase_2", {})
+        auditor_result = phase2.get("result", {}) if isinstance(phase2, dict) else {}
+
+        phase4 = findings.get("phase_4", {})
+        rep_result = phase4.get("result", {}) if isinstance(phase4, dict) else {}
+
+        # ── WOW numbers ──
+        wow = _compute_wow_from_findings(findings)
+
+        # ── Feature matrix ──
+        feature_matrix = {}
+        comp_list = top_competitors if top_competitors else competitors
+        for c in comp_list:
+            name = c.get("name", c) if isinstance(c, dict) else str(c)
+            url = c.get("url", c) if isinstance(c, dict) else str(c)
+            feature_matrix[name] = {
+                "url": url,
+                "seo_score": auditor_result.get("seo_score", "?"),
+                "rating": rep_result.get("avg_rating") if isinstance(rep_result, dict) else None,
+                "pricing_visible": False,
+                "online_booking": False,
+            }
+
+        # ── Pricing comparison ──
+        pricing_comparison = {}
+        for c in comp_list:
+            name = c.get("name", c) if isinstance(c, dict) else str(c)
+            pricing_comparison[name] = {
+                "primary_consult": auditor_result.get("primary_consult_price") if isinstance(auditor_result, dict) else None,
+                "popular_service": auditor_result.get("popular_service_price") if isinstance(auditor_result, dict) else None,
+            }
+
+        # ── Positioning map ──
+        competitive_intensity = "unknown"
+        competitor_count = len(comp_list) if comp_list else len(competitors)
+        if competitor_count >= 10:
+            competitive_intensity = "high"
+        elif competitor_count >= 4:
+            competitive_intensity = "medium"
+        elif competitor_count >= 1:
+            competitive_intensity = "low"
+
+        positioning_map = {
+            "competitive_intensity": competitive_intensity,
+            "digital_maturity": "unknown",
+            "market_size": "medium" if competitor_count >= 5 else "small",
+        }
+
+        # ── Chat summary ──
+        geo_str = f"в {geo}" if geo else ""
+        chat_summary = (
+            f"Быстрый аудит сайта. "
+            f"Ниша: {niche}{' ' + geo_str if geo_str else ''}. "
+            f"Найдено конкурентов: {competitor_count}. "
+            f"Интенсивность конкуренции: {competitive_intensity}. "
+            f"Потенциал: {wow.get('patients_per_month', '?')} пациентов/мес, "
+            f"первые результаты через {wow.get('time_to_result_weeks', '?')} нед."
+        )
+
+        return {
+            "chat_summary": chat_summary,
+            "feature_matrix": feature_matrix,
+            "pricing_comparison": pricing_comparison,
+            "positioning_map": positioning_map,
+            "steal_worthy_tactics": [],
+            "top_recommendation": "",
+            "wow": wow,
+        }
 
     async def _execute_single_phase(
         self,
@@ -554,7 +646,60 @@ class CIOrchestrator(Agent):
         # Set correlation_id on agent so the bridged report_result can use it
         agent._ci_correlation_id = phase_correlation
 
-        # ── EventBus delegation ──
+        # ── Quick tier: direct execution (bypasses EventBus poll loop) ──
+        if timeout <= 10.0:
+            logger.info(
+                "Direct execution: %s phase %d (timeout=%.0fs)",
+                agent_name, phase_num, timeout,
+            )
+            try:
+                await asyncio.wait_for(agent.receive_task(task), timeout=timeout)
+                # Bridged report_result published ci.agent.completed → stored in _completed_results
+                for key, val in self._completed_results.items():
+                    if key.startswith(phase_correlation):
+                        return {
+                            "phase": phase_num,
+                            "agent": agent_name,
+                            "status": val.get("status", "completed"),
+                            "result": val.get("result", {}),
+                        }
+                # Fallback: task completed but no event captured
+                logger.warning(
+                    "Direct execution for %s phase %d: no result in _completed_results",
+                    agent_name, phase_num,
+                )
+                return {
+                    "phase": phase_num,
+                    "agent": agent_name,
+                    "status": "completed",
+                    "result": {},
+                }
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "Direct execution timeout for %s phase %d after %.0fs",
+                    agent_name, phase_num, timeout,
+                )
+                return {
+                    "phase": phase_num,
+                    "agent": agent_name,
+                    "status": "timeout",
+                    "error": f"Agent {agent_name} did not complete within {timeout:.0f}s",
+                    "result": {},
+                }
+            except Exception as e:
+                logger.error(
+                    "Direct execution failed for %s phase %d: %s",
+                    agent_name, phase_num, e,
+                )
+                return {
+                    "phase": phase_num,
+                    "agent": agent_name,
+                    "status": "failed",
+                    "error": str(e)[:200],
+                    "result": {},
+                }
+
+        # ── Deep/full tier: EventBus delegation ──
         # Publish audit trail event
         await self.event_bus.publish(Event(
             event_type="ci.task.dispatched",
@@ -1274,3 +1419,54 @@ class CIOrchestrator(Agent):
             "traffic_analysis",
             "strategy_synthesis"
         ]
+
+
+def _compute_wow_from_findings(findings: Dict[str, Any]) -> Dict[str, Any]:
+    """Compute WOW estimates from phase findings (shared by quick and compact paths)."""
+    phase1 = findings.get("phase_1", {})
+    scout_result = phase1.get("result", {}) if isinstance(phase1, dict) else {}
+    competitors = scout_result.get("top_for_analysis", [])
+    competitor_count = len(competitors) if isinstance(competitors, list) else 0
+
+    phase2 = findings.get("phase_2", {})
+    auditor_result = phase2.get("result", {}) if isinstance(phase2, dict) else {}
+    audit_scores = auditor_result.get("scores", {}) or {}
+    avg_score = 0
+    if isinstance(audit_scores, dict):
+        scores = [v for v in audit_scores.values() if isinstance(v, (int, float))]
+        if scores:
+            avg_score = sum(scores) / len(scores)
+
+    phase4 = findings.get("phase_4", {})
+    rep_result = phase4.get("result", {}) if isinstance(phase4, dict) else {}
+    avg_rating = rep_result.get("avg_rating", 0) or 0
+
+    base = 10 + competitor_count * 5
+    if 0 < avg_score < 50:
+        base += 15
+    elif 0 < avg_score < 70:
+        base += 5
+
+    if 0 < avg_score < 50:
+        weeks = 4
+    elif 0 < avg_score < 70:
+        weeks = 8
+    else:
+        weeks = 12
+
+    if competitor_count <= 2:
+        cost = 800
+    elif competitor_count <= 5:
+        cost = 1200
+    else:
+        cost = 1800
+
+    if avg_rating > 0 and avg_rating < 4.0:
+        cost = max(500, cost - 300)
+
+    return {
+        "patients_per_month": max(5, base),
+        "time_to_result_weeks": weeks,
+        "cost_per_patient_rub": cost,
+        "is_estimated": True,
+    }
