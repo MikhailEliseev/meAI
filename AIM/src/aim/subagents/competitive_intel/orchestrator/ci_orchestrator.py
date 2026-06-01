@@ -361,6 +361,9 @@ class CIOrchestrator(Agent):
             # Validate results quality
             quality_score = self._calculate_quality_score(findings, phases)
 
+            # Count actual competitors from Phase 1 results (ci-scout)
+            actual_competitors = _count_actual_competitors(findings, task_data)
+
             # Generate reports
             reports = await self._generate_reports(task_id, findings, task_data)
 
@@ -368,7 +371,7 @@ class CIOrchestrator(Agent):
                 "tier": tier,
                 "phases_executed": len(phases),
                 "execution_time_seconds": int(execution_time),
-                "competitors_analyzed": len(task_data.get("competitors", [])),
+                "competitors_analyzed": actual_competitors,
                 "quality_score": quality_score,
                 "errors_count": len(errors),
             }
@@ -383,18 +386,22 @@ class CIOrchestrator(Agent):
                 }
             ))
 
+            # Build presale-friendly fields from findings
+            presale = self._build_quick_summary(findings, task_data)
+
             # Return structured result
             return {
                 "task_id": task_id,
                 "tier": tier,
                 "phases_executed": phases,
                 "execution_time_seconds": int(execution_time),
-                "competitors_analyzed": len(task_data.get("competitors", [])),
+                "competitors_analyzed": actual_competitors,
                 "findings": findings,
                 "reports": reports,
                 "quality_score": quality_score,
                 "errors": errors,
                 "correlation_id": correlation_id,
+                **presale,
             }
 
         except Exception as e:
@@ -479,13 +486,17 @@ class CIOrchestrator(Agent):
 
             execution_time = (datetime.now() - start_time).total_seconds()
             quality_score = self._calculate_quality_score(findings, phases)
+
+            # Count actual competitors (quick tier: from phase 2+ data, since phase 1 is often skipped)
+            actual_competitors = _count_actual_competitors(findings, task_data)
+
             reports = await self._generate_reports(task_id, findings, task_data)
 
             summary = {
                 "tier": tier,
                 "phases_executed": len(phases),
                 "execution_time_seconds": int(execution_time),
-                "competitors_analyzed": len(task_data.get("competitors", [])),
+                "competitors_analyzed": actual_competitors,
                 "quality_score": quality_score,
                 "errors_count": len(errors),
             }
@@ -507,7 +518,7 @@ class CIOrchestrator(Agent):
                 "tier": tier,
                 "phases_executed": phases,
                 "execution_time_seconds": int(execution_time),
-                "competitors_analyzed": len(task_data.get("competitors", [])),
+                "competitors_analyzed": actual_competitors,
                 "findings": findings,
                 "reports": reports,
                 "quality_score": quality_score,
@@ -696,23 +707,25 @@ class CIOrchestrator(Agent):
             try:
                 await asyncio.wait_for(agent.receive_task(task), timeout=timeout)
                 # Bridged report_result published ci.agent.completed → stored in _completed_results
-                for key, val in self._completed_results.items():
-                    if key.startswith(phase_correlation):
-                        return {
-                            "phase": phase_num,
-                            "agent": agent_name,
-                            "status": val.get("status", "completed"),
-                            "result": val.get("result", {}),
-                        }
+                # Key format: "{phase_correlation}:{agent_name}" (set by _on_agent_completed)
+                expected_key = f"{phase_correlation}:{agent_name}"
+                val = self._completed_results.get(expected_key)
+                if val:
+                    return {
+                        "phase": phase_num,
+                        "agent": agent_name,
+                        "status": val.get("status", "completed"),
+                        "result": val.get("result", {}),
+                    }
                 # Fallback: task completed but no event captured
                 logger.warning(
-                    "Direct execution for %s phase %d: no result in _completed_results",
-                    agent_name, phase_num,
+                    "Direct execution for %s phase %d: no result in _completed_results (key=%s)",
+                    agent_name, phase_num, expected_key,
                 )
                 return {
                     "phase": phase_num,
                     "agent": agent_name,
-                    "status": "completed",
+                    "status": "completed_no_event",
                     "result": {},
                 }
             except asyncio.TimeoutError:
@@ -831,22 +844,31 @@ class CIOrchestrator(Agent):
         # Collect results
         agent_results = {}
         errors = []
+        success_count = 0
+        fail_count = 0
 
         for i, result in enumerate(results):
             agent_name = agent_names[i]
             if isinstance(result, Exception):
                 errors.append(f"{agent_name}: {str(result)}")
                 agent_results[agent_name] = {"status": "failed", "error": str(result)}
+                fail_count += 1
             else:
                 agent_results[agent_name] = result
+                agent_status = result.get("status", "unknown")
+                if agent_status in ("success", "completed"):
+                    success_count += 1
+                elif agent_status in ("failed", "timeout", "stub", "completed_no_event"):
+                    fail_count += 1
+                    errors.append(f"{agent_name}: {agent_status}")
 
-        # Determine overall status for quality_score calculation
-        if len(errors) == len(agent_names):
+        # Determine overall status based on individual agent statuses
+        if fail_count == len(agent_names):
             parallel_status = "failed"
-        elif len(errors) > 0:
-            parallel_status = "partial"
-        else:
+        elif success_count == len(agent_names):
             parallel_status = "success"
+        else:
+            parallel_status = "partial"
 
         return {
             "phase": phase_num,
@@ -1461,6 +1483,34 @@ class CIOrchestrator(Agent):
             "traffic_analysis",
             "strategy_synthesis"
         ]
+
+
+def _count_actual_competitors(findings: Dict[str, Any], task_data: Dict[str, Any]) -> int:
+    """Count actual competitors from ci-scout results, falling back to task_data input.
+
+    Phase 1 (ci-scout) returns top_for_analysis — the real list of competitors found.
+    Phase 2 (ci-auditor) returns audits — one per competitor analyzed.
+    Falls back to task_data competitors count if neither phase has results.
+    """
+    # Try Phase 1 — ci-scout's top_for_analysis
+    phase1 = findings.get("phase_1", {})
+    if isinstance(phase1, dict):
+        scout_result = phase1.get("result", {}) or {}
+        top = scout_result.get("top_for_analysis", [])
+        if isinstance(top, list) and top:
+            return len(top)
+
+    # Try Phase 2 — ci-auditor's audits array
+    phase2 = findings.get("phase_2", {})
+    if isinstance(phase2, dict):
+        auditor_result = phase2.get("result", {}) or {}
+        audits = auditor_result.get("audits", [])
+        if isinstance(audits, list) and audits:
+            return len(audits)
+
+    # Fallback: initial input
+    competitors = task_data.get("competitors", [])
+    return len(competitors) if competitors else 0
 
 
 def _compute_wow_from_findings(findings: Dict[str, Any]) -> Dict[str, Any]:
