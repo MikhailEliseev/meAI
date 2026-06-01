@@ -86,7 +86,7 @@ class CIOrchestrator(Agent):
 
         # Phase-specific timeouts (seconds) — agents have different runtime profiles
         self._phase_timeouts: Dict[int, float] = {
-            1: 180.0,   # ci-scout: Apify (13s) + SerpAPI/SEMrush fallback hang + DaData + processing
+            1: 240.0,   # ci-scout: Apify (13s) + parallel profile building (15 sites × 15s max each = 15s total)
             2: 90.0,    # ci-auditor: httpx scraping (technical + content)
             3: 90.0,    # ci-auditor: competitive comparison
             4: 90.0,    # ci-reputation: multi-platform review scraping
