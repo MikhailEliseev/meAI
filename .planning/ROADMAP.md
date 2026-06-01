@@ -232,7 +232,7 @@ Plans:
   4. Deploy to Yandex Cloud / VK Cloud
   5. Production monitoring и alerting
   6. ФЗ-152 полный compliance
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
 - [x] 12-01: ЮKassa + Контур.Диадок real integrations
@@ -395,10 +395,26 @@ Plans:
 - [x] 21-04-PLAN.md — Make /api/competitors/analyze/stream a true alias via shared orchestrator singleton
 - [x] 21-05-PLAN.md — Verify all 49 tests pass, fix remaining failures, confirm all gaps closed
 
+### Phase 22: Hermes First Communication Flow
+**Goal**: Разработать алгоритм первой коммуникации Hermes с потенциальным клиентом — пошаговый диалог, который собирает данные, анализирует сайт, находит и оценивает конкурентов, и выдаёт развёрнутый финальный отчёт. Дружеский тон («как будто друг рассказал»), общие выводы перед детальным анализом.
+**Depends on**: Phase 21
+**Success Criteria** (what must be TRUE):
+  1. Алгоритм диалога пошагово прописан: website → анализ → конкуренты → сравнение → отчёт
+  2. Hermes умеет запрашивать URL сайта, быстро анализировать его (направления, врачи, оборот)
+  3. Hermes предлагает найти конкурентов (find_competitors) или принять от клиента named_competitors
+  4. Конкуренты оцениваются по выручке, размеру, локации с вердиктом «релевантно/нерелевантно»
+  5. Финальный отчёт: сначала дружеские выводы в свободной форме, затем развёрнутый детальный анализ
+  6. Все существующие инструменты (find_competitors, seo_audit, CI-агенты) задействованы в правильной последовательности
+  7. Шаблон отчёта и prompt для Hermes готовы к использованию в продакшене
+**Plans**: 1 plan
+
+Plans:
+- [ ] 22-01-PLAN.md — SOUL.md PRESALE redesign (7-step conversational flow) + _presale_prompt() sync + validation tests
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21
+Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -424,5 +440,6 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 19. Competitor Discovery Quality | v4.4 | 1/1 | Complete | 2026-05-23 |
 | 20. Apify Competitor Intelligence | v5.0 | 1/1 | Complete | 2026-05-26 |
 | 21. CI Pipeline Unification | v5.1 | 5/5 | Complete | 2026-05-31 |
+| 22. Hermes First Communication | v5.2 | 0/1 | Planned | — |
 
-**Overall:** 50/54 plans complete (93%)
+**Overall:** 50/55 plans complete (91%)
