@@ -155,7 +155,7 @@ class CIVacanciesAgent(Agent):
     ) -> Dict[str, Any]:
         """
         Проанализировать вакансии одного конкурента.
-        Методы: hh.ru API → Brave Search fallback.
+        Методы: hh.ru API → Brave Search → DuckDuckGo Lite.
         """
         name = competitor["name"]
         print(f"[CI Vacancies] Анализ: {name}")
@@ -176,6 +176,11 @@ class CIVacanciesAgent(Agent):
             brave_data = await self._search_vacancies_brave(client, name)
             if brave_data and brave_data.get("open_vacancies", 0) is not None:
                 return brave_data
+
+            # Method 3: DuckDuckGo Lite (free, no API key)
+            ddg_data = await self._search_vacancies_duckduckgo(client, name, size)
+            if ddg_data and ddg_data.get("open_vacancies", 0) is not None:
+                return ddg_data
 
         # Method 3: Unavailable
         return {
@@ -360,6 +365,104 @@ class CIVacanciesAgent(Agent):
 
         except Exception as e:
             print(f"[CI Vacancies] Brave search error for {company_name}: {e}")
+            return None
+
+    async def _search_vacancies_duckduckgo(
+        self, client: httpx.AsyncClient, company_name: str, size: str
+    ) -> Dict[str, Any] | None:
+        """Search for company vacancies via DuckDuckGo Lite (free, no API key)."""
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            }
+            query = f"{company_name} вакансии site:hh.ru"
+            params = {"q": query}
+            resp = await client.get(
+                "https://lite.duckduckgo.com/lite/",
+                params=params, headers=headers
+            )
+            if resp.status_code != 200:
+                return None
+
+            html = resp.text
+
+            # DDG Lite HTML structure:
+            # <tr class="result-snippet"><td>snippet</td></tr>
+            # <tr class="result-link"><td><a href="url">title</a></td></tr>
+            snippets = []
+            snippet_matches = re.findall(
+                r'<tr[^>]*class="result-snippet"[^>]*>.*?<td[^>]*>(.*?)</td>.*?</tr>',
+                html, re.DOTALL | re.IGNORECASE
+            )
+            for s in snippet_matches[:5]:
+                clean = re.sub(r'<[^>]+>', '', s).strip()
+                if clean and len(clean) > 15:
+                    snippets.append(clean)
+
+            # Extract vacancy count from snippets
+            open_count = 0
+            all_text = " ".join(snippets)
+            count_match = re.search(
+                r'(\d+)\s*(?:ваканси|vacanc)', all_text, re.IGNORECASE
+            )
+            if count_match:
+                open_count = int(count_match.group(1))
+            else:
+                # Count unique hh.ru vacancy URLs
+                link_matches = re.findall(
+                    r'<a[^>]*href="(https?://[^"]*hh\.ru/vacancy/[^"]*)"[^>]*>',
+                    html, re.IGNORECASE
+                )
+                open_count = len(set(link_matches))
+
+            if open_count == 0:
+                # Try broader search
+                query2 = f"{company_name} работа вакансии"
+                params2 = {"q": query2}
+                resp2 = await client.get(
+                    "https://lite.duckduckgo.com/lite/",
+                    params=params2, headers=headers
+                )
+                if resp2.status_code == 200:
+                    html2 = resp2.text
+                    cm = re.search(r'(\d+)\s*(?:ваканси|vacanc)', html2, re.IGNORECASE)
+                    if cm:
+                        open_count = int(cm.group(1))
+
+            if open_count == 0:
+                return None
+
+            print(f"[CI Vacancies] DuckDuckGo found ~{open_count} vacancies for {company_name}")
+
+            team_size_ranges = {"small": (5, 15), "medium": (15, 50), "large": (50, 200)}
+            low, high = team_size_ranges.get(size, (15, 50))
+            team_size = (low + high) // 2
+
+            vacancy_ratio = open_count / max(team_size, 1)
+            if vacancy_ratio > 0.2:
+                growth_rate = "fast"
+            elif vacancy_ratio > 0.05:
+                growth_rate = "moderate"
+            else:
+                growth_rate = "slow"
+
+            return {
+                "name": company_name,
+                "size": size,
+                "open_vacancies": open_count,
+                "vacancies_list": [],
+                "team_size_estimate": team_size,
+                "vacancies_by_category": {},
+                "avg_salaries": {},
+                "growth_rate": growth_rate,
+                "hiring_active": open_count > 0,
+                "sources": ["duckduckgo"],
+                "data_source": "duckduckgo_lite",
+                "confidence": 0.4,
+            }
+
+        except Exception as e:
+            print(f"[CI Vacancies] DuckDuckGo error for {company_name}: {e}")
             return None
 
     # hh.ru area ID mapping
