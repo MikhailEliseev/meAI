@@ -83,18 +83,34 @@ class CIPricingAgent(Agent):
                 pricing_profiles.append(profile)
 
             # Шаг 2: Market pricing analysis
-            market_analysis = await self._analyze_market_pricing(pricing_profiles)
+            try:
+                market_analysis = await self._analyze_market_pricing(pricing_profiles)
+            except Exception as e:
+                print(f"[CI Pricing] Ошибка в _analyze_market_pricing: {type(e).__name__}: {e}")
+                raise
 
             # Шаг 3: Identify pricing leaders
-            pricing_leaders = await self._identify_pricing_leaders(pricing_profiles)
+            try:
+                pricing_leaders = await self._identify_pricing_leaders(pricing_profiles)
+            except Exception as e:
+                print(f"[CI Pricing] Ошибка в _identify_pricing_leaders: {type(e).__name__}: {e}")
+                raise
 
             # Шаг 4: Price positioning map
-            positioning_map = await self._create_positioning_map(pricing_profiles)
+            try:
+                positioning_map = await self._create_positioning_map(pricing_profiles)
+            except Exception as e:
+                print(f"[CI Pricing] Ошибка в _create_positioning_map: {type(e).__name__}: {e}")
+                raise
 
             # Шаг 5: Pricing insights
-            insights = await self._generate_pricing_insights(
-                pricing_profiles, market_analysis, pricing_leaders, positioning_map
-            )
+            try:
+                insights = await self._generate_pricing_insights(
+                    pricing_profiles, market_analysis, pricing_leaders, positioning_map
+                )
+            except Exception as e:
+                print(f"[CI Pricing] Ошибка в _generate_pricing_insights: {type(e).__name__}: {e}")
+                raise
 
             # Шаг 6: Save results
             results = {
