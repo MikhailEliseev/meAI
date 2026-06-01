@@ -29,7 +29,7 @@ def _normalize_args(first_param, defaults):
 
 
 AIM_API_BASE = "http://app:8000"
-REQUEST_TIMEOUT = 180.0  # full pipeline: Apify actor (90s) + Playwright (45s) + rusprofile (10s)
+REQUEST_TIMEOUT = 600.0  # full pipeline: Apify (90s) + 50-place Playwright INN extraction + nalog enrichment + scoring
 
 
 async def handle_find_competitors(url=None, named_competitors=None, **kwargs) -> str:
@@ -170,7 +170,7 @@ registry.register(
                 "Optionally accepts named_competitors — competitor names or URLs "
                 "to look up directly. "
                 "Returns up to 5 competitors with match reasons for the client to review. "
-                "⚠️ Takes ~90-120 seconds (full pipeline: Google Maps scraping + financial enrichment)."
+                "⚠️ Takes ~120-180 seconds (full pipeline: Google Maps → INN extraction → nalog → scoring)."
             ),
             "parameters": {
                 "type": "object",
@@ -192,6 +192,6 @@ registry.register(
     handler=handle_find_competitors,
     check_fn=lambda: True,
     is_async=True,
-    description="Find top-5 competitors for a clinic via Google Maps + financial enrichment (90-120s)",
+    description="Find top-5 competitors for a clinic via Google Maps + financial enrichment (120-180s)",
     emoji="🔎",
 )
