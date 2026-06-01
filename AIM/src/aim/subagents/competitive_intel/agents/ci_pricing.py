@@ -218,7 +218,7 @@ class CIPricingAgent(Agent):
                                 raw_numbers.append(price)
                         except (ValueError, IndexError):
                             continue
-                if len(raw_numbers) >= 5:
+                if len(raw_numbers) >= 2:
                     return base
 
                 return None
@@ -374,7 +374,11 @@ class CIPricingAgent(Agent):
         pricing_url = await self._find_pricing_url(website)
 
         if not pricing_url:
-            print(f"[CI Pricing] Страница цен не найдена для {name}")
+            # Fallback: try scraping the homepage directly
+            print(f"[CI Pricing] Страница цен не найдена для {name}, пробую главную")
+            pricing_url = website.rstrip('/') if website else None
+
+        if not pricing_url:
             return {
                 "name": name,
                 "website": website,
