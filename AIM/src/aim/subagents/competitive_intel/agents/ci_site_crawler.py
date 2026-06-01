@@ -72,11 +72,12 @@ class CISiteCrawlerAgent(Agent):
 
             print(f"[CI Site Crawler] Начало краулинга {len(competitors)} сайтов (depth={max_depth})")
 
-            # Шаг 1: Crawl each competitor site
-            crawl_results = []
-            for competitor in competitors:
-                result = await self._crawl_competitor_site(competitor, max_depth)
-                crawl_results.append(result)
+            # Шаг 1: Crawl each competitor site (concurrent)
+            crawl_tasks = [
+                self._crawl_competitor_site(competitor, max_depth)
+                for competitor in competitors
+            ]
+            crawl_results = await asyncio.gather(*crawl_tasks)
 
             # Шаг 2: Analyze site structures
             structure_analysis = await self._analyze_site_structures(crawl_results)
