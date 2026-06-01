@@ -86,11 +86,11 @@ class CIOrchestrator(Agent):
 
         # Phase-specific timeouts (seconds) — agents have different runtime profiles
         self._phase_timeouts: Dict[int, float] = {
-            1: 120.0,   # ci-scout: Apify Google Maps (30-60s) + processing
+            1: 180.0,   # ci-scout: Apify (13s) + SerpAPI/SEMrush fallback hang + DaData + processing
             2: 90.0,    # ci-auditor: httpx scraping (technical + content)
             3: 90.0,    # ci-auditor: competitive comparison
             4: 90.0,    # ci-reputation: multi-platform review scraping
-            5: 90.0,    # 9 parallel agents: finance, tech, crawler, etc.
+            5: 120.0,   # 9 parallel agents: each may do HTTP scraping + API calls
             6: 60.0,    # ci-factchecker: cross-reference validation
             7: 60.0,    # ci-strategist: synthesis + positioning
             8: 60.0,    # ci-strategist: GTM + recommendations
@@ -341,14 +341,14 @@ class CIOrchestrator(Agent):
 
                     phase_timeout = self._phase_timeouts.get(phase_num, 60.0)
                     if isinstance(agent_names, list):
-                        # Phase 5: Parallel execution
+                        # Phase 5: Parallel execution (direct=True bypasses EventBus poll loop)
                         phase_result = await self._execute_parallel_phase(
-                            phase_num, agent_names, phase_task_data, timeout=phase_timeout
+                            phase_num, agent_names, phase_task_data, timeout=phase_timeout, direct=True
                         )
                     else:
-                        # Single agent execution
+                        # Single agent execution (direct=True bypasses EventBus poll loop)
                         phase_result = await self._execute_single_phase(
-                            phase_num, agent_names, phase_task_data, timeout=phase_timeout
+                            phase_num, agent_names, phase_task_data, timeout=phase_timeout, direct=True
                         )
 
                     findings[f"phase_{phase_num}"] = phase_result
