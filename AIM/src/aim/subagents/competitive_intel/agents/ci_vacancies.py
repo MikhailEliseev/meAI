@@ -11,12 +11,13 @@ CI Vacancies Agent - HR Intelligence Analysis
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 import json
+import os
+import re
 import asyncio
 
 import httpx
 
 from meai.agents.base_agent import Agent, Task, TaskResult
-from meai.events.event_bus import EventBus
 from meai.memory.obsidian import ObsidianVault
 
 
@@ -25,7 +26,7 @@ class CIVacanciesAgent(Agent):
     CI Vacancies - агент анализа HR-активности конкурентов.
 
     Phase 5 CI pipeline (параллельный агент):
-    - Сбор открытых вакансий
+    - Сбор открытых вакансий (hh.ru API → Brave Search fallback)
     - Оценка размера команды
     - Анализ зарплат и условий
     - Определение темпов роста
@@ -44,6 +45,8 @@ class CIVacanciesAgent(Agent):
             vault_path=vault_path
         )
         self.vault = ObsidianVault("AIM/obsidian/ci-vacancies")
+        self.brave_api_key = os.getenv("BRAVE_API_KEY")
+        self.brave_base_url = "https://api.search.brave.com/res/v1/web/search"
 
         # Vacancy sources
         self.sources = {
@@ -151,15 +154,8 @@ class CIVacanciesAgent(Agent):
         geo: str
     ) -> Dict[str, Any]:
         """
-        Проанализировать вакансии одного конкурента через hh.ru API.
-
-        Args:
-            competitor: данные конкурента
-            niche: ниша
-            geo: город
-
-        Returns:
-            Профиль вакансий конкурента на реальных данных
+        Проанализировать вакансии одного конкурента.
+        Методы: hh.ru API → Brave Search fallback.
         """
         name = competitor["name"]
         print(f"[CI Vacancies] Анализ: {name}")
@@ -167,99 +163,204 @@ class CIVacanciesAgent(Agent):
         size = competitor.get("estimated_size", "medium")
 
         async with httpx.AsyncClient(timeout=httpx.Timeout(15.0)) as client:
+            # Method 1: hh.ru API
             employer = await self._find_employer_on_hh(client, name, geo)
 
             if employer:
                 hh_data = await self._fetch_hh_vacancies(client, employer["id"])
-
                 total_found = hh_data.get("found", 0)
-                open_vacancies = min(total_found, 100)
-                vacancies_list = hh_data.get("items", [])
+                if total_found > 0:
+                    return self._build_profile_from_hh(name, size, employer, hh_data)
 
-                vacancies_by_category: dict[str, int] = {}
-                total_salary_by_cat: dict[str, float] = {}
-                count_salary_by_cat: dict[str, int] = {}
+            # Method 2: Brave Search fallback
+            brave_data = await self._search_vacancies_brave(client, name)
+            if brave_data and brave_data.get("open_vacancies", 0) is not None:
+                return brave_data
 
-                for vac in vacancies_list:
-                    roles = vac.get("professional_roles", [])
-                    for role in roles:
-                        role_name = role.get("name", "")
-                        cat = self._map_hh_role_to_category(role_name)
-                        vacancies_by_category[cat] = vacancies_by_category.get(cat, 0) + 1
+        # Method 3: Unavailable
+        return {
+            "name": name,
+            "size": size,
+            "open_vacancies": None,
+            "vacancies_list": [],
+            "team_size_estimate": None,
+            "vacancies_by_category": {},
+            "avg_salaries": {},
+            "growth_rate": None,
+            "hiring_active": None,
+            "sources": [],
+            "data_source": "unavailable",
+            "confidence": 0.0,
+            "note": f"Не удалось получить данные о вакансиях для '{name}'",
+        }
 
-                    salary = vac.get("salary")
-                    if salary and salary.get("from"):
-                        sal_from = salary.get("from") or 0
-                        sal_to = salary.get("to") or sal_from
-                        avg_sal = (sal_from + sal_to) / 2
-                        for role in roles:
-                            role_name = role.get("name", "")
-                            cat = self._map_hh_role_to_category(role_name)
-                            total_salary_by_cat[cat] = total_salary_by_cat.get(cat, 0.0) + avg_sal
-                            count_salary_by_cat[cat] = count_salary_by_cat.get(cat, 0) + 1
+    def _build_profile_from_hh(
+        self, name: str, size: str, employer: dict, hh_data: dict
+    ) -> Dict[str, Any]:
+        """Build vacancy profile from hh.ru API data."""
+        total_found = hh_data.get("found", 0)
+        open_vacancies = min(total_found, 100)
+        vacancies_list = hh_data.get("items", [])
 
-                avg_salaries = {}
-                for cat in vacancies_by_category:
-                    if count_salary_by_cat.get(cat, 0) > 0:
-                        avg_salaries[cat] = round(total_salary_by_cat[cat] / count_salary_by_cat[cat])
+        vacancies_by_category: dict[str, int] = {}
+        total_salary_by_cat: dict[str, float] = {}
+        count_salary_by_cat: dict[str, int] = {}
 
-                team_size = employer.get("open_vacancies", 0)
-                if team_size == 0:
-                    team_size_ranges = {
-                        "small": (5, 15),
-                        "medium": (15, 50),
-                        "large": (50, 200)
-                    }
-                    low, high = team_size_ranges.get(size, (15, 50))
-                    team_size = (low + high) // 2
+        for vac in vacancies_list:
+            roles = vac.get("professional_roles", [])
+            for role in roles:
+                role_name = role.get("name", "")
+                cat = self._map_hh_role_to_category(role_name)
+                vacancies_by_category[cat] = vacancies_by_category.get(cat, 0) + 1
 
-                vacancy_ratio = open_vacancies / max(team_size, 1)
-                if vacancy_ratio > 0.2:
-                    growth_rate = "fast"
-                elif vacancy_ratio > 0.05:
-                    growth_rate = "moderate"
-                else:
-                    growth_rate = "slow"
+            salary = vac.get("salary")
+            if salary and salary.get("from"):
+                sal_from = salary.get("from") or 0
+                sal_to = salary.get("to") or sal_from
+                avg_sal = (sal_from + sal_to) / 2
+                for role in roles:
+                    role_name = role.get("name", "")
+                    cat = self._map_hh_role_to_category(role_name)
+                    total_salary_by_cat[cat] = total_salary_by_cat.get(cat, 0.0) + avg_sal
+                    count_salary_by_cat[cat] = count_salary_by_cat.get(cat, 0) + 1
 
-                profile = {
-                    "name": name,
-                    "size": size,
-                    "open_vacancies": open_vacancies,
-                    "vacancies_list": [
-                        {
-                            "title": v.get("name", ""),
-                            "url": v.get("alternate_url", ""),
-                            "salary": v.get("salary"),
-                        }
-                        for v in vacancies_list[:10]
-                    ],
-                    "team_size_estimate": team_size,
-                    "vacancies_by_category": vacancies_by_category,
-                    "avg_salaries": avg_salaries,
-                    "growth_rate": growth_rate,
-                    "hiring_active": open_vacancies > 0,
-                    "sources": ["hh.ru"],
-                    "data_source": "hh.ru API",
-                    "confidence": 0.8,
-                }
+        avg_salaries = {}
+        for cat in vacancies_by_category:
+            if count_salary_by_cat.get(cat, 0) > 0:
+                avg_salaries[cat] = round(total_salary_by_cat[cat] / count_salary_by_cat[cat])
+
+        team_size = employer.get("open_vacancies", 0)
+        if team_size == 0:
+            team_size_ranges = {"small": (5, 15), "medium": (15, 50), "large": (50, 200)}
+            low, high = team_size_ranges.get(size, (15, 50))
+            team_size = (low + high) // 2
+
+        vacancy_ratio = open_vacancies / max(team_size, 1)
+        if vacancy_ratio > 0.2:
+            growth_rate = "fast"
+        elif vacancy_ratio > 0.05:
+            growth_rate = "moderate"
+        else:
+            growth_rate = "slow"
+
+        return {
+            "name": name, "size": size,
+            "open_vacancies": open_vacancies,
+            "vacancies_list": [
+                {"title": v.get("name", ""), "url": v.get("alternate_url", ""), "salary": v.get("salary")}
+                for v in vacancies_list[:10]
+            ],
+            "team_size_estimate": team_size,
+            "vacancies_by_category": vacancies_by_category,
+            "avg_salaries": avg_salaries,
+            "growth_rate": growth_rate,
+            "hiring_active": open_vacancies > 0,
+            "sources": ["hh.ru"],
+            "data_source": "hh.ru API",
+            "confidence": 0.8,
+        }
+
+    async def _search_vacancies_brave(
+        self, client: httpx.AsyncClient, company_name: str
+    ) -> Dict[str, Any] | None:
+        """Search for company vacancies via Brave Search API."""
+        if not self.brave_api_key:
+            return None
+        try:
+            headers = {
+                "Accept": "application/json",
+                "Accept-Encoding": "gzip",
+                "X-Subscription-Token": self.brave_api_key,
+            }
+            # Search hh.ru for this company
+            query = f"{company_name} вакансии site:hh.ru"
+            params = {"q": query, "count": 10, "search_lang": "ru", "country": "RU"}
+            resp = await client.get(self.brave_base_url, params=params, headers=headers)
+            resp.raise_for_status()
+            data = resp.json()
+
+            web_results = data.get("web", {}).get("results", [])
+
+            # Count unique company vacancy pages
+            vacancy_urls: set[str] = set()
+            vacancy_titles: list[dict] = []
+            estimated_count = 0
+
+            for r in web_results:
+                url = r.get("url", "")
+                title = r.get("title", "")
+                description = r.get("description", "")
+
+                # hh.ru vacancy URLs contain "vacancy/"
+                if "hh.ru/vacancy/" in url:
+                    vacancy_urls.add(url)
+                    vacancy_titles.append({"title": title, "url": url})
+
+                # Try to extract total vacancy count from snippets
+                # Pattern: "Найдено 23 вакансии" or "23 вакансии"
+                count_match = re.search(
+                    r'(?:найдено|найдено|открыто|активных)\s*(\d+)\s*(?:ваканси|vacanc)',
+                    description, re.IGNORECASE
+                )
+                if count_match:
+                    estimated_count = max(estimated_count, int(count_match.group(1)))
+
+                # Also check title for count
+                count_match2 = re.search(
+                    r'(\d+)\s*(?:ваканси|vacanc)',
+                    title, re.IGNORECASE
+                )
+                if count_match2:
+                    estimated_count = max(estimated_count, int(count_match2.group(1)))
+
+            open_count = estimated_count or len(vacancy_urls)
+
+            if open_count == 0:
+                # Second attempt: search without site:hh.ru restriction
+                query2 = f"{company_name} работа вакансии врач косметолог"
+                params2 = {"q": query2, "count": 5, "search_lang": "ru", "country": "RU"}
+                resp2 = await client.get(self.brave_base_url, params=params2, headers=headers)
+                resp2.raise_for_status()
+                data2 = resp2.json()
+                for r in data2.get("web", {}).get("results", []):
+                    desc = r.get("description", "")
+                    cm = re.search(r'(\d+)\s*(?:ваканси|vacanc)', desc, re.IGNORECASE)
+                    if cm:
+                        open_count = max(open_count, int(cm.group(1)))
+
+            print(f"[CI Vacancies] Brave found ~{open_count} vacancies for {company_name}")
+
+            size = "medium"
+            team_size_ranges = {"small": (5, 15), "medium": (15, 50), "large": (50, 200)}
+            low, high = team_size_ranges.get(size, (15, 50))
+            team_size = (low + high) // 2
+
+            vacancy_ratio = open_count / max(team_size, 1)
+            if vacancy_ratio > 0.2:
+                growth_rate = "fast"
+            elif vacancy_ratio > 0.05:
+                growth_rate = "moderate"
             else:
-                profile = {
-                    "name": name,
-                    "size": size,
-                    "open_vacancies": None,
-                    "vacancies_list": [],
-                    "team_size_estimate": None,
-                    "vacancies_by_category": {},
-                    "avg_salaries": {},
-                    "growth_rate": None,
-                    "hiring_active": None,
-                    "sources": [],
-                    "data_source": "unavailable",
-                    "confidence": 0.0,
-                    "note": f"Компания '{name}' не найдена на hh.ru",
-                }
+                growth_rate = "slow"
 
-        return profile
+            return {
+                "name": company_name,
+                "size": size,
+                "open_vacancies": open_count,
+                "vacancies_list": vacancy_titles[:10],
+                "team_size_estimate": team_size,
+                "vacancies_by_category": {},
+                "avg_salaries": {},
+                "growth_rate": growth_rate,
+                "hiring_active": open_count > 0,
+                "sources": ["brave_search"],
+                "data_source": "brave_search",
+                "confidence": 0.5,
+            }
+
+        except Exception as e:
+            print(f"[CI Vacancies] Brave search error for {company_name}: {e}")
+            return None
 
     # hh.ru area ID mapping
     HH_AREA_IDS = {
