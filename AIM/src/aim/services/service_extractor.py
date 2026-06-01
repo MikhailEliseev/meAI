@@ -561,11 +561,37 @@ def _detect_specialization(
 
     # Priority overrides: if dominant_spec appears in title/H1 and noisy_spec
     # is leading only because of body-text volume, promote dominant_spec.
+    # BUT: only override when dominant appears FIRST in the title OR it has
+    # strong body presence (≥60% of noisy score). Prevents false overrides
+    # where a secondary specialisation is merely listed among many in a title.
     for dominant, noisy in _PRIORITY_OVERRIDES.items():
         if best == noisy and dominant in scores:
             dominant_patterns = _SPECIALIZATIONS.get(dominant, [])
             if any(p in high_signal for p in dominant_patterns):
-                if scores[dominant] >= scores[noisy] * 0.3:
+                # Check which specialisation appears first in the title/H1
+                noisy_patterns = _SPECIALIZATIONS.get(noisy, [])
+                dominant_first_pos = min(
+                    (high_signal.find(p) for p in dominant_patterns if p in high_signal),
+                    default=9999,
+                )
+                noisy_first_pos = min(
+                    (high_signal.find(p) for p in noisy_patterns if p in high_signal),
+                    default=9999,
+                )
+                # If noisy appears first in title, dominant is secondary —
+                # require stronger evidence (≥60% of noisy score)
+                if noisy_first_pos < dominant_first_pos:
+                    threshold = 0.6
+                else:
+                    # Dominant appears first — this is likely the primary niche
+                    threshold = 0.3
+                if scores[dominant] >= scores[noisy] * threshold:
+                    logger.info(
+                        "Priority override: %s → %s (scores: %.1f vs %.1f, threshold=%.1f, "
+                        "dominant_pos=%d, noisy_pos=%d)",
+                        noisy, dominant, scores[dominant], scores[noisy],
+                        threshold, dominant_first_pos, noisy_first_pos,
+                    )
                     return dominant
 
     # "Многопрофильная клиника" — особый случай. Паттерн "клиника"
