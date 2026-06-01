@@ -566,6 +566,12 @@ class CIOrchestrator(Agent):
         phase4 = findings.get("phase_4", {})
         rep_result = phase4.get("result", {}) if isinstance(phase4, dict) else {}
 
+        phase5 = findings.get("phase_5", {})
+        pricing_agent = {}
+        if isinstance(phase5, dict):
+            pricing_agent = phase5.get("results", {}).get("ci-pricing", {})
+        pricing_result = pricing_agent.get("result", {}) if isinstance(pricing_agent, dict) else {}
+
         # ── WOW numbers ──
         wow = _compute_wow_from_findings(findings)
 
@@ -580,15 +586,16 @@ class CIOrchestrator(Agent):
                 "url": url,
                 "seo_score": seo_score,
                 "rating": _extract_reputation_rating(rep_result, name),
-                "pricing_visible": _has_pricing_data(auditor_result),
+                "pricing_visible": _has_pricing_data_from_agent(pricing_result, name),
                 "online_booking": _has_online_booking(auditor_result),
             }
 
         # ── Pricing comparison ──
         pricing_comparison = {}
+        pricing_profiles = pricing_result.get("pricing_profiles", []) if isinstance(pricing_result, dict) else []
         for c in comp_list:
             name = c.get("name", c) if isinstance(c, dict) else str(c)
-            prices = _extract_prices(auditor_result)
+            prices = _extract_prices_from_agent(pricing_profiles, name)
             pricing_comparison[name] = {
                 "primary_consult": prices.get("primary_consult"),
                 "popular_service": prices.get("popular_service"),
@@ -697,7 +704,9 @@ class CIOrchestrator(Agent):
             "geo": task_data.get("geo", ""),
             "target_audience": task_data.get("target_audience", ""),
             "price_segment": task_data.get("price_segment", "mid"),
-            "competitors": task_data.get("competitors", [])
+            "competitors": task_data.get("competitors", []),
+            "our_url": task_data.get("our_url", ""),
+            "url": task_data.get("url", ""),
         }
 
         correlation_id = task_data.get("correlation_id", task_data.get("task_id", "unknown"))
@@ -1757,6 +1766,37 @@ def _extract_reputation_rating(rep_result: Dict[str, Any], competitor_name: str 
     return None
 
 
+def _has_pricing_data_from_agent(pricing_result: Dict[str, Any], competitor_name: str) -> bool:
+    """Check if ci-pricing agent found real pricing data for a competitor."""
+    profiles = pricing_result.get("pricing_profiles", []) if isinstance(pricing_result, dict) else []
+    for p in profiles:
+        if isinstance(p, dict) and p.get("name") == competitor_name:
+            if p.get("prices") and p["prices"].get("count", 0) > 0:
+                return True
+            if p.get("avg_check") is not None:
+                return True
+    return False
+
+
+def _extract_prices_from_agent(
+    pricing_profiles: List[Dict[str, Any]], competitor_name: str
+) -> Dict[str, Any]:
+    """Extract real pricing info from ci-pricing agent profiles."""
+    for p in pricing_profiles:
+        if isinstance(p, dict) and p.get("name") == competitor_name:
+            prices = p.get("prices", {})
+            return {
+                "primary_consult": prices.get("budget_range"),
+                "popular_service": prices.get("mid_range"),
+                "avg_check": p.get("avg_check"),
+                "price_segment": p.get("price_segment"),
+                "price_transparency": p.get("price_transparency"),
+                "confidence": p.get("confidence", 0),
+            }
+    return {"primary_consult": None, "popular_service": None, "avg_check": None,
+            "price_segment": None, "price_transparency": False, "confidence": 0}
+
+
 def _has_pricing_data(auditor_result: Dict[str, Any]) -> bool:
     """Check if ci-auditor found pricing information on the site."""
     if not isinstance(auditor_result, dict):
@@ -1769,7 +1809,6 @@ def _has_pricing_data(auditor_result: Dict[str, Any]) -> bool:
                 if isinstance(dim_checks, dict):
                     for check in dim_checks.values():
                         if isinstance(check, dict) and check.get("status") == "pass":
-                            # Look for pricing-related checks
                             if check.get("score", 0) and isinstance(check.get("score"), (int, float)):
                                 if check["score"] > 60:
                                     return True
