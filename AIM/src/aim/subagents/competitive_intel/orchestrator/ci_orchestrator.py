@@ -84,6 +84,19 @@ class CIOrchestrator(Agent):
         # Phase-pending Events for dict-based completion signalling (avoids N transient subscribers)
         self._phase_pending: Dict[str, asyncio.Event] = {}
 
+        # Phase-specific timeouts (seconds) — agents have different runtime profiles
+        self._phase_timeouts: Dict[int, float] = {
+            1: 120.0,   # ci-scout: Apify Google Maps (30-60s) + processing
+            2: 90.0,    # ci-auditor: httpx scraping (technical + content)
+            3: 90.0,    # ci-auditor: competitive comparison
+            4: 90.0,    # ci-reputation: multi-platform review scraping
+            5: 90.0,    # 9 parallel agents: finance, tech, crawler, etc.
+            6: 60.0,    # ci-factchecker: cross-reference validation
+            7: 60.0,    # ci-strategist: synthesis + positioning
+            8: 60.0,    # ci-strategist: GTM + recommendations
+            9: 30.0,    # ci-prioritizer: action plan scoring
+        }
+
         # Persistent subscriber: collects ALL ci.agent.completed events for audit trail
         self.event_bus.subscribe("ci.agent.completed", self._on_agent_completed)
 
@@ -326,15 +339,16 @@ class CIOrchestrator(Agent):
                                 {"name": url, "url": url} for url in competitors_list
                             ]
 
+                    phase_timeout = self._phase_timeouts.get(phase_num, 60.0)
                     if isinstance(agent_names, list):
                         # Phase 5: Parallel execution
                         phase_result = await self._execute_parallel_phase(
-                            phase_num, agent_names, phase_task_data
+                            phase_num, agent_names, phase_task_data, timeout=phase_timeout
                         )
                     else:
                         # Single agent execution
                         phase_result = await self._execute_single_phase(
-                            phase_num, agent_names, phase_task_data
+                            phase_num, agent_names, phase_task_data, timeout=phase_timeout
                         )
 
                     findings[f"phase_{phase_num}"] = phase_result
