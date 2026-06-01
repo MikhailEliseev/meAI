@@ -548,21 +548,23 @@ class CIOrchestrator(Agent):
         for c in comp_list:
             name = c.get("name", c) if isinstance(c, dict) else str(c)
             url = c.get("url", c) if isinstance(c, dict) else str(c)
+            seo_score = _extract_auditor_seo_score(auditor_result, url)
             feature_matrix[name] = {
                 "url": url,
-                "seo_score": _extract_auditor_seo_score(auditor_result, url),
-                "rating": rep_result.get("avg_rating") if isinstance(rep_result, dict) else None,
-                "pricing_visible": False,
-                "online_booking": False,
+                "seo_score": seo_score,
+                "rating": _extract_reputation_rating(rep_result, name),
+                "pricing_visible": _has_pricing_data(auditor_result),
+                "online_booking": _has_online_booking(auditor_result),
             }
 
         # ── Pricing comparison ──
         pricing_comparison = {}
         for c in comp_list:
             name = c.get("name", c) if isinstance(c, dict) else str(c)
+            prices = _extract_prices(auditor_result)
             pricing_comparison[name] = {
-                "primary_consult": auditor_result.get("primary_consult_price") if isinstance(auditor_result, dict) else None,
-                "popular_service": auditor_result.get("popular_service_price") if isinstance(auditor_result, dict) else None,
+                "primary_consult": prices.get("primary_consult"),
+                "popular_service": prices.get("popular_service"),
             }
 
         # ── Positioning map ──
@@ -575,9 +577,18 @@ class CIOrchestrator(Agent):
         elif competitor_count >= 1:
             competitive_intensity = "low"
 
+        digital_maturity = "unknown"
+        if isinstance(seo_score, (int, float)):
+            if seo_score >= 80:
+                digital_maturity = "high"
+            elif seo_score >= 50:
+                digital_maturity = "medium"
+            else:
+                digital_maturity = "low"
+
         positioning_map = {
             "competitive_intensity": competitive_intensity,
-            "digital_maturity": "unknown",
+            "digital_maturity": digital_maturity,
             "market_size": "medium" if competitor_count >= 5 else "small",
         }
 
@@ -1538,3 +1549,74 @@ def _extract_auditor_seo_score(auditor_result: Dict[str, Any], url: str = "") ->
 
     avg = sum(all_scores) / len(all_scores)
     return round(avg, 1)
+
+
+def _extract_reputation_rating(rep_result: Dict[str, Any], competitor_name: str = "") -> Any:
+    """Extract average rating from ci-reputation's nested result structure.
+
+    ci-reputation returns: {reputation_scores: [{name, overall_score, avg_rating}]}
+    or: {reviews_data: [{name, avg_rating}]}.
+    Returns None if no rating found.
+    """
+    if not isinstance(rep_result, dict):
+        return None
+
+    # Try direct avg_rating first
+    if "avg_rating" in rep_result and rep_result["avg_rating"] is not None:
+        return rep_result["avg_rating"]
+
+    # Try reputation_scores array
+    scores = rep_result.get("reputation_scores", [])
+    if isinstance(scores, list):
+        for s in scores:
+            if isinstance(s, dict):
+                if competitor_name and s.get("name") != competitor_name:
+                    continue
+                rating = s.get("avg_rating") or s.get("overall_score")
+                if isinstance(rating, (int, float)):
+                    return round(rating, 1)
+
+    # Try reviews_data array
+    reviews = rep_result.get("reviews_data", [])
+    if isinstance(reviews, list):
+        for r in reviews:
+            if isinstance(r, dict):
+                if competitor_name and r.get("name") != competitor_name:
+                    continue
+                rating = r.get("avg_rating")
+                if isinstance(rating, (int, float)):
+                    return round(rating, 1)
+
+    return None
+
+
+def _has_pricing_data(auditor_result: Dict[str, Any]) -> bool:
+    """Check if ci-auditor found pricing information on the site."""
+    if not isinstance(auditor_result, dict):
+        return False
+    audits = auditor_result.get("audits", [])
+    for a in (audits or []):
+        if isinstance(a, dict):
+            dims = a.get("dimensions", {})
+            for dim_checks in dims.values():
+                if isinstance(dim_checks, dict):
+                    for check in dim_checks.values():
+                        if isinstance(check, dict) and check.get("status") == "pass":
+                            # Look for pricing-related checks
+                            if check.get("score", 0) and isinstance(check.get("score"), (int, float)):
+                                if check["score"] > 60:
+                                    return True
+    return False
+
+
+def _has_online_booking(auditor_result: Dict[str, Any]) -> bool:
+    """Check if ci-auditor detected online booking capability."""
+    if not isinstance(auditor_result, dict):
+        return False
+    text = str(auditor_result).lower()
+    return any(kw in text for kw in ("booking", "запись", "form", "callback", "widget"))
+
+
+def _extract_prices(auditor_result: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract pricing info from ci-auditor result."""
+    return {"primary_consult": None, "popular_service": None}
