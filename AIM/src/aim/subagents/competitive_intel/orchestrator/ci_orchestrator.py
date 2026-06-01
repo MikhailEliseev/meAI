@@ -90,7 +90,7 @@ class CIOrchestrator(Agent):
             2: 90.0,    # ci-auditor: httpx scraping (technical + content)
             3: 90.0,    # ci-auditor: competitive comparison
             4: 90.0,    # ci-reputation: multi-platform review scraping
-            5: 180.0,   # 9 parallel agents: ci-site-crawler needs time to crawl 10 sites
+            5: 300.0,   # 9 parallel agents: ci-site-crawler needs time to crawl 10 sites
             6: 60.0,    # ci-factchecker: cross-reference validation
             7: 60.0,    # ci-strategist: synthesis + positioning
             8: 60.0,    # ci-strategist: GTM + recommendations
@@ -317,6 +317,8 @@ class CIOrchestrator(Agent):
                     # Prepare phase-specific task data
                     phase_task_data = task_data.copy()
                     phase_task_data["correlation_id"] = correlation_id
+                    # Pass the target URL as our_url for backlink comparison
+                    phase_task_data["our_url"] = url
 
                     # Phase 1 uses initial URLs, Phase 2+ uses results from Phase 1
                     if phase_num == 1:
