@@ -175,6 +175,24 @@ async def _run_audit_background(task: AuditTask, payload: dict):
 
         all_urls = [url] + [c for c in competitors if c != url]
 
+        # Progress labels for each phase
+        _PHASE_LABELS = {
+            1: "Ищу конкурентов в нише…",
+            2: "Анализирую сайты конкурентов…",
+            3: "Оцениваю техническое SEO…",
+            4: "Анализирую репутацию…",
+            5: "Собираю данные: цены, контент, технологии, вакансии…",
+            6: "Проверяю данные (fact-check)…",
+            7: "Формирую стратегию…",
+            8: "Анализирую рыночные возможности…",
+            9: "Приоритизирую рекомендации…",
+        }
+
+        async def update_progress(phase: int, status: str, message: str):
+            label = _PHASE_LABELS.get(phase, message)
+            task.progress = f"[Фаза {phase}/9] {label}"
+            _save_tasks()
+
         result = await orchestrator.execute_ci_analysis(
             task_data={
                 "task_id": task.task_id,
@@ -184,7 +202,8 @@ async def _run_audit_background(task: AuditTask, payload: dict):
                 "competitors": all_urls,
                 "target_audience": payload.get("target_audience", ""),
                 "price_segment": payload.get("price_segment", "mid"),
-            }
+            },
+            progress_callback=update_progress,
         )
 
         task.result = result
@@ -334,13 +353,17 @@ async def start_seo_audit_stream(payload: dict):
         async def run_analysis():
             try:
                 orchestrator = await _get_orchestrator()
+
+                async def sse_progress(phase: int, status: str, message: str):
+                    await queue.put({"type": "progress", "phase": phase, "status": status, "message": message})
+
                 result = await orchestrator.execute_ci_analysis({
                     "url": url,
                     "competitors": [url] + [c for c in competitors if c != url],
                     "niche": payload.get("niche", payload.get("specialization", "medical")),
                     "geo": payload.get("geo", payload.get("city", "")),
                     "tier": "quick",
-                })
+                }, progress_callback=sse_progress)
                 await queue.put({"type": "result", "data": result})
             except Exception as e:
                 logger.exception("Streaming quick analysis failed")
