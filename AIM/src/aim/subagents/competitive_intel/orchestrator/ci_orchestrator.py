@@ -420,6 +420,17 @@ class CIOrchestrator(Agent):
                     phase_task_data = task_data.copy()
                     phase_task_data["correlation_id"] = correlation_id
 
+                    # Quick tier: skip ci-scout when only client URL (no competitors to discover)
+                    # Apify Google Maps scraper takes 30-60s — too slow for quick tier.
+                    # Competitor discovery is handled by PRESALE Step 4 (find_competitors).
+                    if phase_num == 1 and len(competitors_list) <= 1:
+                        findings["phase_1"] = {
+                            "phase": 1, "agent": "ci-scout", "status": "skipped",
+                            "result": {"top_for_analysis": [], "competitors_found": 0,
+                                       "reason": "single_url_quick_tier"}
+                        }
+                        continue
+
                     # Phase 1 uses initial URLs, phase 2+ uses results from phase 1
                     if phase_num == 1:
                         phase_task_data["competitors"] = competitors_list
@@ -623,7 +634,7 @@ class CIOrchestrator(Agent):
         # Create Task for agent
         from meai.agents.base_agent import Task, TaskStatus
         task = Task(
-            task_id=task_data.get("task_id", "unknown"),
+            task_id=f"{task_data.get('task_id', 'unknown')}-phase-{phase_num}",
             subtask_id=f"phase-{phase_num}",
             parent_task_id=task_data.get("task_id", "unknown"),
             action="analyze",
