@@ -295,8 +295,10 @@ class CIVacanciesAgent(Agent):
 
     def _hh_headers(self) -> dict:
         """Build browser-like headers for hh.ru API requests."""
-        import random
-        ua = random.choice(self._USER_AGENTS)
+        # Cycle through User-Agents deterministically (no random import)
+        import time
+        idx = int(time.time() * 1000) % len(self._USER_AGENTS)
+        ua = self._USER_AGENTS[idx]
         return {
             "User-Agent": ua,
             "Accept": "application/json, text/plain, */*",
