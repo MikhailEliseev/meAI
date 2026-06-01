@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Client Acquisition
-status: completed
-stopped_at: Phase 21 complete. All 49 CI integration tests pass (0 failures). CI pipelines unified. 5/5 plans done.
-last_updated: "2026-05-31T20:45:00.000Z"
-last_activity: 2026-05-31 — Phase 21 shipped (49/49 CI tests, EventBus delegation, unified models, thin proxy)
+status: executing
+stopped_at: Phase 21 complete. CI pipelines unified. 49/49 tests pass.
+last_updated: "2026-06-01T06:59:01.505Z"
+last_activity: 2026-06-01 -- Phase 22 execution started
 progress:
   total_phases: 18
   completed_phases: 16
@@ -21,13 +21,14 @@ progress:
 See: .planning/ROADMAP.md (updated 2026-05-19)
 
 **Core value:** AI-first medical marketing agency at iamaim.ru — полный цикл захвата клиентов
-**Current focus:** Все основные фазы завершены. Остался Phase 13-02 (маркетинг — post-MVP)
+**Current focus:** Phase 22 — hermes-first-communication-flow
 
 ## Current Position
 
-Phase: 13 ◆ Landing Page & Marketing — Wave 1 done, Wave 2 pending  
-Status: **Phase 21 complete ✅ (CI Pipeline Unification).** Phase 13 partial — 2/4 done, 2 pending (tokens needed)  
-Last activity: 2026-05-31 — Phase 21 shipped (49/49 CI tests, EventBus delegation, CiMarketingAnalyzer thin proxy)  
+Phase: 22 (hermes-first-communication-flow) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase 22
+Last activity: 2026-06-01 -- Phase 22 execution started
 
 Progress: [████████░] 93% — 50/50 plans complete
 
