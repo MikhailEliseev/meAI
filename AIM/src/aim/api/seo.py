@@ -239,8 +239,10 @@ async def start_seo_audit(payload: dict):
         specialization = payload.get("specialization", payload.get("niche", "medical"))
         city = payload.get("city", payload.get("geo", ""))
 
+        import uuid
         orchestrator = await _get_orchestrator()
         result = await orchestrator.execute_ci_analysis({
+            "task_id": f"seo-quick-{uuid.uuid4().hex[:8]}",
             "url": url,
             "competitors": [url] + [c for c in competitors if c != url],
             "niche": specialization,
