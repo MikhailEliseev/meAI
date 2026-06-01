@@ -142,7 +142,7 @@ async def _fetch_sitemap(url: str) -> list[str]:
     return []
 
 
-async def _render_page(url: str, timeout_ms: int = 30000) -> dict:
+async def _render_page(url: str, timeout_ms: int = 15000) -> dict:
     """Render a single page with Playwright and extract content."""
     result = {"url": url, "title": "", "text": "", "links": [], "status": "ok"}
 
@@ -156,16 +156,12 @@ async def _render_page(url: str, timeout_ms: int = 30000) -> dict:
             page = await browser.new_page(viewport={"width": 1280, "height": 800})
 
             try:
-                await page.goto(url, wait_until="networkidle", timeout=timeout_ms)
-                await page.wait_for_timeout(2000)
+                await page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
+                await page.wait_for_timeout(1000)
             except Exception as goto_err:
-                try:
-                    await page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
-                    await page.wait_for_timeout(3000)
-                except Exception:
-                    result["status"] = f"goto_failed: {goto_err}"
-                    await browser.close()
-                    return result
+                result["status"] = f"goto_failed: {str(goto_err)[:100]}"
+                await browser.close()
+                return result
 
             result["title"] = await page.title() or ""
 
