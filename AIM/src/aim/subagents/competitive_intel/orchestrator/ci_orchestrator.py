@@ -439,11 +439,11 @@ class CIOrchestrator(Agent):
 
                     if isinstance(agent_names, list):
                         phase_result = await self._execute_parallel_phase(
-                            phase_num, agent_names, phase_task_data, timeout=10.0
+                            phase_num, agent_names, phase_task_data, timeout=15.0, direct=True
                         )
                     else:
                         phase_result = await self._execute_single_phase(
-                            phase_num, agent_names, phase_task_data, timeout=10.0
+                            phase_num, agent_names, phase_task_data, timeout=15.0, direct=True
                         )
 
                     findings[f"phase_{phase_num}"] = phase_result
@@ -595,14 +595,17 @@ class CIOrchestrator(Agent):
         agent_name: str,
         task_data: Dict[str, Any],
         timeout: float = 60.0,
+        direct: bool = False,
     ) -> Dict[str, Any]:
-        """Execute single agent phase via EventBus delegation.
+        """Execute single agent phase.
 
-        Publishes a task.request Message targeting the agent and waits for the
-        ci.agent.completed Event with matching correlation_id. No fallback to
-        direct agent.execute_task() — EventBus delegation is the ONLY path.
+        With direct=True (quick tier): calls agent.receive_task() directly,
+        bypassing EventBus message polling. Faster and more reliable.
 
-        timeout: max wait for agent completion (default 60s; use 10s for quick tier).
+        With direct=False (deep/full tier): publishes task.request Message and
+        waits for ci.agent.completed Event via EventBus delegation.
+
+        timeout: max wait for agent completion.
         """
         agent = await self._get_agent(agent_name)
 
@@ -646,8 +649,8 @@ class CIOrchestrator(Agent):
         # Set correlation_id on agent so the bridged report_result can use it
         agent._ci_correlation_id = phase_correlation
 
-        # ── Quick tier: direct execution (bypasses EventBus poll loop) ──
-        if timeout <= 10.0:
+        # ── Direct execution (bypasses EventBus poll loop) ──
+        if direct:
             logger.info(
                 "Direct execution: %s phase %d (timeout=%.0fs)",
                 agent_name, phase_num, timeout,
@@ -776,12 +779,13 @@ class CIOrchestrator(Agent):
         agent_names: List[str],
         task_data: Dict[str, Any],
         timeout: float = 60.0,
+        direct: bool = False,
     ) -> Dict[str, Any]:
         """Execute multiple agents in parallel (Phase 5)"""
         tasks = []
 
         for agent_name in agent_names:
-            tasks.append(self._execute_single_phase(phase_num, agent_name, task_data, timeout=timeout))
+            tasks.append(self._execute_single_phase(phase_num, agent_name, task_data, timeout=timeout, direct=direct))
 
         # Execute in parallel with error handling
         results = await asyncio.gather(*tasks, return_exceptions=True)
