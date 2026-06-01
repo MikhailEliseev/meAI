@@ -522,6 +522,8 @@ class CIPricingAgent(Agent):
 
         for profile in pricing_profiles:
             segment = profile["price_segment"]
+            if segment is None:
+                continue  # Skip competitors with no price data
             positioning[segment].append({
                 "name": profile["name"],
                 "avg_check": profile["avg_check"],

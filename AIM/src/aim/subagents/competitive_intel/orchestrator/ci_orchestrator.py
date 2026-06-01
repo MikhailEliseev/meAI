@@ -90,7 +90,7 @@ class CIOrchestrator(Agent):
             2: 90.0,    # ci-auditor: httpx scraping (technical + content)
             3: 90.0,    # ci-auditor: competitive comparison
             4: 90.0,    # ci-reputation: multi-platform review scraping
-            5: 120.0,   # 9 parallel agents: each may do HTTP scraping + API calls
+            5: 180.0,   # 9 parallel agents: ci-site-crawler needs time to crawl 10 sites
             6: 60.0,    # ci-factchecker: cross-reference validation
             7: 60.0,    # ci-strategist: synthesis + positioning
             8: 60.0,    # ci-strategist: GTM + recommendations
@@ -1494,45 +1494,50 @@ class CIOrchestrator(Agent):
 def _extract_steal_worthy_tactics(findings: Dict[str, Any]) -> list:
     """Extract steal-worthy tactics from ci-auditor findings.
 
+    Checks both Phase 2 (deep audit of target site) and Phase 3 (competitive comparison).
     Each tactic describes what to copy from which competitor and why.
     """
     tactics = []
-    phase2 = findings.get("phase_2", {})
-    if not isinstance(phase2, dict):
-        return tactics
+    seen_tactics = set()
 
-    auditor_result = phase2.get("result", {}) or {}
-    audits = auditor_result.get("audits", [])
-    if not audits:
-        return tactics
-
-    for audit in audits:
-        if not isinstance(audit, dict):
+    # Collect from both Phase 2 (target site) and Phase 3 (competitors)
+    for phase_key in ("phase_3", "phase_2"):
+        phase = findings.get(phase_key, {})
+        if not isinstance(phase, dict):
             continue
-        url = audit.get("url", "")
-        name = audit.get("name", url)
-        dims = audit.get("dimensions", {})
+        auditor_result = phase.get("result", {}) or {}
+        audits = auditor_result.get("audits", [])
+        if not audits:
+            continue
 
-        for dim_name, checks in dims.items():
-            if not isinstance(checks, dict):
+        for audit in audits:
+            if not isinstance(audit, dict):
                 continue
-            for check_key, check_data in checks.items():
-                if not isinstance(check_data, dict):
+            name = audit.get("name", audit.get("url", ""))
+            dims = audit.get("dimensions", {})
+
+            for dim_name, checks in dims.items():
+                if not isinstance(checks, dict):
                     continue
-                score = check_data.get("score", 0) or 0
-                status = check_data.get("status", "")
-                if status == "pass" and isinstance(score, (int, float)) and score >= 80:
-                    check_label = check_data.get("check", check_key)
-                    tactic_desc = f"Внедрить «{check_label}» как у {name}"
-                    if any(t.get("tactic_description") == tactic_desc for t in tactics):
+                for check_key, check_data in checks.items():
+                    if not isinstance(check_data, dict):
                         continue
-                    tactics.append({
-                        "source_competitor": name,
-                        "tactic_description": tactic_desc,
-                        "why_it_works": f"{name} имеет {score}/100 по параметру «{check_label}»",
-                        "expected_impact": "High" if score >= 90 else "Medium",
-                        "estimated_effort": "Medium",
-                    })
+                    score = check_data.get("score", 0) or 0
+                    status = check_data.get("status", "")
+                    if status in ("pass", "good") and isinstance(score, (int, float)) and score >= 80:
+                        check_label = check_data.get("name", check_data.get("check", check_key))
+                        tactic_desc = f"Внедрить «{check_label}» как у {name}"
+                        dedup_key = f"{name}:{check_label}"
+                        if dedup_key in seen_tactics:
+                            continue
+                        seen_tactics.add(dedup_key)
+                        tactics.append({
+                            "source_competitor": name,
+                            "tactic_description": tactic_desc,
+                            "why_it_works": f"{name} имеет {score}/100 по параметру «{check_label}»",
+                            "expected_impact": "High" if score >= 90 else "Medium",
+                            "estimated_effort": "Medium",
+                        })
 
     # Sort: High impact first, then Medium
     tactics.sort(key=lambda t: 0 if t["expected_impact"] == "High" else 1)

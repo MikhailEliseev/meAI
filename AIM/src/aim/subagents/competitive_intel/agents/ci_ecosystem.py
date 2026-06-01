@@ -76,7 +76,7 @@ class CIEcosystemAgent(Agent):
         }
 
         self.analytics_signals = {
-            "Yandex.Metrika": ["mc.yandex.ru/metrika", "metrika", "yandex_metrika", "ym("],
+            "Yandex.Metrika": ["mc.yandex.ru/metrika", "metrika", "yandex_metrika", r"ym\("],
             "Google Analytics": ["googletagmanager", "gtag", "analytics.js", "ga\(", "gtm.start"],
             "VK Pixel": ["vk.com/js/api", "vk_pixel", "VK.Retargeting", "vk_retargeting"],
             "MyTarget": ["top-fwz1.mail.ru", "mytarget", "top.mail.ru/js"],
