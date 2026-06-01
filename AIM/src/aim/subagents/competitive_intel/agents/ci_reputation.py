@@ -251,7 +251,12 @@ class CIReputationAgent(Agent):
             if result is not None and (result.get("count") or result.get("avg_rating")):
                 return result
 
-        # Method 3: Direct platform scraping
+        # Method 3: DuckDuckGo Lite (free, no API key)
+        result = await self._search_duckduckgo(name, source_info)
+        if result is not None and (result.get("count") or result.get("avg_rating")):
+            return result
+
+        # Method 4: Direct platform scraping
         result = await self._scrape_direct(name, source_info, source)
         if result is not None:
             return result
@@ -304,6 +309,96 @@ class CIReputationAgent(Agent):
                 return self._extract_rating_from_brave(data, source_info)
         except Exception as e:
             print(f"[CI Reputation] Brave Search error for {name}: {e}")
+            return None
+
+    async def _search_duckduckgo(
+        self, name: str, source_info: dict
+    ) -> Dict[str, Any] | None:
+        """Search via DuckDuckGo Lite — free, no API key, plain HTML."""
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
+                query = f"{name} отзывы рейтинг"
+                params = {"q": query}
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+                }
+                resp = await client.get(
+                    "https://lite.duckduckgo.com/lite/",
+                    params=params, headers=headers
+                )
+                if resp.status_code != 200:
+                    return None
+
+                html = resp.text
+
+                # DDG Lite returns results in simple HTML tables:
+                # <tr class="result-snippet"><td>snippet</td></tr>
+                # <tr class="result-link"><td><a href="url">title</a></td></tr>
+                snippets = []
+                rating = None
+                count = None
+
+                # Extract result snippets
+                snippet_matches = re.findall(
+                    r'<tr[^>]*class="result-snippet"[^>]*>.*?<td[^>]*>(.*?)</td>.*?</tr>',
+                    html, re.DOTALL | re.IGNORECASE
+                )
+                for s in snippet_matches[:5]:
+                    clean = re.sub(r'<[^>]+>', '', s).strip()
+                    if clean and len(clean) > 20:
+                        snippets.append({"text": clean[:300], "source": "duckduckgo", "date": None})
+
+                # Extract rating from all text (snippets + titles)
+                link_matches = re.findall(
+                    r'<tr[^>]*class="result-link"[^>]*>.*?<a[^>]*href="([^"]*)"[^>]*>(.*?)</a>.*?</tr>',
+                    html, re.DOTALL | re.IGNORECASE
+                )
+                all_text = " ".join(s["text"] for s in snippets)
+                for _, title in link_matches[:10]:
+                    all_text += " " + re.sub(r'<[^>]+>', '', title)
+
+                # Extract rating
+                rating_match = re.search(
+                    r'(?:рейтинг|rating|оценка)\s*(\d+[.,]\d+)', all_text, re.IGNORECASE
+                )
+                if not rating_match:
+                    rating_match = re.search(
+                        r'(\d+[.,]\d+)\s*(?:из\s*5|/5|★)', all_text
+                    )
+                if rating_match:
+                    rating = float(rating_match.group(1).replace(",", "."))
+
+                # Extract review count
+                count_match = re.search(
+                    r'(\d+)\s*(?:отзыв|отзыва|отзывов|review)', all_text, re.IGNORECASE
+                )
+                if count_match:
+                    count = int(count_match.group(1))
+
+                if rating or count or snippets:
+                    sentiment_dist = None
+                    if rating and isinstance(rating, (int, float)):
+                        if rating >= 4.0:
+                            sentiment_dist = {"positive": 70, "negative": 15, "neutral": 15}
+                        elif rating >= 3.0:
+                            sentiment_dist = {"positive": 40, "negative": 30, "neutral": 30}
+                        else:
+                            sentiment_dist = {"positive": 20, "negative": 60, "neutral": 20}
+
+                    return {
+                        "source": source_info["name"],
+                        "source_name": source_info["name"],
+                        "count": count,
+                        "avg_rating": round(rating, 1) if isinstance(rating, (int, float)) else None,
+                        "sentiment_distribution": sentiment_dist,
+                        "recent_reviews": snippets,
+                        "data_source": "duckduckgo_lite",
+                    }
+
+                return None
+
+        except Exception as e:
+            print(f"[CI Reputation] DuckDuckGo error for {name}: {e}")
             return None
 
     async def _scrape_direct(
