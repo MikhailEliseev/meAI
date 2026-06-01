@@ -549,14 +549,18 @@ class CIOrchestrator(Agent):
     ) -> Dict[str, Any]:
         """Build presale-friendly summary fields from phase findings.
 
-        Produces chat_summary, feature_matrix, wow, pricing_comparison,
-        positioning_map, and steal_worthy_tactics — even from partial/stub data.
+        Produces a rich narrative structure (not a template string) so Hermes
+        can tell a compelling human story with concrete discoveries, not just
+        recite numbers.
+
+        Returns: narrative, chat_summary, feature_matrix, wow, pricing_comparison,
+        positioning_map, competitive_highlights, steal_worthy_tactics, top_recommendation.
         """
         niche = task_data.get("niche", "medical")
         geo = task_data.get("geo", "")
         competitors = task_data.get("competitors", [])
 
-        # ── Extract data from phases ──
+        # ── Extract data from all phases ──
         phase1 = findings.get("phase_1", {})
         scout_result = phase1.get("result", {}) if isinstance(phase1, dict) else {}
         top_competitors = scout_result.get("top_for_analysis", []) if isinstance(scout_result, dict) else []
@@ -568,75 +572,262 @@ class CIOrchestrator(Agent):
         rep_result = phase4.get("result", {}) if isinstance(phase4, dict) else {}
 
         phase5 = findings.get("phase_5", {})
-        pricing_agent = {}
-        if isinstance(phase5, dict):
-            pricing_agent = phase5.get("results", {}).get("ci-pricing", {})
+        phase5_results = phase5.get("results", {}) if isinstance(phase5, dict) else {}
+
+        pricing_agent = phase5_results.get("ci-pricing", {})
         pricing_result = pricing_agent.get("result", {}) if isinstance(pricing_agent, dict) else {}
+
+        tech_agent = phase5_results.get("ci-tech", {})
+        tech_result = tech_agent.get("result", {}) if isinstance(tech_agent, dict) else {}
+
+        content_agent = phase5_results.get("ci-content", {})
+        content_result = content_agent.get("result", {}) if isinstance(content_agent, dict) else {}
+
+        vacancies_agent = phase5_results.get("ci-vacancies", {})
+        vacancies_result = vacancies_agent.get("result", {}) if isinstance(vacancies_agent, dict) else {}
+
+        finance_agent = phase5_results.get("ci-finance", {})
+        finance_result = finance_agent.get("result", {}) if isinstance(finance_agent, dict) else {}
+
+        ecosystem_agent = phase5_results.get("ci-ecosystem", {})
+        ecosystem_result = ecosystem_agent.get("result", {}) if isinstance(ecosystem_agent, dict) else {}
+
+        phase7 = findings.get("phase_7", {})
+        strategy_result = phase7.get("result", {}) if isinstance(phase7, dict) else {}
+
+        phase9 = findings.get("phase_9", {})
+        prioritizer_result = phase9.get("result", {}) if isinstance(phase9, dict) else {}
 
         # ── WOW numbers ──
         wow = _compute_wow_from_findings(findings)
 
-        # ── Feature matrix ──
-        feature_matrix = {}
+        # ── Competitor count ──
         comp_list = top_competitors if top_competitors else competitors
+        competitor_count = len(comp_list)
+
+        # ── Build rich feature matrix ──
+        feature_matrix = {}
         for c in comp_list:
             name = c.get("name", c) if isinstance(c, dict) else str(c)
             url = c.get("url", c) if isinstance(c, dict) else str(c)
             seo_score = _extract_auditor_seo_score(auditor_result, url)
+            rep_rating = _extract_reputation_rating(rep_result, name)
+            has_pricing = _has_pricing_data_from_agent(pricing_result, name)
+            has_booking = _has_online_booking(auditor_result)
+
+            # Human-readable SEO interpretation
+            seo_label = "не проверен"
+            if isinstance(seo_score, (int, float)):
+                if seo_score >= 80:
+                    seo_label = "отличный уровень — сайт хорошо находят в поиске"
+                elif seo_score >= 60:
+                    seo_label = "нормальный уровень — можно улучшить"
+                elif seo_score >= 40:
+                    seo_label = "ниже среднего — есть над чем работать"
+                else:
+                    seo_label = "слабый — нужно серьёзно улучшать"
+
+            # Human-readable reputation
+            rep_label = "нет данных"
+            if isinstance(rep_rating, (int, float)) and rep_rating > 0:
+                if rep_rating >= 4.5:
+                    rep_label = f"отличная репутация ({rep_rating}★)"
+                elif rep_rating >= 4.0:
+                    rep_label = f"хорошая репутация ({rep_rating}★)"
+                elif rep_rating >= 3.0:
+                    rep_label = f"средняя репутация ({rep_rating}★)"
+                else:
+                    rep_label = f"слабая репутация ({rep_rating}★)"
+
             feature_matrix[name] = {
                 "url": url,
                 "seo_score": seo_score,
-                "rating": _extract_reputation_rating(rep_result, name),
-                "pricing_visible": _has_pricing_data_from_agent(pricing_result, name),
-                "online_booking": _has_online_booking(auditor_result),
+                "seo_label": seo_label,
+                "rating": rep_rating,
+                "reputation_label": rep_label,
+                "pricing_visible": has_pricing,
+                "online_booking": has_booking,
             }
 
-        # ── Pricing comparison ──
+        # ── Build rich pricing comparison ──
         pricing_comparison = {}
         pricing_profiles = pricing_result.get("pricing_profiles", []) if isinstance(pricing_result, dict) else []
         for c in comp_list:
             name = c.get("name", c) if isinstance(c, dict) else str(c)
             prices = _extract_prices_from_agent(pricing_profiles, name)
+            primary = prices.get("primary_consult")
+            popular = prices.get("popular_service")
             pricing_comparison[name] = {
-                "primary_consult": prices.get("primary_consult"),
-                "popular_service": prices.get("popular_service"),
+                "primary_consult": primary,
+                "popular_service": popular,
+                "price_positioning": _classify_price_positioning(primary, pricing_profiles),
             }
+
+        # ── Competitive highlights (surprising/interesting findings) ──
+        highlights = _extract_competitive_highlights(findings, comp_list)
 
         # ── Positioning map ──
         competitive_intensity = "unknown"
-        competitor_count = len(comp_list) if comp_list else len(competitors)
         if competitor_count >= 10:
-            competitive_intensity = "high"
+            competitive_intensity = "высокая"
         elif competitor_count >= 4:
-            competitive_intensity = "medium"
+            competitive_intensity = "средняя"
         elif competitor_count >= 1:
-            competitive_intensity = "low"
+            competitive_intensity = "низкая"
 
         digital_maturity = "unknown"
-        if isinstance(seo_score, (int, float)):
-            if seo_score >= 80:
-                digital_maturity = "high"
-            elif seo_score >= 50:
-                digital_maturity = "medium"
+        seo_score_val = _extract_auditor_seo_score(auditor_result)
+        if isinstance(seo_score_val, (int, float)):
+            if seo_score_val >= 80:
+                digital_maturity = "высокая"
+            elif seo_score_val >= 50:
+                digital_maturity = "средняя"
             else:
-                digital_maturity = "low"
+                digital_maturity = "низкая"
 
         positioning_map = {
             "competitive_intensity": competitive_intensity,
             "digital_maturity": digital_maturity,
-            "market_size": "medium" if competitor_count >= 5 else "small",
+            "market_size": "средний" if competitor_count >= 5 else "небольшой",
+            "readable": (
+                f"Рынок {niche} {f'в {geo}' if geo else ''}: "
+                f"конкуренция {competitive_intensity}, "
+                f"уровень диджитализации {digital_maturity}. "
+                f"Найдено {competitor_count} конкурентов."
+            ),
         }
 
-        # ── Chat summary ──
-        geo_str = f"в {geo}" if geo else ""
-        chat_summary = (
-            f"Быстрый аудит сайта. "
-            f"Ниша: {niche}{' ' + geo_str if geo_str else ''}. "
-            f"Найдено конкурентов: {competitor_count}. "
-            f"Интенсивность конкуренции: {competitive_intensity}. "
-            f"Потенциал: {wow.get('patients_per_month', '?')} пациентов/мес, "
-            f"первые результаты через {wow.get('time_to_result_weeks', '?')} нед."
+        # ── Build rich narrative ──
+        # Extract reputation data for top competitors
+        rep_scores = rep_result.get("reputation_scores", []) if isinstance(rep_result, dict) else []
+        top_rated = _top_n_by(rep_scores, "avg_rating", 3) if rep_scores else []
+        most_reviewed = _top_n_by(rep_scores, "total_reviews", 3) if rep_scores else []
+
+        # Extract vacancy data
+        vacancy_profiles = vacancies_result.get("vacancy_profiles", []) if isinstance(vacancies_result, dict) else []
+        hiring_leaders = [vp for vp in vacancy_profiles if vp.get("open_vacancies", 0) >= 5]
+        hiring_leaders.sort(key=lambda x: x.get("open_vacancies", 0), reverse=True)
+
+        # Extract finance data
+        finance_profiles = finance_result.get("financial_profiles", []) if isinstance(finance_result, dict) else []
+        revenue_leaders = sorted(
+            [fp for fp in finance_profiles if fp.get("revenue_year")],
+            key=lambda x: x.get("revenue_year", 0), reverse=True
+        )[:3]
+
+        # Extract ecosystem data
+        ecosystem_profiles = ecosystem_result.get("ecosystem_profiles", []) if isinstance(ecosystem_result, dict) else []
+
+        # Extract content insights
+        content_profiles = content_result.get("content_profiles", []) if isinstance(content_result, dict) else []
+
+        # Extract tech insights
+        tech_profiles = tech_result.get("tech_profiles", []) if isinstance(tech_result, dict) else []
+
+        # Build narrative structure
+        patients_str = f"~{wow.get('patients_per_month', '?')}" if wow.get('patients_per_month') else "?"
+        time_str = f"{wow.get('time_to_result_weeks', '?')}" if wow.get('time_to_result_weeks') else "?"
+
+        # Opening hook
+        opening = (
+            f"Проанализировал рынок {niche} {f'в {geo}' if geo else ''}. "
+            f"Нашёл {competitor_count} конкурентов. "
         )
+        if competitive_intensity == "высокая":
+            opening += "Рынок конкурентный, но это хороший знак — значит есть спрос и деньги."
+        elif competitive_intensity == "средняя":
+            opening += "Конкуренция умеренная — хорошее окно возможностей для усиления."
+        else:
+            opening += "Конкуренция низкая — можно занять лидирующую позицию."
+
+        # Key findings as bullet-point observations
+        key_findings = []
+        for h in highlights[:5]:
+            key_findings.append(h)
+
+        if top_rated:
+            best = top_rated[0]
+            key_findings.append(
+                f"Лучшая репутация у «{best.get('name', '?')}» — "
+                f"{best.get('avg_rating', '?')}★ на основе {best.get('total_reviews', '?')} отзывов"
+            )
+
+        if hiring_leaders:
+            hl = hiring_leaders[0]
+            key_findings.append(
+                f"«{hl.get('name', '?')}» активно нанимает — {hl.get('open_vacancies', '?')} открытых вакансий. "
+                f"Это признак роста бизнеса."
+            )
+
+        if revenue_leaders:
+            rl = revenue_leaders[0]
+            rev = rl.get("revenue_year")
+            if rev and rev > 0:
+                rev_str = f"{rev/1_000_000:.1f} млн ₽" if rev >= 1_000_000 else f"{rev:,.0f} ₽".replace(",", " ")
+                key_findings.append(
+                    f"Крупнейший игрок по выручке — «{rl.get('name', '?')}»: {rev_str} в год"
+                )
+
+        # Digital gaps
+        if digital_maturity in ("низкая", "средняя"):
+            key_findings.append(
+                f"Уровень диджитализации рынка — {digital_maturity}. "
+                f"Большинство конкурентов слабо представлены в интернете — это ваш шанс вырваться вперёд."
+            )
+
+        # Unexpected finding
+        unexpected = None
+        # Find competitor with best rating but low SEO (great offline, weak online)
+        for rep_item in rep_scores:
+            name = rep_item.get("name", "")
+            if rep_item.get("avg_rating", 0) >= 4.5:
+                seo = _extract_auditor_seo_score(auditor_result, name if isinstance(name, str) else "")
+                if isinstance(seo, (int, float)) and seo < 60:
+                    unexpected = (
+                        f"У «{name}» отличная репутация ({rep_item.get('avg_rating')}★, "
+                        f"{rep_item.get('total_reviews', '?')} отзывов), но сайт практически невидим в поиске. "
+                        f"При правильном продвижении их пациенты могут стать вашими."
+                    )
+                    break
+        if not unexpected and highlights:
+            unexpected = highlights[0] if highlights else None
+
+        # Client potential
+        if patients_str != "?":
+            potential = (
+                f"Ваш потенциал — {patients_str} пациентов в месяц. "
+                f"Первые результаты через {time_str} недель активного продвижения. "
+            )
+            if revenue_leaders:
+                avg_rev = sum(
+                    fp.get("revenue_year", 0) for fp in revenue_leaders if fp.get("revenue_year")
+                ) / max(len([fp for fp in revenue_leaders if fp.get("revenue_year")]), 1)
+                if avg_rev > 0:
+                    potential += f"Ориентир по выручке — конкуренты делают в среднем {avg_rev/1_000_000:.1f} млн ₽ в год."
+        else:
+            potential = "Нужно больше данных для точной оценки потенциала."
+
+        # Narrative as dict (Hermes can assemble into natural speech)
+        narrative = {
+            "opening": opening,
+            "key_findings": key_findings,
+            "unexpected_finding": unexpected,
+            "client_potential": potential,
+        }
+
+        # ── Rich chat_summary (not a template string anymore) ──
+        geo_str = f"в {geo}" if geo else ""
+        summary_parts = [
+            f"Аудит рынка {niche} {geo_str}".strip(),
+            f"Найдено {competitor_count} конкурентов",
+            f"Интенсивность конкуренции: {competitive_intensity}",
+            f"Уровень диджитализации: {digital_maturity}",
+        ]
+        if patients_str != "?":
+            summary_parts.append(f"Потенциал: {patients_str} пациентов/мес (первые результаты — {time_str} нед.)")
+        if highlights:
+            summary_parts.append(f"Главная находка: {highlights[0][:200]}")
+        chat_summary = ". ".join(summary_parts) + "."
 
         # ── Steal-worthy tactics ──
         steal_worthy = _extract_steal_worthy_tactics(findings)
@@ -645,10 +836,12 @@ class CIOrchestrator(Agent):
         top_rec = _extract_top_recommendation(findings, feature_matrix)
 
         return {
+            "narrative": narrative,
             "chat_summary": chat_summary,
             "feature_matrix": feature_matrix,
             "pricing_comparison": pricing_comparison,
             "positioning_map": positioning_map,
+            "competitive_highlights": highlights,
             "steal_worthy_tactics": steal_worthy,
             "top_recommendation": top_rec,
             "wow": wow,
@@ -1827,3 +2020,96 @@ def _has_online_booking(auditor_result: Dict[str, Any]) -> bool:
 def _extract_prices(auditor_result: Dict[str, Any]) -> Dict[str, Any]:
     """Extract pricing info from ci-auditor result."""
     return {"primary_consult": None, "popular_service": None}
+
+
+def _classify_price_positioning(
+    primary_consult: Any, all_profiles: List[Dict[str, Any]]
+) -> str:
+    """Classify competitor's price positioning relative to market average."""
+    if primary_consult is None:
+        return "неизвестно"
+    if not isinstance(primary_consult, (int, float)):
+        return "неизвестно"
+    others = []
+    for p in (all_profiles or []):
+        prices = p.get("prices", {})
+        val = prices.get("budget_range")
+        if isinstance(val, (int, float)) and val > 0:
+            others.append(val)
+    if not others:
+        return "неизвестно"
+    avg = sum(others) / len(others)
+    ratio = primary_consult / avg if avg > 0 else 1
+    if ratio < 0.8:
+        return "ниже рынка (демпинг?)"
+    elif ratio < 1.2:
+        return "среднерыночная"
+    else:
+        return "выше рынка (премиум)"
+
+
+def _extract_competitive_highlights(
+    findings: Dict[str, Any], comp_list: List[Dict[str, Any]]
+) -> List[str]:
+    """Extract surprising/interesting competitive findings for narrative."""
+    highlights = []
+
+    # Check reputation gaps
+    rep_result = findings.get("phase_4", {}).get("result", {})
+    rep_scores = rep_result.get("reputation_scores", []) if isinstance(rep_result, dict) else []
+    for rs in rep_scores:
+        rating = rs.get("avg_rating", 0)
+        reviews = rs.get("total_reviews", 0)
+        if isinstance(rating, (int, float)) and rating >= 4.7 and isinstance(reviews, (int, float)) and reviews >= 100:
+            highlights.append(
+                f"«{rs.get('name', '?')}» собрал {reviews} отзывов с рейтингом {rating}★ — "
+                f"пациенты довольны и активно делятся мнением"
+            )
+    if len(highlights) > 3:
+        highlights = highlights[:3]
+
+    # Check vacancy surges (growth signals)
+    phase5 = findings.get("phase_5", {})
+    vac_agent = phase5.get("results", {}).get("ci-vacancies", {}) if isinstance(phase5, dict) else {}
+    vac_result = vac_agent.get("result", {}) if isinstance(vac_agent, dict) else {}
+    for vp in vac_result.get("vacancy_profiles", [])[:5]:
+        if vp.get("open_vacancies", 0) >= 10:
+            highlights.append(
+                f"«{vp.get('name', '?')}» нанимает {vp.get('open_vacancies')}+ сотрудников — "
+                f"активно растёт и расширяется"
+            )
+
+    # Check ecosystem strength
+    eco_agent = phase5.get("results", {}).get("ci-ecosystem", {}) if isinstance(phase5, dict) else {}
+    eco_result = eco_agent.get("result", {}) if isinstance(eco_agent, dict) else {}
+    for ep in eco_result.get("ecosystem_profiles", [])[:5]:
+        channels = ep.get("channels_count", 0) or len(ep.get("social_links", []))
+        if channels >= 4:
+            highlights.append(
+                f"«{ep.get('name', '?')}» представлен на {channels} digital-площадках — "
+                f"максимальный охват аудитории"
+            )
+
+    # Check tech leaders
+    tech_agent = phase5.get("results", {}).get("ci-tech", {}) if isinstance(phase5, dict) else {}
+    tech_result = tech_agent.get("result", {}) if isinstance(tech_agent, dict) else {}
+    tech_profiles = tech_result.get("tech_profiles", []) if isinstance(tech_result, dict) else []
+    for tp in tech_profiles[:5]:
+        stack = tp.get("tech_stack", []) if isinstance(tp.get("tech_stack"), list) else []
+        if len(stack) >= 5:
+            highlights.append(
+                f"«{tp.get('name', '?')}» использует {len(stack)} технологий на сайте — "
+                f"технически продвинутая клиника"
+            )
+
+    return highlights[:8]
+
+
+def _top_n_by(items: List[Dict[str, Any]], key: str, n: int) -> List[Dict[str, Any]]:
+    """Return top N items sorted by key (descending), skipping None/missing values."""
+    filtered = [
+        item for item in items
+        if isinstance(item, dict) and item.get(key) is not None
+    ]
+    filtered.sort(key=lambda x: x.get(key, 0), reverse=True)
+    return filtered[:n]

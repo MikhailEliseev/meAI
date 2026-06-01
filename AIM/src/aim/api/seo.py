@@ -272,9 +272,11 @@ async def start_seo_audit(payload: dict):
         return {
             "success": True,
             "chat_summary": result.get("chat_summary", ""),
+            "narrative": result.get("narrative", {}),
             "feature_matrix": result.get("feature_matrix", {}),
             "pricing_comparison": result.get("pricing_comparison", {}),
             "positioning_map": result.get("positioning_map", {}),
+            "competitive_highlights": result.get("competitive_highlights", []),
             "steal_worthy_tactics": result.get("steal_worthy_tactics", []),
             "top_recommendation": result.get("top_recommendation", ""),
             "wow": result.get("wow"),
