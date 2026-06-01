@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 import json
+import os
 import asyncio
 import logging
 
@@ -124,7 +125,7 @@ class CIOrchestrator(Agent):
                 agent = CIAuditorAgent(agent_id=f"{self.agent_id}-auditor", database_url=db_url, vault_path=vault)
             elif agent_name == "ci-reputation":
                 from aim.subagents.competitive_intel.agents.ci_reputation import CIReputationAgent
-                agent = CIReputationAgent(agent_id=f"{self.agent_id}-reputation", database_url=db_url, vault_path=vault)
+                agent = CIReputationAgent(agent_id=f"{self.agent_id}-reputation", database_url=db_url, vault_path=vault, brave_api_key=os.getenv("BRAVE_API_KEY"))
             elif agent_name == "ci-finance":
                 from aim.subagents.competitive_intel.agents.ci_finance import CIFinanceAgent
                 agent = CIFinanceAgent(agent_id=f"{self.agent_id}-finance", database_url=db_url, vault_path=vault)

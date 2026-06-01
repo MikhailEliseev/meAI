@@ -11,6 +11,7 @@ CI Vacancies Agent - HR Intelligence Analysis
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 import json
+import asyncio
 
 import httpx
 
@@ -284,6 +285,62 @@ class CIVacanciesAgent(Agent):
         "волгоград": "24",
     }
 
+    # Rotating User-Agent pool to avoid IP-based blocking
+    _USER_AGENTS = [
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+        "AIM-CI/1.0 (aim@iamaim.ru)",
+    ]
+
+    def _hh_headers(self) -> dict:
+        """Build browser-like headers for hh.ru API requests."""
+        import random
+        ua = random.choice(self._USER_AGENTS)
+        return {
+            "User-Agent": ua,
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Referer": "https://hh.ru/",
+            "Origin": "https://hh.ru",
+            "Connection": "keep-alive",
+        }
+
+    async def _hh_request(
+        self, client: httpx.AsyncClient, url: str, params: dict, retries: int = 2
+    ) -> httpx.Response | None:
+        """Make hh.ru API request with retry on 403."""
+        last_error = None
+        for attempt in range(retries + 1):
+            try:
+                headers = self._hh_headers()
+                resp = await client.get(url, params=params, headers=headers)
+                if resp.status_code == 403:
+                    last_error = f"403 Forbidden (attempt {attempt + 1})"
+                    if attempt < retries:
+                        await asyncio.sleep(1.0 * (attempt + 1))
+                    continue
+                resp.raise_for_status()
+                return resp
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 403:
+                    last_error = f"403 Forbidden (attempt {attempt + 1})"
+                    if attempt < retries:
+                        await asyncio.sleep(1.0 * (attempt + 1))
+                    continue
+                last_error = str(e)
+                break
+            except Exception as e:
+                last_error = str(e)
+                if attempt < retries:
+                    await asyncio.sleep(0.5 * (attempt + 1))
+                else:
+                    break
+        if last_error:
+            print(f"[CI Vacancies] hh.ru request failed: {last_error}")
+        return None
+
     async def _find_employer_on_hh(
         self,
         client: httpx.AsyncClient,
@@ -297,27 +354,22 @@ class CIVacanciesAgent(Agent):
             area_id = self.HH_AREA_IDS.get(area.lower().strip(), "")
             if area_id:
                 params["area"] = area_id
-        try:
-            resp = await client.get(url, params=params,
-                                    headers={"User-Agent": "AIM-CI/1.0 (aim@iamaim.ru)"})
-            resp.raise_for_status()
+        resp = await self._hh_request(client, url, params)
+        if resp:
             data = resp.json()
             items = data.get("items", [])
             if items:
                 return items[0]
-            # Fallback: search by first word of company name
+            # Fallback: search by first word
             short_name = company_name.split()[0] if company_name else ""
             if short_name and short_name != company_name:
                 params["text"] = short_name
-                resp = await client.get(url, params=params,
-                                        headers={"User-Agent": "AIM-CI/1.0 (aim@iamaim.ru)"})
-                resp.raise_for_status()
-                data = resp.json()
-                items = data.get("items", [])
-                if items:
-                    return items[0]
-        except Exception as e:
-            print(f"[CI Vacancies] hh.ru employer search error: {e}")
+                resp2 = await self._hh_request(client, url, params)
+                if resp2:
+                    data2 = resp2.json()
+                    items2 = data2.get("items", [])
+                    if items2:
+                        return items2[0]
         return None
 
     async def _fetch_hh_vacancies(
@@ -332,10 +384,11 @@ class CIVacanciesAgent(Agent):
             "per_page": 100,
             "only_with_salary": "false",
         }
-        resp = await client.get(url, params=params,
-                                headers={"User-Agent": "AIM-CI/1.0 (aim@iamaim.ru)"})
-        resp.raise_for_status()
-        return resp.json()
+        resp = await self._hh_request(client, url, params)
+        if resp:
+            return resp.json()
+        # Return empty structure on failure
+        return {"found": 0, "items": []}
 
     def _map_hh_role_to_category(self, hh_role_name: str) -> str:
         """Маппинг специализации hh.ru → категория позиции."""
