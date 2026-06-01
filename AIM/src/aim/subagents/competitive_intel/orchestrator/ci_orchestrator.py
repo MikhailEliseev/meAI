@@ -439,11 +439,11 @@ class CIOrchestrator(Agent):
 
                     if isinstance(agent_names, list):
                         phase_result = await self._execute_parallel_phase(
-                            phase_num, agent_names, phase_task_data
+                            phase_num, agent_names, phase_task_data, timeout=10.0
                         )
                     else:
                         phase_result = await self._execute_single_phase(
-                            phase_num, agent_names, phase_task_data
+                            phase_num, agent_names, phase_task_data, timeout=10.0
                         )
 
                     findings[f"phase_{phase_num}"] = phase_result
@@ -501,13 +501,16 @@ class CIOrchestrator(Agent):
         self,
         phase_num: int,
         agent_name: str,
-        task_data: Dict[str, Any]
+        task_data: Dict[str, Any],
+        timeout: float = 60.0,
     ) -> Dict[str, Any]:
         """Execute single agent phase via EventBus delegation.
 
         Publishes a task.request Message targeting the agent and waits for the
         ci.agent.completed Event with matching correlation_id. No fallback to
         direct agent.execute_task() — EventBus delegation is the ONLY path.
+
+        timeout: max wait for agent completion (default 60s; use 10s for quick tier).
         """
         agent = await self._get_agent(agent_name)
 
@@ -595,7 +598,7 @@ class CIOrchestrator(Agent):
         self._phase_pending[phase_correlation] = completion_event
 
         try:
-            await asyncio.wait_for(completion_event.wait(), timeout=60.0)
+            await asyncio.wait_for(completion_event.wait(), timeout=timeout)
             # Retrieve matching result from _completed_results
             for key, val in self._completed_results.items():
                 if key.startswith(phase_correlation):
@@ -608,15 +611,15 @@ class CIOrchestrator(Agent):
                 "result": completion_result.get("result", {}),
             }
         except asyncio.TimeoutError:
-            logger.error(
-                "EventBus delegation timeout for %s phase %d after 60s",
-                agent_name, phase_num,
+            logger.warning(
+                "EventBus delegation timeout for %s phase %d after %.0fs",
+                agent_name, phase_num, timeout,
             )
             return {
                 "phase": phase_num,
                 "agent": agent_name,
                 "status": "timeout",
-                "error": f"Agent {agent_name} did not complete within 60s",
+                "error": f"Agent {agent_name} did not complete within {timeout:.0f}s",
                 "result": {},
             }
         finally:
@@ -626,13 +629,14 @@ class CIOrchestrator(Agent):
         self,
         phase_num: int,
         agent_names: List[str],
-        task_data: Dict[str, Any]
+        task_data: Dict[str, Any],
+        timeout: float = 60.0,
     ) -> Dict[str, Any]:
         """Execute multiple agents in parallel (Phase 5)"""
         tasks = []
 
         for agent_name in agent_names:
-            tasks.append(self._execute_single_phase(phase_num, agent_name, task_data))
+            tasks.append(self._execute_single_phase(phase_num, agent_name, task_data, timeout=timeout))
 
         # Execute in parallel with error handling
         results = await asyncio.gather(*tasks, return_exceptions=True)
