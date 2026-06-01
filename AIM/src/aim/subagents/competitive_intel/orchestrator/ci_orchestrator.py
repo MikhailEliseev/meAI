@@ -312,8 +312,9 @@ class CIOrchestrator(Agent):
                         # Use top_for_analysis from Phase 1 if available
                         if "phase_1" in findings and "result" in findings["phase_1"]:
                             phase1_result = findings["phase_1"]["result"]
-                            if "top_for_analysis" in phase1_result:
-                                phase_task_data["competitors"] = phase1_result["top_for_analysis"]
+                            top = phase1_result.get("top_for_analysis", [])
+                            if top:
+                                phase_task_data["competitors"] = top
                             else:
                                 # Fallback: convert URLs to simple objects
                                 phase_task_data["competitors"] = [
@@ -437,8 +438,9 @@ class CIOrchestrator(Agent):
                     else:
                         if "phase_1" in findings and "result" in findings["phase_1"]:
                             phase1_result = findings["phase_1"]["result"]
-                            if "top_for_analysis" in phase1_result:
-                                phase_task_data["competitors"] = phase1_result["top_for_analysis"]
+                            top = phase1_result.get("top_for_analysis", [])
+                            if top:
+                                phase_task_data["competitors"] = top
                             else:
                                 phase_task_data["competitors"] = [
                                     {"name": url, "url": url} for url in competitors_list
