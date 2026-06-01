@@ -234,11 +234,15 @@ class CIVacanciesAgent(Agent):
             if count_salary_by_cat.get(cat, 0) > 0:
                 avg_salaries[cat] = round(total_salary_by_cat[cat] / count_salary_by_cat[cat])
 
-        team_size = employer.get("open_vacancies", 0)
-        if team_size == 0:
-            team_size_ranges = {"small": (5, 15), "medium": (15, 50), "large": (50, 200)}
-            low, high = team_size_ranges.get(size, (15, 50))
-            team_size = (low + high) // 2
+        # Estimate team size from vacancy count (proxy method)
+        if open_vacancies <= 2:
+            team_size = 8
+        elif open_vacancies <= 8:
+            team_size = 25
+        elif open_vacancies <= 30:
+            team_size = 80
+        else:
+            team_size = min(open_vacancies * 2, 500)
 
         vacancy_ratio = open_vacancies / max(team_size, 1)
         if vacancy_ratio > 0.2:
@@ -320,8 +324,8 @@ class CIVacanciesAgent(Agent):
 
             open_count = estimated_count or len(vacancy_urls)
 
+            # Second attempt: broader search if no results
             if open_count == 0:
-                # Second attempt: search without site:hh.ru restriction
                 query2 = f"{company_name} работа вакансии врач косметолог"
                 params2 = {"q": query2, "count": 5, "search_lang": "ru", "country": "RU"}
                 resp2 = await client.get(self.brave_base_url, params=params2, headers=headers)
@@ -333,12 +337,64 @@ class CIVacanciesAgent(Agent):
                     if cm:
                         open_count = max(open_count, int(cm.group(1)))
 
-            print(f"[CI Vacancies] Brave found ~{open_count} vacancies for {company_name}")
+            # Filter vacancies: keep only those where company name (or part) appears in title
+            company_words = [w.lower() for w in re.findall(r'[A-Za-zА-Яа-я]+', company_name) if len(w) > 2]
+            filtered_titles = []
+            for vt in vacancy_titles:
+                title_lower = vt["title"].lower()
+                # Check if at least 2 company words match (or 1 for short names)
+                match_threshold = 1 if len(company_words) <= 2 else 2
+                matches = sum(1 for w in company_words if w in title_lower)
+                if matches >= match_threshold:
+                    filtered_titles.append(vt)
+            if not filtered_titles:
+                filtered_titles = vacancy_titles[:3]
 
-            size = "medium"
-            team_size_ranges = {"small": (5, 15), "medium": (15, 50), "large": (50, 200)}
-            low, high = team_size_ranges.get(size, (15, 50))
-            team_size = (low + high) // 2
+            # Parse salaries from snippets
+            salaries = []
+            for r in web_results:
+                desc = r.get("description", "")
+                salary_match = re.findall(
+                    r'(\d[\d\s]*)\s*(?:000|тыс|тысяч|₽|руб|р\.)',
+                    desc, re.IGNORECASE
+                )
+                for s in salary_match:
+                    try:
+                        amount = int(s.replace(' ', ''))
+                        if 20 <= amount <= 500:
+                            salaries.append(amount)
+                    except ValueError:
+                        pass
+            avg_salary = sum(salaries) // len(salaries) if salaries else None
+
+            # Classify vacancies by category
+            categories = {
+                "врачи": ["врач", "доктор", "хирург", "дерматолог", "косметолог", "терапевт"],
+                "медсёстры": ["медсестра", "медбрат", "сестринск", "медицинская сестра"],
+                "администраторы": ["администратор", "менеджер", "управляющий", "директор"],
+                "маркетинг": ["маркетолог", "smm", "seo", "таргет", "продвижени", "реклам"],
+            }
+            by_category = {cat: 0 for cat in categories}
+            for vt in vacancy_titles:
+                title_lower = vt["title"].lower()
+                for cat, keywords in categories.items():
+                    if any(kw in title_lower for kw in keywords):
+                        by_category[cat] += 1
+                        break
+
+            # Estimate team size from vacancy count (proxy method)
+            if open_count <= 2:
+                size = "small"
+                team_size = 8
+            elif open_count <= 8:
+                size = "medium"
+                team_size = 25
+            elif open_count <= 30:
+                size = "large"
+                team_size = 80
+            else:
+                size = "enterprise"
+                team_size = min(open_count * 2, 500)
 
             vacancy_ratio = open_count / max(team_size, 1)
             if vacancy_ratio > 0.2:
@@ -348,19 +404,21 @@ class CIVacanciesAgent(Agent):
             else:
                 growth_rate = "slow"
 
+            print(f"[CI Vacancies] Brave found ~{open_count} vacancies for {company_name} (size={size}, team={team_size})")
+
             return {
                 "name": company_name,
                 "size": size,
                 "open_vacancies": open_count,
-                "vacancies_list": vacancy_titles[:10],
+                "vacancies_list": filtered_titles[:10],
                 "team_size_estimate": team_size,
-                "vacancies_by_category": {},
-                "avg_salaries": {},
+                "vacancies_by_category": {k: v for k, v in by_category.items() if v > 0},
+                "avg_salaries": {"avg_monthly_rub": avg_salary} if avg_salary else {},
                 "growth_rate": growth_rate,
                 "hiring_active": open_count > 0,
                 "sources": ["brave_search"],
                 "data_source": "brave_search",
-                "confidence": 0.5,
+                "confidence": 0.6 if company_words and filtered_titles else 0.4,
             }
 
         except Exception as e:
@@ -432,11 +490,19 @@ class CIVacanciesAgent(Agent):
             if open_count == 0:
                 return None
 
-            print(f"[CI Vacancies] DuckDuckGo found ~{open_count} vacancies for {company_name}")
-
-            team_size_ranges = {"small": (5, 15), "medium": (15, 50), "large": (50, 200)}
-            low, high = team_size_ranges.get(size, (15, 50))
-            team_size = (low + high) // 2
+            # Estimate team size from vacancy count
+            if open_count <= 2:
+                estimated_size = "small"
+                team_size = 8
+            elif open_count <= 8:
+                estimated_size = "medium"
+                team_size = 25
+            elif open_count <= 30:
+                estimated_size = "large"
+                team_size = 80
+            else:
+                estimated_size = "enterprise"
+                team_size = min(open_count * 2, 500)
 
             vacancy_ratio = open_count / max(team_size, 1)
             if vacancy_ratio > 0.2:
@@ -446,9 +512,11 @@ class CIVacanciesAgent(Agent):
             else:
                 growth_rate = "slow"
 
+            print(f"[CI Vacancies] DuckDuckGo found ~{open_count} vacancies for {company_name} (size={estimated_size}, team={team_size})")
+
             return {
                 "name": company_name,
-                "size": size,
+                "size": estimated_size,
                 "open_vacancies": open_count,
                 "vacancies_list": [],
                 "team_size_estimate": team_size,
