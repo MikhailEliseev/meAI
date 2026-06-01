@@ -61,7 +61,7 @@ class CIScoutAgent(Agent):
 
         # HTTP client для загрузки сайтов
         self._http = httpx.AsyncClient(
-            timeout=30.0,
+            timeout=15.0,
             follow_redirects=True,
             headers={"User-Agent": "Mozilla/5.0 (compatible; AIM-CIScout/1.0)"}
         )
@@ -270,8 +270,8 @@ class CIScoutAgent(Agent):
 
         # Если есть client_url, используем полноценный CompetitorMatcher.find_competitors()
         if client_url:
+            matcher = CompetitorMatcher()
             try:
-                matcher = CompetitorMatcher()
                 matches = await matcher.find_competitors(url=client_url, count=10)
                 for m in matches:
                     p = m.profile
@@ -289,8 +289,11 @@ class CIScoutAgent(Agent):
                 return result
             except Exception as e:
                 print(f"[CI Scout] CompetitorMatcher.find_competitors() failed: {e}")
+            finally:
+                await matcher.close()
 
         # Fallback: используем только _search_candidates() без полного пайплайна
+        matcher = None
         try:
             from aim.services.rusprofile.models import ClientProfile
             from aim.services.competitor_matcher import CompetitorMatcher
@@ -315,6 +318,9 @@ class CIScoutAgent(Agent):
             print(f"[CI Scout] DaData (_search_candidates): нашёл {len(result)}")
         except Exception as e:
             print(f"[CI Scout] DaData _search_candidates failed: {e}")
+        finally:
+            if matcher:
+                await matcher.close()
 
         return result
 
@@ -400,21 +406,20 @@ class CIScoutAgent(Agent):
         """
         Построить профили конкурентов на основе реальных данных с сайтов.
 
+        Запросы выполняются параллельно (asyncio.gather) — общее время
+        ограничено самым медленным сайтом, а не суммой всех.
+
         Args:
             competitors: список [{name, url, source}, ...]
             niche: ниша
             geo: город
         """
-        profiles = []
-
-        for comp in competitors[:15]:  # Максимум 15 профилей
+        async def _build_one(comp: Dict[str, str]) -> Dict[str, Any]:
             try:
-                profile = await self._build_single_profile(comp, niche, geo)
-                profiles.append(profile)
+                return await self._build_single_profile(comp, niche, geo)
             except Exception as e:
                 print(f"[CI Scout] Failed to build profile for {comp.get('name', '?')}: {e}")
-                # Базовый профиль из того что есть
-                profiles.append({
+                return {
                     "name": comp.get("name", "Unknown"),
                     "url": comp.get("url", ""),
                     "geo": geo,
@@ -427,10 +432,13 @@ class CIScoutAgent(Agent):
                     "ad_presence": "unknown",
                     "differentiators": [],
                     "notes": "Не удалось загрузить сайт"
-                })
+                }
+
+        tasks = [_build_one(comp) for comp in competitors[:15]]
+        profiles = await asyncio.gather(*tasks)
 
         print(f"[CI Scout] Построено {len(profiles)} профилей конкурентов")
-        return profiles
+        return list(profiles)
 
     async def _build_single_profile(
         self,
