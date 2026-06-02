@@ -99,6 +99,9 @@ class AnalyzeCompetitorsRequest(BaseModel):
     city: str = Field(..., description="Client city")
     services: list[str] = Field(..., description="Client services list")
     competitors: list[CompetitorJson] = Field(..., description="3 confirmed competitors")
+    tier: str = Field("quick", description="Analysis tier: quick or deep")
+    target_audience: str = Field("", description="Target audience description")
+    price_segment: str = Field("mid", description="Price segment: economy, mid, premium")
     client_revenue: Optional[int] = Field(None, description="Estimated client annual revenue (RUB)")
     client_rating: Optional[float] = Field(None, description="Client rating if known")
 
@@ -225,9 +228,9 @@ async def analyze_competitors(body: AnalyzeCompetitorsRequest) -> AnalyzeCompeti
             "competitors": named_urls,
             "niche": body.specialization,
             "geo": body.city,
-            "tier": "quick",
-            "target_audience": "",
-            "price_segment": "mid",
+            "tier": body.tier,
+            "target_audience": body.target_audience or "",
+            "price_segment": body.price_segment or "mid",
         })
 
         # Map dict result to backwards-compatible response fields.

@@ -305,16 +305,16 @@ class CIAuditorAgent(Agent):
     ) -> dict | None:
         """Fetch Google PageSpeed Insights data with rate limiting.
 
-        Google PageSpeed API free tier: 1 query/second, 400 queries/hour.
-        We add 2.0s delay between calls to avoid 429 errors.
+        Google PageSpeed API free tier: 1 QPS, 400 queries/hour.
+        We use 8s delay to safely stay under the limit with multiple competitors.
         """
         try:
-            # Rate limiting: 2s delay between PageSpeed API calls
+            # Rate limiting: 8s delay between PageSpeed API calls (safe margin for free tier)
             if not hasattr(self, "_last_pagespeed_call"):
                 self._last_pagespeed_call = 0.0
             elapsed = time.time() - self._last_pagespeed_call
-            if elapsed < 2.0:
-                await asyncio.sleep(2.0 - elapsed)
+            if elapsed < 8.0:
+                await asyncio.sleep(8.0 - elapsed)
             self._last_pagespeed_call = time.time()
 
             params = {
@@ -328,8 +328,8 @@ class CIAuditorAgent(Agent):
             ps_url = self.pagespeed_url
             resp = await client.get(ps_url, params=params, timeout=httpx.Timeout(25.0))
             if resp.status_code == 429:
-                print(f"[CI Auditor] PageSpeed 429 — waiting 5s before retry")
-                await asyncio.sleep(5.0)
+                print(f"[CI Auditor] PageSpeed 429 — waiting 15s before retry")
+                await asyncio.sleep(15.0)
                 resp = await client.get(ps_url, params=params, timeout=httpx.Timeout(25.0))
             resp.raise_for_status()
             return resp.json()

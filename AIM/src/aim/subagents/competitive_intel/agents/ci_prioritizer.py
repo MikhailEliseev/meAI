@@ -155,77 +155,180 @@ class CIPrioritizerAgent(Agent):
 
         all_insights = []
 
-        # Phase 1: Scout insights
+        # ── Phase 1: Scout ──────────────────────────────────────────
+        # insights is a DICT: {total_players, fragmentation, dominant_positioning,
+        #                      digitalization_level, key_gaps: [str, ...]}
         scout_result = _unwrap("phase_1")
-        if scout_result.get("insights"):
-            for insight in scout_result["insights"]:
+        scout_insights = scout_result.get("insights", {})
+        if isinstance(scout_insights, dict):
+            # Market structure insights
+            for field, label in [
+                ("fragmentation", "Фрагментация рынка"),
+                ("digitalization_level", "Уровень диджитализации"),
+                ("dominant_positioning", "Доминирующее позиционирование"),
+            ]:
+                val = scout_insights.get(field)
+                if val:
+                    all_insights.append({
+                        "source": "Scout",
+                        "phase": 1,
+                        "type": "market_structure",
+                        "title": label,
+                        "description": f"{label}: {val}",
+                        "value": val,
+                    })
+            # Key gaps → individual insights
+            for gap in scout_insights.get("key_gaps", []):
                 all_insights.append({
                     "source": "Scout",
                     "phase": 1,
-                    "type": insight.get("type", "general"),
-                    "title": insight.get("title", ""),
-                    "description": insight.get("description", ""),
-                    "value": insight.get("value")
+                    "type": "market_gap",
+                    "title": gap if isinstance(gap, str) else gap.get("title", str(gap)),
+                    "description": gap if isinstance(gap, str) else gap.get("description", ""),
+                    "value": None,
                 })
 
-        # Phase 2-3: Auditor insights
+        # ── Phase 2-3: Auditor ──────────────────────────────────────
+        # insights is a DICT: {market_average, dimension_averages, best_competitor,
+        #                      worst_competitor, strongest_dimension, weakest_dimension}
+        # gaps is a LIST: [{type, dimension, avg_score, opportunity, priority}, ...]
         auditor_result = _unwrap("phase_2")
-        if auditor_result.get("insights"):
-            for insight in auditor_result["insights"]:
+        auditor_insights = auditor_result.get("insights", {})
+        if isinstance(auditor_insights, dict):
+            strongest = auditor_insights.get("strongest_dimension")
+            weakest = auditor_insights.get("weakest_dimension")
+            market_avg = auditor_insights.get("market_average")
+            if strongest:
                 all_insights.append({
                     "source": "Auditor",
                     "phase": 2,
-                    "type": "audit",
-                    "title": insight.get("title", ""),
-                    "description": insight.get("description", ""),
-                    "value": insight.get("value")
+                    "type": "competitive_advantage",
+                    "title": f"Сильнейшее измерение рынка: {strongest}",
+                    "description": f"Рынок силён в измерении «{strongest}». Средняя оценка: {market_avg}/100.",
+                    "value": strongest,
                 })
+            if weakest:
+                all_insights.append({
+                    "source": "Auditor",
+                    "phase": 2,
+                    "type": "market_opportunity",
+                    "title": f"Слабейшее измерение рынка: {weakest}",
+                    "description": f"Рынок слаб в измерении «{weakest}». Это ключевая возможность для дифференциации.",
+                    "value": weakest,
+                })
+        # Gaps list (already structured)
+        for gap in auditor_result.get("gaps", []):
+            all_insights.append({
+                "source": "Auditor",
+                "phase": 2,
+                "type": gap.get("type", "audit_gap"),
+                "title": gap.get("dimension", ""),
+                "description": gap.get("opportunity", ""),
+                "value": gap.get("priority", "medium"),
+            })
 
-        # Phase 4: Reputation insights
+        # ── Phase 4: Reputation ─────────────────────────────────────
+        # insights is a DICT: {market_avg_reputation, market_avg_sentiment,
+        #                      best_reputation, worst_reputation, reputation_spread}
+        # risks_opportunities: {risks: [...], opportunities: [...]}
         reputation_result = _unwrap("phase_4")
-        if reputation_result.get("insights"):
-            for insight in reputation_result["insights"]:
+        rep_insights = reputation_result.get("insights", {})
+        if isinstance(rep_insights, dict):
+            best_rep = rep_insights.get("best_reputation", {})
+            worst_rep = rep_insights.get("worst_reputation", {})
+            market_avg_rep = rep_insights.get("market_avg_reputation")
+            if isinstance(best_rep, dict) and best_rep.get("name"):
                 all_insights.append({
                     "source": "Reputation",
                     "phase": 4,
-                    "type": "reputation",
-                    "title": insight.get("title", ""),
-                    "description": insight.get("description", ""),
-                    "value": insight.get("value")
+                    "type": "competitive_advantage",
+                    "title": f"Лучшая репутация: {best_rep.get('name')}",
+                    "description": f"Конкурент с лучшей репутацией: {best_rep.get('name')} "
+                                   f"(score: {best_rep.get('score')}, grade: {best_rep.get('grade')}). "
+                                   f"Средняя репутация рынка: {market_avg_rep}.",
+                    "value": best_rep.get("score"),
                 })
+            if isinstance(worst_rep, dict) and worst_rep.get("name"):
+                all_insights.append({
+                    "source": "Reputation",
+                    "phase": 4,
+                    "type": "market_opportunity",
+                    "title": f"Худшая репутация: {worst_rep.get('name')}",
+                    "description": f"Конкурент с худшей репутацией: {worst_rep.get('name')} "
+                                   f"(score: {worst_rep.get('score')}). Возможность обойти.",
+                    "value": worst_rep.get("score"),
+                })
+        # Risks & opportunities
+        ro = reputation_result.get("risks_opportunities", {})
+        for opp in ro.get("opportunities", []):
+            all_insights.append({
+                "source": "Reputation",
+                "phase": 4,
+                "type": "market_opportunity",
+                "title": opp if isinstance(opp, str) else opp.get("title", str(opp)),
+                "description": opp if isinstance(opp, str) else opp.get("description", ""),
+                "value": None,
+            })
+        for risk in ro.get("risks", []):
+            all_insights.append({
+                "source": "Reputation",
+                "phase": 4,
+                "type": "risk",
+                "title": risk if isinstance(risk, str) else risk.get("title", str(risk)),
+                "description": risk if isinstance(risk, str) else risk.get("description", ""),
+                "value": "high",
+            })
 
-        # Phase 5: Parallel agents insights
+        # ── Phase 5: Parallel agents ─────────────────────────────────
+        # Each agent's result has insights dict with key_findings list
         phase5_raw = _unwrap("phase_5")
         if isinstance(phase5_raw, dict):
-            for agent_name, agent_result in phase5_raw.get("results", {}).items():
-                if agent_result.get("insights"):
-                    insights = agent_result["insights"]
-                    if isinstance(insights, dict):
-                        for key, value in insights.items():
-                            if key == "key_findings" and isinstance(value, list):
-                                for finding in value:
-                                    all_insights.append({
-                                        "source": agent_name,
-                                        "phase": 5,
-                                        "type": key,
-                                        "title": finding,
-                                        "description": finding,
-                                        "value": None
-                                    })
+            for agent_name, agent_wrapper in phase5_raw.get("results", {}).items():
+                # Unwrap agent result if wrapped
+                agent_result = agent_wrapper
+                if isinstance(agent_wrapper, dict) and "result" in agent_wrapper:
+                    agent_result = agent_wrapper["result"]
+                insights = agent_result.get("insights", {})
+                if isinstance(insights, dict):
+                    for key, value in insights.items():
+                        if key == "key_findings" and isinstance(value, list):
+                            for finding in value:
+                                all_insights.append({
+                                    "source": agent_name,
+                                    "phase": 5,
+                                    "type": "finding",
+                                    "title": finding if isinstance(finding, str) else finding.get("title", str(finding)),
+                                    "description": finding if isinstance(finding, str) else finding.get("description", ""),
+                                    "value": None,
+                                })
+                        elif key in ("opportunities", "gap_analysis") and isinstance(value, list):
+                            for item in value:
+                                all_insights.append({
+                                    "source": agent_name,
+                                    "phase": 5,
+                                    "type": "opportunity",
+                                    "title": item if isinstance(item, str) else item.get("title", str(item)),
+                                    "description": item if isinstance(item, str) else item.get("description", ""),
+                                    "value": None,
+                                })
 
-        # Phase 7-8: Strategist insights
+        # ── Phase 7-8: Strategist ────────────────────────────────────
+        # recommendations is a LIST of dicts: [{priority, category, recommendation,
+        #                                       action, impact, effort}, ...]
         strategist_result = _unwrap("phase_7")
-        if strategist_result.get("recommendations"):
-            for rec in strategist_result["recommendations"]:
-                all_insights.append({
-                    "source": "Strategist",
-                    "phase": 7,
-                    "type": "recommendation",
-                    "title": rec.get("recommendation", rec.get("title", "")),
-                    "description": rec.get("action", rec.get("description", "")),
-                    "value": rec.get("priority")
-                })
+        for rec in strategist_result.get("recommendations", []):
+            all_insights.append({
+                "source": "Strategist",
+                "phase": 7,
+                "type": "recommendation",
+                "title": rec.get("recommendation", rec.get("title", "")),
+                "description": rec.get("action", rec.get("description", "")),
+                "value": rec.get("priority"),
+                "impact_hint": rec.get("impact"),
+                "effort_hint": rec.get("effort"),
+            })
 
+        print(f"[CI Prioritizer] Всего собрано инсайтов: {len(all_insights)}")
         return all_insights
 
     async def _score_insights(
@@ -276,19 +379,29 @@ class CIPrioritizerAgent(Agent):
 
     def _calculate_impact(self, insight: Dict[str, Any], goals: List[str]) -> int:
         """Рассчитать impact (1-10)."""
-        # Базовый impact по типу
+        # Use strategist's hint if available
+        if insight.get("impact_hint"):
+            hint = insight["impact_hint"]
+            if isinstance(hint, str):
+                return {"high": 8, "medium": 5, "low": 3}.get(hint.lower(), 5)
+            if isinstance(hint, (int, float)):
+                return min(10, max(1, int(hint)))
+
         impact_by_type = {
             "competitive_advantage": 9,
             "market_opportunity": 8,
             "recommendation": 7,
-            "audit": 6,
-            "reputation": 5,
-            "general": 4
+            "risk": 7,
+            "market_gap": 7,
+            "opportunity": 6,
+            "finding": 5,
+            "market_structure": 4,
+            "audit_gap": 6,
+            "general": 4,
         }
 
         base_impact = impact_by_type.get(insight.get("type", "general"), 5)
 
-        # Бонус если связано с бизнес-целями
         if goals and any(goal.lower() in insight.get("description", "").lower() for goal in goals):
             base_impact = min(10, base_impact + 2)
 
@@ -296,7 +409,14 @@ class CIPrioritizerAgent(Agent):
 
     def _calculate_effort(self, insight: Dict[str, Any]) -> int:
         """Рассчитать effort (1-10)."""
-        # Эвристика: чем сложнее источник, тем больше effort
+        # Use strategist's hint if available
+        if insight.get("effort_hint"):
+            hint = insight["effort_hint"]
+            if isinstance(hint, str):
+                return {"high": 7, "medium": 4, "low": 2}.get(hint.lower(), 4)
+            if isinstance(hint, (int, float)):
+                return min(10, max(1, int(hint)))
+
         effort_by_source = {
             "Scout": 3,
             "Auditor": 5,
@@ -304,21 +424,27 @@ class CIPrioritizerAgent(Agent):
             "Strategist": 7,
             "ci-finance": 6,
             "ci-tech": 5,
-            "ci-content": 4
+            "ci-content": 4,
+            "ci-pricing": 4,
+            "ci-vacancies": 3,
+            "ci-site-crawler": 4,
         }
 
         return effort_by_source.get(insight.get("source", ""), 5)
 
     def _calculate_urgency(self, insight: Dict[str, Any]) -> int:
         """Рассчитать urgency (1-10)."""
-        # Эвристика: конкурентные инсайты более срочные
         urgency_by_type = {
             "competitive_advantage": 9,
             "market_opportunity": 8,
             "recommendation": 7,
-            "reputation": 6,
-            "audit": 5,
-            "general": 4
+            "risk": 8,
+            "market_gap": 7,
+            "opportunity": 6,
+            "finding": 5,
+            "market_structure": 3,
+            "audit_gap": 6,
+            "general": 4,
         }
 
         return urgency_by_type.get(insight.get("type", "general"), 5)
