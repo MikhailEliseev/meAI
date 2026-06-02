@@ -105,8 +105,13 @@ _RUSSIAN_CITIES: list[str] = [
     "Сочи", "Смоленск", "Калуга", "Владикавказ", "Волжский", "Череповец",
     "Саранск", "Вологда", "Якутск", "Курган", "Орёл", "Тамбов", "Псков",
     "Сургут", "Нижневартовск", "Нижний Тагил", "Архангельск", "Мурманск",
-    "Севастополь", "Симферополь", "Зеленоград",
+    "Севастополь", "Симферополь",
 ]
+
+# Moscow administrative districts that should normalize to Москва
+_CITY_CANONICAL: dict[str, str] = {
+    "Зеленоград": "Москва",
+}
 
 _CITY_PATTERNS: list[tuple[re.Pattern, str]] = []
 
@@ -178,7 +183,6 @@ _CITY_DECLENSIONS: dict[str, list[str]] = {
     "Воронеж": ["Воронеже"],
     "Нижневартовск": ["Нижневартовске"],
     "Волжский": ["Волжском"],
-    "Зеленоград": ["Зеленограде", "Зеленограда"],
 }
 
 
@@ -243,6 +247,7 @@ async def extract_client_profile(url: str) -> dict:
     site_structure = _analyze_site_structure(html)
     specialization = _detect_specialization(text_lower, url, html, site_structure)
     city = _extract_city_from_schema(html) or _detect_city(text) or _extract_city_from_url(url)
+    city = _CITY_CANONICAL.get(city, city)  # normalize districts → city
     company_name = _extract_company_name(html)
     inn = _extract_inn(html)
 
