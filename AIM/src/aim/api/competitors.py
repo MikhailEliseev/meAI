@@ -124,8 +124,8 @@ async def find_competitors(body: FindCompetitorsRequest) -> FindCompetitorsRespo
     Runs service extractor → DaData search → scoring → top-3.
     Returns competitor profiles with match scores and reasons.
     """
+    matcher = CompetitorMatcher()
     try:
-        matcher = CompetitorMatcher()
         matches = await matcher.find_competitors(
             url=body.url, count=body.count, named_competitors=body.named_competitors,
         )
@@ -149,6 +149,8 @@ async def find_competitors(body: FindCompetitorsRequest) -> FindCompetitorsRespo
             competitors=[],
             error=str(e),
         )
+    finally:
+        await matcher.close()
 
 
 @router.post("/save", response_model=SaveCompetitorsResponse, status_code=status.HTTP_200_OK)

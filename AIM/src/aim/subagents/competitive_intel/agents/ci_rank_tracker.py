@@ -21,6 +21,41 @@ import structlog
 from meai.agents.base_agent import Agent, Task, TaskResult
 
 
+# Map Latin transliterations to Russian niche names
+_NICHE_TRANSLIT = {
+    "stomatologiya": "стоматология",
+    "kosmetologiya": "косметология",
+    "dermatologiya": "дерматология",
+    "ginekologiya": "гинекология",
+    "urologiya": "урология",
+    "oftalmologiya": "офтальмология",
+    "flebologiya": "флебология",
+    "proktologiya": "проктология",
+    "nevrologiya": "неврология",
+    "kardiologiya": "кардиология",
+    "allergologiya": "аллергология",
+    "endokrinologiya": "эндокринология",
+    "gastroenterologiya": "гастроэнтерология",
+    "otolaringologiya": "отоларингология",
+    "hirurgiya": "хирургия",
+    "plasticheskaya-hirurgiya": "пластическая хирургия",
+    "ortopediya": "ортопедия",
+    "travmatologiya": "травматология",
+    "reabilitologiya": "реабилитология",
+    "rentgenologiya": "рентгенология",
+    "mammologiya": "маммология",
+    "reproduktologiya": "репродуктология",
+    "pediatriya": "педиатрия",
+    "terapiya": "терапия",
+}
+
+
+def _normalize_niche(niche: str) -> str:
+    """Convert Latin transliteration to Russian if needed."""
+    lower = niche.lower().strip()
+    return _NICHE_TRANSLIT.get(lower, niche)
+
+
 @dataclass
 class KeywordPosition:
     """Keyword position data."""
@@ -568,6 +603,8 @@ class CIRankTrackerAgent(Agent):
                 niche = task.payload.get("niche", "")
                 geo = task.payload.get("geo", "")
                 if niche:
+                    # Normalize Latin transliterations to Russian
+                    niche = _normalize_niche(niche)
                     keywords = [
                         f"{niche} {geo}",
                         f"клиника {niche} {geo}",

@@ -90,7 +90,7 @@ class CIOrchestrator(Agent):
             1: 420.0,   # ci-scout: Apify + DaData fallback + parallel HTTP profile building (15 sites × 15s)
             2: 90.0,    # ci-auditor: httpx scraping (technical + content)
             3: 90.0,    # ci-auditor: competitive comparison
-            4: 90.0,    # ci-reputation: multi-platform review scraping
+            4: 120.0,   # ci-reputation: multi-platform review scraping
             5: 300.0,   # 9 parallel agents: ci-site-crawler needs time to crawl 10 sites
             6: 60.0,    # ci-factchecker: cross-reference validation
             7: 60.0,    # ci-strategist: synthesis + positioning
@@ -332,6 +332,9 @@ class CIOrchestrator(Agent):
                     phase_task_data["correlation_id"] = correlation_id
                     # Pass the target URL as our_url for backlink comparison
                     phase_task_data["our_url"] = url
+                    # Pass accumulated phase results so downstream agents
+                    # (strategist, prioritizer) can extract insights
+                    phase_task_data["previous_results"] = {k: v for k, v in findings.items()}
 
                     # Phase 1 uses initial URLs, Phase 2+ uses results from Phase 1
                     if phase_num == 1:
@@ -469,6 +472,7 @@ class CIOrchestrator(Agent):
 
                     phase_task_data = task_data.copy()
                     phase_task_data["correlation_id"] = correlation_id
+                    phase_task_data["previous_results"] = {k: v for k, v in findings.items()}
 
                     # Quick tier: skip ci-scout when only client URL (no competitors to discover)
                     # Apify Google Maps scraper takes 30-60s — too slow for quick tier.
@@ -918,6 +922,7 @@ class CIOrchestrator(Agent):
         )
 
         # Set task payload
+        prev = task_data.get("previous_results", {})
         task.payload = {
             "niche": task_data.get("niche", ""),
             "geo": task_data.get("geo", ""),
@@ -926,7 +931,12 @@ class CIOrchestrator(Agent):
             "competitors": task_data.get("competitors", []),
             "our_url": task_data.get("our_url", ""),
             "url": task_data.get("url", ""),
+            "previous_results": prev,
         }
+        logger.info(
+            "Phase %d (%s): previous_results has %d keys: %s",
+            phase_num, agent_name, len(prev), list(prev.keys()),
+        )
 
         correlation_id = task_data.get("correlation_id", task_data.get("task_id", "unknown"))
         phase_correlation = f"{correlation_id}-{phase_num}"

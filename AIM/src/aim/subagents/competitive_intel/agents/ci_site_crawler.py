@@ -234,7 +234,19 @@ class CISiteCrawlerAgent(Agent):
 
                 try:
                     resp = await client.get(
-                        url, headers={"User-Agent": "AIM-CI/1.0"}
+                        url,
+                        headers={
+                            "User-Agent": (
+                                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                                "Chrome/131.0.0.0 Safari/537.36"
+                            ),
+                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                            "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+                            "Accept-Encoding": "gzip, deflate, br",
+                            "Cache-Control": "no-cache",
+                            "Pragma": "no-cache",
+                        }
                     )
                     resp.raise_for_status()
                     html = resp.text
@@ -261,6 +273,9 @@ class CISiteCrawlerAgent(Agent):
                         for link in soup.find_all("a", href=True):
                             href = link.get("href", "")
                             full_url = urljoin(final_url, href)
+                            # Deduplicate consecutive path segments
+                            # (e.g., /uslugi/uslugi/stomatologiya → /uslugi/stomatologiya)
+                            full_url = self._normalize_url_path(full_url)
                             parsed = urlparse(full_url)
                             # Only same domain, skip anchors/js/mailto
                             if (
@@ -292,6 +307,26 @@ class CISiteCrawlerAgent(Agent):
             if len(visited) >= max_pages:
                 result["note"] = f"Capped at {max_pages} pages (priority crawl: key pages first, {remaining} URLs skipped)"
         return result
+
+    def _normalize_url_path(self, url: str) -> str:
+        """Remove duplicate consecutive path segments from a URL.
+
+        Example: https://clinic.ru/uslugi/uslugi/stomatologiya
+              → https://clinic.ru/uslugi/stomatologiya
+        """
+        parsed = urlparse(url)
+        parts = parsed.path.split('/')
+        deduped = []
+        for part in parts:
+            if deduped and deduped[-1] == part:
+                continue
+            deduped.append(part)
+        if len(deduped) != len(parts):
+            result = f"{parsed.scheme}://{parsed.netloc}{'/'.join(deduped)}"
+            if parsed.query:
+                result += f"?{parsed.query}"
+            return result
+        return url
 
     def _classify_page_url(self, url: str) -> str:
         """Classify page by URL pattern."""

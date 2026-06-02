@@ -39,6 +39,7 @@ services:
       dockerfile: AIM/Dockerfile
     image: aim:latest
     container_name: aim-app
+    init: true
     restart: unless-stopped
     expose:
       - "8000"

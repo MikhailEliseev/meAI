@@ -105,6 +105,7 @@ class CIScoutAgent(Agent):
             "chudostom.ru", "www.chudostom.ru",
             "100zubov.ru", "www.100zubov.ru",
             "top10clinic.ru", "www.top10clinic.ru",
+            "mos.ru", "www.mos.ru",
         }
 
     async def execute_task(self, task: Task) -> TaskResult:
@@ -425,7 +426,8 @@ class CIScoutAgent(Agent):
     def _extract_domain(self, url: str) -> str:
         """Извлечь домен из URL."""
         match = re.search(r'https?://([^/]+)', url)
-        return match.group(1) if match else url
+        domain = match.group(1) if match else url
+        return re.sub(r'^www\.', '', domain)
 
     def _clean_company_name(self, title: str) -> str:
         """Очистить название компании из заголовка поиска."""
@@ -524,7 +526,15 @@ class CIScoutAgent(Agent):
             soup = BeautifulSoup(html, "lxml")
 
             # Title + meta description
-            profile["title"] = soup.title.text.strip()[:200] if soup.title else name
+            page_title = soup.title.text.strip()[:200] if soup.title else ""
+            profile["title"] = page_title
+
+            # Use homepage title to refine name (SERP titles often have noise)
+            if page_title and len(page_title) < len(name) * 2:
+                cleaned_title = self._clean_company_name(page_title)
+                if cleaned_title and len(cleaned_title) >= 3:
+                    name = cleaned_title
+                    profile["name"] = cleaned_title
             meta_desc = soup.find("meta", attrs={"name": "description"})
             profile["meta_description"] = meta_desc["content"][:300] if meta_desc else ""
 
@@ -718,32 +728,42 @@ class CIScoutAgent(Agent):
             return item
 
         top = []
+        seen_names = set()
+
+        def _add_item(name: str, cluster: str, reason: str) -> bool:
+            if name in seen_names:
+                return False
+            seen_names.add(name)
+            top.append(_build_item(name, cluster, reason))
+            return True
 
         # Все прямые конкуренты
         for name in clusters["direct"]:
-            top.append(_build_item(name, "direct", "Прямой конкурент (тот же ценовой сегмент)"))
+            if len(top) >= 10:
+                break
+            _add_item(name, "direct", "Прямой конкурент (тот же ценовой сегмент)")
 
         # Минимум 1 лидер
-        if clusters["leader"]:
-            top.append(_build_item(clusters["leader"][0], "leader",
-                                   "Лидер рынка (высокий рейтинг, много отзывов)"))
+        if clusters["leader"] and len(top) < 10:
+            _add_item(clusters["leader"][0], "leader",
+                      "Лидер рынка (высокий рейтинг, много отзывов)")
 
         # Минимум 1 нишевой
-        if clusters["niche"]:
-            top.append(_build_item(clusters["niche"][0], "niche",
-                                   "Нишевой игрок (узкая специализация)"))
+        if clusters["niche"] and len(top) < 10:
+            _add_item(clusters["niche"][0], "niche",
+                      "Нишевой игрок (узкая специализация)")
 
         # Добавить emerging если есть место
         if len(top) < 10 and clusters["emerging"]:
-            top.append(_build_item(clusters["emerging"][0], "emerging",
-                                   "Новый игрок (активно растёт)"))
+            _add_item(clusters["emerging"][0], "emerging",
+                      "Новый игрок (активно растёт)")
 
         # Fill remaining slots from indirect cluster
         for name in clusters.get("indirect", []):
             if len(top) >= 10:
                 break
-            top.append(_build_item(name, "indirect",
-                                   "Косвенный конкурент (смежная услуга или другая ЦА)"))
+            _add_item(name, "indirect",
+                      "Косвенный конкурент (смежная услуга или другая ЦА)")
 
         print(f"[CI Scout] Выбрано {len(top)} конкурентов для глубокого анализа")
 
