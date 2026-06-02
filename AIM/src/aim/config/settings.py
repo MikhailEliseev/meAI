@@ -53,6 +53,7 @@ class APISettings(BaseSettings):
     )
     serpapi_api_key: Optional[str] = Field(
         default=None,
+        validation_alias="SERPAPI_KEY",
         description="SerpAPI key for real-time SERP and web search",
         min_length=10,
     )
