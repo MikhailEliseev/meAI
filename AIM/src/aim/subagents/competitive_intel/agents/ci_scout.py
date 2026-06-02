@@ -209,7 +209,7 @@ class CIScoutAgent(Agent):
                 try:
                     results = await self._serpapi_search(query)
                     for r in results:
-                        url = r.get("url", "")
+                        url = r.get("link") or r.get("url", "")
                         name = r.get("title", "")
                         if url and name and "http" in url:
                             domain = self._extract_domain(url)
