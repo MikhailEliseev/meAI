@@ -730,8 +730,8 @@ class CIOrchestrator(Agent):
 
         # Extract vacancy data
         vacancy_profiles = vacancies_result.get("vacancy_profiles", []) if isinstance(vacancies_result, dict) else []
-        hiring_leaders = [vp for vp in vacancy_profiles if vp.get("open_vacancies", 0) >= 5]
-        hiring_leaders.sort(key=lambda x: x.get("open_vacancies", 0), reverse=True)
+        hiring_leaders = [vp for vp in vacancy_profiles if (vp.get("open_vacancies") or 0) >= 5]
+        hiring_leaders.sort(key=lambda x: x.get("open_vacancies") or 0, reverse=True)
 
         # Extract finance data
         finance_profiles = finance_result.get("financial_profiles", []) if isinstance(finance_result, dict) else []
@@ -805,7 +805,7 @@ class CIOrchestrator(Agent):
         # Find competitor with best rating but low SEO (great offline, weak online)
         for rep_item in rep_scores:
             name = rep_item.get("name", "")
-            if rep_item.get("avg_rating", 0) >= 4.5:
+            if (rep_item.get("avg_rating") or 0) >= 4.5:
                 seo = _extract_auditor_seo_score(auditor_result, name if isinstance(name, str) else "")
                 if isinstance(seo, (int, float)) and seo < 60:
                     unexpected = (
@@ -2118,7 +2118,7 @@ def _extract_competitive_highlights(
     vac_agent = phase5.get("results", {}).get("ci-vacancies", {}) if isinstance(phase5, dict) else {}
     vac_result = vac_agent.get("result", {}) if isinstance(vac_agent, dict) else {}
     for vp in vac_result.get("vacancy_profiles", [])[:5]:
-        if vp.get("open_vacancies", 0) >= 10:
+        if (vp.get("open_vacancies") or 0) >= 10:
             highlights.append(
                 f"«{vp.get('name', '?')}» нанимает {vp.get('open_vacancies')}+ сотрудников — "
                 f"активно растёт и расширяется"
