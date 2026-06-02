@@ -36,7 +36,8 @@ def register_all_tools() -> None:
     - get_lead_pipeline    -> GET  http://app:8000/api/sales/pipeline
     - update_knowledge     -> PUT  http://app:8000/api/sales/knowledge/update
 
-    Pre-Sale tools (4):
+    Pre-Sale tools (5):
+    - run_prescan          -> POST http://app:8000/api/presale/prescan
     - find_competitors     -> POST http://app:8000/api/competitors/find
     - present_competitors  -> POST http://app:8000/api/competitors/save
     - run_ci_analysis      -> POST http://app:8000/api/competitors/analyze
@@ -55,13 +56,14 @@ def register_all_tools() -> None:
     from . import escalate_to_manager    # noqa: F401
     from . import get_lead_pipeline      # noqa: F401
     from . import update_knowledge       # noqa: F401
+    from . import run_prescan          # noqa: F401
     from . import find_competitors       # noqa: F401
     from . import present_competitors    # noqa: F401
     from . import run_ci_analysis        # noqa: F401
     from . import find_company_financials # noqa: F401
     from . import send_telegram_file     # noqa: F401
 
-    logger.info("Registered 15 AIM operations tools in toolset 'aim-operations'")
+    logger.info("Registered 16 AIM operations tools in toolset 'aim-operations'")
 
 
 def register_debug_tools() -> None:
