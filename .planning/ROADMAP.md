@@ -411,10 +411,30 @@ Plans:
 Plans:
 - [x] 22-01-PLAN.md — SOUL.md PRESALE redesign (7-step conversational flow) + _presale_prompt() sync + validation tests
 
+### Phase 23: Ultra-Deep Prescan — Staged Intelligence Pipeline
+**Goal**: Перестроить prescan в трёхстадийный пайплайн с WOW-эффектом: финансы сразу → глубокий анализ → рынок. Все данные сохраняются в `company_profiles` для накопления базы. Конкуренты в будущем тоже попадают в эту базу.
+**Depends on**: Phase 22
+**Success Criteria** (what must be TRUE):
+  1. Стадия 1 (20-30 сек): финансовый хук — оборот, прибыль, юрлицо (DaData + ГИР БО)
+  2. Стадия 2 (40-60 сек): под капотом — лицензии, учредители, SEO, отзывы, соцсети
+  3. Стадия 3 (60-90+ сек): рынок — Яндекс/Google Maps, конкуренты рядом, тренды выручки, контент-аудит
+  4. Progress callback стримит статусы в Hermes → Telegram («5 агентов анализируют...»)
+  5. company_profiles таблица (JSONB) сохраняет все данные для повторных заходов
+  6. Повторный заход того же URL → мгновенная выдача из БД
+  7. Hermes получает промежуточные результаты после каждой стадии и показывает клиенту
+  8. Интеграция с существующим PrescanOrchestrator без его полной замены
+**Plans**: 3 plans (3 waves)
+
+Plans:
+- [ ] 23-01-PLAN.md — Wave 1: company_profiles table (JSONB, url+inn key) + GET/POST API + tests
+- [ ] 23-02-PLAN.md — Wave 2: 3-stage pipeline (financials→deep→market) + Roszdravnadzor + staging endpoint
+- [ ] 23-03-PLAN.md — Wave 3: Hermes run_prescan update + SOUL.md staged flow + PRESALE prompt
+
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22
+Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -441,5 +461,6 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 20. Apify Competitor Intelligence | v5.0 | 1/1 | Complete | 2026-05-26 |
 | 21. CI Pipeline Unification | v5.1 | 5/5 | Complete | 2026-05-31 |
 | 22. Hermes First Communication | v5.2 | 1/1 | Complete   | 2026-06-01 |
+| 23. Ultra-Deep Prescan | v5.3 | 0/3 | Planned | — |
 
-**Overall:** 50/55 plans complete (91%)
+**Overall:** 50/58 plans complete (86%)
