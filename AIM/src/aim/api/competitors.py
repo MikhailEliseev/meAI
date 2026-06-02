@@ -7,6 +7,7 @@ POST /api/competitors/analyze — CI marketing analysis (SWOT, features, pricing
 
 import json
 import logging
+import uuid
 from typing import Optional
 
 from fastapi import APIRouter, status
@@ -223,7 +224,7 @@ async def analyze_competitors(body: AnalyzeCompetitorsRequest) -> AnalyzeCompeti
 
         orchestrator = await _get_orchestrator()
         result = await orchestrator.execute_ci_analysis({
-            "task_id": f"analyze-{id(body)}",
+            "task_id": f"analyze-{uuid.uuid4().hex[:12]}",
             "url": body.url,
             "competitors": named_urls,
             "niche": body.specialization,
