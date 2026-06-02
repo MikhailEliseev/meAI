@@ -39,12 +39,10 @@ class APISettings(BaseSettings):
     semrush_api_key: Optional[str] = Field(
         default=None,
         description="SEMrush API key (required for production)",
-        min_length=10,
     )
     ahrefs_api_key: Optional[str] = Field(
         None,
         description="Ahrefs API key (optional fallback)",
-        min_length=10,
     )
     dadata_api_key: Optional[str] = Field(
         default=None,
