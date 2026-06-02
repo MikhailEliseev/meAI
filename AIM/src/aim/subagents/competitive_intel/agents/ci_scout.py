@@ -671,6 +671,11 @@ class CIScoutAgent(Agent):
             item["url"] = clean
             item["website"] = clean  # some agents use "website" field
             item["source"] = prof.get("source", "unknown")
+            # Carry forward profile data needed by downstream agents (ci-finance, etc.)
+            item["estimated_size"] = prof.get("estimated_size", "medium")
+            item["price_segment"] = prof.get("price_segment", "mid")
+            if prof.get("team_size_estimate"):
+                item["team_size_estimate"] = prof["team_size_estimate"]
             return item
 
         top = []

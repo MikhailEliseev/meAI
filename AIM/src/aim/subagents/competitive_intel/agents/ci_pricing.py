@@ -165,11 +165,19 @@ class CIPricingAgent(Agent):
         '/stoimost', '/stoimost/', '/tseny', '/tseny/',
         '/cena', '/ceny', '/czeny', '/ceni', '/prajs-list', '/prajs-list/',
         '/price-list/', '/prays', '/prays-list/',
+        # Additional Russian medical clinic patterns
+        '/nashi-ceny', '/nashi-tseny', '/tseny-na-uslugi',
+        '/price-list', '/pricelist', '/skachat-prajs',
+        '/stoimost-uslug', '/ceny-na-uslugi', '/price-na-uslugi',
+        '/konsultacija', '/priem', '/priyom',
     ]
 
     PRICING_LINK_KEYWORDS = [
         'цена', 'цены', 'прайс', 'стоимость', 'price', 'pricing',
+        'сколько стоит', 'приём', 'прием', 'консультаци',
     ]
+
+    BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
 
     PROMO_KEYWORDS = [
         'скидк', 'акци', 'спецпредложен', 'подар', 'бесплат',
@@ -185,7 +193,7 @@ class CIPricingAgent(Agent):
 
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
             try:
-                resp = await client.get(base, headers={"User-Agent": "AIM-CI-Pricing/1.0"})
+                resp = await client.get(base, headers={"User-Agent": self.BROWSER_UA})
                 resp.raise_for_status()
                 soup = BeautifulSoup(resp.text, 'html.parser')
 
@@ -218,7 +226,7 @@ class CIPricingAgent(Agent):
                                 raw_numbers.append(price)
                         except (ValueError, IndexError):
                             continue
-                if len(raw_numbers) >= 2:
+                if len(raw_numbers) >= 1:
                     return base
 
                 return None
@@ -232,7 +240,7 @@ class CIPricingAgent(Agent):
 
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
             try:
-                resp = await client.get(url, headers={"User-Agent": "AIM-CI-Pricing/1.0"})
+                resp = await client.get(url, headers={"User-Agent": self.BROWSER_UA})
                 resp.raise_for_status()
             except Exception as e:
                 print(f"[CI Pricing] Ошибка загрузки {url}: {e}")

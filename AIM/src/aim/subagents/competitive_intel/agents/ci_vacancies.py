@@ -354,14 +354,17 @@ class CIVacanciesAgent(Agent):
             salaries = []
             for r in web_results:
                 desc = r.get("description", "")
+                # Two-group capture: (number part) + (thousands indicator or currency)
                 salary_match = re.findall(
-                    r'(\d[\d\s]*)\s*(?:000|тыс|тысяч|₽|руб|р\.)',
+                    r'(\d[\d\s]*?)\s*(000|тыс\.?|тысяч|₽|руб\.?|р\.)',
                     desc, re.IGNORECASE
                 )
-                for s in salary_match:
+                for s, suffix in salary_match:
                     try:
                         amount = int(s.replace(' ', ''))
-                        if 20 <= amount <= 500:
+                        if suffix in ('000', 'тыс', 'тыс.', 'тысяч'):
+                            amount *= 1000
+                        if 20 <= amount <= 1000000:
                             salaries.append(amount)
                     except ValueError:
                         pass
@@ -512,6 +515,24 @@ class CIVacanciesAgent(Agent):
             else:
                 growth_rate = "slow"
 
+            # Parse salaries from DDG snippets (same logic as Brave)
+            salaries = []
+            for s in snippets:
+                salary_match = re.findall(
+                    r'(\d[\d\s]*?)\s*(000|тыс\.?|тысяч|₽|руб\.?|р\.)',
+                    s, re.IGNORECASE
+                )
+                for num_part, suffix in salary_match:
+                    try:
+                        amount = int(num_part.replace(' ', ''))
+                        if suffix in ('000', 'тыс', 'тыс.', 'тысяч'):
+                            amount *= 1000
+                        if 20 <= amount <= 1000000:
+                            salaries.append(amount)
+                    except ValueError:
+                        pass
+            avg_salary = sum(salaries) // len(salaries) if salaries else None
+
             print(f"[CI Vacancies] DuckDuckGo found ~{open_count} vacancies for {company_name} (size={estimated_size}, team={team_size})")
 
             return {
@@ -521,7 +542,7 @@ class CIVacanciesAgent(Agent):
                 "vacancies_list": [],
                 "team_size_estimate": team_size,
                 "vacancies_by_category": {},
-                "avg_salaries": {},
+                "avg_salaries": {"avg_monthly_rub": avg_salary} if avg_salary else {},
                 "growth_rate": growth_rate,
                 "hiring_active": open_count > 0,
                 "sources": ["duckduckgo"],
