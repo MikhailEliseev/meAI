@@ -187,19 +187,44 @@ class CISiteCrawlerAgent(Agent):
     async def _real_bfs_crawl(
         self, name: str, start_url: str, max_depth: int
     ) -> Dict[str, Any]:
-        """Real BFS crawl with httpx + BeautifulSoup, capped at 30 pages."""
+        """Real BFS crawl with httpx + BeautifulSoup, capped at 100 pages with priority."""
         base_domain = urlparse(start_url).netloc
         visited: Set[str] = set()
-        queue: List[tuple[str, int]] = [(start_url, 0)]  # (url, depth)
+        queue: List[tuple[str, int, int]] = [(start_url, 0, 100)]  # (url, depth, priority)
         pages_data: List[dict] = []
-        max_pages = 30
+        max_pages = 100
         delay = 1.5
+        pages_per_type: dict[str, int] = {}  # Limit pages per type to avoid blog-spam
+        max_per_type = 15
+
+        def _url_priority(url: str) -> int:
+            """Higher = crawl first. Key pages get priority over blog/other."""
+            url_lower = url.lower()
+            if any(p in url_lower for p in ["/uslugi", "/service", "/napravleni", "/lechenie"]):
+                return 100
+            if any(p in url_lower for p in ["/price", "/cena", "/ceny", "/prices", "/stoimost"]):
+                return 90
+            if any(p in url_lower for p in ["/about", "/o-nas", "/klinika", "/o-klinike"]):
+                return 80
+            if any(p in url_lower for p in ["/contact", "/kontakt"]):
+                return 70
+            if any(p in url_lower for p in ["/otzyv", "/review", "/reviews"]):
+                return 60
+            if any(p in url_lower for p in ["/zapis", "/appointment", "/booking", "/online"]):
+                return 50
+            if any(p in url_lower for p in ["/faq", "/question", "/vopros"]):
+                return 40
+            if any(p in url_lower for p in ["/blog", "/article", "/stati", "/news", "/novosti"]):
+                return 20
+            return 10  # other
 
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(15.0), follow_redirects=True
         ) as client:
             while queue and len(visited) < max_pages:
-                url, depth = queue.pop(0)
+                # Sort by priority (highest first) each iteration
+                queue.sort(key=lambda x: x[2], reverse=True)
+                url, depth, _ = queue.pop(0)
                 if url in visited:
                     continue
                 if depth > max_depth:
@@ -218,6 +243,12 @@ class CISiteCrawlerAgent(Agent):
 
                     # Classify page type from URL
                     page_type = self._classify_page_url(final_url)
+
+                    # Enforce per-type limit to avoid blog-spam
+                    if pages_per_type.get(page_type, 0) >= max_per_type:
+                        await asyncio.sleep(delay)
+                        continue
+                    pages_per_type[page_type] = pages_per_type.get(page_type, 0) + 1
 
                     # Collect page data
                     page_data = self._extract_page_data(soup, html, final_url, page_type)
@@ -241,7 +272,8 @@ class CISiteCrawlerAgent(Agent):
                                 and not href.startswith("mailto:")
                                 and not href.startswith("tel:")
                             ):
-                                queue.append((full_url, depth + 1))
+                                priority = _url_priority(full_url)
+                                queue.append((full_url, depth + 1, priority))
 
                     await asyncio.sleep(delay)
 
@@ -252,7 +284,14 @@ class CISiteCrawlerAgent(Agent):
         if not pages_data:
             return self._empty_crawl_result(name, start_url, "No pages crawled")
 
-        return self._aggregate_crawl_results(name, start_url, pages_data)
+        result = self._aggregate_crawl_results(name, start_url, pages_data)
+        # Report how many URLs remain in queue (discovered but not crawled due to cap)
+        remaining = len(queue)
+        if remaining > 0:
+            result["uncrawled_urls"] = remaining
+            if len(visited) >= max_pages:
+                result["note"] = f"Capped at {max_pages} pages (priority crawl: key pages first, {remaining} URLs skipped)"
+        return result
 
     def _classify_page_url(self, url: str) -> str:
         """Classify page by URL pattern."""

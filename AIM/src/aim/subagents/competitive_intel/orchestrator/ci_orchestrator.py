@@ -315,6 +315,18 @@ class CIOrchestrator(Agent):
                     # Get agent(s) for this phase
                     agent_names = self.phase_agents.get(phase_num)
 
+                    # Skip duplicate agent phases (same agent as previous phase = duplicate)
+                    if phase_num > 1:
+                        prev_agent = self.phase_agents.get(phase_num - 1)
+                        if agent_names == prev_agent and prev_agent is not None:
+                            prev_key = f"phase_{phase_num - 1}"
+                            if prev_key in findings:
+                                dup_result = dict(findings[prev_key])
+                                dup_result["phase"] = phase_num
+                                dup_result["_deduplicated"] = True
+                                findings[f"phase_{phase_num}"] = dup_result
+                                continue
+
                     # Prepare phase-specific task data
                     phase_task_data = task_data.copy()
                     phase_task_data["correlation_id"] = correlation_id
@@ -332,14 +344,14 @@ class CIOrchestrator(Agent):
                             if top:
                                 phase_task_data["competitors"] = top
                             else:
-                                # Fallback: convert URLs to simple objects
+                                # Fallback: convert URLs to objects with extracted names
                                 phase_task_data["competitors"] = [
-                                    {"name": url, "url": url} for url in competitors_list
+                                    {"name": _extract_name_from_url(url), "url": url} for url in competitors_list
                                 ]
                         else:
-                            # Fallback: convert URLs to simple objects
+                            # Fallback: convert URLs to objects with extracted names
                             phase_task_data["competitors"] = [
-                                {"name": url, "url": url} for url in competitors_list
+                                {"name": _extract_name_from_url(url), "url": url} for url in competitors_list
                             ]
 
                     phase_timeout = self._phase_timeouts.get(phase_num, 60.0)
@@ -442,6 +454,19 @@ class CIOrchestrator(Agent):
             for phase_num in phases:
                 try:
                     agent_names = self.phase_agents.get(phase_num)
+
+                    # Skip duplicate agent phases
+                    if phase_num > 1:
+                        prev_agent = self.phase_agents.get(phase_num - 1)
+                        if agent_names == prev_agent and prev_agent is not None:
+                            prev_key = f"phase_{phase_num - 1}"
+                            if prev_key in findings:
+                                dup_result = dict(findings[prev_key])
+                                dup_result["phase"] = phase_num
+                                dup_result["_deduplicated"] = True
+                                findings[f"phase_{phase_num}"] = dup_result
+                                continue
+
                     phase_task_data = task_data.copy()
                     phase_task_data["correlation_id"] = correlation_id
 
@@ -467,11 +492,11 @@ class CIOrchestrator(Agent):
                                 phase_task_data["competitors"] = top
                             else:
                                 phase_task_data["competitors"] = [
-                                    {"name": url, "url": url} for url in competitors_list
+                                    {"name": _extract_name_from_url(url), "url": url} for url in competitors_list
                                 ]
                         else:
                             phase_task_data["competitors"] = [
-                                {"name": url, "url": url} for url in competitors_list
+                                {"name": _extract_name_from_url(url), "url": url} for url in competitors_list
                             ]
 
                     if isinstance(agent_names, list):
@@ -1789,6 +1814,26 @@ def _extract_top_recommendation(
         )
 
     return "Проведите полный SEO-аудит для выявления точек роста."
+
+
+def _extract_name_from_url(url: str) -> str:
+    """Extract a human-readable company name from a URL/domain.
+
+    Converts 'https://yutskovskaya.ru/' → 'Yutskovskaya'
+    or 'yutskovskaya.ru' → 'Yutskovskaya'.
+    """
+    if not url:
+        return "Unknown"
+    # Strip protocol and path
+    domain = url.replace("https://", "").replace("http://", "").rstrip("/").split("/")[0]
+    # Remove www. prefix
+    domain = domain.removeprefix("www.")
+    # Take the domain name part (before TLD), capitalize
+    name_part = domain.split(".")[0]
+    # Capitalize first letter
+    if name_part:
+        name_part = name_part[0].upper() + name_part[1:] if len(name_part) > 1 else name_part.upper()
+    return name_part or "Unknown"
 
 
 def _count_actual_competitors(findings: Dict[str, Any], task_data: Dict[str, Any]) -> int:
