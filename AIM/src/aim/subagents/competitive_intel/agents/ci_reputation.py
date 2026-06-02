@@ -207,7 +207,11 @@ class CIReputationAgent(Agent):
         sources: List[str]
     ) -> Dict[str, Any]:
         """Собрать отзывы конкурента из всех источников параллельно."""
-        name = competitor["name"]
+        if isinstance(competitor, str):
+            name = competitor.split("//")[-1].split("/")[0][:40]
+            competitor = {"name": name, "url": competitor}
+        else:
+            name = competitor.get("name", competitor.get("brand_name", competitor.get("url", "unknown"))[:40])
         print(f"[CI Reputation] Сбор отзывов: {name}")
 
         # All sources in parallel for this competitor
@@ -254,7 +258,10 @@ class CIReputationAgent(Agent):
         2. Brave Search (если ключ доступен)
         3. Прямой поиск на платформе
         """
-        name = competitor["name"]
+        if isinstance(competitor, str):
+            name = competitor.split("//")[-1].split("/")[0][:40]
+        else:
+            name = competitor.get("name", competitor.get("brand_name", competitor.get("url", "unknown"))[:40])
         source_info = self.sources[source]
 
         empty_result = {
@@ -295,6 +302,9 @@ class CIReputationAgent(Agent):
         self, name: str, source_info: dict
     ) -> Dict[str, Any] | None:
         """Search via SerpAPI with key rotation."""
+        if getattr(self, '_serpapi_quota_exhausted', False):
+            return None
+
         query = f"{name} отзывы {source_info['search_query']}"
 
         # Try rotating client first (handles 429 across keys)
@@ -306,10 +316,15 @@ class CIReputationAgent(Agent):
                         {"organic_results": results}, source_info
                     )
             except Exception as e:
-                print(f"[CI Reputation] Rotating SerpAPI error for {name}: {e}")
+                err_str = str(e)
+                if '429' in err_str:
+                    self._serpapi_quota_exhausted = True
+                    print(f"[CI Reputation] SerpAPI 429 — quota exhausted, skipping SerpAPI for remaining competitors")
+                else:
+                    print(f"[CI Reputation] Rotating SerpAPI error for {name}: {e}")
 
         # Fallback: direct SerpAPI call with single key
-        if self.serpapi_key:
+        if self.serpapi_key and not getattr(self, '_serpapi_quota_exhausted', False):
             try:
                 async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
                     params = {
@@ -325,7 +340,12 @@ class CIReputationAgent(Agent):
                     data = resp.json()
                     return self._extract_rating_from_search(data, source_info)
             except Exception as e:
-                print(f"[CI Reputation] SerpAPI error for {name}: {e}")
+                err_str = str(e)
+                if '429' in err_str:
+                    self._serpapi_quota_exhausted = True
+                    print(f"[CI Reputation] SerpAPI 429 — quota exhausted, skipping SerpAPI for remaining competitors")
+                else:
+                    print(f"[CI Reputation] SerpAPI error for {name}: {e}")
 
         return None
 
@@ -333,6 +353,8 @@ class CIReputationAgent(Agent):
         self, name: str, source_info: dict
     ) -> Dict[str, Any] | None:
         """Search via Brave Search API (free tier, 2000 queries/month)."""
+        if getattr(self, '_brave_quota_exhausted', False):
+            return None
         try:
             async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
                 query = f"{name} отзывы рейтинг {source_info['search_query']}"
@@ -350,7 +372,12 @@ class CIReputationAgent(Agent):
 
                 return self._extract_rating_from_brave(data, source_info)
         except Exception as e:
-            print(f"[CI Reputation] Brave Search error for {name}: {e}")
+            err_str = str(e)
+            if '402' in err_str:
+                self._brave_quota_exhausted = True
+                print(f"[CI Reputation] Brave 402 — quota exhausted, skipping Brave for remaining competitors")
+            else:
+                print(f"[CI Reputation] Brave Search error for {name}: {e}")
             return None
 
     async def _search_duckduckgo(

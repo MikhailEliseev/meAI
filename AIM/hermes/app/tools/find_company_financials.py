@@ -51,7 +51,10 @@ async def handle_find_company_financials(inn=None, ogrn=None, **kwargs) -> str:
 
     identifier = inn or ogrn
     if not identifier:
-        return json.dumps({"error": "Either inn or ogrn is required"})
+        return json.dumps({
+            "error": "Either inn or ogrn is required",
+            "detail": "У тебя нет INN конкурента. Получи INN сначала — через find_competitors (он возвращает inn для каждого конкурента) или спроси клиента. Не вызывай этот tool без INN.",
+        })
 
     logger.info("Fetching financials for: %s", identifier)
 
@@ -148,8 +151,9 @@ registry.register(
                 "Get real tax-filed financial data for a Russian company from bo.nalog.gov.ru (ГИР БО). "
                 "Returns official P&L: annual revenue, net profit, gross profit, operating profit "
                 "by year, plus company metadata (name, status, OKVED). "
-                "Use this when you need a competitor's actual tax-filed revenue "
-                "(not estimated). Requires INN or OGRN."
+                "⚠️ ТРЕБУЕТ INN или ОГРН. Если у тебя нет INN/ОГРН конкурента — НЕ вызывай этот tool. "
+                "Сначала найди INN через find_competitors или DaData, потом вызывай. "
+                "Без INN tool вернёт ошибку — не трать вызов."
             ),
             "parameters": {
                 "type": "object",

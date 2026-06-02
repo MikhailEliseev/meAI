@@ -147,13 +147,11 @@ class ChatLeadRequest(BaseModel):
     """
 
     contact_type: str = Field(
-        ...,
-        pattern=r"^(telegram|email|phone)$",
-        description="Contact type: telegram, email, or phone",
+        default="",
+        description="Contact type: telegram, email, or phone. Empty for website-only leads.",
     )
     contact_value: str = Field(
-        ...,
-        min_length=1,
+        default="",
         max_length=200,
         description="Contact value: @username, email@domain.com, +7...",
     )

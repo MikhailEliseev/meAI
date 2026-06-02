@@ -1,9 +1,9 @@
 """
 run_ci_analysis — Hermes tool: CI Marketing Analysis
 
-POST http://app:8000/api/competitors/analyze/stream (SSE)
-Consumes real-time progress events and pushes them to the global
-progress queue so the frontend sees live updates during collection.
+POST http://app:8000/api/competitors/analyze
+Uses non-streaming endpoint because hermes-agent runs tools in a
+ThreadPoolExecutor where SSE aiter_bytes() does not work reliably.
 
 Registered in Hermes internal registry under toolset "aim-operations".
 """
@@ -24,8 +24,29 @@ def _normalize_args(first_param, defaults):
     return None
 
 
+def _normalize_competitor(comp) -> dict:
+    """Normalize a competitor to {'name': str, 'url': str} dict.
+
+    LLM may pass bare strings, objects with 'website' instead of 'url',
+    or clinic names without URLs. This handles all cases gracefully.
+    """
+    if isinstance(comp, str):
+        if comp.startswith(("http://", "https://")):
+            name = comp.split("//")[-1].split("/")[0].replace("www.", "")[:40]
+            return {"name": name, "url": comp}
+        # Clinic name without URL — pass as name, API needs a url too
+        return {"name": comp, "url": ""}
+    if isinstance(comp, dict):
+        url = comp.get("url", comp.get("website", ""))
+        name = comp.get("name", comp.get("brand_name", ""))
+        if not name and url:
+            name = url.split("//")[-1].split("/")[0].replace("www.", "")[:40]
+        return {"name": name or "unknown", "url": url}
+    return {"name": "unknown", "url": ""}
+
+
 AIM_API_BASE = "http://app:8000"
-REQUEST_TIMEOUT = 300.0  # SSE streaming + parallel scraping (large competitors can take 2-3 min)
+REQUEST_TIMEOUT = 300.0  # parallel scraping can take 2-3 min for large competitors
 
 
 async def handle_run_ci_analysis(
@@ -47,10 +68,6 @@ async def handle_run_ci_analysis(
     - Positioning map (price × specialization)
     - Steal-worthy tactics (what to copy from competitors)
     - Top strategic recommendation
-
-    Uses SSE streaming endpoint — progress events are pushed to the
-    global tool_progress_queue in real-time so the frontend sees:
-    "🔍 Ищу конкурентов…", "💰 Смотрю финансовую отчётность…", etc.
 
     Use after find_competitors confirmed the competitor list.
 
@@ -92,90 +109,54 @@ async def handle_run_ci_analysis(
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
+    # Normalize competitors: LLM may pass bare strings or {website} objects
+    competitors = [_normalize_competitor(c) for c in competitors]
+    # Filter out competitors without URLs — warn but don't fail
+    no_url = [c["name"] for c in competitors if not c["url"]]
+    competitors = [c for c in competitors if c["url"]]
+    if not competitors:
+        return json.dumps({
+            "error": "No competitors with valid URLs",
+            "detail": f"Could not resolve URLs for: {', '.join(no_url)}. Ask the client for website links.",
+        })
+
     logger.info(
-        "Running CI analysis (SSE stream) for URL: %s (%s, %s) with %d competitors",
+        "Running CI analysis for URL: %s (%s, %s) with %d competitors",
         url, specialization, city, len(competitors),
     )
 
-    # Import push_tool_progress for real-time progress events
-    try:
-        from app.main import push_tool_progress
-    except ImportError:
-        push_tool_progress = lambda stage, msg, comp="": logger.info("[tool-progress] %s: %s", stage, msg)
-
-    result_data: dict = {}
-
     try:
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
-            async with client.stream(
-                "POST",
-                f"{AIM_API_BASE}/api/competitors/analyze/stream",
+            response = await client.post(
+                f"{AIM_API_BASE}/api/competitors/analyze",
                 json={
                     "url": url,
                     "specialization": specialization or "",
                     "city": city or "",
                     "services": services or [],
                     "competitors": competitors,
+                    "tier": "quick",
                     "client_revenue": client_revenue,
                     "client_rating": client_rating,
                 },
-            ) as response:
-                response.raise_for_status()
-
-                buffer = ""
-                async for chunk in response.aiter_bytes():
-                    buffer += chunk.decode("utf-8", errors="replace")
-                    while "\n\n" in buffer:
-                        line, buffer = buffer.split("\n\n", 1)
-                        # Parse SSE frame: "data: {...}"
-                        for raw_line in line.split("\n"):
-                            raw_line = raw_line.strip()
-                            if not raw_line.startswith("data: "):
-                                continue
-                            try:
-                                event = json.loads(raw_line[6:])
-                            except json.JSONDecodeError:
-                                continue
-
-                            event_type = event.get("type", "")
-
-                            if event_type == "progress":
-                                # Push to global queue for real-time SSE relay
-                                push_tool_progress(
-                                    event.get("stage", ""),
-                                    event.get("message", ""),
-                                    event.get("competitor", ""),
-                                )
-
-                            elif event_type == "result":
-                                result_data = event.get("data", {})
-
-                            elif event_type == "error":
-                                logger.error("SSE stream error: %s", event.get("message"))
-                                return json.dumps({
-                                    "error": "CI analysis failed",
-                                    "detail": event.get("message", "Unknown error"),
-                                })
-
-        if not result_data:
-            return json.dumps({
-                "error": "CI analysis failed",
-                "detail": "No result received from SSE stream",
-            })
+            )
+            response.raise_for_status()
+            result = response.json()
 
         logger.info(
-            "CI analysis complete: duration=%.1fs",
-            result_data.get("duration_seconds", 0),
+            "CI analysis complete: duration=%.1fs tactics=%d",
+            result.get("duration_seconds", 0),
+            len(result.get("steal_worthy_tactics", [])),
         )
 
         return json.dumps({
-            "chat_summary": result_data.get("chat_summary", ""),
-            "feature_matrix": result_data.get("feature_matrix", {}),
-            "pricing_comparison": result_data.get("pricing_comparison", {}),
-            "positioning_map": result_data.get("positioning_map", {}),
-            "best_practices": result_data.get("steal_worthy_tactics", []),
-            "top_recommendation": result_data.get("top_recommendation", ""),
-            "duration_seconds": result_data.get("duration_seconds", 0),
+            "chat_summary": result.get("chat_summary", ""),
+            "feature_matrix": result.get("feature_matrix", {}),
+            "pricing_comparison": result.get("pricing_comparison", {}),
+            "positioning_map": result.get("positioning_map", {}),
+            "best_practices": result.get("steal_worthy_tactics", []),
+            "top_recommendation": result.get("top_recommendation", ""),
+            "duration_seconds": result.get("duration_seconds", 0),
         }, ensure_ascii=False, indent=2)
 
     except httpx.HTTPStatusError as e:

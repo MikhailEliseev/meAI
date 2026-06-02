@@ -190,8 +190,12 @@ class CIAuditorAgent(Agent):
         Returns:
             Результаты аудита
         """
-        name = competitor["name"]
-        url = competitor.get("url", "")
+        if isinstance(competitor, str):
+            name = competitor.split("//")[-1].split("/")[0][:40]
+            url = competitor
+        else:
+            name = competitor.get("name", competitor.get("brand_name", competitor.get("url", "unknown"))[:40])
+            url = competitor.get("url", competitor.get("website", ""))
 
         print(f"[CI Auditor] Аудит: {name}")
 
@@ -216,7 +220,7 @@ class CIAuditorAgent(Agent):
     def _get_audit_dimensions(self, audit_type: str) -> List[str]:
         """Определить dimensions для аудита в зависимости от типа."""
         if audit_type == "quick":
-            return ["technical", "content"]
+            return ["technical", "content", "ux_ui"]
         elif audit_type == "deep":
             return ["technical", "content", "ux_ui"]
         else:  # full
@@ -263,6 +267,11 @@ class CIAuditorAgent(Agent):
                 soup = BeautifulSoup(html, "html.parser")
                 final_url = str(resp.url)
 
+                # Extract price hints from HTML for quick-tier fallback
+                price_hints = self.extract_price_hints(soup, html)
+                if price_hints:
+                    results["_pricing_hints"] = price_hints
+
                 pagespeed = None
                 if dimension == "technical":
                     pagespeed = await self._fetch_pagespeed(client, url)
@@ -307,7 +316,12 @@ class CIAuditorAgent(Agent):
 
         Google PageSpeed API free tier: 1 QPS, 400 queries/hour.
         We use 8s delay to safely stay under the limit with multiple competitors.
+        After first 429, skips all subsequent calls (quota exhausted).
         """
+        # Circuit-breaker: if quota is already exhausted, skip immediately
+        if getattr(self, '_pagespeed_quota_exhausted', False):
+            return None
+
         try:
             # Rate limiting: 8s delay between PageSpeed API calls (safe margin for free tier)
             if not hasattr(self, "_last_pagespeed_call"):
@@ -328,9 +342,9 @@ class CIAuditorAgent(Agent):
             ps_url = self.pagespeed_url
             resp = await client.get(ps_url, params=params, timeout=httpx.Timeout(25.0))
             if resp.status_code == 429:
-                print(f"[CI Auditor] PageSpeed 429 — waiting 15s before retry")
-                await asyncio.sleep(15.0)
-                resp = await client.get(ps_url, params=params, timeout=httpx.Timeout(25.0))
+                self._pagespeed_quota_exhausted = True
+                print(f"[CI Auditor] PageSpeed 429 — quota exhausted, skipping PageSpeed for remaining competitors")
+                return None
             resp.raise_for_status()
             return resp.json()
         except Exception as e:
@@ -928,7 +942,10 @@ class CIAuditorAgent(Agent):
 
             # Рассчитать средний score для каждого dimension
             for dimension, checks in audit["dimensions"].items():
-                scores = [check["score"] for check in checks.values() if check["score"] is not None]
+                scores = [
+                    check["score"] for key, check in checks.items()
+                    if not key.startswith("_") and check.get("score") is not None
+                ]
                 dimension_scores[dimension] = sum(scores) / len(scores) if scores else 0
 
             # Рассчитать общий weighted score
@@ -1066,6 +1083,49 @@ class CIAuditorAgent(Agent):
             json.dump(results, f, indent=2, ensure_ascii=False)
 
         print(f"[CI Auditor] Результаты сохранены в {output_file}")
+
+    @staticmethod
+    def extract_price_hints(soup, html: str) -> dict:
+        """Extract price indicators from HTML for quick-tier pricing fallback.
+
+        Scans for common Russian medical pricing patterns in element
+        classes/ids and text content. Returns detected price range or {}.
+        """
+        import re
+
+        hints = {}
+        price_elements = soup.select(
+            "[class*='price'], [class*='Price'], "
+            "[class*='cena'], [class*='Cena'], "
+            "[class*='cost'], [class*='Cost'], "
+            "[class*='стоимость'], "
+            "[id*='price'], [id*='cena'], [id*='cost']"
+        )
+
+        prices_found = []
+        for el in price_elements[:20]:
+            text = el.get_text(strip=True)
+            matches = re.findall(
+                r'(?:от\s+)?(\d[\d\s]*)\s*(?:₽|руб|rub|р\.)',
+                text, re.IGNORECASE,
+            )
+            for m in matches:
+                try:
+                    price = int(m.replace(' ', ''))
+                    if 100 <= price <= 500_000:
+                        prices_found.append(price)
+                except ValueError:
+                    continue
+
+        if prices_found:
+            prices_found.sort()
+            hints["detected_prices"] = prices_found[:20]
+            hints["price_range_min"] = prices_found[0]
+            hints["price_range_max"] = prices_found[-1]
+            hints["price_count"] = len(prices_found)
+            hints["source"] = "html_scrape"
+
+        return hints
 
     def get_capabilities(self) -> List[str]:
         """Возвращает список возможностей агента."""

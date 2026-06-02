@@ -78,6 +78,25 @@ async def handle_run_prescan(url=None, **kwargs) -> str:
 
             result = data.get("result", {})
 
+            # Pre-compute human-readable speed description to prevent LLM hallucination.
+            # The LLM otherwise invents numbers like "310 мс" from training data
+            # instead of reading load_speed_ms (e.g., 1067) and converting correctly.
+            load_speed_ms_val = result.get("load_speed_ms", 0)
+            if load_speed_ms_val > 0:
+                load_speed_sec = load_speed_ms_val / 1000
+                if load_speed_ms_val < 1000:
+                    speed_desc = f"{load_speed_ms_val} мс — очень быстро (мгновенная загрузка)"
+                elif load_speed_ms_val < 2000:
+                    speed_desc = f"{load_speed_sec:.1f} сек — хорошая скорость"
+                elif load_speed_ms_val < 3000:
+                    speed_desc = f"{load_speed_sec:.1f} сек — средняя скорость"
+                elif load_speed_ms_val < 5000:
+                    speed_desc = f"{load_speed_sec:.1f} сек — медленно, нужно ускорять"
+                else:
+                    speed_desc = f"{load_speed_sec:.1f} сек — критически медленно"
+            else:
+                speed_desc = "не измерена"
+
             # Build a compact, narrative-friendly summary
             summary = {
                 "url": url,
@@ -97,7 +116,8 @@ async def handle_run_prescan(url=None, **kwargs) -> str:
                 "seo_issues": result.get("seo_issues", []),
                 "has_mobile_viewport": result.get("has_mobile_viewport", False),
                 "has_ssl": result.get("has_ssl", False),
-                "load_speed_ms": result.get("load_speed_ms", 0),
+                "load_speed_ms": load_speed_ms_val,
+                "web_speed": speed_desc,  # ← pre-computed, use THIS in responses (anti-hallucination)
                 # Reviews
                 "rating": result.get("rating"),
                 "reviews_count": result.get("reviews_count", 0),
