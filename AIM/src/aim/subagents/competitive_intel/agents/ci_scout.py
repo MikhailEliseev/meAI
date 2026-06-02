@@ -192,8 +192,8 @@ class CIScoutAgent(Agent):
         """
         discovered = {}  # url → {name, url, source}
 
-        # Метод 1: SerpAPI web search (8 запросов) — rotating client
-        if self._serpapi_client:
+        # Метод 1: SerpAPI web search (8 запросов) — rotating client or direct key
+        if self._serpapi_client or self.serpapi_key:
             search_queries = [
                 f"{niche} {geo} рейтинг лучших клиник 2025 2026",
                 f"{niche} {geo} отзывы пациентов",
@@ -338,6 +338,23 @@ class CIScoutAgent(Agent):
         """Поиск через SerpAPI с ротацией ключей (organic results)."""
         if self._serpapi_client:
             return await self._serpapi_client.search(query)
+        # Fallback: прямой ключ если rotating client не создался
+        if self.serpapi_key:
+            try:
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    resp = await client.get("https://serpapi.com/search", params={
+                        "api_key": self.serpapi_key,
+                        "engine": "google",
+                        "q": query,
+                        "hl": "ru",
+                        "gl": "ru",
+                        "num": 10,
+                    })
+                    resp.raise_for_status()
+                    data = resp.json()
+                    return data.get("organic_results", [])
+            except Exception:
+                pass
         return []
 
     async def _semrush_discover_competitors(self, niche: str, geo: str) -> List[Dict[str, str]]:
