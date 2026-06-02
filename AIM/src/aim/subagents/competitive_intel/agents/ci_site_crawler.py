@@ -309,20 +309,41 @@ class CISiteCrawlerAgent(Agent):
         return result
 
     def _normalize_url_path(self, url: str) -> str:
-        """Remove duplicate consecutive path segments from a URL.
+        """Remove duplicate path segments from a URL.
 
-        Example: https://clinic.ru/uslugi/uslugi/stomatologiya
-              → https://clinic.ru/uslugi/stomatologiya
+        Handles two cases:
+        1. Adjacent duplicates: /a/a/b → /a/b
+        2. Repeating sequences: /a/b/a/b/c → /a/b/c
         """
         parsed = urlparse(url)
-        parts = parsed.path.split('/')
+        parts = [p for p in parsed.path.split('/') if p]
+        if len(parts) < 2:
+            return url
+
+        original = list(parts)
+
+        # Pass 1: remove adjacent duplicates
         deduped = []
         for part in parts:
             if deduped and deduped[-1] == part:
                 continue
             deduped.append(part)
-        if len(deduped) != len(parts):
-            result = f"{parsed.scheme}://{parsed.netloc}{'/'.join(deduped)}"
+        parts = deduped
+
+        # Pass 2: remove repeating sequences (e.g. /a/b/a/b/c → /a/b/c)
+        # Check for prefix of length n that repeats immediately
+        changed = True
+        while changed and len(parts) >= 2:
+            changed = False
+            max_n = len(parts) // 2
+            for n in range(max_n, 0, -1):  # longest match first
+                if parts[0:n] == parts[n:2*n]:
+                    parts = parts[0:n] + parts[2*n:]
+                    changed = True
+                    break
+
+        if parts != original:
+            result = f"{parsed.scheme}://{parsed.netloc}/{'/'.join(parts)}"
             if parsed.query:
                 result += f"?{parsed.query}"
             return result

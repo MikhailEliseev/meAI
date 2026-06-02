@@ -261,21 +261,31 @@ class CIPrioritizerAgent(Agent):
         # Risks & opportunities
         ro = reputation_result.get("risks_opportunities", {})
         for opp in ro.get("opportunities", []):
+            if isinstance(opp, str):
+                title, desc = opp, opp
+            else:
+                title = opp.get("topic", opp.get("competitor", opp.get("type", "")))
+                desc = opp.get("description", str(opp))
             all_insights.append({
                 "source": "Reputation",
                 "phase": 4,
                 "type": "market_opportunity",
-                "title": opp if isinstance(opp, str) else opp.get("title", str(opp)),
-                "description": opp if isinstance(opp, str) else opp.get("description", ""),
+                "title": str(title),
+                "description": str(desc),
                 "value": None,
             })
         for risk in ro.get("risks", []):
+            if isinstance(risk, str):
+                title, desc = risk, risk
+            else:
+                title = f"{risk.get('competitor', '')}: {risk.get('type', '')}"
+                desc = risk.get("description", str(risk))
             all_insights.append({
                 "source": "Reputation",
                 "phase": 4,
                 "type": "risk",
-                "title": risk if isinstance(risk, str) else risk.get("title", str(risk)),
-                "description": risk if isinstance(risk, str) else risk.get("description", ""),
+                "title": str(title),
+                "description": str(desc),
                 "value": "high",
             })
 
