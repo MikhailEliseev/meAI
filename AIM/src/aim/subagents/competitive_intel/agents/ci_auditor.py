@@ -10,6 +10,7 @@ CI Auditor Agent - Deep Competitor Website Audit
 
 import asyncio
 import os
+import time
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 from urllib.parse import urljoin, urlparse
@@ -256,7 +257,7 @@ class CIAuditorAgent(Agent):
 
         try:
             async with httpx.AsyncClient(timeout=httpx.Timeout(20.0), follow_redirects=True) as client:
-                resp = await client.get(url, headers={"User-Agent": "AIM-CI/1.0"})
+                resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"})
                 resp.raise_for_status()
                 html = resp.text
                 soup = BeautifulSoup(html, "html.parser")
@@ -302,8 +303,20 @@ class CIAuditorAgent(Agent):
         client: httpx.AsyncClient,
         url: str
     ) -> dict | None:
-        """Fetch Google PageSpeed Insights data."""
+        """Fetch Google PageSpeed Insights data with rate limiting.
+
+        Google PageSpeed API free tier: 1 query/second, 400 queries/hour.
+        We add 2.0s delay between calls to avoid 429 errors.
+        """
         try:
+            # Rate limiting: 2s delay between PageSpeed API calls
+            if not hasattr(self, "_last_pagespeed_call"):
+                self._last_pagespeed_call = 0.0
+            elapsed = time.time() - self._last_pagespeed_call
+            if elapsed < 2.0:
+                await asyncio.sleep(2.0 - elapsed)
+            self._last_pagespeed_call = time.time()
+
             params = {
                 "url": url,
                 "strategy": "mobile",
@@ -314,6 +327,10 @@ class CIAuditorAgent(Agent):
 
             ps_url = self.pagespeed_url
             resp = await client.get(ps_url, params=params, timeout=httpx.Timeout(25.0))
+            if resp.status_code == 429:
+                print(f"[CI Auditor] PageSpeed 429 — waiting 5s before retry")
+                await asyncio.sleep(5.0)
+                resp = await client.get(ps_url, params=params, timeout=httpx.Timeout(25.0))
             resp.raise_for_status()
             return resp.json()
         except Exception as e:
@@ -462,7 +479,7 @@ class CIAuditorAgent(Agent):
     async def _score_sitemap(self, soup, html, url, final_url, pagespeed, response, client) -> tuple:
         sitemap_url = urljoin(final_url, "/sitemap.xml")
         try:
-            r = await client.get(sitemap_url, headers={"User-Agent": "AIM-CI/1.0"}, timeout=httpx.Timeout(10.0))
+            r = await client.get(sitemap_url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"}, timeout=httpx.Timeout(10.0))
             if r.status_code == 200 and "xml" in r.headers.get("content-type", ""):
                 return (85, "good", f"Sitemap found at {sitemap_url}")
             return (30, "poor", f"No sitemap at {sitemap_url} (status {r.status_code})")
@@ -472,7 +489,7 @@ class CIAuditorAgent(Agent):
     async def _score_robots_txt(self, soup, html, url, final_url, pagespeed, response, client) -> tuple:
         robots_url = urljoin(final_url, "/robots.txt")
         try:
-            r = await client.get(robots_url, headers={"User-Agent": "AIM-CI/1.0"}, timeout=httpx.Timeout(10.0))
+            r = await client.get(robots_url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"}, timeout=httpx.Timeout(10.0))
             if r.status_code == 200:
                 content = r.text[:500]
                 has_sitemap_ref = "sitemap:" in content.lower()

@@ -67,6 +67,7 @@ class CIPrioritizerAgent(Agent):
             business_goals = task.payload.get("business_goals", [])
 
             print(f"[CI Prioritizer] Начало приоритизации инсайтов")
+            print(f"[CI Prioritizer] DEBUG: previous_results type={type(previous_results).__name__}, keys={list(previous_results.keys())}")
 
             # Шаг 1: Collect all insights from previous phases
             all_insights = await self._collect_all_insights(previous_results)
@@ -137,16 +138,25 @@ class CIPrioritizerAgent(Agent):
 
         Args:
             previous_results: результаты Phase 1-8
+              Keys like 'phase_1' — values are wrapped:
+              {phase, agent, status, result: {actual_data}}
 
         Returns:
             Список всех инсайтов
         """
         print(f"[CI Prioritizer] Сбор инсайтов из предыдущих фаз")
 
+        def _unwrap(key: str) -> dict:
+            """Extract inner result dict from wrapped phase data."""
+            raw = previous_results.get(key, {})
+            if isinstance(raw, dict) and "result" in raw:
+                return raw["result"]
+            return raw
+
         all_insights = []
 
         # Phase 1: Scout insights
-        scout_result = previous_results.get("phase_1", {})
+        scout_result = _unwrap("phase_1")
         if scout_result.get("insights"):
             for insight in scout_result["insights"]:
                 all_insights.append({
@@ -159,7 +169,7 @@ class CIPrioritizerAgent(Agent):
                 })
 
         # Phase 2-3: Auditor insights
-        auditor_result = previous_results.get("phase_2", {})
+        auditor_result = _unwrap("phase_2")
         if auditor_result.get("insights"):
             for insight in auditor_result["insights"]:
                 all_insights.append({
@@ -172,7 +182,7 @@ class CIPrioritizerAgent(Agent):
                 })
 
         # Phase 4: Reputation insights
-        reputation_result = previous_results.get("phase_4", {})
+        reputation_result = _unwrap("phase_4")
         if reputation_result.get("insights"):
             for insight in reputation_result["insights"]:
                 all_insights.append({
@@ -185,9 +195,9 @@ class CIPrioritizerAgent(Agent):
                 })
 
         # Phase 5: Parallel agents insights
-        phase5_result = previous_results.get("phase_5", {})
-        if isinstance(phase5_result, dict):
-            for agent_name, agent_result in phase5_result.get("results", {}).items():
+        phase5_raw = _unwrap("phase_5")
+        if isinstance(phase5_raw, dict):
+            for agent_name, agent_result in phase5_raw.get("results", {}).items():
                 if agent_result.get("insights"):
                     insights = agent_result["insights"]
                     if isinstance(insights, dict):
@@ -204,15 +214,15 @@ class CIPrioritizerAgent(Agent):
                                     })
 
         # Phase 7-8: Strategist insights
-        strategist_result = previous_results.get("phase_7", {})
+        strategist_result = _unwrap("phase_7")
         if strategist_result.get("recommendations"):
             for rec in strategist_result["recommendations"]:
                 all_insights.append({
                     "source": "Strategist",
                     "phase": 7,
                     "type": "recommendation",
-                    "title": rec.get("title", ""),
-                    "description": rec.get("description", ""),
+                    "title": rec.get("recommendation", rec.get("title", "")),
+                    "description": rec.get("action", rec.get("description", "")),
                     "value": rec.get("priority")
                 })
 

@@ -42,6 +42,7 @@ class WebScraper:
         )
 
         # Playwright browser for JS-heavy sites
+        self._playwright = None
         self.browser: Optional[Browser] = None
 
         # Rate limiting
@@ -53,8 +54,8 @@ class WebScraper:
     async def __aenter__(self):
         """Async context manager entry"""
         if self.use_playwright:
-            playwright = await async_playwright().start()
-            self.browser = await playwright.chromium.launch(headless=True)
+            self._playwright = await async_playwright().start()
+            self.browser = await self._playwright.chromium.launch(headless=True)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -62,6 +63,10 @@ class WebScraper:
         await self.client.aclose()
         if self.browser:
             await self.browser.close()
+            self.browser = None
+        if self._playwright:
+            await self._playwright.stop()
+            self._playwright = None
 
     async def _check_robots_txt(self, url: str) -> bool:
         """Check if URL is allowed by robots.txt"""

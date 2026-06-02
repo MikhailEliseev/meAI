@@ -111,6 +111,7 @@ class CIStrategistAgent(Agent):
 
             # Логирование начала
             print(f"[CI Strategist] Начало стратегического синтеза")
+            print(f"[CI Strategist] DEBUG: previous_results type={type(previous_results).__name__}, keys={list(previous_results.keys())}")
 
             # Шаг 1: Extract insights from all previous phases
             insights = await self._extract_insights(previous_results)
@@ -141,10 +142,12 @@ class CIStrategistAgent(Agent):
             # Шаг 9: Compute "3 Numbers" (D-05)
             niche = client_context.get("niche") or task.payload.get("niche", "default")
 
-            # Extract traffic data from previous phases
+            # Extract traffic data from previous phases (unwrap orchestrator wrapper)
             traffic_data = {}
-            traffic_data.update(previous_results.get("phase_3", {}))  # Deep Analyzer
-            traffic_data.update(previous_results.get("phase_5", {}))  # Site Crawler
+            for ph in ["phase_3", "phase_5"]:
+                raw = previous_results.get(ph, {})
+                data = raw.get("result", raw) if isinstance(raw, dict) else raw
+                traffic_data.update(data)
 
             patients = self._estimate_patients_per_month(traffic_data, niche)
             time_to_result = self._estimate_time_to_result(
@@ -213,11 +216,22 @@ class CIStrategistAgent(Agent):
 
         Args:
             previous_results: результаты от Scout, Auditor, Reputation и др.
+              Keys like 'phase_1', 'phase_2' — values are wrapped:
+              {phase, agent, status, result: {actual_data}}
 
         Returns:
             Агрегированные инсайты
         """
         print(f"[CI Strategist] Извлечение инсайтов из {len(previous_results)} фаз")
+
+        def _unwrap(key: str) -> dict:
+            """Extract inner result dict from wrapped phase data."""
+            raw = previous_results.get(key, {})
+            # If the value has a 'result' key, unwrap it (orchestrator wrapper)
+            if isinstance(raw, dict) and "result" in raw:
+                return raw["result"]
+            # Otherwise, the raw value is the result itself
+            return raw
 
         insights = {
             "market": {},
@@ -229,7 +243,7 @@ class CIStrategistAgent(Agent):
 
         # Извлечь market insights
         if "phase_1" in previous_results:  # Scout
-            scout_data = previous_results["phase_1"]
+            scout_data = _unwrap("phase_1")
             insights["market"] = {
                 "total_players": scout_data.get("insights", {}).get("total_players", 0),
                 "fragmentation": scout_data.get("insights", {}).get("fragmentation", "unknown"),
@@ -238,7 +252,7 @@ class CIStrategistAgent(Agent):
 
         # Извлечь competitor insights
         if "phase_2" in previous_results:  # Auditor
-            auditor_data = previous_results["phase_2"]
+            auditor_data = _unwrap("phase_2")
             insights["competitors"]["audit"] = {
                 "market_average": auditor_data.get("insights", {}).get("market_average", 0),
                 "best_competitor": auditor_data.get("insights", {}).get("best_competitor", {}),
@@ -246,7 +260,7 @@ class CIStrategistAgent(Agent):
             }
 
         if "phase_4" in previous_results:  # Reputation
-            reputation_data = previous_results["phase_4"]
+            reputation_data = _unwrap("phase_4")
             insights["competitors"]["reputation"] = {
                 "market_avg_reputation": reputation_data.get("insights", {}).get("market_avg_reputation", 0),
                 "best_reputation": reputation_data.get("insights", {}).get("best_reputation", {}),
@@ -255,11 +269,11 @@ class CIStrategistAgent(Agent):
 
         # Извлечь gaps
         if "phase_2" in previous_results:
-            auditor_data = previous_results["phase_2"]
+            auditor_data = _unwrap("phase_2")
             insights["gaps"]["audit"] = auditor_data.get("gaps", [])
 
         if "phase_4" in previous_results:
-            reputation_data = previous_results["phase_4"]
+            reputation_data = _unwrap("phase_4")
             insights["gaps"]["reputation"] = reputation_data.get("risks_opportunities", {}).get("opportunities", [])
 
         return insights

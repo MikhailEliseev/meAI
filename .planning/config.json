@@ -21,7 +21,8 @@
     "pattern_mapper": false,
     "ui_phase": false,
     "ui_safety_gate": false,
-    "post_planning_gaps": true
+    "post_planning_gaps": true,
+    "_auto_chain_active": false
   },
   "planning": {
     "commit_docs": true,
