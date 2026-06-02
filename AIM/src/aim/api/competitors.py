@@ -32,6 +32,11 @@ class FindCompetitorsRequest(BaseModel):
         default=None,
         description="Optional list of competitor names or URLs to look up directly via DaData",
     )
+    client_revenue: Optional[int] = Field(
+        default=None,
+        description="Estimated client annual revenue (RUB) for gap-scoring: "
+                    "boosts competitors with +20-50% higher revenue",
+    )
 
 
 class CompetitorJson(BaseModel):
@@ -132,6 +137,7 @@ async def find_competitors(body: FindCompetitorsRequest) -> FindCompetitorsRespo
     try:
         matches = await matcher.find_competitors(
             url=body.url, count=body.count, named_competitors=body.named_competitors,
+            client_revenue=body.client_revenue,
         )
 
         competitors = [_competitor_to_json(m) for m in matches]
@@ -222,11 +228,41 @@ async def analyze_competitors(body: AnalyzeCompetitorsRequest) -> AnalyzeCompeti
         matches = [_json_to_match(c) for c in body.competitors]
         named_urls = _extract_named_urls(matches)
 
+        # Build rich competitor objects preserving find_competitors data
+        # (ratings, names, revenue) for the orchestrator
+        import re as _re
+        rich_competitors = []
+        for i, c in enumerate(body.competitors):
+            # Extract star rating from match_reason (e.g. "рейтинг 4.7, 52 отзыва")
+            star_rating = None
+            if c.match_reason:
+                rm = _re.search(r'рейтинг\s+(\d+\.?\d*)', c.match_reason)
+                if rm:
+                    try:
+                        star_rating = float(rm.group(1))
+                    except ValueError:
+                        pass
+            comp = {
+                "name": c.brand_name or c.legal_name or f"competitor_{i}",
+                "brand_name": c.brand_name,
+                "legal_name": c.legal_name,
+                "url": c.website or "",
+                "website": c.website or "",
+                "rating": star_rating,
+                "revenue_year": c.revenue_year,
+                "profit_year": c.profit_year,
+                "total_score": c.total_score,
+                "match_reason": c.match_reason,
+                "services": c.services,
+                "social_links": c.social_links,
+            }
+            rich_competitors.append(comp)
+
         orchestrator = await _get_orchestrator()
         result = await orchestrator.execute_ci_analysis({
             "task_id": f"analyze-{uuid.uuid4().hex[:12]}",
             "url": body.url,
-            "competitors": named_urls,
+            "competitors": rich_competitors,
             "niche": body.specialization,
             "geo": body.city,
             "tier": body.tier,

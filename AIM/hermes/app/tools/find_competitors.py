@@ -32,7 +32,7 @@ AIM_API_BASE = "http://app:8000"
 REQUEST_TIMEOUT = 600.0  # full pipeline: Apify (90s) + 50-place Playwright INN extraction + nalog enrichment + scoring
 
 
-async def handle_find_competitors(url=None, named_competitors=None, **kwargs) -> str:
+async def handle_find_competitors(url=None, named_competitors=None, client_revenue=None, **kwargs) -> str:
     """Find top competitors for a clinic website.
 
     Extracts specialization and city from the client website, searches
@@ -43,6 +43,8 @@ async def handle_find_competitors(url=None, named_competitors=None, **kwargs) ->
     Args:
         url: Client clinic website URL (e.g., "https://clinic.ru")
         named_competitors: Optional list of competitor names or URLs
+        client_revenue: Optional client annual revenue (RUB) for gap-scoring
+                       — boosts competitors with +20-50% higher revenue
 
     Returns:
         JSON string with up to 5 competitors: inn, inns (multi-entity), licenses, revenue, services,
@@ -50,11 +52,12 @@ async def handle_find_competitors(url=None, named_competitors=None, **kwargs) ->
         (revenue_match, location_score, service_overlap, total_score),
         and human-readable match_reason for each.
     """
-    defaults = {"url": "", "named_competitors": None}
+    defaults = {"url": "", "named_competitors": None, "client_revenue": None}
     unpacked = _normalize_args(url, defaults)
     if unpacked:
         url = unpacked["url"]
         named_competitors = unpacked.get("named_competitors")
+        client_revenue = unpacked.get("client_revenue")
 
     if not url:
         return json.dumps({"error": "url is required"})
@@ -70,6 +73,8 @@ async def handle_find_competitors(url=None, named_competitors=None, **kwargs) ->
         payload: dict = {"url": url, "count": 5}
         if named_competitors:
             payload["named_competitors"] = named_competitors
+        if client_revenue:
+            payload["client_revenue"] = client_revenue
 
         push_tool_progress("competitors", f"🔎 Извлекаю специализацию и город из {url}…")
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
@@ -183,6 +188,13 @@ registry.register(
                         "type": "array",
                         "items": {"type": "string"},
                         "description": "Optional list of competitor names or URLs to look up",
+                    },
+                    "client_revenue": {
+                        "type": "integer",
+                        "description": "Optional client annual revenue (RUB) for gap-scoring. "
+                                       "Boosts competitors with +20-50% higher revenue — "
+                                       "the sweet spot for growth potential. "
+                                       "Get this from run_prescan → revenue_year.",
                     },
                 },
                 "required": ["url"],

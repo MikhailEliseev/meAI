@@ -169,6 +169,7 @@ class CompetitorMatcher:
         count: int = 3,
         named_competitors: Optional[list[str]] = None,
         client_inn: str = "",
+        client_revenue: Optional[int] = None,
     ) -> list[CompetitorMatch]:
         """Find top-N competitors for a clinic website.
 
@@ -190,6 +191,8 @@ class CompetitorMatcher:
             named_competitors: Optional list of competitor names or URLs.
             client_inn: Optional client INN for accurate revenue lookup on nalog.
                         When provided, skips website INN extraction.
+            client_revenue: Optional client annual revenue (RUB) for gap-scoring.
+                           Competitors with +20-50% higher revenue get a bonus.
         """
         t0 = time.monotonic()
 
@@ -424,7 +427,8 @@ class CompetitorMatcher:
                 logger.info("CompetitorMatcher: nalog enriched %d/%d in %.1fs", enriched_count, len(inn_batch), time.monotonic() - t_enrich_start)
 
         # 10. Score and rank
-        scored = await self._score_candidates(client, candidates, count)
+        scored = await self._score_candidates(client, candidates, count,
+                                               client_revenue=client_revenue)
 
         # 11. Source diversity — ensure INN and real financials in top-N
         top = scored[:count]
@@ -1183,14 +1187,15 @@ class CompetitorMatcher:
         client: ClientProfile,
         candidates: list[CompanyProfile],
         top_n: int,
+        client_revenue: Optional[int] = None,
     ) -> list[CompetitorMatch]:
         """Score each candidate and return top-N matches."""
         scored: list[CompetitorMatch] = []
-        client_revenue = client.estimated_revenue or 30_000_000
+        effective_revenue = client_revenue or client.estimated_revenue or 30_000_000
 
         # Run scoring concurrently (all independent)
         tasks = [
-            _score_one(client, c, client_revenue, client.city_lat, client.city_lon)
+            _score_one(client, c, effective_revenue, client.city_lat, client.city_lon)
             for c in candidates
         ]
         results = await asyncio.gather(*tasks)
@@ -1224,7 +1229,7 @@ class CompetitorMatcher:
 
         # Generate human-readable match reasons for top candidates
         for m in scored[:max(top_n, 10)]:
-            m.match_reason = _build_reason(m, client_revenue)
+            m.match_reason = _build_reason(m, effective_revenue)
 
         return scored  # return ALL — caller handles top-N slicing + diversity
 
@@ -1286,6 +1291,19 @@ async def _score_one(
         + popularity_score * W_POPULARITY
         + visibility_score * W_VISIBILITY
     )
+
+    # ── Gap bonus: +0.08–0.12 for competitors in the +20-50% revenue sweet spot ──
+    # The closer to 1.35x client revenue, the higher the bonus.
+    # This biases toward competitors the client can realistically grow into.
+    if client_revenue > 0 and rev_for_score > 0:
+        ratio = rev_for_score / client_revenue
+        if 1.2 <= ratio <= 1.5:
+            # Linear interpolation: 1.2x → +0.08, 1.35x → +0.12, 1.5x → +0.08
+            center = 1.35
+            dist_from_center = abs(ratio - center) / 0.15  # 0 at center, 1 at edges
+            gap_bonus = 0.12 - (dist_from_center * 0.04)
+            total += gap_bonus
+
     total = round(min(total, 1.0), 4)
 
     # Determine shared services for reporting
