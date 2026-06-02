@@ -91,17 +91,19 @@ class RotatingSerpAPIClient:
 
 
 def get_serpapi_client() -> Optional[RotatingSerpAPIClient]:
-    """Factory: creates a rotating SerpAPI client from configured keys."""
-    try:
-        from aim.config.settings import get_api_settings
-        settings = get_api_settings()
-        keys = []
-        if settings.serpapi_api_key:
-            keys.append(settings.serpapi_api_key)
-        if settings.serpapi_key_secondary:
-            keys.append(settings.serpapi_key_secondary)
-        if keys:
-            return RotatingSerpAPIClient(keys)
-    except Exception:
-        pass
+    """Factory: creates a rotating SerpAPI client from configured keys.
+
+    Reads env vars directly to avoid triggering full APISettings validation
+    which requires SEMrush key (not needed for SerpAPI).
+    """
+    import os
+    keys = []
+    primary = os.getenv("SERPAPI_API_KEY") or os.getenv("SERPAPI_KEY")
+    if primary and len(primary) >= 10:
+        keys.append(primary)
+    secondary = os.getenv("SERPAPI_KEY_SECONDARY")
+    if secondary and len(secondary) >= 10:
+        keys.append(secondary)
+    if keys:
+        return RotatingSerpAPIClient(keys)
     return None
