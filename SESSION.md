@@ -3,59 +3,57 @@
 ## Phase 22: PRESALE Flow Redesign — COMPLETED ✅
 
 **Date:** 2026-06-02
-**Status:** Все code changes реализованы, 27/27 unit-тестов проходят. E2E-тест требует Docker.
+**Status:** Все code changes реализованы, задеплоены на VPS, 27/27 unit-тестов.
 
-### Новый 7-шаговый PRESALE-поток
+### Сессия 3 — тестирование и фиксы (2026-06-02 17:15–18:00)
 
-```
-1. Client URL → run_prescan (5 параллельных потоков, 60-90s)
-   ├─ structure: specialization, city, services, doctors, prices
-   ├─ financials: INN extraction → nalog.ru → revenue/profit
-   ├─ seo: quick SEO scan (score, mobile, SSL, speed)
-   ├─ reviews: rating, count, praise, complaints
-   └─ social: last post date, platform, links
+#### Обнаружено и исправлено (3 проблемы):
 
-2. prescan.revenue → find_competitors(client_revenue=X)
-   └─ Gap-scoring: +0.08–0.12 bonus когда оборот конкурента в [1.2x, 1.5x]
+##### P1: Hermes не показывал prescan-разбор в первом ответе ✅ FIXED
+- **Было:** клиент даёт URL → 90с тишины → «назовите конкурентов». Prescan-данные собраны, но клиент их не видит.
+- **Корень:** промпт разрешал вызывать run_prescan + find_competitors в одном ходе.
+- **Фикс:** добавлено правило `🛑 ПРАВИЛО ПЕРВОГО СООБЩЕНИЯ (НЕРУШИМО)` в самое начало `_presale_prompt()` — ТОЛЬКО run_prescan в первом ходе, потом живой разбор, потом find_competitors.
+- **Результат:** smilestudio.ru → «Так, смотрите что получается... скорость 8.3 сек — критично, врачей нет, отзывов 0... А теперь самое интересное — давайте посмотрим кто вокруг вас.» Живой разбор + WOW-эффект.
 
-3. "Смотрим этих конкурентов или вы приложите своих?"
-   └─ Ветвление: auto-competitors vs named_competitors
+##### P2: run_ci_analysis падал с 422 ✅ FIXED
+- **Было:** LLM передаёт competitors как строки `["Семейная"]` или словари с `website` вместо `url`. Pydantic модель требует `url`.
+- **Фикс:** функция `_normalize_competitor()` — обрабатывает строки (извлекает url/name), словари (website→url), фильтрует конкурентов без URL с понятной ошибкой.
+- **Код:** `AIM/hermes/app/tools/run_ci_analysis.py` — +30 строк нормализации
 
-4. Если named → идентификация клиник (опечатки, названия) → поиск сайтов
+##### P3: find_company_financials вызывался без INN ✅ FIXED
+- **Было:** LLM вызывает tool без INN/ОГРН → ошибка "Either inn or ogrn is required".
+- **Фикс:** tool description: «⚠️ ТРЕБУЕТ INN или ОГРН. Если у тебя нет INN/ОГРН конкурента — НЕ вызывай.» + улучшенный error message.
+- **Код:** `AIM/hermes/app/tools/find_company_financials.py` — description + detail
 
-5. Выбранные конкуренты → run_ci_analysis (deep-tier)
-   └─ Полный сбор: SEO-аудит, отзывы, соцсети, контент-анализ
+### Результаты тестирования (iphk.ru + smilestudio.ru)
 
-6. Формирование финального отчёта
+#### Что работает идеально ✅
+1. **Prescan все данные корректны:** INN, revenue, rating, reviews, SEO, web_speed
+2. **0 галлюцинаций** когда Hermes показывает разбор (все цифры из prescan)
+3. **web_speed антигаллюцинация работает:** "скорость 1,1 сек — хорошая", "8,3 сек — критично"
+4. **Первый ход теперь правильный:** только prescan → живой разбор → "давайте посмотрим кто вокруг"
+5. **Бизнес-язык:** "53% посетителей уходят", "пациенты выбирают врача, а не вывеску"
 
-7. Сбор контактов → Telegram-нотификация
-```
+### Баг-фиксы (всего 12)
 
-### Реализованные файлы
+**Сессия 1-2 (9):**
+1. Галлюцинация load_speed — web_speed поле
+2. collect_contact в середине диалога — промпт "ЖЕЛЕЗНО"
+3. Зацикливание named_competitors — fallback
+4. Выдуманный оборот — правило "null → честно"
+5. Отзывы не находились — импорт + логгер
+6. INN не экстрагировался — DaData fallback
+7. Оборот не загружался — BfoNalogClient методы
+8. Revenue в тыс. руб. — ×1000
+9. Фейковые review_praise — убран keyword matching
 
-#### Новые (4):
-- `AIM/src/aim/api/presale.py` — POST /api/presale/prescan endpoint
-- `AIM/hermes/app/tools/run_prescan.py` — Hermes tool для prescan
-- `AIM/tests/unit/test_prescan_orchestrator.py` — 11 тестов PrescanOrchestrator
-- `AIM/tests/unit/test_competitor_gap_scoring.py` — 16 тестов gap-scoring
-
-#### Изменённые (6):
-- `AIM/src/aim/main.py` — +presale_router
-- `AIM/src/aim/api/competitors.py` — +client_revenue в FindCompetitorsRequest
-- `AIM/src/aim/services/competitor_matcher.py` — gap-bonus в _score_one()
-- `AIM/hermes/app/tools/__init__.py` — +run_prescan (16 tools)
-- `AIM/hermes/app/tools/find_competitors.py` — +client_revenue параметр
-- `AIM/hermes/app/agent_wrapper.py` — полностью новый _presale_prompt() под 7 шагов
+**Сессия 3 (3):**
+10. P1: prescan-разбор в первом ответе — промпт "НЕРУШИМО"
+11. P2: run_ci_analysis 422 — нормализация competitors
+12. P3: find_company_financials без INN — warning в description
 
 ### Тесты: 27/27 PASSED
 
-**TestGapBonusFormula (9):** formula tests — ratio boundaries, center peak, zero revenue
-**TestGapBonusApplied (2):** bonus increases score, score ≤ 1.0 cap
-**TestRevenueMatch (5):** 1:1 = 0.8, 2x = 1.0 peak, zero = 0.5
-**TestPrescanResult (2):** empty/full serialization
-**TestPrescanOrchestrator (3):** URL normalization, error isolation, progress callback
-**TestINNValidation (6):** valid 10/12-digit, invalid checksum/short/empty/non-digit
-
-### Отложено
-- #48/#49: Баг-фиксы (rating 0.0, API quotas)
-- E2E-тест на реальных клиниках (требует Docker: aim-app + aim-hermes)
+### TODO
+- [ ] #61: Протестировать Hermes через Telegram (@iamaim_bot)
+- [ ] Закоммитить все изменения (12 баг-фиксов)

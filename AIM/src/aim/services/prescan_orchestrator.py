@@ -14,7 +14,6 @@ Total target: 60-90 seconds (dominated by slowest thread — Apify/Playwright).
 from __future__ import annotations
 
 import asyncio
-import logging
 import re
 import time
 from dataclasses import dataclass, field
@@ -23,7 +22,9 @@ from urllib.parse import urlparse
 
 import httpx
 
-logger = logging.getLogger(__name__)
+from aim.config.logging import get_logger
+
+logger = get_logger("aim.services.prescan_orchestrator")
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Data models
@@ -177,7 +178,7 @@ class PrescanOrchestrator:
                     result.services = list(profile.get("services", []) or [])
                     result.doctors = list(profile.get("doctors", []) or [])
                     result.price_hints = list(profile.get("price_hints", []) or [])
-                    result.inn = str(profile.get("inn", ""))
+                    result.inn = profile.get("inn") or ""
                 await _emit("structure", "done")
             except Exception as e:
                 logger.warning("Prescan structure thread failed: %s", e)
@@ -192,6 +193,10 @@ class PrescanOrchestrator:
                 inn = result.inn
                 if not inn:
                     inn = await self._extract_inn_from_site(url)
+
+                # Fallback: search rusprofile by company name
+                if not inn:
+                    inn = await self._extract_inn_by_name(url)
 
                 if inn:
                     result.inn = inn
@@ -299,6 +304,42 @@ class PrescanOrchestrator:
                 continue
         return ""
 
+    async def _extract_inn_by_name(self, url: str) -> str:
+        """Fallback: find INN via DaData API by company name.
+
+        Used when the website doesn't display INN in footer/contacts.
+        Extracts brand name from <title>, searches DaData, returns
+        the best-match INN.
+        """
+        company_name = await self._extract_brand_name(url)
+        if not company_name or len(company_name) < 5:
+            return ""
+
+        try:
+            from aim.services.rusprofile.client import get_dadata_client
+
+            client = get_dadata_client()
+            if not client.configured:
+                return ""
+
+            profiles = await client.search_company(company_name, count=5)
+            if not profiles:
+                return ""
+
+            # Pick first result with valid INN
+            for profile in profiles:
+                inn = profile.inn
+                if inn and self._is_valid_inn(inn):
+                    logger.info(
+                        "Found INN via DaData: '%s' → INN %s (%s)",
+                        company_name, inn, profile.legal_name[:60],
+                    )
+                    return inn
+        except Exception as e:
+            logger.debug("DaData name search failed for '%s': %s", company_name, e)
+
+        return ""
+
     @staticmethod
     def _is_valid_inn(inn: str) -> bool:
         """Basic INN checksum validation (Russian taxpayer ID)."""
@@ -317,22 +358,36 @@ class PrescanOrchestrator:
         return False
 
     async def _fetch_nalog_financials(self, inn: str) -> dict:
-        """Fetch financial data from bo.nalog.gov.ru by INN."""
+        """Fetch financial data from bo.nalog.gov.ru by INN.
+
+        Note: bo.nalog.gov.ru returns values in thousands of rubles
+        (Russian accounting standard). We multiply by 1000 to convert
+        to actual RUB for consistency with the rest of the system.
+        """
         try:
             from aim.services.nalog.bfo_client import BfoNalogClient
 
             client = BfoNalogClient(timeout=8.0)
             try:
-                orgs = client.search_by_inn(inn)
+                orgs = client.search(inn)
                 if orgs:
                     org = orgs[0]
-                    fin = client.get_financial_statement(str(org.id))
-                    if fin:
-                        return {
-                            "revenue_year": fin.revenue,
-                            "profit_year": fin.net_profit,
-                            "financial_year": fin.year,
-                        }
+                    result = {}
+                    if org.latest_revenue:
+                        result["revenue_year"] = org.latest_revenue * 1000
+                        result["financial_year"] = org.latest_period
+
+                    # Try to get net profit from detailed financials
+                    try:
+                        fin = client.get_latest_financials(org.id)
+                        if fin:
+                            result["profit_year"] = fin.net_profit * 1000 if fin.net_profit else None
+                            if not result["financial_year"]:
+                                result["financial_year"] = fin.period
+                    except Exception:
+                        pass
+
+                    return result
             finally:
                 client.close()
         except Exception as e:
@@ -399,21 +454,61 @@ class PrescanOrchestrator:
 
     # ── Reviews helpers ─────────────────────────────────────────────────
 
+    async def _extract_brand_name(self, url: str) -> str:
+        """Extract brand name from <title> tag of the website.
+
+        Domain-based names (iphk.ru → "Iphk") fail on Russian review platforms
+        that expect Cyrillic names. The <title> tag usually contains the real name,
+        e.g. "Институт пластической хирургии и косметологии - официальный сайт".
+        """
+        try:
+            http = await self._get_http()
+            r = await http.get(url)
+            match = re.search(r'<title>(.+?)</title>', r.text, re.IGNORECASE)
+            if match:
+                title = match.group(1).strip()
+                # Strip common suffixes: separators, "официальный сайт", city, etc.
+                for sep in [' — ', ' - ', ' – ', ' | ', ' :: ', ' – ']:
+                    if sep in title:
+                        title = title.split(sep)[0].strip()
+                # Remove common boilerplate
+                for suffix in [
+                    'официальный сайт', 'Официальный сайт',
+                    'клиники в Москве', 'клиники в Санкт-Петербурге',
+                    'в Москве', 'в Санкт-Петербурге',
+                    'Москва', 'Санкт-Петербург',
+                ]:
+                    title = re.sub(rf'\s*[—–-]?\s*{re.escape(suffix)}\s*$', '', title)
+                if len(title) >= 3 and not title.startswith('http'):
+                    logger.debug("Extracted brand name from title: %s", title)
+                    return title
+        except Exception as e:
+            logger.debug("Brand name extraction failed for %s: %s", url, e)
+        return ""
+
     async def _quick_reviews(self, url: str, specialization: str, city: str) -> dict:
-        """Quick review snapshot: rating, count, themes.
+        """Quick review snapshot: rating, count.
 
         Uses the existing ReviewCollector (Playwright) if available,
         with a tight 25-second timeout — just enough for 1-2 platforms.
+
+        Note: praise/complaints are left empty here. Real theme extraction
+        requires NLP over individual review texts (future enhancement).
+        Hermes uses rating + count + specialization to comment intelligently.
         """
         result = {"rating": None, "count": 0, "praise": [], "complaints": []}
 
         try:
-            from aim.services.ci.review_collector import ReviewCollector
-            from aim.services.ci.models import AggregatedReviews
+            from aim.services.ci.review_collector import ReviewCollector, AggregatedReviews
 
-            # Extract a meaningful company name from the URL
-            domain = urlparse(url).netloc.replace("www.", "")
-            company_name = domain.split(".")[0].replace("-", " ").title()
+            # Extract the real brand name from <title> tag, not domain.
+            # Domain-based names (iphk.ru → "Iphk") fail on Cyrillic platforms.
+            company_name = await self._extract_brand_name(url)
+            if not company_name:
+                domain = urlparse(url).netloc.replace("www.", "")
+                company_name = domain.split(".")[0].replace("-", " ").title()
+
+            logger.info("Quick reviews: searching for '%s' in %s", company_name, city or "Москва")
 
             collector = ReviewCollector()
             try:
@@ -424,33 +519,16 @@ class PrescanOrchestrator:
                 if reviews and reviews.platforms:
                     result["rating"] = round(reviews.avg_rating, 1)
                     result["count"] = reviews.total_reviews
-
-                    # Extract praise/complaint themes from review texts
-                    praise_keywords = ["понравилось", "отлично", "профессионально", "внимательный",
-                                       "рекомендую", "вежливый", "чисто", "комфортно", "качественно"]
-                    complaint_keywords = ["дорого", "очередь", "долго", "грубый", "не помог",
-                                          "хам", "не вернули", "плохо", "ужасно", "больно"]
-
-                    # Simple keyword matching on what we can extract
-                    for platform in reviews.platforms:
-                        for kw in praise_keywords:
-                            if kw not in result["praise"]:
-                                result["praise"].append(f"пациенты отмечают: {kw}")
-                                if len(result["praise"]) >= 3:
-                                    break
-                        for kw in complaint_keywords:
-                            if kw not in result["complaints"]:
-                                result["complaints"].append(f"жалуются на: {kw}")
-                                if len(result["complaints"]) >= 3:
-                                    break
+                    logger.info("Quick reviews found: rating=%s count=%s platforms=%s",
+                                result["rating"], result["count"], len(reviews.platforms))
             finally:
                 await collector.close()
         except asyncio.TimeoutError:
-            logger.debug("Quick reviews timed out for %s — skipping", url)
+            logger.warning("Quick reviews timed out for %s — skipping", url)
         except ImportError:
-            logger.debug("ReviewCollector not available — skipping quick reviews")
+            logger.warning("ReviewCollector not available — skipping quick reviews")
         except Exception as e:
-            logger.debug("Quick reviews failed for %s: %s", url, e)
+            logger.warning("Quick reviews failed for %s: %s", url, e)
 
         return result
 

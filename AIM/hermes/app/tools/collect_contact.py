@@ -64,10 +64,16 @@ async def handle_collect_contact(
         website = unpacked["website"]
         name = unpacked["name"]
         source = unpacked["source"]
-    if contact_type not in VALID_CONTACT_TYPES:
+    # Allow website-only leads (no contact info yet)
+    if contact_type and contact_type not in VALID_CONTACT_TYPES:
         return json.dumps({
             "error": "Invalid contact_type",
             "detail": f"Must be one of: {', '.join(sorted(VALID_CONTACT_TYPES))}. Got: {contact_type}",
+        })
+    if not contact_type and not website:
+        return json.dumps({
+            "error": "Either contact_type or website is required",
+            "detail": "Provide contact_type + contact_value, or at least website to create a lead skeleton.",
         })
 
     logger.info(
@@ -148,7 +154,7 @@ registry.register(
                         "description": "Lead source (default: web_chat)",
                     },
                 },
-                "required": ["contact_type", "contact_value"],
+                "required": [],
             },
         },
     },

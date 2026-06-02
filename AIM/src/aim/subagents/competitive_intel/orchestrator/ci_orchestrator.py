@@ -88,8 +88,8 @@ class CIOrchestrator(Agent):
         # Phase-specific timeouts (seconds) — agents have different runtime profiles
         self._phase_timeouts: Dict[int, float] = {
             1: 420.0,   # ci-scout: Apify + DaData fallback + parallel HTTP profile building (15 sites × 15s)
-            2: 90.0,    # ci-auditor: httpx scraping (technical + content)
-            3: 90.0,    # ci-auditor: competitive comparison
+            2: 180.0,   # ci-auditor: httpx scraping (technical + content + ux_ui) — 3+ competitors × HTML+PageSpeed
+            3: 180.0,   # ci-auditor: competitive comparison
             4: 120.0,   # ci-reputation: multi-platform review scraping
             5: 300.0,   # 9 parallel agents: ci-site-crawler needs time to crawl 10 sites
             6: 60.0,    # ci-factchecker: cross-reference validation
@@ -345,7 +345,13 @@ class CIOrchestrator(Agent):
                             phase1_result = findings["phase_1"]["result"]
                             top = phase1_result.get("top_for_analysis", [])
                             if top:
-                                phase_task_data["competitors"] = top
+                                # Normalize: bare URL strings → competitor dicts
+                                if isinstance(top[0], str):
+                                    phase_task_data["competitors"] = [
+                                        {"name": _extract_name_from_url(u), "url": u} for u in top
+                                    ]
+                                else:
+                                    phase_task_data["competitors"] = top
                             else:
                                 # Fallback: convert URLs to objects with extracted names
                                 phase_task_data["competitors"] = [
@@ -474,14 +480,14 @@ class CIOrchestrator(Agent):
                     phase_task_data["correlation_id"] = correlation_id
                     phase_task_data["previous_results"] = {k: v for k, v in findings.items()}
 
-                    # Quick tier: skip ci-scout when only client URL (no competitors to discover)
-                    # Apify Google Maps scraper takes 30-60s — too slow for quick tier.
-                    # Competitor discovery is handled by PRESALE Step 4 (find_competitors).
-                    if phase_num == 1 and len(competitors_list) <= 1:
+                    # Quick tier: skip ci-scout when competitors are already provided
+                    # (from find_competitors in PRESALE Step 4). Apify takes 30-60s.
+                    has_named_competitors = bool(task_data.get("competitors", []))
+                    if phase_num == 1 and (len(competitors_list) <= 1 or has_named_competitors):
                         findings["phase_1"] = {
                             "phase": 1, "agent": "ci-scout", "status": "skipped",
-                            "result": {"top_for_analysis": [], "competitors_found": 0,
-                                       "reason": "single_url_quick_tier"}
+                            "result": {"top_for_analysis": task_data.get("competitors", []), "competitors_found": len(task_data.get("competitors", [])),
+                                       "reason": "competitors_provided_skip_scout"}
                         }
                         continue
 
@@ -493,7 +499,13 @@ class CIOrchestrator(Agent):
                             phase1_result = findings["phase_1"]["result"]
                             top = phase1_result.get("top_for_analysis", [])
                             if top:
-                                phase_task_data["competitors"] = top
+                                # Normalize: bare URL strings → competitor dicts
+                                if isinstance(top[0], str):
+                                    phase_task_data["competitors"] = [
+                                        {"name": _extract_name_from_url(u), "url": u} for u in top
+                                    ]
+                                else:
+                                    phase_task_data["competitors"] = top
                             else:
                                 phase_task_data["competitors"] = [
                                     {"name": _extract_name_from_url(url), "url": url} for url in competitors_list
@@ -505,11 +517,13 @@ class CIOrchestrator(Agent):
 
                     if isinstance(agent_names, list):
                         phase_result = await self._execute_parallel_phase(
-                            phase_num, agent_names, phase_task_data, timeout=15.0, direct=True
+                            phase_num, agent_names, phase_task_data,
+                            timeout=self._phase_timeouts.get(phase_num, 60.0), direct=True
                         )
                     else:
                         phase_result = await self._execute_single_phase(
-                            phase_num, agent_names, phase_task_data, timeout=15.0, direct=True
+                            phase_num, agent_names, phase_task_data,
+                            timeout=self._phase_timeouts.get(phase_num, 60.0), direct=True
                         )
 
                     findings[f"phase_{phase_num}"] = phase_result
@@ -641,6 +655,9 @@ class CIOrchestrator(Agent):
             url = c.get("url", c) if isinstance(c, dict) else str(c)
             seo_score = _extract_auditor_seo_score(auditor_result, url)
             rep_rating = _extract_reputation_rating(rep_result, name)
+            # Fallback: use rating from find_competitors if reputation phase failed
+            if rep_rating is None and isinstance(c, dict):
+                rep_rating = c.get("rating")
             has_pricing = _has_pricing_data_from_agent(pricing_result, name)
             has_booking = _has_online_booking(auditor_result)
 
@@ -681,11 +698,35 @@ class CIOrchestrator(Agent):
         # ── Build rich pricing comparison ──
         pricing_comparison = {}
         pricing_profiles = pricing_result.get("pricing_profiles", []) if isinstance(pricing_result, dict) else []
+
+        # Fallback: extract price hints from auditor HTML scraping (quick tier)
+        auditor_hints = {}
+        if not pricing_profiles:
+            auditor_audits = auditor_result.get("audits", [])
+            for audit in auditor_audits:
+                if not isinstance(audit, dict):
+                    continue
+                audit_name = audit.get("name", audit.get("url", ""))
+                for dim_data in audit.get("dimensions", {}).values():
+                    if isinstance(dim_data, dict) and "_pricing_hints" in dim_data:
+                        auditor_hints[audit_name] = dim_data["_pricing_hints"]
+                        break
+
         for c in comp_list:
             name = c.get("name", c) if isinstance(c, dict) else str(c)
             prices = _extract_prices_from_agent(pricing_profiles, name)
             primary = prices.get("primary_consult")
             popular = prices.get("popular_service")
+
+            # Use auditor HTML price hints as fallback
+            if primary is None and name in auditor_hints:
+                hints = auditor_hints[name]
+                hint_min = hints.get("price_range_min")
+                hint_max = hints.get("price_range_max")
+                if hint_min and hint_max:
+                    primary = hint_min
+                    popular = hint_max
+
             pricing_comparison[name] = {
                 "primary_consult": primary,
                 "popular_service": popular,
@@ -1732,15 +1773,17 @@ class CIOrchestrator(Agent):
 
 
 def _extract_steal_worthy_tactics(findings: Dict[str, Any]) -> list:
-    """Extract steal-worthy tactics from ci-auditor findings.
+    """Extract steal-worthy tactics from ci-auditor findings + reputation data.
 
-    Checks both Phase 2 (deep audit of target site) and Phase 3 (competitive comparison).
-    Each tactic describes what to copy from which competitor and why.
+    Three sources of tactics:
+    1. Competitor strengths (score >= 60): "copy what works"
+    2. Competitor weaknesses (score < 50): "fill the gap" opportunities
+    3. Reputation data: review volume/rating insights
     """
     tactics = []
     seen_tactics = set()
 
-    # Collect from both Phase 2 (target site) and Phase 3 (competitors)
+    # ── Source 1: Competitor strengths (copy what works) ──
     for phase_key in ("phase_3", "phase_2"):
         phase = findings.get(phase_key, {})
         if not isinstance(phase, dict):
@@ -1764,24 +1807,89 @@ def _extract_steal_worthy_tactics(findings: Dict[str, Any]) -> list:
                         continue
                     score = check_data.get("score", 0) or 0
                     status = check_data.get("status", "")
-                    if status in ("pass", "good") and isinstance(score, (int, float)) and score >= 80:
-                        check_label = check_data.get("name", check_data.get("check", check_key))
-                        tactic_desc = f"Внедрить «{check_label}» как у {name}"
-                        dedup_key = f"{name}:{check_label}"
+                    check_label = check_data.get("name", check_data.get("check", check_key))
+
+                    # Strength-based tactic: score >= 60 (lowered from 80)
+                    if status in ("pass", "good") and isinstance(score, (int, float)) and score >= 60:
+                        dedup_key = f"strength:{name}:{check_label}"
                         if dedup_key in seen_tactics:
                             continue
                         seen_tactics.add(dedup_key)
                         tactics.append({
                             "source_competitor": name,
-                            "tactic_description": tactic_desc,
+                            "tactic_description": f"Внедрить «{check_label}» как у {name}",
                             "why_it_works": f"{name} имеет {score}/100 по параметру «{check_label}»",
-                            "expected_impact": "High" if score >= 90 else "Medium",
+                            "expected_impact": "High" if score >= 85 else "Medium",
                             "estimated_effort": "Medium",
                         })
 
-    # Sort: High impact first, then Medium
-    tactics.sort(key=lambda t: 0 if t["expected_impact"] == "High" else 1)
-    return tactics[:5]
+    # ── Source 2: Competitor weaknesses → our opportunities ──
+    critical_gap_checks = {"online_booking", "mobile_friendly", "https", "contact_forms", "chat"}
+    for phase_key in ("phase_3", "phase_2"):
+        phase = findings.get(phase_key, {})
+        if not isinstance(phase, dict):
+            continue
+        auditor_result = phase.get("result", {}) or {}
+        audits = auditor_result.get("audits", [])
+        if not audits:
+            continue
+
+        for audit in audits:
+            if not isinstance(audit, dict):
+                continue
+            name = audit.get("name", audit.get("url", ""))
+            dims = audit.get("dimensions", {})
+
+            for dim_name, checks in dims.items():
+                if not isinstance(checks, dict):
+                    continue
+                for check_key, check_data in checks.items():
+                    if not isinstance(check_data, dict):
+                        continue
+                    score = check_data.get("score", 0) or 0
+                    check_label = check_data.get("name", check_data.get("check", check_key))
+
+                    if (isinstance(score, (int, float)) and score < 50
+                            and check_key in critical_gap_checks):
+                        dedup_key = f"gap:{name}:{check_label}"
+                        if dedup_key in seen_tactics:
+                            continue
+                        seen_tactics.add(dedup_key)
+                        tactics.append({
+                            "source_competitor": name,
+                            "tactic_description": f"Обойти {name} — внедрить «{check_label}» (у них {score}/100)",
+                            "why_it_works": f"{name} отстаёт по «{check_label}» ({score}/100) — легко их превзойти",
+                            "expected_impact": "High",
+                            "estimated_effort": "Low" if check_key in ("https", "mobile_friendly") else "Medium",
+                        })
+
+    # ── Source 3: Reputation-based tactics ──
+    phase4 = findings.get("phase_4", {})
+    rep_result = phase4.get("result", {}) if isinstance(phase4, dict) else {}
+    rep_scores = rep_result.get("reputation_scores", {})
+    if isinstance(rep_scores, dict):
+        for comp_name, rep_data in rep_scores.items():
+            if not isinstance(rep_data, dict):
+                continue
+            rating = rep_data.get("rating")
+            review_count = rep_data.get("review_count", 0)
+            if isinstance(rating, (int, float)) and rating >= 4.5 and review_count < 30:
+                dedup_key = f"rep:{comp_name}:low_reviews"
+                if dedup_key not in seen_tactics:
+                    seen_tactics.add(dedup_key)
+                    tactics.append({
+                        "source_competitor": comp_name,
+                        "tactic_description": f"Обойти {comp_name} по отзывам — у них {rating}★ но всего {review_count} отзывов",
+                        "why_it_works": f"Малое количество отзывов ({review_count}) при высоком рейтинге — уязвимость. Запустите кампанию сбора отзывов и обойдите их.",
+                        "expected_impact": "High",
+                        "estimated_effort": "Medium",
+                    })
+
+    # Sort: High impact first, then by effort (Low before Medium)
+    effort_order = {"Low": 0, "Medium": 1, "High": 2}
+    tactics.sort(key=lambda t: (0 if t["expected_impact"] == "High" else 1,
+                                 effort_order.get(t.get("estimated_effort", "Medium"), 1)))
+    return tactics[:7]
 
 
 def _extract_top_recommendation(
