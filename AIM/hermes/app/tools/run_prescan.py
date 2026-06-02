@@ -78,9 +78,9 @@ async def handle_run_prescan(url=None, **kwargs) -> str:
 
             result = data.get("result", {})
 
-            # Pre-compute human-readable speed description to prevent LLM hallucination.
-            # The LLM otherwise invents numbers like "310 мс" from training data
-            # instead of reading load_speed_ms (e.g., 1067) and converting correctly.
+            # ANTI-HALLUCINATION: DeepSeek reinterprets raw numbers (load_speed_ms: 2686 → "5 seconds").
+            # Solution: DELETE raw numbers from LLM response entirely. Give ONLY pre-computed text.
+            # The LLM cannot hallucinate from data it doesn't see.
             load_speed_ms_val = result.get("load_speed_ms", 0)
             if load_speed_ms_val > 0:
                 load_speed_sec = load_speed_ms_val / 1000
@@ -97,6 +97,19 @@ async def handle_run_prescan(url=None, **kwargs) -> str:
             else:
                 speed_desc = "не измерена"
 
+            # Pre-compute SEO health label to prevent number hallucination (70 → "60").
+            seo_score_val = result.get("seo_score", 0)
+            if seo_score_val >= 80:
+                seo_health = f"{seo_score_val}/100 — отличное SEO, сайт хорошо оптимизирован"
+            elif seo_score_val >= 60:
+                seo_health = f"{seo_score_val}/100 — хорошее состояние, но есть потенциал для улучшения"
+            elif seo_score_val >= 40:
+                seo_health = f"{seo_score_val}/100 — среднее состояние, требуется оптимизация"
+            elif seo_score_val > 0:
+                seo_health = f"{seo_score_val}/100 — слабое SEO, сайт плохо виден в поиске"
+            else:
+                seo_health = "не оценено"
+
             # Build a compact, narrative-friendly summary
             summary = {
                 "url": url,
@@ -111,13 +124,12 @@ async def handle_run_prescan(url=None, **kwargs) -> str:
                 "revenue_year": result.get("revenue_year"),
                 "profit_year": result.get("profit_year"),
                 "financial_year": result.get("financial_year"),
-                # SEO
-                "seo_score": result.get("seo_score", 0),
+                # SEO (текстовые описания — без сырых чисел, которые DeepSeek переинтерпретирует)
+                "seo_health": seo_health,  # ← pre-computed, use THIS (anti-hallucination)
                 "seo_issues": result.get("seo_issues", []),
                 "has_mobile_viewport": result.get("has_mobile_viewport", False),
                 "has_ssl": result.get("has_ssl", False),
-                "load_speed_ms": load_speed_ms_val,
-                "web_speed": speed_desc,  # ← pre-computed, use THIS in responses (anti-hallucination)
+                "web_speed": speed_desc,  # ← pre-computed, use THIS (anti-hallucination)
                 # Reviews
                 "rating": result.get("rating"),
                 "reviews_count": result.get("reviews_count", 0),
@@ -133,9 +145,9 @@ async def handle_run_prescan(url=None, **kwargs) -> str:
 
             push_tool_progress(
                 "prescan",
-                f"✅ Разведка завершена: {result.get('specialization', '')} в {result.get('city', '')}, "
+                f"✅ Разведка завершена: {result.get('specialization', '')} в {result.get('city', '') or 'городе'}, "
                 f"оборот ~{result.get('revenue_year', '?')} ₽, "
-                f"SEO={result.get('seo_score', '?')}, "
+                f"SEO={seo_score_val}/100, "
                 f"рейтинг={result.get('rating', '?')}",
             )
 
