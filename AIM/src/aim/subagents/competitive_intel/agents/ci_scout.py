@@ -85,6 +85,28 @@ class CIScoutAgent(Agent):
             "emerging": "Новые игроки (< 2 лет, активно растут)"
         }
 
+        # Домены-агрегаторы — не являются реальными клиниками, фильтруются при discovery
+        self._aggregator_domains = {
+            "kp.ru", "www.kp.ru",
+            "startsmile.ru", "rating.startsmile.ru", "www.startsmile.ru",
+            "32top.ru", "www.32top.ru",
+            "simpladent.com", "www.simpladent.com",
+            "medadvisor.ru", "www.medadvisor.ru",
+            "prodoctorov.ru", "www.prodoctorov.ru",
+            "yandex.ru", "www.yandex.ru",
+            "youtube.com", "www.youtube.com", "m.youtube.com",
+            "forbes.ru", "www.forbes.ru",
+            "zoon.ru", "www.zoon.ru",
+            "napopravku.ru", "www.napopravku.ru",
+            "2gis.ru", "www.2gis.ru",
+            "docdoc.ru", "www.docdoc.ru",
+            "doct.ru", "stomatologiya.doct.ru", "www.doct.ru",
+            "legstom.ru", "www.legstom.ru",
+            "chudostom.ru", "www.chudostom.ru",
+            "100zubov.ru", "www.100zubov.ru",
+            "top10clinic.ru", "www.top10clinic.ru",
+        }
+
     async def execute_task(self, task: Task) -> TaskResult:
         """
         Выполнить поиск и кластеризацию конкурентов.
@@ -195,14 +217,12 @@ class CIScoutAgent(Agent):
         # Метод 1: SerpAPI web search (8 запросов) — rotating client or direct key
         if self._serpapi_client or self.serpapi_key:
             search_queries = [
-                f"{niche} {geo} рейтинг лучших клиник 2025 2026",
-                f"{niche} {geo} отзывы пациентов",
-                f"топ частных клиник {niche} {geo}",
-                f"{niche} {geo} site:prodoctorov.ru",
-                f"{niche} {geo} site:zoon.ru",
-                f"{niche} {geo} site:2gis.ru",
-                f"{niche} {geo} site:napopravku.ru",
-                f"клиника {niche} {geo} запись онлайн",
+                f"{niche} {geo} частная клиника сайт",
+                f"{niche} {geo} записаться онлайн",
+                f"{niche} {geo} услуги цены",
+                f"клиника {niche} {geo} официальный сайт",
+                f"{niche} {geo} врачи специалисты",
+                f"центр {niche} {geo} лечение диагностика",
             ]
 
             for query in search_queries[:6]:
@@ -213,6 +233,8 @@ class CIScoutAgent(Agent):
                         name = r.get("title", "")
                         if url and name and "http" in url:
                             domain = self._extract_domain(url)
+                            if domain in self._aggregator_domains:
+                                continue
                             if domain not in discovered:
                                 discovered[domain] = {
                                     "name": self._clean_company_name(name),
