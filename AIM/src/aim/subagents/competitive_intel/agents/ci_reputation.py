@@ -784,8 +784,7 @@ class CIReputationAgent(Agent):
         }
 
     def _estimate_sentiment_from_rating(self, rating: float) -> dict:
-        """Fallback: estimate sentiment distribution from rating with jitter."""
-        import random
+        """Fallback: estimate sentiment distribution from rating with deterministic jitter."""
         # Base distribution by rating bracket
         if rating >= 4.5:
             base_pos, base_neg, base_neu = 75, 10, 15
@@ -800,9 +799,9 @@ class CIReputationAgent(Agent):
         else:
             base_pos, base_neg, base_neu = 10, 70, 20
 
-        # Add ±8% jitter so not all competitors get identical scores
-        jitter_pos = random.randint(-8, 8)
-        jitter_neg = random.randint(-8, 8)
+        # Deterministic jitter from rating (avoids identical scores, no random import)
+        jitter_pos = (hash(str(rating) + "pos") % 17) - 8
+        jitter_neg = (hash(str(rating) + "neg") % 17) - 8
 
         pos = max(5, min(90, base_pos + jitter_pos))
         neg = max(5, min(90, base_neg + jitter_neg))
