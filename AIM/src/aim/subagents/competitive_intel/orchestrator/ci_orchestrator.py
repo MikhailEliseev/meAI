@@ -95,7 +95,7 @@ class CIOrchestrator(Agent):
             6: 60.0,    # ci-factchecker: cross-reference validation
             7: 60.0,    # ci-strategist: synthesis + positioning
             8: 60.0,    # ci-strategist: GTM + recommendations
-            9: 30.0,    # ci-prioritizer: action plan scoring
+            9: 60.0,    # ci-prioritizer: insight scoring + action plan
         }
 
         # Persistent subscriber: collects ALL ci.agent.completed events for audit trail
