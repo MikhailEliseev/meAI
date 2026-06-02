@@ -325,36 +325,6 @@ class CIScoutAgent(Agent):
             finally:
                 await matcher.close()
 
-        # Fallback: используем только _search_candidates() без полного пайплайна
-        matcher = None
-        try:
-            from aim.services.rusprofile.models import ClientProfile
-            from aim.services.competitor_matcher import CompetitorMatcher
-
-            matcher = CompetitorMatcher()
-            client = ClientProfile(
-                url=client_url or "https://unknown.ru",
-                specialization=niche if niche and niche != "medical" else "стоматология",
-                city=geo if geo and geo != "ru" else "",
-                services=[],
-            )
-            candidates = await matcher._search_candidates(client)
-            for c in candidates:
-                name = c.brand_name or c.legal_name
-                if not name:
-                    continue
-                result.append({
-                    "name": name,
-                    "url": "",
-                    "domain": "",
-                })
-            print(f"[CI Scout] DaData (_search_candidates): нашёл {len(result)}")
-        except Exception as e:
-            print(f"[CI Scout] DaData _search_candidates failed: {e}")
-        finally:
-            if matcher:
-                await matcher.close()
-
         return result
 
     async def _serpapi_search(self, query: str) -> List[Dict[str, str]]:
