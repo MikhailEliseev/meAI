@@ -55,9 +55,19 @@ class CIScoutAgent(Agent):
             settings = get_api_settings()
             self.serpapi_key = settings.serpapi_api_key
             self.semrush_api_key = settings.semrush_api_key
+            self._serpapi_key_secondary = settings.serpapi_key_secondary
         except Exception:
             self.serpapi_key = None
             self.semrush_api_key = None
+            self._serpapi_key_secondary = None
+
+        # Rotating SerpAPI client (auto-failover on 429)
+        self._serpapi_client = None
+        try:
+            from aim.subagents.competitive_intel.serpapi_client import get_serpapi_client
+            self._serpapi_client = get_serpapi_client()
+        except Exception:
+            pass
 
         # HTTP client для загрузки сайтов
         self._http = httpx.AsyncClient(
@@ -182,8 +192,8 @@ class CIScoutAgent(Agent):
         """
         discovered = {}  # url → {name, url, source}
 
-        # Метод 1: SerpAPI web search (8 запросов)
-        if self.serpapi_key:
+        # Метод 1: SerpAPI web search (8 запросов) — rotating client
+        if self._serpapi_client:
             search_queries = [
                 f"{niche} {geo} рейтинг лучших клиник 2025 2026",
                 f"{niche} {geo} отзывы пациентов",
@@ -325,20 +335,10 @@ class CIScoutAgent(Agent):
         return result
 
     async def _serpapi_search(self, query: str) -> List[Dict[str, str]]:
-        """Поиск через SerpAPI (organic results)."""
-        params = {
-            "api_key": self.serpapi_key,
-            "engine": "google",
-            "q": query,
-            "hl": "ru",
-            "gl": "ru",
-            "num": 10,
-        }
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get("https://serpapi.com/search", params=params)
-            resp.raise_for_status()
-            data = resp.json()
-        return data.get("organic_results", [])
+        """Поиск через SerpAPI с ротацией ключей (organic results)."""
+        if self._serpapi_client:
+            return await self._serpapi_client.search(query)
+        return []
 
     async def _semrush_discover_competitors(self, niche: str, geo: str) -> List[Dict[str, str]]:
         """

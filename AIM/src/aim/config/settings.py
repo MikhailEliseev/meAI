@@ -54,7 +54,12 @@ class APISettings(BaseSettings):
     serpapi_api_key: Optional[str] = Field(
         default=None,
         validation_alias="SERPAPI_KEY",
-        description="SerpAPI key for real-time SERP and web search",
+        description="SerpAPI key for real-time SERP and web search (primary)",
+        min_length=10,
+    )
+    serpapi_key_secondary: Optional[str] = Field(
+        default=None,
+        description="SerpAPI secondary key (old key, recovers after ~1 month of inactivity)",
         min_length=10,
     )
     pagespeed_api_key: Optional[str] = Field(

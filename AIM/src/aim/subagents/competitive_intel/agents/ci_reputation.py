@@ -51,6 +51,14 @@ class CIReputationAgent(Agent):
         self.serpapi_base_url = "https://serpapi.com/search"
         self.brave_base_url = "https://api.search.brave.com/res/v1/web/search"
 
+        # Rotating SerpAPI client (auto-failover on 429)
+        self._serpapi_client = None
+        try:
+            from aim.subagents.competitive_intel.serpapi_client import get_serpapi_client
+            self._serpapi_client = get_serpapi_client()
+        except Exception:
+            pass
+
         # Review sources with platform-specific scraping URLs
         self.sources = {
             "yandex_maps": {
@@ -259,8 +267,8 @@ class CIReputationAgent(Agent):
             "data_source": "unavailable",
         }
 
-        # Method 1: SerpAPI
-        if self.serpapi_key:
+        # Method 1: SerpAPI (rotating client preferred, fallback to direct key)
+        if self._serpapi_client or self.serpapi_key:
             result = await self._search_serpapi(name, source_info)
             if result is not None and (result.get("count") or isinstance(result.get("avg_rating"), (int, float))):
                 return result
@@ -286,26 +294,40 @@ class CIReputationAgent(Agent):
     async def _search_serpapi(
         self, name: str, source_info: dict
     ) -> Dict[str, Any] | None:
-        """Search via SerpAPI (Google)."""
-        try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
-                query = f"{name} отзывы {source_info['search_query']}"
-                params = {
-                    "q": query,
-                    "api_key": self.serpapi_key,
-                    "engine": "google",
-                    "hl": "ru",
-                    "gl": "ru",
-                    "num": 10,
-                }
-                resp = await client.get(self.serpapi_base_url, params=params)
-                resp.raise_for_status()
-                data = resp.json()
+        """Search via SerpAPI with key rotation."""
+        query = f"{name} отзывы {source_info['search_query']}"
 
-                return self._extract_rating_from_search(data, source_info)
-        except Exception as e:
-            print(f"[CI Reputation] SerpAPI error for {name}: {e}")
-            return None
+        # Try rotating client first (handles 429 across keys)
+        if self._serpapi_client:
+            try:
+                results = await self._serpapi_client.search(query)
+                if results:
+                    return self._extract_rating_from_search(
+                        {"organic_results": results}, source_info
+                    )
+            except Exception as e:
+                print(f"[CI Reputation] Rotating SerpAPI error for {name}: {e}")
+
+        # Fallback: direct SerpAPI call with single key
+        if self.serpapi_key:
+            try:
+                async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
+                    params = {
+                        "q": query,
+                        "api_key": self.serpapi_key,
+                        "engine": "google",
+                        "hl": "ru",
+                        "gl": "ru",
+                        "num": 10,
+                    }
+                    resp = await client.get(self.serpapi_base_url, params=params)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    return self._extract_rating_from_search(data, source_info)
+            except Exception as e:
+                print(f"[CI Reputation] SerpAPI error for {name}: {e}")
+
+        return None
 
     async def _search_brave(
         self, name: str, source_info: dict
