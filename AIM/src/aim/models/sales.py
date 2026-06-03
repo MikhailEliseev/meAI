@@ -7,8 +7,7 @@ Part of Phase 13: AI Sales Admin Agent.
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from aim.storage.models import Base
@@ -34,7 +33,7 @@ class SalesConversation(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
     last_message_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     messages_count: Mapped[int] = mapped_column(Integer, default=0)
-    qualification_result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    qualification_result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     escalation_count: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
@@ -66,7 +65,7 @@ class SalesMessage(Base):
     content_type: Mapped[str] = mapped_column(String(20), default="text")
     sender_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     ai_generated: Mapped[bool] = mapped_column(Boolean, default=False)
-    tool_calls: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    tool_calls: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     response_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
@@ -90,7 +89,7 @@ class SalesEscalation(Base):
     )
     reason: Mapped[str] = mapped_column(String(50), nullable=False)
     severity: Mapped[str] = mapped_column(String(20), nullable=False)
-    context_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    context_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     escalated_to: Mapped[str] = mapped_column(String(50), nullable=True)
     notification_channel: Mapped[str | None] = mapped_column(String(20), nullable=True)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -116,7 +115,7 @@ class SalesAgentActivity(Base):
     action: Mapped[str] = mapped_column(String(50), nullable=False)
     conversation_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     lead_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    details: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     success: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -28,6 +28,7 @@ from aim.models.sales import (
     SalesEscalation,
     SalesAgentActivity,
 )
+from aim.models.company_profile import CompanyProfileModel
 
 __all__ = [
     "Base",
@@ -50,4 +51,5 @@ __all__ = [
     "SalesMessage",
     "SalesEscalation",
     "SalesAgentActivity",
+    "CompanyProfileModel",
 ]

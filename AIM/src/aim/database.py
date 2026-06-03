@@ -58,6 +58,7 @@ def _import_models():
     from aim.models.document import Document  # noqa: F401
     from aim.models.onboarding import Onboarding  # noqa: F401
     from aim.models.fz152_audit import FZ152AuditLog  # noqa: F401
+    from aim.models.company_profile import CompanyProfileModel  # noqa: F401
 
 
 _import_models()
