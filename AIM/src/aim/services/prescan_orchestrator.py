@@ -468,9 +468,33 @@ class PrescanOrchestrator:
             if match:
                 title = match.group(1).strip()
                 # Strip common suffixes: separators, "официальный сайт", city, etc.
+                parts = None
                 for sep in [' — ', ' - ', ' – ', ' | ', ' :: ', ' – ']:
                     if sep in title:
-                        title = title.split(sep)[0].strip()
+                        parts = [p.strip() for p in title.split(sep, 1)]
+                        break
+
+                if parts and len(parts) == 2:
+                    # If the first part looks like a boilerplate page label
+                    # (too short, or a known generic title), use the second part.
+                    boilerplate_labels = {
+                        'коммерческое предложение', 'главная', 'главная страница',
+                        'home', 'home page', 'index',
+                    }
+                    first_lower = parts[0].lower()
+                    # Also: "Заголовок" page titles where part1 < 25 chars and part2 > 25 chars
+                    if (first_lower in boilerplate_labels or
+                        (len(parts[0]) < 25 and len(parts[1]) > len(parts[0]) * 2)):
+                        title = parts[1]
+                    else:
+                        title = parts[0]
+                elif parts and len(parts) > 2:
+                    # Multi-separator title. Skip boilerplate front parts.
+                    meaningful = [p for p in parts if p.lower() not in {
+                        'коммерческое предложение', 'главная', 'главная страница',
+                        'home', 'home page',
+                    }]
+                    title = meaningful[0] if meaningful else parts[0]
                 # Remove common boilerplate
                 for suffix in [
                     'официальный сайт', 'Официальный сайт',
@@ -487,22 +511,25 @@ class PrescanOrchestrator:
         return ""
 
     async def _quick_reviews(self, url: str, specialization: str, city: str) -> dict:
-        """Quick review snapshot: rating, count.
+        """Quick review snapshot: rating, count, and per-platform data.
 
         Uses the existing ReviewCollector (Playwright) if available,
         with a tight 25-second timeout — just enough for 1-2 platforms.
 
-        Note: praise/complaints are left empty here. Real theme extraction
-        requires NLP over individual review texts (future enhancement).
-        Hermes uses rating + count + specialization to comment intelligently.
+        Returns dict with:
+          - rating, count, praise, complaints (aggregated)
+          - yandex_maps: {found, rating, reviews, url} (from ReviewCollector)
         """
-        result = {"rating": None, "count": 0, "praise": [], "complaints": []}
+        result = {
+            "rating": None, "count": 0, "praise": [], "complaints": [],
+            "yandex_maps": {"found": False, "rating": None, "reviews": None, "url": ""},
+            "prodoctorov": {"found": False, "rating": None, "reviews": None, "url": ""},
+        }
 
         try:
             from aim.services.ci.review_collector import ReviewCollector, AggregatedReviews
 
             # Extract the real brand name from <title> tag, not domain.
-            # Domain-based names (iphk.ru → "Iphk") fail on Cyrillic platforms.
             company_name = await self._extract_brand_name(url)
             if not company_name:
                 domain = urlparse(url).netloc.replace("www.", "")
@@ -519,8 +546,27 @@ class PrescanOrchestrator:
                 if reviews and reviews.platforms:
                     result["rating"] = round(reviews.avg_rating, 1)
                     result["count"] = reviews.total_reviews
-                    logger.info("Quick reviews found: rating=%s count=%s platforms=%s",
-                                result["rating"], result["count"], len(reviews.platforms))
+
+                    # Extract Yandex Maps + ProDoctorov data from platform results
+                    for p in reviews.platforms:
+                        if p.platform == "yandex_maps" and not p.error:
+                            result["yandex_maps"] = {
+                                "found": True,
+                                "rating": p.rating,
+                                "reviews": p.reviews_count,
+                                "url": p.url,
+                            }
+                        elif p.platform == "prodoctorov" and not p.error:
+                            result["prodoctorov"] = {
+                                "found": True,
+                                "rating": p.rating,
+                                "reviews": p.reviews_count,
+                                "url": p.url,
+                            }
+
+                    logger.info("Quick reviews found: rating=%s count=%s yandex=%s platforms=%s",
+                                result["rating"], result["count"],
+                                result["yandex_maps"]["found"], len(reviews.platforms))
             finally:
                 await collector.close()
         except asyncio.TimeoutError:
@@ -585,3 +631,532 @@ class PrescanOrchestrator:
         # We just return the links found — Hermes can note which platforms
         # are present.
         return result
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # Staged Pipeline (Phase 23)
+    # ═══════════════════════════════════════════════════════════════════════
+
+    async def prescan_staged(
+        self,
+        url: str,
+        progress_callback=None,
+        force_refresh: bool = False,
+    ) -> dict:
+        """Run 3-stage ultra-deep prescan with progressive results.
+
+        Stages:
+          1. Финансовый хук (20-30s) — revenue, profit, legal entity
+          2. Под капотом (40-60s) — licenses, founders, deep SEO, reviews, social
+          3. Рынок (60-90+s) — maps, competitors, revenue trends, content audit
+
+        Each stage fires progress_callback(stage_number, stage_name, summary, is_final).
+        Results are cached in company_profiles for instant repeat lookups.
+        """
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+
+        t0 = time.monotonic()
+        errors: list[str] = []
+
+        # ── Cache check ───────────────────────────────────────────────────
+        if not force_refresh:
+            cached = await self._cache_get(url)
+            if cached:
+                logger.info("prescan_staged: cache hit for %s (%.0fms)", url,
+                            (time.monotonic() - t0) * 1000)
+                return cached
+
+        # ── Stage 1: Финансовый хук ───────────────────────────────────────
+        try:
+            stage_1_data = await self._stage_1_financials(url)
+        except Exception as e:
+            stage_1_data = {"_errors": [f"stage_1: {e}"]}
+        stage_1_errors = stage_1_data.pop("_errors", [])
+        errors.extend(stage_1_errors)
+        if progress_callback:
+            try:
+                await progress_callback(1, "Финансовый хук", stage_1_data, False)
+            except Exception:
+                pass
+
+        # ── Stage 2: Под капотом ──────────────────────────────────────────
+        try:
+            stage_2_data = await self._stage_2_deep(url, stage_1_data)
+        except Exception as e:
+            stage_2_data = {"_errors": [f"stage_2: {e}"]}
+        stage_2_errors = stage_2_data.pop("_errors", [])
+        errors.extend(stage_2_errors)
+        if progress_callback:
+            try:
+                await progress_callback(2, "Под капотом", stage_2_data, False)
+            except Exception:
+                pass
+
+        # ── Stage 3: Рынок ────────────────────────────────────────────────
+        try:
+            stage_3_data = await self._stage_3_market(url, stage_1_data, stage_2_data)
+        except Exception as e:
+            stage_3_data = {"_errors": [f"stage_3: {e}"]}
+        stage_3_errors = stage_3_data.pop("_errors", [])
+        errors.extend(stage_3_errors)
+        if progress_callback:
+            try:
+                await progress_callback(3, "Рынок", stage_3_data, True)
+            except Exception:
+                pass
+
+        # ── Merge & cache ──────────────────────────────────────────────────
+        profile_data = {
+            "stage_1": stage_1_data,
+            "stage_2": stage_2_data,
+            "stage_3": stage_3_data,
+        }
+        if errors:
+            profile_data["_errors"] = errors
+
+        inn = stage_1_data.get("legal_entity", {}).get("inn", "")
+        await self._cache_put(url, inn, profile_data)
+
+        elapsed = time.monotonic() - t0
+        logger.info("prescan_staged complete in %.1fs: %d errors", elapsed, len(errors))
+        return profile_data
+
+    # ── Stage 1: Финансовый хук ───────────────────────────────────────────
+
+    async def _stage_1_financials(self, url: str) -> dict:
+        """Stage 1: financial hook — revenue, profit, legal entity, structure."""
+        errors: list[str] = []
+        inn = ""
+        legal_entity: dict = {}
+        revenue_data: dict = {"latest": None, "by_year": {}, "trend": "unknown"}
+        profit_data: dict = {"latest": None, "by_year": {}}
+        specialization = ""
+        city = ""
+        services: list = []
+        doctors: list = []
+
+        # ── 1a. Website structure ─────────────────────────────────────────
+        try:
+            from aim.services.service_extractor import extract_client_profile
+
+            profile = await extract_client_profile(url)
+            if profile:
+                specialization = str(profile.get("specialization", ""))
+                city = str(profile.get("city", ""))
+                services = list(profile.get("services", []) or [])
+                doctors = list(profile.get("doctors", []) or [])
+                inn = profile.get("inn") or ""
+        except Exception as e:
+            errors.append(f"structure: {e}")
+
+        # ── 1b. INN extraction ────────────────────────────────────────────
+        if not inn:
+            try:
+                inn = await self._extract_inn_from_site(url)
+            except Exception as e:
+                errors.append(f"inn_site: {e}")
+
+        if not inn:
+            try:
+                inn = await self._extract_inn_by_name(url)
+            except Exception as e:
+                errors.append(f"inn_name: {e}")
+
+        # ── 1c. DaData legal entity ───────────────────────────────────────
+        if inn:
+            try:
+                from aim.services.rusprofile.client import get_dadata_client
+
+                client = get_dadata_client()
+                if client.configured:
+                    profiles = await client.search_company(inn, count=1)
+                    if profiles:
+                        p = profiles[0]
+                        years = 0
+                        if p.registration_date:
+                            try:
+                                from datetime import datetime as dt_mod
+                                rd = dt_mod.strptime(p.registration_date, "%Y-%m-%d")
+                                years = dt_mod.now().year - rd.year
+                            except Exception:
+                                pass
+                        legal_entity = {
+                            "inn": p.inn or inn,
+                            "ogrn": p.ogrn or "",
+                            "legal_name": p.legal_name or "",
+                            "registration_date": p.registration_date or "",
+                            "years_on_market": years,
+                            "okved_main": p.okved_main or "",
+                            "legal_address": p.legal_address or "",
+                            "authorized_capital": None,
+                        }
+            except Exception as e:
+                errors.append(f"dadata: {e}")
+
+        # ── 1d. ГИР БО financials ─────────────────────────────────────────
+        if inn:
+            try:
+                fin = await self._fetch_nalog_financials(inn)
+                revenue_data["latest"] = fin.get("revenue_year")
+                profit_data["latest"] = fin.get("profit_year")
+                if fin.get("revenue_year"):
+                    revenue_data["by_year"][str(fin.get("financial_year", ""))] = fin["revenue_year"]
+                if fin.get("profit_year"):
+                    profit_data["by_year"][str(fin.get("financial_year", ""))] = fin["profit_year"]
+            except Exception as e:
+                errors.append(f"nalog: {e}")
+
+        summary: dict = {
+            "revenue": revenue_data,
+            "profit": profit_data,
+            "legal_entity": legal_entity,
+            "specialization": specialization,
+            "city": city,
+            "services": services,
+            "doctors": doctors,
+        }
+        if errors:
+            summary["_errors"] = errors
+        return summary
+
+    # ── Stage 2: Под капотом ──────────────────────────────────────────────
+
+    async def _stage_2_deep(self, url: str, stage_1: dict) -> dict:
+        """Stage 2: deep analysis — licenses, founders, SEO, reviews, social."""
+        errors: list[str] = []
+        le = stage_1.get("legal_entity", {})
+        inn = le.get("inn", "")
+        legal_name = le.get("legal_name", "")
+        specialization = str(stage_1.get("specialization", ""))
+        city = str(stage_1.get("city", ""))
+
+        # ── 2a. DaData founders/management ────────────────────────────────
+        founders: list = []
+        general_director: dict = {}
+        if inn:
+            try:
+                from aim.services.rusprofile.client import get_dadata_client
+                client = get_dadata_client()
+                if client.configured:
+                    profiles = await client.search_company(inn, count=1)
+                    if profiles:
+                        p = profiles[0]
+                        if p.management:
+                            general_director = {
+                                "name": p.management.get("name", ""),
+                                "position": p.management.get("post", ""),
+                            }
+                        if p.founders:
+                            founders = p.founders
+            except Exception as e:
+                errors.append(f"founders: {e}")
+
+        # ── 2b. Roszdravnadzor licenses ───────────────────────────────────
+        licenses: list = []
+        if legal_name or inn:
+            try:
+                from aim.services.roszdravnadzor.client import RoszdravnadzorClient
+                rzd = RoszdravnadzorClient(timeout=8.0)
+                try:
+                    licenses = await rzd.search_licenses(legal_name, inn=inn)
+                finally:
+                    await rzd.close()
+            except Exception as e:
+                errors.append(f"licenses: {e}")
+
+        # ── 2c. Deep SEO scan ─────────────────────────────────────────────
+        seo_data: dict = {
+            "score": 70, "issues": [],
+            "has_mobile_viewport": False, "has_ssl": url.startswith("https://"),
+            "load_speed_ms": 0,
+            "has_sitemap": False, "sitemap_urls": None,
+            "has_structured_data": False, "structured_data_types": [],
+            "h1_count": 0, "meta_description": "",
+        }
+        try:
+            http = await self._get_http()
+            t0 = time.monotonic()
+            r = await http.get(url)
+            seo_data["load_speed_ms"] = int((time.monotonic() - t0) * 1000)
+            html = r.text.lower()
+
+            if 'meta name="viewport"' in html or "meta name='viewport'" in html:
+                seo_data["has_mobile_viewport"] = True
+            else:
+                seo_data["issues"].append("не адаптирован под мобильные")
+                seo_data["score"] -= 15
+
+            if "<title>" not in html or "<title></title>" in html:
+                seo_data["issues"].append("отсутствует title")
+                seo_data["score"] -= 10
+
+            import re as _re
+            desc_match = _re.search(
+                r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']*)["\']', r.text,
+                _re.IGNORECASE,
+            )
+            if desc_match:
+                seo_data["meta_description"] = desc_match.group(1)[:200]
+            else:
+                seo_data["issues"].append("отсутствует meta description")
+                seo_data["score"] -= 5
+
+            seo_data["h1_count"] = len(_re.findall(r'<h1[>\s]', html))
+            if seo_data["h1_count"] == 0:
+                seo_data["issues"].append("отсутствует H1")
+                seo_data["score"] -= 5
+
+            # Sitemap check
+            sitemap_r = await http.get(url.rstrip("/") + "/sitemap.xml")
+            if sitemap_r.status_code == 200 and "<?xml" in sitemap_r.text.lower():
+                seo_data["has_sitemap"] = True
+                sitemap_urls = _re.findall(r'<loc>(.+?)</loc>', sitemap_r.text)
+                seo_data["sitemap_urls"] = len(sitemap_urls)
+
+            # Structured data
+            structured_types = _re.findall(
+                r'"(?:@type|@context)"[^}]*"(Medical\w+|Physician|Hospital|LocalBusiness|Organization)"',
+                r.text, _re.IGNORECASE,
+            )
+            if structured_types:
+                seo_data["has_structured_data"] = True
+                seo_data["structured_data_types"] = list(set(structured_types))
+
+            if seo_data["load_speed_ms"] > 3000:
+                seo_data["issues"].append(
+                    f"медленная загрузка ({seo_data['load_speed_ms']/1000:.1f}с)"
+                )
+                seo_data["score"] -= 10
+
+            seo_data["score"] = max(0, min(100, seo_data["score"]))
+
+            # ── Platform detection ──────────────────────────────────────
+            platform = "unknown"
+            platform_markers = {
+                "tilda": ["tilda.ws", "tildacdn", "tilda", "tildafiles"],
+                "wordpress": ["wp-content", "wordpress", "wp-json"],
+                "1c-bitrix": ["bitrix24", "bitrix", "1c-bitrix", "bx_site"],
+                "joomla": ["joomla", "com_content"],
+                "wix": ["wix.com", "wixstatic"],
+                "drupal": ["drupal", "sites/default/files"],
+            }
+            for name, markers in platform_markers.items():
+                if any(m in html for m in markers):
+                    platform = name
+                    break
+            seo_data["platform"] = platform
+
+            if platform == "tilda":
+                seo_data["issues"].append("сайт на конструкторе Tilda")
+                seo_data["score"] -= 10
+        except Exception as e:
+            errors.append(f"seo: {e}")
+
+        # ── 2d. Reviews ───────────────────────────────────────────────────
+        reviews = await self._quick_reviews(url, specialization, city)
+
+        # ── 2e. Social media ──────────────────────────────────────────────
+        social = await self._quick_social_scan(url)
+
+        summary: dict = {
+            "licenses": licenses,
+            "founders": founders,
+            "general_director": general_director,
+            "seo_deep": seo_data,
+            "reviews": reviews,
+            "social": social,
+        }
+        if errors:
+            summary["_errors"] = errors
+        return summary
+
+    # ── Stage 3: Рынок ────────────────────────────────────────────────────
+
+    async def _stage_3_market(self, url: str, stage_1: dict, stage_2: dict) -> dict:
+        """Stage 3: market position — revenue trends, maps, competitors, content."""
+        errors: list[str] = []
+        le = stage_1.get("legal_entity", {})
+        inn = le.get("inn", "")
+        legal_name = le.get("legal_name", "")
+        city = str(stage_1.get("city", ""))
+        specialization = str(stage_1.get("specialization", ""))
+
+        # ── 3a. Multi-year revenue trends ─────────────────────────────────
+        revenue_multi_year: dict = {}
+        if inn:
+            try:
+                from aim.services.nalog.bfo_client import BfoNalogClient
+                client = BfoNalogClient(timeout=8.0)
+                try:
+                    orgs = client.search(inn)
+                    if orgs:
+                        fs_list = client.get_financials(orgs[0].id)
+                        for fs in fs_list:
+                            if fs.period and fs.revenue:
+                                revenue_multi_year[str(fs.period)] = fs.revenue * 1000
+                finally:
+                    client.close()
+            except Exception as e:
+                errors.append(f"revenue_trends: {e}")
+
+        # ── 3b. Content audit ─────────────────────────────────────────────
+        content_audit: dict = {
+            "total_pages_estimated": 0, "has_blog": False,
+            "thin_content_pages": 0, "avg_title_length": 0,
+            "titles_sample": [],
+        }
+        try:
+            http = await self._get_http()
+            r = await http.get(url)
+            html_lower = r.text.lower()
+
+            # Detect blog
+            if any(seg in html_lower for seg in ["/blog", "/news", "/articles", "/stati"]):
+                content_audit["has_blog"] = True
+
+            # Estimate total pages from internal links (absolute + relative)
+            import re as _re
+            base = url.rstrip("/")
+            # Absolute links to same domain
+            abs_links = _re.findall(
+                rf'href=["\']({_re.escape(base)}[^"\']*)["\']', r.text,
+                _re.IGNORECASE,
+            )
+            # Relative links (starting with / but not //)
+            rel_links = _re.findall(
+                r'href=["\'](/(?![/])[^"\']*)["\']', r.text,
+                _re.IGNORECASE,
+            )
+            all_links = set(abs_links) | {f"{base}{rl}" for rl in rel_links}
+            # Filter out anchors, assets, external links
+            page_links = {l for l in all_links
+                          if not l.endswith(('.css', '.js', '.png', '.jpg', '.ico', '.svg', '.woff2'))
+                          and '#' not in l.split('/')[-1]}
+            content_audit["total_pages_estimated"] = max(len(page_links), 1)
+            if content_audit["total_pages_estimated"] < 3:
+                # Fallback: try sitemap
+                try:
+                    sm = await http.get(f"{base}/sitemap.xml")
+                    if sm.status_code == 200 and "<?xml" in sm.text.lower():
+                        sm_urls = _re.findall(r'<loc>(.+?)</loc>', sm.text)
+                        if sm_urls:
+                            content_audit["total_pages_estimated"] = len(sm_urls)
+                except Exception:
+                    pass
+
+            # Title samples
+            titles = _re.findall(r'<title>(.+?)</title>', r.text, _re.IGNORECASE)
+            if titles:
+                content_audit["titles_sample"] = titles[:5]
+                content_audit["avg_title_length"] = sum(len(t) for t in titles) // len(titles)
+        except Exception as e:
+            errors.append(f"content_audit: {e}")
+
+        # ── 3c. Yandex/Google Maps — reuse ReviewCollector data from Stage 2 ─
+        stage_2_reviews = stage_2.get("reviews", {})
+        yandex_from_reviews = stage_2_reviews.get("yandex_maps", {})
+        if yandex_from_reviews and yandex_from_reviews.get("found"):
+            yandex_maps = {
+                "found": True,
+                "rating": yandex_from_reviews.get("rating"),
+                "reviews": yandex_from_reviews.get("reviews"),
+                "address": yandex_from_reviews.get("address", ""),
+                "coordinates": yandex_from_reviews.get("coordinates", {}),
+                "photos": yandex_from_reviews.get("photos"),
+                "working_hours": yandex_from_reviews.get("working_hours", ""),
+                "url": yandex_from_reviews.get("url", ""),
+            }
+        else:
+            yandex_maps = {"found": False, "rating": None, "reviews": None,
+                            "address": "", "coordinates": {}, "photos": None,
+                            "working_hours": ""}
+        google_maps: dict = {"found": False, "rating": None, "reviews": None}
+
+        # ── 3d. Nearby competitors ────────────────────────────────────────
+        nearby_competitors: list = []
+        if city and specialization:
+            try:
+                from aim.services.competitor_matcher import CompetitorMatcher
+                matcher = CompetitorMatcher()
+                competitors = await matcher.find_competitors(
+                    url=url,
+                    count=5,
+                )
+                for c in competitors:
+                    nearby_competitors.append({
+                        "name": c.profile.legal_name or c.profile.brand_name or "",
+                        "rating": c.profile.rating,
+                        "reviews_count": c.profile.reviews_count,
+                    })
+            except Exception as e:
+                errors.append(f"nearby_competitors: {e}")
+
+        summary: dict = {
+            "revenue_multi_year": revenue_multi_year,
+            "yandex_maps": yandex_maps,
+            "google_maps": google_maps,
+            "nearby_competitors": nearby_competitors,
+            "content_audit": content_audit,
+        }
+        if errors:
+            summary["_errors"] = errors
+        return summary
+
+    # ── Cache helpers ─────────────────────────────────────────────────────
+
+    async def _cache_get(self, url: str) -> dict | None:
+        """Check company_profiles cache for existing prescan data."""
+        try:
+            from aim.database import async_session_maker
+            from aim.models.company_profile import CompanyProfileModel
+            from sqlalchemy import select
+
+            async with async_session_maker() as session:
+                stmt = (
+                    select(CompanyProfileModel)
+                    .where(CompanyProfileModel.url == url)
+                    .order_by(CompanyProfileModel.updated_at.desc())
+                    .limit(1)
+                )
+                result = await session.execute(stmt)
+                row = result.scalar_one_or_none()
+                if row and row.profile_data:
+                    logger.info("Cache hit for %s", url)
+                    return dict(row.profile_data)
+        except Exception as e:
+            logger.debug("Cache read error for %s: %s", url, e)
+        return None
+
+    async def _cache_put(self, url: str, inn: str, profile_data: dict) -> None:
+        """Store prescan results in company_profiles cache."""
+        try:
+            from datetime import datetime as dt_mod, timezone as tz
+
+            from aim.database import async_session_maker
+            from aim.models.company_profile import CompanyProfileModel
+            from sqlalchemy import select
+
+            async with async_session_maker() as session:
+                stmt = (
+                    select(CompanyProfileModel)
+                    .where(CompanyProfileModel.url == url, CompanyProfileModel.inn == inn)
+                    .limit(1)
+                )
+                result = await session.execute(stmt)
+                row = result.scalar_one_or_none()
+
+                if row:
+                    row.profile_data = profile_data
+                    row.updated_at = dt_mod.now(tz.utc)
+                else:
+                    row = CompanyProfileModel(
+                        url=url,
+                        inn=inn or "",
+                        profile_data=profile_data,
+                    )
+                    session.add(row)
+
+                await session.commit()
+                logger.info("Cached prescan for %s (INN=%s)", url, inn or "unknown")
+        except Exception as e:
+            logger.debug("Cache write error for %s: %s", url, e)
