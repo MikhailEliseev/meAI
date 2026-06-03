@@ -112,6 +112,8 @@ _RUSSIAN_CITIES: list[str] = [
     "Саранск", "Вологда", "Якутск", "Курган", "Орёл", "Тамбов", "Псков",
     "Сургут", "Нижневартовск", "Нижний Тагил", "Архангельск", "Мурманск",
     "Севастополь", "Симферополь",
+    # Moscow districts (canonicalized below)
+    "Зеленоград",
 ]
 
 # Moscow administrative districts that should normalize to Москва
