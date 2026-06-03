@@ -257,6 +257,10 @@ async def extract_client_profile(url: str) -> dict:
     company_name = _extract_company_name(html)
     inn = _extract_inn(html)
 
+    # If INN not on homepage, crawl legal/requisites pages from navigation
+    if not inn and site_structure:
+        inn = await _extract_inn_from_nav_legal_pages(url, site_structure)
+
     logger.info(
         "Service extraction: url=%s services=%s specialization=%s city=%s structure_departments=%s",
         url, services, specialization, city,
@@ -828,6 +832,43 @@ def _extract_inn(html: str) -> Optional[str]:
 
     except Exception:
         pass
+    return None
+
+
+async def _extract_inn_from_nav_legal_pages(url: str, site_structure: dict) -> Optional[str]:
+    """Crawl legal/requisites pages found in navigation to extract INN.
+
+    Many clinics bury their INN on /about/legal-information/ or /rekvizity/ —
+    not on the homepage. This follows those links from the nav structure.
+    """
+    legal_keywords = [
+        "правовая", "legal", "реквизит", "requisite",
+        "политика конфиденциальности", "privacy",
+    ]
+    departments = site_structure.get("departments", [])
+    legal_paths = []
+    for dep in departments:
+        label = dep.get("label", "").lower()
+        if any(kw in label for kw in legal_keywords):
+            href = dep.get("href", "")
+            if href and not href.startswith(("http://", "https://")):
+                legal_paths.append(href)
+
+    if not legal_paths:
+        return None
+
+    base = url.rstrip("/")
+    for path in legal_paths[:3]:  # max 3 pages
+        try:
+            target = base + (path if path.startswith("/") else "/" + path)
+            html = await _fetch_page(target)
+            if html:
+                inn = _extract_inn(html)
+                if inn:
+                    return inn
+        except Exception:
+            continue
+
     return None
 
 

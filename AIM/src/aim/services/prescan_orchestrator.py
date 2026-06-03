@@ -289,10 +289,14 @@ class PrescanOrchestrator:
             r'(?:ИНН|INN|инн|inn)\s*[:;]?\s*(\d{10,12})',
             re.IGNORECASE,
         )
-        paths = ["", "/about", "/contacts", "/kontakty", "/o-klinike", "/rekvizity"]
+        paths = [
+            "", "/about", "/contacts", "/kontakty", "/o-klinike", "/rekvizity",
+            "/about/legal-information", "/about/rekvizity",
+            "/o-kompanii/rekvizity", "/legal",
+        ]
         http = await self._get_http()
 
-        for path in paths[:4]:
+        for path in paths:
             try:
                 target = url.rstrip("/") + (path if path else "")
                 r = await http.get(target)
