@@ -1033,22 +1033,40 @@ class PrescanOrchestrator:
                 r'href=["\'](/(?![/])[^"\']*)["\']', r.text,
                 _re.IGNORECASE,
             )
-            all_links = set(abs_links) | {f"{base}{rl}" for rl in rel_links}
-            # Filter out anchors, assets, external links
-            page_links = {l for l in all_links
-                          if not l.endswith(('.css', '.js', '.png', '.jpg', '.ico', '.svg', '.woff2'))
-                          and '#' not in l.split('/')[-1]}
+            # Bare relative links (no leading /, no protocol) — e.g. href="about", href="uslugi"
+            bare_rel = _re.findall(
+                r'href=["\']([a-zA-Zа-яА-ЯёЁ0-9][a-zA-Zа-яА-ЯёЁ0-9._-]*(?:/[a-zA-Zа-яА-ЯёЁ0-9._-]+)*)["\']',
+                r.text, _re.IGNORECASE,
+            )
+            all_links = (
+                set(abs_links)
+                | {f"{base}{rl}" for rl in rel_links}
+                | {f"{base}/{br}" for br in bare_rel}
+            )
+            STATIC_EXTS = (
+                '.css', '.js', '.png', '.jpg', '.jpeg', '.ico', '.svg',
+                '.woff2', '.woff', '.ttf', '.eot', '.webp', '.gif',
+                '.mp4', '.pdf', '.xml',
+            )
+            page_links = set()
+            for link in all_links:
+                if link.startswith(('mailto:', 'tel:', 'javascript:', '#')):
+                    continue
+                clean = link.split('?')[0].split('#')[0]
+                if clean.endswith(STATIC_EXTS):
+                    continue
+                page_links.add(link)
             content_audit["total_pages_estimated"] = max(len(page_links), 1)
-            if content_audit["total_pages_estimated"] < 3:
-                # Fallback: try sitemap
-                try:
-                    sm = await http.get(f"{base}/sitemap.xml")
-                    if sm.status_code == 200 and "<?xml" in sm.text.lower():
-                        sm_urls = _re.findall(r'<loc>(.+?)</loc>', sm.text)
-                        if sm_urls:
-                            content_audit["total_pages_estimated"] = len(sm_urls)
-                except Exception:
-                    pass
+
+            # Sitemap fallback — always try if count looks low, prefer sitemap if better
+            try:
+                sm = await http.get(f"{base}/sitemap.xml")
+                if sm.status_code == 200 and "<urlset" in sm.text.lower():
+                    sm_urls = _re.findall(r'<loc>(.+?)</loc>', sm.text)
+                    if sm_urls and len(sm_urls) > content_audit["total_pages_estimated"]:
+                        content_audit["total_pages_estimated"] = len(sm_urls)
+            except Exception:
+                pass
 
             # Title samples
             titles = _re.findall(r'<title>(.+?)</title>', r.text, _re.IGNORECASE)
