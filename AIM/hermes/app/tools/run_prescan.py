@@ -24,7 +24,7 @@ from tools.registry import registry
 logger = logging.getLogger(__name__)
 
 AIM_API_BASE = "http://app:8000"
-REQUEST_TIMEOUT = 150.0  # 3-stage pipeline up to 90+ seconds
+REQUEST_TIMEOUT = 300.0  # prescan can take 180-250s (Apify, reviews, SEO)
 
 
 async def handle_run_prescan(url=None, **kwargs) -> str:
