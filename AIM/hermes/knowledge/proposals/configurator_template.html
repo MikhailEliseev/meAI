@@ -1,0 +1,134 @@
+<!-- configurator_template.html — LEGO-конструктор услуг AIM -->
+<!-- LLM (Hermes) заполняет секции, помеченные {{PLACEHOLDER}} -->
+<style>
+  .cfg-container { max-width: 640px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  .cfg-item { display:flex; align-items:center; padding:12px 16px; margin-bottom:8px; border-radius:8px; border:2px solid #E5E7EB; }
+  .cfg-item.base { border-color:#1A5C3E; background:#F0FAF4; }
+  .cfg-item.recommended { border-color:#B8860B; background:#FFFDF5; }
+  .cfg-item.optional { border-color:#D1D5DB; border-style:dashed; }
+  .cfg-item.next_stage { border-color:#93C5FD; background:#F0F7FF; }
+  .cfg-category { font-size:11px; font-weight:700; padding:2px 8px; border-radius:3px; margin-right:12px; white-space:nowrap; }
+  .cfg-category.base { background:#1A5C3E; color:#FFF; }
+  .cfg-category.recommended { background:#B8860B; color:#FFF; }
+  .cfg-category.optional { background:#6B7280; color:#FFF; }
+  .cfg-category.next_stage { background:#2563EB; color:#FFF; }
+  .cfg-name { flex:1; font-size:14px; }
+  .cfg-price { font-weight:700; margin-right:12px; white-space:nowrap; }
+  .cfg-checkbox { width:20px; height:20px; cursor:pointer; accent-color:#1A5C3E; }
+  .cfg-checkbox:disabled { cursor:not-allowed; opacity:0.3; }
+  .cfg-lock { width:20px; height:20px; color:#1A5C3E; }
+  .cfg-defer-reason { font-size:12px; color:#1E40AF; margin-top:4px; padding-left:12px; border-left:2px solid #93C5FD; }
+  .cfg-total { text-align:right; font-size:20px; font-weight:800; padding:16px 0; border-top:2px solid #E5E7EB; margin-top:16px; }
+  .cfg-warning { font-size:12px; color:#B8860B; margin-left:8px; display:none; }
+  .cfg-form { margin-top:24px; }
+  .cfg-input { width:100%; padding:12px 16px; border:2px solid #D1D5DB; border-radius:8px; font-size:16px; margin-bottom:12px; box-sizing:border-box; }
+  .cfg-input:focus { border-color:#1A5C3E; outline:none; }
+  .cfg-submit { width:100%; padding:14px 24px; background:#1A5C3E; color:#FFF; border:none; border-radius:8px; font-size:16px; font-weight:700; cursor:pointer; }
+  .cfg-submit:hover { background:#145230; }
+  .cfg-submit:disabled { background:#9CA3AF; cursor:not-allowed; }
+  .cfg-title { font-size:22px; font-weight:700; margin-bottom:8px; }
+  .cfg-subtitle { color:#6B7280; margin-bottom:24px; font-size:14px; }
+</style>
+
+<div class="cfg-container">
+  <div class="cfg-title">Соберите решение под вашу клинику</div>
+  <div class="cfg-subtitle">{{SUBTITLE}} — например: «Мы проанализировали "НейроМед" и конкурентов. Вот оптимальная конфигурация.»</div>
+
+  <!-- УСЛУГИ — LLM заполняет по одной строке на каждую услугу -->
+  <!-- Шаблон строки:
+    БАЗА (заблокирована):
+      <div class="cfg-item base">
+        <span class="cfg-category base">БАЗА</span>
+        <span class="cfg-name">{{NAME}}</span>
+        <span class="cfg-price">{{PRICE}} ₽/мес</span>
+        <svg class="cfg-lock" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+      </div>
+
+    РЕКОМЕНДОВАНО (предотмечена):
+      <div class="cfg-item recommended" data-price="{{PRICE}}">
+        <span class="cfg-category recommended">РЕКОМЕНДОВАНО</span>
+        <span class="cfg-name">{{NAME}}</span>
+        <span class="cfg-price">{{PRICE}} ₽/мес</span>
+        <input type="checkbox" class="cfg-checkbox" checked onchange="recalcTotal()">
+        <span class="cfg-warning" id="warn-{{ID}}">Без этого результат будет слабее</span>
+      </div>
+
+    ОПЦИОНАЛЬНО (не отмечена):
+      <div class="cfg-item optional" data-price="{{PRICE}}">
+        <span class="cfg-category optional">ОПЦИОНАЛЬНО</span>
+        <span class="cfg-name">{{NAME}}</span>
+        <span class="cfg-price">+{{PRICE}} ₽/мес</span>
+        <input type="checkbox" class="cfg-checkbox" onchange="recalcTotal()">
+      </div>
+
+    СЛЕДУЮЩИЙ ЭТАП (заблокирована, с пояснением):
+      <div class="cfg-item next_stage">
+        <span class="cfg-category next_stage">СЛЕДУЮЩИЙ ЭТАП</span>
+        <span class="cfg-name">{{NAME}}</span>
+        <span class="cfg-price">—</span>
+        <svg class="cfg-lock" viewBox="0 0 24 24" fill="#93C5FD"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+        <div class="cfg-defer-reason">{{REASON}} — например: «Сначала закроем поисковый трафик, потом соцсети. Иначе распылим бюджет.»</div>
+      </div>
+  -->
+
+  <div class="cfg-total">
+    Итого: <span id="cfg-total-price">{{TOTAL}} ₽/мес</span>
+  </div>
+
+  <div class="cfg-form">
+    <input type="text" class="cfg-input" id="cfg-contact" placeholder="Телефон или email для связи">
+    <input type="text" class="cfg-input" id="cfg-name-input" placeholder="Ваше имя">
+    <button class="cfg-submit" id="cfg-submit-btn" onclick="submitConfig()">Получить расчёт и уточнить детали</button>
+  </div>
+</div>
+
+<script>
+  // Пересчёт итога при каждом клике
+  function recalcTotal() {
+    let total = {{BASE_PRICE}}; // База — всегда включена (единоразово)
+    const items = document.querySelectorAll('.cfg-item[data-price]');
+    items.forEach(item => {
+      const checkbox = item.querySelector('.cfg-checkbox');
+      if (checkbox && checkbox.checked) {
+        total += parseInt(item.dataset.price);
+      }
+      // Предупреждение при снятии рекомендованной услуги
+      const warnId = item.querySelector('.cfg-warning');
+      if (warnId && checkbox && !checkbox.checked) {
+        warnId.style.display = 'inline';
+      } else if (warnId) {
+        warnId.style.display = 'none';
+      }
+    });
+    document.getElementById('cfg-total-price').textContent = total.toLocaleString() + ' ₽/мес';
+  }
+
+  function submitConfig() {
+    const contact = document.getElementById('cfg-contact').value.trim();
+    const name = document.getElementById('cfg-name-input').value.trim();
+    if (!contact) {
+      alert('Пожалуйста, укажите телефон или email для связи');
+      return;
+    }
+    // Собираем выбранные услуги
+    const selected = [];
+    document.querySelectorAll('.cfg-item').forEach(item => {
+      const name = item.querySelector('.cfg-name');
+      const checkbox = item.querySelector('.cfg-checkbox');
+      const lockIcon = item.querySelector('.cfg-lock');
+      if (name && ((checkbox && checkbox.checked) || lockIcon)) {
+        selected.push(name.textContent);
+      }
+    });
+    const total = document.getElementById('cfg-total-price').textContent;
+    const body = encodeURIComponent(
+      'Имя: ' + name + '\n' +
+      'Контакты: ' + contact + '\n' +
+      'Выбранные услуги:\n  - ' + selected.join('\n  - ') + '\n' +
+      'Итого: ' + total
+    );
+    window.location.href = 'mailto:{{EMAIL}}?subject=Заявка%20на%20расчёт&body=' + body;
+    document.getElementById('cfg-submit-btn').textContent = 'Отправлено!';
+    document.getElementById('cfg-submit-btn').disabled = true;
+  }
+</script>
