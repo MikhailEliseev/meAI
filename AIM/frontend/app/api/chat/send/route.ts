@@ -6,7 +6,7 @@ import path from "path";
 // ── Configuration ──────────────────────────────────────────────
 const HERMES_URL = process.env.HERMES_URL || "http://hermes:8000";
 const HERMES_API_KEY = process.env.HERMES_API_KEY || "";
-const HERMES_TIMEOUT_MS = 30000;  // D-34: 30s timeout
+const HERMES_TIMEOUT_MS = 120000;  // D-34: 120s timeout (PRESALE prescan + LLM takes 60-90s)
 const RETRY_DELAYS_MS = [5000, 15000, 45000];  // D-35: 5s, 15s, 45s
 const LEADS_DIR = process.env.LEADS_DIR || "/opt/data/leads";  // S-15-07
 

@@ -86,10 +86,67 @@
 - P5 (minor): На med-det.ru Hermes пропустил prescan и сразу вызвал find_competitors. Правило `🛑 ПРАВИЛО ПЕРВОГО СООБЩЕНИЯ` в промпте есть, но DeepSeek не всегда ему следует. Это проблема дисциплины модели, не кода.
 - Session cache теряется при перезапуске контейнера (in-memory) — ожидаемо.
 
+### Сессия 5 — P5 fix: программное принуждение prescan (2026-06-02 22:30–23:00)
+
+#### P5: DeepSeek игнорировал правило первого сообщения ✅ FIXED
+- **Было:** промпт «🛑 ПРАВИЛО ПЕРВОГО СООБЩЕНИЯ (НЕРУШИМО)» был, но DeepSeek всё равно иногда пропускал prescan и вызывал find_competitors сразу (особенно на Tilda/WordPress сайтах).
+- **Корень:** DeepSeek менее дисциплинирован чем Claude. Prompt-based enforcement недостаточен.
+- **Фикс:** Программное принуждение в `run_agent_sync()`:
+  1. При первом сообщении PRESALE с URL → вызываем prescan API напрямую синхронно (httpx)
+  2. Результат вкалывается в conversation history как завершённый tool_call (id=`force_prescan_1`)
+  3. LLM видит: prescan уже сделан, данные готовы. Он может только рассказать о них.
+  4. Инжектированные tool_calls фильтруются из ответа (id начинается с `force_`)
+- **Результат:** mc-zdorovie.ru — tool_calls пуст, prescan выполнен кодом за 17с, LLM рассказал живой разбор: «многопрофильная клиника в Симферополе, 14 направлений, SEO 65/100, врачей нет, отзывов нет». Без галлюцинаций.
+- **Код:** `AIM/hermes/app/agent_wrapper.py` — +95 строк (_extract_url_from_message, _force_prescan, инъекция в run_agent_sync, фильтр force_ tool_calls)
+
 ### TODO
-- [x] #61: Протестировать Hermes через API (2 клиники, полный диалог)
+- [x] #61: Протестировать Hermes через API (5 клиник, Bitrix/WordPress/Tilda)
 - [x] P4: Исправить галлюцинацию web_speed/seo_score DeepSeek'ом
+- [x] P5: Программное принуждение prescan на первом ходе PRESALE
 - [ ] Протестировать Hermes через Telegram (@iamaim_bot) — нужен живой пользователь
 - [ ] Phase 23: Ultra-Deep Prescan — планы готовы, реализация ждёт
 - [x] Закоммитить все изменения (12 баг-фиксов) — `63b7414`
 - [x] Задеплоить на VPS — контейнеры перезапущены, фиксы активны
+- [ ] Закоммитить P5 fix
+
+### Сессия 6 — P5 v2 + деплой фронтенда + веб-интерфейс (2026-06-03 10:30–11:50)
+
+#### P5 v2: Agent-level tool restriction ✅
+- **Было (v1):** prescan вкалывался в историю, но DeepSeek всё равно вызывал find_competitors на первом ходу
+- **Фикс:** При первом сообщении PRESALE с URL создаётся агент с `enabled_toolsets=["hermes-debug"]` — физически не может вызвать find_competitors
+- **Результат:** `find_competitors` заблокирован ("Unknown tool"), модель self-corrected → web_search + web_fetch
+- **Turn 2:** Новый агент с полными инструментами → `run_ci_analysis` реально вызван (0.72s, 2 конкурента)
+- **Код:** `agent_wrapper.py` — `_create_agent(enabled_toolsets=...)`, `_p5_restricted` флаг, кеширование `(None, ts, history)`
+
+#### Frontend fix: Permission denied в веб-интерфейсе ✅
+- **Было:** iamaim.ru/api/chat/send возвращал `EACCES: permission denied, mkdir '/opt/data/leads/...'`
+- **Корень:** Волюм `hermes_data` имеет `/opt/data/` с `drwx------` (700, только root). Next.js запущен как `nextjs` (uid=1001)
+- **Фикс:** 
+  1. Создал `/opt/aim/leads` на хосте (777)
+  2. Bind mount `/opt/aim/leads:/opt/data/leads` в docker-compose (вместо `hermes_data:/opt/data`)
+  3. Увеличил `HERMES_TIMEOUT_MS` с 30с → 120с (prescan 17с + DeepSeek 20-40с = 60-90с)
+  4. Next.js 308 redirect fix: curl без trailing slash
+- **Файлы:** `docker-compose.yml` (volume), `AIM/frontend/app/api/chat/send/route.ts` (timeout)
+
+#### Результаты веб-теста (iamaim.ru)
+1. ✅ **Базовый чат:** "Привет" → Operator презентуется, просит URL
+2. ✅ **PRESALE с URL:** `medsi-premium.ru` → prescan + живой разбор (SEO 70/100, скорость мгновенная, 9+ специализаций, VK/Telegram)
+3. ✅ **Антигаллюцинации:** Цифры точные, без искажений DeepSeek
+
+#### Uncommitted changes (4 файла)
+- `AIM/frontend/app/api/chat/send/route.ts` — HERMES_TIMEOUT_MS 30→120s
+- `AIM/hermes/app/agent_wrapper.py` — P5 v2: restricted agent + force_prescan + tool filtering
+- `AIM/hermes/app/tools/run_prescan.py` — sub-1000ms speed format fix
+- `SESSION.md` — эта запись
+
+### TODO
+- [x] #61: Протестировать Hermes через API (5 клиник, Bitrix/WordPress/Tilda)
+- [x] P4: Исправить галлюцинацию web_speed/seo_score DeepSeek'ом
+- [x] P5: Программное принуждение prescan на первом ходе PRESALE
+- [x] P5 v2: Agent-level tool restriction + кеширование истории
+- [x] Починить веб-интерфейс iamaim.ru (EACCES + timeout)
+- [ ] Протестировать Hermes через Telegram (@iamaim_bot) — нужен живой пользователь
+- [ ] Phase 23: Ultra-Deep Prescan — планы готовы, реализация ждёт
+- [x] Закоммитить все изменения (12 баг-фиксов) — `63b7414`
+- [x] Задеплоить на VPS — контейнеры перезапущены, фиксы активны
+- [ ] Закоммитить P5 fix + frontend fix (4 файла, сессия 6)
