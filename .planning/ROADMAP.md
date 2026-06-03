@@ -426,9 +426,9 @@ Plans:
 **Plans**: 3 plans (3 waves)
 
 Plans:
-- [ ] 23-01-PLAN.md — Wave 1: company_profiles table (JSONB, url+inn key) + GET/POST API + tests
-- [ ] 23-02-PLAN.md — Wave 2: 3-stage pipeline (financials→deep→market) + Roszdravnadzor + staging endpoint
-- [ ] 23-03-PLAN.md — Wave 3: Hermes run_prescan update + SOUL.md staged flow + PRESALE prompt
+- [x] 23-01-PLAN.md — Wave 1: company_profiles table (JSONB, url+inn key) + GET/POST API + tests
+- [x] 23-02-PLAN.md — Wave 2: 3-stage pipeline (financials→deep→market) + Roszdravnadzor + staging endpoint
+- [x] 23-03-PLAN.md — Wave 3: Hermes run_prescan update + SOUL.md staged flow + PRESALE prompt
 
 ### Phase 24: Guided Configurator Pricing & Presale Flow Redesign
 **Goal**: Заменить 3-уровневое ценообразование на LEGO-конструктор с 4 категориями (БАЗА/РЕКОМЕНДОВАНО/ОПЦИОНАЛЬНО/СЛЕДУЮЩИЙ ЭТАП). Hermes даёт выжимку в чате + ссылку на полный КП с конфигуратором. Категории определяются автоматически на основе prescan + CI-анализа.
@@ -477,7 +477,7 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 20. Apify Competitor Intelligence | v5.0 | 1/1 | Complete | 2026-05-26 |
 | 21. CI Pipeline Unification | v5.1 | 5/5 | Complete | 2026-05-31 |
 | 22. Hermes First Communication | v5.2 | 1/1 | Complete   | 2026-06-01 |
-| 23. Ultra-Deep Prescan | v5.3 | 0/3 | Planned | — |
+| 23. Ultra-Deep Prescan | v5.3 | 3/3 | Complete | 2026-06-03 |
 | 24. Guided Configurator Pricing | v5.4 | 1/1 | Complete   | 2026-06-03 |
 
-**Overall:** 50/59 plans complete (84%)
+**Overall:** 53/59 plans complete (90%)

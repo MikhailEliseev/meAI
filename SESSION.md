@@ -1,152 +1,116 @@
-# Session: 2026-06-02
+# Session: 2026-06-03
 
-## Phase 22: PRESALE Flow Redesign — COMPLETED ✅
+## Phase 23↔24 Integration Audit + Fixes ✅
 
-**Date:** 2026-06-02
-**Status:** Все code changes реализованы, задеплоены на VPS, 27/27 unit-тестов.
+**Что было:** Phase 23 (Ultra-Deep Prescan) выполнен, Phase 24 (LEGO Configurator) выполнен поверх. Но SOUL.md содержал две противоречащие версии шагов 6-7: старую (полный отчёт в чате) и новую (выжимка + handoff).
 
-### Сессия 3 — тестирование и фиксы (2026-06-02 17:15–18:00)
+**Исправлено (5 правок):**
+1. **agent_wrapper.py — PRESALE prompt:** ссылка «Вот полный отчёт» → «Я собрал полный отчёт — откройте обязательно» с перечислением ЧТО внутри. Добавлены «Правила ссылки на КП» (настойчиво рекомендовать, объяснять ценность). КП создаётся СРАЗУ после CI-анализа, не спрашивая разрешения.
+2. **SOUL.md — Шаг 6:** добавлено что после CI-анализа СРАЗУ создаётся HTML-КП + даётся выжимка со ссылкой.
+3. **SOUL.md — Шаг 7:** полностью переписан: «Финальный отчёт + конкретное предложение» → «Handoff на Михаила (не робот-апсейл)» с 3 сценариями.
+4. **SOUL.md — Уроки из реального пресейла:** «После шага 7 → предложи КП» → «После шага 6 → КП уже готово».
+5. **ROADMAP.md:** Phase 23 обновлён: 0/3 → 3/3 Complete. Общий прогресс: 50/59 (84%) → 53/59 (90%).
 
-#### Обнаружено и исправлено (3 проблемы):
+**Логика:** КП создаётся автоматически на шаге 6, без вопроса «хотите?». Клиент получает готовый документ + настойчивую рекомендацию открыть (с перечислением что внутри: сравнение цен, дорожная карта, конфигуратор). Шаг 7 — мягкая передача Михаилу, без робот-апсейла.
 
-##### P1: Hermes не показывал prescan-разбор в первом ответе ✅ FIXED
-- **Было:** клиент даёт URL → 90с тишины → «назовите конкурентов». Prescan-данные собраны, но клиент их не видит.
-- **Корень:** промпт разрешал вызывать run_prescan + find_competitors в одном ходе.
-- **Фикс:** добавлено правило `🛑 ПРАВИЛО ПЕРВОГО СООБЩЕНИЯ (НЕРУШИМО)` в самое начало `_presale_prompt()` — ТОЛЬКО run_prescan в первом ходе, потом живой разбор, потом find_competitors.
-- **Результат:** smilestudio.ru → «Так, смотрите что получается... скорость 8.3 сек — критично, врачей нет, отзывов 0... А теперь самое интересное — давайте посмотрим кто вокруг вас.» Живой разбор + WOW-эффект.
+---
 
-##### P2: run_ci_analysis падал с 422 ✅ FIXED
-- **Было:** LLM передаёт competitors как строки `["Семейная"]` или словари с `website` вместо `url`. Pydantic модель требует `url`.
-- **Фикс:** функция `_normalize_competitor()` — обрабатывает строки (извлекает url/name), словари (website→url), фильтрует конкурентов без URL с понятной ошибкой.
-- **Код:** `AIM/hermes/app/tools/run_ci_analysis.py` — +30 строк нормализации
+## Phase 24: Guided Configurator Pricing — COMPLETED ✅
 
-##### P3: find_company_financials вызывался без INN ✅ FIXED
-- **Было:** LLM вызывает tool без INN/ОГРН → ошибка "Either inn or ogrn is required".
-- **Фикс:** tool description: «⚠️ ТРЕБУЕТ INN или ОГРН. Если у тебя нет INN/ОГРН конкурента — НЕ вызывай.» + улучшенный error message.
-- **Код:** `AIM/hermes/app/tools/find_company_financials.py` — description + detail
+**Date:** 2026-06-03
+**Status:** Design + Plan + Execute + Verify + Deploy — всё готово. 8 коммитов запушено.
 
-### Результаты тестирования (iphk.ru + smilestudio.ru)
+### Что сделано
 
-#### Что работает идеально ✅
-1. **Prescan все данные корректны:** INN, revenue, rating, reviews, SEO, web_speed
-2. **0 галлюцинаций** когда Hermes показывает разбор (все цифры из prescan)
-3. **web_speed антигаллюцинация работает:** "скорость 1,1 сек — хорошая", "8,3 сек — критично"
-4. **Первый ход теперь правильный:** только prescan → живой разбор → "давайте посмотрим кто вокруг"
-5. **Бизнес-язык:** "53% посетителей уходят", "пациенты выбирают врача, а не вывеску"
+**Концепция:** Заменили 3-уровневое ценообразование (Базовый/Оптимальный/Максимальный) на LEGO-конструктор с 4 категориями. Клиент собирает решение под себя. Категории определяются автоматически на основе prescan + CI-анализа.
 
-### Баг-фиксы (всего 12)
+**4 категории:**
+- БАЗА (зелёный, 🔒 заблокирована) — фундамент, без этого нельзя
+- РЕКОМЕНДОВАНО (золотой, ✅ предотмечена) — можно снять с предупреждением
+- ОПЦИОНАЛЬНО (серый, ☐ не отмечена) — можно добавить
+- СЛЕДУЮЩИЙ ЭТАП (синий, ⏭️ заблокирована) — milestone 2, с пояснением
 
-**Сессия 1-2 (9):**
-1. Галлюцинация load_speed — web_speed поле
-2. collect_contact в середине диалога — промпт "ЖЕЛЕЗНО"
-3. Зацикливание named_competitors — fallback
-4. Выдуманный оборот — правило "null → честно"
-5. Отзывы не находились — импорт + логгер
-6. INN не экстрагировался — DaData fallback
-7. Оборот не загружался — BfoNalogClient методы
-8. Revenue в тыс. руб. — ×1000
-9. Фейковые review_praise — убран keyword matching
+**Presale-диалог Hermes (7 шагов):**
+1. Приветствие → 2. Prescan с live-наррацией → 3. Картина клиенту → 4. Параллельный конкурентный трек → 5. CI-анализ с WOW-эффектом → 6. **Выжимка в чате** (3 пункта + цена + результат + ссылка на HTML-КП) → 7. **Handoff на Михаила** (мягкий, не робот-апсейл)
 
-**Сессия 3 (3):**
-10. P1: prescan-разбор в первом ответе — промпт "НЕРУШИМО"
-11. P2: run_ci_analysis 422 — нормализация competitors
-12. P3: find_company_financials без INN — warning в description
+**Создано/изменено (6 файлов в проде):**
+- `AIM/hermes/app/agent_wrapper.py` — PRESALE prompt v2 (шаги 6-7)
+- `AIM/hermes/app/tools/service_categorizer.py` — rules engine (5 правил)
+- `AIM/hermes/knowledge/proposals/QUALITY.md` — блок 5: нарратив, блок 10: конфигуратор
+- `AIM/hermes/skills/aim/SOUL.md` — правила 23, 23.1, 23.2
+- `AIM/hermes/knowledge/proposals/categorization_rules.md` — knowledge file
+- `AIM/hermes/knowledge/proposals/configurator_template.html` — HTML+CSS+JS шаблон
 
-### Тесты: 27/27 PASSED
+**Документация:**
+- `docs/superpowers/specs/2026-06-03-guided-configurator-design.md` — дизайн-спек
+- `.planning/phases/24-guided-configurator-pricing/24-01-PLAN.md` — план (744 строки)
+- `.planning/phases/24-guided-configurator-pricing/24-VERIFICATION.md` — 0.91 PASS
 
-### Сессия 4 — тестирование через API и фикс антигаллюцинации (2026-06-02 21:40–22:00)
+**Коммиты (8 шт, все в main):**
+```
+b7a4f6f chore(phase-24): finalize plan + verification + configurator template
+8866d2a docs(phase-24): complete guided-configurator-pricing plan
+f432fb2 docs(phase-24): add categorization_rules.md
+3ca8536 feat(phase-24): implement ServiceCategorizer
+34b15c7 test(phase-24): add failing tests for ServiceCategorizer
+88bed68 feat(phase-24): update PRESALE prompt — step 6 summary + step 7 handoff
+36141ce feat(phase-24): replace 3-tier pricing with 4-category LEGO configurator
+4239168 docs(phase-24): create guided configurator pricing & presale flow redesign plan
+```
 
-#### Обнаружено и исправлено:
+### Результаты тестирования
 
-##### P4: DeepSeek игнорировал web_speed и seo_score — галлюцинировал цифры ✅ FIXED
-- **Было:** load_speed_ms=2686 → Hermes: «5 секунд» (на самом деле 2.7с). seo_score=70 → Hermes: «60 из 100».
-- **Корень:** DeepSeek видел сырые числа (load_speed_ms, seo_score) и переинтерпретировал их, игнорируя правила «используй ТОЛЬКО web_speed».
-- **Фикс:** Удалил сырые числа из ответа tool вообще. Оставил только готовые текстовые поля:
-  - `web_speed`: «2.7 сек — средняя скорость» (было и осталось)
-  - `seo_health`: «70/100 — хорошее состояние, но есть потенциал для улучшения» (новое)
-  - `load_speed_ms` и `seo_score` больше не передаются LLM
-- **Результат:** smilestudio.ru — скорость «1,3 сек» (точно), SEO «70/100» (точно). med-det.ru — «1.4 сек», «70/100».
-- **Код:** `AIM/hermes/app/tools/run_prescan.py` — +12 строк seo_health, убран load_speed_ms/seo_score
-- **Промпт:** `AIM/hermes/app/agent_wrapper.py` — обновлены правила под seo_health
+**ServiceCategorizer (4 кейса + детерминизм):**
+- Слабый сайт (SEO=28, без рекламы): БАЗА + 2 рекомендованных = 270k/мес
+- Сильный сайт (SEO=72, есть реклама): только БАЗА обязательна = 110k/мес
+- Пустые данные: безопасные дефолты
+- 10 запусков — идентичный результат
 
-#### Результаты тестирования через API
+**Configurator template:** 23 проверки (CSS, JS, placeholders) — PASS
+**QUALITY.md:** блоки 5/10 обновлены, 3-tier удалён — PASS
+**SOUL.md:** rules 23/23.1/23.2 активны — PASS
+**Agent wrapper:** новый промпт, старые «3 уровня» удалены — PASS
+**MTCNF:** 3 рана по 3 кейса — стабильно
 
-**Протестировано 2 клиники:** smilestudio.ru, med-det.ru
+### Apify: синхронизация ключей
 
-**Что работает идеально:**
-1. P1 fix держится: первый ход — только run_prescan (на smilestudio.ru)
-2. Антигаллюцинация web_speed: 1.3с, 1.4с — все цифры точные
-3. Антигаллюцинация seo_health: 70/100 — без искажений
-4. Живой дружеский тон, бизнес-язык
-5. Честность: «выручка не раскрыта», «убыток 273 тыс»
-6. Сохранение контекста между ходами диалога
-7. Fallback когда find_competitors не срабатывает
+**Было:** 5 ключей локально (2 active), 7 на сервере (3 active), токены account-004/005 не совпадали
+**Стало:** 12 ключей, синхронизировано локально ↔ сервер
 
-**Известная проблема (не код, а модель):**
-- P5 (minor): На med-det.ru Hermes пропустил prescan и сразу вызвал find_competitors. Правило `🛑 ПРАВИЛО ПЕРВОГО СООБЩЕНИЯ` в промпте есть, но DeepSeek не всегда ему следует. Это проблема дисциплины модели, не кода.
-- Session cache теряется при перезапуске контейнера (in-memory) — ожидаемо.
+- 8 активных (005-012), 4 exhausted (001-004)
+- Exhausted восстановятся: 001-003 → 26-28 июня, 004 → 2 июля
+- 5 новых ключей добавлено (008-012)
+- Round-robin ротация проверена (16 pull = 2 полных цикла по 8)
+- Бэкапы: `apify_keys.json.20260603` (сервер), `/tmp/apify_keys_backup_20260603.json` (хост)
+- Память обновлена: `api-keys.md`
 
-### Сессия 5 — P5 fix: программное принуждение prescan (2026-06-02 22:30–23:00)
+---
 
-#### P5: DeepSeek игнорировал правило первого сообщения ✅ FIXED
-- **Было:** промпт «🛑 ПРАВИЛО ПЕРВОГО СООБЩЕНИЯ (НЕРУШИМО)» был, но DeepSeek всё равно иногда пропускал prescan и вызывал find_competitors сразу (особенно на Tilda/WordPress сайтах).
-- **Корень:** DeepSeek менее дисциплинирован чем Claude. Prompt-based enforcement недостаточен.
-- **Фикс:** Программное принуждение в `run_agent_sync()`:
-  1. При первом сообщении PRESALE с URL → вызываем prescan API напрямую синхронно (httpx)
-  2. Результат вкалывается в conversation history как завершённый tool_call (id=`force_prescan_1`)
-  3. LLM видит: prescan уже сделан, данные готовы. Он может только рассказать о них.
-  4. Инжектированные tool_calls фильтруются из ответа (id начинается с `force_`)
-- **Результат:** mc-zdorovie.ru — tool_calls пуст, prescan выполнен кодом за 17с, LLM рассказал живой разбор: «многопрофильная клиника в Симферополе, 14 направлений, SEO 65/100, врачей нет, отзывов нет». Без галлюцинаций.
-- **Код:** `AIM/hermes/app/agent_wrapper.py` — +95 строк (_extract_url_from_message, _force_prescan, инъекция в run_agent_sync, фильтр force_ tool_calls)
+## Что делать дальше (Михаил)
 
-### TODO
-- [x] #61: Протестировать Hermes через API (5 клиник, Bitrix/WordPress/Tilda)
-- [x] P4: Исправить галлюцинацию web_speed/seo_score DeepSeek'ом
-- [x] P5: Программное принуждение prescan на первом ходе PRESALE
-- [ ] Протестировать Hermes через Telegram (@iamaim_bot) — нужен живой пользователь
-- [ ] Phase 23: Ultra-Deep Prescan — планы готовы, реализация ждёт
-- [x] Закоммитить все изменения (12 баг-фиксов) — `63b7414`
-- [x] Задеплоить на VPS — контейнеры перезапущены, фиксы активны
-- [ ] Закоммитить P5 fix
+### Срочно
+1. **Написать @iamaim_bot в Telegram** — протестировать полный PRESALE-цикл:
+   - Отправить URL реальной клиники
+   - Проверить что Hermes делает prescan → живой разбор → спрашивает конкурентов
+   - Проверить шаг 6: выжимка из 3 пунктов + цена + результат + ссылка на КП (а НЕ КП в чате)
+   - Проверить шаг 7: при фразе «поехали» → handoff на Михаила
 
-### Сессия 6 — P5 v2 + деплой фронтенда + веб-интерфейс (2026-06-03 10:30–11:50)
+2. **Проверить HTML-КП** — когда Hermes создаст КП через file_write, проверить что:
+   - Блок 5: нарративное обоснование (почему эти услуги)
+   - Блок 10: форма-конструктор с чекбоксами, пересчётом итога
+   - Категории услуг соответствуют данным prescan
 
-#### P5 v2: Agent-level tool restriction ✅
-- **Было (v1):** prescan вкалывался в историю, но DeepSeek всё равно вызывал find_competitors на первом ходу
-- **Фикс:** При первом сообщении PRESALE с URL создаётся агент с `enabled_toolsets=["hermes-debug"]` — физически не может вызвать find_competitors
-- **Результат:** `find_competitors` заблокирован ("Unknown tool"), модель self-corrected → web_search + web_fetch
-- **Turn 2:** Новый агент с полными инструментами → `run_ci_analysis` реально вызван (0.72s, 2 конкурента)
-- **Код:** `agent_wrapper.py` — `_create_agent(enabled_toolsets=...)`, `_p5_restricted` флаг, кеширование `(None, ts, history)`
+3. **Проверить веб-интерфейс** — iamaim.ru, отправить URL через сайт:
+   - Не падает ли с EACCES (должно быть починено)
+   - Не обрывается ли по таймауту (увеличен до 120с)
 
-#### Frontend fix: Permission denied в веб-интерфейсе ✅
-- **Было:** iamaim.ru/api/chat/send возвращал `EACCES: permission denied, mkdir '/opt/data/leads/...'`
-- **Корень:** Волюм `hermes_data` имеет `/opt/data/` с `drwx------` (700, только root). Next.js запущен как `nextjs` (uid=1001)
-- **Фикс:** 
-  1. Создал `/opt/aim/leads` на хосте (777)
-  2. Bind mount `/opt/aim/leads:/opt/data/leads` в docker-compose (вместо `hermes_data:/opt/data`)
-  3. Увеличил `HERMES_TIMEOUT_MS` с 30с → 120с (prescan 17с + DeepSeek 20-40с = 60-90с)
-  4. Next.js 308 redirect fix: curl без trailing slash
-- **Файлы:** `docker-compose.yml` (volume), `AIM/frontend/app/api/chat/send/route.ts` (timeout)
+### На подумать
+4. Phase 23 (Ultra-Deep Prescan) — 3-стадийный пайплайн, планы готовы
+5. Накопить базу 200+ компаний перед мультиагентным ultra-prescan
+6. SEMRUSH_API_KEY и AHREFS_API_KEY до сих пор пустые — нужны ключи
+7. ANTHROPIC_API_KEY — нет кредитов, нужно пополнить
 
-#### Результаты веб-теста (iamaim.ru)
-1. ✅ **Базовый чат:** "Привет" → Operator презентуется, просит URL
-2. ✅ **PRESALE с URL:** `medsi-premium.ru` → prescan + живой разбор (SEO 70/100, скорость мгновенная, 9+ специализаций, VK/Telegram)
-3. ✅ **Антигаллюцинации:** Цифры точные, без искажений DeepSeek
-
-#### Uncommitted changes (4 файла)
-- `AIM/frontend/app/api/chat/send/route.ts` — HERMES_TIMEOUT_MS 30→120s
-- `AIM/hermes/app/agent_wrapper.py` — P5 v2: restricted agent + force_prescan + tool filtering
-- `AIM/hermes/app/tools/run_prescan.py` — sub-1000ms speed format fix
-- `SESSION.md` — эта запись
-
-### TODO
-- [x] #61: Протестировать Hermes через API (5 клиник, Bitrix/WordPress/Tilda)
-- [x] P4: Исправить галлюцинацию web_speed/seo_score DeepSeek'ом
-- [x] P5: Программное принуждение prescan на первом ходе PRESALE
-- [x] P5 v2: Agent-level tool restriction + кеширование истории
-- [x] Починить веб-интерфейс iamaim.ru (EACCES + timeout)
-- [ ] Протестировать Hermes через Telegram (@iamaim_bot) — нужен живой пользователь
-- [ ] Phase 23: Ultra-Deep Prescan — планы готовы, реализация ждёт
-- [x] Закоммитить все изменения (12 баг-фиксов) — `63b7414`
-- [x] Задеплоить на VPS — контейнеры перезапущены, фиксы активны
-- [ ] Закоммитить P5 fix + frontend fix (4 файла, сессия 6)
+### Деплой (готово)
+- [x] Phase 24: все 6 файлов на сервере, Hermes перезапущен
+- [x] SOUL.md: исходник на хосте исправлен (read-only mount больше не перезапишет)
+- [x] Apify: 12 ключей синхронизированы локально ↔ сервер
