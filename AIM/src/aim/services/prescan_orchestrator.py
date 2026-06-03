@@ -468,9 +468,33 @@ class PrescanOrchestrator:
             if match:
                 title = match.group(1).strip()
                 # Strip common suffixes: separators, "официальный сайт", city, etc.
+                parts = None
                 for sep in [' — ', ' - ', ' – ', ' | ', ' :: ', ' – ']:
                     if sep in title:
-                        title = title.split(sep)[0].strip()
+                        parts = [p.strip() for p in title.split(sep, 1)]
+                        break
+
+                if parts and len(parts) == 2:
+                    # If the first part looks like a boilerplate page label
+                    # (too short, or a known generic title), use the second part.
+                    boilerplate_labels = {
+                        'коммерческое предложение', 'главная', 'главная страница',
+                        'home', 'home page', 'index',
+                    }
+                    first_lower = parts[0].lower()
+                    # Also: "Заголовок" page titles where part1 < 25 chars and part2 > 25 chars
+                    if (first_lower in boilerplate_labels or
+                        (len(parts[0]) < 25 and len(parts[1]) > len(parts[0]) * 2)):
+                        title = parts[1]
+                    else:
+                        title = parts[0]
+                elif parts and len(parts) > 2:
+                    # Multi-separator title. Skip boilerplate front parts.
+                    meaningful = [p for p in parts if p.lower() not in {
+                        'коммерческое предложение', 'главная', 'главная страница',
+                        'home', 'home page',
+                    }]
+                    title = meaningful[0] if meaningful else parts[0]
                 # Remove common boilerplate
                 for suffix in [
                     'официальный сайт', 'Официальный сайт',
@@ -487,22 +511,25 @@ class PrescanOrchestrator:
         return ""
 
     async def _quick_reviews(self, url: str, specialization: str, city: str) -> dict:
-        """Quick review snapshot: rating, count.
+        """Quick review snapshot: rating, count, and per-platform data.
 
         Uses the existing ReviewCollector (Playwright) if available,
         with a tight 25-second timeout — just enough for 1-2 platforms.
 
-        Note: praise/complaints are left empty here. Real theme extraction
-        requires NLP over individual review texts (future enhancement).
-        Hermes uses rating + count + specialization to comment intelligently.
+        Returns dict with:
+          - rating, count, praise, complaints (aggregated)
+          - yandex_maps: {found, rating, reviews, url} (from ReviewCollector)
         """
-        result = {"rating": None, "count": 0, "praise": [], "complaints": []}
+        result = {
+            "rating": None, "count": 0, "praise": [], "complaints": [],
+            "yandex_maps": {"found": False, "rating": None, "reviews": None, "url": ""},
+            "prodoctorov": {"found": False, "rating": None, "reviews": None, "url": ""},
+        }
 
         try:
             from aim.services.ci.review_collector import ReviewCollector, AggregatedReviews
 
             # Extract the real brand name from <title> tag, not domain.
-            # Domain-based names (iphk.ru → "Iphk") fail on Cyrillic platforms.
             company_name = await self._extract_brand_name(url)
             if not company_name:
                 domain = urlparse(url).netloc.replace("www.", "")
@@ -519,8 +546,27 @@ class PrescanOrchestrator:
                 if reviews and reviews.platforms:
                     result["rating"] = round(reviews.avg_rating, 1)
                     result["count"] = reviews.total_reviews
-                    logger.info("Quick reviews found: rating=%s count=%s platforms=%s",
-                                result["rating"], result["count"], len(reviews.platforms))
+
+                    # Extract Yandex Maps + ProDoctorov data from platform results
+                    for p in reviews.platforms:
+                        if p.platform == "yandex_maps" and not p.error:
+                            result["yandex_maps"] = {
+                                "found": True,
+                                "rating": p.rating,
+                                "reviews": p.reviews_count,
+                                "url": p.url,
+                            }
+                        elif p.platform == "prodoctorov" and not p.error:
+                            result["prodoctorov"] = {
+                                "found": True,
+                                "rating": p.rating,
+                                "reviews": p.reviews_count,
+                                "url": p.url,
+                            }
+
+                    logger.info("Quick reviews found: rating=%s count=%s yandex=%s platforms=%s",
+                                result["rating"], result["count"],
+                                result["yandex_maps"]["found"], len(reviews.platforms))
             finally:
                 await collector.close()
         except asyncio.TimeoutError:
@@ -883,6 +929,26 @@ class PrescanOrchestrator:
                 seo_data["score"] -= 10
 
             seo_data["score"] = max(0, min(100, seo_data["score"]))
+
+            # ── Platform detection ──────────────────────────────────────
+            platform = "unknown"
+            platform_markers = {
+                "tilda": ["tilda.ws", "tildacdn", "tilda", "tildafiles"],
+                "wordpress": ["wp-content", "wordpress", "wp-json"],
+                "1c-bitrix": ["bitrix24", "bitrix", "1c-bitrix", "bx_site"],
+                "joomla": ["joomla", "com_content"],
+                "wix": ["wix.com", "wixstatic"],
+                "drupal": ["drupal", "sites/default/files"],
+            }
+            for name, markers in platform_markers.items():
+                if any(m in html for m in markers):
+                    platform = name
+                    break
+            seo_data["platform"] = platform
+
+            if platform == "tilda":
+                seo_data["issues"].append("сайт на конструкторе Tilda")
+                seo_data["score"] -= 10
         except Exception as e:
             errors.append(f"seo: {e}")
 
@@ -948,13 +1014,35 @@ class PrescanOrchestrator:
             if any(seg in html_lower for seg in ["/blog", "/news", "/articles", "/stati"]):
                 content_audit["has_blog"] = True
 
-            # Estimate total pages from sitemap or nav links
+            # Estimate total pages from internal links (absolute + relative)
             import re as _re
-            internal_links = _re.findall(
-                rf'href=["\']({_re.escape(url.rstrip("/"))}[^"\']*)["\']', r.text,
+            base = url.rstrip("/")
+            # Absolute links to same domain
+            abs_links = _re.findall(
+                rf'href=["\']({_re.escape(base)}[^"\']*)["\']', r.text,
                 _re.IGNORECASE,
             )
-            content_audit["total_pages_estimated"] = len(set(internal_links)) or 1
+            # Relative links (starting with / but not //)
+            rel_links = _re.findall(
+                r'href=["\'](/(?![/])[^"\']*)["\']', r.text,
+                _re.IGNORECASE,
+            )
+            all_links = set(abs_links) | {f"{base}{rl}" for rl in rel_links}
+            # Filter out anchors, assets, external links
+            page_links = {l for l in all_links
+                          if not l.endswith(('.css', '.js', '.png', '.jpg', '.ico', '.svg', '.woff2'))
+                          and '#' not in l.split('/')[-1]}
+            content_audit["total_pages_estimated"] = max(len(page_links), 1)
+            if content_audit["total_pages_estimated"] < 3:
+                # Fallback: try sitemap
+                try:
+                    sm = await http.get(f"{base}/sitemap.xml")
+                    if sm.status_code == 200 and "<?xml" in sm.text.lower():
+                        sm_urls = _re.findall(r'<loc>(.+?)</loc>', sm.text)
+                        if sm_urls:
+                            content_audit["total_pages_estimated"] = len(sm_urls)
+                except Exception:
+                    pass
 
             # Title samples
             titles = _re.findall(r'<title>(.+?)</title>', r.text, _re.IGNORECASE)
@@ -964,29 +1052,25 @@ class PrescanOrchestrator:
         except Exception as e:
             errors.append(f"content_audit: {e}")
 
-        # ── 3c. Yandex/Google Maps — best-effort ──────────────────────────
-        yandex_maps: dict = {"found": False, "rating": None, "reviews": None,
-                              "address": "", "coordinates": {}, "photos": None,
-                              "working_hours": ""}
+        # ── 3c. Yandex/Google Maps — reuse ReviewCollector data from Stage 2 ─
+        stage_2_reviews = stage_2.get("reviews", {})
+        yandex_from_reviews = stage_2_reviews.get("yandex_maps", {})
+        if yandex_from_reviews and yandex_from_reviews.get("found"):
+            yandex_maps = {
+                "found": True,
+                "rating": yandex_from_reviews.get("rating"),
+                "reviews": yandex_from_reviews.get("reviews"),
+                "address": yandex_from_reviews.get("address", ""),
+                "coordinates": yandex_from_reviews.get("coordinates", {}),
+                "photos": yandex_from_reviews.get("photos"),
+                "working_hours": yandex_from_reviews.get("working_hours", ""),
+                "url": yandex_from_reviews.get("url", ""),
+            }
+        else:
+            yandex_maps = {"found": False, "rating": None, "reviews": None,
+                            "address": "", "coordinates": {}, "photos": None,
+                            "working_hours": ""}
         google_maps: dict = {"found": False, "rating": None, "reviews": None}
-
-        search_name = legal_name or urlparse(url).netloc.replace("www.", "")
-        if search_name and city:
-            try:
-                http = await self._get_http()
-                yandex_search = f"https://yandex.ru/maps/?text={search_name}+{city}"
-                yr = await http.get(yandex_search)
-                # Best-effort rating extraction from Yandex Maps page
-                import re as _re
-                rating_match = _re.search(r'"rating"[:\s]+([\d.]+)', yr.text)
-                reviews_match = _re.search(r'"reviewsCount"[:\s]+(\d+)', yr.text)
-                if rating_match:
-                    yandex_maps["found"] = True
-                    yandex_maps["rating"] = float(rating_match.group(1))
-                if reviews_match:
-                    yandex_maps["reviews"] = int(reviews_match.group(1))
-            except Exception as e:
-                errors.append(f"yandex_maps: {e}")
 
         # ── 3d. Nearby competitors ────────────────────────────────────────
         nearby_competitors: list = []
@@ -996,15 +1080,13 @@ class PrescanOrchestrator:
                 matcher = CompetitorMatcher()
                 competitors = await matcher.find_competitors(
                     url=url,
-                    specialization=specialization,
-                    city=city,
                     count=5,
                 )
                 for c in competitors:
                     nearby_competitors.append({
-                        "name": c.get("legal_name", c.get("brand_name", "")),
-                        "rating": c.get("rating"),
-                        "reviews_count": c.get("reviews_count"),
+                        "name": c.profile.legal_name or c.profile.brand_name or "",
+                        "rating": c.profile.rating,
+                        "reviews_count": c.profile.reviews_count,
                     })
             except Exception as e:
                 errors.append(f"nearby_competitors: {e}")
