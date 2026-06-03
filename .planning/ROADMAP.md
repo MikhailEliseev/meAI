@@ -478,6 +478,6 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 21. CI Pipeline Unification | v5.1 | 5/5 | Complete | 2026-05-31 |
 | 22. Hermes First Communication | v5.2 | 1/1 | Complete   | 2026-06-01 |
 | 23. Ultra-Deep Prescan | v5.3 | 0/3 | Planned | — |
-| 24. Guided Configurator Pricing | v5.4 | 0/1 | Planned | — |
+| 24. Guided Configurator Pricing | v5.4 | 1/1 | Complete   | 2026-06-03 |
 
 **Overall:** 50/59 plans complete (84%)
