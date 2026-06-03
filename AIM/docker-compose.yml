@@ -126,6 +126,8 @@ services:
       - NEXT_PUBLIC_BASE_URL=https://iamaim.ru
     env_file:
       - .env.production
+    volumes:
+      - /opt/aim/leads:/opt/data/leads
     networks:
       - aim-network
     healthcheck:

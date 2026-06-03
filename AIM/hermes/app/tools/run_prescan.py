@@ -85,7 +85,7 @@ async def handle_run_prescan(url=None, **kwargs) -> str:
             if load_speed_ms_val > 0:
                 load_speed_sec = load_speed_ms_val / 1000
                 if load_speed_ms_val < 1000:
-                    speed_desc = f"{load_speed_ms_val} мс — очень быстро (мгновенная загрузка)"
+                    speed_desc = "мгновенная загрузка — очень быстро"
                 elif load_speed_ms_val < 2000:
                     speed_desc = f"{load_speed_sec:.1f} сек — хорошая скорость"
                 elif load_speed_ms_val < 3000:
