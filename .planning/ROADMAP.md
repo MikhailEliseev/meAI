@@ -430,11 +430,27 @@ Plans:
 - [ ] 23-02-PLAN.md — Wave 2: 3-stage pipeline (financials→deep→market) + Roszdravnadzor + staging endpoint
 - [ ] 23-03-PLAN.md — Wave 3: Hermes run_prescan update + SOUL.md staged flow + PRESALE prompt
 
+### Phase 24: Guided Configurator Pricing & Presale Flow Redesign
+**Goal**: Заменить 3-уровневое ценообразование на LEGO-конструктор с 4 категориями (БАЗА/РЕКОМЕНДОВАНО/ОПЦИОНАЛЬНО/СЛЕДУЮЩИЙ ЭТАП). Hermes даёт выжимку в чате + ссылку на полный КП с конфигуратором. Категории определяются автоматически на основе prescan + CI-анализа.
+**Depends on**: Phase 22, Phase 23
+**Success Criteria** (what must be TRUE):
+  1. Блок 5 КП: нарративное обоснование услуг вместо таблицы с 3 уровнями цен
+  2. Блок 10 КП: форма-конструктор с 4 категориями, чекбоксами и живым пересчётом итога
+  3. Категории услуг (БАЗА/РЕКОМЕНДОВАНО/ОПЦИОНАЛЬНО/СЛЕДУЮЩИЙ ЭТАП) определяются автоматически правилами на основе prescan
+  4. Шаг 6 PRESALE: Hermes даёт выжимку (3 пункта + цена + результат) и ссылку на КП вместо текста КП в чате
+  5. Шаг 7 PRESALE: handoff на Михаила с передачей контекста
+  6. QUALITY.md обновлён: блок 5 и 10 переименованы, red flags обновлены
+  7. SOUL.md обновлён: правило 23 (4 категории), правило 19 (блоки), новое правило (выжимка в чате)
+**Plans**: 1 plan
+
+Plans:
+- [x] 24-01-PLAN.md — Guided configurator: QUALITY.md + SOUL.md + PRESALE prompt + HTML-КП generator + ServiceCategorizer
+
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23
+Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -462,5 +478,6 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 21. CI Pipeline Unification | v5.1 | 5/5 | Complete | 2026-05-31 |
 | 22. Hermes First Communication | v5.2 | 1/1 | Complete   | 2026-06-01 |
 | 23. Ultra-Deep Prescan | v5.3 | 0/3 | Planned | — |
+| 24. Guided Configurator Pricing | v5.4 | 0/1 | Planned | — |
 
-**Overall:** 50/58 plans complete (86%)
+**Overall:** 50/59 plans complete (84%)
