@@ -459,19 +459,38 @@ class PrescanOrchestrator:
     # ── Reviews helpers ─────────────────────────────────────────────────
 
     async def _extract_brand_name(self, url: str) -> str:
-        """Extract brand name from <title> tag of the website.
+        """Extract brand name from <title> and og:site_name meta tags.
 
         Domain-based names (iphk.ru → "Iphk") fail on Russian review platforms
         that expect Cyrillic names. The <title> tag usually contains the real name,
         e.g. "Институт пластической хирургии и косметологии - официальный сайт".
+
+        Falls back to og:site_name when title-based brand looks like a generic
+        locale descriptor rather than a real brand name.
         """
+        import re as _re
         try:
             http = await self._get_http()
             r = await http.get(url)
-            match = re.search(r'<title>(.+?)</title>', r.text, re.IGNORECASE)
+            html = r.text
+
+            # Extract og:site_name as potential fallback
+            og_site = None
+            og_match = _re.search(
+                r'<meta[^>]+property=["\']og:site_name["\'][^>]+content=["\']([^"\']+)["\']',
+                html, _re.IGNORECASE,
+            )
+            if not og_match:
+                og_match = _re.search(
+                    r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:site_name["\']',
+                    html, _re.IGNORECASE,
+                )
+            if og_match:
+                og_site = og_match.group(1).strip()
+
+            match = _re.search(r'<title>(.+?)</title>', html, _re.IGNORECASE)
             if match:
                 title = match.group(1).strip()
-                # Strip common suffixes: separators, "официальный сайт", city, etc.
                 parts = None
                 for sep in [' — ', ' - ', ' – ', ' | ', ' :: ', ' – ']:
                     if sep in title:
@@ -479,39 +498,55 @@ class PrescanOrchestrator:
                         break
 
                 if parts and len(parts) == 2:
-                    # If the first part looks like a boilerplate page label
-                    # (too short, or a known generic title), use the second part.
-                    # BUT: if part1 contains Latin chars → it's a brand name, keep it.
                     boilerplate_labels = {
                         'коммерческое предложение', 'главная', 'главная страница',
                         'home', 'home page', 'index',
                     }
                     first_lower = parts[0].lower()
-                    has_latin = bool(re.search(r'[a-zA-Z]', parts[0]))
-                    # Also: "Заголовок" page titles where part1 < 25 chars and part2 > 25 chars
+                    has_latin = bool(_re.search(r'[a-zA-Z]', parts[0]))
                     if not has_latin and (first_lower in boilerplate_labels or
                         (len(parts[0]) < 25 and len(parts[1]) > len(parts[0]) * 2)):
                         title = parts[1]
                     else:
                         title = parts[0]
                 elif parts and len(parts) > 2:
-                    # Multi-separator title. Skip boilerplate front parts.
                     meaningful = [p for p in parts if p.lower() not in {
                         'коммерческое предложение', 'главная', 'главная страница',
                         'home', 'home page',
                     }]
                     title = meaningful[0] if meaningful else parts[0]
-                # Remove common boilerplate
+
+                # Remove common boilerplate suffixes
                 for suffix in [
                     'официальный сайт', 'Официальный сайт',
                     'клиники в Москве', 'клиники в Санкт-Петербурге',
                     'в Москве', 'в Санкт-Петербурге',
                     'Москва', 'Санкт-Петербург',
                 ]:
-                    title = re.sub(rf'\s*[—–-]?\s*{re.escape(suffix)}\s*$', '', title)
+                    title = _re.sub(rf'\s*[—–-]?\s*{_re.escape(suffix)}\s*$', '', title)
+
+                # If title-based brand looks like a generic locale descriptor,
+                # prefer og:site_name (which is usually the real brand)
+                GENERIC_PATTERNS = [
+                    r'^стоматология\s+в\s+\S+',       # "Стоматология в Зеленограде"
+                    r'^клиника\s+\S+\s+\S+',          # "Клиника профессора Юцковской"
+                    r'^стоматологическая\s+клиника',
+                ]
+                is_generic = len(title) > 30 or any(
+                    _re.search(p, title, _re.IGNORECASE) for p in GENERIC_PATTERNS
+                )
+                if is_generic and og_site and len(og_site) >= 3:
+                    logger.debug("Title brand '%s' looks generic, using og:site_name '%s'",
+                                 title, og_site)
+                    title = og_site
+
                 if len(title) >= 3 and not title.startswith('http'):
-                    logger.debug("Extracted brand name from title: %s", title)
+                    logger.debug("Extracted brand name: %s", title)
                     return title
+
+            # No title tag — use og:site_name directly
+            if og_site and len(og_site) >= 3:
+                return og_site
         except Exception as e:
             logger.debug("Brand name extraction failed for %s: %s", url, e)
         return ""
@@ -812,7 +847,10 @@ class PrescanOrchestrator:
             except Exception as e:
                 errors.append(f"nalog: {e}")
 
+        brand_name = await self._extract_brand_name(url)
+
         summary: dict = {
+            "brand_name": brand_name,
             "revenue": revenue_data,
             "profit": profit_data,
             "legal_entity": legal_entity,
