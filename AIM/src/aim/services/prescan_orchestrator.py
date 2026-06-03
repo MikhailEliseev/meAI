@@ -481,13 +481,15 @@ class PrescanOrchestrator:
                 if parts and len(parts) == 2:
                     # If the first part looks like a boilerplate page label
                     # (too short, or a known generic title), use the second part.
+                    # BUT: if part1 contains Latin chars → it's a brand name, keep it.
                     boilerplate_labels = {
                         'коммерческое предложение', 'главная', 'главная страница',
                         'home', 'home page', 'index',
                     }
                     first_lower = parts[0].lower()
+                    has_latin = bool(re.search(r'[a-zA-Z]', parts[0]))
                     # Also: "Заголовок" page titles where part1 < 25 chars and part2 > 25 chars
-                    if (first_lower in boilerplate_labels or
+                    if not has_latin and (first_lower in boilerplate_labels or
                         (len(parts[0]) < 25 and len(parts[1]) > len(parts[0]) * 2)):
                         title = parts[1]
                     else:
