@@ -403,7 +403,7 @@ def _force_prescan(url: str) -> str | None:
     AIM_API = "http://app:8000"
 
     try:
-        with httpx.Client(timeout=120.0) as client:
+        with httpx.Client(timeout=180.0) as client:
             response = client.post(
                 f"{AIM_API}/api/presale/prescan",
                 json={"url": url},
@@ -469,6 +469,7 @@ def _force_prescan(url: str) -> str | None:
                 "last_post_date": result.get("last_post_date"),
                 "last_post_platform": result.get("last_post_platform"),
                 "social_links": result.get("social_links", {}),
+                "nearby_competitors": result.get("nearby_competitors", []),
                 "errors": result.get("errors", []),
             }
 
