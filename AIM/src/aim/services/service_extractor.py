@@ -790,21 +790,76 @@ def _extract_company_name(html: str) -> Optional[str]:
     return None
 
 
+def _is_valid_inn_checksum(inn: str) -> bool:
+    """Validate INN checksum (Russian taxpayer ID algorithm)."""
+    if not inn or not inn.isdigit():
+        return False
+    if len(inn) == 10:  # Legal entity
+        coeffs = [2, 4, 10, 3, 5, 9, 4, 6, 8]
+        checksum = sum(int(inn[i]) * coeffs[i] for i in range(9)) % 11 % 10
+        return checksum == int(inn[9])
+    if len(inn) == 12:  # Individual entrepreneur
+        coeffs1 = [7, 2, 4, 10, 3, 5, 9, 4, 6, 8]
+        checksum1 = sum(int(inn[i]) * coeffs1[i] for i in range(10)) % 11 % 10
+        coeffs2 = [3, 7, 2, 4, 10, 3, 5, 9, 4, 6, 8]
+        checksum2 = sum(int(inn[i]) * coeffs2[i] for i in range(11)) % 11 % 10
+        return checksum1 == int(inn[10]) and checksum2 == int(inn[11])
+    return False
+
+
+def _score_inn_context(inn: str, text: str, match_start: int) -> int:
+    """Score how likely this INN belongs to the site's legal entity.
+
+    Higher score = more likely to be the correct INN.
+    Penalizes third-party mentions (Yandex, Koltach, etc.).
+    """
+    score = 0
+    ctx_start = max(0, match_start - 300)
+    ctx_end = min(len(text), match_start + 300)
+    context = text[ctx_start:ctx_end]
+
+    # Bonus for legal entity indicators near the INN
+    if re.search(r'ООО|Общество\s+с\s+ограниченной|АО\s+«|ЗАО\s+«', context):
+        score += 10
+    # Penalty for third-party processor mentions
+    if re.search(r'Яндекс|Yandex|Колтач|Koltach|Google|треть(?:их|ьи)\s+лиц', context, re.IGNORECASE):
+        score -= 5
+    # Bonus for requisites block indicators
+    if re.search(r'ОГРН|КПП|ОКВЭД|ОКПО|БИК|р/с|расч[её]тный\s+сч[её]т', context):
+        score += 5
+    # Bonus if "ИНН" label is close to this INN (not a different INN)
+    inn_label_pos = context.rfind("ИНН", 0, inn.find(inn, max(0, match_start - 50)) if match_start > 50 else 0)
+    if inn_label_pos == -1:
+        inn_label_pos = context.find("ИНН")
+    if inn_label_pos != -1 and abs(inn_label_pos - (match_start - ctx_start)) < 100:
+        score += 3
+
+    return score
+
+
 def _extract_inn(html: str) -> Optional[str]:
     """Extract INN (10 or 12 digits) from website HTML.
 
     Looks in: footer sections, schema.org markup, text near "ИНН" label.
-    Returns the first valid INN found, or None.
+    Validates checksum and prefers INNs near legal entity names (ООО)
+    over third-party processor INNs (Yandex, Koltach, etc.).
     """
     try:
         from bs4 import BeautifulSoup
         soup = BeautifulSoup(html, "html.parser")
 
-        # 1. Look for text "ИНН" followed by digits (footer, requisites)
+        # 1. Collect ALL "ИНН" matches with context scoring
         text = soup.get_text()
-        inn_match = re.search(r"ИНН\s*[:/\s]*\s*(\d{10}|\d{12})", text)
-        if inn_match:
-            return inn_match.group(1)
+        candidates: list[tuple[str, int]] = []  # (inn, score)
+        for m in re.finditer(r"ИНН\s*[:/\s]*\s*(\d{10}|\d{12})", text):
+            inn = m.group(1)
+            if _is_valid_inn_checksum(inn):
+                score = _score_inn_context(inn, text, m.start())
+                candidates.append((inn, score))
+
+        if candidates:
+            candidates.sort(key=lambda x: x[1], reverse=True)
+            return candidates[0][0]
 
         # 2. Look in schema.org Organization markup
         for script in soup.find_all("script", type="application/ld+json"):
@@ -813,24 +868,32 @@ def _extract_inn(html: str) -> Optional[str]:
                 data = json.loads(script.string or "")
                 if isinstance(data, dict):
                     tax_id = data.get("taxID") or ""
-                    if re.match(r"^\d{10}$|^\d{12}$", tax_id):
+                    if re.match(r"^\d{10}$|^\d{12}$", tax_id) and _is_valid_inn_checksum(tax_id):
                         return tax_id
             except (json.JSONDecodeError, TypeError):
                 pass
 
         # 3. Look for elements with class/id containing "inn" or "реквизит"
+        element_candidates: list[tuple[str, int]] = []
         for el in soup.find_all(
             class_=lambda c: c and any(
                 kw in c.lower() for kw in ["inn", "реквизит", "requisite", "footer"]
             ) if c else False
         ):
             el_text = el.get_text()
-            m = re.search(r"(\d{10}|\d{12})", el_text)
-            if m:
+            for m in re.finditer(r"(\d{10}|\d{12})", el_text):
                 digits = m.group(1)
-                # Validate: skip phone numbers (start with 7 or 8)
-                if digits[0] not in ("7", "8"):
-                    return digits
+                # Skip phone numbers (start with 7 or 8) and validate checksum
+                if digits[0] in ("7", "8"):
+                    continue
+                if not _is_valid_inn_checksum(digits):
+                    continue
+                score = _score_inn_context(digits, el_text, m.start())
+                element_candidates.append((digits, score))
+
+        if element_candidates:
+            element_candidates.sort(key=lambda x: x[1], reverse=True)
+            return element_candidates[0][0]
 
     except Exception:
         pass

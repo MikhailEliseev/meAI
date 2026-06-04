@@ -45,7 +45,8 @@ class BfoNalogClient:
             timeout=httpx.Timeout(timeout),
             headers={
                 "User-Agent": USER_AGENT,
-                "Accept": "application/json",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.5",
             },
         )
         self._cache: dict[str, tuple[float, object]] = {}

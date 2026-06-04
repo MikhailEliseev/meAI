@@ -66,6 +66,9 @@ class PrescanResult:
     last_post_platform: Optional[str] = None
     social_links: dict[str, str] = field(default_factory=dict)
 
+    # ── Competitors ──
+    nearby_competitors: list[dict] = field(default_factory=list)
+
     # ── Errors (non-fatal) ──
     errors: list[str] = field(default_factory=list)
 
@@ -92,6 +95,7 @@ class PrescanResult:
             "last_post_date": self.last_post_date,
             "last_post_platform": self.last_post_platform,
             "social_links": self.social_links,
+            "nearby_competitors": self.nearby_competitors,
             "errors": self.errors,
         }
 
@@ -265,10 +269,31 @@ class PrescanOrchestrator:
             _thread_social(),
         )
 
+        # ── Competitor discovery (after gather — needs city + specialization) ──
+        if result.city and result.specialization:
+            try:
+                from aim.services.competitor_matcher import CompetitorMatcher
+                matcher = CompetitorMatcher()
+                competitors = await matcher.find_competitors(
+                    url=url,
+                    count=5,
+                )
+                result.nearby_competitors = [
+                    {
+                        "name": c.profile.legal_name or c.profile.brand_name or "",
+                        "rating": c.profile.rating,
+                        "reviews_count": c.profile.reviews_count,
+                    }
+                    for c in competitors
+                ]
+            except Exception as e:
+                logger.warning("Prescan competitor discovery failed: %s", e)
+                result.errors.append(f"competitors: {e}")
+
         elapsed = time.monotonic() - t0
         logger.info(
             "Prescan complete in %.1fs: specialization=%s city=%s revenue=%s "
-            "seo=%s rating=%s reviews=%d errors=%d",
+            "seo=%s rating=%s reviews=%d competitors=%d errors=%d",
             elapsed,
             result.specialization,
             result.city,
@@ -276,6 +301,7 @@ class PrescanOrchestrator:
             result.seo_score,
             result.rating,
             result.reviews_count,
+            len(result.nearby_competitors),
             len(result.errors),
         )
 
@@ -551,6 +577,56 @@ class PrescanOrchestrator:
             logger.debug("Brand name extraction failed for %s: %s", url, e)
         return ""
 
+    async def _extract_city_from_html(self, html: str) -> str:
+        """Extract city from page HTML — address patterns, Yandex Maps links, geo meta."""
+        import re as _re
+
+        city_patterns = [
+            # Schema.org address
+            r'"addressLocality"\s*:\s*"([^"]+)"',
+            r'<meta[^>]+name=["\']address["\'][^>]+content=["\']([^"\']*?)[,\s]*["\']',
+            # Yandex Maps widget — city in coordinates or address
+            r'yandex\.ru/maps/.*?/[^/]+/([^/]+)/',
+            # Address text: "г. Москва", "Санкт-Петербург", etc.
+            r'г\.\s*([А-ЯЁ][а-яё]+(?:\s*[-–]\s*[А-ЯЁ][а-яё]+)?)',
+            r'город\s+([А-ЯЁ][а-яё]+(?:\s*[-–]\s*[А-ЯЁ][а-яё]+)?)',
+            # "Москва", "Санкт-Петербург" on contact pages
+        ]
+
+        russian_cities = [
+            'Москва', 'Санкт-Петербург', 'Новосибирск', 'Екатеринбург',
+            'Казань', 'Нижний Новгород', 'Челябинск', 'Самара', 'Омск',
+            'Ростов-на-Дону', 'Уфа', 'Красноярск', 'Воронеж', 'Пермь',
+            'Волгоград', 'Краснодар',
+        ]
+
+        # Districts/suburbs that should map to parent cities for Yandex Maps search
+        suburb_to_city = {
+            'Зеленоград': 'Москва',
+            'Троицк': 'Москва',
+            'Щербинка': 'Москва',
+            'Московский': 'Москва',
+            'Пушкин': 'Санкт-Петербург',
+            'Петергоф': 'Санкт-Петербург',
+            'Колпино': 'Санкт-Петербург',
+            'Сестрорецк': 'Санкт-Петербург',
+        }
+
+        for pattern in city_patterns:
+            m = _re.search(pattern, html, _re.IGNORECASE)
+            if m:
+                candidate = m.group(1).strip()
+                if len(candidate) >= 2:
+                    return suburb_to_city.get(candidate, candidate)
+
+        # Fallback: scan for known city names
+        body = html[:50000]  # first 50KB is enough
+        for city in russian_cities:
+            if city in body:
+                return city
+
+        return ""
+
     async def _quick_reviews(self, url: str, specialization: str, city: str) -> dict:
         """Quick review snapshot: rating, count, and per-platform data.
 
@@ -575,6 +651,18 @@ class PrescanOrchestrator:
             if not company_name:
                 domain = urlparse(url).netloc.replace("www.", "")
                 company_name = domain.split(".")[0].replace("-", " ").title()
+
+            # Fix: Extract city from page HTML if not already set.
+            # _thread_reviews runs in parallel with _thread_structure which sets
+            # result.city — if city is empty, reviews defaults to "Москва" and
+            # misses regional clinics (e.g. ARclinic in Санкт-Петербург).
+            if not city:
+                try:
+                    http = await self._get_http()
+                    r = await http.get(url)
+                    city = await self._extract_city_from_html(r.text)
+                except Exception:
+                    pass
 
             logger.info("Quick reviews: searching for '%s' in %s", company_name, city or "Москва")
 
@@ -834,6 +922,10 @@ class PrescanOrchestrator:
             except Exception as e:
                 errors.append(f"dadata: {e}")
 
+            # Always store INN even without DaData
+            if not legal_entity:
+                legal_entity = {"inn": inn}
+
         # ── 1d. ГИР БО financials ─────────────────────────────────────────
         if inn:
             try:
@@ -844,6 +936,19 @@ class PrescanOrchestrator:
                     revenue_data["by_year"][str(fin.get("financial_year", ""))] = fin["revenue_year"]
                 if fin.get("profit_year"):
                     profit_data["by_year"][str(fin.get("financial_year", ""))] = fin["profit_year"]
+
+                # Sanity check: medical clinics rarely exceed 500M RUB/year
+                rev = fin.get("revenue_year")
+                if rev and rev > 500_000_000:
+                    logger.warning(
+                        "Revenue sanity check failed: INN=%s revenue=%.0fM RUB — "
+                        "likely wrong INN (third-party processor?)",
+                        inn, rev / 1_000_000,
+                    )
+                    errors.append(
+                        f"revenue_sanity: выручка {rev/1_000_000:.0f}M RUB "
+                        f"для ИНН {inn} — возможно, ошибочный ИНН"
+                    )
             except Exception as e:
                 errors.append(f"nalog: {e}")
 
