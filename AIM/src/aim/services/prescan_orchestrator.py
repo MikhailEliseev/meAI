@@ -269,31 +269,10 @@ class PrescanOrchestrator:
             _thread_social(),
         )
 
-        # ── Competitor discovery (after gather — needs city + specialization) ──
-        if result.city and result.specialization:
-            try:
-                from aim.services.competitor_matcher import CompetitorMatcher
-                matcher = CompetitorMatcher()
-                competitors = await matcher.find_competitors(
-                    url=url,
-                    count=5,
-                )
-                result.nearby_competitors = [
-                    {
-                        "name": c.profile.legal_name or c.profile.brand_name or "",
-                        "rating": c.profile.rating,
-                        "reviews_count": c.profile.reviews_count,
-                    }
-                    for c in competitors
-                ]
-            except Exception as e:
-                logger.warning("Prescan competitor discovery failed: %s", e)
-                result.errors.append(f"competitors: {e}")
-
         elapsed = time.monotonic() - t0
         logger.info(
             "Prescan complete in %.1fs: specialization=%s city=%s revenue=%s "
-            "seo=%s rating=%s reviews=%d competitors=%d errors=%d",
+            "seo=%s rating=%s reviews=%d errors=%d",
             elapsed,
             result.specialization,
             result.city,
@@ -301,7 +280,6 @@ class PrescanOrchestrator:
             result.seo_score,
             result.rating,
             result.reviews_count,
-            len(result.nearby_competitors),
             len(result.errors),
         )
 
