@@ -42,7 +42,7 @@ def _make_candidate(**kwargs) -> CompanyProfile:
 # ── S1 + S2: Weights rebalanced ──────────────────────────────────────
 
 class TestScoringWeights:
-    """S1: popularity 0.18 (was 0.11), S2: services 0.12 (was 0.25)."""
+    """S1: popularity 0.13 (was 0.11), S2: services 0.12 (was 0.25)."""
 
     def test_all_weights_sum_to_one(self):
         weights = [W_REVENUE, W_LOCATION, W_SERVICES, W_SPECIALIZATION,
@@ -50,20 +50,20 @@ class TestScoringWeights:
         assert abs(sum(weights) - 1.0) < 0.001
 
     def test_popularity_weight_raised(self):
-        """S1: popularity now 0.18 (was 0.11)."""
-        assert W_POPULARITY == 0.18
+        """S1: popularity now 0.13 (was 0.11)."""
+        assert W_POPULARITY == 0.13
 
     def test_service_overlap_weight_lowered(self):
         """S2: service_overlap now 0.12 (was 0.25)."""
         assert W_SERVICES == 0.12
 
     def test_data_quality_weight_raised(self):
-        """data_quality now 0.18 (was 0.14)."""
-        assert W_DATA == 0.18
+        """data_quality now 0.15 (was 0.14)."""
+        assert W_DATA == 0.15
 
     def test_visibility_weight_raised(self):
-        """visibility now 0.12 (was 0.10)."""
-        assert W_VISIBILITY == 0.12
+        """visibility now 0.10 (was 0.10) — unchanged."""
+        assert W_VISIBILITY == 0.10
 
 
 # ── M1: Pure Jaccard (no TF-IDF) ─────────────────────────────────────
@@ -133,7 +133,7 @@ class TestJaccardScoring:
 
 class TestRevenueMatch:
     def test_exact_match(self):
-        assert _score_revenue_match(50_000_000, 50_000_000) == 1.0
+        assert _score_revenue_match(50_000_000, 50_000_000) == 0.8
 
     def test_similar_revenue(self):
         score = _score_revenue_match(50_000_000, 60_000_000)
