@@ -447,21 +447,26 @@ Plans:
 - [x] 24-01-PLAN.md — Guided configurator: QUALITY.md + SOUL.md + PRESALE prompt + HTML-КП generator + ServiceCategorizer
 
 ### Phase 25: Presale Pipeline Tool Extraction
-**Goal**: Разобрать монолитный SKILL.md (757 строк, 55 патчей) на отдельные инструменты (skills), которые LLM вызывает по своему усмотрению. Сохранить v2.55.0 как fallback. Первый инструмент: Instagram Doctor Verifier (5-pass система).
+**Goal**: Разобрать монолитный SKILL.md (757 строк, 55 патчей) на отдельные инструменты (skills), которые LLM вызывает по своему усмотрению. Закрыть 4 gaps vs ampermy etalon: технический аудит, контент-анализ 10 экспертов, виральные темы конкурентов, Reel Scraper. Сохранить v2.55.0 как fallback.
 **Depends on**: Phase 24
 **Success Criteria** (what must be TRUE):
   1. SKILL.md v2.55.0 сохранён как fallback (бэкап в /root/.hermes/backups/2026-06-06_v2.55.0_snapshot/)
   2. Instagram Doctor Verifier выделен в отдельный skill: `presale-pipeline/social-verifier/SKILL.md`
-  3. Верификатор принимает список врачей на вход, возвращает верифицированные соцсети с pass-маркерами
-  4. 5-pass система сохранена, но изолирована от остального пайплайна
-  5. SKILL.md сокращён: удалены инструкции, вынесенные в tool
-  6. Каждый tool тестируется независимо (без запуска полного пресейла)
-  7. Ошибки в tool не ломают весь пресейл — fallback на SKILL.md
-**Plans**: 2 plan(s)
+  3. 4 инструмента извлечены: social-verifier, html-kp-generator, financial-fetcher, competitor-scorer
+  4. SKILL.md сокращён до v2.57.1 с делегированием в извлечённые skills
+  5. tech-auditor skill: 8-параметров технического аудита сайта (скорость, битые ссылки, meta, h1, alt, sitemap, SSL, mobile)
+  6. content-analyzer skill: контент-анализ ВСЕХ 10 экспертов (не только TOP-2) — форматы, вовлечение, виральные посты
+  7. competitor-scorer v1.1.0: добавлен поиск виральных постов конкурентов (Wellcure, Некрасова и др.)
+  8. reel-scraper skill: сбор Instagram Reels через Apify (ссылки с target=_blank, БЕЗ визуального анализа)
+  9. Каждый tool тестируется независимо (без запуска полного пресейла)
+  10. Ошибки в tool не ломают весь пресейл — fallback на SKILL.md
+**Plans**: 4 plan(s)
 
 Plans:
-- [ ] 25-01-PLAN.md — Instagram Doctor Verifier: выделение 5-pass системы в отдельный skill
-- [ ] 25-02-PLAN.md — SKILL.md cleanup: удаление вынесенных инструкций, обновление ссылок
+- [x] 25-01-PLAN.md — Instagram Doctor Verifier: выделение 5-pass системы в отдельный skill
+- [x] 25-02-PLAN.md — SKILL.md cleanup: удаление вынесенных инструкций, обновление ссылок + html-kp-generator, financial-fetcher, competitor-scorer extraction
+- [ ] 25-03-PLAN.md — Gap closure HIGH priority: tech-auditor skill (8-param audit) + content-analyzer skill (ALL 10 experts)
+- [ ] 25-04-PLAN.md — Gap closure MEDIUM priority: competitor-scorer viral post search + reel-scraper skill (links only, no visual)
 
 
 ## Progress
@@ -496,6 +501,6 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 22. Hermes First Communication | v5.2 | 1/1 | Complete   | 2026-06-01 |
 | 23. Ultra-Deep Prescan | v5.3 | 3/3 | Complete | 2026-06-03 |
 | 24. Guided Configurator Pricing | v5.4 | 1/1 | Complete   | 2026-06-03 |
-| 25. Presale Pipeline Tool Extraction | v5.5 | 0/2 | Planned | 2026-06-06 |
+| 25. Presale Pipeline Tool Extraction | v5.5 | 2/4 | 25-01, 25-02 done; 25-03, 25-04 planned | 2026-06-06 |
 
-**Overall:** 53/61 plans complete (87%)
+**Overall:** 55/63 plans complete (87%)
