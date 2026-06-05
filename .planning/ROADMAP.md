@@ -465,7 +465,7 @@ Plans:
 Plans:
 - [x] 25-01-PLAN.md — Instagram Doctor Verifier: выделение 5-pass системы в отдельный skill
 - [x] 25-02-PLAN.md — SKILL.md cleanup: удаление вынесенных инструкций, обновление ссылок + html-kp-generator, financial-fetcher, competitor-scorer extraction
-- [ ] 25-03-PLAN.md — Gap closure HIGH priority: tech-auditor skill (8-param audit) + content-analyzer skill (ALL 10 experts)
+- [x] 25-03-PLAN.md — Gap closure HIGH priority: tech-auditor skill (8-param audit) + content-analyzer skill (ALL 10 experts)
 - [ ] 25-04-PLAN.md — Gap closure MEDIUM priority: competitor-scorer viral post search + reel-scraper skill (links only, no visual)
 
 
@@ -501,6 +501,6 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 22. Hermes First Communication | v5.2 | 1/1 | Complete   | 2026-06-01 |
 | 23. Ultra-Deep Prescan | v5.3 | 3/3 | Complete | 2026-06-03 |
 | 24. Guided Configurator Pricing | v5.4 | 1/1 | Complete   | 2026-06-03 |
-| 25. Presale Pipeline Tool Extraction | v5.5 | 2/4 | 25-01, 25-02 done; 25-03, 25-04 planned | 2026-06-06 |
+| 25. Presale Pipeline Tool Extraction | v5.5 | 3/4 | In Progress|  |
 
 **Overall:** 55/63 plans complete (87%)
