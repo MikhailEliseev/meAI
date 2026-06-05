@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Client Acquisition
-status: executing
-stopped_at: Phase 21 complete. CI pipelines unified. 49/49 tests pass.
-last_updated: "2026-06-05T23:21:03.936Z"
+status: milestone_complete
+stopped_at: Milestone complete (Phase 25 was final phase)
+last_updated: 2026-06-05T23:53:38.239Z
 last_activity: 2026-06-05 -- Phase 25 execution started
 progress:
   total_phases: 18
   completed_phases: 16
   total_plans: 50
-  completed_plans: 50
-  percent: 93
+  completed_plans: 25
+  percent: 89
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/ROADMAP.md (updated 2026-05-19)
 
 **Core value:** AI-first medical marketing agency at iamaim.ru — полный цикл захвата клиентов
-**Current focus:** Phase 25 — llm-first-orchestration
+**Current focus:** Milestone complete
 
 ## Current Position
 
-Phase: 25 (llm-first-orchestration) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 25
-Last activity: 2026-06-05 -- Phase 25 execution started
+Phase: 25
+Plan: Not started
+Status: Milestone complete
+Last activity: 2026-06-05
 
 Progress: [░░░░░░░░░░] 0%
 
