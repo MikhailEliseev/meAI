@@ -468,6 +468,51 @@ Plans:
 - [x] 25-03-PLAN.md — Gap closure HIGH priority: tech-auditor skill (8-param audit) + content-analyzer skill (ALL 10 experts)
 - [x] 25-04-PLAN.md — Gap closure MEDIUM priority: competitor-scorer viral post search + reel-scraper skill (links only, no visual)
 
+### Phase 26: Presale Orchestration Fix
+**Goal**: Исправить загрузку 7 presale tools по короткому имени (skill_view) + LLM-first оркестрация через Goal Loop + Hard Gate
+**Depends on**: Phase 25
+**Success Criteria** (what must be TRUE):
+  1. 7 подскиллов перемещены из presale-pipeline/ на уровень software-development/
+  2. Parent SKILL.md переписан как orchestration layer (< 200 строк)
+  3. Старый SKILL.md (92KB, 757 строк) → references/ легаси
+  4. Hermes загружает все 7 tools через skill_view(name='...') по короткому имени
+  5. Hard Gate + Goal Loop + Structured Log работают
+**Plans**: 1 plan
+
+Plans:
+- [x] 26-01-PLAN.md — Flatten skill paths + rewrite parent SKILL.md v3.0.0 + verify
+
+### Phase 27: Presale Conveyor — JSON Contract + State Machine + Quality Gate
+**Goal**: Превратить 7 скиллов в конвейер: единый JSON-формат данных, structured state machine, программный quality gate
+**Depends on**: Phase 26
+**Success Criteria** (what must be TRUE):
+  1. PresaleData JSON schema — единая схема data.json для всех скиллов
+  2. State machine (presale-state.json) — атомарное обновление после каждого шага
+  3. quality-gate.py — программный валидатор (0 gaps → PASS, иначе FAIL)
+  4. html-kp-generator читает data.json вместо markdown-таблиц
+  5. Parent SKILL.md интегрирует state machine + quality gate
+**Plans**: 1 plan
+
+Plans:
+- [x] 27-01-PLAN.md — JSON schema + state machine + quality gate + html-kp-generator адаптация
+
+### Phase 28: Deep Research Phase 0 — Mandatory Pre-Flight Intelligence
+**Goal**: Обязательный Deep Research на каждую ключевую персону клиники и всю клинику перед основным пресейл-пайплайном. Автоматическое определение «заслуженных» докторов и углублённое исследование. Конкуренты — только поверхностно (честно в КП). Deep Research findings — база для дальнейших поисков ассистента.
+**Depends on**: Phase 27
+**Success Criteria** (what must be TRUE):
+  1. Phase 0 автоматически запускается перед Phase 1 пресейла
+  2. Каждый ключевой врач клиники получает deep research (стаж, регалии, публикации, соцсети, отзывы пациентов)
+  3. «Заслуженные» доктора (д.м.н., профессора, авторы методик) распознаются автоматически → углублённое исследование
+  4. Клиника получает deep research: история, репутация, рейтинги, юрлицо, лицензии
+  5. Конкуренты — только поверхностный анализ (честное указание в КП)
+  6. Deep-анализ конкурентов — только после подписания договора (постконтракт)
+  7. Результаты Deep Research сохраняются в data.json и используются на всех следующих фазах
+**Requirements**: DEEP-01, DEEP-02, DEEP-03, DEEP-04, DEEP-05, DEEP-06, DEEP-07
+**Plans**: 1 plan
+
+Plans:
+- [x] 28-01-PLAN.md — Deep Research Phase 0: Python helper, SKILL.md, presale-pipeline integration, server deploy
+
 
 ## Progress
 
@@ -502,5 +547,8 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 23. Ultra-Deep Prescan | v5.3 | 3/3 | Complete | 2026-06-03 |
 | 24. Guided Configurator Pricing | v5.4 | 1/1 | Complete   | 2026-06-03 |
 | 25. Presale Pipeline Tool Extraction | v5.5 | 4/4 | Complete    | 2026-06-05 |
+| 26. Presale Orchestration Fix | v5.6 | 1/1 | Planned | — |
+| 27. Presale Conveyor | v5.7 | 1/1 | Planned | — |
+| 28. Deep Research Phase 0 | v5.8 | 0/1 | Planned | — |
 
-**Overall:** 55/63 plans complete (87%)
+**Overall:** 55/66 plans complete (83%)
