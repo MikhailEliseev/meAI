@@ -1,0 +1,27 @@
+{
+  "client": "",
+  "url": "",
+  "phase": 0,
+  "step": "init",
+  "completed": [],
+  "pending": [
+    "phase0-deep-research-extract-doctors",
+    "phase0-deep-research-classify",
+    "phase0-deep-research-doctors",
+    "phase0-deep-research-clinic",
+    "phase0-deep-research-merge",
+    "phase0-site-audit",
+    "phase0-finance",
+    "phase1-social-audit",
+    "phase1-competitors",
+    "phase1-reels",
+    "phase2-content-analysis",
+    "phase2-gap-audit",
+    "phase4-html-kp"
+  ],
+  "errors": [],
+  "gaps": 0,
+  "iterations": 0,
+  "started_at": "",
+  "updated_at": ""
+}
