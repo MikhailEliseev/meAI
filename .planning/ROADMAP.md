@@ -549,6 +549,6 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 25. Presale Pipeline Tool Extraction | v5.5 | 4/4 | Complete    | 2026-06-05 |
 | 26. Presale Orchestration Fix | v5.6 | 1/1 | Planned | — |
 | 27. Presale Conveyor | v5.7 | 1/1 | Planned | — |
-| 28. Deep Research Phase 0 | v5.8 | 0/1 | Planned | — |
+| 28. Deep Research Phase 0 | v5.8 | 1/1 | Complete (deploy deferred) | 2026-06-06 |
 
-**Overall:** 55/66 plans complete (83%)
+**Overall:** 56/66 plans complete (85%)
