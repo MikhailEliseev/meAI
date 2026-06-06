@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Client Acquisition
-status: milestone_complete
-stopped_at: Milestone complete (Phase 25 was final phase)
-last_updated: 2026-06-05T23:53:38.239Z
-last_activity: 2026-06-05 -- Phase 25 execution started
+status: in_progress
+stopped_at: Phase 28 Plan 01 complete. Deep Research Phase 0 created.
+last_updated: "2026-06-06T13:51:35.857Z"
+last_activity: 2026-06-06
 progress:
-  total_phases: 18
+  total_phases: 22
   completed_phases: 16
-  total_plans: 50
-  completed_plans: 25
-  percent: 89
+  total_plans: 51
+  completed_plans: 26
+  percent: 91
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/ROADMAP.md (updated 2026-05-19)
 
 ## Current Position
 
-Phase: 25
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-06-05
+Phase: 28
+Plan: 28-01 (complete)
+Status: In progress — Deep Research Phase 0
+Last activity: 2026-06-06
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [████████░░] 91%
 
 ## Performance Metrics
 
@@ -58,8 +58,9 @@ Progress: [░░░░░░░░░░] 0%
 | 19. Competitor Discovery Quality | 1 | Complete ✅ (8 fixes across 4 files: name scoring, services, specialization, social links) |
 | 20. Apify Competitor Intelligence | 1 | Complete ✅ (Google Maps Scraper + ApifyKeyPool + bugfixes + tests) |
 | 21. CI Pipeline Unification | 5 | Complete ✅ (EventBus delegation, unified models, CiMarketingAnalyzer thin proxy, 49/49 tests) |
+| 28. Deep Research Phase 0 | 1 | 1/1 done (28-01), deployment deferred |
 
-*Updated 2026-05-31*
+*Updated 2026-06-06*
 
 ## Pending Plans (Phase 13)
 
@@ -80,6 +81,7 @@ Progress: [░░░░░░░░░░] 0%
 - **Sprint structure**: Phase 11 used 4 sprints (200h total)
 - **Hermes**: Phase 15 replaced DeepSeek with Hermes AIAgent via OmniRoute
 - **Telegram**: Hybrid Bot API (incoming) + Telethon (outgoing) gateway
+- **Phase 28 Deep Research Phase 0**: Mandatory pre-flight intelligence inserted BEFORE Phase 1. Three-tier doctor classification (star/core/team). Python helper for JSON merge. Phase renumbering from old P0→P1, P1→P2 etc. Server deployment deferred (server DOWN).
 
 ### Pending Todos
 
@@ -145,6 +147,6 @@ None — infrastructure ready for production deploy.
 
 ## Session Continuity
 
-Last session: 2026-06-03T17:28:03.234Z
-Stopped at: Phase 21 complete. CI pipelines unified. 49/49 tests pass.
-Next: 13-02 (Yandex Direct) or 13-03 (VK Ads + Telegram Ads) — depends on available tokens
+Last session: 2026-06-06T13:50:38Z
+Stopped at: Phase 28 Plan 01 complete. Deep Research Phase 0 — all local files created.
+Next: Deploy to server when root@138.16.224.188 is back up; verify against server presale-pipeline SKILL.md original.
