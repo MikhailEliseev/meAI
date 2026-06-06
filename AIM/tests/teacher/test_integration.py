@@ -3,7 +3,7 @@
 import pytest
 import tempfile
 from pathlib import Path
-from AIM.src.aim.teacher.teacher_agent import TeacherAgent
+from src.aim.teacher.teacher_agent import TeacherAgent
 
 
 def test_full_audit_cycle():
@@ -105,8 +105,8 @@ class Client:
         test_file.write_text(original_code)
 
         # Create mock audit result with gaps
-        from AIM.src.aim.teacher.gap_detector import Gap, GapSeverity
-        from AIM.src.aim.teacher.audit_report import AuditResult
+        from src.aim.teacher.gap_detector import Gap, GapSeverity
+        from src.aim.teacher.audit_report import AuditResult
 
         gaps = [
             Gap(

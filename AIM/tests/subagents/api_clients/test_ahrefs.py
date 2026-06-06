@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from AIM.src.aim.subagents.api_clients.ahrefs import AhrefsClient
+from src.aim.subagents.api_clients.ahrefs import AhrefsClient
 from AIM.tests.fixtures.keyword_data import (
     AHREFS_MOCK_RESPONSE,
     ZERO_VOLUME_RESPONSE,
@@ -205,7 +205,7 @@ async def test_min_volume_filtering(ahrefs_client):
 @pytest.mark.asyncio
 async def test_cost_tracking(ahrefs_client):
     """Test API cost is tracked in metrics"""
-    from AIM.src.aim.subagents.api_clients.base import api_cost_total
+    from src.aim.subagents.api_clients.base import api_cost_total
 
     with patch.object(ahrefs_client, "_make_request") as mock_request:
         mock_request.return_value = AHREFS_MOCK_RESPONSE

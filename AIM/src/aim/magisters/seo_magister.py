@@ -11,9 +11,9 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Any
 
-from aim.subagents.seo.technical_agent import TechnicalSEOAgent
-from aim.subagents.seo.content_agent import ContentSEOAgent
-from aim.subagents.seo.links_agent import LinksSEOAgent
+from src.aim.subagents.seo.technical_agent import TechnicalSEOAgent
+from src.aim.subagents.seo.content_agent import ContentSEOAgent
+from src.aim.subagents.seo.links_agent import LinksSEOAgent
 
 
 class SEOMagister:
@@ -34,6 +34,7 @@ class SEOMagister:
         technical_agent: TechnicalSEOAgent | None = None,
         content_agent: ContentSEOAgent | None = None,
         links_agent: LinksSEOAgent | None = None,
+        event_bus=None,
     ):
         """Initialize SEO Magister
 
@@ -42,11 +43,13 @@ class SEOMagister:
             technical_agent: Optional TechnicalSEOAgent instance (for testing)
             content_agent: Optional ContentSEOAgent instance (for testing)
             links_agent: Optional LinksSEOAgent instance (for testing)
+            event_bus: Optional EventBus instance for publishing results
         """
         self.technical_agent = technical_agent or TechnicalSEOAgent()
         self.content_agent = content_agent or ContentSEOAgent()
         self.links_agent = links_agent or LinksSEOAgent()
         self.timeout = timeout
+        self.event_bus = event_bus
 
     async def coordinate_analysis(self, url: str, correlation_id: str | None = None) -> dict[str, Any]:
         """Coordinate comprehensive SEO analysis
@@ -81,6 +84,23 @@ class SEOMagister:
                 links_result=links_result,
                 start_time=start_time
             )
+
+            # Publish completion event if EventBus is available
+            if self.event_bus is not None:
+                try:
+                    from meai.events.event_bus import Event
+
+                    await self.event_bus.publish(Event(
+                        event_type="seo.analysis.completed",
+                        payload={
+                            "url": url,
+                            "correlation_id": correlation_id,
+                            "overall_score": report.get("scores", {}).get("overall"),
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                        },
+                    ))
+                except Exception:
+                    pass
 
             return report
 

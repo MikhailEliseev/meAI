@@ -2,7 +2,7 @@
 
 import pytest
 
-from AIM.src.aim.subagents.ads.landing_page_analyzer import (
+from src.aim.subagents.ads.landing_page_analyzer import (
     LandingPageAnalyzer,
     LandingPageReport,
     RelevanceAnalysis,

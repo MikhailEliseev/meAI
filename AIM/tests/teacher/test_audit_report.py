@@ -1,8 +1,8 @@
 # AIM/tests/teacher/test_audit_report.py
 import pytest
 from pathlib import Path
-from AIM.src.aim.teacher.audit_report import AuditReportGenerator, AuditResult
-from AIM.src.aim.teacher.gap_detector import Gap, GapSeverity
+from src.aim.teacher.audit_report import AuditReportGenerator, AuditResult
+from src.aim.teacher.gap_detector import Gap, GapSeverity
 
 
 def test_generate_report():

@@ -16,9 +16,9 @@ from typing import Any
 
 import numpy as np
 
-from aim.ai.lead_scoring.feature_extractor import LeadFeatureExtractor
-from aim.ai.lead_scoring.schemas import LeadScore
-from aim.models.lead import Lead
+from src.aim.ai.lead_scoring.feature_extractor import LeadFeatureExtractor
+from src.aim.ai.lead_scoring.schemas import LeadScore
+from src.aim.models.lead import Lead
 
 
 class LeadScoringService:

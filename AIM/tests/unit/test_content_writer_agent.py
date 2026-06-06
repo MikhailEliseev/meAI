@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 
 from meai.agents.base_agent import Task, TaskStatus
-from AIM.src.aim.subagents.content_writer_agent import ContentWriterAgent
+from src.aim.subagents.content_writer_agent import ContentWriterAgent
 from tests.fixtures.subagent_fixtures import mock_api_clients, content_writer_agent
 
 

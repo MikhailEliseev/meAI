@@ -19,7 +19,7 @@ aim_path = Path(__file__).parent.parent.parent.parent
 if str(aim_path) not in sys.path:
     sys.path.insert(0, str(aim_path))
 
-from aim.subagents.social_agent import SocialAgent
+from src.aim.subagents.social_agent import SocialAgent
 
 logger = logging.getLogger(__name__)
 

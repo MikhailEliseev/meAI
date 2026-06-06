@@ -1,6 +1,6 @@
 # AIM/tests/teacher/test_github_finder.py
 import pytest
-from AIM.src.aim.teacher.github_finder import GitHubFinder
+from src.aim.teacher.github_finder import GitHubFinder
 
 
 def test_find_repos_for_topic():

@@ -7,7 +7,7 @@ Tests report generation functionality.
 import pytest
 import json
 from pathlib import Path
-from aim.subagents.competitive_intel.agents.business_report import BusinessReportGenerator
+from src.aim.subagents.competitive_intel.agents.business_report import BusinessReportGenerator
 
 
 @pytest.fixture

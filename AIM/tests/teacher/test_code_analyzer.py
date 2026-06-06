@@ -1,7 +1,7 @@
 # AIM/tests/teacher/test_code_analyzer.py
 import pytest
 from pathlib import Path
-from AIM.src.aim.teacher.code_analyzer import CodeAnalyzer
+from src.aim.teacher.code_analyzer import CodeAnalyzer
 
 
 def test_extract_imports():

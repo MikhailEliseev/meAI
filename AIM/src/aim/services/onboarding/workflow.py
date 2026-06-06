@@ -337,7 +337,7 @@ class OnboardingWorkflow:
         session: OnboardingSession,
     ) -> OnboardingSession:
         """Send BAA for signature via Контур.Диадок"""
-        from aim.services.contracts.kontour_client import (
+        from src.aim.services.contracts.kontour_client import (
             SignatureType,
             get_signature_type_for_amount,
         )

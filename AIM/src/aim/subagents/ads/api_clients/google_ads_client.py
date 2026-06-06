@@ -20,11 +20,11 @@ from google.ads.googleads.client import GoogleAdsClient as GoogleAdsSDKClient
 from google.api_core.gapic_v1.client_info import ClientInfo
 from google.auth.credentials import Credentials
 
-from aim.subagents.ads.auth.oauth_flow import (
+from src.aim.subagents.ads.auth.oauth_flow import (
     get_installed_app_credentials,
     refresh_credentials,
 )
-from aim.subagents.ads.config.settings import AdsSettings
+from src.aim.subagents.ads.config.settings import AdsSettings
 
 logger = structlog.get_logger(__name__)
 

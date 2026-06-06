@@ -3,7 +3,7 @@
 from unittest.mock import AsyncMock, patch
 import pytest
 
-from aim.magisters.seo_magister import SEOMagister
+from src.aim.magisters.seo_magister import SEOMagister
 
 
 @pytest.fixture

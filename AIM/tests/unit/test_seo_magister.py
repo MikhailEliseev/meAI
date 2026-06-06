@@ -84,7 +84,7 @@ async def test_seo_magister_timeout(mock_seo_subagents):
     Expected: asyncio.TimeoutError raised, error status returned
     """
     # Create magister with short timeout for testing (1 second)
-    from AIM.src.aim.magisters.seo_magister import SEOMagister
+    from src.aim.magisters.seo_magister import SEOMagister
     seo_magister = SEOMagister(
         timeout=1,
         technical_agent=mock_seo_subagents["technical"],

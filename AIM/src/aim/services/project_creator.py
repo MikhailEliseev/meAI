@@ -4,8 +4,8 @@ from typing import Any, Dict, List, Optional
 import asyncio
 from dataclasses import dataclass
 
-from aim.integrations.linear.client import LinearClient, LinearProject, LinearIssue
-from aim.templates.engine import TemplateEngine, TemplateData
+from src.aim.integrations.linear.client import LinearClient, LinearProject, LinearIssue
+from src.aim.templates.engine import TemplateEngine, TemplateData
 
 
 @dataclass

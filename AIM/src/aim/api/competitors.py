@@ -14,9 +14,9 @@ from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from aim.services.competitor_matcher import CompetitorMatcher
-from aim.services.pre_sale_folder import PreSaleFolder
-from aim.services.rusprofile.models import CompetitorMatch
+from src.aim.services.competitor_matcher import CompetitorMatcher
+from src.aim.services.pre_sale_folder import PreSaleFolder
+from src.aim.services.rusprofile.models import CompetitorMatch
 
 logger = logging.getLogger(__name__)
 
@@ -223,7 +223,7 @@ async def analyze_competitors(body: AnalyzeCompetitorsRequest) -> AnalyzeCompeti
     Reuses the SEO API's singleton CIOrchestrator via _get_orchestrator().
     """
     try:
-        from aim.api.seo import _get_orchestrator
+        from src.aim.api.seo import _get_orchestrator
 
         matches = [_json_to_match(c) for c in body.competitors]
         named_urls = _extract_named_urls(matches)
@@ -351,7 +351,7 @@ async def analyze_competitors_stream(body: AnalyzeCompetitorsRequest):
     """
 
     async def generate():
-        from aim.api.seo import _get_orchestrator
+        from src.aim.api.seo import _get_orchestrator
         import asyncio as _asyncio
 
         matches = [_json_to_match(c) for c in body.competitors]
@@ -501,7 +501,7 @@ def _competitor_to_json(m: CompetitorMatch) -> CompetitorJson:
 def _json_to_match(j: CompetitorJson) -> CompetitorMatch:
     """Convert API model back to CompetitorMatch for storage."""
     import hashlib
-    from aim.services.rusprofile.models import CompanyProfile
+    from src.aim.services.rusprofile.models import CompanyProfile
 
     inn = j.inn if j.inn else f"manual-{hashlib.md5((j.website or j.brand_name or 'unknown').encode()).hexdigest()[:10]}"
     legal_name = j.legal_name if j.legal_name else (j.brand_name or j.website or "Неизвестный конкурент")

@@ -3,7 +3,7 @@ import pytest
 import tempfile
 import shutil
 from pathlib import Path
-from AIM.src.aim.teacher.repo_cloner import RepoCloner
+from src.aim.teacher.repo_cloner import RepoCloner
 
 
 def test_clone_repo():

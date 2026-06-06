@@ -16,8 +16,8 @@ import pytest
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from aim.services.competitor_matcher import _score_one, _score_revenue_match
-from aim.services.rusprofile.models import ClientProfile, CompanyProfile
+from src.aim.services.competitor_matcher import _score_one, _score_revenue_match
+from src.aim.services.rusprofile.models import ClientProfile, CompanyProfile
 
 
 def calculate_gap_bonus(client_revenue: int, comp_revenue: int) -> float:

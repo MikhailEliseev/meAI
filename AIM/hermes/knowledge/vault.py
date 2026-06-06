@@ -67,13 +67,17 @@ class HermesKnowledgeVault:
     async def query_context(self, domain: str, action: str) -> dict:
         """Search knowledge vault for patterns relevant to domain+action.
 
-        Searches: wiki/patterns/, wiki/learnings/{domain}/, decisions/rules/
+        Searches: wiki/patterns/, wiki/learnings/{domain}/, decisions/rules/,
+                  /opt/data/memories/learnings/ (auto-learnings),
+                  knowledge/learnings/ (teacher reports)
         """
         patterns = self._list_files(self.wiki_patterns)
         learnings = self._list_files(self.wiki_learnings / domain)
         rules = self._list_files(self.decisions)
+        auto_learnings = self._list_files(Path("/opt/data/memories/learnings"))
+        teacher_reports = self._list_files(self.base / "learnings")
 
-        relevant = {"patterns": [], "learnings": [], "rules": [], "query": f"{domain}:{action}"}
+        relevant = {"patterns": [], "learnings": [], "rules": [], "auto_learnings": [], "teacher_reports": [], "query": f"{domain}:{action}"}
 
         keyword = action.split("_")[0] if "_" in action else action
 
@@ -87,6 +91,14 @@ class HermesKnowledgeVault:
         for r in rules:
             if domain in r.stem or keyword in r.stem:
                 relevant["rules"].append({"name": r.stem, "content": r.read_text(encoding="utf-8")[:2000]})
+
+        # Auto-learnings from Hermes runtime
+        for a in auto_learnings:
+            relevant["auto_learnings"].append({"name": a.stem, "content": a.read_text(encoding="utf-8")[:2000]})
+
+        # Teacher reports
+        for t in teacher_reports:
+            relevant["teacher_reports"].append({"name": t.stem, "content": t.read_text(encoding="utf-8")[:2000]})
 
         return relevant
 

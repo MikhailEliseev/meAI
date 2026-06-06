@@ -19,7 +19,7 @@ async def test_analytics_magister_execute_task_success():
     Expected: Correct delegation to subagents, status="delegated" or "success"
     """
     # Arrange: Create real AnalyticsMagister (not using fixture for this test)
-    from AIM.src.aim.magisters.analytics_magister import AnalyticsMagister
+    from src.aim.magisters.analytics_magister import AnalyticsMagister
     import tempfile
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -67,7 +67,7 @@ async def test_analytics_magister_generate_report_success():
     Expected: Report file created, summary returned, event published
     """
     # Arrange: Create real AnalyticsMagister
-    from AIM.src.aim.magisters.analytics_magister import AnalyticsMagister
+    from src.aim.magisters.analytics_magister import AnalyticsMagister
     import tempfile
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -122,7 +122,7 @@ async def test_analytics_magister_collect_report_data_partial_failure():
     Expected: Report generation continues with available data
     """
     # Arrange: Create real AnalyticsMagister
-    from AIM.src.aim.magisters.analytics_magister import AnalyticsMagister
+    from src.aim.magisters.analytics_magister import AnalyticsMagister
     import tempfile
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -164,7 +164,7 @@ async def test_analytics_magister_execute_task_full_failure():
     Expected: Returns error status with message
     """
     # Arrange: Create real AnalyticsMagister
-    from AIM.src.aim.magisters.analytics_magister import AnalyticsMagister
+    from src.aim.magisters.analytics_magister import AnalyticsMagister
     import tempfile
 
     with tempfile.TemporaryDirectory() as tmpdir:

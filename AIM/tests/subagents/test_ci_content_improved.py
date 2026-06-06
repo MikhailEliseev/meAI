@@ -6,7 +6,7 @@ import pytest
 from pathlib import Path
 from datetime import datetime
 
-from AIM.src.aim.subagents.competitive_intel.agents.ci_content_improved import (
+from src.aim.subagents.competitive_intel.agents.ci_content_improved import (
     CIContentAgentImproved,
     PageAnalyzer,
 )

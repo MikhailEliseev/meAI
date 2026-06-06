@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from meai.events.event_bus import EventBus, Event, EventPriority
-from aim.models.analytics_models import DomainMetrics, AggregatedMetrics
+from src.aim.models.analytics_models import DomainMetrics, AggregatedMetrics
 
 
 class BaseDomainAnalytics(ABC):

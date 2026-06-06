@@ -15,19 +15,19 @@ from typing import Any, Optional
 
 import structlog
 
-from aim.subagents.ads.ad_copy_generator import (
+from src.aim.subagents.ads.ad_copy_generator import (
     AdCopyGenerator,
     AdCopySet,
 )
-from aim.subagents.ads.landing_page_analyzer import (
+from src.aim.subagents.ads.landing_page_analyzer import (
     LandingPageAnalyzer,
     LandingPageReport,
 )
-from aim.subagents.ads.bid_strategy_optimizer import (
+from src.aim.subagents.ads.bid_strategy_optimizer import (
     BidStrategyOptimizer,
     BidOptimizationReport,
 )
-from aim.magisters.linear_mixin import LinearMixin
+from src.aim.magisters.linear_mixin import LinearMixin
 
 
 @dataclass
@@ -146,7 +146,7 @@ class AdsMagisterV2(LinearMixin):
             errors.append(f"Ad Copy Generation failed: {str(e)}")
             self.add_linear_progress_update("Phase 1: Ad Copy", "failed", str(e))
             # Create empty ad copy set to continue workflow
-            from aim.subagents.ads.ad_copy_generator import (
+            from src.aim.subagents.ads.ad_copy_generator import (
                 AdCopySet,
             )
 

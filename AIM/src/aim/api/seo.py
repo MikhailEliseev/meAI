@@ -118,7 +118,7 @@ _init_lock = asyncio.Lock()
 
 
 async def _get_orchestrator():
-    """Lazy-init CIOrchestrator with EventBus (singleton)."""
+    """Lazy-init CIOrchestrator with shared EventBus (singleton)."""
     global _orchestrator
     if _orchestrator is not None:
         return _orchestrator
@@ -127,12 +127,11 @@ async def _get_orchestrator():
         if _orchestrator is not None:
             return _orchestrator
 
-        from meai.events.event_bus import EventBus
-        from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+        from src.aim.orchestration.shared_event_bus import get_shared_event_bus
+        from src.aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
 
         database_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/aim.db")
-        event_bus = EventBus(database_url=database_url)
-        await event_bus.initialize()
+        event_bus = await get_shared_event_bus()
 
         _orchestrator = CIOrchestrator(
             agent_id="hermes-seo-api",
@@ -140,7 +139,7 @@ async def _get_orchestrator():
             database_url=database_url,
             vault_path="AIM/obsidian/ci-orchestrator",
         )
-        logger.info("CIOrchestrator initialized for SEO API")
+        logger.info("CIOrchestrator initialized for SEO API (shared EventBus)")
         return _orchestrator
 
 
@@ -165,7 +164,7 @@ async def _run_audit_background(task: AuditTask, payload: dict):
         tier = payload.get("tier", "deep")
 
         # Extract city and specialization from client website
-        from aim.services.service_extractor import extract_client_profile
+        from src.aim.services.service_extractor import extract_client_profile
         task.progress = "Извлекаю город и специализацию с сайта…"
         profile = await extract_client_profile(url)
         geo = profile.get("city") or "ru"

@@ -9,7 +9,7 @@ import logging
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from aim.services.pre_sale_folder import PreSaleFolder
+from src.aim.services.pre_sale_folder import PreSaleFolder
 
 logger = logging.getLogger(__name__)
 

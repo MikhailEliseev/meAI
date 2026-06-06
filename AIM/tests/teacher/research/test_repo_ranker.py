@@ -5,11 +5,11 @@ Tests for RepoRanker.
 import pytest
 from datetime import datetime, timedelta
 
-from AIM.src.aim.teacher.research.repo_ranker import (
+from src.aim.teacher.research.repo_ranker import (
     RepoRanker,
     RepoScore,
 )
-from AIM.src.aim.teacher.research.github_searcher import GitHubRepo
+from src.aim.teacher.research.github_searcher import GitHubRepo
 
 
 @pytest.fixture

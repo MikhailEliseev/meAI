@@ -81,3 +81,50 @@ logs/
 
 # Linear tasks (temporary)
 plans/cleanup-linear-tasks.md
+
+# Claude Code internal
+.claude/
+
+# Superpowers skills (loaded at runtime)
+.superpowers/
+
+# Screenshots and reports in root
+*.png
+*.html
+
+# Planning artifacts (large, auto-generated)
+.planning/
+
+# Obsidian raw imports and generated results
+obsidian/architect/raw/
+obsidian/content-magister/
+
+# CI audit artifacts
+ci-audit/
+
+# Hermes build artifacts (if any)
+hermes/
+
+# Auto-generated agent results (subagent outputs)
+obsidian/intelligence-magister/
+obsidian/seo-magister/results/
+obsidian/content-magister/results/
+obsidian/ads-magister/results/
+
+# Superpowers generated docs
+docs/superpowers/
+docs/briefs/
+docs/subagents-specs/
+
+# AIM generated docs and projects
+AIM/docs/
+AIM/projects/
+AIM/obsidian/ci-scout/
+
+# Misc root noise
+arclinic-*
+iamaim-*
+aim_audit_report.html
+chat-before-test.png
+med-det-report-v2.png
+.dockerignore

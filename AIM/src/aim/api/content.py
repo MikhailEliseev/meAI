@@ -39,7 +39,7 @@ async def run_content_analysis(payload: dict):
     # Use ci_content agent via CIOrchestrator for consistent pipeline
     try:
         from meai.events.event_bus import EventBus
-        from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+        from src.aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
 
         database_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./AIM/data/aim.db")
         event_bus = EventBus()

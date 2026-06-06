@@ -3,18 +3,18 @@
 import pytest
 from datetime import datetime
 
-from AIM.src.aim.magisters.seo_magister_v2 import (
+from src.aim.magisters.seo_magister_v2 import (
     SEOMagisterV2,
     SEOWorkflowReport,
 )
-from AIM.src.aim.subagents.seo.keyword_research_agent import (
+from src.aim.subagents.seo.keyword_research_agent import (
     KeywordCluster,
     KeywordIntent,
     KeywordPriority,
     KeywordResearchResult,
 )
-from AIM.src.aim.subagents.schemas.api_responses import KeywordDataUnified
-from AIM.src.aim.subagents.seo.onpage_optimizer import (
+from src.aim.subagents.schemas.api_responses import KeywordDataUnified
+from src.aim.subagents.seo.onpage_optimizer import (
     TitleTagAnalysis,
     MetaDescriptionAnalysis,
     HeaderStructure,
@@ -24,7 +24,7 @@ from AIM.src.aim.subagents.seo.onpage_optimizer import (
     URLAnalysis,
     OnPageReport,
 )
-from AIM.src.aim.subagents.seo.schema_generator import (
+from src.aim.subagents.seo.schema_generator import (
     SchemaValidation,
     SchemaReport,
 )

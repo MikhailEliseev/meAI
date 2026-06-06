@@ -10,7 +10,7 @@ import numpy as np
 from typing import Dict, List, Any
 from datetime import datetime, timezone
 
-from aim.ai.analytics.schemas import BudgetOptimizationResult
+from src.aim.ai.analytics.schemas import BudgetOptimizationResult
 
 
 class BudgetOptimizer:

@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from AIM.src.aim.subagents.api_clients.semrush import SEMrushClient
+from src.aim.subagents.api_clients.semrush import SEMrushClient
 from AIM.tests.fixtures.keyword_data import (
     SEMRUSH_MOCK_RESPONSE,
     ZERO_VOLUME_RESPONSE,
@@ -193,7 +193,7 @@ async def test_min_volume_filtering(semrush_client):
 @pytest.mark.asyncio
 async def test_cost_tracking(semrush_client):
     """Test API cost is tracked in metrics"""
-    from AIM.src.aim.subagents.api_clients.base import api_cost_total
+    from src.aim.subagents.api_clients.base import api_cost_total
 
     with patch.object(semrush_client, "_make_request") as mock_request:
         mock_request.return_value = SEMRUSH_MOCK_RESPONSE

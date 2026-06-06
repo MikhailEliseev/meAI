@@ -14,21 +14,21 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from AIM.src.aim.teacher.skills.skill_comparator import (
+from src.aim.teacher.skills.skill_comparator import (
     ComparisonResult,
 )
-from AIM.src.aim.teacher.skills.skill_extractor import (
+from src.aim.teacher.skills.skill_extractor import (
     ExtractedImplementation,
 )
-from AIM.src.aim.teacher.skills.skill_extraction_orchestrator import (
+from src.aim.teacher.skills.skill_extraction_orchestrator import (
     SkillExtractionOrchestrator,
     SkillExtractionReport,
 )
-from AIM.src.aim.teacher.skills.skill_selector import (
-    SelectedSkill,
+from src.aim.teacher.skills.skill_selector import (
+    Skill,
     SelectionCriteria,
 )
-from AIM.src.aim.teacher.skills.skill_teacher import TeachingResult
+from src.aim.teacher.skills.skill_teacher import TeachingResult
 
 
 @pytest.fixture
@@ -144,7 +144,7 @@ def sample_selection_result(sample_comparisons):
     """Create sample selection result."""
     return {
         "skills_to_adopt": [
-            SelectedSkill(
+            Skill(
                 comparison=sample_comparisons[0],
                 selection_score=85.0,
                 selection_reason="High improvement potential",

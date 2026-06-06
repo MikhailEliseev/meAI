@@ -35,7 +35,7 @@ except ImportError:
     BitrixAsync = None
     _FAST_BITRIX24_AVAILABLE = False
 
-from aim.integrations.bitrix24.schemas import (
+from src.aim.integrations.bitrix24.schemas import (
     Bitrix24Contact,
     Bitrix24Deal,
     Bitrix24Lead,

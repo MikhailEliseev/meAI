@@ -12,13 +12,13 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.database import get_db
-from aim.schemas.lead import (
+from src.aim.database import get_db
+from src.aim.schemas.lead import (
     ChatLeadRequest,
     LeadCaptureRequest,
     LeadCaptureResponse,
 )
-from aim.services.lead_capture import LeadCaptureService, RateLimitExceeded, RecaptchaVerificationFailed
+from src.aim.services.lead_capture import LeadCaptureService, RateLimitExceeded, RecaptchaVerificationFailed
 
 logger = logging.getLogger(__name__)
 

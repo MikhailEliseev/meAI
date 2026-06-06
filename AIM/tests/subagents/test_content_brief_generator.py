@@ -3,15 +3,15 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from AIM.src.aim.subagents.content.content_brief_generator import (
+from src.aim.subagents.content.content_brief_generator import (
     ContentBriefGenerator,
     ContentBrief,
     HeaderStructure,
     TopicCoverage,
     QuestionToAnswer,
 )
-from AIM.src.aim.subagents.schemas.api_responses import KeywordDataUnified
-from AIM.src.aim.subagents.seo.keyword_research_agent import (
+from src.aim.subagents.schemas.api_responses import KeywordDataUnified
+from src.aim.subagents.seo.keyword_research_agent import (
     KeywordResearchResult,
     KeywordIntent,
     KeywordCluster,

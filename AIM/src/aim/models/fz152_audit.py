@@ -12,7 +12,7 @@ from typing import Optional
 from sqlalchemy import String, Integer, DateTime, Text, Index, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
-from aim.storage.models import Base
+from src.aim.storage.models import Base
 
 
 class FZ152AuditLog(Base):

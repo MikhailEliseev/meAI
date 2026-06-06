@@ -11,12 +11,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models.onboarding import Onboarding
-from aim.models.lead import Lead
-from aim.models.document import Document
-from aim.models.payment import Payment
-from aim.services.onboarding.onboarding_service import OnboardingService
-from aim.services.onboarding.state_machine import OnboardingState, OnboardingEvent
+from src.aim.models.onboarding import Onboarding
+from src.aim.models.lead import Lead
+from src.aim.models.document import Document
+from src.aim.models.payment import Payment
+from src.aim.services.onboarding.onboarding_service import OnboardingService
+from src.aim.services.onboarding.state_machine import OnboardingState, OnboardingEvent
 
 
 @pytest.fixture

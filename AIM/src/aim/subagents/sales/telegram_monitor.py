@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from aim.subagents.sales.channel_monitor_base import BaseChannelMonitor, ChannelMessage
+from src.aim.subagents.sales.channel_monitor_base import BaseChannelMonitor, ChannelMessage
 
 logger = logging.getLogger(__name__)
 

@@ -17,7 +17,7 @@ from pathlib import Path
 
 import structlog
 
-from aim.teacher.skills.skill_extractor import ExtractedImplementation
+from src.aim.teacher.skills.skill_extractor import ExtractedImplementation
 
 logger = structlog.get_logger()
 

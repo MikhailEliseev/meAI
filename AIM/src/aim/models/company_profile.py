@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from sqlalchemy import JSON, DateTime, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from aim.storage.models import Base
+from src.aim.storage.models import Base
 
 
 class CompanyProfileModel(Base):

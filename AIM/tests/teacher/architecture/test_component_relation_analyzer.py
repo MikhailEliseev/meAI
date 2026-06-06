@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from AIM.src.aim.teacher.architecture.component_relation_analyzer import (
+from src.aim.teacher.architecture.component_relation_analyzer import (
     ComponentRelationAnalyzer,
     ComponentRelations,
 )

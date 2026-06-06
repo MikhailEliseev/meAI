@@ -8,8 +8,8 @@ import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from datetime import datetime, timezone
 
-from AIM.src.aim.magisters.ads_magister import AdsMagister
-from AIM.src.aim.subagents.ads_campaign_creator_agent import AdsCampaignCreatorAgent
+from src.aim.magisters.ads_magister import AdsMagister
+from src.aim.subagents.ads_campaign_creator_agent import AdsCampaignCreatorAgent
 
 
 @pytest.fixture

@@ -5,7 +5,7 @@ Tests for GitHubSearcher.
 import pytest
 from datetime import datetime
 
-from AIM.src.aim.teacher.research.github_searcher import (
+from src.aim.teacher.research.github_searcher import (
     GitHubSearcher,
     GitHubRepo,
 )

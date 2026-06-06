@@ -54,7 +54,7 @@ class CIReputationAgent(Agent):
         # Rotating SerpAPI client (auto-failover on 429)
         self._serpapi_client = None
         try:
-            from aim.subagents.competitive_intel.serpapi_client import get_serpapi_client
+            from src.aim.subagents.competitive_intel.serpapi_client import get_serpapi_client
             self._serpapi_client = get_serpapi_client()
         except Exception:
             pass

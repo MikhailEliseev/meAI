@@ -4,13 +4,13 @@ Tests for SERP Overlap Clusterer.
 
 import pytest
 
-from AIM.src.aim.subagents.gap_detection.serp_overlap_clusterer import (
+from src.aim.subagents.gap_detection.serp_overlap_clusterer import (
     ClusteringConfig,
     KeywordSERPData,
     SERPOverlapClusterer,
     SERPResult,
 )
-from AIM.src.aim.subagents.schemas.content_gap import IntentType
+from src.aim.subagents.schemas.content_gap import IntentType
 
 
 @pytest.fixture

@@ -2,7 +2,7 @@
 
 import pytest
 
-from AIM.src.aim.subagents.analytics.conversion_tracker import (
+from src.aim.subagents.analytics.conversion_tracker import (
     ConversionTracker,
     ConversionReport,
     Goal,

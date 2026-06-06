@@ -7,7 +7,7 @@ Verifies end-to-end task execution and campaign metric aggregation.
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from AIM.src.aim.magisters.ads_magister import AdsMagister
+from src.aim.magisters.ads_magister import AdsMagister
 
 
 @pytest.mark.asyncio

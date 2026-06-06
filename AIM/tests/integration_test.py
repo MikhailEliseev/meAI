@@ -11,7 +11,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from aim.subagents.competitive_intel.agents.ci_deep_analyzer import CIDeepAnalyzer
+from src.aim.subagents.competitive_intel.agents.ci_deep_analyzer import CIDeepAnalyzer
 
 
 # Sample HTML from medical clinic (realistic)

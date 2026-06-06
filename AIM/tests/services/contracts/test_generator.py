@@ -10,8 +10,8 @@ from datetime import datetime
 import tempfile
 import shutil
 
-from aim.services.contracts.generator import ContractGenerator, ContractVersioning
-from aim.services.contracts.templates import ContractType
+from src.aim.services.contracts.generator import ContractGenerator, ContractVersioning
+from src.aim.services.contracts.templates import ContractType
 
 
 @pytest.fixture

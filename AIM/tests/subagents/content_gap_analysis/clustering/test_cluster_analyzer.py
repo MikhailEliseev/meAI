@@ -7,7 +7,7 @@ Tests cluster quality metrics, statistics, and recommendations.
 import pytest
 import numpy as np
 
-from AIM.src.aim.subagents.content_gap_analysis.clustering.cluster_analyzer import (
+from src.aim.subagents.content_gap_analysis.clustering.cluster_analyzer import (
     ClusterAnalyzer,
 )
 

@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from AIM.src.aim.subagents.api_clients.ga4_client import (
+from src.aim.subagents.api_clients.ga4_client import (
     GA4Client,
     GA4Credentials,
     GA4TrafficData,

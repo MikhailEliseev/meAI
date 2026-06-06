@@ -2,7 +2,7 @@
 
 import pytest
 
-from AIM.src.aim.subagents.analytics.report_generator import (
+from src.aim.subagents.analytics.report_generator import (
     ReportGenerator,
     MarketingReport,
     ReportMetrics,

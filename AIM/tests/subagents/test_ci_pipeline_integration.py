@@ -19,15 +19,15 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from aim.services.ci.wow_estimator import compute_wow_numbers
-from aim.services.ci.models import WowMetrics
-from aim.services.ci_marketing_analysis import (
+from src.aim.services.ci.wow_estimator import compute_wow_numbers
+from src.aim.services.ci.models import WowMetrics
+from src.aim.services.ci_marketing_analysis import (
     CiAnalysisResult,
     SwotQuadrant,
     StealWorthyTactic,
     _tactic_impact_effort,
 )
-from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+from src.aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────
@@ -379,7 +379,7 @@ class TestCiAnalysisResult:
 
 class TestAuditTaskPersistence:
     def test_to_dict(self):
-        from aim.api.seo import AuditTask
+        from src.aim.api.seo import AuditTask
 
         task = AuditTask(task_id="test-1", status="pending", progress="Запуск...")
         task.started_at = time.time()
@@ -392,7 +392,7 @@ class TestAuditTaskPersistence:
         assert d["error"] is None
 
     def test_from_dict(self):
-        from aim.api.seo import AuditTask
+        from src.aim.api.seo import AuditTask
 
         d = {
             "task_id": "test-2",
@@ -410,7 +410,7 @@ class TestAuditTaskPersistence:
         assert task.finished_at == 2000.0
 
     def test_roundtrip(self):
-        from aim.api.seo import AuditTask
+        from src.aim.api.seo import AuditTask
 
         original = AuditTask(
             task_id="roundtrip-1",
@@ -430,7 +430,7 @@ class TestAuditTaskPersistence:
         try:
             tasks_file = Path(tmp) / "seo_audit_tasks.json"
 
-            from aim.api.seo import AuditTask
+            from src.aim.api.seo import AuditTask
 
             # Create and save
             task = AuditTask(task_id="persist-1", status="done", finished_at=time.time())
@@ -451,7 +451,7 @@ class TestAuditTaskPersistence:
             shutil.rmtree(tmp, ignore_errors=True)
 
     def test_ttl_expired_cleanup(self):
-        from aim.api.seo import AuditTask
+        from src.aim.api.seo import AuditTask
 
         # Create expired task
         old = AuditTask(
@@ -481,7 +481,7 @@ class TestAuditTaskPersistence:
         assert filtered[0]["task_id"] == "fresh-1"
 
     def test_running_task_not_expired(self):
-        from aim.api.seo import AuditTask
+        from src.aim.api.seo import AuditTask
 
         # Running task that started long ago — should NOT be cleaned up
         running = AuditTask(
@@ -508,11 +508,11 @@ class TestAuditTaskPersistence:
 
 class TestCIOrchestratorStructure:
     def test_execute_ci_analysis_exists(self):
-        from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+        from src.aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
         assert hasattr(CIOrchestrator, "execute_ci_analysis")
 
     def test_path2_stubs_removed(self):
-        from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+        from src.aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
         assert not hasattr(CIOrchestrator, "_delegate_to_agent"), "_delegate_to_agent stub should be removed"
         assert not hasattr(CIOrchestrator, "_execute_single_agent"), "_execute_single_agent stub should be removed"
         assert not hasattr(CIOrchestrator, "_execute_phase_stub"), "_execute_phase_stub should be removed"
@@ -523,12 +523,12 @@ class TestCIOrchestratorStructure:
 
 class TestModelsConsistency:
     def test_wow_metrics_importable(self):
-        from aim.services.ci.models import WowMetrics
+        from src.aim.services.ci.models import WowMetrics
         w = WowMetrics(patients_per_month=10, time_to_result_weeks=4, cost_per_patient_rub=800)
         assert w.patients_per_month == 10
 
     def test_all_models_importable(self):
-        from aim.services.ci.models import (
+        from src.aim.services.ci.models import (
             SeoAuditResult, SocialProfile, SocialScanResult,
             DoctorInfo, CompetitorFull, ComparisonMatrix, PipelineProgress,
         )
@@ -542,7 +542,7 @@ class TestUnifiedArchitecture:
     """Phase 21 — CI Pipeline Unification."""
 
     def test_unified_result_quick_defaults(self):
-        from aim.services.ci.models import UnifiedCiResult
+        from src.aim.services.ci.models import UnifiedCiResult
         r = UnifiedCiResult()
         assert r.tier == "quick"
         assert r.is_quick is True
@@ -551,7 +551,7 @@ class TestUnifiedArchitecture:
         assert r.findings == {}
 
     def test_unified_result_deep_tier(self):
-        from aim.services.ci.models import UnifiedCiResult
+        from src.aim.services.ci.models import UnifiedCiResult
         r = UnifiedCiResult(
             tier="deep",
             findings={"phase_1": {"status": "success"}},
@@ -565,7 +565,7 @@ class TestUnifiedArchitecture:
         assert r.competitors_analyzed == 5
 
     def test_unified_result_to_dict(self):
-        from aim.services.ci.models import UnifiedCiResult, SwotQuadrant, StealWorthyTactic
+        from src.aim.services.ci.models import UnifiedCiResult, SwotQuadrant, StealWorthyTactic
         r = UnifiedCiResult(
             tier="quick",
             chat_summary="test summary",
@@ -589,7 +589,7 @@ class TestUnifiedArchitecture:
         assert d["analysis_duration_seconds"] == 5.5
 
     def test_ci_analysis_result_backward_compat(self):
-        from aim.services.ci_marketing_analysis import CiAnalysisResult, SwotQuadrant
+        from src.aim.services.ci_marketing_analysis import CiAnalysisResult, SwotQuadrant
         r = CiAnalysisResult()
         assert hasattr(r, "chat_summary")
         assert hasattr(r, "feature_matrix")
@@ -606,7 +606,7 @@ class TestUnifiedArchitecture:
 
     async def test_orchestrator_event_bus_injection(self):
         from meai.events.event_bus import EventBus
-        from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+        from src.aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
 
         eb = EventBus()
         o = CIOrchestrator(agent_id="test-w5", event_bus=eb)
@@ -618,7 +618,7 @@ class TestUnifiedArchitecture:
 
     def test_orchestrator_tier_routing_has_quick_path(self):
         import inspect
-        from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+        from src.aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
 
         src = inspect.getsource(CIOrchestrator.execute_ci_analysis)
         assert "tier" in src
@@ -627,13 +627,13 @@ class TestUnifiedArchitecture:
 
     def test_orchestrator_agent_type_set(self):
         from meai.events.event_bus import EventBus
-        from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+        from src.aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
 
         o = CIOrchestrator(agent_id="test-w5b", event_bus=EventBus())
         assert o.agent_type == "ci-orchestrator"
 
     def test_swot_quadrant_in_models(self):
-        from aim.services.ci.models import SwotQuadrant
+        from src.aim.services.ci.models import SwotQuadrant
         s = SwotQuadrant(strengths=["s1"], weaknesses=["w1"])
         assert s.strengths == ["s1"]
 
@@ -758,7 +758,7 @@ class TestEventBusDelegation:
     async def test_orchestrator_full_delegation_flow(self):
         """CIOrchestrator._execute_single_phase → task.request → agent → ci.agent.completed."""
         from meai.events.event_bus import EventBus, Event
-        from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+        from src.aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
 
         eb = EventBus("sqlite+aiosqlite:///:memory:")
         await eb.initialize()
@@ -819,7 +819,7 @@ class TestEventBusDelegation:
     async def test_eventbus_delegation_timeout_when_no_agent(self):
         """_execute_single_phase returns stub when agent is None."""
         from meai.events.event_bus import EventBus
-        from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+        from src.aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
 
         eb = EventBus("sqlite+aiosqlite:///:memory:")
         await eb.initialize()

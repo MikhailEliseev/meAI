@@ -19,7 +19,7 @@ from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTEN
 from prometheus_fastapi_instrumentator import Instrumentator
 
 # Structured logging
-from aim.config.logging import configure_logging, get_logger
+from src.aim.config.logging import configure_logging, get_logger
 
 # Configure logging
 environment = os.getenv("ENVIRONMENT", "production")
@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI):
     """
     if os.getenv("AUTO_MIGRATE", "false").lower() == "true":
         try:
-            from aim.database import engine
+            from src.aim.database import engine
             from alembic.config import Config
             from alembic import command
 
@@ -84,8 +84,8 @@ async def lifespan(app: FastAPI):
 
     # Ensure ФЗ-152 partitions exist (safe — handles all errors internally)
     try:
-        from aim.services.retention.partition_manager import PartitionManager
-        from aim.database import async_session_maker
+        from src.aim.services.retention.partition_manager import PartitionManager
+        from src.aim.database import async_session_maker
         pm = PartitionManager(async_session_maker)
         await pm.ensure_partitions()
         logger.info("fz152_partitions_ensured")
@@ -97,7 +97,7 @@ async def lifespan(app: FastAPI):
     if os.getenv("SALES_ADMIN_ENABLED", "false").lower() == "true":
         try:
             from meai.events.event_bus import EventBus
-            from aim.magisters.sales_admin_magister import SalesAdminMagister
+            from src.aim.magisters.sales_admin_magister import SalesAdminMagister
 
             db_url = os.getenv("DATABASE_URL", "")
             event_bus = EventBus(db_url)
@@ -134,7 +134,7 @@ app = FastAPI(
 )
 
 # Query profiling middleware
-from aim.middleware.profiling import QueryProfilingMiddleware
+from src.aim.middleware.profiling import QueryProfilingMiddleware
 app.add_middleware(QueryProfilingMiddleware)
 
 # Custom Prometheus metrics
@@ -170,7 +170,7 @@ api_cost_usd_total = Counter(
 )
 
 # Business metrics — imported from single source of truth
-from aim.metrics import (
+from src.aim.metrics import (
     leads_captured_total,
     leads_scored_total,
     leads_by_tier,
@@ -327,25 +327,27 @@ async def metrics():
 
 
 # Import API routers
-from aim.api.leads import router as leads_router
-from aim.api.onboarding import router as onboarding_router
-from aim.api.analytics import router as analytics_router
-from aim.api.email import router as email_router
-from aim.api.webhooks import router as webhooks_router
-from aim.api.gdpr import router as gdpr_router
-from aim.api.seo import router as seo_router
-from aim.api.content import router as content_router
-from aim.api.ads import router as ads_router
-from aim.api.projects import router as projects_router
-from aim.api.telegram import router as telegram_router
-from aim.api.sales import router as sales_router
-from aim.api.competitors import router as competitors_router
-from aim.api.pre_sale import router as pre_sale_router
-from aim.api.companies import router as companies_router
-from aim.api.presale import router as presale_router
-from aim.api.company_profiles import router as company_profiles_router
+from src.aim.api.leads import router as leads_router
+from src.aim.api.onboarding import router as onboarding_router
+from src.aim.api.analytics import router as analytics_router
+from src.aim.api.email import router as email_router
+from src.aim.api.webhooks import router as webhooks_router
+from src.aim.api.gdpr import router as gdpr_router
+from src.aim.api.seo import router as seo_router
+from src.aim.api.content import router as content_router
+from src.aim.api.ads import router as ads_router
+from src.aim.api.projects import router as projects_router
+from src.aim.api.telegram import router as telegram_router
+from src.aim.api.sales import router as sales_router
+from src.aim.api.competitors import router as competitors_router
+from src.aim.api.pre_sale import router as pre_sale_router
+from src.aim.api.companies import router as companies_router
+from src.aim.api.presale import router as presale_router
+from src.aim.api.company_profiles import router as company_profiles_router
+from src.aim.api.hermes import router as hermes_router
 
 # Include API routers
+app.include_router(hermes_router)
 app.include_router(leads_router)
 app.include_router(onboarding_router)
 app.include_router(analytics_router)
@@ -368,8 +370,8 @@ app.include_router(company_profiles_router)
 @app.get("/api/performance/stats")
 async def performance_stats():
     """Return query profiling statistics and cache info."""
-    from aim.middleware.profiling import get_profiler
-    from aim.middleware.cache import cache as response_cache
+    from src.aim.middleware.profiling import get_profiler
+    from src.aim.middleware.cache import cache as response_cache
     return {
         "query_profiler": get_profiler().stats,
         "cache_entries": response_cache.size,
@@ -379,7 +381,7 @@ async def performance_stats():
 @app.post("/api/performance/cache/clear")
 async def clear_analytics_cache():
     """Clear analytics response cache. Useful after data imports."""
-    from aim.middleware.cache import cache as response_cache
+    from src.aim.middleware.cache import cache as response_cache
     count = response_cache.invalidate("analytics:")
     return {"cleared": count}
 

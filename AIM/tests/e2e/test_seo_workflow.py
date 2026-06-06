@@ -9,11 +9,11 @@ import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from datetime import datetime, timezone
 
-from AIM.src.aim.magisters.seo_magister import SEOMagister
-from AIM.src.aim.subagents.keyword_research_agent import KeywordResearchAgent
-from AIM.src.aim.subagents.seo.technical_agent import TechnicalSEOAgent
-from AIM.src.aim.subagents.seo.content_agent import ContentSEOAgent
-from AIM.src.aim.subagents.seo.links_agent import LinksSEOAgent
+from src.aim.magisters.seo_magister import SEOMagister
+from src.aim.subagents.keyword_research_agent import KeywordResearchAgent
+from src.aim.subagents.seo.technical_agent import TechnicalSEOAgent
+from src.aim.subagents.seo.content_agent import ContentSEOAgent
+from src.aim.subagents.seo.links_agent import LinksSEOAgent
 
 
 @pytest.fixture

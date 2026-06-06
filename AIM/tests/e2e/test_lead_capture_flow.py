@@ -19,11 +19,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models.lead import Lead
-from aim.models.linear_task import LinearTask
-from aim.services.lead_capture import LeadCaptureService
-from aim.ai.lead_scoring.scoring_service import LeadScoringService
-from aim.integrations.linear.service import LinearService
+from src.aim.models.lead import Lead
+from src.aim.models.linear_task import LinearTask
+from src.aim.services.lead_capture import LeadCaptureService
+from src.aim.ai.lead_scoring.scoring_service import LeadScoringService
+from src.aim.integrations.linear.service import LinearService
 
 
 @pytest.mark.asyncio

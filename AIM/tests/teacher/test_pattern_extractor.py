@@ -1,7 +1,7 @@
 # AIM/tests/teacher/test_pattern_extractor.py
 import pytest
 from pathlib import Path
-from AIM.src.aim.teacher.pattern_extractor import PatternExtractor, ExtractedPattern
+from src.aim.teacher.pattern_extractor import PatternExtractor, ExtractedPattern
 
 
 def test_extract_circuit_breaker():

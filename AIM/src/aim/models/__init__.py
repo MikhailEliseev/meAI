@@ -4,8 +4,8 @@ AIM Models Package
 Data models for AIM Agency.
 """
 
-from aim.storage.models import Base
-from aim.models.analytics_models import (
+from src.aim.storage.models import Base
+from src.aim.models.analytics_models import (
     DomainMetrics,
     AggregatedMetrics,
     Correlation,
@@ -13,22 +13,22 @@ from aim.models.analytics_models import (
     CrossDomainMetrics,
     AnalyticsAlert,
 )
-from aim.models.lead import Lead
-from aim.models.linear_task import LinearTask
-from aim.models.email_workflow import EmailWorkflow
-from aim.models.scheduled_email import ScheduledEmail
-from aim.models.email_event import EmailEvent
-from aim.models.email_template import EmailTemplate
-from aim.models.payment import Payment
-from aim.models.document import Document
-from aim.models.fz152_audit import FZ152AuditLog
-from aim.models.sales import (
+from src.aim.models.lead import Lead
+from src.aim.models.linear_task import LinearTask
+from src.aim.models.email_workflow import EmailWorkflow
+from src.aim.models.scheduled_email import ScheduledEmail
+from src.aim.models.email_event import EmailEvent
+from src.aim.models.email_template import EmailTemplate
+from src.aim.models.payment import Payment
+from src.aim.models.document import Document
+from src.aim.models.fz152_audit import FZ152AuditLog
+from src.aim.models.sales import (
     SalesConversation,
     SalesMessage,
     SalesEscalation,
     SalesAgentActivity,
 )
-from aim.models.company_profile import CompanyProfileModel
+from src.aim.models.company_profile import CompanyProfileModel
 
 __all__ = [
     "Base",

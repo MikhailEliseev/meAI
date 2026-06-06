@@ -6,7 +6,7 @@ import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from AIM.src.aim.teacher.monitoring.health_monitor import (
+from src.aim.teacher.monitoring.health_monitor import (
     HealthMonitor,
     EndpointStatus,
     Severity,

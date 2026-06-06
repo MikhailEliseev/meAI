@@ -431,15 +431,32 @@ async def _legacy_prescan(client: httpx.AsyncClient, url: str, push_fn) -> str:
 # ── Helpers ────────────────────────────────────────────────────────────────
 
 
-def _compute_years_on_market(reg_date: str | None) -> int | None:
-    """Compute years since registration date."""
+def _compute_years_on_market(reg_date) -> int | None:
+    """Compute years since registration date.
+
+    Handles ISO strings, integer years, and already-parsed dates.
+    """
     if not reg_date:
         return None
     try:
         from datetime import datetime
 
-        dt = datetime.fromisoformat(reg_date.replace("Z", "+00:00"))
-        return datetime.now().year - dt.year
+        # Integer — assume it's a year (e.g. 2015)
+        if isinstance(reg_date, int):
+            if reg_date > 1900 and reg_date < 2100:
+                return datetime.now().year - reg_date
+            # Could be a Unix timestamp (seconds since epoch)
+            if reg_date > 1_000_000_000:
+                dt = datetime.fromtimestamp(reg_date)
+                return datetime.now().year - dt.year
+            return None
+
+        # String — ISO format
+        if isinstance(reg_date, str):
+            dt = datetime.fromisoformat(reg_date.replace("Z", "+00:00"))
+            return datetime.now().year - dt.year
+
+        return None
     except (ValueError, TypeError):
         return None
 

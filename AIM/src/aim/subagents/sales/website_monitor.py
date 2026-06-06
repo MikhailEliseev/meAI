@@ -18,7 +18,7 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from bs4 import BeautifulSoup
 
-from aim.subagents.sales.knowledge_manager import KnowledgeManager
+from src.aim.subagents.sales.knowledge_manager import KnowledgeManager
 
 logger = logging.getLogger(__name__)
 

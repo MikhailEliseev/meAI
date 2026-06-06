@@ -1,5 +1,5 @@
 """Ads subagent package."""
 
-from aim.subagents.ads.config.settings import AdsSettings, get_ads_settings
+from src.aim.subagents.ads.config.settings import AdsSettings, get_ads_settings
 
 __all__ = ["AdsSettings", "get_ads_settings"]

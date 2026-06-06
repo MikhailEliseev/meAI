@@ -7,16 +7,16 @@ import pytest
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models.payment import Payment
-from aim.schemas.payment import (
+from src.aim.models.payment import Payment
+from src.aim.schemas.payment import (
     PaymentMethod,
     PaymentRequest,
     PaymentStatus,
     RefundRequest,
 )
-from aim.services.payment.helcim_client import HelcimClient
-from aim.services.payment.payment_service import PaymentService
-from aim.utils.encryption import FieldEncryption
+from src.aim.services.payment.helcim_client import HelcimClient
+from src.aim.services.payment.payment_service import PaymentService
+from src.aim.utils.encryption import FieldEncryption
 
 
 @pytest.fixture

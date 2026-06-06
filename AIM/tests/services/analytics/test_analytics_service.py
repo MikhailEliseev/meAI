@@ -8,13 +8,13 @@ from datetime import datetime, timedelta
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models.email_event import EmailEvent
-from aim.models.email_workflow import EmailWorkflow
-from aim.models.lead import Lead
-from aim.models.linear_task import LinearTask
-from aim.models.scheduled_email import ScheduledEmail
-from aim.services.analytics.analytics_service import AnalyticsService
-from aim.utils.encryption import FieldEncryption
+from src.aim.models.email_event import EmailEvent
+from src.aim.models.email_workflow import EmailWorkflow
+from src.aim.models.lead import Lead
+from src.aim.models.linear_task import LinearTask
+from src.aim.models.scheduled_email import ScheduledEmail
+from src.aim.services.analytics.analytics_service import AnalyticsService
+from src.aim.utils.encryption import FieldEncryption
 
 
 @pytest.fixture

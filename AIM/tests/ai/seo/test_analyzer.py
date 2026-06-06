@@ -5,8 +5,8 @@ Tests for SEO Analyzer
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from aim.ai.seo.analyzer import SEOAnalyzer, analyze_url
-from aim.ai.seo.schemas import (
+from src.aim.ai.seo.analyzer import SEOAnalyzer, analyze_url
+from src.aim.ai.seo.schemas import (
     ContentQualityScore,
     EntityAnalysis,
     SERPAnalysis,
@@ -103,7 +103,7 @@ class TestSEOAnalyzer:
     ):
         """Test analysis without SERP data."""
         # Mock EntityOptimizer to avoid spaCy model requirement
-        with patch("aim.ai.seo.analyzer.EntityOptimizer"):
+        with patch("src.aim.ai.seo.analyzer.EntityOptimizer"):
             analyzer = SEOAnalyzer(
                 llm_client=mock_llm_client,
                 serp_api_key="test_key",
@@ -141,7 +141,7 @@ class TestSEOAnalyzer:
     ):
         """Test analysis with SERP data."""
         # Mock EntityOptimizer to avoid spaCy model requirement
-        with patch("aim.ai.seo.analyzer.EntityOptimizer"):
+        with patch("src.aim.ai.seo.analyzer.EntityOptimizer"):
             analyzer = SEOAnalyzer(
                 llm_client=mock_llm_client,
                 serp_api_key="test_key",
@@ -177,7 +177,7 @@ class TestSEOAnalyzer:
     ):
         """Test overall score calculation."""
         # Mock EntityOptimizer to avoid spaCy model requirement
-        with patch("aim.ai.seo.analyzer.EntityOptimizer"):
+        with patch("src.aim.ai.seo.analyzer.EntityOptimizer"):
             analyzer = SEOAnalyzer(
                 llm_client=mock_llm_client,
                 serp_api_key="test_key",
@@ -206,7 +206,7 @@ class TestSEOAnalyzer:
     ):
         """Test priority actions generation."""
         # Mock EntityOptimizer to avoid spaCy model requirement
-        with patch("aim.ai.seo.analyzer.EntityOptimizer"):
+        with patch("src.aim.ai.seo.analyzer.EntityOptimizer"):
             analyzer = SEOAnalyzer(
                 llm_client=mock_llm_client,
                 serp_api_key="test_key",
@@ -234,7 +234,7 @@ class TestSEOAnalyzer:
     async def test_estimate_impact(self, mock_llm_client):
         """Test impact estimation."""
         # Mock EntityOptimizer to avoid spaCy model requirement
-        with patch("aim.ai.seo.analyzer.EntityOptimizer"):
+        with patch("src.aim.ai.seo.analyzer.EntityOptimizer"):
             analyzer = SEOAnalyzer(
                 llm_client=mock_llm_client,
                 serp_api_key="test_key",
@@ -271,7 +271,7 @@ class TestAnalyzeURL:
         mock_conversational,
     ):
         """Test analyze_url function."""
-        with patch("aim.ai.seo.analyzer.SEOAnalyzer") as MockAnalyzer:
+        with patch("src.aim.ai.seo.analyzer.SEOAnalyzer") as MockAnalyzer:
             # Mock analyzer instance
             mock_analyzer = MagicMock()
             mock_analyzer.analyze = AsyncMock(return_value=MagicMock(
@@ -305,7 +305,7 @@ class TestSEOAnalyzerIntegration:
         """Test full analysis flow with all components."""
         # This is a smoke test to ensure all components work together
         # Mock EntityOptimizer to avoid spaCy model requirement
-        with patch("aim.ai.seo.analyzer.EntityOptimizer"):
+        with patch("src.aim.ai.seo.analyzer.EntityOptimizer"):
             analyzer = SEOAnalyzer(
                 llm_client=mock_llm_client,
                 serp_api_key="test_key",

@@ -2101,3 +2101,49 @@ SUM             = 1.00
 
 **Время завершения:** 2026-05-23T15:30 GMT+3
 
+---
+
+## Checkpoint #26: Hermes Clean Reinstall + Prescan Fixes (2026-06-04)
+
+**Что сделано:**
+
+### Hermes — чистая переустановка с bootstrap
+- Удалён старый контейнер + том `hermes_data` (14MB state.db, 139 сессий, SSH-туннели)
+- Создан механизм самообучения: BOOTSTRAP.md → copy_soul.sh → bootstrap.sh
+- Hermes при первом старте изучает: 19 tools, 4 skills, AIM API, Docker-окружение
+- Результат: 297 строк learnings.md, 15 LLM-вызовов, ~3 минуты
+- Флаг `.bootstrapped` предотвращает повторный bootstrap при рестарте
+
+### Prescan — баг has_mobile_viewport
+- Наивный substring заменён на regex: `re.search(r'<meta[^>]*name=["\']viewport["\']', html, re.IGNORECASE)`
+- Массово исправлены импорты `from src.aim` → `from aim` на сервере (~40 файлов)
+- Контейнер `aim-app` пересобран и работает healthy
+- Результат yutskovskaya.ru: viewport=true, ssl=true, errors=[]
+
+### Session Recovery — защита от потери контекста после компакта
+- CLAUDE.md: Session Recovery переписан — SESSION.md как истина, компакт-саммари не доверять
+- SESSION.md: актуализирован с разделением на «Текущий фокус» и «Завершено»
+- `.current-task`: создан для иммунности к компакту (одна строка)
+- Auto-memory: правило `session-md-before-compact` — обновлять SESSION.md при каждой смене задачи
+- CHECKPOINTS.md: этот чекпоинт
+
+**Ключевые файлы:**
+- `AIM/hermes/skills/aim/BOOTSTRAP.md` — инструкция самообучения Hermes
+- `AIM/hermes/scripts/bootstrap.sh` — скрипт запуска bootstrap
+- `AIM/hermes/scripts/copy_soul.sh` — обновлён (BOOTSTRAP.md + запуск bootstrap)
+- `AIM/hermes/Dockerfile` — обновлён (bootstrap.sh)
+- `AIM/src/aim/services/prescan_orchestrator.py` — regex fix
+- `CLAUDE.md` — новый Session Recovery
+- `SESSION.md` — актуализирован
+- `.current-task` — создан
+
+**Контекст для продолжения:**
+- Hermes: healthy, bootstrap завершён, знает систему
+- Prescan: viewport и SSL детектятся корректно
+- При компакте: читать SESSION.md секцию «Текущий фокус» ПЕРВОЙ, не доверять саммари
+- Сервер: `ssh aim`, проект в `/opt/aim/AIM/`, деплой через `docker compose build + up -d`
+
+**Следующий шаг:** Тестировать Hermes в боевом режиме (@iamaim_bot)
+
+**Время завершения:** 2026-06-04T13:50 GMT+3
+

@@ -10,7 +10,7 @@ class TestPipelineRunner:
     @pytest.mark.asyncio
     async def test_runner_needs_client_url(self):
         """Empty client_url raises ValueError."""
-        from AIM.src.aim.services.ci.pipeline_runner import PipelineRunner
+        from src.aim.services.ci.pipeline_runner import PipelineRunner
 
         runner = PipelineRunner()
         with pytest.raises(ValueError, match="client_url"):
@@ -19,8 +19,8 @@ class TestPipelineRunner:
     @pytest.mark.asyncio
     async def test_runner_collects_competitors(self):
         """PipelineRunner calls CompetitorMatcher.find_competitors and returns results."""
-        from AIM.src.aim.services.ci.pipeline_runner import PipelineRunner
-        from AIM.src.aim.services.rusprofile.models import CompanyProfile, CompetitorMatch
+        from src.aim.services.ci.pipeline_runner import PipelineRunner
+        from src.aim.services.rusprofile.models import CompanyProfile, CompetitorMatch
 
         runner = PipelineRunner()
 
@@ -63,8 +63,8 @@ class TestPipelineRunner:
     @pytest.mark.asyncio
     async def test_runner_fires_progress(self):
         """Progress callback receives PipelineProgress events during run()."""
-        from AIM.src.aim.services.ci.pipeline_runner import PipelineRunner
-        from AIM.src.aim.services.rusprofile.models import CompanyProfile, CompetitorMatch
+        from src.aim.services.ci.pipeline_runner import PipelineRunner
+        from src.aim.services.rusprofile.models import CompanyProfile, CompetitorMatch
 
         progress_messages = []
 
@@ -121,7 +121,7 @@ class TestPipelineRunner:
     @pytest.mark.asyncio
     async def test_runner_handles_collector_failure(self):
         """When INN is empty, _collect_financials returns None (no crash)."""
-        from AIM.src.aim.services.ci.pipeline_runner import PipelineRunner
+        from src.aim.services.ci.pipeline_runner import PipelineRunner
 
         runner = PipelineRunner()
         data = await runner._collect_financials_async("")
@@ -130,7 +130,7 @@ class TestPipelineRunner:
     @pytest.mark.asyncio
     async def test_runner_handles_no_competitors(self):
         """When no competitors found, returns empty list and emits 'done'."""
-        from AIM.src.aim.services.ci.pipeline_runner import PipelineRunner
+        from src.aim.services.ci.pipeline_runner import PipelineRunner
 
         runner = PipelineRunner()
         progress_messages = []
@@ -156,8 +156,8 @@ class TestPipelineRunner:
     @pytest.mark.asyncio
     async def test_skip_empty_competitor(self):
         """When all collectors return empty, competitor is skipped."""
-        from AIM.src.aim.services.ci.pipeline_runner import PipelineRunner
-        from AIM.src.aim.services.rusprofile.models import CompanyProfile, CompetitorMatch
+        from src.aim.services.ci.pipeline_runner import PipelineRunner
+        from src.aim.services.rusprofile.models import CompanyProfile, CompetitorMatch
 
         progress_messages = []
 

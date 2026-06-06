@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from AIM.src.aim.teacher.architecture.file_structure_analyzer import (
+from src.aim.teacher.architecture.file_structure_analyzer import (
     FileStructure,
     FileStructureAnalyzer,
 )

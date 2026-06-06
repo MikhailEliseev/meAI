@@ -13,18 +13,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
-from aim.models.document import Document
-from aim.models.lead import Lead
-from aim.models.onboarding import Onboarding
-from aim.models.payment import Payment
-from aim.schemas.payment import PaymentRequest, PaymentStatus
-from aim.services.documents.processor import DocumentProcessor
-from aim.services.onboarding.state_machine import (
+from src.aim.models.document import Document
+from src.aim.models.lead import Lead
+from src.aim.models.onboarding import Onboarding
+from src.aim.models.payment import Payment
+from src.aim.schemas.payment import PaymentRequest, PaymentStatus
+from src.aim.services.documents.processor import DocumentProcessor
+from src.aim.services.onboarding.state_machine import (
     OnboardingEvent,
     OnboardingState,
     OnboardingStateMachine,
 )
-from aim.services.payment.payment_service import PaymentService
+from src.aim.services.payment.payment_service import PaymentService
 
 logger = logging.getLogger(__name__)
 

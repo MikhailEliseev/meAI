@@ -16,7 +16,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER, TA_RIGHT
 
-from aim.services.contracts.templates import (
+from src.aim.services.contracts.templates import (
     ContractTemplate,
     ContractType,
     fill_template,

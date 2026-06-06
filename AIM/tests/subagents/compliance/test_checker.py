@@ -9,8 +9,8 @@ import pytest
 import pytest_asyncio
 from unittest.mock import patch
 
-from AIM.src.aim.subagents.compliance.checker import ComplianceChecker
-from AIM.src.aim.subagents.schemas.compliance import (
+from src.aim.subagents.compliance.checker import ComplianceChecker
+from src.aim.subagents.schemas.compliance import (
     RiskLevel,
     ComplianceAction,
     FDAEnforcementRecord,
@@ -26,7 +26,7 @@ async def compliance_checker():
     )
 
     # Create tables
-    from AIM.src.aim.storage.models import Base
+    from src.aim.storage.models import Base
     async with checker.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 

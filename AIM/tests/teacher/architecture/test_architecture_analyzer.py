@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from AIM.src.aim.teacher.architecture.architecture_analyzer import (
+from src.aim.teacher.architecture.architecture_analyzer import (
     ArchitectureAnalyzer,
     ArchitectureReport,
 )

@@ -13,8 +13,8 @@ from typing import Any, Dict, List
 from datetime import datetime, timezone
 import structlog
 
-from aim.magisters.content_magister import ContentMagister
-from aim.ai.llm.client import LLMClient
+from src.aim.magisters.content_magister import ContentMagister
+from src.aim.ai.llm.client import LLMClient
 
 logger = structlog.get_logger(__name__)
 
@@ -120,7 +120,7 @@ Return the content in markdown format.
 """
 
         # Generate content
-        from aim.ai.llm.schemas import LLMRequest
+        from src.aim.ai.llm.schemas import LLMRequest
 
         request = LLMRequest(
             prompt=prompt,
@@ -206,7 +206,7 @@ Return format:
 """
 
         # Optimize content
-        from aim.ai.llm.schemas import LLMRequest
+        from src.aim.ai.llm.schemas import LLMRequest
 
         request = LLMRequest(
             prompt=prompt,
@@ -293,7 +293,7 @@ Recommendations:
 """
 
         # Analyze readability
-        from aim.ai.llm.schemas import LLMRequest
+        from src.aim.ai.llm.schemas import LLMRequest
 
         request = LLMRequest(
             prompt=prompt,
@@ -410,7 +410,7 @@ Recommendations:
 """
 
         # Analyze SEO
-        from aim.ai.llm.schemas import LLMRequest
+        from src.aim.ai.llm.schemas import LLMRequest
 
         request = LLMRequest(
             prompt=prompt,

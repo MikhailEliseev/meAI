@@ -19,7 +19,7 @@ from typing import Optional
 from sqlalchemy import Boolean, DateTime, Float, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from aim.storage.models import Base
+from src.aim.storage.models import Base
 
 
 class Lead(Base):
@@ -166,7 +166,7 @@ class Lead(Base):
         Raises:
             ValueError: If field doesn't exist or isn't encrypted
         """
-        from aim.utils.encryption import FieldEncryption
+        from src.aim.utils.encryption import FieldEncryption
 
         encrypted_field = f"{field_name}_encrypted"
         if not hasattr(self, encrypted_field):

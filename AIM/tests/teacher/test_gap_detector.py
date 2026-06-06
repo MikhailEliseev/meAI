@@ -1,6 +1,6 @@
 # AIM/tests/teacher/test_gap_detector.py
 import pytest
-from AIM.src.aim.teacher.gap_detector import GapDetector, Gap, GapSeverity
+from src.aim.teacher.gap_detector import GapDetector, Gap, GapSeverity
 
 
 def test_detect_missing_patterns():

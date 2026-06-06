@@ -48,7 +48,7 @@ RUN mkdir -p data/production logs AIM/data AIM/reports
 
 # Set Python path
 ENV PATH=/root/.local/bin:$PATH
-ENV PYTHONPATH=/app/AIM/src:/app/src
+ENV PYTHONPATH=/app/AIM:/app
 
 # Install Chromium browser for Playwright (Yandex Maps search)
 RUN playwright install chromium
@@ -61,4 +61,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 EXPOSE 8000
 
 # Run application
-CMD ["uvicorn", "AIM.src.aim.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.aim.main:app", "--host", "0.0.0.0", "--port", "8000"]

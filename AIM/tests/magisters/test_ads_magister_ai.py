@@ -14,9 +14,9 @@ import pandas as pd
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from AIM.src.aim.magisters.ads_magister_ai import AdsMagisterAI
-from AIM.src.aim.ai.ads.schemas import AdCopyResult, AdCopyVariant, ComplianceCheck
-from AIM.src.aim.ai.analytics.schemas import (
+from src.aim.magisters.ads_magister_ai import AdsMagisterAI
+from src.aim.ai.ads.schemas import AdCopyResult, AdCopyVariant, ComplianceCheck
+from src.aim.ai.analytics.schemas import (
     BudgetOptimizationResult,
     AnomalyAlert,
     ForecastResponse,

@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from meai.agents.base_agent import Task, TaskResult, TaskStatus
 from meai.events.event_bus import EventBus
 
-from AIM.src.aim.subagents.seo.orchestrator.seo_orchestrator import SEOOrchestrator
+from src.aim.subagents.seo.orchestrator.seo_orchestrator import SEOOrchestrator
 
 
 @pytest.fixture

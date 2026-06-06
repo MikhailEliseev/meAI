@@ -4,16 +4,16 @@ Tests for Brief Generator.
 
 import pytest
 
-from AIM.src.aim.subagents.gap_detection.architecture_planner import (
+from src.aim.subagents.gap_detection.architecture_planner import (
     ContentPage,
     PageType,
 )
-from AIM.src.aim.subagents.gap_detection.brief_generator import (
+from src.aim.subagents.gap_detection.brief_generator import (
     BriefConfig,
     BriefGenerator,
     ReadabilityLevel,
 )
-from AIM.src.aim.subagents.schemas.content_gap import (
+from src.aim.subagents.schemas.content_gap import (
     ContentGap,
     GapSeverity,
     GapType,

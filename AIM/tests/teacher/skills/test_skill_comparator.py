@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from AIM.src.aim.teacher.skills.skill_selector import Skill
-from AIM.src.aim.teacher.skills.skill_comparator import (
+from src.aim.teacher.skills.skill_selector import Skill
+from src.aim.teacher.skills.skill_comparator import (
     SkillComparator,
     ComparisonResult,
 )

@@ -52,9 +52,10 @@ COPY knowledge/ ./knowledge/
 # Copy skills from repo (D-03: stored in repo, copied into image at build time)
 COPY skills/ ./skills/
 
-# Copy startup script from Plan 15-01
+# Copy startup scripts
 COPY scripts/copy_soul.sh ./scripts/copy_soul.sh
-RUN chmod +x ./scripts/copy_soul.sh
+COPY scripts/bootstrap.sh ./scripts/bootstrap.sh
+RUN chmod +x ./scripts/copy_soul.sh ./scripts/bootstrap.sh
 
 # Runtime configuration
 ENV HERMES_HOME=/opt/data

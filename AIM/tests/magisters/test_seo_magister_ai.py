@@ -5,8 +5,8 @@ Tests for SEO Magister AI
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from AIM.src.aim.magisters.seo_magister_ai import SEOMagisterAI
-from AIM.src.aim.ai.seo.schemas import (
+from src.aim.magisters.seo_magister_ai import SEOMagisterAI
+from src.aim.ai.seo.schemas import (
     ContentQualityScore,
     EntityAnalysis,
     SERPAnalysis,

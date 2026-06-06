@@ -2,7 +2,7 @@
 
 Usage in Magister.plan_task_with_ci():
 
-    from aim.integration.hermes_context import HermesContextProvider
+    from src.aim.integration.hermes_context import HermesContextProvider
     hermes = HermesContextProvider()
     context = await hermes.get_context(domain="seo", action="competitive_analysis")
     plan["hermes_context"] = context

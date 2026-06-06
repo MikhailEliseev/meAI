@@ -3,8 +3,8 @@ import pytest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
-from aim.subagents.ads.attribution_pipeline import AttributionPipeline
-from aim.models.campaign_models import Campaign, CampaignAttribution
+from src.aim.subagents.ads.attribution_pipeline import AttributionPipeline
+from src.aim.models.campaign_models import Campaign, CampaignAttribution
 from meai.events.event_bus import Event
 
 

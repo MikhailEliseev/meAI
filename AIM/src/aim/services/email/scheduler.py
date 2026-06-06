@@ -12,7 +12,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from aim.services.email.workflow_engine import WorkflowEngine
+from src.aim.services.email.workflow_engine import WorkflowEngine
 
 logger = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ import numpy as np
 from typing import List, Dict, Any
 from datetime import datetime, timezone
 
-from aim.ai.analytics.schemas import SeasonalityPattern
+from src.aim.ai.analytics.schemas import SeasonalityPattern
 
 
 class SeasonalityDetector:

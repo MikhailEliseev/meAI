@@ -2,7 +2,7 @@
 
 import pytest
 
-from AIM.src.aim.subagents.seo.onpage_optimizer import (
+from src.aim.subagents.seo.onpage_optimizer import (
     OnPageOptimizer,
     OnPageReport,
     TitleTagAnalysis,

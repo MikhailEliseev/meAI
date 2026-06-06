@@ -12,7 +12,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / "AIM" / "src"))
 sys.path.insert(0, str(project_root / "src"))
 
-from aim.subagents.competitive_intel.agents.ci_qa_validator import CIQAValidator
+from src.aim.subagents.competitive_intel.agents.ci_qa_validator import CIQAValidator
 from meai.agents.base_agent import Task
 
 

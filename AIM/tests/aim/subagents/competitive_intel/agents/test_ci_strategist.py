@@ -30,7 +30,7 @@ NICHE_COMPLEXITY = {
 
 def _make_strategist():
     """Create CIStrategistAgent with mocked __init__ and required attributes."""
-    from aim.subagents.competitive_intel.agents.ci_strategist import CIStrategistAgent
+    from src.aim.subagents.competitive_intel.agents.ci_strategist import CIStrategistAgent
 
     with patch.object(CIStrategistAgent, '__init__', lambda self, **kw: None):
         agent = CIStrategistAgent.__new__(CIStrategistAgent)

@@ -13,12 +13,12 @@ import pandas as pd
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 
-from AIM.src.aim.magisters.ads_magister_ai import AdsMagisterAI
-from AIM.src.aim.magisters.seo_magister_ai import SEOMagisterAI
-from AIM.src.aim.magisters.content_magister_ai import ContentMagisterAI
-from AIM.src.aim.ai.ads.schemas import AdCopyResult, AdCopyVariant, ComplianceCheck
-from AIM.src.aim.ai.analytics.schemas import BudgetOptimizationResult
-from AIM.src.aim.ai.llm.schemas import LLMResponse
+from src.aim.magisters.ads_magister_ai import AdsMagisterAI
+from src.aim.magisters.seo_magister_ai import SEOMagisterAI
+from src.aim.magisters.content_magister_ai import ContentMagisterAI
+from src.aim.ai.ads.schemas import AdCopyResult, AdCopyVariant, ComplianceCheck
+from src.aim.ai.analytics.schemas import BudgetOptimizationResult
+from src.aim.ai.llm.schemas import LLMResponse
 
 
 class TestAIMagistersE2E:
@@ -304,7 +304,7 @@ Better content...
         assert len(anomalies) == 0
 
         # Step 2: Forecast performance
-        from AIM.src.aim.ai.analytics.schemas import ForecastResponse
+        from src.aim.ai.analytics.schemas import ForecastResponse
 
         forecast_result = ForecastResponse(
             predictions=[100, 105, 110, 115, 120],

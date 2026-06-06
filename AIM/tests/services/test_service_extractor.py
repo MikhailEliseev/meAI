@@ -1,6 +1,6 @@
 """Tests for service_extractor — specialization (C1), services (C3), city (S3)."""
 import pytest
-from aim.services.service_extractor import (
+from src.aim.services.service_extractor import (
     _detect_specialization,
     _detect_services,
     _detect_city,

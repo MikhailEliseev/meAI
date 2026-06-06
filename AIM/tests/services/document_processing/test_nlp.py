@@ -5,14 +5,14 @@ Tests for NLP Extractor
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 
-from aim.services.document_processing.nlp_extractor import NLPExtractor
+from src.aim.services.document_processing.nlp_extractor import NLPExtractor
 
 
 @pytest.fixture
 def nlp_extractor():
     """Create NLP extractor instance"""
-    with patch("aim.services.document_processing.nlp_extractor.spacy.load") as mock_load:
-        with patch("aim.services.document_processing.nlp_extractor.Matcher") as mock_matcher:
+    with patch("src.aim.services.document_processing.nlp_extractor.spacy.load") as mock_load:
+        with patch("src.aim.services.document_processing.nlp_extractor.Matcher") as mock_matcher:
             # Mock spaCy model
             mock_nlp = MagicMock()
             mock_vocab = MagicMock()
@@ -60,8 +60,8 @@ class TestNLPExtractor:
     @pytest.mark.asyncio
     async def test_init_with_model(self):
         """Test initialization with spaCy model"""
-        with patch("aim.services.document_processing.nlp_extractor.spacy.load") as mock_load:
-            with patch("aim.services.document_processing.nlp_extractor.Matcher"):
+        with patch("src.aim.services.document_processing.nlp_extractor.spacy.load") as mock_load:
+            with patch("src.aim.services.document_processing.nlp_extractor.Matcher"):
                 mock_nlp = MagicMock()
                 mock_vocab = MagicMock()
                 mock_nlp.vocab = mock_vocab
@@ -75,9 +75,9 @@ class TestNLPExtractor:
     @pytest.mark.asyncio
     async def test_init_fallback_to_blank(self):
         """Test fallback to blank model when model not found"""
-        with patch("aim.services.document_processing.nlp_extractor.spacy.load") as mock_load:
-            with patch("aim.services.document_processing.nlp_extractor.spacy.blank") as mock_blank:
-                with patch("aim.services.document_processing.nlp_extractor.Matcher"):
+        with patch("src.aim.services.document_processing.nlp_extractor.spacy.load") as mock_load:
+            with patch("src.aim.services.document_processing.nlp_extractor.spacy.blank") as mock_blank:
+                with patch("src.aim.services.document_processing.nlp_extractor.Matcher"):
                     mock_load.side_effect = OSError("Model not found")
                     mock_blank_nlp = MagicMock()
                     mock_vocab = MagicMock()

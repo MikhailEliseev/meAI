@@ -7,8 +7,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timezone
 
-from AIM.src.aim.ai.analytics.anomaly_detector import AnomalyDetector
-from AIM.src.aim.ai.analytics.schemas import AnomalyAlert
+from src.aim.ai.analytics.anomaly_detector import AnomalyDetector
+from src.aim.ai.analytics.schemas import AnomalyAlert
 
 
 class TestAnomalyDetector:

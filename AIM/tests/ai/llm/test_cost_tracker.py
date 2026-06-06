@@ -5,8 +5,8 @@ Tests for LLM cost tracker.
 import pytest
 from datetime import datetime, timedelta
 
-from aim.ai.llm.cost_tracker import CostTracker, CostMetrics
-from aim.ai.llm.schemas import LLMProvider, LLMBudgetExceededError
+from src.aim.ai.llm.cost_tracker import CostTracker, CostMetrics
+from src.aim.ai.llm.schemas import LLMProvider, LLMBudgetExceededError
 
 
 class TestCostTracker:

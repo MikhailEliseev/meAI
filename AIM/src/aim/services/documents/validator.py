@@ -9,7 +9,7 @@ import logging
 import re
 from typing import Optional
 
-from aim.schemas.document import ExtractedData, ValidationResult
+from src.aim.schemas.document import ExtractedData, ValidationResult
 
 logger = logging.getLogger(__name__)
 

@@ -5,8 +5,8 @@ Tests for Ad Copy Generator
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from AIM.src.aim.ai.ads.generator import AdCopyGenerator, generate_ad_copy
-from AIM.src.aim.ai.ads.schemas import (
+from src.aim.ai.ads.generator import AdCopyGenerator, generate_ad_copy
+from src.aim.ai.ads.schemas import (
     AdCopyResult,
     AdCopyVariant,
     ComplianceCheck,

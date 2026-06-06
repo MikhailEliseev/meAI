@@ -2,7 +2,7 @@
 
 import pytest
 
-from AIM.src.aim.subagents.content.content_quality_checker import (
+from src.aim.subagents.content.content_quality_checker import (
     ContentQualityChecker,
     ContentQualityReport,
     ReadabilityAnalysis,

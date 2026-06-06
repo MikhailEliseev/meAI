@@ -2,8 +2,8 @@
 
 import pytest
 
-from AIM.src.aim.subagents.gap_detection.gap_detector import GapDetector
-from AIM.src.aim.subagents.schemas.content_gap import GapSeverity, GapType
+from src.aim.subagents.gap_detection.gap_detector import GapDetector
+from src.aim.subagents.schemas.content_gap import GapSeverity, GapType
 
 
 @pytest.fixture

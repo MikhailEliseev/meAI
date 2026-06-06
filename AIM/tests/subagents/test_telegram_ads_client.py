@@ -1,7 +1,7 @@
 """Tests for Telegram Ads API client."""
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
-from aim.subagents.ads.telegram_ads_client import (
+from src.aim.subagents.ads.telegram_ads_client import (
     TelegramAdsClient, TelegramCampaignInfo, TelegramAPIError
 )
 

@@ -3,8 +3,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from AIM.src.aim.services.ci.comparison_matrix import ComparisonMatrixBuilder
-from AIM.src.aim.services.ci.models import CompetitorFull, SeoAuditResult, SocialScanResult, SocialProfile
+from src.aim.services.ci.comparison_matrix import ComparisonMatrixBuilder
+from src.aim.services.ci.models import CompetitorFull, SeoAuditResult, SocialScanResult, SocialProfile
 
 
 class TestComparisonMatrixBuilder:

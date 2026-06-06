@@ -11,7 +11,7 @@ import tempfile
 aim_src = Path(__file__).parent.parent.parent / "src"
 sys.path.insert(0, str(aim_src))
 
-from aim.services.report_scheduler import ReportScheduler, ScheduleConfig
+from src.aim.services.report_scheduler import ReportScheduler, ScheduleConfig
 
 
 # Mock report callback

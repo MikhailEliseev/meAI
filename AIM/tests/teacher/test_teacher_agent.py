@@ -4,7 +4,7 @@ import tempfile
 import logging
 import sys
 from pathlib import Path
-from AIM.src.aim.teacher.teacher_agent import TeacherAgent
+from src.aim.teacher.teacher_agent import TeacherAgent
 import structlog
 
 # Enable debug logging for tests
@@ -116,7 +116,7 @@ async def test_teach_subagent():
         print(f"Re-extracted skills: {len(skills)}")
 
     # Step 2: Create target context
-    from AIM.src.aim.teacher.skills.skill_applier import TargetContext
+    from src.aim.teacher.skills.skill_applier import TargetContext
     target_context = TargetContext(
         subagent_name="ci-content",
         is_async=False,

@@ -3,7 +3,7 @@
 import pytest
 from datetime import datetime, timedelta
 
-from AIM.src.aim.subagents.analytics.traffic_analyzer import (
+from src.aim.subagents.analytics.traffic_analyzer import (
     TrafficAnalyzer,
     TrafficReport,
     TrafficSource,

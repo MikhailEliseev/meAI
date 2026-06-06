@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from aim.subagents.seo.technical_agent import TechnicalSEOAgent
+from src.aim.subagents.seo.technical_agent import TechnicalSEOAgent
 
 
 @pytest.fixture

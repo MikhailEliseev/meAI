@@ -3,11 +3,11 @@
 import pytest
 from datetime import datetime
 
-from AIM.src.aim.magisters.analytics_magister_v2 import (
+from src.aim.magisters.analytics_magister_v2 import (
     AnalyticsMagisterV2,
     AnalyticsWorkflowReport,
 )
-from AIM.src.aim.subagents.analytics.traffic_analyzer import (
+from src.aim.subagents.analytics.traffic_analyzer import (
     TrafficReport,
     TrafficSource,
     UserBehavior,
@@ -15,7 +15,7 @@ from AIM.src.aim.subagents.analytics.traffic_analyzer import (
     SessionAnalysis,
     ConversionFunnel,
 )
-from AIM.src.aim.subagents.analytics.conversion_tracker import (
+from src.aim.subagents.analytics.conversion_tracker import (
     ConversionReport,
     Goal,
     Attribution,
@@ -24,7 +24,7 @@ from AIM.src.aim.subagents.analytics.conversion_tracker import (
     RevenueMetrics,
     ROIMetrics,
 )
-from AIM.src.aim.subagents.analytics.report_generator import (
+from src.aim.subagents.analytics.report_generator import (
     MarketingReport,
     ReportMetrics,
     ChannelPerformance,

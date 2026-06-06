@@ -185,7 +185,7 @@ async def discover_competitors_google_maps(
         List of CompanyProfile objects with website, rating, reviews, coords.
     """
     if client is None:
-        raise ValueError("ApifyClient is required — create via get_apify_client() from aim.services")
+        raise ValueError("ApifyClient is required — create via get_apify_client() from src.aim.services")
 
     # Multi-search (>1 query) → SolidCode first (fast, handles multi-query well)
     # Single search → Compass first (slower but returns social media data)

@@ -4,7 +4,7 @@ Tests for WebResearcher.
 
 import pytest
 
-from AIM.src.aim.teacher.research.web_researcher import (
+from src.aim.teacher.research.web_researcher import (
     WebResearcher,
     ResearchDepth,
     WebResearchResult,

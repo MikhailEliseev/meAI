@@ -6,8 +6,8 @@ import pytest
 import numpy as np
 from datetime import datetime, timezone
 
-from AIM.src.aim.ai.analytics.budget_optimizer import BudgetOptimizer
-from AIM.src.aim.ai.analytics.schemas import BudgetOptimizationResult
+from src.aim.ai.analytics.budget_optimizer import BudgetOptimizer
+from src.aim.ai.analytics.schemas import BudgetOptimizationResult
 
 
 class TestBudgetOptimizer:

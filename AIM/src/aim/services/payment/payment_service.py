@@ -14,8 +14,8 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models.payment import Payment
-from aim.schemas.payment import (
+from src.aim.models.payment import Payment
+from src.aim.schemas.payment import (
     PaymentRecord,
     PaymentRequest,
     PaymentResponse,
@@ -24,8 +24,8 @@ from aim.schemas.payment import (
     RefundRequest,
     RefundResponse,
 )
-from aim.services.payment.yookassa_client import YooKassaClient
-from aim.utils.encryption import FieldEncryption
+from src.aim.services.payment.yookassa_client import YooKassaClient
+from src.aim.utils.encryption import FieldEncryption
 
 logger = logging.getLogger(__name__)
 

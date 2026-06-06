@@ -15,16 +15,16 @@ from typing import Any
 
 import structlog
 
-from aim.teacher.research.web_researcher import (
+from src.aim.teacher.research.web_researcher import (
     WebResearcher,
     ResearchDepth,
     WebResearchResult,
 )
-from aim.teacher.research.github_searcher import (
+from src.aim.teacher.research.github_searcher import (
     GitHubSearcher,
     GitHubRepo,
 )
-from aim.teacher.research.repo_ranker import (
+from src.aim.teacher.research.repo_ranker import (
     RepoRanker,
     RepoScore,
 )

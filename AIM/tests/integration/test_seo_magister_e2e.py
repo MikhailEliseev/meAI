@@ -7,7 +7,7 @@ Verifies end-to-end coordination from Magister → Subagents → API clients.
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 
-from AIM.src.aim.magisters.seo_magister import SEOMagister
+from src.aim.magisters.seo_magister import SEOMagister
 
 
 @pytest.mark.asyncio

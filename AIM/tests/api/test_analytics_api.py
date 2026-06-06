@@ -11,19 +11,19 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.api.analytics import router
-from aim.models.email_event import EmailEvent
-from aim.models.email_workflow import EmailWorkflow
-from aim.models.lead import Lead
-from aim.models.linear_task import LinearTask
-from aim.models.scheduled_email import ScheduledEmail
-from aim.utils.encryption import FieldEncryption
+from src.aim.api.analytics import router
+from src.aim.models.email_event import EmailEvent
+from src.aim.models.email_workflow import EmailWorkflow
+from src.aim.models.lead import Lead
+from src.aim.models.linear_task import LinearTask
+from src.aim.models.scheduled_email import ScheduledEmail
+from src.aim.utils.encryption import FieldEncryption
 
 
 @pytest.fixture
 def app(db_session: AsyncSession):
     """FastAPI app with analytics router and test database."""
-    from aim.database import get_db
+    from src.aim.database import get_db
 
     app = FastAPI()
     app.include_router(router, prefix="/api")

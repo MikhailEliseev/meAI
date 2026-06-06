@@ -11,13 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 # Import all models to register them with Base.metadata
-from aim.storage.models import Base
-from aim.models.lead import Lead
-from aim.models.linear_task import LinearTask
-from aim.models.email_workflow import EmailWorkflow
-from aim.models.scheduled_email import ScheduledEmail
-from aim.models.email_event import EmailEvent
-from aim.models.email_template import EmailTemplate
+from src.aim.storage.models import Base
+from src.aim.models.lead import Lead
+from src.aim.models.linear_task import LinearTask
+from src.aim.models.email_workflow import EmailWorkflow
+from src.aim.models.scheduled_email import ScheduledEmail
+from src.aim.models.email_event import EmailEvent
+from src.aim.models.email_template import EmailTemplate
 
 
 @pytest.fixture(scope="session", autouse=True)

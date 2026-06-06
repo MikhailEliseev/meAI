@@ -5,9 +5,9 @@ Covers the full pipeline: models → matrix builder → dialogue manager.
 
 import pytest
 
-from AIM.src.aim.services.ci.comparison_matrix import ComparisonMatrixBuilder
-from AIM.src.aim.services.ci.dialogue_manager import DialogueManager
-from AIM.src.aim.services.ci.models import (
+from src.aim.services.ci.comparison_matrix import ComparisonMatrixBuilder
+from src.aim.services.ci.dialogue_manager import DialogueManager
+from src.aim.services.ci.models import (
     CompetitorFull,
     ComparisonMatrix,
     PipelineProgress,

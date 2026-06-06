@@ -16,9 +16,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy import desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.database import get_db
-from aim.models.sales import SalesAgentActivity, SalesConversation, SalesEscalation, SalesMessage
-from aim.subagents.sales.knowledge_manager import KnowledgeManager
+from src.aim.database import get_db
+from src.aim.models.sales import SalesAgentActivity, SalesConversation, SalesEscalation, SalesMessage
+from src.aim.subagents.sales.knowledge_manager import KnowledgeManager
 
 logger = logging.getLogger(__name__)
 

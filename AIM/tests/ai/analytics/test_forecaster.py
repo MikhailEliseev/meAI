@@ -7,8 +7,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta, timezone
 
-from AIM.src.aim.ai.analytics.forecaster import PerformanceForecaster
-from AIM.src.aim.ai.analytics.schemas import ForecastRequest, ForecastResponse
+from src.aim.ai.analytics.forecaster import PerformanceForecaster
+from src.aim.ai.analytics.schemas import ForecastRequest, ForecastResponse
 
 
 class TestPerformanceForecaster:

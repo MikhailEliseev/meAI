@@ -12,10 +12,10 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.database import get_db
-from aim.models.email_event import EmailEvent
-from aim.models.scheduled_email import ScheduledEmail
-from aim.services.email.webhook_handler import WebhookHandler
+from src.aim.database import get_db
+from src.aim.models.email_event import EmailEvent
+from src.aim.models.scheduled_email import ScheduledEmail
+from src.aim.services.email.webhook_handler import WebhookHandler
 
 logger = logging.getLogger(__name__)
 

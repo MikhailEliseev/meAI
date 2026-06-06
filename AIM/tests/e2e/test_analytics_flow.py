@@ -13,8 +13,8 @@ from io import BytesIO
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.services.email.workflow_service import WorkflowService
-from aim.services.email.email_sender import EmailSender
+from src.aim.services.email.workflow_service import WorkflowService
+from src.aim.services.email.email_sender import EmailSender
 
 
 def _lead_payload(name, email, phone="+79991234567", clinic="Test Clinic",

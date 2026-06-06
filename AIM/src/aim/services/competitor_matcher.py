@@ -1805,7 +1805,7 @@ async def _enrich_via_rusprofile_search(
         queries.append(distinctive[0])  # longest distinctive word
 
     try:
-        from aim.services.rusprofile.parser import get_rusprofile_client
+        from src.aim.services.rusprofile.parser import get_rusprofile_client
 
         rp = get_rusprofile_client()
     except Exception as e:

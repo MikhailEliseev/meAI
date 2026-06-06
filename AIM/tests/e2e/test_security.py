@@ -20,15 +20,15 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from aim.models.lead import Lead
-from aim.utils.encryption import (
+from src.aim.models.lead import Lead
+from src.aim.utils.encryption import (
     FieldEncryption,
     EncryptionError,
     DecryptionError,
     generate_encryption_key,
     get_encryptor,
 )
-from aim.services.lead_capture import RateLimitExceeded, LeadCaptureService
+from src.aim.services.lead_capture import RateLimitExceeded, LeadCaptureService
 
 
 # ──────────────────────────────────────────────────

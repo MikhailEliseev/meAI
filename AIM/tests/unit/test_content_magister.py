@@ -18,7 +18,7 @@ async def test_content_magister_identify_subagents_success():
     Expected: Correct subagent IDs returned for each action
     """
     # Arrange: Create real ContentMagister (not using fixture for this test)
-    from AIM.src.aim.magisters.content_magister import ContentMagister
+    from src.aim.magisters.content_magister import ContentMagister
     magister = ContentMagister()
 
     # Act & Assert: Test action routing
@@ -62,7 +62,7 @@ async def test_content_magister_aggregate_results_success():
     Expected: Average scores calculated, insights generated, recommendations provided
     """
     # Arrange: Create real ContentMagister
-    from AIM.src.aim.magisters.content_magister import ContentMagister
+    from src.aim.magisters.content_magister import ContentMagister
     magister = ContentMagister()
 
     subagent_results = [
@@ -111,7 +111,7 @@ async def test_content_magister_aggregate_results_partial_failure():
     Expected: Aggregation continues with available data, no crashes
     """
     # Arrange: Create real ContentMagister
-    from AIM.src.aim.magisters.content_magister import ContentMagister
+    from src.aim.magisters.content_magister import ContentMagister
     magister = ContentMagister()
 
     subagent_results = [
@@ -156,7 +156,7 @@ async def test_content_magister_aggregate_results_full_failure():
     Expected: Returns empty aggregation with default values
     """
     # Arrange: Create real ContentMagister
-    from AIM.src.aim.magisters.content_magister import ContentMagister
+    from src.aim.magisters.content_magister import ContentMagister
     magister = ContentMagister()
 
     subagent_results = []

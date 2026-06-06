@@ -5,8 +5,8 @@ import os
 import tempfile
 
 import pytest
-from aim.services.apify_key_pool import ApifyKeyPool
-from aim.services.apify_client import ApifyClient
+from src.aim.services.apify_key_pool import ApifyKeyPool
+from src.aim.services.apify_client import ApifyClient
 
 
 def _keys_file(tokens: list[str]) -> str:

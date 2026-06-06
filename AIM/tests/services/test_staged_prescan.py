@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from aim.services.prescan_orchestrator import PrescanOrchestrator, PrescanResult
+from src.aim.services.prescan_orchestrator import PrescanOrchestrator, PrescanResult
 
 
 @pytest.fixture
@@ -251,7 +251,7 @@ async def test_stage_errors_do_not_block_pipeline(orchestrator):
 @pytest.mark.asyncio
 async def test_roszdravnadzor_graceful_degradation():
     """RoszdravnadzorClient returns [] on timeout/error, never raises."""
-    from aim.services.roszdravnadzor.client import RoszdravnadzorClient
+    from src.aim.services.roszdravnadzor.client import RoszdravnadzorClient
 
     client = RoszdravnadzorClient(timeout=1.0)
     try:

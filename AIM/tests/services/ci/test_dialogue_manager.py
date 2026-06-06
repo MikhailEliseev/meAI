@@ -6,12 +6,12 @@ competitors), fallback response rendering, and chat() flow (LLM vs no-LLM).
 
 import pytest
 
-from AIM.src.aim.services.ci.comparison_matrix import ComparisonMatrixBuilder
-from AIM.src.aim.services.ci.dialogue_manager import (
+from src.aim.services.ci.comparison_matrix import ComparisonMatrixBuilder
+from src.aim.services.ci.dialogue_manager import (
     SYSTEM_PROMPT_TEMPLATE,
     DialogueManager,
 )
-from AIM.src.aim.services.ci.models import (
+from src.aim.services.ci.models import (
     CompetitorFull,
     SeoAuditResult,
     SocialScanResult,

@@ -7,13 +7,13 @@ import pytest
 from unittest.mock import AsyncMock
 from pathlib import Path
 
-from AIM.src.aim.subagents.seo.technical_agent import TechnicalSEOAgent
-from AIM.src.aim.subagents.seo.content_agent import ContentSEOAgent
-from AIM.src.aim.subagents.seo.links_agent import LinksSEOAgent
-from AIM.src.aim.magisters.seo_magister import SEOMagister
-from AIM.src.aim.magisters.content_magister import ContentMagister
-from AIM.src.aim.magisters.ads_magister import AdsMagister
-from AIM.src.aim.magisters.analytics_magister import AnalyticsMagister
+from src.aim.subagents.seo.technical_agent import TechnicalSEOAgent
+from src.aim.subagents.seo.content_agent import ContentSEOAgent
+from src.aim.subagents.seo.links_agent import LinksSEOAgent
+from src.aim.magisters.seo_magister import SEOMagister
+from src.aim.magisters.content_magister import ContentMagister
+from src.aim.magisters.ads_magister import AdsMagister
+from src.aim.magisters.analytics_magister import AnalyticsMagister
 
 
 @pytest.fixture

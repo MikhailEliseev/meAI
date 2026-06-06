@@ -6,7 +6,7 @@ import pytest
 from datetime import datetime, timezone
 from pydantic import ValidationError
 
-from AIM.src.aim.ai.analytics.schemas import (
+from src.aim.ai.analytics.schemas import (
     ForecastRequest,
     ForecastResponse,
     AnomalyAlert,

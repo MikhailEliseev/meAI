@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import status
 from httpx import AsyncClient
 
-from aim.models.onboarding import Onboarding
-from aim.services.onboarding.state_machine import OnboardingState
+from src.aim.models.onboarding import Onboarding
+from src.aim.services.onboarding.state_machine import OnboardingState
 
 
 @pytest.fixture
@@ -49,7 +49,7 @@ async def test_start_onboarding_success(client: AsyncClient, mock_onboarding_ser
     mock_onboarding_service.start_onboarding.return_value = mock_onboarding
 
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.post(
             "/api/onboarding/start",
             json={"lead_id": "lead_123"},
@@ -71,7 +71,7 @@ async def test_start_onboarding_lead_not_found(client: AsyncClient, mock_onboard
     mock_onboarding_service.start_onboarding.side_effect = ValueError("Lead lead_999 not found")
 
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.post(
             "/api/onboarding/start",
             json={"lead_id": "lead_999"},
@@ -89,7 +89,7 @@ async def test_start_onboarding_already_exists(client: AsyncClient, mock_onboard
     mock_onboarding_service.start_onboarding.side_effect = ValueError("Onboarding already exists for lead")
 
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.post(
             "/api/onboarding/start",
             json={"lead_id": "lead_123"},
@@ -123,7 +123,7 @@ async def test_get_onboarding_status_success(client: AsyncClient, mock_onboardin
     mock_onboarding_service.get_onboarding_status.return_value = mock_status
 
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.get("/api/onboarding/onb_20260517014000_abc123/status")
 
     # Verify
@@ -142,7 +142,7 @@ async def test_get_onboarding_status_not_found(client: AsyncClient, mock_onboard
     mock_onboarding_service.get_onboarding_status.side_effect = ValueError("Onboarding onb_999 not found")
 
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.get("/api/onboarding/onb_999/status")
 
     # Verify
@@ -154,7 +154,7 @@ async def test_get_onboarding_status_not_found(client: AsyncClient, mock_onboard
 async def test_upload_document_success(client: AsyncClient, mock_onboarding_service):
     """Test uploading document successfully."""
     # Mock service response
-    from aim.models.document import Document
+    from src.aim.models.document import Document
     mock_document = Document(
         id="doc_123",
         lead_id="lead_123",
@@ -183,7 +183,7 @@ async def test_upload_document_success(client: AsyncClient, mock_onboarding_serv
     mock_onboarding_service.get_onboarding_status.return_value = mock_status
 
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.post(
             "/api/onboarding/onb_20260517014000_abc123/documents",
             params={"document_type": "license"},
@@ -202,7 +202,7 @@ async def test_upload_document_success(client: AsyncClient, mock_onboarding_serv
 async def test_upload_document_invalid_type(client: AsyncClient, mock_onboarding_service):
     """Test uploading document with invalid type."""
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.post(
             "/api/onboarding/onb_20260517014000_abc123/documents",
             params={"document_type": "invalid_type"},
@@ -218,7 +218,7 @@ async def test_upload_document_invalid_type(client: AsyncClient, mock_onboarding
 async def test_upload_document_invalid_file_type(client: AsyncClient, mock_onboarding_service):
     """Test uploading document with invalid file type."""
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.post(
             "/api/onboarding/onb_20260517014000_abc123/documents",
             params={"document_type": "license"},
@@ -235,7 +235,7 @@ async def test_upload_document_invalid_file_type(client: AsyncClient, mock_onboa
 async def test_process_payment_success(client: AsyncClient, mock_onboarding_service):
     """Test processing payment successfully."""
     # Mock service response
-    from aim.models.payment import Payment
+    from src.aim.models.payment import Payment
     mock_payment = Payment(
         id="pay_123",
         lead_id="lead_123",
@@ -265,7 +265,7 @@ async def test_process_payment_success(client: AsyncClient, mock_onboarding_serv
     mock_onboarding_service.get_onboarding_status.return_value = mock_status
 
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.post(
             "/api/onboarding/onb_20260517014000_abc123/payment",
             json={
@@ -292,7 +292,7 @@ async def test_process_payment_documents_not_validated(client: AsyncClient, mock
     mock_onboarding_service.process_payment.side_effect = ValueError("Documents not validated")
 
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.post(
             "/api/onboarding/onb_20260517014000_abc123/payment",
             json={
@@ -328,7 +328,7 @@ async def test_complete_onboarding_success(client: AsyncClient, mock_onboarding_
     mock_onboarding_service.complete_onboarding.return_value = mock_onboarding
 
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.post("/api/onboarding/onb_20260517014000_abc123/complete")
 
     # Verify
@@ -347,7 +347,7 @@ async def test_complete_onboarding_payment_not_completed(client: AsyncClient, mo
     mock_onboarding_service.complete_onboarding.side_effect = ValueError("Payment not completed")
 
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.post("/api/onboarding/onb_20260517014000_abc123/complete")
 
     # Verify
@@ -373,7 +373,7 @@ async def test_retry_step_success(client: AsyncClient, mock_onboarding_service):
     mock_onboarding_service.retry_failed_step.return_value = mock_onboarding
 
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.post(
             "/api/onboarding/onb_20260517014000_abc123/retry",
             json={"step": "documents_validation"},
@@ -394,7 +394,7 @@ async def test_retry_step_not_failed(client: AsyncClient, mock_onboarding_servic
     mock_onboarding_service.retry_failed_step.side_effect = ValueError("Onboarding is not in failed state")
 
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.post(
             "/api/onboarding/onb_20260517014000_abc123/retry",
             json={"step": "documents_validation"},
@@ -440,7 +440,7 @@ async def test_get_onboarding_by_lead_success(client: AsyncClient, mock_onboardi
     mock_onboarding_service.get_onboarding_status.return_value = mock_status
 
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.get("/api/onboarding/lead/lead_123")
 
     # Verify
@@ -457,7 +457,7 @@ async def test_get_onboarding_by_lead_not_found(client: AsyncClient, mock_onboar
     mock_onboarding_service.get_onboarding_by_lead.side_effect = ValueError("No onboarding found for lead")
 
     # Make request
-    with patch("aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
+    with patch("src.aim.api.onboarding.get_onboarding_service", return_value=mock_onboarding_service):
         response = await client.get("/api/onboarding/lead/lead_999")
 
     # Verify

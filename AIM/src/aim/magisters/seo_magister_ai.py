@@ -13,9 +13,9 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Any
 
-from aim.magisters.seo_magister import SEOMagister
-from aim.ai.seo.analyzer import SEOAnalyzer
-from aim.ai.seo.schemas import SEOAnalysisResult
+from src.aim.magisters.seo_magister import SEOMagister
+from src.aim.ai.seo.analyzer import SEOAnalyzer
+from src.aim.ai.seo.schemas import SEOAnalysisResult
 
 
 class SEOMagisterAI(SEOMagister):

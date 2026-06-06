@@ -10,7 +10,7 @@ import sys
 aim_src = Path(__file__).parent.parent.parent / "src"
 sys.path.insert(0, str(aim_src))
 
-from aim.services.report_generator import ReportGenerator, ReportData
+from src.aim.services.report_generator import ReportGenerator, ReportData
 
 
 class TestReportGenerator:

@@ -11,7 +11,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / "AIM" / "src"))
 sys.path.insert(0, str(project_root / "src"))
 
-from aim.core.api_config import get_api_config, get_api_cache
+from src.aim.core.api_config import get_api_config, get_api_cache
 
 
 async def test_api_config():

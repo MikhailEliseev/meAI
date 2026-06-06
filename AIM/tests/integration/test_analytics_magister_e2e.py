@@ -8,7 +8,7 @@ import pytest
 from unittest.mock import AsyncMock
 from pathlib import Path
 
-from AIM.src.aim.magisters.analytics_magister import AnalyticsMagister
+from src.aim.magisters.analytics_magister import AnalyticsMagister
 
 
 @pytest.mark.asyncio

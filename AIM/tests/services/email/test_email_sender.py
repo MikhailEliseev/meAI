@@ -8,15 +8,15 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from aim.models import EmailWorkflow, Lead, ScheduledEmail
-from aim.services.email.email_sender import EmailSender
+from src.aim.models import EmailWorkflow, Lead, ScheduledEmail
+from src.aim.services.email.email_sender import EmailSender
 
 
 @pytest.fixture
 async def lead(db_session):
     """Create test lead."""
     from datetime import datetime, timezone
-    from aim.utils.encryption import FieldEncryption
+    from src.aim.utils.encryption import FieldEncryption
 
     email = "ivan@example.com"
     encryptor = FieldEncryption()
@@ -79,7 +79,7 @@ async def scheduled_email(db_session, workflow):
 @pytest.fixture
 def email_sender(db_session):
     """Create EmailSender instance with mocked SendGrid client."""
-    with patch("aim.services.email.email_sender.SendGridAPIClient") as mock_sg:
+    with patch("src.aim.services.email.email_sender.SendGridAPIClient") as mock_sg:
         # Mock the client structure
         mock_client = MagicMock()
         mock_sg.return_value = mock_client

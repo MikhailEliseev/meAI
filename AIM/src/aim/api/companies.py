@@ -58,7 +58,7 @@ async def get_company_financials(
     logger.info("Fetching nalog financials for: %s", identifier)
 
     try:
-        from aim.services.nalog import BfoNalogClient
+        from src.aim.services.nalog import BfoNalogClient
 
         # BfoNalogClient is sync — run in thread to not block the event loop
         def _fetch():

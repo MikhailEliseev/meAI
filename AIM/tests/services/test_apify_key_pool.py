@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from aim.services.apify_key_pool import ApifyKeyPool
+from src.aim.services.apify_key_pool import ApifyKeyPool
 
 
 # ── Helpers ────────────────────────────────────────────────────────────

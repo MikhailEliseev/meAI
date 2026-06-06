@@ -22,7 +22,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from aim.config.logging import get_logger
+from src.aim.config.logging import get_logger
 
 logger = get_logger("aim.services.prescan_orchestrator")
 
@@ -173,7 +173,7 @@ class PrescanOrchestrator:
         async def _thread_structure():
             await _emit("structure", "scanning")
             try:
-                from aim.services.service_extractor import extract_client_profile
+                from src.aim.services.service_extractor import extract_client_profile
 
                 profile = await extract_client_profile(url)
                 if profile:
@@ -324,7 +324,7 @@ class PrescanOrchestrator:
             return ""
 
         try:
-            from aim.services.rusprofile.client import get_dadata_client
+            from src.aim.services.rusprofile.client import get_dadata_client
 
             client = get_dadata_client()
             if not client.configured:
@@ -373,7 +373,7 @@ class PrescanOrchestrator:
         to actual RUB for consistency with the rest of the system.
         """
         try:
-            from aim.services.nalog.bfo_client import BfoNalogClient
+            from src.aim.services.nalog.bfo_client import BfoNalogClient
 
             client = BfoNalogClient(timeout=8.0)
             try:
@@ -425,8 +425,8 @@ class PrescanOrchestrator:
 
             html = r.text.lower()
 
-            # Check meta viewport (mobile-friendly)
-            if 'meta name="viewport"' in html or "meta name='viewport'" in html:
+            # Check meta viewport (mobile-friendly) — regex handles any attribute order
+            if re.search(r'<meta[^>]*name=["\']viewport["\']', html, re.IGNORECASE):
                 result["has_mobile_viewport"] = True
             else:
                 result["issues"].append("не адаптирован под мобильные (нет viewport meta)")
@@ -622,7 +622,7 @@ class PrescanOrchestrator:
         }
 
         try:
-            from aim.services.ci.review_collector import ReviewCollector, AggregatedReviews
+            from src.aim.services.ci.review_collector import ReviewCollector, AggregatedReviews
 
             # Extract the real brand name from <title> tag, not domain.
             company_name = await self._extract_brand_name(url)
@@ -844,7 +844,7 @@ class PrescanOrchestrator:
 
         # ── 1a. Website structure ─────────────────────────────────────────
         try:
-            from aim.services.service_extractor import extract_client_profile
+            from src.aim.services.service_extractor import extract_client_profile
 
             profile = await extract_client_profile(url)
             if profile:
@@ -872,7 +872,7 @@ class PrescanOrchestrator:
         # ── 1c. DaData legal entity ───────────────────────────────────────
         if inn:
             try:
-                from aim.services.rusprofile.client import get_dadata_client
+                from src.aim.services.rusprofile.client import get_dadata_client
 
                 client = get_dadata_client()
                 if client.configured:
@@ -962,7 +962,7 @@ class PrescanOrchestrator:
         general_director: dict = {}
         if inn:
             try:
-                from aim.services.rusprofile.client import get_dadata_client
+                from src.aim.services.rusprofile.client import get_dadata_client
                 client = get_dadata_client()
                 if client.configured:
                     profiles = await client.search_company(inn, count=1)
@@ -982,7 +982,7 @@ class PrescanOrchestrator:
         licenses: list = []
         if legal_name or inn:
             try:
-                from aim.services.roszdravnadzor.client import RoszdravnadzorClient
+                from src.aim.services.roszdravnadzor.client import RoszdravnadzorClient
                 rzd = RoszdravnadzorClient(timeout=8.0)
                 try:
                     licenses = await rzd.search_licenses(legal_name, inn=inn)
@@ -1007,7 +1007,7 @@ class PrescanOrchestrator:
             seo_data["load_speed_ms"] = int((time.monotonic() - t0) * 1000)
             html = r.text.lower()
 
-            if 'meta name="viewport"' in html or "meta name='viewport'" in html:
+            if re.search(r'<meta[^>]*name=["\']viewport["\']', html, re.IGNORECASE):
                 seo_data["has_mobile_viewport"] = True
             else:
                 seo_data["issues"].append("не адаптирован под мобильные")
@@ -1112,7 +1112,7 @@ class PrescanOrchestrator:
         revenue_multi_year: dict = {}
         if inn:
             try:
-                from aim.services.nalog.bfo_client import BfoNalogClient
+                from src.aim.services.nalog.bfo_client import BfoNalogClient
                 client = BfoNalogClient(timeout=8.0)
                 try:
                     orgs = client.search(inn)
@@ -1221,7 +1221,7 @@ class PrescanOrchestrator:
         nearby_competitors: list = []
         if city and specialization:
             try:
-                from aim.services.competitor_matcher import CompetitorMatcher
+                from src.aim.services.competitor_matcher import CompetitorMatcher
                 matcher = CompetitorMatcher()
                 competitors = await matcher.find_competitors(
                     url=url,
@@ -1252,8 +1252,8 @@ class PrescanOrchestrator:
     async def _cache_get(self, url: str) -> dict | None:
         """Check company_profiles cache for existing prescan data."""
         try:
-            from aim.database import async_session_maker
-            from aim.models.company_profile import CompanyProfileModel
+            from src.aim.database import async_session_maker
+            from src.aim.models.company_profile import CompanyProfileModel
             from sqlalchemy import select
 
             async with async_session_maker() as session:
@@ -1277,8 +1277,8 @@ class PrescanOrchestrator:
         try:
             from datetime import datetime as dt_mod, timezone as tz
 
-            from aim.database import async_session_maker
-            from aim.models.company_profile import CompanyProfileModel
+            from src.aim.database import async_session_maker
+            from src.aim.models.company_profile import CompanyProfileModel
             from sqlalchemy import select
 
             async with async_session_maker() as session:

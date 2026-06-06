@@ -236,7 +236,7 @@ class PipelineRunner:
         name, url, inn, services.
         """
         try:
-            from aim.services.competitor_matcher import CompetitorMatcher
+            from src.aim.services.competitor_matcher import CompetitorMatcher
         except ImportError as e:
             logger.error(
                 "CompetitorMatcher module not available: %s. "
@@ -300,7 +300,7 @@ class PipelineRunner:
             )
 
             def _sync_fetch():
-                from aim.services.nalog.bfo_client import BfoNalogClient
+                from src.aim.services.nalog.bfo_client import BfoNalogClient
 
                 client = BfoNalogClient()
                 try:

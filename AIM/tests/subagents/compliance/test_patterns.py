@@ -7,7 +7,7 @@ Tests pattern matching accuracy, performance, and coverage.
 import pytest
 import time
 
-from AIM.src.aim.subagents.compliance.patterns import ProhibitedPatternLibrary
+from src.aim.subagents.compliance.patterns import ProhibitedPatternLibrary
 
 
 @pytest.fixture

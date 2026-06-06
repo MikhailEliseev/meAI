@@ -6,8 +6,8 @@ Tests E-E-A-T scoring for medical content.
 
 import pytest
 
-from AIM.src.aim.subagents.content_gap_analysis.scoring.eeat_scorer import EEATScorer
-from AIM.src.aim.subagents.content_gap_analysis.schemas import ScrapedPageData
+from src.aim.subagents.content_gap_analysis.scoring.eeat_scorer import EEATScorer
+from src.aim.subagents.content_gap_analysis.schemas import ScrapedPageData
 
 
 @pytest.fixture

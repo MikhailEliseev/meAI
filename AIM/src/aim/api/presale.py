@@ -11,8 +11,8 @@ from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from aim.schemas.company_profile import StagedPrescanRequest
-from aim.services.prescan_orchestrator import PrescanOrchestrator
+from src.aim.schemas.company_profile import StagedPrescanRequest
+from src.aim.services.prescan_orchestrator import PrescanOrchestrator
 
 logger = logging.getLogger(__name__)
 

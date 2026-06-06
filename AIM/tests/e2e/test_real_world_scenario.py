@@ -10,7 +10,7 @@ import time
 from unittest.mock import AsyncMock, patch
 from datetime import datetime
 
-from AIM.src.aim.magisters.seo_magister import SEOMagister
+from src.aim.magisters.seo_magister import SEOMagister
 from AIM.tests.fixtures.e2e_fixtures import (
     mock_client_data,
     correlation_tracker,

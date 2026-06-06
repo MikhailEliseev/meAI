@@ -14,8 +14,8 @@ from sendgrid.helpers.mail import Mail, TrackingSettings, ClickTracking, OpenTra
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models import ScheduledEmail
-from aim.services.email.workflow_state_manager import WorkflowStateManager
+from src.aim.models import ScheduledEmail
+from src.aim.services.email.workflow_state_manager import WorkflowStateManager
 
 logger = logging.getLogger(__name__)
 

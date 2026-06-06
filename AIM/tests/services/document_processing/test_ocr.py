@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch, AsyncMock
 from PIL import Image
 import io
 
-from aim.services.document_processing.ocr import OCRService
+from src.aim.services.document_processing.ocr import OCRService
 
 
 @pytest.fixture
@@ -67,8 +67,8 @@ class TestOCRService:
         assert service.min_confidence == 0.8
 
     @pytest.mark.asyncio
-    @patch("aim.services.document_processing.ocr.Image.open")
-    @patch("aim.services.document_processing.ocr.pytesseract.image_to_data")
+    @patch("src.aim.services.document_processing.ocr.Image.open")
+    @patch("src.aim.services.document_processing.ocr.pytesseract.image_to_data")
     async def test_extract_text_from_image_success(
         self,
         mock_image_to_data,
@@ -98,8 +98,8 @@ class TestOCRService:
         assert 0 <= result["confidence"] <= 1
 
     @pytest.mark.asyncio
-    @patch("aim.services.document_processing.ocr.Image.open")
-    @patch("aim.services.document_processing.ocr.pytesseract.image_to_data")
+    @patch("src.aim.services.document_processing.ocr.Image.open")
+    @patch("src.aim.services.document_processing.ocr.pytesseract.image_to_data")
     async def test_extract_text_from_image_low_confidence(
         self,
         mock_image_to_data,
@@ -128,7 +128,7 @@ class TestOCRService:
         assert result["confidence"] == 0
 
     @pytest.mark.asyncio
-    @patch("aim.services.document_processing.ocr.Image.open")
+    @patch("src.aim.services.document_processing.ocr.Image.open")
     async def test_extract_text_from_image_file_not_found(
         self,
         mock_image_open,
@@ -141,8 +141,8 @@ class TestOCRService:
             await ocr_service.extract_text_from_image("nonexistent.jpg")
 
     @pytest.mark.asyncio
-    @patch("aim.services.document_processing.ocr.convert_from_path")
-    @patch("aim.services.document_processing.ocr.pytesseract.image_to_data")
+    @patch("src.aim.services.document_processing.ocr.convert_from_path")
+    @patch("src.aim.services.document_processing.ocr.pytesseract.image_to_data")
     async def test_extract_text_from_pdf_success(
         self,
         mock_image_to_data,
@@ -176,7 +176,7 @@ class TestOCRService:
         assert "\n\n" in result["text"]
 
     @pytest.mark.asyncio
-    @patch("aim.services.document_processing.ocr.convert_from_path")
+    @patch("src.aim.services.document_processing.ocr.convert_from_path")
     async def test_extract_text_from_pdf_conversion_error(
         self,
         mock_convert_from_path,
@@ -189,7 +189,7 @@ class TestOCRService:
             await ocr_service.extract_text_from_pdf("test.pdf")
 
     @pytest.mark.asyncio
-    @patch("aim.services.document_processing.ocr.OCRService.extract_text_from_pdf")
+    @patch("src.aim.services.document_processing.ocr.OCRService.extract_text_from_pdf")
     async def test_extract_text_pdf_file(
         self,
         mock_extract_pdf,
@@ -204,7 +204,7 @@ class TestOCRService:
         mock_extract_pdf.assert_called_once_with("document.pdf")
 
     @pytest.mark.asyncio
-    @patch("aim.services.document_processing.ocr.OCRService.extract_text_from_image")
+    @patch("src.aim.services.document_processing.ocr.OCRService.extract_text_from_image")
     async def test_extract_text_image_file(
         self,
         mock_extract_image,
@@ -225,8 +225,8 @@ class TestOCRService:
             await ocr_service.extract_text("document.txt")
 
     @pytest.mark.asyncio
-    @patch("aim.services.document_processing.ocr.Image.open")
-    @patch("aim.services.document_processing.ocr.pytesseract.image_to_data")
+    @patch("src.aim.services.document_processing.ocr.Image.open")
+    @patch("src.aim.services.document_processing.ocr.pytesseract.image_to_data")
     async def test_bbox_coordinates(
         self,
         mock_image_to_data,
@@ -249,8 +249,8 @@ class TestOCRService:
         assert first_block["bbox"]["height"] == 20
 
     @pytest.mark.asyncio
-    @patch("aim.services.document_processing.ocr.Image.open")
-    @patch("aim.services.document_processing.ocr.pytesseract.image_to_data")
+    @patch("src.aim.services.document_processing.ocr.Image.open")
+    @patch("src.aim.services.document_processing.ocr.pytesseract.image_to_data")
     async def test_language_parameter(
         self,
         mock_image_to_data,
@@ -270,8 +270,8 @@ class TestOCRService:
         assert call_args[1]["lang"] == "eng+rus"
 
     @pytest.mark.asyncio
-    @patch("aim.services.document_processing.ocr.convert_from_path")
-    @patch("aim.services.document_processing.ocr.pytesseract.image_to_data")
+    @patch("src.aim.services.document_processing.ocr.convert_from_path")
+    @patch("src.aim.services.document_processing.ocr.pytesseract.image_to_data")
     async def test_pdf_dpi_parameter(
         self,
         mock_image_to_data,

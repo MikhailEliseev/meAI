@@ -19,9 +19,9 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Request, status
 from sqlalchemy import select
 
-from aim.database import async_session_maker
-from aim.models.payment import Payment
-from aim.schemas.payment import PaymentStatus
+from src.aim.database import async_session_maker
+from src.aim.models.payment import Payment
+from src.aim.schemas.payment import PaymentStatus
 
 logger = logging.getLogger(__name__)
 

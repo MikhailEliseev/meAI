@@ -28,7 +28,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from aim.subagents.ads.config.settings import AdsSettings
+from src.aim.subagents.ads.config.settings import AdsSettings
 
 logger = structlog.get_logger(__name__)
 

@@ -1,6 +1,6 @@
 import pytest
-from AIM.src.aim.services.ci.seo_auditor import SeoAuditor
-from AIM.src.aim.services.ci.models import SeoAuditResult
+from src.aim.services.ci.seo_auditor import SeoAuditor
+from src.aim.services.ci.models import SeoAuditResult
 
 
 class TestSeoAuditor:
