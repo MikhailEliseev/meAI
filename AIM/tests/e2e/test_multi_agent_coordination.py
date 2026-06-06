@@ -12,9 +12,9 @@ from datetime import datetime
 
 from meai.events.event_bus import EventBus, Event, EventPriority
 from meai.events.event_store import EventStore
-from AIM.src.aim.magisters.seo_magister import SEOMagister
-from AIM.src.aim.magisters.content_magister import ContentMagister
-from AIM.src.aim.magisters.ads_magister import AdsMagister
+from src.aim.magisters.seo_magister import SEOMagister
+from src.aim.magisters.content_magister import ContentMagister
+from src.aim.magisters.ads_magister import AdsMagister
 from AIM.tests.fixtures.e2e_fixtures import (
     event_bus,
     event_store,

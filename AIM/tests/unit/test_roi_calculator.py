@@ -1,6 +1,6 @@
 """Tests for ROI calculator."""
 import pytest
-from aim.subagents.ads.roi_calculator import ROICalculator, ChannelROI
+from src.aim.subagents.ads.roi_calculator import ROICalculator, ChannelROI
 
 
 @pytest.fixture

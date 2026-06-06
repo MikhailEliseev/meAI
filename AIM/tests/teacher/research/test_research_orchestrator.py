@@ -5,11 +5,11 @@ Tests for ResearchOrchestrator.
 import pytest
 from datetime import datetime
 
-from AIM.src.aim.teacher.research.research_orchestrator import (
+from src.aim.teacher.research.research_orchestrator import (
     ResearchOrchestrator,
     ResearchFindings,
 )
-from AIM.src.aim.teacher.research.web_researcher import ResearchDepth
+from src.aim.teacher.research.web_researcher import ResearchDepth
 
 
 @pytest.fixture

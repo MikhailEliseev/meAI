@@ -3,11 +3,11 @@
 import pytest
 from datetime import datetime
 
-from AIM.src.aim.magisters.ads_magister_v2 import (
+from src.aim.magisters.ads_magister_v2 import (
     AdsMagisterV2,
     AdsWorkflowReport,
 )
-from AIM.src.aim.subagents.ads.ad_copy_generator import (
+from src.aim.subagents.ads.ad_copy_generator import (
     AdCopySet,
     AdCopyVariant,
     AdHeadline,
@@ -15,7 +15,7 @@ from AIM.src.aim.subagents.ads.ad_copy_generator import (
     CallToAction,
     ComplianceCheck,
 )
-from AIM.src.aim.subagents.ads.landing_page_analyzer import (
+from src.aim.subagents.ads.landing_page_analyzer import (
     LandingPageReport,
     RelevanceAnalysis,
     ConversionOptimization,
@@ -23,7 +23,7 @@ from AIM.src.aim.subagents.ads.landing_page_analyzer import (
     MobileOptimization,
     PerformanceAnalysis,
 )
-from AIM.src.aim.subagents.ads.bid_strategy_optimizer import (
+from src.aim.subagents.ads.bid_strategy_optimizer import (
     BidOptimizationReport,
     PerformanceMetrics,
     BidStrategyAnalysis,

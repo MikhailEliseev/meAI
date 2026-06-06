@@ -1,7 +1,7 @@
 # AIM/tests/services/ci/test_social_scanner.py
 import pytest
-from AIM.src.aim.services.ci.social_scanner import SocialScanner
-from AIM.src.aim.services.ci.models import SocialScanResult, SocialProfile
+from src.aim.services.ci.social_scanner import SocialScanner
+from src.aim.services.ci.models import SocialScanResult, SocialProfile
 
 
 class TestSocialScanner:

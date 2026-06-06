@@ -16,8 +16,10 @@ import json
 import logging
 import os
 import re
+import secrets
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -49,7 +51,7 @@ _LEARNINGS_TIMEOUT = 60  # 1 minute — learnings extraction deadline
 
 OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "http://omniroute:20128/v1")
 OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "sk-a10f604cd99e7a50-dd1d5a-56e30050")
-DEFAULT_MODEL = os.getenv("HERMES_MODEL", "ds/deepseek-v4-pro")
+DEFAULT_MODEL = os.getenv("LLM_MODEL", "ds/deepseek-v4-pro")
 
 # SOUL.md cache — loaded once, reused across requests
 _soul_md_cache: Optional[str] = None
@@ -378,106 +380,34 @@ def _create_agent(session_id: str | None, mode: str, enabled_toolsets: list[str]
         load_soul_identity=True,
         ephemeral_system_prompt=get_mode_prompt(mode),
         enabled_toolsets=enabled_toolsets,
-        max_iterations=50,
+        max_iterations=25,
         quiet_mode=True,
-        max_tokens=32000,
-        reasoning_config={"type": "enabled"},
+        max_tokens=16000,
     )
 
 
 def _extract_url_from_message(message: str) -> str | None:
-    """Extract first URL from a user message."""
-    pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
-    match = re.search(pattern, message)
-    return match.group(0) if match else None
+    """Extract first URL from a user message.
 
-
-def _force_prescan(url: str) -> str | None:
-    """Call AIM prescan API synchronously and return formatted JSON.
-
-    Blocks for 60-120s. Returns the same formatted JSON that
-    handle_run_prescan would return, or None on failure.
+    Handles both full URLs (https://example.ru) and bare domains (example.ru).
     """
-    import httpx
+    # Try full URL first: https://example.ru/page
+    full_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
+    match = re.search(full_pattern, message)
+    if match:
+        return match.group(0)
 
-    AIM_API = "http://app:8000"
-
-    try:
-        with httpx.Client(timeout=180.0) as client:
-            response = client.post(
-                f"{AIM_API}/api/presale/prescan",
-                json={"url": url},
-            )
-            response.raise_for_status()
-            data = response.json()
-
-            if not data.get("success"):
-                logger.warning("_force_prescan: API returned error: %s", data.get("error"))
-                return None
-
-            result = data.get("result", {})
-
-            # Replicate handle_run_prescan formatting (anti-hallucination)
-            load_speed_ms_val = result.get("load_speed_ms", 0)
-            if load_speed_ms_val > 0:
-                load_speed_sec = load_speed_ms_val / 1000
-                if load_speed_ms_val < 1000:
-                    speed_desc = "мгновенная загрузка — очень быстро"
-                elif load_speed_ms_val < 2000:
-                    speed_desc = f"{load_speed_sec:.1f} сек — хорошая скорость"
-                elif load_speed_ms_val < 3000:
-                    speed_desc = f"{load_speed_sec:.1f} сек — средняя скорость"
-                elif load_speed_ms_val < 5000:
-                    speed_desc = f"{load_speed_sec:.1f} сек — медленно, нужно ускорять"
-                else:
-                    speed_desc = f"{load_speed_sec:.1f} сек — критически медленно"
-            else:
-                speed_desc = "не измерена"
-
-            seo_score_val = result.get("seo_score", 0)
-            if seo_score_val >= 80:
-                seo_health = f"{seo_score_val}/100 — отличное SEO, сайт хорошо оптимизирован"
-            elif seo_score_val >= 60:
-                seo_health = f"{seo_score_val}/100 — хорошее состояние, но есть потенциал для улучшения"
-            elif seo_score_val >= 40:
-                seo_health = f"{seo_score_val}/100 — среднее состояние, требуется оптимизация"
-            elif seo_score_val > 0:
-                seo_health = f"{seo_score_val}/100 — слабое SEO, сайт плохо виден в поиске"
-            else:
-                seo_health = "не оценено"
-
-            summary = {
-                "url": url,
-                "specialization": result.get("specialization", ""),
-                "city": result.get("city", ""),
-                "services": result.get("services", []),
-                "doctors": result.get("doctors", []),
-                "price_hints": result.get("price_hints", []),
-                "inn": result.get("inn", ""),
-                "revenue_year": result.get("revenue_year"),
-                "profit_year": result.get("profit_year"),
-                "financial_year": result.get("financial_year"),
-                "seo_health": seo_health,
-                "seo_issues": result.get("seo_issues", []),
-                "has_mobile_viewport": result.get("has_mobile_viewport", False),
-                "has_ssl": result.get("has_ssl", False),
-                "web_speed": speed_desc,
-                "rating": result.get("rating"),
-                "reviews_count": result.get("reviews_count", 0),
-                "review_praise": result.get("review_praise", []),
-                "review_complaints": result.get("review_complaints", []),
-                "last_post_date": result.get("last_post_date"),
-                "last_post_platform": result.get("last_post_platform"),
-                "social_links": result.get("social_links", {}),
-                "nearby_competitors": result.get("nearby_competitors", []),
-                "errors": result.get("errors", []),
-            }
-
-            return json.dumps(summary, ensure_ascii=False, indent=2)
-
-    except Exception as e:
-        logger.error("_force_prescan failed for %s: %s", url, e)
-        return None
+    # Try bare domain: example.ru, clinic-name.com, site.рф
+    bare_pattern = (
+        r'(?:^|\s)([a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?\.'
+        r'(?:ru|com|net|org|рф|su|io|pro|dev|digital|agency|'
+        r'club|online|site|tech|med|health|clinic|center|care|'
+        r'msk|spb|rf|info|biz))(?:\s|$|[,.!?;:")]|$)'
+    )
+    match = re.search(bare_pattern, message)
+    if match:
+        return match.group(1)
+    return None
 
 
 def _apply_markdown_formatting(text: str) -> str:
@@ -594,60 +524,10 @@ def run_agent_sync(
     with lock:
         # Pitfall 8: Reuse cached agent + conversation history
         agent, _, history = _agent_cache.get(sid, (None, 0, []))
-        _p5_restricted = False
         if agent is None:
             agent = _create_agent(session_id, mode)
             if not history:
                 history = []
-
-            # P5 FIX: DeepSeek sometimes ignores the prompt rule «ТОЛЬКО run_prescan»
-            # on first PRESALE message. We enforce it programmatically: call the
-            # prescan API directly, inject the result as a completed tool_call into
-            # conversation history, AND restrict the agent to read-only tools
-            # (hermes-debug only) so it CANNOT call find_competitors on turn 1.
-            if mode == "PRESALE":
-                url = _extract_url_from_message(message)
-                if url:
-                    logger.info("P5-FIX: Forcing prescan for first PRESALE message: %s", url)
-                    prescan_json = _force_prescan(url)
-                    if prescan_json:
-                        force_tc_id = "force_prescan_1"
-                        history = [
-                            {"role": "user", "content": message},
-                            {
-                                "role": "assistant",
-                                "content": None,
-                                "tool_calls": [
-                                    {
-                                        "id": force_tc_id,
-                                        "type": "function",
-                                        "function": {
-                                            "name": "run_prescan",
-                                            "arguments": json.dumps({"url": url}),
-                                        },
-                                    }
-                                ],
-                            },
-                            {
-                                "role": "tool",
-                                "tool_call_id": force_tc_id,
-                                "content": prescan_json,
-                            },
-                        ]
-                        message = (
-                            f"Ты только что завершил run_prescan для {url}. "
-                            f"Теперь покажи клиенту живой разбор того что ты узнал: "
-                            f"специализация, город, врачи, SEO, отзывы, соцсети, скорость сайта. "
-                            f"Расскажи ИСТОРИЮ про его бизнес — не список цифр."
-                        )
-                        # P5 v2: Create agent with ONLY hermes-debug (read-only tools).
-                        # find_competitors is in aim-operations → physically inaccessible.
-                        # LLM can ONLY narrate prescan results.
-                        agent = _create_agent(session_id, mode, enabled_toolsets=["hermes-debug"])
-                        _p5_restricted = True
-                        logger.info("P5-FIX: Prescan injected, agent restricted to hermes-debug (no find_competitors)")
-                    else:
-                        logger.warning("P5-FIX: Prescan failed, falling through to normal flow")
 
             logger.info(f"Agent created (cached): session={agent.session_id}")
         else:
@@ -701,14 +581,8 @@ def run_agent_sync(
         history.append({"role": "assistant", "content": reply_text})
 
         # Cache under REAL session_id so frontend can resume across requests.
-        # P5: restricted agent (hermes-debug only) — store history but NOT agent.
-        # Next turn creates fresh agent with full toolsets (aim-operations).
         cache_key = agent.session_id
-        if _p5_restricted:
-            _agent_cache[cache_key] = (None, time.time(), history)
-            logger.info("P5-FIX: Cached history only (next turn gets full tools)")
-        else:
-            _agent_cache[cache_key] = (agent, time.time(), history)
+        _agent_cache[cache_key] = (agent, time.time(), history)
 
         # Expire old agents (lazy cleanup)
         _expire_stale_agents()

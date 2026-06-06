@@ -6,13 +6,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from AIM.src.aim.subagents.analytics.conversion_tracker import (
+from src.aim.subagents.analytics.conversion_tracker import (
     ConversionTracker,
     Goal,
     Attribution,
     RevenueMetrics,
 )
-from AIM.src.aim.subagents.api_clients.ga4_client import (
+from src.aim.subagents.api_clients.ga4_client import (
     GA4Credentials,
     GA4ConversionData,
 )
@@ -40,7 +40,7 @@ def ga4_credentials():
 @pytest.fixture
 def mock_ga4_client():
     """Mock GA4 client."""
-    with patch("AIM.src.aim.subagents.analytics.conversion_tracker.GA4Client") as mock:
+    with patch("src.aim.subagents.analytics.conversion_tracker.GA4Client") as mock:
         yield mock
 
 

@@ -13,12 +13,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models.document import Document
-from aim.schemas.document import ExtractedData, ValidationResult
-from aim.services.documents.ai_extractor import AIExtractor
-from aim.services.documents.ocr_service import OCRService
-from aim.services.documents.processor import DocumentProcessor
-from aim.services.documents.validator import DocumentValidator
+from src.aim.models.document import Document
+from src.aim.schemas.document import ExtractedData, ValidationResult
+from src.aim.services.documents.ai_extractor import AIExtractor
+from src.aim.services.documents.ocr_service import OCRService
+from src.aim.services.documents.processor import DocumentProcessor
+from src.aim.services.documents.validator import DocumentValidator
 
 
 # Fixtures
@@ -80,7 +80,7 @@ def mock_document() -> Document:
 @pytest.mark.asyncio
 async def test_ocr_service_initialization():
     """Test OCR service initialization."""
-    with patch("aim.services.documents.ocr_service.pytesseract") as mock_tess:
+    with patch("src.aim.services.documents.ocr_service.pytesseract") as mock_tess:
         mock_tess.get_tesseract_version.return_value = "5.0.0"
         mock_tess.get_languages.return_value = ["eng", "rus"]
 
@@ -101,7 +101,7 @@ async def test_ocr_extract_text_from_image(tmp_path, sample_ocr_text):
     img = Image.new("RGB", (800, 600), color="white")
     img.save(image_path)
 
-    with patch("aim.services.documents.ocr_service.pytesseract") as mock_tess:
+    with patch("src.aim.services.documents.ocr_service.pytesseract") as mock_tess:
         mock_tess.get_tesseract_version.return_value = "5.0.0"
         mock_tess.get_languages.return_value = ["eng", "rus"]
         mock_tess.image_to_string.return_value = sample_ocr_text
@@ -120,8 +120,8 @@ async def test_ocr_extract_text_from_pdf(tmp_path, sample_ocr_text):
     pdf_path = tmp_path / "test.pdf"
 
     # Mock PDF conversion
-    with patch("aim.services.documents.ocr_service.convert_from_path") as mock_convert:
-        with patch("aim.services.documents.ocr_service.pytesseract") as mock_tess:
+    with patch("src.aim.services.documents.ocr_service.convert_from_path") as mock_convert:
+        with patch("src.aim.services.documents.ocr_service.pytesseract") as mock_tess:
             from PIL import Image
 
             mock_tess.get_tesseract_version.return_value = "5.0.0"
@@ -146,7 +146,7 @@ async def test_ocr_extract_text_from_pdf(tmp_path, sample_ocr_text):
 @pytest.mark.asyncio
 async def test_ocr_file_not_found():
     """Test OCR with non-existent file."""
-    with patch("aim.services.documents.ocr_service.pytesseract") as mock_tess:
+    with patch("src.aim.services.documents.ocr_service.pytesseract") as mock_tess:
         mock_tess.get_tesseract_version.return_value = "5.0.0"
         mock_tess.get_languages.return_value = ["eng", "rus"]
 

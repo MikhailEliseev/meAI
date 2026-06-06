@@ -17,7 +17,7 @@ class TestStructuredNull:
 
     async def test_ci_scout_returns_null_on_missing_serpapi_key(self, unset_api_keys):
         """ci_scout._discover_competitors returns structured null when SERPAPI_API_KEY absent."""
-        from aim.subagents.competitive_intel.agents.ci_scout import CIScoutAgent
+        from src.aim.subagents.competitive_intel.agents.ci_scout import CIScoutAgent
 
         # Need to mock the parent class init (Agent) to avoid database dependency
         with patch.object(CIScoutAgent, '__init__', lambda self, **kw: None):
@@ -37,7 +37,7 @@ class TestStructuredNull:
 
     async def test_ci_backlink_returns_null_on_missing_ahrefs_key(self, unset_api_keys):
         """ci_backlink returns structured null when AHREFS_API_KEY absent."""
-        from aim.subagents.competitive_intel.agents.ci_backlink import CIBacklinkAgent
+        from src.aim.subagents.competitive_intel.agents.ci_backlink import CIBacklinkAgent
 
         with patch.object(CIBacklinkAgent, '__init__', lambda self, **kw: None):
             agent = CIBacklinkAgent.__new__(CIBacklinkAgent)
@@ -53,7 +53,7 @@ class TestStructuredNull:
 
     async def test_ci_reputation_returns_null_on_missing_serpapi_key(self, unset_api_keys):
         """ci_reputation._collect_from_source returns structured null when SERPAPI_KEY absent."""
-        from aim.subagents.competitive_intel.agents.ci_reputation import CIReputationAgent
+        from src.aim.subagents.competitive_intel.agents.ci_reputation import CIReputationAgent
 
         with patch.object(CIReputationAgent, '__init__', lambda self, **kw: None):
             agent = CIReputationAgent.__new__(CIReputationAgent)
@@ -76,7 +76,7 @@ class TestStructuredNull:
 
     async def test_ci_vacancies_returns_structured_data_not_random(self, unset_api_keys):
         """ci_vacancies uses public hh.ru API — returns real data, never random."""
-        from aim.subagents.competitive_intel.agents.ci_vacancies import CIVacanciesAgent
+        from src.aim.subagents.competitive_intel.agents.ci_vacancies import CIVacanciesAgent
 
         with patch.object(CIVacanciesAgent, '__init__', lambda self, **kw: None):
             agent = CIVacanciesAgent.__new__(CIVacanciesAgent)

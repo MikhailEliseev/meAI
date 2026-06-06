@@ -13,8 +13,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.database import get_db
-from aim.schemas.onboarding import (
+from src.aim.database import get_db
+from src.aim.schemas.onboarding import (
     OnboardingStartRequest,
     OnboardingStartResponse,
     OnboardingStatusResponse,
@@ -28,13 +28,13 @@ from aim.schemas.onboarding import (
     OnboardingProgressResponse,
     OnboardingNextStep,
 )
-from aim.services.documents.ai_extractor import AIExtractor
-from aim.services.documents.ocr_service import OCRService
-from aim.services.documents.processor import DocumentProcessor
-from aim.services.documents.validator import DocumentValidator
-from aim.services.onboarding.onboarding_service import OnboardingService
-from aim.services.payment.yookassa_client import YooKassaClient
-from aim.services.payment.payment_service import PaymentService
+from src.aim.services.documents.ai_extractor import AIExtractor
+from src.aim.services.documents.ocr_service import OCRService
+from src.aim.services.documents.processor import DocumentProcessor
+from src.aim.services.documents.validator import DocumentValidator
+from src.aim.services.onboarding.onboarding_service import OnboardingService
+from src.aim.services.payment.yookassa_client import YooKassaClient
+from src.aim.services.payment.payment_service import PaymentService
 
 logger = logging.getLogger(__name__)
 

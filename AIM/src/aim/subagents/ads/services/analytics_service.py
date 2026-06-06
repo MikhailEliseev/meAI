@@ -8,8 +8,8 @@ from typing import Any, Dict, List, Optional
 import structlog
 from datetime import datetime, timedelta
 
-from aim.subagents.ads.api_clients.google_ads_client import GoogleAdsClient
-from aim.subagents.ads.config.settings import AdsSettings
+from src.aim.subagents.ads.api_clients.google_ads_client import GoogleAdsClient
+from src.aim.subagents.ads.config.settings import AdsSettings
 
 logger = structlog.get_logger(__name__)
 

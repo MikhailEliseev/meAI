@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 from datetime import datetime, timezone
 
 from meai.agents.base_agent import Task
-from AIM.src.aim.subagents.analytics_agent import AnalyticsAgent
+from src.aim.subagents.analytics_agent import AnalyticsAgent
 from AIM.tests.fixtures.subagent_data import GA4_METRICS, YANDEX_METRICS
 
 

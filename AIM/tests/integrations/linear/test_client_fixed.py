@@ -12,8 +12,8 @@ from pathlib import Path
 aim_src = Path(__file__).parent.parent.parent.parent / "src"
 sys.path.insert(0, str(aim_src))
 
-from aim.integrations.linear.client import LinearClient
-from aim.integrations.linear.schemas import LinearIssue, LinearTeam, LinearWorkflowState, LinearUser, LinearLabel
+from src.aim.integrations.linear.client import LinearClient
+from src.aim.integrations.linear.schemas import LinearIssue, LinearTeam, LinearWorkflowState, LinearUser, LinearLabel
 
 
 @pytest.fixture

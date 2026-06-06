@@ -9,9 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
 import structlog
 
-from aim.database import get_db
-from aim.models.lead import Lead
-from aim.models.fz152_audit import FZ152AuditLog
+from src.aim.database import get_db
+from src.aim.models.lead import Lead
+from src.aim.models.fz152_audit import FZ152AuditLog
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/api/gdpr", tags=["gdpr"])

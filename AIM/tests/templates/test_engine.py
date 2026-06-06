@@ -8,7 +8,7 @@ import sys
 aim_src = Path(__file__).parent.parent.parent / "src"
 sys.path.insert(0, str(aim_src))
 
-from aim.templates.engine import (
+from src.aim.templates.engine import (
     TemplateEngine,
     TemplateData,
     ProjectTemplate,

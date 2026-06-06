@@ -8,7 +8,7 @@ import httpx
 import pytest
 from pybreaker import CircuitBreakerError
 
-from AIM.src.aim.subagents.api_clients.base import (
+from src.aim.subagents.api_clients.base import (
     APIClientBase,
     TokenBucketRateLimiter,
 )
@@ -154,7 +154,7 @@ async def test_retry_with_exponential_backoff(mock_client):
 @pytest.mark.asyncio
 async def test_metrics_tracked(mock_client):
     """Test Prometheus metrics are tracked"""
-    from AIM.src.aim.subagents.api_clients.base import api_calls_total
+    from src.aim.subagents.api_clients.base import api_calls_total
 
     with patch.object(mock_client.client, "request") as mock_request:
         mock_response = AsyncMock(

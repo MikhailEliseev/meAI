@@ -7,7 +7,7 @@ Tests e-signature integration (STUB implementation).
 import pytest
 from datetime import datetime
 
-from aim.services.contracts.kontour_client import (
+from src.aim.services.contracts.kontour_client import (
     KontourClient,
     KontourWebhookHandler,
     DocumentStatus,

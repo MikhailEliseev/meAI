@@ -5,14 +5,14 @@ Tests for LearningScheduler.
 import pytest
 from datetime import datetime
 
-from AIM.src.aim.teacher.scheduling.learning_scheduler import (
+from src.aim.teacher.scheduling.learning_scheduler import (
     LearningScheduler,
     LearningStrategy,
     ResearchDepth,
     LearningTask,
     LearningPlan,
 )
-from AIM.src.aim.teacher.scheduling.system_auditor import (
+from src.aim.teacher.scheduling.system_auditor import (
     SystemAuditReport,
     SubagentHealth,
     SubagentStatus,

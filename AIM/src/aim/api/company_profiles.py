@@ -12,9 +12,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.database import get_db
-from aim.models.company_profile import CompanyProfileModel
-from aim.schemas.company_profile import (
+from src.aim.database import get_db
+from src.aim.models.company_profile import CompanyProfileModel
+from src.aim.schemas.company_profile import (
     CompanyProfileCreate,
     CompanyProfileFound,
     CompanyProfileNotFound,

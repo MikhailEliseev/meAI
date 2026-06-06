@@ -12,7 +12,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models import EmailEvent, EmailWorkflow, ScheduledEmail
+from src.aim.models import EmailEvent, EmailWorkflow, ScheduledEmail
 
 
 class WorkflowStateManager:

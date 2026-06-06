@@ -4,13 +4,13 @@ Tests for Architecture Planner.
 
 import pytest
 
-from AIM.src.aim.subagents.gap_detection.architecture_planner import (
+from src.aim.subagents.gap_detection.architecture_planner import (
     ArchitecturePlanner,
     ContentPage,
     PageType,
     PlanningConfig,
 )
-from AIM.src.aim.subagents.schemas.content_gap import (
+from src.aim.subagents.schemas.content_gap import (
     ContentCluster,
     ContentGap,
     GapSeverity,

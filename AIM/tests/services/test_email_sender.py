@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch, MagicMock
 aim_src = Path(__file__).parent.parent.parent / "src"
 sys.path.insert(0, str(aim_src))
 
-from aim.services.email_sender import EmailSender, EmailConfig
+from src.aim.services.email_sender import EmailSender, EmailConfig
 
 
 class TestEmailSender:

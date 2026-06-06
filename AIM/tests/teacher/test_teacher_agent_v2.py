@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from AIM.src.aim.teacher.teacher_agent import TeacherAgent
-from AIM.src.aim.teacher.skills.skill_selector import Skill
+from src.aim.teacher.teacher_agent import TeacherAgent
+from src.aim.teacher.skills.skill_selector import Skill
 
 
 @pytest.fixture

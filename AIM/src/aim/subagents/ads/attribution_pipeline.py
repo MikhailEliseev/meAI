@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from meai.events.event_bus import EventBus, Event, EventPriority
-from aim.models.campaign_models import Campaign, CampaignAttribution
+from src.aim.models.campaign_models import Campaign, CampaignAttribution
 
 
 class AttributionPipeline:

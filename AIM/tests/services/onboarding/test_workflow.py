@@ -6,7 +6,7 @@ import pytest
 from datetime import datetime, timedelta
 from unittest.mock import Mock, AsyncMock, patch
 
-from aim.services.onboarding.workflow import (
+from src.aim.services.onboarding.workflow import (
     OnboardingWorkflow,
     OnboardingState,
     OnboardingEvent,

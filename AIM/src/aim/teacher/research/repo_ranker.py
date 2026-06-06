@@ -14,7 +14,7 @@ from typing import Any
 
 import structlog
 
-from aim.teacher.research.github_searcher import GitHubRepo
+from src.aim.teacher.research.github_searcher import GitHubRepo
 
 logger = structlog.get_logger()
 

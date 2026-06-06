@@ -12,8 +12,8 @@ Part of: Phase 10 - AI Enhancement (Task 2.3)
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from AIM.src.aim.magisters.content_magister_ai import ContentMagisterAI
-from AIM.src.aim.ai.llm.schemas import LLMResponse
+from src.aim.magisters.content_magister_ai import ContentMagisterAI
+from src.aim.ai.llm.schemas import LLMResponse
 
 
 class TestContentMagisterAI:

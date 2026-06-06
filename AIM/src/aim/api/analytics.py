@@ -13,9 +13,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSock
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.database import get_db
-from aim.middleware.cache import cache
-from aim.schemas.analytics import (
+from src.aim.database import get_db
+from src.aim.middleware.cache import cache
+from src.aim.schemas.analytics import (
     AnalyticsExportRequest,
     AnalyticsExportResponse,
     ConversionFunnel,
@@ -23,8 +23,8 @@ from aim.schemas.analytics import (
     LeadMetrics,
     RealTimeStats,
 )
-from aim.services.analytics import AnalyticsService
-from aim.services.analytics.report_generator import ReportGenerator
+from src.aim.services.analytics import AnalyticsService
+from src.aim.services.analytics.report_generator import ReportGenerator
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 

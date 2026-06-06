@@ -14,9 +14,9 @@ from pathlib import Path
 
 import pytest
 
-from AIM.src.aim.teacher.skills.skill_selector import Skill
-from AIM.src.aim.teacher.adoption.full_adopter import AdoptionResult
-from AIM.src.aim.teacher.adoption_report import (
+from src.aim.teacher.skills.skill_selector import Skill
+from src.aim.teacher.adoption.full_adopter import AdoptionResult
+from src.aim.teacher.adoption_report import (
     AdoptionReportGenerator,
     AdoptionReport,
 )

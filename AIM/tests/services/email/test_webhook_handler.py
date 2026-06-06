@@ -9,15 +9,15 @@ from uuid import uuid4
 
 from sqlalchemy import select
 
-from aim.models import EmailEvent, EmailWorkflow, Lead, ScheduledEmail
-from aim.services.email.webhook_handler import WebhookHandler
+from src.aim.models import EmailEvent, EmailWorkflow, Lead, ScheduledEmail
+from src.aim.services.email.webhook_handler import WebhookHandler
 
 
 @pytest.fixture
 async def lead(db_session):
     """Create test lead."""
     from datetime import datetime, timezone
-    from aim.utils.encryption import FieldEncryption
+    from src.aim.utils.encryption import FieldEncryption
 
     email = "ivan@example.com"
     encryptor = FieldEncryption()

@@ -3,7 +3,7 @@
 RED phase: tests will fail until ServiceCategorizer is implemented.
 """
 
-from service_categorizer import ServiceCategorizer, ServiceItem, CategoryType
+from .service_categorizer import ServiceCategorizer, ServiceItem
 
 
 def test_seo_poor_no_ads_no_social():

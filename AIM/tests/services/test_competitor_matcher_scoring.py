@@ -1,7 +1,7 @@
 """Tests for competitor_matcher scoring (S1, S2, M1, S4)."""
 import inspect
 import pytest
-from aim.services.competitor_matcher import (
+from src.aim.services.competitor_matcher import (
     W_REVENUE, W_LOCATION, W_SERVICES, W_SPECIALIZATION,
     W_DATA, W_POPULARITY, W_VISIBILITY,
     _score_revenue_match,

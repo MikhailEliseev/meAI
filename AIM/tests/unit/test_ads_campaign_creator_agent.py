@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 from datetime import datetime, timezone
 
 from meai.agents.base_agent import Task, TaskStatus
-from AIM.src.aim.subagents.ads_campaign_creator_agent import AdsCampaignCreatorAgent
+from src.aim.subagents.ads_campaign_creator_agent import AdsCampaignCreatorAgent
 from tests.fixtures.subagent_data import YANDEX_CAMPAIGN
 
 

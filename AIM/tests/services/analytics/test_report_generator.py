@@ -10,14 +10,14 @@ from pathlib import Path
 
 import pytest
 
-from aim.schemas.analytics import (
+from src.aim.schemas.analytics import (
     ConversionFunnel,
     EmailMetrics,
     LeadMetrics,
     RealTimeStats,
     TimeSeriesPoint,
 )
-from aim.services.analytics.report_generator import ReportGenerator
+from src.aim.services.analytics.report_generator import ReportGenerator
 
 
 @pytest.fixture

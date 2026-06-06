@@ -1,6 +1,6 @@
 """Tests for ФЗ-38 medical advertising compliance."""
 import pytest
-from aim.subagents.ads.ad_copy_generator import AdCopyGenerator, ComplianceCheck
+from src.aim.subagents.ads.ad_copy_generator import AdCopyGenerator, ComplianceCheck
 
 
 DISCLAIMER = "ИМЕЮТСЯ ПРОТИВОПОКАЗАНИЯ, НЕОБХОДИМА КОНСУЛЬТАЦИЯ СПЕЦИАЛИСТА"

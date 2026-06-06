@@ -10,9 +10,9 @@ import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
 from datetime import datetime, timezone
 
-from AIM.src.aim.magisters.content_magister import ContentMagister
-from AIM.src.aim.subagents.content_writer_agent import ContentWriterAgent
-from AIM.src.aim.subagents.content_gap_analysis_agent import ContentGapAnalysisAgent
+from src.aim.magisters.content_magister import ContentMagister
+from src.aim.subagents.content_writer_agent import ContentWriterAgent
+from src.aim.subagents.content_gap_analysis_agent import ContentGapAnalysisAgent
 
 
 @pytest.fixture

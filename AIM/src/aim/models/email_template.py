@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, Integer, String, Text, JSON
 
-from aim.storage.models import Base
+from src.aim.storage.models import Base
 
 
 class EmailTemplate(Base):

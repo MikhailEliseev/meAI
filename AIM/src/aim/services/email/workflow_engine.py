@@ -12,8 +12,8 @@ from uuid import UUID, uuid4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models import EmailWorkflow, Lead, ScheduledEmail
-from aim.services.email.template_renderer import TemplateRenderer
+from src.aim.models import EmailWorkflow, Lead, ScheduledEmail
+from src.aim.services.email.template_renderer import TemplateRenderer
 
 
 class WorkflowEngine:

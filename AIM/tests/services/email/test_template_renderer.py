@@ -6,7 +6,7 @@ Part of: Phase 11 Sprint 2 - Task 2.4
 import pytest
 from pathlib import Path
 
-from aim.services.email.template_renderer import TemplateRenderer
+from src.aim.services.email.template_renderer import TemplateRenderer
 
 
 @pytest.fixture

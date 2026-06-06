@@ -14,9 +14,9 @@ from io import BytesIO
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models.document import Document
-from aim.models.lead import Lead
-from aim.schemas.document import (
+from src.aim.models.document import Document
+from src.aim.models.lead import Lead
+from src.aim.schemas.document import (
     DocumentUploadResponse,
     DocumentStatusResponse,
     ExtractedData,
@@ -78,7 +78,7 @@ def sample_pdf_file():
 @pytest.mark.asyncio
 async def test_upload_document_success(mock_lead, sample_pdf_file, tmp_path):
     """Test successful document upload."""
-    from aim.api.documents import upload_document
+    from src.aim.api.documents import upload_document
 
     # Mock database
     mock_db = AsyncMock(spec=AsyncSession)
@@ -102,7 +102,7 @@ async def test_upload_document_success(mock_lead, sample_pdf_file, tmp_path):
     mock_processor.process_document.return_value = processed_doc
 
     # Mock settings
-    with patch("aim.api.documents.get_settings") as mock_settings:
+    with patch("src.aim.api.documents.get_settings") as mock_settings:
         mock_settings.return_value.upload_dir = str(tmp_path)
 
         # Upload document
@@ -123,7 +123,7 @@ async def test_upload_document_success(mock_lead, sample_pdf_file, tmp_path):
 @pytest.mark.asyncio
 async def test_upload_document_invalid_type(mock_lead, sample_pdf_file):
     """Test upload with invalid document type."""
-    from aim.api.documents import upload_document
+    from src.aim.api.documents import upload_document
     from fastapi import HTTPException
 
     mock_db = AsyncMock(spec=AsyncSession)
@@ -145,7 +145,7 @@ async def test_upload_document_invalid_type(mock_lead, sample_pdf_file):
 @pytest.mark.asyncio
 async def test_upload_document_lead_not_found(sample_pdf_file):
     """Test upload with non-existent lead."""
-    from aim.api.documents import upload_document
+    from src.aim.api.documents import upload_document
     from fastapi import HTTPException
 
     mock_db = AsyncMock(spec=AsyncSession)
@@ -168,7 +168,7 @@ async def test_upload_document_lead_not_found(sample_pdf_file):
 @pytest.mark.asyncio
 async def test_upload_document_invalid_file_type(mock_lead):
     """Test upload with invalid file extension."""
-    from aim.api.documents import upload_document
+    from src.aim.api.documents import upload_document
     from fastapi import HTTPException
 
     # Create file with invalid extension
@@ -198,7 +198,7 @@ async def test_upload_document_invalid_file_type(mock_lead):
 @pytest.mark.asyncio
 async def test_upload_document_file_too_large(mock_lead):
     """Test upload with file exceeding size limit."""
-    from aim.api.documents import upload_document
+    from src.aim.api.documents import upload_document
     from fastapi import HTTPException
 
     # Create large file (> 10 MB)
@@ -231,7 +231,7 @@ async def test_upload_document_file_too_large(mock_lead):
 @pytest.mark.asyncio
 async def test_get_document_status_success(mock_document):
     """Test successful document status retrieval."""
-    from aim.api.documents import get_document_status
+    from src.aim.api.documents import get_document_status
 
     mock_db = AsyncMock(spec=AsyncSession)
     mock_db.execute.return_value.scalar_one_or_none.return_value = mock_document
@@ -251,7 +251,7 @@ async def test_get_document_status_success(mock_document):
 @pytest.mark.asyncio
 async def test_get_document_status_not_found():
     """Test status retrieval for non-existent document."""
-    from aim.api.documents import get_document_status
+    from src.aim.api.documents import get_document_status
     from fastapi import HTTPException
 
     mock_db = AsyncMock(spec=AsyncSession)
@@ -272,8 +272,8 @@ async def test_get_document_status_not_found():
 @pytest.mark.asyncio
 async def test_list_lead_documents_success(mock_lead, mock_document):
     """Test successful document listing."""
-    from aim.api.documents import list_lead_documents
-    from aim.schemas.document import DocumentListResponse
+    from src.aim.api.documents import list_lead_documents
+    from src.aim.schemas.document import DocumentListResponse
 
     mock_db = AsyncMock(spec=AsyncSession)
 
@@ -301,7 +301,7 @@ async def test_list_lead_documents_success(mock_lead, mock_document):
 @pytest.mark.asyncio
 async def test_list_lead_documents_with_filter(mock_lead, mock_document):
     """Test document listing with type filter."""
-    from aim.api.documents import list_lead_documents
+    from src.aim.api.documents import list_lead_documents
 
     mock_db = AsyncMock(spec=AsyncSession)
 
@@ -325,7 +325,7 @@ async def test_list_lead_documents_with_filter(mock_lead, mock_document):
 @pytest.mark.asyncio
 async def test_list_lead_documents_lead_not_found():
     """Test listing for non-existent lead."""
-    from aim.api.documents import list_lead_documents
+    from src.aim.api.documents import list_lead_documents
     from fastapi import HTTPException
 
     mock_db = AsyncMock(spec=AsyncSession)
@@ -346,7 +346,7 @@ async def test_list_lead_documents_lead_not_found():
 @pytest.mark.asyncio
 async def test_reprocess_document_success(mock_document):
     """Test successful document reprocessing."""
-    from aim.api.documents import reprocess_document
+    from src.aim.api.documents import reprocess_document
 
     mock_db = AsyncMock(spec=AsyncSession)
     mock_db.execute.return_value.scalar_one_or_none.return_value = mock_document
@@ -371,7 +371,7 @@ async def test_reprocess_document_success(mock_document):
 @pytest.mark.asyncio
 async def test_reprocess_document_not_found():
     """Test reprocessing non-existent document."""
-    from aim.api.documents import reprocess_document
+    from src.aim.api.documents import reprocess_document
     from fastapi import HTTPException
 
     mock_db = AsyncMock(spec=AsyncSession)
@@ -392,7 +392,7 @@ async def test_reprocess_document_not_found():
 @pytest.mark.asyncio
 async def test_reprocess_document_failure(mock_document):
     """Test reprocessing failure."""
-    from aim.api.documents import reprocess_document
+    from src.aim.api.documents import reprocess_document
     from fastapi import HTTPException
 
     mock_db = AsyncMock(spec=AsyncSession)

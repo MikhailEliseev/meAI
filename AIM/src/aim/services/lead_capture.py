@@ -27,18 +27,18 @@ from fastapi import HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models.lead import Lead as LeadModel
-from aim.middleware.cache import cache
-from aim.metrics import leads_captured_total, leads_scored_total, rate_limit_hits_total
-from aim.schemas.lead import (
+from src.aim.models.lead import Lead as LeadModel
+from src.aim.middleware.cache import cache
+from src.aim.metrics import leads_captured_total, leads_scored_total, rate_limit_hits_total
+from src.aim.schemas.lead import (
     ChatLeadRequest,
     LeadCaptureRequest,
     LeadCaptureResponse,
     LeadRecord,
     LeadSource,
 )
-from aim.services.pre_sale_folder import PreSaleFolder
-from aim.utils.encryption import get_encryptor
+from src.aim.services.pre_sale_folder import PreSaleFolder
+from src.aim.utils.encryption import get_encryptor
 
 
 class RateLimitExceeded(Exception):
@@ -430,7 +430,7 @@ class LeadCaptureService:
         logger = logging.getLogger("aim.fz152")
 
         try:
-            from aim.models.fz152_audit import FZ152AuditLog
+            from src.aim.models.fz152_audit import FZ152AuditLog
 
             audit_entry = FZ152AuditLog(
                 lead_id=lead_id,
@@ -474,7 +474,7 @@ class LeadCaptureService:
                 return
 
             # 2. Score lead (Task 2.2)
-            from aim.ai.lead_scoring.scoring_service import LeadScoringService
+            from src.aim.ai.lead_scoring.scoring_service import LeadScoringService
 
             scoring_service = LeadScoringService(model_path=None)  # Rule-based for MVP
             score_result = await scoring_service.score_lead(
@@ -500,7 +500,7 @@ class LeadCaptureService:
             )
 
             # 4. Create email workflow and schedule emails
-            from aim.services.email.workflow_engine import WorkflowEngine
+            from src.aim.services.email.workflow_engine import WorkflowEngine
 
             workflow_engine = WorkflowEngine(self.db)
             await workflow_engine.trigger_workflow(

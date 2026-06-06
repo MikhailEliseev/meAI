@@ -5,7 +5,7 @@ Test CI URL Validator with correct URL for 5th competitor
 import asyncio
 from datetime import datetime
 
-from aim.subagents.competitive_intel.agents.ci_url_validator import CIURLValidator
+from src.aim.subagents.competitive_intel.agents.ci_url_validator import CIURLValidator
 from meai.agents.base_agent import Task
 
 

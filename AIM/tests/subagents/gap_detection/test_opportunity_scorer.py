@@ -2,8 +2,8 @@
 
 import pytest
 
-from AIM.src.aim.subagents.gap_detection.opportunity_scorer import OpportunityScorer
-from AIM.src.aim.subagents.schemas.content_gap import (
+from src.aim.subagents.gap_detection.opportunity_scorer import OpportunityScorer
+from src.aim.subagents.schemas.content_gap import (
     ContentGap,
     GapSeverity,
     GapType,

@@ -11,10 +11,10 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models.email_workflow import EmailWorkflow
-from aim.models.scheduled_email import ScheduledEmail
-from aim.services.email.workflow_engine import WorkflowEngine
-from aim.services.email.email_sender import EmailSender
+from src.aim.models.email_workflow import EmailWorkflow
+from src.aim.models.scheduled_email import ScheduledEmail
+from src.aim.services.email.workflow_engine import WorkflowEngine
+from src.aim.services.email.email_sender import EmailSender
 
 
 class WorkflowService:

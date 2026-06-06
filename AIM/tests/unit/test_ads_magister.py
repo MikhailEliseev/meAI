@@ -18,7 +18,7 @@ async def test_ads_magister_identify_subagents_success():
     Expected: Correct subagent IDs returned for each action
     """
     # Arrange: Create real AdsMagister (not using fixture for this test)
-    from AIM.src.aim.magisters.ads_magister import AdsMagister
+    from src.aim.magisters.ads_magister import AdsMagister
     magister = AdsMagister()
 
     # Act & Assert: Test action routing
@@ -68,7 +68,7 @@ async def test_ads_magister_aggregate_results_success():
     Expected: Total budget calculated, CTR/conversion_rate computed, insights generated
     """
     # Arrange: Create real AdsMagister
-    from AIM.src.aim.magisters.ads_magister import AdsMagister
+    from src.aim.magisters.ads_magister import AdsMagister
     magister = AdsMagister()
 
     subagent_results = [
@@ -136,7 +136,7 @@ async def test_ads_magister_aggregate_results_partial_failure():
     Expected: Aggregation continues with available data, no crashes
     """
     # Arrange: Create real AdsMagister
-    from AIM.src.aim.magisters.ads_magister import AdsMagister
+    from src.aim.magisters.ads_magister import AdsMagister
     magister = AdsMagister()
 
     subagent_results = [
@@ -185,7 +185,7 @@ async def test_ads_magister_aggregate_results_full_failure():
     Expected: Returns empty aggregation with default values
     """
     # Arrange: Create real AdsMagister
-    from AIM.src.aim.magisters.ads_magister import AdsMagister
+    from src.aim.magisters.ads_magister import AdsMagister
     magister = AdsMagister()
 
     subagent_results = []

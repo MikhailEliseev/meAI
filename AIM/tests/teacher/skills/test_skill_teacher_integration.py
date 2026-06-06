@@ -17,7 +17,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from AIM.src.aim.teacher.skills.skill_teacher import SkillTeacher
+from src.aim.teacher.skills.skill_teacher import SkillTeacher
 
 
 @pytest.mark.asyncio
@@ -76,7 +76,7 @@ class CircuitBreaker:
         return_value={"https://github.com/test/repo": mock_repo_path},
     ):
         # Mock skill extraction (Step 2)
-        from AIM.src.aim.teacher.skills.skill_selector import Skill
+        from src.aim.teacher.skills.skill_selector import Skill
 
         mock_skill = Skill(
             name="circuit_breaker",
@@ -91,7 +91,7 @@ class CircuitBreaker:
             teacher.selector, "extract_skills", return_value=[mock_skill]
         ):
             # Mock comparison (Step 3)
-            from AIM.src.aim.teacher.skills.skill_comparator import ComparisonResult
+            from src.aim.teacher.skills.skill_comparator import ComparisonResult
 
             mock_comparison = ComparisonResult(
                 ranked_skills=[mock_skill],
@@ -103,7 +103,7 @@ class CircuitBreaker:
                 teacher.comparator, "compare", return_value=mock_comparison
             ):
                 # Mock extraction (Step 4)
-                from AIM.src.aim.teacher.skills.skill_extractor import (
+                from src.aim.teacher.skills.skill_extractor import (
                     ExtractedImplementation,
                 )
 
@@ -118,7 +118,7 @@ class CircuitBreaker:
                     teacher.extractor, "extract", return_value=mock_implementation
                 ):
                     # Mock application (Step 5)
-                    from AIM.src.aim.teacher.skills.skill_applier import (
+                    from src.aim.teacher.skills.skill_applier import (
                         ApplicationResult,
                     )
 

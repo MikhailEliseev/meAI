@@ -1,6 +1,6 @@
 # AIM/tests/teacher/test_subagent_inventory.py
 import pytest
-from AIM.src.aim.teacher.subagent_inventory import SubagentInventory
+from src.aim.teacher.subagent_inventory import SubagentInventory
 
 
 def test_scan_subagents():

@@ -12,7 +12,7 @@ from sqlalchemy import Column, DateTime, ForeignKey, String, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
-from aim.storage.models import Base
+from src.aim.storage.models import Base
 
 
 class EmailEvent(Base):

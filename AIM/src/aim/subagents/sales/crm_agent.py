@@ -22,18 +22,18 @@ from typing import Optional
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.database import get_db
-from aim.integrations.bitrix24.client import Bitrix24Client, create_bitrix24_client
-from aim.integrations.bitrix24.schemas import (
+from src.aim.database import get_db
+from src.aim.integrations.bitrix24.client import Bitrix24Client, create_bitrix24_client
+from src.aim.integrations.bitrix24.schemas import (
     Bitrix24Contact,
     Bitrix24Deal,
     Bitrix24Lead,
     Bitrix24Webhook,
     CrmSyncResult,
 )
-from aim.models.lead import Lead
-from aim.models.sales import SalesAgentActivity, SalesConversation
-from aim.utils.encryption import FieldEncryption
+from src.aim.models.lead import Lead
+from src.aim.models.sales import SalesAgentActivity, SalesConversation
+from src.aim.utils.encryption import FieldEncryption
 
 logger = logging.getLogger(__name__)
 

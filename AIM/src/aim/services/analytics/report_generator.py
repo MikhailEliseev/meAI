@@ -25,7 +25,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-from aim.schemas.analytics import (
+from src.aim.schemas.analytics import (
     ConversionFunnel,
     EmailMetrics,
     LeadMetrics,

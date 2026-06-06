@@ -5,7 +5,7 @@ Tests for CI Rank Tracker Agent.
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from AIM.src.aim.subagents.competitive_intel.agents.ci_rank_tracker import (
+from src.aim.subagents.competitive_intel.agents.ci_rank_tracker import (
     CIRankTrackerAgent,
     KeywordPosition,
     PositionChange,

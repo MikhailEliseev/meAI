@@ -16,7 +16,7 @@ from datetime import datetime
 from typing import Any, Dict, List
 
 from meai.agents.base_agent import Agent, Task, TaskResult
-from aim.core.agent_learning import AgentLearning
+from src.aim.core.agent_learning import AgentLearning
 
 
 class CIQAValidator(Agent):

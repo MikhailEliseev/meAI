@@ -1,7 +1,7 @@
 """Tests for VK Ads API client."""
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
-from aim.subagents.ads.vk_ads_client import VKAdsClient, VKCampaignInfo, VKAPIError
+from src.aim.subagents.ads.vk_ads_client import VKAdsClient, VKCampaignInfo, VKAPIError
 
 
 def make_mock_vk_response(data, error=None):

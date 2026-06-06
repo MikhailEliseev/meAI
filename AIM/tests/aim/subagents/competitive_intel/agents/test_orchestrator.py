@@ -16,7 +16,7 @@ class TestOrchestratorQualityScore:
 
     async def test_quality_score_high_when_all_data_real(self):
         """quality_score should be high when all agents return real data."""
-        from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+        from src.aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
 
         with patch.object(CIOrchestrator, '__init__', lambda self, **kw: None):
             orchestrator = CIOrchestrator.__new__(CIOrchestrator)
@@ -44,7 +44,7 @@ class TestOrchestratorQualityScore:
 
     async def test_quality_score_degraded_when_most_data_null(self):
         """quality_score should be low when >50% agents return structured null."""
-        from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+        from src.aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
 
         with patch.object(CIOrchestrator, '__init__', lambda self, **kw: None):
             orchestrator = CIOrchestrator.__new__(CIOrchestrator)
@@ -83,7 +83,7 @@ class TestOrchestratorQualityScore:
 
     async def test_quality_score_detects_complete_null(self):
         """quality_score should be minimal when ALL agents return structured null."""
-        from aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
+        from src.aim.subagents.competitive_intel.orchestrator.ci_orchestrator import CIOrchestrator
 
         with patch.object(CIOrchestrator, '__init__', lambda self, **kw: None):
             orchestrator = CIOrchestrator.__new__(CIOrchestrator)

@@ -7,7 +7,7 @@ Uses direct agent mocking for reliability.
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from aim.magisters.seo_magister import SEOMagister
+from src.aim.magisters.seo_magister import SEOMagister
 
 
 @pytest.fixture

@@ -7,7 +7,7 @@ Tests BERTopic clustering, topic extraction, and hierarchical structure.
 import pytest
 import numpy as np
 
-from AIM.src.aim.subagents.content_gap_analysis.clustering.topic_clusterer import (
+from src.aim.subagents.content_gap_analysis.clustering.topic_clusterer import (
     TopicClusterer,
 )
 

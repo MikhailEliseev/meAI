@@ -1,8 +1,6 @@
 """Pytest configuration for AIM tests."""
 
 import os
-import sys
-from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -10,25 +8,24 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from aim.database import Base
-from aim.main import app
+from src.aim.database import Base
+from src.aim.main import app
 
-# Add project root to Python path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+# Path is set via pyproject.toml [tool.pytest.ini_options] pythonpath = ["src"]
+# which adds AIM/src/ to sys.path, making 'from src.aim.X import Y' work everywhere.
 
 # Import all models to register them with Base.metadata
-from aim.models.lead import Lead  # noqa: F401
-from aim.models.linear_task import LinearTask  # noqa: F401
-from aim.models.email_workflow import EmailWorkflow  # noqa: F401
-from aim.models.scheduled_email import ScheduledEmail  # noqa: F401
-from aim.models.email_event import EmailEvent  # noqa: F401
-from aim.models.email_template import EmailTemplate  # noqa: F401
-from aim.models.payment import Payment  # noqa: F401
-from aim.models.document import Document  # noqa: F401
-from aim.models.onboarding import Onboarding  # noqa: F401
-from aim.models.fz152_audit import FZ152AuditLog  # noqa: F401
-from aim.models.company_profile import CompanyProfileModel  # noqa: F401
+from src.aim.models.lead import Lead  # noqa: F401
+from src.aim.models.linear_task import LinearTask  # noqa: F401
+from src.aim.models.email_workflow import EmailWorkflow  # noqa: F401
+from src.aim.models.scheduled_email import ScheduledEmail  # noqa: F401
+from src.aim.models.email_event import EmailEvent  # noqa: F401
+from src.aim.models.email_template import EmailTemplate  # noqa: F401
+from src.aim.models.payment import Payment  # noqa: F401
+from src.aim.models.document import Document  # noqa: F401
+from src.aim.models.onboarding import Onboarding  # noqa: F401
+from src.aim.models.fz152_audit import FZ152AuditLog  # noqa: F401
+from src.aim.models.company_profile import CompanyProfileModel  # noqa: F401
 
 
 @pytest.fixture(scope="session")
@@ -79,7 +76,7 @@ async def db(db_session):
 @pytest.fixture
 async def client(db, encryption_key):
     """Create async HTTP client for API testing."""
-    from aim.database import get_db
+    from src.aim.database import get_db
 
     # Override get_db dependency to use test database
     async def override_get_db():
@@ -98,7 +95,7 @@ async def client(db, encryption_key):
 @pytest.fixture(autouse=True)
 def mock_recaptcha():
     """Mock reCAPTCHA verification for all tests automatically."""
-    with patch("aim.services.lead_capture.LeadCaptureService._verify_recaptcha") as mock:
+    with patch("src.aim.services.lead_capture.LeadCaptureService._verify_recaptcha") as mock:
         mock.return_value = AsyncMock(return_value=None)
         yield mock
 
@@ -106,7 +103,7 @@ def mock_recaptcha():
 @pytest.fixture(autouse=True)
 def clear_rate_limits():
     """Clear rate limit cache between tests to prevent cross-test contamination."""
-    from aim.services.lead_capture import LeadCaptureService
+    from src.aim.services.lead_capture import LeadCaptureService
     LeadCaptureService._rate_limit_cache.clear()
     yield
     LeadCaptureService._rate_limit_cache.clear()
@@ -138,7 +135,7 @@ def mock_document_processing():
         return document
 
     with patch(
-        "aim.services.documents.processor.DocumentProcessor.process_document",
+        "src.aim.services.documents.processor.DocumentProcessor.process_document",
         mock_process_document,
     ):
         yield

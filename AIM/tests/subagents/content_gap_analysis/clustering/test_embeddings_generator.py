@@ -10,7 +10,7 @@ from pathlib import Path
 import tempfile
 import shutil
 
-from AIM.src.aim.subagents.content_gap_analysis.clustering.embeddings_generator import (
+from src.aim.subagents.content_gap_analysis.clustering.embeddings_generator import (
     EmbeddingsGenerator,
 )
 

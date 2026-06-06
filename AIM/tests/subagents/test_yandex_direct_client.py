@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import AsyncMock, patch
 from datetime import datetime
 
-from AIM.src.aim.subagents.ads.yandex_direct_client import (
+from src.aim.subagents.ads.yandex_direct_client import (
     YandexDirectAPIClient,
     CampaignInfo,
     CampaignStats,

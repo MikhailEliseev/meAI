@@ -19,19 +19,19 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
-from aim.magisters.sales_admin_base import (
+from src.aim.magisters.sales_admin_base import (
     DEFAULT_ESCALATION_RULES,
     ConversationStatus,
 )
-from aim.models.sales import (
+from src.aim.models.sales import (
     SalesAgentActivity,
     SalesConversation,
     SalesEscalation,
     SalesMessage,
 )
-from aim.services.sales.escalation_service import EscalationService
-from aim.services.sales.qualification_service import QualificationService
-from aim.subagents.sales.telegram_monitor import TelegramMonitor
+from src.aim.services.sales.escalation_service import EscalationService
+from src.aim.services.sales.qualification_service import QualificationService
+from src.aim.subagents.sales.telegram_monitor import TelegramMonitor
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ class SalesAdminMagister:
     def _db():
         """Lazy import of async_session_maker — avoids triggering engine
         creation at module import time."""
-        from aim.database import async_session_maker
+        from src.aim.database import async_session_maker
 
         return async_session_maker
 

@@ -13,7 +13,7 @@ import pytest
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from aim.services.prescan_orchestrator import PrescanOrchestrator, PrescanResult
+from src.aim.services.prescan_orchestrator import PrescanOrchestrator, PrescanResult
 
 
 class TestPrescanResult:
@@ -244,27 +244,27 @@ class TestINNValidation:
     """INN checksum validation tests."""
 
     def test_valid_10_digit_inn(self):
-        from aim.services.prescan_orchestrator import PrescanOrchestrator
+        from src.aim.services.prescan_orchestrator import PrescanOrchestrator
         # Valid 10-digit INN for a legal entity
         assert PrescanOrchestrator._is_valid_inn("7707083893") is True
 
     def test_valid_12_digit_inn(self):
-        from aim.services.prescan_orchestrator import PrescanOrchestrator
+        from src.aim.services.prescan_orchestrator import PrescanOrchestrator
         # Valid 12-digit INN for an individual entrepreneur
         assert PrescanOrchestrator._is_valid_inn("500100732259") is True
 
     def test_invalid_inn_wrong_checksum(self):
-        from aim.services.prescan_orchestrator import PrescanOrchestrator
+        from src.aim.services.prescan_orchestrator import PrescanOrchestrator
         assert PrescanOrchestrator._is_valid_inn("7707083890") is False
 
     def test_invalid_inn_short(self):
-        from aim.services.prescan_orchestrator import PrescanOrchestrator
+        from src.aim.services.prescan_orchestrator import PrescanOrchestrator
         assert PrescanOrchestrator._is_valid_inn("12345") is False
 
     def test_invalid_inn_empty(self):
-        from aim.services.prescan_orchestrator import PrescanOrchestrator
+        from src.aim.services.prescan_orchestrator import PrescanOrchestrator
         assert PrescanOrchestrator._is_valid_inn("") is False
 
     def test_invalid_inn_non_digit(self):
-        from aim.services.prescan_orchestrator import PrescanOrchestrator
+        from src.aim.services.prescan_orchestrator import PrescanOrchestrator
         assert PrescanOrchestrator._is_valid_inn("770708389A") is False

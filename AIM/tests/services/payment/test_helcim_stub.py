@@ -5,7 +5,7 @@ Part of: Phase 11 Sprint 3 - Task 3.1
 
 import pytest
 
-from aim.services.payment.helcim_client import HelcimClient
+from src.aim.services.payment.helcim_client import HelcimClient
 
 
 @pytest.mark.asyncio

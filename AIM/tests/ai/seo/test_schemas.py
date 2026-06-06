@@ -5,7 +5,7 @@ Tests for SEO schemas
 import pytest
 from pydantic import ValidationError
 
-from aim.ai.seo.schemas import (
+from src.aim.ai.seo.schemas import (
     Entity,
     ContentQualityScore,
     EntityAnalysis,

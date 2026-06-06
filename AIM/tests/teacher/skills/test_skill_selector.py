@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from AIM.src.aim.teacher.skills.skill_selector import (
+from src.aim.teacher.skills.skill_selector import (
     GitHubRepo,
     Skill,
     SkillSelector,

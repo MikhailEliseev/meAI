@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
-from aim.magisters.sales_admin_base import (
+from src.aim.magisters.sales_admin_base import (
     DEFAULT_ESCALATION_RULES,
     EscalationReason,
     EscalationSeverity,

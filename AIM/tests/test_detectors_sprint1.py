@@ -15,7 +15,7 @@ Tests 10 new detectors:
 """
 
 import pytest
-from aim.subagents.competitive_intel.agents.ci_deep_analyzer import CIDeepAnalyzer
+from src.aim.subagents.competitive_intel.agents.ci_deep_analyzer import CIDeepAnalyzer
 
 
 @pytest.fixture

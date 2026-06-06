@@ -2,8 +2,8 @@
 import pytest
 import tempfile
 from pathlib import Path
-from AIM.src.aim.teacher.upgrade_applier import UpgradeApplier
-from AIM.src.aim.teacher.gap_detector import Gap, GapSeverity
+from src.aim.teacher.upgrade_applier import UpgradeApplier
+from src.aim.teacher.gap_detector import Gap, GapSeverity
 
 
 def test_apply_upgrade():

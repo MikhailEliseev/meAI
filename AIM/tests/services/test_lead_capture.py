@@ -21,13 +21,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from AIM.src.aim.models.lead import Lead as LeadModel
-from AIM.src.aim.schemas.lead import (
+from src.aim.models.lead import Lead as LeadModel
+from src.aim.schemas.lead import (
     LeadCaptureRequest,
     LeadSource,
     MedicalSpecialty,
 )
-from AIM.src.aim.services.lead_capture import (
+from src.aim.services.lead_capture import (
     LeadCaptureService,
     RateLimitExceeded,
     RecaptchaVerificationFailed,

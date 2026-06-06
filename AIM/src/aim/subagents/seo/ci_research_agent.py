@@ -476,8 +476,8 @@ class CIResearchAgent(Agent):
             return []
 
         # Использовать SEMrush через Omni-Router
-        from aim.subagents.api_clients.omni_router import OmniRouter
-        from aim.subagents.api_clients.semrush_client import SEMrushClient
+        from src.aim.subagents.api_clients.omni_router import OmniRouter
+        from src.aim.subagents.api_clients.semrush_client import SEMrushClient
 
         # Инициализировать Omni-Router
         router = OmniRouter()
@@ -528,7 +528,7 @@ class CIResearchAgent(Agent):
 
         Использует Google Search для поиска топового домена по запросу
         """
-        from aim.subagents.api_clients.web_scraper import WebScraper
+        from src.aim.subagents.api_clients.web_scraper import WebScraper
 
         scraper = WebScraper()
         await scraper.initialize()
@@ -569,7 +569,7 @@ class CIResearchAgent(Agent):
         - Customer testimonials
         """
         sources = []
-        from aim.subagents.api_clients.web_scraper import WebScraper
+        from src.aim.subagents.api_clients.web_scraper import WebScraper
 
         scraper = WebScraper()
         await scraper.initialize()
@@ -650,7 +650,7 @@ class CIResearchAgent(Agent):
         - Press releases
         """
         sources = []
-        from aim.subagents.api_clients.web_scraper import WebScraper
+        from src.aim.subagents.api_clients.web_scraper import WebScraper
 
         scraper = WebScraper()
         await scraper.initialize()
@@ -728,7 +728,7 @@ class CIResearchAgent(Agent):
         - Social media mentions
         """
         sources = []
-        from aim.subagents.api_clients.web_scraper import WebScraper
+        from src.aim.subagents.api_clients.web_scraper import WebScraper
 
         scraper = WebScraper()
         await scraper.initialize()
@@ -795,8 +795,8 @@ class CIResearchAgent(Agent):
         - Business metrics (funding, team size)
         - Medical ratings (HealthGrades, Zocdoc)
         """
-        from aim.subagents.api_clients.omni_router import OmniRouter
-        from aim.subagents.api_clients.semrush_client import SEMrushClient
+        from src.aim.subagents.api_clients.omni_router import OmniRouter
+        from src.aim.subagents.api_clients.semrush_client import SEMrushClient
 
         # Инициализировать Omni-Router
         router = OmniRouter()

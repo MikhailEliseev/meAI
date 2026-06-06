@@ -2,7 +2,7 @@
 
 import pytest
 
-from AIM.src.aim.subagents.seo.schema_generator import (
+from src.aim.subagents.seo.schema_generator import (
     SchemaGenerator,
     SchemaValidation,
     SchemaReport,

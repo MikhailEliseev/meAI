@@ -12,7 +12,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / "AIM" / "src"))
 sys.path.insert(0, str(project_root / "src"))
 
-from aim.core.agent_learning import AgentLearning
+from src.aim.core.agent_learning import AgentLearning
 
 
 async def test_agent_learning():

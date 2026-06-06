@@ -5,9 +5,9 @@ Tests for LLM providers.
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from aim.ai.llm.providers.anthropic import AnthropicProvider
-from aim.ai.llm.providers.openai import OpenAIProvider
-from aim.ai.llm.schemas import LLMRequest, LLMProvider
+from src.aim.ai.llm.providers.anthropic import AnthropicProvider
+from src.aim.ai.llm.providers.openai import OpenAIProvider
+from src.aim.ai.llm.schemas import LLMRequest, LLMProvider
 
 
 class TestAnthropicProvider:

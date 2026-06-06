@@ -5,13 +5,13 @@ Tests for Keyword Research Agent.
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from AIM.src.aim.subagents.seo.keyword_research_agent import (
+from src.aim.subagents.seo.keyword_research_agent import (
     KeywordResearchAgent,
     KeywordCluster,
     KeywordIntent,
     KeywordPriority,
 )
-from AIM.src.aim.subagents.schemas.api_responses import KeywordDataUnified
+from src.aim.subagents.schemas.api_responses import KeywordDataUnified
 
 
 @pytest.fixture

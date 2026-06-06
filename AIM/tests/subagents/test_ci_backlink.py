@@ -5,7 +5,7 @@ Tests for CI Backlink Agent.
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from AIM.src.aim.subagents.competitive_intel.agents.ci_backlink import (
+from src.aim.subagents.competitive_intel.agents.ci_backlink import (
     CIBacklinkAgent,
     BacklinkStats,
     DomainMetrics,

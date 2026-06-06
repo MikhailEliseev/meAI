@@ -51,7 +51,7 @@ class CIScoutAgent(Agent):
 
         # Загружаем API-ключи
         try:
-            from aim.config.settings import get_api_settings
+            from src.aim.config.settings import get_api_settings
             settings = get_api_settings()
             self.serpapi_key = settings.serpapi_api_key
             self.semrush_api_key = settings.semrush_api_key
@@ -64,7 +64,7 @@ class CIScoutAgent(Agent):
         # Rotating SerpAPI client (auto-failover on 429)
         self._serpapi_client = None
         try:
-            from aim.subagents.competitive_intel.serpapi_client import get_serpapi_client
+            from src.aim.subagents.competitive_intel.serpapi_client import get_serpapi_client
             self._serpapi_client = get_serpapi_client()
         except Exception:
             pass
@@ -297,7 +297,7 @@ class CIScoutAgent(Agent):
 
         Использует CompetitorMatcher (тот же, что и /api/competitors/find).
         """
-        from aim.services.competitor_matcher import CompetitorMatcher
+        from src.aim.services.competitor_matcher import CompetitorMatcher
 
         result: List[Dict[str, str]] = []
 

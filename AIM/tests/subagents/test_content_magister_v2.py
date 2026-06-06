@@ -3,17 +3,17 @@
 import pytest
 from datetime import datetime
 
-from AIM.src.aim.magisters.content_magister_v2 import (
+from src.aim.magisters.content_magister_v2 import (
     ContentMagisterV2,
     ContentWorkflowReport,
 )
-from AIM.src.aim.subagents.content.content_brief_generator import (
+from src.aim.subagents.content.content_brief_generator import (
     ContentBrief,
     HeaderStructure,
     TopicCoverage,
     QuestionToAnswer,
 )
-from AIM.src.aim.subagents.content.content_quality_checker import (
+from src.aim.subagents.content.content_quality_checker import (
     ReadabilityAnalysis,
     GrammarAnalysis,
     UniquenessAnalysis,
@@ -22,7 +22,7 @@ from AIM.src.aim.subagents.content.content_quality_checker import (
     EngagementAnalysis,
     ContentQualityReport,
 )
-from AIM.src.aim.subagents.content.content_calendar_manager import (
+from src.aim.subagents.content.content_calendar_manager import (
     ContentItem,
     ContentGap,
     ContentCalendarReport,

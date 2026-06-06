@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from AIM.src.aim.subagents.seo.links_agent import LinksSEOAgent
+from src.aim.subagents.seo.links_agent import LinksSEOAgent
 
 
 @pytest.fixture

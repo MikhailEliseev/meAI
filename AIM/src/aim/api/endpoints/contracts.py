@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
 import structlog
 
-from aim.services.contracts import (
+from src.aim.services.contracts import (
     ContractGenerator,
     ContractType,
     KontourClient,
@@ -258,7 +258,7 @@ async def _send_for_signature_background(
 
         # Determine signature type based on contract amount
         amount = client_data.get("monthly_fee", 0)
-        from aim.services.contracts.kontour_client import get_signature_type_for_amount
+        from src.aim.services.contracts.kontour_client import get_signature_type_for_amount
         signature_type = get_signature_type_for_amount(amount)
 
         # Send for signature

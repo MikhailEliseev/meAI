@@ -11,7 +11,7 @@ from typing import Optional, Tuple
 
 from openai import AsyncOpenAI
 
-from aim.schemas.document import ExtractedData
+from src.aim.schemas.document import ExtractedData
 
 logger = logging.getLogger(__name__)
 

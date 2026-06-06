@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from aim.teacher.code_generator import CodeGenerator
-from aim.teacher.gap_detector import Gap
-from aim.teacher.pattern_extractor import PatternExtractor
+from src.aim.teacher.code_generator import CodeGenerator
+from src.aim.teacher.gap_detector import Gap
+from src.aim.teacher.pattern_extractor import PatternExtractor
 
 
 @dataclass

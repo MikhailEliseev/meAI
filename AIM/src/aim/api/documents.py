@@ -24,19 +24,19 @@ from fastapi import (
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.config.settings import get_api_settings
-from aim.database import get_db
-from aim.models.document import Document
-from aim.models.lead import Lead
-from aim.schemas.document import (
+from src.aim.config.settings import get_api_settings
+from src.aim.database import get_db
+from src.aim.models.document import Document
+from src.aim.models.lead import Lead
+from src.aim.schemas.document import (
     DocumentListResponse,
     DocumentStatusResponse,
     DocumentUploadResponse,
 )
-from aim.services.documents.ai_extractor import AIExtractor
-from aim.services.documents.ocr_service import OCRService
-from aim.services.documents.processor import DocumentProcessor
-from aim.services.documents.validator import DocumentValidator
+from src.aim.services.documents.ai_extractor import AIExtractor
+from src.aim.services.documents.ocr_service import OCRService
+from src.aim.services.documents.processor import DocumentProcessor
+from src.aim.services.documents.validator import DocumentValidator
 
 logger = logging.getLogger(__name__)
 
@@ -231,13 +231,13 @@ async def get_document_status(
 
     # Add extracted data if available
     if document.extracted_data:
-        from aim.schemas.document import ExtractedData
+        from src.aim.schemas.document import ExtractedData
 
         response.extracted_data = ExtractedData(**document.extracted_data)
 
     # Add validation result if available
     if document.validation_status:
-        from aim.schemas.document import ValidationResult
+        from src.aim.schemas.document import ValidationResult
 
         response.validation_result = ValidationResult(
             is_valid=document.validation_status == "valid",
@@ -304,13 +304,13 @@ async def list_lead_documents(
 
         # Add extracted data if available
         if doc.extracted_data:
-            from aim.schemas.document import ExtractedData
+            from src.aim.schemas.document import ExtractedData
 
             doc_response.extracted_data = ExtractedData(**doc.extracted_data)
 
         # Add validation result if available
         if doc.validation_status:
-            from aim.schemas.document import ValidationResult
+            from src.aim.schemas.document import ValidationResult
 
             doc_response.validation_result = ValidationResult(
                 is_valid=doc.validation_status == "valid",

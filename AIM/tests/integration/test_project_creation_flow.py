@@ -13,9 +13,9 @@ import sys
 aim_src = Path(__file__).parent.parent.parent / "src"
 sys.path.insert(0, str(aim_src))
 
-from aim.services.project_creator import ProjectCreator, CreationResult
-from aim.integrations.linear.client import LinearClient
-from aim.templates.engine import TemplateEngine
+from src.aim.services.project_creator import ProjectCreator, CreationResult
+from src.aim.integrations.linear.client import LinearClient
+from src.aim.templates.engine import TemplateEngine
 
 
 class TestProjectCreationFlow:

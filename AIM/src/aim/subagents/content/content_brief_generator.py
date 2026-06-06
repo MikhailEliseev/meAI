@@ -14,10 +14,10 @@ from typing import Any
 
 import structlog
 
-from aim.subagents.competitive_intel.agents.ci_content_improved import (
+from src.aim.subagents.competitive_intel.agents.ci_content_improved import (
     CIContentAgentImproved,
 )
-from aim.subagents.seo.keyword_research_agent import KeywordResearchAgent
+from src.aim.subagents.seo.keyword_research_agent import KeywordResearchAgent
 
 
 @dataclass

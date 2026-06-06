@@ -1,6 +1,6 @@
 """Tests for A/B test engine (scipy-based statistical analysis)."""
 import pytest
-from aim.subagents.ads.ab_test_engine import (
+from src.aim.subagents.ads.ab_test_engine import (
     ABTestEngine, ExperimentResult, ExperimentConfig, ExperimentStatus,
 )
 

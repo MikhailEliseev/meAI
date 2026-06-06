@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from AIM.src.aim.teacher.architecture.design_pattern_detector import (
+from src.aim.teacher.architecture.design_pattern_detector import (
     DesignPatternDetector,
     DesignPatterns,
 )

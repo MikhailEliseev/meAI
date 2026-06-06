@@ -106,7 +106,7 @@ class TelegramAdsClient:
         from datetime import datetime, timezone
 
         from sqlalchemy import select
-        from aim.models.campaign_models import Campaign
+        from src.aim.models.campaign_models import Campaign
 
         campaigns = await self.get_campaigns()
         if campaign_ids:
@@ -175,7 +175,7 @@ class TelegramAdsClient:
         """Get campaign statistics from Telegram."""
         self.logger.info("telegram_get_stats", campaign_ids=campaign_ids)
 
-        from aim.subagents.ads.yandex_direct_client import CampaignStats
+        from src.aim.subagents.ads.yandex_direct_client import CampaignStats
 
         stats = []
         for campaign_id in campaign_ids:

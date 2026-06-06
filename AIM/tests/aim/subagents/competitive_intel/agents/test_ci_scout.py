@@ -36,7 +36,7 @@ class TestCIScoutRealDiscovery:
 
     async def test_discover_returns_competitors_when_api_key_present(self):
         """ci_scout with SerpAPI key returns real competitor data."""
-        from aim.subagents.competitive_intel.agents.ci_scout import CIScoutAgent
+        from src.aim.subagents.competitive_intel.agents.ci_scout import CIScoutAgent
 
         with patch.object(CIScoutAgent, '__init__', lambda self, **kw: None):
             agent = CIScoutAgent.__new__(CIScoutAgent)
@@ -77,7 +77,7 @@ class TestCIScoutRealDiscovery:
 
     async def test_discover_returns_empty_when_no_api_key(self):
         """ci_scout without keys returns empty list (not random names)."""
-        from aim.subagents.competitive_intel.agents.ci_scout import CIScoutAgent
+        from src.aim.subagents.competitive_intel.agents.ci_scout import CIScoutAgent
 
         with patch.object(CIScoutAgent, '__init__', lambda self, **kw: None):
             agent = CIScoutAgent.__new__(CIScoutAgent)
@@ -95,7 +95,7 @@ class TestCIScoutRealDiscovery:
 
     async def test_discover_uses_real_urls_not_generated(self):
         """ci_scout returns real URLs from search results, not auto-generated URLs."""
-        from aim.subagents.competitive_intel.agents.ci_scout import CIScoutAgent
+        from src.aim.subagents.competitive_intel.agents.ci_scout import CIScoutAgent
 
         with patch.object(CIScoutAgent, '__init__', lambda self, **kw: None):
             agent = CIScoutAgent.__new__(CIScoutAgent)

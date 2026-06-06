@@ -8,9 +8,9 @@ import pytest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
-from aim.subagents.api_clients.base import TokenBucketRateLimiter
-from aim.subagents.api_clients.semrush import SEMrushClient
-from aim.subagents.api_clients.ahrefs import AhrefsClient
+from src.aim.subagents.api_clients.base import TokenBucketRateLimiter
+from src.aim.subagents.api_clients.semrush import SEMrushClient
+from src.aim.subagents.api_clients.ahrefs import AhrefsClient
 
 
 class TestTokenBucketRateLimiter:

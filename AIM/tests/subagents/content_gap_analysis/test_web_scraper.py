@@ -7,8 +7,8 @@ Tests HTML parsing, content extraction, and robots.txt compliance.
 import pytest
 from bs4 import BeautifulSoup
 
-from AIM.src.aim.subagents.content_gap_analysis.scrapers.web_scraper import WebScraper
-from AIM.src.aim.subagents.content_gap_analysis.schemas import ContentType
+from src.aim.subagents.content_gap_analysis.scrapers.web_scraper import WebScraper
+from src.aim.subagents.content_gap_analysis.schemas import ContentType
 
 
 @pytest.fixture

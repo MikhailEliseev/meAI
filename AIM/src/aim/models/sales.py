@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from aim.storage.models import Base
+from src.aim.storage.models import Base
 
 
 def _new_id(prefix: str) -> str:

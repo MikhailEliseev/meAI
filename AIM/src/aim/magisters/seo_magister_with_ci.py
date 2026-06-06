@@ -7,8 +7,8 @@ SEO Magister with CI Integration
 from typing import Any, Dict, List
 from datetime import datetime
 
-from aim.magisters.seo_magister import SEOMagister
-from aim.integration.ci_magisters_integration import CIMagisterIntegration
+from src.aim.magisters.seo_magister import SEOMagister
+from src.aim.integration.ci_magisters_integration import CIMagisterIntegration
 
 
 class SEOMagisterWithCI(SEOMagister):
@@ -61,7 +61,7 @@ class SEOMagisterWithCI(SEOMagister):
 
         # Запрашиваем контекст у Hermes (знания из прошлых запусков)
         try:
-            from aim.integration.hermes_context import HermesContextProvider
+            from src.aim.integration.hermes_context import HermesContextProvider
             if not hasattr(self, '_hermes'):
                 self._hermes = HermesContextProvider()
             hermes_context = await self._hermes.get_context(domain="seo", action=action)

@@ -6,7 +6,7 @@ import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from AIM.src.aim.subagents.seo.ci_research_agent import (
+from src.aim.subagents.seo.ci_research_agent import (
     CIResearchAgent,
     CIResearchInput,
     ClientContext,

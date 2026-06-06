@@ -12,14 +12,14 @@ from typing import Optional
 from sqlalchemy import func, select, and_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models import (
+from src.aim.models import (
     Lead,
     EmailWorkflow,
     ScheduledEmail,
     EmailEvent,
     LinearTask,
 )
-from aim.schemas.analytics import (
+from src.aim.schemas.analytics import (
     LeadMetrics,
     EmailMetrics,
     ConversionFunnel,

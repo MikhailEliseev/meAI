@@ -14,7 +14,7 @@ from typing import Any, Optional
 import httpx
 import structlog
 
-from aim.services.contracts.kontour_auth import KontourAuth
+from src.aim.services.contracts.kontour_auth import KontourAuth
 
 logger = structlog.get_logger()
 

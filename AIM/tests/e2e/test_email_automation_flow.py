@@ -14,11 +14,11 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models.email_workflow import EmailWorkflow
-from aim.models.email_event import EmailEvent
-from aim.models.scheduled_email import ScheduledEmail
-from aim.services.email.workflow_service import WorkflowService
-from aim.services.email.email_sender import EmailSender
+from src.aim.models.email_workflow import EmailWorkflow
+from src.aim.models.email_event import EmailEvent
+from src.aim.models.scheduled_email import ScheduledEmail
+from src.aim.services.email.workflow_service import WorkflowService
+from src.aim.services.email.email_sender import EmailSender
 
 
 def _make_lead_data(name, email, phone, clinic, **extra):

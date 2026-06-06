@@ -3,7 +3,7 @@
 import pytest
 from datetime import datetime, timedelta
 
-from AIM.src.aim.subagents.content.content_calendar_manager import (
+from src.aim.subagents.content.content_calendar_manager import (
     ContentCalendarManager,
     ContentCalendarReport,
     ContentItem,

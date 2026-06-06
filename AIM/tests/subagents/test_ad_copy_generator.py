@@ -2,7 +2,7 @@
 
 import pytest
 
-from AIM.src.aim.subagents.ads.ad_copy_generator import (
+from src.aim.subagents.ads.ad_copy_generator import (
     AdCopyGenerator,
     AdCopySet,
     AdHeadline,

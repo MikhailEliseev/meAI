@@ -15,19 +15,19 @@ from typing import Any, Optional
 
 import structlog
 
-from aim.subagents.content.content_brief_generator import (
+from src.aim.subagents.content.content_brief_generator import (
     ContentBriefGenerator,
     ContentBrief,
 )
-from aim.subagents.content.content_quality_checker import (
+from src.aim.subagents.content.content_quality_checker import (
     ContentQualityChecker,
     ContentQualityReport,
 )
-from aim.subagents.content.content_calendar_manager import (
+from src.aim.subagents.content.content_calendar_manager import (
     ContentCalendarManager,
     ContentCalendarReport,
 )
-from aim.magisters.linear_mixin import LinearMixin
+from src.aim.magisters.linear_mixin import LinearMixin
 
 
 @dataclass
@@ -205,7 +205,7 @@ class ContentMagisterV2(LinearMixin):
             errors.append(f"Calendar Planning failed: {str(e)}")
             self.add_linear_progress_update("Phase 3: Calendar Planning", "failed", str(e))
             # Create empty calendar report to continue workflow
-            from aim.subagents.content.content_calendar_manager import (
+            from src.aim.subagents.content.content_calendar_manager import (
                 CalendarMetrics,
             )
 

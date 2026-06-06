@@ -20,10 +20,10 @@ from io import BytesIO
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models.onboarding import Onboarding
-from aim.models.document import Document
-from aim.models.payment import Payment
-from aim.services.onboarding.state_machine import OnboardingState
+from src.aim.models.onboarding import Onboarding
+from src.aim.models.document import Document
+from src.aim.models.payment import Payment
+from src.aim.services.onboarding.state_machine import OnboardingState
 
 
 @pytest.mark.asyncio
@@ -174,7 +174,7 @@ async def test_onboarding_flow_with_document_validation_failure(
         return document
 
     with patch(
-        "aim.services.documents.processor.DocumentProcessor.process_document",
+        "src.aim.services.documents.processor.DocumentProcessor.process_document",
         mock_fail_processing,
     ):
         for doc_type in ["license", "inn", "ogrn", "contract"]:
@@ -238,7 +238,7 @@ async def test_onboarding_flow_with_payment_failure(
         )
 
     # Step 2: Try payment with insufficient funds
-    with patch("aim.services.payment.payment_service.PaymentService.create_payment") as mock_payment:
+    with patch("src.aim.services.payment.payment_service.PaymentService.create_payment") as mock_payment:
         mock_payment.side_effect = ValueError("Insufficient funds")
 
         payment_response = await client.post(
@@ -297,7 +297,7 @@ async def test_onboarding_flow_retry_after_failure(
             files={"file": (f"{doc_type}.pdf", file, "application/pdf")},
         )
 
-    with patch("aim.services.payment.payment_service.PaymentService.create_payment") as mock_payment:
+    with patch("src.aim.services.payment.payment_service.PaymentService.create_payment") as mock_payment:
         mock_payment.side_effect = ValueError("Payment failed")
         await client.post(
             f"/api/onboarding/{onboarding_id}/payment",

@@ -17,9 +17,9 @@ from datetime import datetime, timezone
 
 import pytest
 
-from AIM.src.aim.ai.lead_scoring.feature_extractor import LeadFeatureExtractor
-from AIM.src.aim.models.lead import Lead as LeadModel
-from AIM.src.aim.schemas.lead import MedicalSpecialty
+from src.aim.ai.lead_scoring.feature_extractor import LeadFeatureExtractor
+from src.aim.models.lead import Lead as LeadModel
+from src.aim.schemas.lead import MedicalSpecialty
 
 
 @pytest.fixture

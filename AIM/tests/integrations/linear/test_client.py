@@ -12,7 +12,7 @@ from pathlib import Path
 aim_src = Path(__file__).parent.parent.parent.parent / "src"
 sys.path.insert(0, str(aim_src))
 
-from aim.integrations.linear.client import LinearClient, LinearProject, LinearIssue
+from src.aim.integrations.linear.client import LinearClient, LinearProject, LinearIssue
 
 
 @pytest.fixture

@@ -15,10 +15,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from AIM.src.aim.teacher.skills.skill_comparator import (
+from src.aim.teacher.skills.skill_comparator import (
     ComparisonResult,
 )
-from AIM.src.aim.teacher.skills.skill_teacher import (
+from src.aim.teacher.skills.skill_teacher import (
     AdaptedCode,
     IntegrationPoint,
     SkillTeacher,

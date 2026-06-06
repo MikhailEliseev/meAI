@@ -2,7 +2,7 @@
 
 import pytest
 
-from AIM.src.aim.subagents.ads.bid_strategy_optimizer import (
+from src.aim.subagents.ads.bid_strategy_optimizer import (
     BidStrategyOptimizer,
     BidOptimizationReport,
     PerformanceMetrics,

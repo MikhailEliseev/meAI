@@ -3,7 +3,7 @@ Tests for Document Validator
 """
 
 import pytest
-from aim.services.document_processing.validator import (
+from src.aim.services.document_processing.validator import (
     DocumentValidator,
     ValidationStatus,
     ValidationRule,

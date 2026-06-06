@@ -200,7 +200,7 @@ class YandexDirectAPIClient:
         from datetime import datetime, timezone
 
         from sqlalchemy import select
-        from aim.models.campaign_models import Campaign
+        from src.aim.models.campaign_models import Campaign
 
         campaigns = await self.get_campaigns()
         if campaign_ids:

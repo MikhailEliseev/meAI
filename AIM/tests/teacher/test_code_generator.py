@@ -1,7 +1,7 @@
 # AIM/tests/teacher/test_code_generator.py
 import pytest
-from AIM.src.aim.teacher.code_generator import CodeGenerator
-from AIM.src.aim.teacher.pattern_extractor import ExtractedPattern
+from src.aim.teacher.code_generator import CodeGenerator
+from src.aim.teacher.pattern_extractor import ExtractedPattern
 
 
 def test_add_imports():

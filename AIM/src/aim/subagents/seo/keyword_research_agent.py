@@ -14,9 +14,9 @@ from typing import Any
 
 import structlog
 
-from aim.subagents.api_clients.semrush import SEMrushClient
-from aim.subagents.api_clients.ahrefs import AhrefsClient
-from aim.subagents.schemas.api_responses import KeywordDataUnified
+from src.aim.subagents.api_clients.semrush import SEMrushClient
+from src.aim.subagents.api_clients.ahrefs import AhrefsClient
+from src.aim.subagents.schemas.api_responses import KeywordDataUnified
 
 
 @dataclass

@@ -47,3 +47,9 @@ for FILE in services.md processes.md kpi.md; do
         echo "[copy_soul] WARNING: $FILE not found at $SRC" >&2
     fi
 done
+
+# ── Trigger bootstrap self-study in background ───────────────────────
+if [ -x /opt/hermes/scripts/bootstrap.sh ]; then
+    echo "[copy_soul] Launching bootstrap self-study in background..."
+    /opt/hermes/scripts/bootstrap.sh &
+fi

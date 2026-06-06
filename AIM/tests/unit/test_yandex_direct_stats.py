@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from aim.subagents.ads.yandex_direct_client import YandexDirectAPIClient, CampaignStats
+from src.aim.subagents.ads.yandex_direct_client import YandexDirectAPIClient, CampaignStats
 
 
 SAMPLE_TSV = (

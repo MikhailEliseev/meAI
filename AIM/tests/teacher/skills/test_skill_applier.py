@@ -12,11 +12,11 @@ from pathlib import Path
 
 import pytest
 
-from AIM.src.aim.teacher.skills.skill_applier import (
+from src.aim.teacher.skills.skill_applier import (
     ApplicationResult,
     SkillApplier,
 )
-from AIM.src.aim.teacher.skills.skill_extractor import ExtractedImplementation
+from src.aim.teacher.skills.skill_extractor import ExtractedImplementation
 
 
 @pytest.fixture

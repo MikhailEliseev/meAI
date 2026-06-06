@@ -14,7 +14,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.services.email.workflow_state_manager import WorkflowStateManager
+from src.aim.services.email.workflow_state_manager import WorkflowStateManager
 
 logger = logging.getLogger(__name__)
 
@@ -234,7 +234,7 @@ class WebhookHandler:
         Returns:
             Dict with event counts by type
         """
-        from aim.models import EmailEvent
+        from src.aim.models import EmailEvent
         from sqlalchemy import func, select
 
         # Count events by type

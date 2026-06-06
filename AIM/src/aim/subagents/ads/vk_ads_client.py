@@ -110,7 +110,7 @@ class VKAdsClient:
         from datetime import datetime, timezone
 
         from sqlalchemy import select
-        from aim.models.campaign_models import Campaign
+        from src.aim.models.campaign_models import Campaign
 
         campaigns = await self.get_campaigns(account_id=account_id)
         if campaign_ids:
@@ -181,7 +181,7 @@ class VKAdsClient:
             date_to=date_to,
         )
 
-        from aim.subagents.ads.yandex_direct_client import CampaignStats
+        from src.aim.subagents.ads.yandex_direct_client import CampaignStats
 
         stats = []
         for item in result:

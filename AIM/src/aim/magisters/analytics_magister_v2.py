@@ -15,19 +15,19 @@ from typing import Any, Optional
 
 import structlog
 
-from aim.subagents.analytics.traffic_analyzer import (
+from src.aim.subagents.analytics.traffic_analyzer import (
     TrafficAnalyzer,
     TrafficReport,
 )
-from aim.subagents.analytics.conversion_tracker import (
+from src.aim.subagents.analytics.conversion_tracker import (
     ConversionTracker,
     ConversionReport,
 )
-from aim.subagents.analytics.report_generator import (
+from src.aim.subagents.analytics.report_generator import (
     ReportGenerator,
     MarketingReport,
 )
-from aim.magisters.linear_mixin import LinearMixin
+from src.aim.magisters.linear_mixin import LinearMixin
 
 
 @dataclass
@@ -142,7 +142,7 @@ class AnalyticsMagisterV2(LinearMixin):
             errors.append(f"Traffic Analysis failed: {str(e)}")
             self.add_linear_progress_update("Phase 1: Traffic Analysis", "failed", str(e))
             # Create empty traffic report to continue workflow
-            from aim.subagents.analytics.traffic_analyzer import (
+            from src.aim.subagents.analytics.traffic_analyzer import (
                 TrafficReport,
                 UserBehavior,
                 BounceAnalysis,
@@ -207,7 +207,7 @@ class AnalyticsMagisterV2(LinearMixin):
             errors.append(f"Conversion Tracking failed: {str(e)}")
             self.add_linear_progress_update("Phase 2: Conversion Tracking", "failed", str(e))
             # Create empty conversion report to continue workflow
-            from aim.subagents.analytics.conversion_tracker import (
+            from src.aim.subagents.analytics.conversion_tracker import (
                 ConversionReport,
                 RevenueMetrics,
                 ROIMetrics,
@@ -275,7 +275,7 @@ class AnalyticsMagisterV2(LinearMixin):
             errors.append(f"Report Generation failed: {str(e)}")
             self.add_linear_progress_update("Phase 3: Report Generation", "failed", str(e))
             # Create empty marketing report to continue workflow
-            from aim.subagents.analytics.report_generator import (
+            from src.aim.subagents.analytics.report_generator import (
                 MarketingReport,
                 ReportMetrics,
             )

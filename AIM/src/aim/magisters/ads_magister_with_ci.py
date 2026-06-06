@@ -7,8 +7,8 @@ Ads Magister with CI Integration
 from typing import Any, Dict, List
 from datetime import datetime
 
-from aim.magisters.ads_magister import AdsMagister
-from aim.integration.ci_magisters_integration import CIMagisterIntegration
+from src.aim.magisters.ads_magister import AdsMagister
+from src.aim.integration.ci_magisters_integration import CIMagisterIntegration
 
 
 class AdsMagisterWithCI(AdsMagister):
@@ -62,7 +62,7 @@ class AdsMagisterWithCI(AdsMagister):
 
         # Запрашиваем контекст у Hermes (знания из прошлых запусков)
         try:
-            from aim.integration.hermes_context import HermesContextProvider
+            from src.aim.integration.hermes_context import HermesContextProvider
             if not hasattr(self, '_hermes'):
                 self._hermes = HermesContextProvider()
             hermes_context = await self._hermes.get_context(domain="ads", action=action)

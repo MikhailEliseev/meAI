@@ -8,8 +8,8 @@ import pytest
 import pytest_asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
 
-from AIM.src.aim.subagents.compliance.fda_client import FDAClient
-from AIM.src.aim.subagents.schemas.compliance import FDAEnforcementRecord
+from src.aim.subagents.compliance.fda_client import FDAClient
+from src.aim.subagents.schemas.compliance import FDAEnforcementRecord
 
 
 @pytest_asyncio.fixture

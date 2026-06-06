@@ -5,7 +5,7 @@ Tests for LLM schemas.
 import pytest
 from pydantic import ValidationError
 
-from aim.ai.llm.schemas import (
+from src.aim.ai.llm.schemas import (
     LLMRequest,
     LLMResponse,
     LLMProvider,

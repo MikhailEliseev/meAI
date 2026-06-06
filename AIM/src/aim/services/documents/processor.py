@@ -14,11 +14,11 @@ from typing import Optional, Tuple
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from aim.models.document import Document
-from aim.schemas.document import ExtractedData, ValidationResult
-from aim.services.documents.ai_extractor import AIExtractor
-from aim.services.documents.ocr_service import OCRService
-from aim.services.documents.validator import DocumentValidator
+from src.aim.models.document import Document
+from src.aim.schemas.document import ExtractedData, ValidationResult
+from src.aim.services.documents.ai_extractor import AIExtractor
+from src.aim.services.documents.ocr_service import OCRService
+from src.aim.services.documents.validator import DocumentValidator
 
 logger = logging.getLogger(__name__)
 

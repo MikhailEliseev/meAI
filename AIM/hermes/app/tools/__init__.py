@@ -22,30 +22,31 @@ def register_all_tools() -> None:
     and calls registry.register() at module level, so importing them
     here is sufficient to register.
 
-    Core tools (6):
+    UNIFIED TOOL (replaces 16 individual tools):
+    - orchestrate           -> POST http://app:8000/api/hermes/orchestrate
+
+    Legacy tools (kept for backward compatibility):
     - run_seo_audit        -> POST http://app:8000/api/seo/audit
     - run_content_analysis -> POST http://app:8000/api/content/analyze
     - run_ads_report       -> POST http://app:8000/api/ads/report
     - show_project_status  -> GET  http://app:8000/api/projects/{project_id}/status
     - collect_contact      -> POST http://app:8000/api/leads
     - show_all_leads       -> GET  http://app:8000/api/leads
-
-    Sales Admin tools (4):
     - qualify_lead         -> POST http://app:8000/api/sales/qualify
     - escalate_to_manager  -> POST http://app:8000/api/sales/escalate
     - get_lead_pipeline    -> GET  http://app:8000/api/sales/pipeline
     - update_knowledge     -> PUT  http://app:8000/api/sales/knowledge/update
-
-    Pre-Sale tools (5):
     - run_prescan          -> POST http://app:8000/api/presale/prescan
     - find_competitors     -> POST http://app:8000/api/competitors/find
     - present_competitors  -> POST http://app:8000/api/competitors/save
     - run_ci_analysis      -> POST http://app:8000/api/competitors/analyze
     - find_company_financials -> GET http://app:8000/api/companies/financials
-
-    Telegram tools (1):
     - send_telegram_file   -> Bot API sendDocument/sendPhoto
     """
+    # Unified orchestrator — PRIMARY tool
+    from . import orchestrate           # noqa: F401
+
+    # Legacy tools — kept for backward compatibility
     from . import run_seo_audit          # noqa: F401
     from . import run_content_analysis   # noqa: F401
     from . import run_ads_report         # noqa: F401
@@ -63,7 +64,7 @@ def register_all_tools() -> None:
     from . import find_company_financials # noqa: F401
     from . import send_telegram_file     # noqa: F401
 
-    logger.info("Registered 16 AIM operations tools in toolset 'aim-operations'")
+    logger.info("Registered 17 AIM operations tools: orchestrate (unified) + 16 legacy")
 
 
 def register_debug_tools() -> None:
@@ -78,7 +79,8 @@ def register_debug_tools() -> None:
     from . import web_scraper  # noqa: F401
     from . import external_api  # noqa: F401
     from . import bitrix_scraper  # noqa: F401
-    logger.info("Registered 11 debug tools: shell_exec, file_read, api_debug, file_write, pip_install, restart_myself, web_fetch, web_search, browser_screenshot, call_api, bitrix_scrape")
+    from . import firecrawl_web  # noqa: F401
+    logger.info("Registered 15 debug tools: shell_exec, file_read, api_debug, file_write, pip_install, restart_myself, web_fetch, web_search, browser_screenshot, call_api, bitrix_scrape, firecrawl_scrape, firecrawl_search, firecrawl_crawl, firecrawl_map")
 
 
 __all__ = ["register_all_tools", "register_debug_tools"]

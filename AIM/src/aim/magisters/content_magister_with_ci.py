@@ -7,8 +7,8 @@ Content Magister with CI Integration
 from typing import Any, Dict, List
 from datetime import datetime
 
-from aim.magisters.content_magister import ContentMagister
-from aim.integration.ci_magisters_integration import CIMagisterIntegration
+from src.aim.magisters.content_magister import ContentMagister
+from src.aim.integration.ci_magisters_integration import CIMagisterIntegration
 
 
 class ContentMagisterWithCI(ContentMagister):
@@ -62,7 +62,7 @@ class ContentMagisterWithCI(ContentMagister):
 
         # Запрашиваем контекст у Hermes (знания из прошлых запусков)
         try:
-            from aim.integration.hermes_context import HermesContextProvider
+            from src.aim.integration.hermes_context import HermesContextProvider
             if not hasattr(self, '_hermes'):
                 self._hermes = HermesContextProvider()
             hermes_context = await self._hermes.get_context(domain="content", action=action)

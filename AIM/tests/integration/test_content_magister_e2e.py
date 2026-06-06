@@ -7,7 +7,7 @@ Verifies end-to-end task execution and result aggregation.
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from AIM.src.aim.magisters.content_magister import ContentMagister
+from src.aim.magisters.content_magister import ContentMagister
 
 
 @pytest.mark.asyncio

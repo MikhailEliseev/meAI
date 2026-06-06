@@ -7,8 +7,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta, timezone
 
-from AIM.src.aim.ai.analytics.seasonality_detector import SeasonalityDetector
-from AIM.src.aim.ai.analytics.schemas import SeasonalityPattern
+from src.aim.ai.analytics.seasonality_detector import SeasonalityDetector
+from src.aim.ai.analytics.schemas import SeasonalityPattern
 
 
 class TestSeasonalityDetector:
