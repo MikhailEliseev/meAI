@@ -1,7 +1,7 @@
 # AIM System Handbook for Hermes
 
 > Всё, что работает. Без архитектурного мусора.
-> Последнее обновление: 2026-06-04
+> Последнее обновление: 2026-06-06
 
 ---
 
@@ -229,3 +229,72 @@ AIM/
 - **EventBus** — не используется в продакшене
 - **Obsidian vaults для 17 агентов** — работают только teacher и architect
 - **`.planning/`** — исторические планы, не актуальны
+
+---
+
+## 12. Presale Pipeline — Полный Автомат
+
+**Версия:** 3.2.0 (Full Auto Mode)
+
+Превращает URL клиники в HTML-коммерческое предложение через 8 специализированных Hermes-скиллов. Никакого хардкода — LLM читает SKILL.md и оркестрирует фазы сама.
+
+### Как это работает
+
+1. Клиент кидает ссылку на сайт клиники в Telegram
+2. Hermes читает `presale-pipeline/SKILL.md` и запускает 5 фаз подряд
+3. Каждая фаза вызывает специализированные скиллы (не делает работу сама)
+4. Результат: HTML-КП с 12 блоками (анализ рынка, врачи, конкуренты, контент-план)
+
+### 5 фаз
+
+| Фаза | Скиллы | Модель | Что делает |
+|------|--------|--------|-----------|
+| **Phase 0** | `deep-research-phase-0` | Flash | Исследует клинику и врачей (звания, степени, публикации, рейтинги). Классификация: star/core/team |
+| **Phase 1** | `tech-auditor`, `financial-fetcher` | Flash | 8 параметров сайта + 7 источников финансов |
+| **Phase 2** | `social-verifier`, `competitor-scorer`, `reel-scraper` | Flash | 5-pass поиск врачей в соцсетях + конкуренты + Reels |
+| **Phase 3** | `doctor-content-analysis` | Flash | Контент-карточки врачей, Forum Pain Research, SMI-поиск |
+| **Phase 4** | `html-kp-generator` | **Pro** | HTML-КП (12-block). ТОЛЬКО на Pro-модели |
+
+### Iron Rules
+
+1. **Full Auto Mode** — никаких подтверждений. Ссылка → результат.
+2. **Честность** — не найдено → так и пишем. Поверхностный анализ → помечаем.
+3. **Всё через скиллы** — оркестратор не делает работу скиллов сам.
+4. **Political Firewall** — политическая информация НЕ проникает в пайплайн.
+5. **HTML только на Pro** — Phase 4 требует deepseek-v4-pro с thinking.
+6. **Нельзя пропускать фазы** — Phase 2 (social-verifier 5 проходов) и Phase 3 (doctor-content-analysis) обязательны перед HTML.
+7. **Шаблон HTML** — всегда `presale-ampermy-v3.html`, не писать с нуля.
+
+### Three-Pass System
+
+Presale выполняется в 3 прохода:
+1. Первый проход — сбор всех данных
+2. Второй проход — devils-advocate critic (QC1-QC8), исправление FAIL
+3. Третий проход — финальная полировка
+
+Результат показывается только после 3-го прохода.
+
+### Goal Loop
+
+```
+while gaps > 0 and iterations < 3:
+    вернуться к Phase 2 для незакрытых gaps
+    if новых данных == 0: break
+```
+
+### Presale State
+
+Состояние хранится в `/root/work/presale/{client}/presale.json`:
+- `client_url`, `state` (текущая фаза), `phases_completed`, `gaps`, `iterations`
+
+Лог каждого шага: `/root/work/presale/{client}/log.jsonl`
+
+### Файлы
+
+```
+AIM/hermes/skills/presale-pipeline/SKILL.md          # Оркестратор
+AIM/hermes/skills/deep-research-phase-0/SKILL.md      # Phase 0
+AIM/hermes/app/tools/deep_research_merge.py            # Tier-классификация
+AIM/hermes/app/tools/quality_gate.py                   # Quality gate
+AIM/PRESALE-STATUS.md                                  # Статус и бэклог
+```
