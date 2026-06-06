@@ -1,21 +1,27 @@
 # Session: 2026-06-06
 
-## Текущий фокус: Phase 25 завершён — все 4 gaps закрыты, 6 standalone tools на сервере
+## Текущий фокус: Phase 26 + 28 выполнены и задеплоены
 
 ### Что сделано
-- **Phase 25 завершён:** 4 плана, 4 волны, 22/22 must-haves verified
-- **6 standalone Hermes tools** на сервере (root@138.16.224.188):
-  - social-verifier (266 строк) — 5-pass Instagram doctor verification
-  - html-kp-generator (196 строк) — 12-block HTML-КП
-  - financial-fetcher (102 строки) — финансовые данные
-  - competitor-scorer v1.1.0 (182 строки) — scoring + viral post search
-  - tech-auditor (351 строка) — 8-parameter technical audit
-  - content-analyzer (338 строк) — ALL-experts content analysis
-  - reel-scraper (287 строк) — Instagram Reel URLs (no visual analysis)
-- **SKILL.md:** 757→622 строк, v2.57.1, 7 routing entries, все фазы сохранены
-- **Все 4 gaps vs ampermy etalon закрыты**
-- **Все инструменты — универсальные** (без привязки к конкретным клиникам)
+
+**Phase 28 (Deep Research Phase 0):**
+- deep_research_merge.py + 30 unit-тестов
+- deep-research-phase-0/SKILL.md (487 строк, 5 Steps, tier classification)
+- presale-pipeline v3.6.0 (Phase 0 интегрирован)
+- quality_gate.py + presale-state.template.json обновлены
+- 5 коммитов, всё задеплоено на сервер
+
+**Phase 26 (Key Unification) — все 4 шага уже были на сервере:**
+- Symlink apify_keys.json → /opt/aim/AIM/data/
+- Monkey-patch firecrawl_provider_bank в hermes_cli/main.py
+- web.search_backend = firecrawl, disabled_toolsets = []
+- healthcheck_keys.py + cron (каждые 6 часов)
+
+**Phase 26 (Presale Orchestration Fix):**
+- Task 1: Flatten — уже сделано (7 skills на верхнем уровне)
+- Task 2: Parent SKILL.md rewrite — v3.0.0 (122 строки, LLM-first orchestration)
+- Task 3: Archive legacy → references/SKILL.md.v3.6.0-legacy
 
 ### Следующие шаги
-- Phase 25 — последняя фаза в ROADMAP
-- Возможные направления: cost optimization ($20 за 2 дня), git для Hermes skills, визуальный анализ Reels (постконтракт)
+- Ждать активности @iamaim_bot — проверить что новый SKILL.md v3.0.0 работает
+- Phase 27 (если есть в ROADMAP)
