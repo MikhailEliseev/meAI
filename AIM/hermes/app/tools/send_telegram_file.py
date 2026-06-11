@@ -19,7 +19,10 @@ from tools.registry import registry
 logger = logging.getLogger(__name__)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_ADMIN_CHAT_ID = int(os.getenv("TELEGRAM_ADMIN_CHAT_ID", "0"))
+_TELEGRAM_ADMIN_CHAT_IDS: set[int] = set(
+    int(x.strip()) for x in os.getenv("TELEGRAM_ADMIN_CHAT_ID", "").split(",")
+    if x.strip().isdigit()
+)
 TELEGRAM_PROXY_URL = os.getenv("TELEGRAM_PROXY_URL", "http://193.111.152.14:7451")
 TELEGRAM_PROXY_AUTH = os.getenv("TELEGRAM_PROXY_AUTH", "U9pjtK:hxtlqz")
 
@@ -151,7 +154,7 @@ async def handle_send_telegram_file(
         except ImportError:
             pass
     if not target_chat_id:
-        target_chat_id = TELEGRAM_ADMIN_CHAT_ID
+        target_chat_id = next(iter(_TELEGRAM_ADMIN_CHAT_IDS), 0)
     if not target_chat_id:
         return json.dumps({"error": "No chat_id provided and TELEGRAM_ADMIN_CHAT_ID not configured"})
 

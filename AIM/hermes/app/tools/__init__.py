@@ -63,8 +63,10 @@ def register_all_tools() -> None:
     from . import run_ci_analysis        # noqa: F401
     from . import find_company_financials # noqa: F401
     from . import send_telegram_file     # noqa: F401
+    from . import telegram_tools         # noqa: F401  # send_message_as_user, search_chats, bind_chat, list_chats
+    from . import geo_optimizer_tools    # noqa: F401  # run_geo_audit
 
-    logger.info("Registered 17 AIM operations tools: orchestrate (unified) + 16 legacy")
+    logger.info("Registered 20 AIM operations tools: orchestrate + 19 tools")
 
 
 def register_debug_tools() -> None:

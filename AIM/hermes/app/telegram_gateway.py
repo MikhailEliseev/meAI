@@ -15,10 +15,13 @@ web_session_id → bot receives /start command with web_session_id parameter
 """
 
 import asyncio
+import json
 import logging
 import os
+import threading
 import time
 from concurrent.futures import Future
+from pathlib import Path
 from typing import Optional
 
 import httpx
@@ -30,16 +33,19 @@ from .voice_transcriber import transcribe_voice
 logger = logging.getLogger(__name__)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_ADMIN_CHAT_ID = int(os.getenv("TELEGRAM_ADMIN_CHAT_ID", "0"))
+_TELEGRAM_ADMIN_CHAT_IDS: set[int] = set(
+    int(x.strip()) for x in os.getenv("TELEGRAM_ADMIN_CHAT_ID", "").split(",")
+    if x.strip().isdigit()
+)
 
 
 def _get_mode(chat_id: int, lead_id: str | None) -> str:
     """Determine client mode for Telegram messages.
 
-    Admin chat always gets ADMIN mode with full tool access.
+    Admin chats always get ADMIN mode with full tool access.
     Active leads get ACTIVE, new chats get PRESALE.
     """
-    if TELEGRAM_ADMIN_CHAT_ID and chat_id == TELEGRAM_ADMIN_CHAT_ID:
+    if chat_id in _TELEGRAM_ADMIN_CHAT_IDS:
         return "ADMIN"
     if lead_id:
         return "ACTIVE"
@@ -70,6 +76,38 @@ _session_bindings: dict[str, str] = {}
 # Maps telegram chat_id -> AIM lead_id
 _chat_lead_map: dict[int, str] = {}
 
+# Persistent binding storage
+_BINDINGS_FILE = Path("/opt/data/chat_bindings.json")
+
+
+def _load_bindings() -> dict[int, str]:
+    """Load chat→lead bindings from disk. Called on module import."""
+    try:
+        if _BINDINGS_FILE.exists():
+            data = json.loads(_BINDINGS_FILE.read_text())
+            # JSON keys are strings, convert to int
+            bindings = {int(k): v for k, v in data.items()}
+            logger.info(f"Loaded {len(bindings)} chat bindings from {_BINDINGS_FILE}")
+            return bindings
+    except Exception as e:
+        logger.warning(f"Failed to load bindings from {_BINDINGS_FILE}: {e}")
+    return {}
+
+
+def _save_bindings() -> None:
+    """Persist chat→lead bindings to disk. Called on every change."""
+    try:
+        _BINDINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        # JSON keys must be strings
+        data = {str(k): v for k, v in _chat_lead_map.items()}
+        _BINDINGS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+    except Exception as e:
+        logger.warning(f"Failed to save bindings to {_BINDINGS_FILE}: {e}")
+
+
+# Load persisted bindings at startup
+_chat_lead_map = _load_bindings()
+
 # Polling control
 _polling_future: Optional[Future] = None
 _polling_stop = False
@@ -88,6 +126,11 @@ class DeepLinkBindRequest(BaseModel):
     lead_id: str
 
 
+class ChatBindRequest(BaseModel):
+    chat_id: int
+    lead_id: str
+
+
 # ── Deep Link Binding ───────────────────────────────────────────────
 # D-18: tg:// deep link from website binds Telegram chat to AIM lead
 
@@ -102,6 +145,29 @@ async def bind_session(body: DeepLinkBindRequest):
     _session_bindings[body.web_session_id] = body.lead_id
     logger.info(f"Session binding created: {body.web_session_id} -> {body.lead_id}")
     return {"status": "bound", "web_session_id": body.web_session_id}
+
+
+@router.post("/bind-chat")
+async def bind_chat(body: ChatBindRequest):
+    """Manually bind a Telegram chat_id to an AIM lead_id.
+
+    Admin endpoint — allows direct chat→lead binding without deep link flow.
+    Persists to /opt/data/chat_bindings.json to survive restarts.
+    """
+    _chat_lead_map[body.chat_id] = body.lead_id
+    _save_bindings()
+    logger.info(f"Manual chat binding: chat_id={body.chat_id} -> lead_id={body.lead_id}")
+    return {"status": "bound", "chat_id": body.chat_id, "lead_id": body.lead_id}
+
+
+@router.get("/list-chats")
+async def list_chats():
+    """List all bound Telegram chats. Admin debug endpoint."""
+    return {
+        "bindings": {str(k): v for k, v in _chat_lead_map.items()},
+        "pending_sessions": dict(_session_bindings),
+        "total": len(_chat_lead_map),
+    }
 
 
 # ── Webhook ─────────────────────────────────────────────────────────
@@ -141,6 +207,7 @@ async def telegram_webhook(request: Request):
                     lead_id = _session_bindings.pop(web_session_id, None)
                     if lead_id:
                         _chat_lead_map[chat_id] = lead_id
+                        _save_bindings()
                         logger.info(f"Session bound: chat_id={chat_id} -> lead_id={lead_id}")
                         await _send_telegram_message(
                             chat_id,
@@ -159,40 +226,232 @@ async def telegram_webhook(request: Request):
                     await _send_telegram_message(chat_id, "❌ Не удалось расшифровать голосовое сообщение")
                     return {"status": "transcription_failed"}
 
-        # Process message via Hermes AIAgent with session memory (D-17: unified chat)
-        if chat_id and text:
-            lead_id = _chat_lead_map.get(chat_id)
-            mode = _get_mode(chat_id, lead_id)
+        # Detect document/file — download + extract text (PPTX, PDF, DOCX, TXT)
+        document = update.message.get("document")
+        if chat_id and document and not text:
+            file_id = document.get("file_id")
+            file_name = document.get("file_name", "file.bin")
+            caption = update.message.get("caption", "")
+            if file_id:
+                await _send_telegram_message(chat_id, f"📎 Читаю файл «{file_name}»...")
+                extracted = await _download_and_extract_text(file_id, file_name)
+                if extracted:
+                    text = f"[Файл: {file_name}]\n\n{extracted}"
+                    if caption:
+                        text = f"[Задача от пользователя]: {caption}\n\n{text}"
+                elif caption:
+                    text = f"[Пользователь отправил файл «{file_name}» с подписью]: {caption}"
+                    await _send_telegram_message(
+                        chat_id,
+                        f"⚠️ Не удалось извлечь текст из «{file_name}». Использую только подпись к файлу."
+                    )
 
-            _send_chat_action_sync(chat_id)
-            reply = _call_hermes_agent(mode=mode, user_message=text, session_id=f"tg:{chat_id}")
-            await _send_telegram_message(chat_id, reply)
-            return {"status": "replied"}
+        # Detect photo — use caption as message
+        photo = update.message.get("photo")
+        if chat_id and photo and not text:
+            caption = update.message.get("caption", "")
+            if caption:
+                text = f"[Пользователь отправил фото с подписью]: {caption}"
+            else:
+                await _send_telegram_message(chat_id, "📸 Я вижу фото. Напишите, что с ним нужно сделать?")
+                return {"status": "photo_no_caption"}
+
+        # Process message via Hermes AIAgent with session memory (D-17: unified chat)
+        # ASYNC: webhook returns 200 immediately, agent runs in background.
+        # Long tool calls (prescan up to 300s) would cause Telegram webhook
+        # timeout (~30s) and retry loops if processed synchronously.
+        if chat_id and text:
+            # Block system-generated messages to prevent self-reply loops.
+            # These patterns leak from error handlers and webhook retries.
+            if _is_system_message(text):
+                logger.info(f"Ignoring system message in chat {chat_id}: {text[:100]}")
+                return {"status": "ignored_system_message"}
+            asyncio.create_task(_process_message_async(chat_id, text))
+            return {"status": "processing"}
 
     return {"status": "ok"}
 
 
 # ── Helpers ─────────────────────────────────────────────────────────
+
+_SYSTEM_MESSAGE_PATTERNS = [
+    "⚠️ The model provider failed after retries",
+    "## SELF-LEARNING — выполни ОБЯЗАТЕЛЬНО",
+    "⚠️ Iteration budget exhausted",
+    "⚠️ Произошла ошибка при обработке",
+    "The model provider failed",
+    "⚠️ Reached maximum iterations",
+]
+
+
+def _is_system_message(text: str) -> bool:
+    """Detect system-generated messages that would create self-reply loops."""
+    for pattern in _SYSTEM_MESSAGE_PATTERNS:
+        if pattern in text:
+            return True
+    return False
+
+
+async def _download_and_extract_text(file_id: str, file_name: str) -> str | None:
+    """Download a file from Telegram Bot API and extract text content.
+
+    Supports: .pptx, .pdf, .docx, .txt, .md, .py, .json, .html, .csv
+    Returns extracted text or None if extraction fails.
+    """
+    import io
+    from pathlib import Path
+
+    ext = Path(file_name).suffix.lower()
+    get_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getFile?file_id={file_id}"
+    proxy = os.getenv("TELEGRAM_PROXY_URL", "")
+    proxy_auth = os.getenv("TELEGRAM_PROXY_AUTH", "")
+    proxy_url = None
+    if proxy and proxy_auth:
+        from urllib.parse import urlparse
+        p = urlparse(proxy)
+        proxy_url = f"http://{proxy_auth}@{p.netloc or p.path}"
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0, proxy=proxy_url) as client:
+            resp = await client.get(get_url)
+            if resp.status_code != 200:
+                logger.error(f"getFile failed: HTTP {resp.status_code}")
+                return None
+            file_info = resp.json()
+            if not file_info.get("ok"):
+                logger.error(f"getFile API error: {file_info.get('description')}")
+                return None
+
+            file_path = file_info["result"]["file_path"]
+            download_url = f"https://api.telegram.org/file/bot{TELEGRAM_BOT_TOKEN}/{file_path}"
+            resp = await client.get(download_url)
+            if resp.status_code != 200:
+                logger.error(f"File download failed: HTTP {resp.status_code}")
+                return None
+
+            content = resp.content
+            logger.info(f"Downloaded {file_name} ({len(content)} bytes, ext={ext})")
+
+    except Exception as e:
+        logger.error(f"Failed to download file {file_name}: {e}")
+        return None
+
+    # Extract text based on file type
+    try:
+        if ext in (".txt", ".md", ".py", ".json", ".html", ".csv", ".yaml", ".yml", ".xml"):
+            return content.decode("utf-8", errors="replace")
+
+        if ext == ".pptx":
+            from pptx import Presentation
+            prs = Presentation(io.BytesIO(content))
+            slides = []
+            for i, slide in enumerate(prs.slides, 1):
+                parts = []
+                for shape in slide.shapes:
+                    if shape.has_text_frame:
+                        for para in shape.text_frame.paragraphs:
+                            t = para.text.strip()
+                            if t:
+                                parts.append(t)
+                if parts:
+                    slides.append(f"Слайд {i}:\n" + "\n".join(parts))
+            return "\n\n".join(slides) if slides else None
+
+        if ext == ".pdf":
+            from pypdf import PdfReader
+            reader = PdfReader(io.BytesIO(content))
+            pages = []
+            for i, page in enumerate(reader.pages, 1):
+                t = page.extract_text()
+                if t and t.strip():
+                    pages.append(f"Страница {i}:\n{t.strip()}")
+            return "\n\n".join(pages) if pages else None
+
+        if ext == ".docx":
+            from docx import Document
+            doc = Document(io.BytesIO(content))
+            paras = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+            return "\n".join(paras) if paras else None
+
+        logger.warning(f"No text extractor for extension {ext}")
+        return None
+
+    except Exception as e:
+        logger.error(f"Text extraction failed for {file_name} ({ext}): {e}")
+        return None
+
+
+async def _process_message_async(chat_id: int, text: str) -> None:
+    """Process a Telegram message in background and send reply via sendMessage.
+
+    Offloads the synchronous _call_hermes_agent to a thread pool so the
+    webhook can return 200 immediately. Long tool calls (prescan,
+    competitors) would otherwise hit Telegram's ~30s webhook timeout.
+    """
+    lead_id = _chat_lead_map.get(chat_id)
+    mode = _get_mode(chat_id, lead_id)
+
+    logger.info(f"Processing tg message (async): chat_id={chat_id} mode={mode} text={text[:80]}")
+    stop_typing = threading.Event()
+    typing_thread = threading.Thread(
+        target=_send_chat_action_keepalive,
+        args=(chat_id, stop_typing),
+        daemon=True,
+    )
+    typing_thread.start()
+    try:
+        loop = asyncio.get_running_loop()
+        reply = await loop.run_in_executor(
+            None, _call_hermes_agent, mode, text, f"tg:{chat_id}"
+        )
+        logger.info(f"Agent reply received (async): {len(str(reply))} chars. Sending to chat {chat_id}...")
+        await _send_telegram_message(chat_id, str(reply))
+    except Exception as e:
+        logger.error(f"Agent processing failed for chat {chat_id}: {e}", exc_info=True)
+        await _send_telegram_message(
+            chat_id,
+            "⚠️ Произошла ошибка при обработке сообщения. Пожалуйста, попробуйте ещё раз или свяжитесь с администратором."
+        )
+    finally:
+        stop_typing.set()
+
+
 async def _send_telegram_message(chat_id: int, text: str) -> dict:
     """Send message via Bot API. Async version for webhook."""
     return _send_telegram_message_sync(chat_id, text)
 
 
-def _send_chat_action_sync(chat_id: int, action: str = "typing") -> None:
+def _send_chat_action_sync(chat_id: int, action: str = "typing") -> bool:
     """Send chat action to Telegram — shows 'typing...' indicator.
 
-    Fire-and-forget: errors are logged but not raised.
-    Telegram auto-expires the indicator after ~5s or on next message.
+    Returns True on success. Telegram auto-expires the indicator after ~5s.
+    Use _send_chat_action_keepalive() to keep it alive during long operations.
     """
     if not TELEGRAM_BOT_TOKEN:
-        return
+        return False
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendChatAction"
     proxy = _get_proxy_url()
     try:
         with httpx.Client(timeout=5.0, proxy=proxy) as client:
-            client.post(url, json={"chat_id": chat_id, "action": action})
-    except Exception:
-        pass  # typing indicator is cosmetic — never block on failure
+            resp = client.post(url, json={"chat_id": chat_id, "action": action})
+            data = resp.json()
+            if not data.get("ok"):
+                logger.warning(f"sendChatAction failed: {data}")
+                return False
+            return True
+    except Exception as e:
+        logger.warning(f"sendChatAction error: {e}")
+        return False
+
+
+def _send_chat_action_keepalive(chat_id: int, stop_event: threading.Event, interval: float = 4.0):
+    """Keep typing indicator alive by re-sending every `interval` seconds.
+
+    Runs in a daemon thread. Telegram expires typing after ~5s,
+    so we refresh at 4s intervals. Stops when stop_event is set.
+    """
+    while not stop_event.wait(interval):
+        _send_chat_action_sync(chat_id)
 
 
 def _send_telegram_message_sync(chat_id: int, text: str, retries: int = 3) -> dict:
@@ -308,10 +567,19 @@ def _process_update_sync(message_data: dict, chat_id: int, text: str):
     mode = _get_mode(chat_id, lead_id)
 
     logger.info(f"Processing tg message: chat_id={chat_id} mode={mode} text={text[:80]}")
-    _send_chat_action_sync(chat_id)
+    stop_typing = threading.Event()
+    typing_thread = threading.Thread(
+        target=_send_chat_action_keepalive,
+        args=(chat_id, stop_typing),
+        daemon=True,
+    )
+    typing_thread.start()
     try:
         reply = _call_hermes_agent(mode=mode, user_message=text, session_id=f"tg:{chat_id}")
-        logger.info(f"Agent reply received: {len(reply)} chars. Sending to Telegram chat {chat_id}...")
+    finally:
+        stop_typing.set()
+    logger.info(f"Agent reply received: {len(reply)} chars. Sending to Telegram chat {chat_id}...")
+    try:
         result = _send_telegram_message_sync(chat_id, reply)
         ok = result.get('ok', False)
         msg_id = 'N/A'
@@ -408,6 +676,7 @@ def _polling_loop_sync():
                             lead_id = _session_bindings.pop(web_session_id, None)
                             if lead_id:
                                 _chat_lead_map[chat_id] = lead_id
+                                _save_bindings()
                                 logger.info(f"Session bound: chat_id={chat_id} -> lead_id={lead_id}")
                                 _send_telegram_message_sync(
                                     chat_id,
