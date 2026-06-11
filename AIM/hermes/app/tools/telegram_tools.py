@@ -131,3 +131,92 @@ registry.register(
     is_async=True,
     description="Send Telegram message as Mikhail (user account, not bot)",
 )
+
+
+# ── Tool: bind_telegram_chat ─────────────────────────────────────────
+
+async def handle_bind_telegram_chat(chat_id: int, lead_id: str, **kwargs) -> str:
+    """Manually bind a Telegram chat to an AIM lead. Admin tool."""
+    from app.telegram_gateway import _chat_lead_map, _save_bindings
+
+    _chat_lead_map[chat_id] = lead_id
+    _save_bindings()
+    logger.info(f"bind_telegram_chat: chat_id={chat_id} -> lead_id={lead_id}")
+    return json.dumps({
+        "status": "bound",
+        "chat_id": chat_id,
+        "lead_id": lead_id,
+        "total_bindings": len(_chat_lead_map),
+    }, ensure_ascii=False)
+
+
+registry.register(
+    name="bind_telegram_chat",
+    toolset="aim-operations",
+    schema={
+        "type": "function",
+        "function": {
+            "name": "bind_telegram_chat",
+            "description": (
+                "Manually bind a Telegram chat_id to an AIM lead_id. "
+                "Use when a client's chat needs to be linked to their project without the deep link flow. "
+                "The bot will then recognize messages from this chat as belonging to the lead. "
+                "Requires ADMIN mode."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "chat_id": {
+                        "type": "integer",
+                        "description": "Telegram chat ID (e.g., -1003902587696 for a supergroup, or positive number for private chat)",
+                    },
+                    "lead_id": {
+                        "type": "string",
+                        "description": "AIM lead_id to bind this chat to (e.g., 'arclinic:01')",
+                    },
+                },
+                "required": ["chat_id", "lead_id"],
+            },
+        },
+    },
+    handler=handle_bind_telegram_chat,
+    is_async=True,
+    description="Manually bind a Telegram chat to an AIM lead (admin only)",
+)
+
+
+# ── Tool: list_telegram_chats ────────────────────────────────────────
+
+async def handle_list_telegram_chats(args: dict = None, **kwargs) -> str:
+    """List all bound Telegram chats. Admin debug tool."""
+    from app.telegram_gateway import _chat_lead_map, _session_bindings
+
+    return json.dumps({
+        "bindings": {str(k): v for k, v in _chat_lead_map.items()},
+        "pending_sessions": dict(_session_bindings),
+        "total": len(_chat_lead_map),
+    }, ensure_ascii=False, indent=2)
+
+
+registry.register(
+    name="list_telegram_chats",
+    toolset="aim-operations",
+    schema={
+        "type": "function",
+        "function": {
+            "name": "list_telegram_chats",
+            "description": (
+                "List all Telegram chats currently bound to AIM leads. "
+                "Shows chat_id → lead_id mappings and pending deep link sessions. "
+                "Use to find which chats the bot recognizes. Requires ADMIN mode."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {},
+            },
+        },
+    },
+    handler=handle_list_telegram_chats,
+    is_async=True,
+    description="List all bound Telegram chats (admin debug)",
+)

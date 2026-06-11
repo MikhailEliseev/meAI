@@ -1,25 +1,22 @@
-# Session: 2026-06-07
+# Session: 2026-06-11
 
-## Текущий фокус: Ожидание следующей задачи
+## Текущий фокус: Перестройка iamaim.ru — выполняю план (14 tasks)
 
-### Статус системы
+### Статус
+- ✅ Task 1: CPT `research` зарегистрирован (sandbox auto-loader)
+- ✅ Task 2: Старые страницы удалены, Contact создан, permalinks настроены
+- ✅ Task 3: style.css (217 B)
+- ✅ Task 4: functions.php (3.4 KB) — theme setup, enqueue, REST proxy, settings page
+- ✅ Task 5: header.php (1.1 KB) + footer.php (981 B)
+- ✅ Task 6: index.php (374 B)
+- ✅ Task 7: theme.css (4.7 KB, Tailwind скомпилирован)
+- ✅ Task 8: animated-text.js (819 B)
+- ⏳ Task 9: React chat bundle (следующий)
+- ⏳ Tasks 10-14: front-page, research, blog/contact, activation, SEO
 
-**Presale Pipeline v3.3.0:** ЗАВЕРШЁН и протестирован.
-- Полное тестирование с Hermes: пользователь очень доволен результатами
-- Vacancy Intelligence (hh.ru через Firecrawl) — работает
-- Патч ротации Firecrawl-ключей (402 auto-rotation) — работает
-- Full Auto Mode: ссылка → HTML-КП, без промежуточных подтверждений
-- Все фазы (Phase 0–4) отрабатывают корректно
-
-**Code Audit (DeepSeek v4 Pro):** Завершён 2026-06-06.
-- Критических багов нет. Код качественный.
-- Найден docstring-weight mismatch в competitor_matcher.py (не исправлен — пользователь сказал «забей»)
-- Дублирование INN-валидации, brand name extraction (решено не трогать)
-
-**Что дальше:**
-- Phase 13: 13-02 (Яндекс.Директ) + 13-03 (VK/Telegram Ads) — pending
-- Возможно, другие задачи от пользователя
-
-### Состояние серверов
-- AIM (138.16.224.188): недоступен (таймаут, 2026-06-07)
-- s1 (194.36.89.5): DEAD
+### Важные выводы
+- **MCP write-file НЕНАДЁЖЕН для PHP копирования в тему.** Писать PHP напрямую в Docker volume: `/var/lib/docker/volumes/aim_wp_content/_data/themes/aim-theme/`
+- **MCP execute-php может писать в sandbox**, но копирование из sandbox в тему работало нестабильно
+- **Sandbox auto-loader:** если PHP-файл в sandbox вызывает фатальную ошибку → `.crashed` → safe mode → MCP недоступен
+- **CSS/JS пишутся напрямую** в Docker volume — это работало стабильно
+- WordPress контейнер: `aim-wp`, wp-content смонтирован как Docker volume `aim_wp_content`

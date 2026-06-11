@@ -25,6 +25,8 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+MAX_SESSION_MESSAGES = 100  # auto-purge sessions exceeding this
+
 # ── Persistent session DB (survives container restarts) ────────────────
 # hermes-agent's SessionDB stores conversations in SQLite at /opt/data/state.db.
 # Passing this to every AIAgent instance means conversation history is loaded
@@ -35,6 +37,21 @@ try:
     _DB_PATH = Path(os.getenv("HERMES_HOME", "/opt/data")) / "state.db"
     _session_db = SessionDB(db_path=_DB_PATH)
     logger.info("Session DB opened: %s", _DB_PATH)
+    # Purge bloated sessions on startup to prevent token waste
+    try:
+        import sqlite3
+        conn = sqlite3.connect(str(_DB_PATH))
+        cur = conn.execute("SELECT session_id, COUNT(*) as cnt FROM messages GROUP BY session_id HAVING cnt > ?", (MAX_SESSION_MESSAGES,))
+        bloated = cur.fetchall()
+        for sid, cnt in bloated:
+            conn.execute("DELETE FROM messages WHERE session_id = ?", (sid,))
+            logger.warning("Purged bloated session %s (%d messages)", sid, cnt)
+        conn.commit()
+        conn.close()
+        if bloated:
+            logger.info("Session cleanup: purged %d bloated sessions", len(bloated))
+    except Exception as e:
+        logger.warning("Session cleanup failed: %s", e)
 except Exception as e:
     logger.warning("Session DB unavailable — sessions will NOT survive restarts: %s", e)
 
@@ -369,6 +386,15 @@ def _create_agent(session_id: str | None, mode: str, enabled_toolsets: list[str]
     if enabled_toolsets is None:
         enabled_toolsets = ["aim-operations", "hermes-debug"]
 
+    # Cost control: limit iterations and output tokens by mode
+    _mode_limits = {
+        "ADMIN":       (12, 12000),
+        "ACTIVE":      (6,  6000),
+        "PRESALE":     (5,  6000),
+        "SALES_ADMIN": (4,  4000),
+    }
+    iters, out_tokens = _mode_limits.get(mode, (5, 6000))
+
     return AIAgent(
         base_url=OMNIROUTE_URL,
         api_key=OMNIROUTE_AUTH,
@@ -380,9 +406,9 @@ def _create_agent(session_id: str | None, mode: str, enabled_toolsets: list[str]
         load_soul_identity=True,
         ephemeral_system_prompt=get_mode_prompt(mode),
         enabled_toolsets=enabled_toolsets,
-        max_iterations=25,
+        max_iterations=iters,
         quiet_mode=True,
-        max_tokens=16000,
+        max_tokens=out_tokens,
     )
 
 

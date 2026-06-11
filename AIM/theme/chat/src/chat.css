@@ -1,0 +1,25 @@
+#hermes-chat {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+#hermes-chat *,
+#hermes-chat *::before,
+#hermes-chat *::after {
+  box-sizing: border-box;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes chatSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#hermes-chat .chat-message-enter {
+  animation: chatSlideUp 0.3s ease-out;
+}

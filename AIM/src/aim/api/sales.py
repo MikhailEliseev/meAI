@@ -6,9 +6,11 @@ activity log, manual qualification and escalation triggers.
 Part of Phase 13: AI Sales Admin Agent — Sub-Phase 5.
 """
 
+import json
 import logging
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -21,6 +23,50 @@ from src.aim.models.sales import SalesAgentActivity, SalesConversation, SalesEsc
 from src.aim.subagents.sales.knowledge_manager import KnowledgeManager
 
 logger = logging.getLogger(__name__)
+
+LEADS_DIR = os.getenv("LEADS_DIR", "/opt/data/leads")
+
+
+def _pipeline_from_filesystem() -> tuple[int, list[dict], list[dict]]:
+    """Read pipeline stats from filesystem lead dossiers."""
+    leads_path = Path(LEADS_DIR)
+    if not leads_path.exists():
+        return 0, [], []
+
+    statuses: dict[str, int] = {}
+    tiers: dict[str, int] = {}
+    total = 0
+
+    for lead_dir in leads_path.iterdir():
+        if not lead_dir.is_dir():
+            continue
+        total += 1
+
+        status_file = lead_dir / "status.json"
+        if status_file.exists():
+            try:
+                data = json.loads(status_file.read_text())
+                st = data.get("status", "unknown")
+                statuses[st] = statuses.get(st, 0) + 1
+                # Map status to tier
+                if st == "qualified":
+                    tiers["warm"] = tiers.get("warm", 0) + 1
+                elif st in ("audited", "contacted", "active"):
+                    tiers["hot"] = tiers.get("hot", 0) + 1
+                elif st == "closed":
+                    tiers["cold"] = tiers.get("cold", 0) + 1
+                else:
+                    tiers["cold"] = tiers.get("cold", 0) + 1
+            except (json.JSONDecodeError, OSError):
+                statuses["unknown"] = statuses.get("unknown", 0) + 1
+                tiers["cold"] = tiers.get("cold", 0) + 1
+        else:
+            statuses["unknown"] = statuses.get("unknown", 0) + 1
+            tiers["cold"] = tiers.get("cold", 0) + 1
+
+    by_status = [{"stage": k, "count": v} for k, v in statuses.items()]
+    by_tier = [{"stage": k, "count": v} for k, v in tiers.items()]
+    return total, by_status, by_tier
 
 router = APIRouter(prefix="/api/sales", tags=["sales"])
 
@@ -108,11 +154,20 @@ async def get_pipeline(
     if project_id:
         base_q = base_q.where(SalesConversation.project_id == project_id)
 
-    # Total
     total_result = await db.execute(
         select(func.count()).select_from(base_q.subquery())
     )
     total = total_result.scalar() or 0
+
+    # Fallback to filesystem if PostgreSQL is empty
+    if total == 0:
+        fs_total, fs_by_status, fs_by_tier = _pipeline_from_filesystem()
+        if fs_total > 0:
+            return PipelineResponse(
+                total=fs_total,
+                by_status=[PipelineStats(**s) for s in fs_by_status],
+                by_tier=[PipelineStats(**s) for s in fs_by_tier],
+            )
 
     # By status
     status_result = await db.execute(
@@ -125,8 +180,7 @@ async def get_pipeline(
         for row in status_result.all()
     ]
 
-    # By qualification tier (extracted from JSONB)
-    # SQLite doesn't support jsonb path extraction cleanly, so we'll use raw strings
+    # By qualification tier
     tier_result = await db.execute(
         select(SalesConversation.qualification_result).where(
             SalesConversation.qualification_result.isnot(None)
