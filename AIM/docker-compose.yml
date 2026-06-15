@@ -170,7 +170,7 @@ services:
         define('WP_HOME', 'https://iamaim.ru');
         define('WP_SITEURL', 'https://iamaim.ru');
     volumes:
-      - wp_content:/var/www/html/wp-content
+      - aim_wp_content:/var/www/html/wp-content
       # aim-theme is in wp_content volume — no local mount needed
     depends_on:
       mysql:
@@ -185,7 +185,7 @@ services:
       start_period: 20s
 
   mysql:
-    image: mariadb:10.6
+    image: mariadb:11
     container_name: aim-mysql
     restart: unless-stopped
     environment:
@@ -194,7 +194,7 @@ services:
       MYSQL_USER: wp_user
       MYSQL_PASSWORD: ${WP_DB_PASSWORD}
     volumes:
-      - wp_db:/var/lib/mysql
+      - aim_wp_db:/var/lib/mysql
     networks:
       - aim-network
     healthcheck:
@@ -216,7 +216,7 @@ services:
       - ./ssl:/etc/nginx/ssl:ro
       - ./logs/nginx:/var/log/nginx
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - wp_content:/var/www/html/wp-content:ro
+      - aim_wp_content:/var/www/html/wp-content:ro
     depends_on:
       - app
       - wordpress
@@ -351,7 +351,7 @@ volumes:
   prometheus-data:
   grafana-data:
   hermes_data:
-  wp_content:
+  aim_wp_content:
     external: true
-  wp_db:
+  aim_wp_db:
     external: true
