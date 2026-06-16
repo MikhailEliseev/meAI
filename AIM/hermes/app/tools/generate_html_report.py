@@ -1278,7 +1278,8 @@ def _build_strategy(data: dict) -> str:
     top_rec = ci.get("top_recommendation", "")
     priority_actions = ci.get("priority_actions", []) or []
     gaps = ci.get("gaps", [])
-    steal_worthy = ci.get("steal_worthy", [])
+    best_practices = ci.get("best_practices", {}) or {}
+    steal_worthy = best_practices.get("steal_worthy_tactics", [])
 
     if not (top_rec or priority_actions or gaps):
         return ""
