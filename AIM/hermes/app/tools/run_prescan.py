@@ -24,7 +24,7 @@ from tools.registry import registry
 logger = logging.getLogger(__name__)
 
 AIM_API_BASE = "http://app:8000"
-REQUEST_TIMEOUT = 300.0  # prescan can take 180-250s (Apify, reviews, SEO)
+REQUEST_TIMEOUT = 900.0  # prescan can take 6-10 min (Apify, INN scraping, rusprofile)
 
 
 async def handle_run_prescan(url=None, **kwargs) -> str:
