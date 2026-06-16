@@ -252,6 +252,21 @@ def _load_session_data(session_hash: str) -> dict:
         except (json.JSONDecodeError, OSError) as e:
             logger.warning("Failed to read ci-analysis.json: %s", e)
 
+    # New optional data sources (graceful — file absence is normal)
+    for filename, key in [
+        ("doctor_dossiers.json", "doctor_dossiers"),
+        ("instagram_content.json", "instagram_content"),
+        ("smi_mentions.json", "smi_mentions"),
+        ("pagespeed.json", "pagespeed"),
+    ]:
+        path = os.path.join(session_dir, filename)
+        if os.path.exists(path):
+            try:
+                with open(path, "r") as f:
+                    data[key] = json.load(f)
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning("Failed to read %s: %s", filename, e)
+
     return data
 
 
@@ -292,22 +307,41 @@ def _build_hero(data: dict) -> str:
 
 
 def _build_nav(data: dict) -> str:
-    """Fixed navigation bar with logo, section anchor links, and theme toggle."""
-    return """<nav>
+    """Fixed navigation bar with conditional section links and theme toggle."""
+    ci = data.get("ci_analysis", {})
+    has_competitors = bool(ci.get("feature_matrix"))
+    has_whitefields = bool(ci.get("gaps") or ci.get("advantages"))
+    has_strategy = bool(ci.get("top_recommendation") or ci.get("priority_actions"))
+
+    links = []
+    links.append('<a href="#about">О клинике</a>')  # Always renders
+    if has_competitors:
+        links.append('<a href="#market">Рынок</a>')
+    if data.get("doctor_dossiers"):
+        links.append('<a href="#experts">Эксперты</a>')
+    if data.get("instagram_content"):
+        links.append('<a href="#content-analysis">Контент</a>')
+    if data.get("smi_mentions"):
+        links.append('<a href="#media">СМИ</a>')
+    if has_competitors:
+        links.append('<a href="#competitors">Конкуренты</a>')
+    if has_whitefields:
+        links.append('<a href="#whitefields">Белые поля</a>')
+    # reviews always in prescan — check platforms
+    reviews = (data.get("prescan", {}).get("stage_2_under_the_hood", {}) or {}).get("reviews_data") or data.get("prescan", {}).get("reviews", {})
+    platforms = reviews.get("platforms", []) if isinstance(reviews, dict) else []
+    if platforms:
+        links.append('<a href="#presence">Присутствие</a>')
+    if has_strategy:
+        links.append('<a href="#strategy">Стратегия</a>')
+
+    return f"""<nav>
   <div style="display:flex;align-items:center;gap:16px">
     <div class="logo">AIM</div>
     <div class="tag">Marketing Agency</div>
   </div>
   <div style="display:flex;align-items:center;gap:4px">
-    <div class="links">
-      <a href="#hero">Обзор</a>
-      <a href="#market">Рынок</a>
-      <a href="#competitors">Конкуренты</a>
-      <a href="#seo">SEO</a>
-      <a href="#pagespeed">PageSpeed</a>
-      <a href="#reviews">Отзывы</a>
-      <a href="#recommendations">План</a>
-    </div>
+    <div class="links">{"".join(links)}</div>
     <button class="theme-toggle" onclick="var d=document.documentElement;var t=d.dataset.theme==='dark'?'light':'dark';d.dataset.theme=t;localStorage.setItem('theme',t)" aria-label="Toggle theme">🌓</button>
   </div>
 </nav>"""
@@ -370,12 +404,13 @@ def _build_exec_summary(data: dict) -> str:
 
 
 def _build_competitors(data: dict) -> str:
-    """Competitor comparison table with metric-tags."""
+    """Enhanced competitor comparison: table + per-competitor detail cards."""
     ci = data.get("ci_analysis", {})
     feature_matrix = ci.get("feature_matrix", [])
     if not feature_matrix:
         return ""
 
+    # Score comparison table (kept from previous version)
     rows = ""
     for comp in feature_matrix:
         name = comp.get("name") or comp.get("brand_name") or "—"
@@ -393,6 +428,38 @@ def _build_competitors(data: dict) -> str:
           <td>{'<a href="' + _esc(website) + '" style="color:var(--accent)" target="_blank" rel="noopener noreferrer">' + _esc(website) + '</a>' if website else '—'}</td>
         </tr>"""
 
+    # Per-competitor detail cards
+    comp_cards = ""
+    for comp in feature_matrix:
+        name = comp.get("name") or comp.get("brand_name") or "—"
+        strengths = comp.get("strengths") or comp.get("advantages") or []
+        weaknesses = comp.get("weaknesses") or comp.get("gaps") or []
+        social = comp.get("social") or comp.get("instagram") or ""
+        doctors = comp.get("doctors") or ""
+
+        if not (strengths or weaknesses or social or doctors):
+            continue  # Skip cards with no detail data
+
+        card_body = f'<h3 style="font-size:16px;margin-bottom:8px">{_esc(name)}</h3>'
+
+        if doctors:
+            card_body += f'<p style="font-size:13px">Врачей: {_esc(str(doctors))}</p>'
+        if social:
+            card_body += f'<p style="font-size:13px">Instagram: {_esc(str(social))}</p>'
+
+        if strengths:
+            s_list = [str(s) if isinstance(s, str) else s.get("description", str(s)) for s in (strengths if isinstance(strengths, list) else [strengths])]
+            card_body += f'<div class="social-found" style="font-size:12px;margin-top:8px">Сильные стороны: {", ".join(_esc(s) for s in s_list[:3])}</div>'
+        if weaknesses:
+            w_list = [str(w) if isinstance(w, str) else w.get("description", str(w)) for w in (weaknesses if isinstance(weaknesses, list) else [weaknesses])]
+            card_body += f'<div class="social-notfound" style="font-size:12px;margin-top:4px">Слабые стороны: {", ".join(_esc(w) for w in w_list[:3])}</div>'
+
+        comp_cards += f'<div class="card comp-expert">{card_body}</div>'
+
+    cards_section = ""
+    if comp_cards:
+        cards_section = f'<h3 style="margin-top:32px">Детальный анализ конкурентов</h3><div class="grid-2">{comp_cards}</div>'
+
     return f"""<section id="competitors">
       <div class="container">
         <div class="section-label">Конкуренты</div>
@@ -403,6 +470,7 @@ def _build_competitors(data: dict) -> str:
             <tbody>{rows}</tbody>
           </table>
         </div>
+        {cards_section}
       </div>
     </section>"""
 
@@ -741,21 +809,613 @@ def _build_footer(data: dict) -> str:
     </footer>"""
 
 
+# ── New Section Builders (PLAN-02) ────────────────────────────────────────────
+
+def _build_about(data: dict) -> str:
+    """About section — merges exec summary + financials into one rich section."""
+    prescan = data.get("prescan", {})
+    stage1 = prescan.get("stage_1_financials", {}) or {}
+    stage2 = prescan.get("stage_2_under_the_hood", {}) or {}
+
+    revenue = stage1.get("revenue")
+    profit = stage1.get("profit")
+    legal_name = stage1.get("legal_name") or ""
+    inn = stage1.get("inn") or ""
+    okved = stage1.get("okved") or ""
+    employees = stage1.get("employees")
+    doctors = stage1.get("doctors")
+    licenses = stage1.get("licenses")
+    revenue_trend = stage1.get("revenue_trend") or prescan.get("stage_3_market", {}).get("revenue_trend")
+
+    client_name = prescan.get("client_name") or data.get("metadata", {}).get("client_name") or ""
+
+    if not (revenue or profit or legal_name):
+        return ""
+
+    # Build description paragraph
+    desc_parts = []
+    if legal_name:
+        desc_parts.append(f"<strong>{_esc(legal_name)}</strong>")
+    if inn:
+        desc_parts.append(f"ИНН {_esc(inn)}")
+    if okved:
+        desc_parts.append(f"ОКВЭД {_esc(str(okved))}")
+    if employees:
+        desc_parts.append(f"{_esc(str(employees))} сотрудников")
+    if licenses:
+        lic_str = str(licenses)
+        desc_parts.append(f"{_esc(lic_str)}")
+    desc = " — ".join(desc_parts) + "." if desc_parts else ""
+
+    # Metrics row
+    metrics_items = []
+    if revenue:
+        metrics_items.append(
+            f'<div class="metric"><div class="value">{_format_currency(revenue)}</div><div class="label">Выручка / год</div></div>'
+        )
+    if doctors is not None:
+        metrics_items.append(
+            f'<div class="metric"><div class="value">{_esc(str(doctors))}</div><div class="label">Врачей</div></div>'
+        )
+    if employees is not None:
+        metrics_items.append(
+            f'<div class="metric"><div class="value">{_esc(str(employees))}</div><div class="label">Сотрудников</div></div>'
+        )
+    if revenue_trend:
+        trend_str = str(revenue_trend)
+        is_up = "+" in trend_str or "рост" in trend_str.lower() or "↑" in trend_str
+        trend_tag = "metric-tag-green" if is_up else "metric-tag-red"
+        metrics_items.append(
+            f'<div class="metric"><div class="value" style="font-size:clamp(24px,3vw,36px)"><span class="metric-tag {trend_tag}"><span class="metric-tag-dot"></span>{_esc(trend_str)}</span></div><div class="label">Тренд выручки</div></div>'
+        )
+
+    metrics_html = f'<div class="metrics">{"".join(metrics_items)}</div>' if metrics_items else ""
+
+    # Dynamics description
+    dynamics = ""
+    if revenue_trend:
+        trend_str = str(revenue_trend).lower()
+        if "рост" in trend_str or "+" in trend_str or "↑" in trend_str:
+            dynamics = f"<p>Выручка показывает положительную динамику. Это говорит о стабильном положении {_esc(client_name or legal_name or 'клиники')} на рынке.</p>"
+        elif "пад" in trend_str or "-" in trend_str or "↓" in trend_str:
+            dynamics = f"<p>Выручка показывает отрицательную динамику. Цифровой маркетинг может помочь переломить этот тренд и привлечь новых пациентов.</p>"
+
+    # OKVED + Licenses in grid-2
+    grid_items = ""
+    if okved:
+        grid_items += f'<div class="card"><h4>ОКВЭД</h4><p style="font-size:13px">{_esc(str(okved))}</p></div>'
+    if licenses:
+        lic_str = str(licenses)
+        grid_items += f'<div class="card"><h4>Лицензии</h4><p style="font-size:13px">{_esc(lic_str)}</p></div>'
+
+    grid_html = f'<div class="grid-2">{grid_items}</div>' if grid_items else ""
+
+    # Key takeaway
+    takeaway = ""
+    if doctors and revenue:
+        takeaway = "<blockquote>Ключевой вывод: при текущей выручке и штате врачей клиника имеет потенциал для роста за счёт усиления цифрового присутствия.</blockquote>"
+
+    return f"""<section id="about">
+  <div class="section-label">01 — О компании</div>
+  <h2>{_esc(legal_name or client_name or 'Клиника')}</h2>
+  {f'<p>{desc}</p>' if desc else ''}
+  {dynamics}
+  {metrics_html}
+  {grid_html}
+  {takeaway}
+</section>
+<hr>"""
+
+
+def _build_market(data: dict) -> str:
+    """Market section — revenue comparison table with competitors."""
+    ci = data.get("ci_analysis", {})
+    feature_matrix = ci.get("feature_matrix", [])
+    if not feature_matrix:
+        return ""
+
+    prescan = data.get("prescan", {})
+    stage1 = prescan.get("stage_1_financials", {}) or {}
+    client_name = prescan.get("client_name") or data.get("metadata", {}).get("client_name") or "Клиника"
+    client_revenue = stage1.get("revenue", "—")
+    client_trend = stage1.get("revenue_trend") or prescan.get("stage_3_market", {}).get("revenue_trend") or "—"
+    client_doctors = stage1.get("doctors", "—")
+    client_instagram = prescan.get("instagram", {}).get("handle", "—") if prescan.get("instagram") else "—"
+
+    # Build table rows
+    rows = f"""<tr style="background:var(--hover);font-weight:700">
+  <td style="color:var(--text)">{_esc(str(client_name))} ← <span style="font-size:12px;color:var(--text-dim)">Вы</span></td>
+  <td style="color:var(--text)">{_format_currency(client_revenue)}</td>
+  <td>{_esc(str(client_trend))}</td>
+  <td>{_esc(str(client_doctors))}</td>
+  <td>{_esc(str(client_instagram))}</td>
+</tr>"""
+
+    for comp in feature_matrix:
+        name = comp.get("name") or comp.get("brand_name") or "—"
+        rev = comp.get("revenue") or "—"
+        rev_display = _format_currency(rev) if rev != "—" else "—"
+        trend = comp.get("trend") or comp.get("revenue_trend") or "—"
+        comp_doctors = comp.get("doctors") or "—"
+        social = comp.get("social") or comp.get("instagram") or "—"
+        rows += f"""<tr>
+  <td style="color:var(--text);font-weight:500">{_esc(str(name))}</td>
+  <td>{_esc(str(rev_display))}</td>
+  <td>{_esc(str(trend))}</td>
+  <td>{_esc(str(comp_doctors))}</td>
+  <td>{_esc(str(social))}</td>
+</tr>"""
+
+    # Strengths and growth points
+    advantages = ci.get("advantages", [])
+    gaps = ci.get("gaps", [])
+
+    strength_blocks = ""
+    if advantages:
+        strength_items = ""
+        for a in advantages[:3]:
+            text = a if isinstance(a, str) else (a.get("description") or a.get("advantage") or str(a))
+            strength_items += f'<div class="gap" style="border-left:3px solid var(--green)"><h4>{_esc(text)}</h4></div>'
+        strength_blocks += f"<h3>Где сильны</h3>{strength_items}"
+
+    growth_blocks = ""
+    if gaps:
+        growth_items = ""
+        for g in gaps[:3]:
+            text = g if isinstance(g, str) else (g.get("description") or g.get("gap") or str(g))
+            growth_items += f'<div class="gap" style="border-left:3px solid var(--border)"><h4>{_esc(text)}</h4></div>'
+        growth_blocks += f"<h3 style=\"margin-top:24px\">Где есть точки роста</h3>{growth_items}"
+
+    gaps_section = ""
+    if strength_blocks or growth_blocks:
+        gaps_section = f"<h3>Где сильны — где есть точки роста</h3>{strength_blocks}{growth_blocks}"
+
+    return f"""<section id="market">
+  <div class="section-label">02 — Рынок</div>
+  <h2>{_esc(client_name)} vs конкуренты</h2>
+  <p>Сравнение по выручке и ключевым метрикам.</p>
+  <div style="overflow-x:auto;margin:24px 0">
+    <table>
+      <thead><tr><th>Клиника</th><th>Выручка</th><th>Тренд</th><th>Врачей</th><th>Instagram</th></tr></thead>
+      <tbody>{rows}</tbody>
+    </table>
+  </div>
+  {gaps_section}
+</section>
+<hr>"""
+
+
+def _build_experts(data: dict) -> str:
+    """Experts section — per-doctor cards from doctor_dossiers."""
+    dossiers = data.get("doctor_dossiers")
+    if not dossiers:
+        return ""
+    doctors = dossiers.get("doctors", [])
+    if not doctors:
+        return ""
+
+    # Sort by followers descending
+    sorted_doctors = sorted(doctors, key=lambda d: d.get("followers", 0) or 0, reverse=True)
+    top_doctors = sorted_doctors[:5]
+
+    cards = ""
+    for i, doc in enumerate(top_doctors):
+        name = doc.get("name") or doc.get("full_name") or "—"
+        title = doc.get("title") or doc.get("specialty") or ""
+        instagram = doc.get("instagram") or doc.get("handle") or ""
+        followers = doc.get("followers", 0) or 0
+        avg_likes = doc.get("avg_likes") or doc.get("avg_likes_count", 0) or 0
+        content_style = doc.get("content_style") or ""
+
+        follower_display = f"{followers:,}" if isinstance(followers, (int, float)) and followers > 0 else str(followers)
+        is_top = i == 0
+
+        cards += f"""<div class="card" {'style="background:var(--hover)"' if is_top else ''}>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+    <div>
+      <div class="name" style="font-size:16px;font-weight:600;color:var(--text)">{_esc(name)}</div>
+      {f'<div class="spec">{_esc(title)}</div>' if title else ''}
+      {f'<div class="social" style="margin-top:4px">{_esc(instagram)}</div>' if instagram else ''}
+      {f'<p style="font-size:12px;color:var(--text-dim);margin-top:4px">Стиль: {_esc(content_style)}</p>' if content_style else ''}
+    </div>
+    <div style="text-align:right">
+      <div class="social-found" style="font-size:24px;font-weight:300">{_esc(follower_display)}</div>
+      <div class="social" style="font-size:12px">подписчиков</div>
+      {f'<div class="social" style="font-size:12px;margin-top:4px">~{_esc(str(avg_likes))} лайков/пост</div>' if avg_likes else ''}
+    </div>
+  </div>
+</div>"""
+
+    # Summary for remaining doctors
+    remaining = len(sorted_doctors) - len(top_doctors)
+    summary = ""
+    if remaining > 0:
+        total_audience = sum(d.get("followers", 0) or 0 for d in sorted_doctors)
+        summary = f"<blockquote>Всего найдено {len(sorted_doctors)} врачей с суммарной аудиторией {total_audience:,} подписчиков. Ещё {remaining} специалистов доступны в детальном отчёте.</blockquote>"
+
+    return f"""<section id="experts">
+  <div class="section-label">03 — Эксперты</div>
+  <h2>Ключевые специалисты</h2>
+  <p>Найдено {len(sorted_doctors)} врачей с соцсетями.</p>
+  <div class="expert-category">
+    <div class="cat-title">ТОП-{len(top_doctors)} врачей по аудитории</div>
+    {cards}
+  </div>
+  {summary}
+</section>
+<hr>"""
+
+
+def _build_content(data: dict) -> str:
+    """Content analysis section from instagram_content.json."""
+    ig_content = data.get("instagram_content")
+    if not ig_content:
+        return ""
+
+    doctors = ig_content.get("doctors", [])
+    patient_fears = ig_content.get("patient_fears", [])
+
+    # Rating emoji helper
+    def _rating_emoji(idx, total):
+        if idx == 0 or total <= 2:
+            return "🔥"
+        if idx < total // 2:
+            return "🟢"
+        return "🟡"
+
+    # Per-doctor content cards
+    doctor_cards = ""
+    for i, doc in enumerate(doctors):
+        name = doc.get("name") or doc.get("full_name") or "—"
+        style = doc.get("style") or doc.get("content_style") or ""
+        avg_likes = doc.get("avg_likes") or doc.get("avg_likes_count", 0) or 0
+        avg_views = doc.get("avg_views") or 0
+        themes = doc.get("themes", [])
+        gaps_list = doc.get("gaps", [])
+        potential = doc.get("potential") or ""
+
+        themes_html = ""
+        if themes:
+            theme_tags = " ".join(f'<span class="tag-badge">{_esc(t)}</span>' for t in (themes if isinstance(themes, list) else [themes]))
+            themes_html = f'<div style="margin:8px 0">{theme_tags}</div>'
+
+        gaps_html = ""
+        if gaps_list:
+            gap_strs = [str(g) for g in (gaps_list if isinstance(gaps_list, list) else [gaps_list])]
+            gaps_html = f'<p style="font-size:12px;color:var(--red)">Пробелы: {", ".join(_esc(g) for g in gap_strs)}</p>'
+
+        emoji = _rating_emoji(i, len(doctors))
+        doctor_cards += f"""<div class="card">
+  <h4>{emoji} {_esc(name)}</h4>
+  {f'<p style="font-size:13px">{_esc(style)}</p>' if style else ''}
+  {f'<p style="font-size:12px;color:var(--text-dim)">~{_esc(str(avg_likes))} лайков · ~{_esc(str(avg_views))} просмотров</p>' if avg_likes or avg_views else ''}
+  {themes_html}
+  {gaps_html}
+  {f'<p style="font-size:12px;color:var(--text-secondary);margin-top:8px">Потенциал: {_esc(potential)}</p>' if potential else ''}
+</div>"""
+
+    # Patient fears section
+    fears_html = ""
+    if patient_fears:
+        fear_cards = ""
+        for fear in patient_fears[:5]:
+            fear_name = fear.get("fear") or fear.get("name") or "—"
+            frequency = fear.get("frequency") or ""
+            covered_by = fear.get("covered_by") or ""
+            if isinstance(covered_by, list):
+                covered_by = ", ".join(covered_by)
+            fear_cards += f"""<div class="card">
+  <h4 style="color:var(--red)">{_esc(fear_name)}</h4>
+  {f'<p style="font-size:13px">Частота: {_esc(str(frequency))}</p>' if frequency else ''}
+  {f'<p style="font-size:12px;color:var(--text-dim)">Освещается: {_esc(str(covered_by)) if covered_by else "Нет"}</p>' if covered_by else ''}
+</div>"""
+
+        fears_html = f"""<h3>Топ-5 страхов пациентов (с форумов)</h3>
+<div class="grid-2">{fear_cards}</div>"""
+
+    key_insight = ""
+    if doctors:
+        key_insight = "<blockquote>Контент врачей — мощный канал доверия. Регулярные публикации с экспертным контентом повышают узнаваемость клиники и привлекают пациентов.</blockquote>"
+
+    return f"""<section id="content-analysis">
+  <div class="section-label">04 — Контент-анализ</div>
+  <h2>Что публикуют врачи — и что волнует пациентов</h2>
+  <p>Анализ контента ключевых специалистов.</p>
+  {doctor_cards}
+  {fears_html}
+  {key_insight}
+</section>
+<hr>"""
+
+
+def _build_media(data: dict) -> str:
+    """Media section — SMI mentions from smi_mentions.json."""
+    smi = data.get("smi_mentions")
+    if not smi:
+        return ""
+    articles = smi.get("articles", [])
+    if not articles:
+        return ""
+
+    article_html = ""
+    for a in articles:
+        publication = a.get("publication") or a.get("source") or "—"
+        title = a.get("title") or ""
+        url = a.get("url") or ""
+        sentiment = a.get("sentiment") or ""
+        year = a.get("year") or ""
+
+        sentiment_tag = ""
+        if sentiment:
+            tag_color = "var(--green)" if sentiment.lower() in ("positive", "позитивная") else ("var(--red)" if sentiment.lower() in ("negative", "негативная") else "var(--text-dim)")
+            sentiment_tag = f'<span class="tag-badge" style="color:{tag_color}">{_esc(sentiment)}</span>'
+
+        if url:
+            display_title = f'<a href="{_esc(url)}" class="article-link" target="_blank" rel="noopener noreferrer"><div class="title">{_esc(title or publication)}</div><div class="expert">{_esc(publication)} · {_esc(str(year))} {sentiment_tag}</div></a>'
+        else:
+            display_title = f'<div class="article-link"><div class="title">{_esc(title or publication)}</div><div class="expert">{_esc(publication)} · {_esc(str(year))} {sentiment_tag}</div></div>'
+        article_html += display_title
+
+    return f"""<section id="media">
+  <div class="section-label">05 — Медийное присутствие</div>
+  <h2>Упоминания в СМИ</h2>
+  <p>Найдено {len(articles)} публикаций в деловых и профильных изданиях.</p>
+  {article_html}
+</section>
+<hr>"""
+
+
+def _build_whitefields(data: dict) -> str:
+    """Whitefields section — CI gaps and advantages cross-competitor comparison."""
+    ci = data.get("ci_analysis", {})
+    gaps = ci.get("gaps", [])
+    advantages = ci.get("advantages", [])
+    if not (gaps or advantages):
+        return ""
+
+    # Gaps — what needs development
+    gap_blocks = ""
+    if gaps:
+        gap_items = ""
+        for g in gaps:
+            text = g if isinstance(g, str) else (g.get("description") or g.get("gap") or str(g))
+            sev = g.get("severity", "medium") if isinstance(g, dict) else "medium"
+            border_color = "var(--red)" if sev == "high" else "var(--border)"
+            gap_items += f'<div class="gap" style="border-left:3px solid {border_color}"><h4>{_esc(text)}</h4></div>'
+        gap_blocks += f"<h3>Что нужно развивать</h3>{gap_items}"
+
+    # Advantages — what the client has
+    adv_blocks = ""
+    if advantages:
+        adv_items = ""
+        for a in advantages:
+            text = a if isinstance(a, str) else (a.get("description") or a.get("advantage") or str(a))
+            adv_items += f'<div class="gap" style="border-left:3px solid var(--green)"><h4>{_esc(text)}</h4></div>'
+        adv_blocks += f"<h3 style=\"margin-top:24px\">Конкурентные преимущества</h3>{adv_items}"
+
+    return f"""<section id="whitefields">
+  <div class="section-label">06 — Белые поля</div>
+  <h2>Где конкуренты вас опережают</h2>
+  <p>Сравнительный анализ цифрового присутствия.</p>
+  {gap_blocks}
+  {adv_blocks}
+</section>
+<hr>"""
+
+
+def _build_presence(data: dict) -> str:
+    """Digital presence section — platform status table and review ratings."""
+    prescan = data.get("prescan", {})
+    stage2 = prescan.get("stage_2_under_the_hood", {}) or {}
+
+    reviews_data = stage2.get("reviews_data") or prescan.get("reviews") or {}
+    review_platforms = reviews_data.get("platforms", []) if isinstance(reviews_data, dict) else []
+
+    if not review_platforms:
+        return ""
+
+    # Review cards in grid-3
+    review_cards = ""
+    for platform in review_platforms:
+        name = platform.get("platform") or platform.get("name") or "—"
+        rating_val = platform.get("rating") or platform.get("score", "—")
+        count = platform.get("reviews_count") or platform.get("count", "—")
+        url = platform.get("url", "")
+
+        count_str = str(count)
+        if count_str in ("данных нет", "None", "0", "—"):
+            count_label = "нет данных"
+        elif count_str.startswith("~") or count_str.isdigit() or (count_str.replace(",", "").isdigit()):
+            count_label = f"{count_str} отзывов"
+        else:
+            count_label = count_str
+
+        review_cards += f"""<div class="card">
+  <h4>{_esc(name)}</h4>
+  <div class="num">{_esc(str(rating_val))}</div>
+  <p>{_esc(count_label)}</p>
+  {f'<a href="{_esc(url)}" style="color:var(--accent);font-size:12px" target="_blank" rel="noopener noreferrer">Открыть →</a>' if url else ''}
+</div>"""
+
+    # Platform presence table
+    instagram = prescan.get("instagram", {}) or {}
+    ig_handle = instagram.get("handle", "")
+
+    platforms_status = []
+    # 2GIS
+    has_2gis = any(p.get("platform", "").lower() == "2gis" for p in review_platforms)
+    platforms_status.append(f'<div class="row"><div class="k">2GIS</div><div class="v">{"✓ Найдено" if has_2gis else "— Не проверено"}</div></div>')
+    # Yandex Maps
+    has_yandex = any("yandex" in p.get("platform", "").lower() for p in review_platforms)
+    platforms_status.append(f'<div class="row"><div class="k">Яндекс.Карты</div><div class="v">{"✓ Найдено" if has_yandex else "— Не проверено"}</div></div>')
+    # Google Maps
+    has_google = any("google" in p.get("platform", "").lower() for p in review_platforms)
+    platforms_status.append(f'<div class="row"><div class="k">Google Maps</div><div class="v">{"✓ Найдено" if has_google else "— Не проверено"}</div></div>')
+    # Instagram
+    platforms_status.append(f'<div class="row"><div class="k">Instagram</div><div class="v">{_esc(ig_handle) if ig_handle else "— Не найден"}</div></div>')
+    # Other platforms
+    platforms_status.append('<div class="row"><div class="k">VK</div><div class="v">— Не проверено</div></div>')
+    platforms_status.append('<div class="row"><div class="k">Telegram</div><div class="v">— Не проверено</div></div>')
+    platforms_status.append('<div class="row"><div class="k">YouTube</div><div class="v">— Не проверено</div></div>')
+    platforms_status.append('<div class="row"><div class="k">ПроДокторов</div><div class="v">— Не проверено</div></div>')
+
+    return f"""<section id="presence">
+  <div class="section-label">07 — Цифровое присутствие</div>
+  <h2>Где вас находят пациенты</h2>
+  <h3>Рейтинги на площадках</h3>
+  <div class="grid-3">
+    {review_cards}
+  </div>
+  <h3 style="margin-top:32px">Статус присутствия</h3>
+  {''.join(platforms_status)}
+</section>
+<hr>"""
+
+
+def _build_strategy(data: dict) -> str:
+    """Strategy section — 5-pillar recommendations from CI analysis data."""
+    ci = data.get("ci_analysis", {})
+    top_rec = ci.get("top_recommendation", "")
+    priority_actions = ci.get("priority_actions", []) or []
+    gaps = ci.get("gaps", [])
+    steal_worthy = ci.get("steal_worthy", [])
+
+    if not (top_rec or priority_actions or gaps):
+        return ""
+
+    pillars = []
+
+    # Pillar 1: SEO & Technical
+    prescan = data.get("prescan", {})
+    stage2 = prescan.get("stage_2_under_the_hood", {}) or {}
+    seo_score = stage2.get("seo_score")
+    seo_fails = stage2.get("seo_fails", []) or []
+    if seo_score is not None or seo_fails:
+        seo_desc = "Оптимизация технического SEO — фундамент видимости в поиске. "
+        if seo_score is not None:
+            seo_desc += f"Текущий SEO Score: {seo_score}/100. "
+        if seo_fails:
+            seo_desc += f"Найдено {len(seo_fails)} критических проблем."
+        pillars.append(("01", "SEO и технический аудит", seo_desc))
+
+    # Pillar 2: Content strategy
+    if data.get("instagram_content"):
+        pillars.append(("02", "Контент-стратегия", "Развитие контента врачей в Instagram и других соцсетях. Регулярный экспертный контент повышает доверие и привлекает пациентов из поиска."))
+
+    # Pillar 3: Social media
+    has_social_gaps = bool(gaps)
+    if has_social_gaps:
+        pillars.append(("03", "Социальные сети", "Закрытие пробелов в цифровом присутствии: Telegram, VK, YouTube. Каждая площадка — дополнительный канал привлечения пациентов."))
+
+    # Pillar 4: Whitefields / steal-worthy
+    if steal_worthy:
+        tactics = [s if isinstance(s, str) else s.get("tactic", str(s)) for s in steal_worthy[:3]]
+        tactics_str = ", ".join(tactics)
+        pillars.append(("04", "Белые поля", f"Тактики конкурентов, которые стоит перенять: {_esc(tactics_str)}."))
+
+    # Pillar 5: Top recommendation
+    if top_rec:
+        pillars.append(("05", "Главная рекомендация", _esc(top_rec)))
+
+    # Build pillar blocks
+    pillar_blocks = ""
+    for step_num, title, desc in pillars[:5]:
+        pillar_blocks += f"""<div class="strategy-block">
+  <div class="header">
+    <span class="step">{step_num}</span>
+    <h3>{title}</h3>
+  </div>
+  <p>{desc}</p>
+</div>"""
+
+    # Priority actions
+    actions_html = ""
+    if priority_actions:
+        action_items = ""
+        for i, action in enumerate(priority_actions[:5]):
+            text = action if isinstance(action, str) else (action.get("action") or action.get("name") or str(action))
+            action_items += f'<div class="gap"><h4>Шаг {i + 1}</h4><p>{_esc(text)}</p></div>'
+        actions_html = f"<h3>Первоочередные действия</h3>{action_items}"
+
+    return f"""<section id="strategy">
+  <div class="section-label">08 — Стратегия</div>
+  <h2>План действий</h2>
+  <p>На основе анализа конкурентов и цифрового присутствия.</p>
+  {pillar_blocks}
+  {actions_html}
+  <div class="cta-box">
+    <h3>Готовы действовать?</h3>
+    <p>Команда AIM реализует эти рекомендации.</p>
+    <a href="https://t.me/aim_hermes_bot" class="btn" target="_blank" rel="noopener noreferrer">Связаться в Telegram</a>
+  </div>
+</section>
+<hr>"""
+
+
+def _build_offer(data: dict) -> str:
+    """Offer section — AIM services catalog. Template-driven, always renders."""
+    prescan = data.get("prescan", {})
+    client_name = prescan.get("client_name") or data.get("metadata", {}).get("client_name") or "вашей клинике"
+
+    return f"""<section id="offer">
+  <div class="section-label">09 — Предложение AIM</div>
+  <h2>Как мы поможем {_esc(client_name)}</h2>
+  <p>AIM — AI-first маркетинговое агентство для медицинских организаций. Мы не делаем &laquo;всё для всех&raquo;. Мы специализируемся на коммерческой медицине и знаем этот рынок досконально.</p>
+  <div class="grid-2">
+    <div class="card">
+      <h4>SEO и поисковое продвижение</h4>
+      <p>Технический аудит, оптимизация, рост позиций в Яндекс и Google. Приводим пациентов, которые уже ищут ваши услуги.</p>
+    </div>
+    <div class="card">
+      <h4>Контент-маркетинг</h4>
+      <p>Экспертный контент от врачей: статьи, посты, видео. Формируем доверие и повышаем конверсию.</p>
+    </div>
+    <div class="card">
+      <h4>Социальные сети</h4>
+      <p>Ведение Instagram, Telegram, VK. Стратегия, контент-план, съёмка, оформление.</p>
+    </div>
+    <div class="card">
+      <h4>Управление репутацией</h4>
+      <p>Работа с отзывами на 2GIS, Яндекс.Картах, ПроДокторов. Повышаем рейтинг и доверие.</p>
+    </div>
+    <div class="card">
+      <h4>Контекстная реклама</h4>
+      <p>Настройка и ведение Яндекс.Директ. Точное попадание в целевую аудиторию.</p>
+    </div>
+    <div class="card">
+      <h4>Аналитика и отчётность</h4>
+      <p>Сквозная аналитика: от показов до записи на приём. Прозрачные метрики и ROI.</p>
+    </div>
+  </div>
+  <div class="cta-box">
+    <h3>Начните с аудита</h3>
+    <p>Первый шаг — глубокий анализ вашего цифрового присутствия. Это бесплатно и занимает 30 минут.</p>
+    <a href="https://t.me/aim_hermes_bot" class="btn" target="_blank" rel="noopener noreferrer">Получить аудит</a>
+  </div>
+</section>
+<hr>"""
+
+
 # ── HTML Assembly ───────────────────────────────────────────────────────────
 
 def _build_html(data: dict) -> str:
     """Build complete self-contained HTML page from session data."""
     sections = [
         _build_hero(data),
-        _build_exec_summary(data),
-        _build_financials(data),
-        _build_competitors(data),
-        _build_ci_gaps(data),
-        _build_seo(data),
-        _build_pagespeed(data),
-        _build_reviews(data),
-        _build_recommendations(data),
-        _build_footer(data),
+        _build_about(data),        # Always (merges exec_summary + financials)
+        _build_market(data),       # Conditional (needs competitors)
+        _build_experts(data),      # Conditional (needs doctor_dossiers)
+        _build_content(data),      # Conditional (needs instagram_content)
+        _build_media(data),        # Conditional (needs smi_mentions)
+        _build_competitors(data),  # Conditional (needs feature_matrix)
+        _build_whitefields(data),  # Conditional (needs CI gaps)
+        _build_presence(data),     # Conditional (needs reviews)
+        _build_strategy(data),     # Conditional (needs CI analysis)
+        _build_seo(data),          # Conditional (needs seo data)
+        _build_pagespeed(data),    # Conditional (needs pagespeed data)
+        _build_reviews(data),      # Conditional (needs review platforms)
+        _build_offer(data),        # Always (template)
+        _build_footer(data),       # Always
     ]
     body_sections = "".join(s for s in sections if s)
     nav_html = _build_nav(data)
