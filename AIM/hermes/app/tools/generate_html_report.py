@@ -335,34 +335,34 @@ def _build_exec_summary(data: dict) -> str:
 
     stats = []
     if revenue:
-        stats.append(f"""<div class="glass-stat">
-          <div class="glass-stat-value">{_format_currency(revenue)}</div>
-          <div class="glass-stat-label">Выручка / год</div>
+        stats.append(f"""<div class="metric">
+          <div class="value">{_format_currency(revenue)}</div>
+          <div class="label">Выручка / год</div>
         </div>""")
     if doctors:
-        stats.append(f"""<div class="glass-stat">
-          <div class="glass-stat-value">{_esc(str(doctors))}</div>
-          <div class="glass-stat-label">Врачей</div>
+        stats.append(f"""<div class="metric">
+          <div class="value">{_esc(str(doctors))}</div>
+          <div class="label">Врачей</div>
         </div>""")
     if seo_score is not None:
-        stats.append(f"""<div class="glass-stat">
-          <div class="glass-stat-value">{_esc(str(seo_score))}<span style="font-size:24px">/100</span></div>
-          <div class="glass-stat-label">SEO Score</div>
+        stats.append(f"""<div class="metric">
+          <div class="value">{_esc(str(seo_score))}<span style="font-size:24px">/100</span></div>
+          <div class="label">SEO Score</div>
         </div>""")
     if rating is not None:
-        stats.append(f"""<div class="glass-stat">
-          <div class="glass-stat-value">{_esc(str(rating))}</div>
-          <div class="glass-stat-label">Рейтинг</div>
+        stats.append(f"""<div class="metric">
+          <div class="value">{_esc(str(rating))}</div>
+          <div class="label">Рейтинг</div>
         </div>""")
 
     if not stats:
         return ""
 
-    return f"""<section class="section">
+    return f"""<section id="market">
       <div class="container">
-        <div class="sec-tag">Executive Summary</div>
-        <h2 class="sec-title">Ключевые метрики</h2>
-        <div class="glass-stats-wrap">
+        <div class="section-label">Executive Summary</div>
+        <h2>Ключевые метрики</h2>
+        <div class="metrics">
           {''.join(stats)}
         </div>
       </div>
@@ -390,14 +390,14 @@ def _build_competitors(data: dict) -> str:
           <td style="color:var(--text);font-weight:500">{_esc(name)}</td>
           <td><span class="metric-tag {score_tag}"><span class="metric-tag-dot"></span>{_esc(str(score))}</span></td>
           <td>{_esc(str(services))}</td>
-          <td>{'<a href="' + _esc(website) + '" style="color:var(--accent)" target="_blank">' + _esc(website) + '</a>' if website else '—'}</td>
+          <td>{'<a href="' + _esc(website) + '" style="color:var(--accent)" target="_blank" rel="noopener noreferrer">' + _esc(website) + '</a>' if website else '—'}</td>
         </tr>"""
 
-    return f"""<section class="section">
+    return f"""<section id="competitors">
       <div class="container">
-        <div class="sec-tag">Конкуренты</div>
-        <h2 class="sec-title">Сравнение с конкурентами</h2>
-        <div class="glass-table-wrap">
+        <div class="section-label">Конкуренты</div>
+        <h2>Сравнение с конкурентами</h2>
+        <div style="overflow-x:auto;margin:24px 0">
           <table>
             <thead><tr><th>Клиника</th><th>Score</th><th>Услуги</th><th>Сайт</th></tr></thead>
             <tbody>{rows}</tbody>
@@ -428,8 +428,8 @@ def _build_ci_gaps(data: dict) -> str:
             sev = g.get("severity", "medium") if isinstance(g, dict) else "medium"
             text = g if isinstance(g, str) else (g.get("description") or g.get("gap") or str(g))
             icon = "🔴" if sev == "high" else ("🟡" if sev == "medium" else "🟢")
-            gap_items += f'<div class="surface-block-red"><p>{icon} {_esc(text)}</p></div>'
-        parts.append(f"""<h3 style="font-size:15px;font-weight:600;color:#FFCDD2;margin-bottom:12px">Что теряете</h3>
+            gap_items += f'<div class="gap" style="border-left:3px solid var(--red)"><h4>{icon} {_esc(text)}</h4></div>'
+        parts.append(f"""<h3 style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px">Что теряете</h3>
         {gap_items}""")
 
     # Advantages (what client has that competitors don't)
@@ -437,8 +437,8 @@ def _build_ci_gaps(data: dict) -> str:
         adv_items = ""
         for a in advantages:
             text = a if isinstance(a, str) else (a.get("description") or a.get("advantage") or str(a))
-            adv_items += f'<div class="surface-block-green"><p>✅ {_esc(text)}</p></div>'
-        parts.append(f"""<h3 style="font-size:15px;font-weight:600;color:#81C784;margin-bottom:12px;margin-top:24px">Ваши преимущества</h3>
+            adv_items += f'<div class="gap" style="border-left:3px solid var(--green)"><h4>✅ {_esc(text)}</h4></div>'
+        parts.append(f"""<h3 style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;margin-top:24px">Ваши преимущества</h3>
         {adv_items}""")
 
     # Steal-worthy tactics
@@ -446,24 +446,24 @@ def _build_ci_gaps(data: dict) -> str:
         steal_items = ""
         for s in steal_worthy:
             text = s if isinstance(s, str) else (s.get("tactic") or s.get("description") or str(s))
-            steal_items += f'<div class="surface-block"><p>💡 {_esc(text)}</p></div>'
-        parts.append(f"""<h3 style="font-size:15px;font-weight:600;color:var(--accent);margin-bottom:12px;margin-top:24px">Что стоит перенять у конкурентов</h3>
+            steal_items += f'<div class="gap"><h4>💡 {_esc(text)}</h4></div>'
+        parts.append(f"""<h3 style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;margin-top:24px">Что стоит перенять у конкурентов</h3>
         {steal_items}""")
 
     # Top recommendation
     if top_rec:
-        parts.append(f"""<div class="glass-panel" style="margin-top:24px">
-          <h3>Главная рекомендация</h3>
+        parts.append(f"""<div class="gap" style="margin-top:24px">
+          <h4>Главная рекомендация</h4>
           <p>{_esc(top_rec)}</p>
         </div>""")
 
     if not parts:
         return ""
 
-    return f"""<section class="section">
+    return f"""<section id="gaps">
       <div class="container">
-        <div class="sec-tag">CI Analysis</div>
-        <h2 class="sec-title">Разрывы и преимущества</h2>
+        <div class="section-label">CI Analysis</div>
+        <h2>Разрывы и преимущества</h2>
         {''.join(parts)}
       </div>
     </section>"""
@@ -511,7 +511,7 @@ def _build_seo(data: dict) -> str:
             <td>{_esc(impact)}</td>
           </tr>"""
 
-        seo_table = f"""<div class="glass-table-wrap">
+        seo_table = f"""<div style="overflow-x:auto;margin:24px 0">
           <table>
             <thead><tr><th>Проверка</th><th>Статус</th><th>Детали</th><th>Влияние на бизнес</th></tr></thead>
             <tbody>{rows}</tbody>
@@ -520,10 +520,10 @@ def _build_seo(data: dict) -> str:
     else:
         seo_table = ""
 
-    return f"""<section class="section">
+    return f"""<section id="seo">
       <div class="container">
-        <div class="sec-tag">SEO Аудит</div>
-        <h2 class="sec-title">Технический SEO</h2>
+        <div class="section-label">SEO Аудит</div>
+        <h2>Технический SEO</h2>
         {summary_html}
         {seo_table}
       </div>
@@ -551,28 +551,28 @@ def _build_pagespeed(data: dict) -> str:
     inp_dist = mobile.get("inp_distribution", {}) or {}
     cls_dist = mobile.get("cls_distribution", {}) or {}
 
-    return f"""<section class="section">
+    return f"""<section id="pagespeed">
       <div class="container">
-        <div class="sec-tag">PageSpeed</div>
-        <h2 class="sec-title">Core Web Vitals</h2>
-        <div class="glass-stats-wrap" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
-          <div class="glass-stat">
-            <div class="glass-stat-value">{_esc(str(lcp))}<span style="font-size:20px">s</span></div>
-            <div class="glass-stat-label">LCP</div>
+        <div class="section-label">PageSpeed</div>
+        <h2>Core Web Vitals</h2>
+        <div class="metrics" style="margin-bottom:24px">
+          <div class="metric">
+            <div class="value">{_esc(str(lcp))}<span style="font-size:20px">s</span></div>
+            <div class="label">LCP</div>
           </div>
-          <div class="glass-stat">
-            <div class="glass-stat-value">{_esc(str(inp))}<span style="font-size:20px">ms</span></div>
-            <div class="glass-stat-label">INP</div>
+          <div class="metric">
+            <div class="value">{_esc(str(inp))}<span style="font-size:20px">ms</span></div>
+            <div class="label">INP</div>
           </div>
-          <div class="glass-stat">
-            <div class="glass-stat-value">{_esc(str(cls))}</div>
-            <div class="glass-stat-label">CLS</div>
+          <div class="metric">
+            <div class="value">{_esc(str(cls))}</div>
+            <div class="label">CLS</div>
           </div>
         </div>
         <div style="text-align:center;margin-bottom:24px">
           <span class="metric-tag {cwv_tag}" style="font-size:14px;padding:8px 18px"><span class="metric-tag-dot"></span>CWV: {_esc(cwv)}</span>
         </div>
-        <div class="glass-table-wrap">
+        <div style="overflow-x:auto;margin:24px 0">
           <table>
             <thead><tr><th>Метрика</th><th>Значение</th><th>Good</th><th>Needs Improvement</th><th>Poor</th></tr></thead>
             <tbody>
@@ -614,19 +614,19 @@ def _build_reviews(data: dict) -> str:
         else:
             count_label = count_str
 
-        cards += f"""<div class="card-glass-sm">
+        cards += f"""<div class="card">
           <h3>{_esc(name)}</h3>
           <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px">
             <span style="font-family:'Playfair Display',serif;font-size:28px;color:var(--accent)">{_esc(str(rating_val))}</span>
             <span style="color:var(--text-secondary);font-size:14px">{_esc(count_label)}</span>
           </div>
-          {f'<a href="{_esc(url)}" style="color:var(--accent);font-size:13px" target="_blank">Открыть →</a>' if url else ''}
+          {f'<a href="{_esc(url)}" style="color:var(--accent);font-size:13px" target="_blank" rel="noopener noreferrer">Открыть →</a>' if url else ''}
         </div>"""
 
-    return f"""<section class="section">
+    return f"""<section id="reviews">
       <div class="container">
-        <div class="sec-tag">Отзывы</div>
-        <h2 class="sec-title">Репутация на платформах</h2>
+        <div class="section-label">Отзывы</div>
+        <h2>Репутация на платформах</h2>
         <div class="grid-3">{cards}</div>
       </div>
     </section>"""
@@ -649,33 +649,33 @@ def _build_financials(data: dict) -> str:
 
     stats = []
     if revenue:
-        stats.append(f"""<div class="glass-stat">
-          <div class="glass-stat-value">{_format_currency(revenue)}</div>
-          <div class="glass-stat-label">Выручка / год</div>
+        stats.append(f"""<div class="metric">
+          <div class="value">{_format_currency(revenue)}</div>
+          <div class="label">Выручка / год</div>
         </div>""")
     if profit:
-        stats.append(f"""<div class="glass-stat">
-          <div class="glass-stat-value">{_format_currency(profit)}</div>
-          <div class="glass-stat-label">Прибыль / год</div>
+        stats.append(f"""<div class="metric">
+          <div class="value">{_format_currency(profit)}</div>
+          <div class="label">Прибыль / год</div>
         </div>""")
     if revenue_trend:
         trend_str = str(revenue_trend)
         is_up = "+" in trend_str or "рост" in trend_str.lower() or "↑" in trend_str
         trend_tag = "metric-tag-green" if is_up else "metric-tag-red"
-        stats.append(f"""<div class="glass-stat">
-          <div class="glass-stat-value" style="font-size:clamp(24px,3vw,36px)"><span class="metric-tag {trend_tag}"><span class="metric-tag-dot"></span>{_esc(trend_str)}</span></div>
-          <div class="glass-stat-label">Тренд выручки</div>
+        stats.append(f"""<div class="metric">
+          <div class="value" style="font-size:clamp(24px,3vw,36px)"><span class="metric-tag {trend_tag}"><span class="metric-tag-dot"></span>{_esc(trend_str)}</span></div>
+          <div class="label">Тренд выручки</div>
         </div>""")
 
     legal_info = ""
     if legal_name or inn:
         legal_info = f'<p style="font-size:13px;color:var(--text-dim);margin-top:8px">{_esc(legal_name)}{" · ИНН " + _esc(inn) if inn else ""}</p>'
 
-    return f"""<section class="section">
+    return f"""<section id="financials">
       <div class="container">
-        <div class="sec-tag">Финансы</div>
-        <h2 class="sec-title">Финансовые показатели</h2>
-        <div class="glass-stats-wrap">
+        <div class="section-label">Финансы</div>
+        <h2>Финансовые показатели</h2>
+        <div class="metrics">
           {''.join(stats)}
         </div>
         {legal_info}
@@ -693,26 +693,26 @@ def _build_recommendations(data: dict) -> str:
     stage2 = prescan.get("stage_2_under_the_hood", {}) or {}
     seo_fails = stage2.get("seo_fails", []) or []
 
-    # Build timeline of priority actions
-    timeline = ""
+    # Build priority actions as gap blocks
+    actions_html = ""
     if priority_actions:
         for i, action in enumerate(priority_actions):
             text = action if isinstance(action, str) else (action.get("action") or action.get("name") or str(action))
-            timeline += f"""<div class="timeline-item">
-            <span class="timeline-step">Шаг {i + 1}</span>
-            <h3>{_esc(text)}</h3>
+            actions_html += f"""<div class="gap">
+            <h4>Шаг {i + 1}</h4>
+            <p>{_esc(text)}</p>
           </div>"""
 
-    return f"""<section class="section">
+    return f"""<section id="recommendations">
       <div class="container">
-        <div class="sec-tag">Рекомендации</div>
-        <h2 class="sec-title">План действий</h2>
-        {f'<div class="timeline">{timeline}</div>' if timeline else ''}
-        {f'<div class="glass-panel"><h3>Приоритетная рекомендация</h3><p>{_esc(top_rec)}</p></div>' if top_rec else ''}
-        <div class="glass-cta">
-          <h2>Готовы вырасти?</h2>
+        <div class="section-label">Рекомендации</div>
+        <h2>План действий</h2>
+        {actions_html}
+        {f'<div class="gap"><h4>Приоритетная рекомендация</h4><p>{_esc(top_rec)}</p></div>' if top_rec else ''}
+        <div class="cta-box">
+          <h3>Готовы вырасти?</h3>
           <p>Команда AIM готова реализовать эти рекомендации и вывести вашу клинику на новый уровень</p>
-          <a href="https://t.me/aim_hermes_bot" class="btn-primary" target="_blank">Связаться в Telegram</a>
+          <a href="https://t.me/aim_hermes_bot" class="btn" target="_blank" rel="noopener noreferrer">Связаться в Telegram</a>
         </div>
       </div>
     </section>"""
