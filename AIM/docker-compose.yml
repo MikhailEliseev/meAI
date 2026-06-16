@@ -78,6 +78,13 @@ services:
     environment:
       - HERMES_HOME=/opt/data
       - PYTHONUNBUFFERED=1
+      # WordPress DB — for HTML report publishing
+      - WP_DB_HOST=aim-mysql
+      - WP_DB_USER=wp_user
+      - WP_DB_PASSWORD=${WP_DB_PASSWORD}
+      - WP_DB_NAME=wordpress
+      - SESSIONS_ROOT=/opt/data/sessions-archive
+      - ARCHIVE_BASE_URL=https://iamaim.ru/wp-json/aim/v1/session
     env_file:
       - .env.production
     volumes:
@@ -169,6 +176,7 @@ services:
       WORDPRESS_CONFIG_EXTRA: |
         define('WP_HOME', 'https://iamaim.ru');
         define('WP_SITEURL', 'https://iamaim.ru');
+        define('HERMES_API_URL', 'http://hermes:8000');
     volumes:
       - aim_wp_content:/var/www/html/wp-content
       # aim-theme is in wp_content volume — no local mount needed
