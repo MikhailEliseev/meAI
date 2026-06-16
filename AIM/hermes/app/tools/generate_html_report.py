@@ -252,6 +252,21 @@ def _load_session_data(session_hash: str) -> dict:
         except (json.JSONDecodeError, OSError) as e:
             logger.warning("Failed to read ci-analysis.json: %s", e)
 
+    # New optional data sources (graceful — file absence is normal)
+    for filename, key in [
+        ("doctor_dossiers.json", "doctor_dossiers"),
+        ("instagram_content.json", "instagram_content"),
+        ("smi_mentions.json", "smi_mentions"),
+        ("pagespeed.json", "pagespeed"),
+    ]:
+        path = os.path.join(session_dir, filename)
+        if os.path.exists(path):
+            try:
+                with open(path, "r") as f:
+                    data[key] = json.load(f)
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning("Failed to read %s: %s", filename, e)
+
     return data
 
 
@@ -292,22 +307,41 @@ def _build_hero(data: dict) -> str:
 
 
 def _build_nav(data: dict) -> str:
-    """Fixed navigation bar with logo, section anchor links, and theme toggle."""
-    return """<nav>
+    """Fixed navigation bar with conditional section links and theme toggle."""
+    ci = data.get("ci_analysis", {})
+    has_competitors = bool(ci.get("feature_matrix"))
+    has_whitefields = bool(ci.get("gaps") or ci.get("advantages"))
+    has_strategy = bool(ci.get("top_recommendation") or ci.get("priority_actions"))
+
+    links = []
+    links.append('<a href="#about">О клинике</a>')  # Always renders
+    if has_competitors:
+        links.append('<a href="#market">Рынок</a>')
+    if data.get("doctor_dossiers"):
+        links.append('<a href="#experts">Эксперты</a>')
+    if data.get("instagram_content"):
+        links.append('<a href="#content-analysis">Контент</a>')
+    if data.get("smi_mentions"):
+        links.append('<a href="#media">СМИ</a>')
+    if has_competitors:
+        links.append('<a href="#competitors">Конкуренты</a>')
+    if has_whitefields:
+        links.append('<a href="#whitefields">Белые поля</a>')
+    # reviews always in prescan — check platforms
+    reviews = (data.get("prescan", {}).get("stage_2_under_the_hood", {}) or {}).get("reviews_data") or data.get("prescan", {}).get("reviews", {})
+    platforms = reviews.get("platforms", []) if isinstance(reviews, dict) else []
+    if platforms:
+        links.append('<a href="#presence">Присутствие</a>')
+    if has_strategy:
+        links.append('<a href="#strategy">Стратегия</a>')
+
+    return f"""<nav>
   <div style="display:flex;align-items:center;gap:16px">
     <div class="logo">AIM</div>
     <div class="tag">Marketing Agency</div>
   </div>
   <div style="display:flex;align-items:center;gap:4px">
-    <div class="links">
-      <a href="#hero">Обзор</a>
-      <a href="#market">Рынок</a>
-      <a href="#competitors">Конкуренты</a>
-      <a href="#seo">SEO</a>
-      <a href="#pagespeed">PageSpeed</a>
-      <a href="#reviews">Отзывы</a>
-      <a href="#recommendations">План</a>
-    </div>
+    <div class="links">{"".join(links)}</div>
     <button class="theme-toggle" onclick="var d=document.documentElement;var t=d.dataset.theme==='dark'?'light':'dark';d.dataset.theme=t;localStorage.setItem('theme',t)" aria-label="Toggle theme">🌓</button>
   </div>
 </nav>"""
