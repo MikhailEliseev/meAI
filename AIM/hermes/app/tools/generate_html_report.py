@@ -281,14 +281,36 @@ def _build_hero(data: dict) -> str:
         subtitle_parts.append(client_url)
     subtitle = " • ".join(subtitle_parts)
 
-    return f"""<header class="section">
+    return f"""<div class="hero" id="hero">
       <div class="container">
-        <div class="sec-tag">AIM Research Report</div>
-        <h1 class="hero-title">{_esc(client_name)}</h1>
-        {'<p class="hero-subtitle">' + _esc(subtitle) + '</p>' if subtitle else ''}
-        {'<p class="hero-date">Исследование завершено ' + _esc(scan_date) + '</p>' if scan_date else ''}
+        <div class="label">AIM Research Report</div>
+        <h1>{_esc(client_name)}</h1>
+        {'<p class="subtitle">' + _esc(subtitle) + '</p>' if subtitle else ''}
+        {'<div class="meta"><span>Исследование завершено ' + _esc(scan_date) + '</span></div>' if scan_date else ''}
       </div>
-    </header>"""
+    </div>"""
+
+
+def _build_nav(data: dict) -> str:
+    """Fixed navigation bar with logo, section anchor links, and theme toggle."""
+    return """<nav>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="logo">AIM</div>
+    <div class="tag">Marketing Agency</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:4px">
+    <div class="links">
+      <a href="#hero">Обзор</a>
+      <a href="#market">Рынок</a>
+      <a href="#competitors">Конкуренты</a>
+      <a href="#seo">SEO</a>
+      <a href="#pagespeed">PageSpeed</a>
+      <a href="#reviews">Отзывы</a>
+      <a href="#recommendations">План</a>
+    </div>
+    <button class="theme-toggle" onclick="var d=document.documentElement;var t=d.dataset.theme==='dark'?'light':'dark';d.dataset.theme=t;localStorage.setItem('theme',t)" aria-label="Toggle theme">🌓</button>
+  </div>
+</nav>"""
 
 
 def _build_exec_summary(data: dict) -> str:
@@ -735,9 +757,8 @@ def _build_html(data: dict) -> str:
         _build_recommendations(data),
         _build_footer(data),
     ]
-
-    body = "".join(s for s in sections if s)
-
+    body_sections = "".join(s for s in sections if s)
+    nav_html = _build_nav(data)
     client_name = (
         data.get("metadata", {}).get("client_name")
         or data.get("prescan", {}).get("client_name")
@@ -751,13 +772,33 @@ def _build_html(data: dict) -> str:
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>AIM Research — {_esc(str(client_name))}</title>
+<script>var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t;</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <style>{AIM_DESIGN_CSS}</style>
 </head>
 <body>
-{body}
+<div class="ripple">
+  <div class="ripple-ring ring-lg-1"></div>
+  <div class="ripple-ring ring-lg-2"></div>
+  <div class="ripple-ring ring-lg-3"></div>
+  <div class="ripple-ring ring-lg-4"></div>
+  <div class="ripple-ring ring-lg-5"></div>
+  <div class="ripple-ring ring-lg-6"></div>
+  <div class="ripple-ring ring-pulse-1"></div>
+  <div class="ripple-ring ring-pulse-2"></div>
+  <div class="ripple-ring ring-pulse-3"></div>
+  <div class="ripple-ring ring-pulse-4"></div>
+  <div class="ripple-ring ring-pulse-5"></div>
+  <div class="ripple-ring ring-pulse-6"></div>
+  <div class="ripple-ring ring-pulse-7"></div>
+  <div class="ripple-ring ring-pulse-8"></div>
+</div>
+{nav_html}
+<div class="container">
+{body_sections}
+</div>
 </body>
 </html>""".replace("\n", "")
 
