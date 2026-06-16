@@ -1,8 +1,13 @@
 """Rusprofile.ru parser — Python port of RomanHuBoss/RusprofileParser VBScript.
 
 Fetches company financial data from rusprofile.ru by INN or OGRN.
-Uses the print-friendly page (?print=1) for easy HTML parsing.
-No API key needed — public data scraping.
+Uses rusprofile's internal AJAX API for search and SSR company pages for data.
+
+rusprofile.ru (2026) is a Vue SPA. The old /search?query= endpoint no longer exists.
+New approach:
+  1. GET homepage → get __Host-csrf-token cookie
+  2. POST /ajax/search/advanced (with CSRF token) → search results as JSON
+  3. GET /id/{id} (with cookies) → SSR company page → parse HTML
 
 Source: https://github.com/RomanHuBoss/RusprofileParser (VBScript → Python port)
 """
@@ -10,7 +15,9 @@ Source: https://github.com/RomanHuBoss/RusprofileParser (VBScript → Python por
 from __future__ import annotations
 
 import logging
+import random
 import re
+import time
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -18,12 +25,14 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-REQUEST_TIMEOUT = 8.0
+REQUEST_TIMEOUT = 15.0
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
-RUSPROFILE_SEARCH = "https://www.rusprofile.ru/search?query={}"
+RUSPROFILE_BASE = "https://www.rusprofile.ru"
+RUSPROFILE_SEARCH_API = "https://www.rusprofile.ru/ajax/search/advanced"
+CSRF_COOKIE_NAME = "__Host-csrf-token"
 
 
 @dataclass
@@ -72,10 +81,16 @@ class RusprofileCompany:
 
 
 class RusprofileClient:
-    """Async client for rusprofile.ru company data scraping."""
+    """Async client for rusprofile.ru company data scraping.
+
+    Uses the 2026 AJAX API for search and SSR company pages for detailed data.
+    Maintains an httpx session with CSRF cookie across requests.
+    """
 
     def __init__(self):
         self._client: httpx.AsyncClient | None = None
+        self._csrf_token: str = ""
+        self._session_ready: bool = False
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
@@ -94,40 +109,106 @@ class RusprofileClient:
         if self._client:
             await self._client.aclose()
             self._client = None
+        self._session_ready = False
+
+    # ── Session / CSRF ───────────────────────────────────────────────────
+
+    async def _ensure_session(self) -> None:
+        """Visit homepage to get CSRF cookie. Called once per session."""
+        if self._session_ready and self._csrf_token:
+            return
+
+        client = await self._get_client()
+
+        try:
+            response = await client.get(RUSPROFILE_BASE)
+            response.raise_for_status()
+
+            # Extract CSRF token from cookies
+            for cookie in client.cookies.jar:
+                if cookie.name == CSRF_COOKIE_NAME and cookie.domain.endswith("rusprofile.ru"):
+                    self._csrf_token = cookie.value
+                    break
+
+            if self._csrf_token:
+                self._session_ready = True
+                logger.debug("rusprofile session ready (CSRF token obtained)")
+            else:
+                logger.warning("rusprofile: no CSRF cookie found after homepage visit")
+                self._session_ready = True  # Don't retry endlessly
+        except httpx.HTTPError as e:
+            logger.warning("rusprofile: failed to get session: %s", e)
+            self._session_ready = True  # Don't retry endlessly
 
     # ── Public API ────────────────────────────────────────────────────
+
+    async def search(self, query: str) -> list[dict]:
+        """Search rusprofile.ru for companies matching query.
+
+        Uses the internal AJAX API: POST /ajax/search/advanced
+        Returns list of {name, inn, ogrn, address, link}.
+        Used to find INN/OGRN when only the company name is known.
+        """
+        await self._ensure_session()
+
+        if not self._csrf_token:
+            logger.warning("rusprofile search: no CSRF token, cannot search")
+            return []
+
+        client = await self._get_client()
+        cache_key = str(random.random())
+
+        try:
+            response = await client.post(
+                RUSPROFILE_SEARCH_API + f"?cacheKey={cache_key}",
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json, text/plain, */*",
+                    "x-csrf-token": self._csrf_token,
+                    "Referer": RUSPROFILE_BASE + "/",
+                },
+                json={"query": query, "action": "search"},
+            )
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError as e:
+            logger.error("rusprofile search API failed for '%s': %s", query[:80], e)
+            return []
+
+        if not data.get("success"):
+            logger.debug("rusprofile search returned success=false for '%s'", query[:80])
+            return []
+
+        items = data.get("data", {}).get("items", [])
+        results = []
+        for item in items:
+            link = item.get("link", "")
+            results.append({
+                "name": item.get("name", item.get("raw_name", "")),
+                "inn": item.get("inn", ""),
+                "ogrn": item.get("ogrn", ""),
+                "address": item.get("address", ""),
+                "link": link,
+                "rusprofile_id": _extract_id_from_link(link),
+                "ceo_name": item.get("ceo_name", ""),
+                "okved_main": item.get("main_okved_id", ""),
+                "okved_descr": item.get("okved_descr", ""),
+                "inactive": bool(item.get("inactive")),
+                "region": item.get("region", ""),
+            })
+
+        logger.debug("rusprofile search: '%s' → %d results", query[:60], len(results))
+        return results
 
     async def get_by_inn(
         self, inn: str, name: str = ""
     ) -> Optional[RusprofileCompany]:
-        """Fetch company data by INN, optionally using name for better results.
-
-        When name is provided, tries name-based search first (more reliable —
-        avoids rusprofile's session-scoped ID issues with INN redirects).
-        Falls back to INN search if name search fails.
-        """
+        """Fetch company data by INN, optionally using name for better results."""
         return await self._fetch(inn=inn, name=name)
 
     async def get_by_ogrn(self, ogrn: str) -> Optional[RusprofileCompany]:
         """Fetch company data by OGRN."""
         return await self._fetch(ogrn=ogrn)
-
-    async def search(self, query: str) -> list[dict]:
-        """Search rusprofile.ru for companies matching query.
-
-        Returns list of {name, inn, ogrn, address, rusprofile_id}.
-        Used to find INN/OGRN when only the company name is known.
-        """
-        client = await self._get_client()
-        url = RUSPROFILE_SEARCH.format(query)
-        try:
-            response = await client.get(url)
-            response.raise_for_status()
-        except httpx.HTTPError as e:
-            logger.error("rusprofile search failed: %s", e)
-            return []
-
-        return _parse_search_results(response.text)
 
     # ── Internal ──────────────────────────────────────────────────────
 
@@ -137,55 +218,54 @@ class RusprofileClient:
         """Fetch and parse company data from rusprofile.ru.
 
         Strategy:
-        1. If name is provided, try name-based search first. Name searches
-           produce pages WITHOUT a company-info section, which means the
-           finance_reliable consistency check passes by default — giving us
-           access to financial data that INN searches often miss (due to
-           rusprofile's session-scoped ID issues).
-        2. Fall back to INN/OGRN search if name search fails or returns
-           wrong company.
+        1. Search for the company via AJAX API to get its rusprofile ID
+        2. GET the SSR company page at /id/{ID}
+        3. Parse the HTML for financials and metadata
         """
         identifier = inn or ogrn
         if not identifier and not name:
             return None
 
-        client = await self._get_client()
-
-        # ── Strategy 1: Name-based search (more reliable for financials) ─
-        if name:
-            company = await self._try_name_search(client, name, inn)
-            if company is not None:
-                return company
-
-        # ── Strategy 2: INN/OGRN search with print page ────────────────
-        if not identifier:
+        search_query = identifier if identifier else name
+        results = await self.search(search_query)
+        if not results:
+            logger.debug("rusprofile: no results for '%s'", search_query[:60])
             return None
 
-        search_url = RUSPROFILE_SEARCH.format(identifier)
+        # Find the right result — match by INN if possible, otherwise first result
+        best = results[0]
+        if inn:
+            for r in results:
+                if r.get("inn") == inn:
+                    best = r
+                    break
 
-        try:
-            response = await client.get(search_url)
-            response.raise_for_status()
-        except httpx.HTTPError as e:
-            logger.error("rusprofile fetch failed for %s: %s", identifier, e)
-            return None
-
-        html = response.text
-
-        # Extract rusprofile ID from redirect URL
-        rusprofile_id = _extract_rusprofile_id(str(response.url), html)
+        rusprofile_id = best.get("rusprofile_id", "")
         if not rusprofile_id:
-            logger.debug("rusprofile: could not extract ID for %s", identifier)
+            logger.debug("rusprofile: no ID in search result for '%s'", search_query[:60])
             return None
 
-        # Request print page for stable HTML (same client = same session)
-        print_url = f"https://www.rusprofile.ru/id/{rusprofile_id}?print=1"
+        # GET the company page (SSR — server-rendered)
+        client = await self._get_client()
+        page_url = f"{RUSPROFILE_BASE}/id/{rusprofile_id}"
+
         try:
-            response = await client.get(print_url)
+            response = await client.get(
+                page_url,
+                headers={
+                    "Referer": RUSPROFILE_BASE + "/",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                },
+            )
             response.raise_for_status()
             html = response.text
         except httpx.HTTPError as e:
-            logger.debug("rusprofile print page failed, using search page: %s", e)
+            logger.error("rusprofile: failed to fetch company page %s: %s", page_url, e)
+            return None
+
+        if len(html) < 5000:
+            logger.debug("rusprofile: page too short (%d bytes) — likely bot protection", len(html))
+            return None
 
         company = _parse_company_html(html)
         company.rusprofile_id = rusprofile_id
@@ -200,164 +280,22 @@ class RusprofileClient:
 
         return company
 
-    async def _try_name_search(
-        self, client: httpx.AsyncClient, name: str, expected_inn: str = ""
-    ) -> Optional[RusprofileCompany]:
-        """Try name-based search on rusprofile.
-
-        Only works when rusprofile redirects directly to a company page
-        (single exact match). For multi-result pages, returns None and
-        lets the caller fall back to INN search.
-
-        Uses print page (?print=1) for stable HTML — finance-col blocks
-        are always present on print pages.
-        """
-        search_url = RUSPROFILE_SEARCH.format(name)
-        try:
-            response = await client.get(search_url)
-            response.raise_for_status()
-        except httpx.HTTPError as e:
-            logger.debug("rusprofile name search failed for '%s': %s", name, e)
-            return None
-
-        final_url = str(response.url)
-
-        # Only proceed if rusprofile redirected to a company page
-        # (single exact match). Search results pages are unreliable —
-        # the first result often points to a different company.
-        if "/id/" not in final_url:
-            logger.debug(
-                "rusprofile name search: multi-result page for '%s', skipping",
-                name,
-            )
-            return None
-
-        rusprofile_id = _extract_rusprofile_id(final_url, "")
-        if not rusprofile_id:
-            return None
-
-        # Request print page for this ID (same client = same session)
-        print_url = f"https://www.rusprofile.ru/id/{rusprofile_id}?print=1"
-        try:
-            response = await client.get(print_url)
-            response.raise_for_status()
-        except httpx.HTTPError as e:
-            logger.debug("rusprofile print page failed: %s", e)
-            return None
-
-        html = response.text
-        company = _parse_company_html(html)
-        company.rusprofile_id = rusprofile_id
-
-        # Verify INN matches if we have one
-        if expected_inn and company.inn and company.inn != expected_inn:
-            logger.debug(
-                "rusprofile name search: INN mismatch — expected %s, got %s (%s)",
-                expected_inn, company.inn, company.short_name,
-            )
-            return None
-
-        logger.debug(
-            "rusprofile name search: success — %s (INN %s, revenue=%s)",
-            company.short_name, company.inn,
-            {y: v for y, v in company.revenue.items()},
-        )
-        return company
-
 
 # ── HTML Parsers ──────────────────────────────────────────────────────────
 
-def _extract_rusprofile_id(url: str, html: str) -> Optional[str]:
-    """Extract rusprofile internal ID from redirect URL or page content.
-
-    rusprofile (2026-05+) redirects INN/OGRN searches directly to the company
-    page via 303. We extract the ID from the final URL after redirect.
-
-    Falls back to parsing HTML for search result links if no redirect occurred.
-    """
-    # Primary: extract from URL (search redirects to /id/{ID})
-    m = re.search(r"/id/(\d+)", url)
-    if m:
-        return m.group(1)
-
-    # Fallback 1: canonical link in HTML
-    m = re.search(r'<link\s[^>]*rel="canonical"[^>]*href="[^"]*/id/(\d+)"', html)
-    if m:
-        return m.group(1)
-
-    # Fallback 2: first search result link (old list-element format, may be Vue-rendered)
-    m = re.search(r'href="(/id/\d+)"', html)
-    if m:
-        return m.group(1).split("/")[-1]
-
-    return None
-
-
-def _extract_canonical(html: str) -> Optional[str]:
-    """Extract canonical URL from rusprofile search results page."""
-    match = re.search(r'<link\s[^>]*rel="canonical"[^>]*href="([^"]+)"', html)
-    if match:
-        return match.group(1)
-    match = re.search(r'<div class="list-element">\s*<a\s[^>]*href="(/id/\d+)"', html)
-    if match:
-        return f"https://www.rusprofile.ru{match.group(1)}"
-    return None
-
-
-def _parse_search_results(html: str) -> list[dict]:
-    """Parse search results page into list of company summaries.
-
-    Splits on list-element blocks and extracts each field individually.
-    More robust than a single monster regex — survives HTML structure changes.
-    """
-    results = []
-    # Split into individual company blocks
-    blocks = re.split(r'<div class="list-element">\s*', html)
-    for block in blocks[1:]:  # first block is everything before first company
-        # Extract href from the title link
-        href_m = re.search(r'href="(/id/\d+)"', block)
-        if not href_m:
-            continue
-        rusprofile_id = href_m.group(1).split("/")[-1]
-
-        # Extract title text (may contain <mark> tags)
-        title_m = re.search(
-            r'<a[^>]*class="[^"]*list-element__title[^"]*"[^>]*>(.*?)</a>',
-            block, re.DOTALL,
-        )
-        name = ""
-        if title_m:
-            name = re.sub(r"<[^>]+>", "", title_m.group(1)).strip()
-
-        # Extract address
-        addr_m = re.search(
-            r'<div class="list-element__address">(.*?)</div>',
-            block, re.DOTALL,
-        )
-        address = addr_m.group(1).strip() if addr_m else ""
-
-        # Extract INN and OGRN
-        inn_m = re.search(r"ИНН:\s*(\d{10,12})", block)
-        ogrn_m = re.search(r"ОГРН:\s*(\d{13,15})", block)
-        inn = inn_m.group(1) if inn_m else ""
-        ogrn = ogrn_m.group(1) if ogrn_m else ""
-
-        results.append({
-            "rusprofile_id": rusprofile_id,
-            "name": name,
-            "address": address,
-            "inn": inn,
-            "ogrn": ogrn,
-        })
-    return results
+def _extract_id_from_link(link: str) -> str:
+    """Extract rusprofile ID from a link like /id/2835629."""
+    if not link:
+        return ""
+    m = re.search(r"/id/(\d+)", link)
+    return m.group(1) if m else ""
 
 
 def _parse_company_html(html: str) -> RusprofileCompany:
-    """Parse rusprofile company page HTML (after search redirect).
+    """Parse rusprofile company page HTML (SSR, 2026 format).
 
     Extracts metadata from meta tags and page text, and financials
-    from embedded finance-col blocks. Single HTML response — no
-    separate print page needed.
+    from embedded finance-col blocks.
     """
     c = RusprofileCompany()
 
@@ -370,12 +308,14 @@ def _parse_company_html(html: str) -> RusprofileCompany:
     desc_m = re.search(r'<meta name="description" content="([^"]+)"', html)
     if desc_m:
         desc = desc_m.group(1)
-        full_m = re.search(r'(?:ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ|АКЦИОНЕРНОЕ ОБЩЕСТВО|ПУБЛИЧНОЕ АКЦИОНЕРНОЕ ОБЩЕСТВО|НЕПУБЛИЧНОЕ АКЦИОНЕРНОЕ ОБЩЕСТВО)\s+"([^"]+)"', desc)
+        full_m = re.search(
+            r'(?:ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ|АКЦИОНЕРНОЕ ОБЩЕСТВО|ПУБЛИЧНОЕ АКЦИОНЕРНОЕ ОБЩЕСТВО|НЕПУБЛИЧНОЕ АКЦИОНЕРНОЕ ОБЩЕСТВО)\s+"([^"]+)"',
+            desc,
+        )
         if full_m:
-            c.full_name = f'{full_m.group(0)}'
+            c.full_name = full_m.group(0)
 
     # ── 2. Registrar identifiers ───────────────────────────────────
-    # Extract OGRN from meta keywords (reliable — always next to the correct INN)
     kw_m = re.search(r'<meta name="keywords" content="([^"]+)"', html)
     if kw_m:
         keywords = kw_m.group(1)
@@ -383,10 +323,6 @@ def _parse_company_html(html: str) -> RusprofileCompany:
             ogrn_m = re.search(r"ОГРН\s*(\d{13,15})", keywords)
             if ogrn_m:
                 c.ogrn = ogrn_m.group(1)
-        if not c.okved_main:
-            okpo_m = re.search(r"(\d{8,10})\s*ОКПО", keywords)
-            if okpo_m:
-                pass  # OKPO is not OKVED, skip
 
     # Extract INN, KPP, director, address from page text
     text = re.sub(r"<[^>]+>", "\n", html)
@@ -395,8 +331,7 @@ def _parse_company_html(html: str) -> RusprofileCompany:
     text = re.sub(r"\n\s*\n", "\n", text)
     lines = [l.strip() for l in text.split("\n") if l.strip()]
 
-    # Also try to extract OGRN from company-info section (more reliable than random text)
-    company_info_ogrn = ""
+    # Also try to extract OGRN from company-info section
     ogrn_section_m = re.search(
         r'<dt class="company-info__title">ОГРН</dt>\s*<dd[^>]*>([^<]+)</dd>',
         html,
@@ -407,7 +342,7 @@ def _parse_company_html(html: str) -> RusprofileCompany:
             if not c.ogrn:
                 c.ogrn = company_info_ogrn
 
-    # Extract INN from company-info section for consistency check
+    # Extract INN from company-info section
     inn_section_m = re.search(
         r'<dt class="company-info__title">ИНН</dt>\s*<dd[^>]*>([^<]+)</dd>',
         html,
@@ -471,7 +406,8 @@ def _parse_company_html(html: str) -> RusprofileCompany:
             c.okved_main = line.strip()
 
     # ── 3. Financial data ───────────────────────────────────────────
-    _parse_finance_widget(html, c)
+    if finance_reliable:
+        _parse_finance_widget(html, c)
 
     # ── 4. Revenue trend from text (fallback) ──────────────────────
     _parse_revenue_trend(lines, c)
@@ -479,165 +415,11 @@ def _parse_company_html(html: str) -> RusprofileCompany:
     return c
 
 
-def _parse_print_page(html: str, finance_html: str = "") -> RusprofileCompany:
-    """Parse rusprofile print page into RusprofileCompany.
-
-    rusprofile.ru (as of mid-2026) loads financial data via JavaScript.
-    The print page (?print=1) exposes a preview tile with the latest year's
-    revenue (unmasked), while profit and company value are behind a login wall.
-
-    The *regular* page (finance_html) often has fully unmasked financial data
-    including profit, company value, and historical trends. We try it first,
-    and fall back to the print page's preview tile.
-
-    We parse BOTH the raw HTML (for financial widgets) and the stripped text
-    (for metadata like INN/OGRN/director).
-    """
-    c = RusprofileCompany()
-
-    # ── 1. Metadata from stripped text ──────────────────────────────
-    text = re.sub(r"<[^>]+>", "\n", html)
-    text = re.sub(r"&quot;", '"', text)
-    text = re.sub(r"&amp;", "&", text)
-    text = re.sub(r"&lt;", "<", text)
-    text = re.sub(r"&gt;", ">", text)
-    text = re.sub(r"\n\s*\n", "\n", text)
-    lines = [l.strip() for l in text.split("\n") if l.strip()]
-
-    # Company name — first substantive line after title
-    for line in lines:
-        if "ИНН" in line and "адрес" in line:
-            # e.g. 'ООО "Спектр" Ангарск (ИНН 3801134241) адрес и телефон'
-            m = re.search(r'^(.+?)\s*\(ИНН\s*\d+\)', line)
-            if m:
-                c.short_name = m.group(1).strip()
-            break
-
-    for i, line in enumerate(lines):
-        # INN
-        if "ИНН" in line:
-            m = re.search(r"ИНН\s*(\d{10,12})", line)
-            if m and not c.inn:
-                c.inn = m.group(1)
-
-        # OGRN
-        if "ОГРН" in line:
-            m = re.search(r"ОГРН\s*(\d{13,15})", line)
-            if m and not c.ogrn:
-                c.ogrn = m.group(1)
-
-        # KPP
-        if "КПП" in line:
-            m = re.search(r"КПП\s*(\d{9})", line)
-            if m and not c.kpp:
-                c.kpp = m.group(1)
-
-        # Full legal name
-        if "Полное наименование" in line:
-            # Next line usually has the name
-            if i + 1 < len(lines) and len(lines[i + 1]) > 5:
-                c.full_name = lines[i + 1].strip('"').strip()
-            else:
-                m = re.search(r"Полное наименование\s*(.+)", line)
-                if m:
-                    c.full_name = m.group(1).strip('"').strip()
-
-        # Short name
-        if "Краткое наименование" in line and not c.short_name:
-            if i + 1 < len(lines) and len(lines[i + 1]) > 3:
-                c.short_name = lines[i + 1].strip('"').strip()
-            else:
-                m = re.search(r"Краткое наименование\s*(.+)", line)
-                if m:
-                    c.short_name = m.group(1).strip('"').strip()
-
-        # Registration date
-        if "Дата регистрации" in line:
-            m = re.search(r"(\d{1,2}\s+\w+\s+\d{4})\s*г\.?", line)
-            if m:
-                c.registration_date = m.group(1)
-
-        # Director
-        if re.search(r"(?:директор|руководитель|генеральный\s+директор)", line, re.IGNORECASE):
-            m = re.search(r"(?:директор|руководитель|генеральный\s+директор)\s*[-–—]\s*(.+)", line, re.IGNORECASE)
-            if m:
-                c.director = m.group(1).strip()
-
-        # Legal address
-        if "Юридический адрес" in line or "Адрес" in line:
-            m = re.search(r"(?:адрес|Адрес)\s*(.+)", line)
-            if m:
-                addr = m.group(1).strip()
-                if len(addr) > 10:
-                    c.legal_address = addr
-
-        # Tax regime
-        if "Специальный налоговый режим" in line:
-            m = re.search(r"(УСН|ОСН|ЕНВД|ПСН|ЕСХН)", line)
-            if m:
-                c.tax_regime = m.group(0)
-
-        # MSP category
-        if "Категория субъекта МСП" in line:
-            m = re.search(r"(Малое|Среднее|Микро)\s*предприятие", line)
-            if m:
-                c.msp_category = m.group(0)
-
-        # OKVED main
-        if re.match(r"^\d{2}\.\d{2}\b", line) and not c.okved_main:
-            c.okved_main = line.strip()
-
-        # License count
-        if "Лицензии" in line:
-            m = re.search(r"Всего\s*(\d+)", line)
-            if m:
-                c.license_count = int(m.group(1))
-
-        # Trademarks
-        if "Товарные знаки" in line or "товарных знаков" in line:
-            m = re.search(r"(\d+)\s*(?:действующих|товарных)", line)
-            if m:
-                c.trademark_count = int(m.group(1))
-
-    # ── 2. Financial data from raw HTML ─────────────────────────────
-    # Try regular page first (unmasked data), then print page (preview tile)
-    if finance_html:
-        _parse_finance_widget(finance_html, c)
-    if not c.revenue:
-        _parse_finance_widget(html, c)
-
-    # ── 3. Revenue trend from stripped text ─────────────────────────
-    _parse_revenue_trend(lines, c)
-
-    return c
-
-
-def _parse_finance_widget(html: str, c: RusprofileCompany) -> None:
-    """Extract financial data from rusprofile page.
-
-    Tries TWO formats (rusprofile changes HTML structure frequently):
-
-    1. NEW format (2026-05+): <div class="finance-columns">
-       - Year in "Основные показатели за XXXX год" (may be masked: 3838 → 2020)
-       - Revenue: unmasked <span class="num"> in finance-col
-       - Profit/Value: may be behind <span class="under_mask"> (login wall)
-
-    2. OLD format (pre-2026-05): <table> after "Финансовая отчетность"
-       - <div class="dt-text">YYYY</div> per row
-       - <div class="dt-text">Выручка/Прибыль/Стоимость:</div> per cell
-       - Units: млн/тыс руб., arrows: arrow-up/arrow-down.svg
-    """
-    if _parse_finance_columns(html, c):
-        return
-    _parse_finance_table(html, c)
+# ── Finance Parsing ───────────────────────────────────────────────────────
 
 
 def _decode_year(raw_year: str) -> int:
-    """Decode rusprofile masked year. Masked years are offset by 1818.
-
-    Also handles years in the 2400-3000 range (new masking scheme
-    that produces values below the old >3000 threshold).
-    """
+    """Decode rusprofile masked year. Masked years are offset by 1818."""
     try:
         y = int(raw_year)
     except (ValueError, TypeError):
@@ -645,7 +427,6 @@ def _decode_year(raw_year: str) -> int:
     if y > 3000:
         y -= 1818
     elif 2400 < y < 3000:
-        # New masking scheme produces values like 2493 for 2020
         candidate = y - 1818
         if 2015 <= candidate <= 2030:
             y = candidate
@@ -654,48 +435,49 @@ def _decode_year(raw_year: str) -> int:
     return y
 
 
-def _parse_finance_columns(html: str, c: RusprofileCompany) -> bool:
-    """Parse finance-col format (2026-05+ rusprofile HTML structure).
+def _parse_finance_widget(html: str, c: RusprofileCompany) -> None:
+    """Extract financial data from rusprofile page.
 
-    New structure uses individual <div class="finance-col ..."> elements
-    (note: plural "finance-col" with extra CSS classes like "space-between").
-    Each col has data-tab_name="tab_{revenue|profit|costs}" and contains
-    <span class="num">VALUE</span> <span class="num-text">UNIT</span>.
+    Tries TWO formats (rusprofile changes HTML structure frequently):
 
-    Year is extracted from "Бухгалтерская отчётность YYYY–YYYY" text,
-    taking the last (most recent) year.
+    1. NEW format (2026-05+): <div class="finance-columns">
+       - Year from "Бухгалтерская отчётность YYYY–YYYY"
+       - Revenue: unmasked <span class="num"> in finance-col
+       - Profit/Value: may be behind <span class="under_mask"> (login wall)
+
+    2. OLD format (pre-2026-05): <table> after "Финансовая отчетность"
     """
-    # Extract the most recent financial year from the accounting period range
+    if _parse_finance_columns(html, c):
+        return
+    _parse_finance_table(html, c)
+
+
+def _parse_finance_columns(html: str, c: RusprofileCompany) -> bool:
+    """Parse finance-col format (2026-05+ rusprofile HTML structure)."""
     year = 0
     year_range_m = re.search(r'Бухгалтерская\s+отчётность\s+(\d{4})[–-](\d{4})', html)
     if year_range_m:
         year = _decode_year(year_range_m.group(2))
     if not year:
-        # Fallback: "Основные показатели за XXXX год" (older format)
         ym = re.search(r'Основные показатели за\s+(\d{4})\s+год', html)
         if ym:
             year = _decode_year(ym.group(1))
 
-    # Find finance-col elements — class may be "finance-col space-between" etc.
     cols_raw = re.split(r'<div class="[^"]*finance-col[^"]*"', html)
     if len(cols_raw) < 2:
         return False
 
     found_any = False
-    for col_html in cols_raw[1:]:  # first element is everything before first finance-col
-        # Detect metric type from data-tab_name
+    for col_html in cols_raw[1:]:
         tab_match = re.search(r'data-tab_name="tab_(\w+)"', col_html)
         if not tab_match:
             continue
-        metric = tab_match.group(1)  # revenue, profit, costs/value
+        metric = tab_match.group(1)
 
-        # Check if data is behind login wall (two known formats)
         if '<span class="under_mask">' in col_html or 'data-quemask="true"' in col_html:
             logger.debug("rusprofile: skipping %s (under_mask detected)", metric)
             continue
 
-        # Extract numeric value
-        # Unit may have leading whitespace/&nbsp; — " руб.", "&nbsp;руб.", "млн&nbsp;руб."
         num_match = re.search(
             r'<span class="num">([\d\s,]+)</span>\s*'
             r'<span class="num-text">(?:&nbsp;|\s)*(млрд|млн|тыс|руб)',
@@ -709,7 +491,6 @@ def _parse_finance_columns(html: str, c: RusprofileCompany) -> bool:
         unit = num_match.group(2)
 
         try:
-            # Russian number format: "1 234,5" or "1234,5" → 1234.5
             amount = float(raw_num.replace(" ", "").replace(",", "."))
         except ValueError:
             continue
@@ -721,7 +502,6 @@ def _parse_finance_columns(html: str, c: RusprofileCompany) -> bool:
         elif unit == "тыс":
             amount *= 1_000
 
-        # Extract trend (arrow direction + percentage change)
         trend_str = ""
         arr_match = re.search(r'<span class="arr">(&[a-z]+;)</span>', col_html)
         pct_match = re.search(r'([+-]\d+)\s*%', col_html)
@@ -733,7 +513,7 @@ def _parse_finance_columns(html: str, c: RusprofileCompany) -> bool:
 
         if metric == "revenue":
             if amount <= 0:
-                continue  # skip zero/missing revenue
+                continue
             c.revenue[year] = int(amount)
             c.financial_year = max(c.financial_year, year)
             if trend_str:
@@ -824,14 +604,8 @@ def _parse_finance_table(html: str, c: RusprofileCompany) -> None:
     )
 
 
-
 def _parse_revenue_trend(lines: list[str], c: RusprofileCompany) -> None:
-    """Extract historical revenue data from stripped text (fallback).
-
-    The print page may include a "Динамика выручки" section with yearly
-    revenue numbers in a comparison table. This serves as fallback when
-    the finance widget is unavailable.
-    """
+    """Extract historical revenue data from stripped text (fallback)."""
     in_revenue_section = False
     for line in lines:
         if "Динамика выручки" in line:
@@ -843,8 +617,6 @@ def _parse_revenue_trend(lines: list[str], c: RusprofileCompany) -> None:
         if not in_revenue_section:
             continue
 
-        # Try to match year + revenue patterns
-        # e.g. "2024  15,2 млн руб."
         m = re.search(r"(\d{4})\s+([\d\s,]+)\s*(млн|тыс)?\s*руб", line)
         if m:
             year = int(m.group(1))

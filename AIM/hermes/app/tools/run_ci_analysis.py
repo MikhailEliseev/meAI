@@ -46,7 +46,7 @@ def _normalize_competitor(comp) -> dict:
 
 
 AIM_API_BASE = "http://app:8000"
-REQUEST_TIMEOUT = 300.0  # parallel scraping can take 2-3 min for large competitors
+REQUEST_TIMEOUT = 600.0  # deep tier runs 9 phases, can take 5-8 min
 
 
 async def handle_run_ci_analysis(
@@ -135,7 +135,7 @@ async def handle_run_ci_analysis(
                     "city": city or "",
                     "services": services or [],
                     "competitors": competitors,
-                    "tier": "quick",
+                    "tier": "deep",
                     "client_revenue": client_revenue,
                     "client_rating": client_rating,
                 },
