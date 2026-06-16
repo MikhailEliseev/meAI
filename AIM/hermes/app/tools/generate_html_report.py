@@ -1402,15 +1402,20 @@ def _build_html(data: dict) -> str:
     """Build complete self-contained HTML page from session data."""
     sections = [
         _build_hero(data),
-        _build_exec_summary(data),
-        _build_financials(data),
-        _build_competitors(data),
-        _build_ci_gaps(data),
-        _build_seo(data),
-        _build_pagespeed(data),
-        _build_reviews(data),
-        _build_recommendations(data),
-        _build_footer(data),
+        _build_about(data),        # Always (merges exec_summary + financials)
+        _build_market(data),       # Conditional (needs competitors)
+        _build_experts(data),      # Conditional (needs doctor_dossiers)
+        _build_content(data),      # Conditional (needs instagram_content)
+        _build_media(data),        # Conditional (needs smi_mentions)
+        _build_competitors(data),  # Conditional (needs feature_matrix)
+        _build_whitefields(data),  # Conditional (needs CI gaps)
+        _build_presence(data),     # Conditional (needs reviews)
+        _build_strategy(data),     # Conditional (needs CI analysis)
+        _build_seo(data),          # Conditional (needs seo data)
+        _build_pagespeed(data),    # Conditional (needs pagespeed data)
+        _build_reviews(data),      # Conditional (needs review platforms)
+        _build_offer(data),        # Always (template)
+        _build_footer(data),       # Always
     ]
     body_sections = "".join(s for s in sections if s)
     nav_html = _build_nav(data)
