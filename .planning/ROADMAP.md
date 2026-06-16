@@ -514,10 +514,32 @@ Plans:
 - [x] 28-01-PLAN.md — Deep Research Phase 0: Python helper, SKILL.md, presale-pipeline integration, server deploy
 
 
+
+### Phase 31: HTML Report Redesign
+**Goal**: Переделать `generate_html_report.py` для отчётов качества ИПХиК: dual theme, ripple-анимации, 15+ data-driven секций, per-doctor анализ
+**Depends on**: Phase 28 (data tools — doctor_dossiers, instagram_content, smi_mentions)
+**Success Criteria** (what must be TRUE):
+  1. Dual theme (light/dark) с CSS variables и localStorage persistence
+  2. Fixed navigation bar с якорными ссылками и theme toggle
+  3. 14 ripple-ring анимаций (pure CSS)
+  4. Inter + Playfair Display шрифты (Jost → Inter)
+  5. 15+ секций (hero, about, market, experts, content, media, competitors, whitefields, presence, strategy, seo, pagespeed, reviews, offer, footer)
+  6. Graceful omission: секции без данных не рендерятся
+  7. Per-doctor анализ из doctor_dossiers.json + instagram_content.json
+  8. Обратная совместимость: старые сессии генерируют отчёт без ошибок
+  9. WordPress публикация сохраняется (pymysql → wp_posts)
+  10. 27+ unit тестов проходят
+**Plans**: 2 plans
+
+Plans:
+- [ ] 31-01-PLAN.md — Visual foundation: dual-theme CSS, navigation, ripple rings, theme toggle
+- [ ] 31-02-PLAN.md — New section builders (About, Market, Experts, Content, Media, Whitefields, Presence, Strategy, Offer) + data loading
+
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24
+Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 31
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -551,4 +573,5 @@ Phases execute in numeric order: 7 → 7.5 → 8 → 9 → 10 → 11 → 12 → 
 | 27. Presale Conveyor | v5.7 | 1/1 | Planned | — |
 | 28. Deep Research Phase 0 | v5.8 | 1/1 | Complete (deploy deferred) | 2026-06-06 |
 
-**Overall:** 56/66 plans complete (85%)
+| 31. HTML Report Redesign | v5.9 | 0/2 | Planned | — |
+**Overall:** 56/58 plans complete (97%)
