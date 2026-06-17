@@ -14,7 +14,6 @@ Target: 60-90 seconds total.
 Registered in Hermes internal registry under toolset "aim-operations".
 """
 
-import asyncio
 import json
 import logging
 
@@ -25,15 +24,7 @@ from tools.registry import registry
 logger = logging.getLogger(__name__)
 
 AIM_API_BASE = "http://app:8000"
-# Explicit timeout: generous read timeout (prescan takes 180-600s),
-# tight connect/write/pool timeouts (network should be fast)
-REQUEST_TIMEOUT = httpx.Timeout(
-    connect=10.0,   # TCP handshake
-    read=600.0,     # prescan-staged can take up to 10 min (Apify, reviews, SEO, nalog.ru)
-    write=30.0,     # POST body
-    pool=10.0,      # connection from pool
-)
-HEALTH_CHECK_TIMEOUT = 5.0  # quick health check before calling prescan
+REQUEST_TIMEOUT = 300.0  # prescan can take 180-250s (Apify, reviews, SEO)
 
 
 async def handle_run_prescan(url=None, **kwargs) -> str:
@@ -66,70 +57,28 @@ async def handle_run_prescan(url=None, **kwargs) -> str:
     from app.main import push_tool_progress
 
     try:
-        # ── Health check before calling prescan (avoid 600s wait if dead) ──
-        async with httpx.AsyncClient(timeout=HEALTH_CHECK_TIMEOUT) as hc:
-            try:
-                health = await hc.get(f"{AIM_API_BASE}/health")
-                health.raise_for_status()
-            except Exception as he:
-                logger.error("AIM API health check failed: %s", he)
-                return json.dumps({
-                    "error": "AIM API is not reachable",
-                    "detail": f"Health check failed: {he}",
-                })
-
         push_tool_progress(
             "prescan",
             "🎭 Запускаю 5 агентов разведки: сайт, финансы, лицензии, SEO, отзывы. Первый этап через 20-30 секунд…",
         )
 
-        # ── Retry once with backoff if first attempt fails ──
-        last_error = None
-        for attempt in (1, 2):
-            try:
-                async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
-                    response = await client.post(
-                        f"{AIM_API_BASE}/api/presale/prescan-staged",
-                        json={"url": url, "force_refresh": False},
-                    )
+        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+            response = await client.post(
+                f"{AIM_API_BASE}/api/presale/prescan-staged",
+                json={"url": url, "force_refresh": False},
+            )
 
-                    # ── Fallback to legacy prescan if staged endpoint not deployed ──
-                    if response.status_code == 404:
-                        logger.info(
-                            "Staged prescan not available — falling back to legacy prescan"
-                        )
-                        return await _legacy_prescan(client, url, push_tool_progress)
+            # ── Fallback to legacy prescan if staged endpoint not deployed ──
+            if response.status_code == 404:
+                logger.info(
+                    "Staged prescan not available — falling back to legacy prescan"
+                )
+                return await _legacy_prescan(client, url, push_tool_progress)
 
-                    response.raise_for_status()
-                    data = response.json()
-                    break  # success — exit retry loop
-            except (httpx.ReadTimeout, httpx.ConnectError, httpx.RemoteProtocolError) as e:
-                last_error = e
-                if attempt == 1:
-                    logger.warning(
-                        "run_prescan attempt 1 failed (%s: %s), retrying in 5s…",
-                        type(e).__name__, e,
-                    )
-                    push_tool_progress(
-                        "prescan",
-                        "⏳ Первая попытка не удалась — повторяю через 5 секунд…",
-                    )
-                    await asyncio.sleep(5)
-                else:
-                    logger.error(
-                        "run_prescan attempt 2 also failed (%s: %s)",
-                        type(e).__name__, e,
-                    )
-            except Exception as e:
-                last_error = e
-                logger.error("run_prescan attempt %d failed with unexpected error: %s", attempt, e)
-                break  # don't retry on unexpected errors
+            response.raise_for_status()
+            data = response.json()
 
-            # ── If both attempts failed ──
-        if last_error is not None:
-            raise last_error  # re-raise to be caught by outer handlers
-
-        if not data.get("success"):
+            if not data.get("success"):
                 logger.warning("run_prescan returned error: %s", data.get("error"))
                 return json.dumps({
                     "error": "Prescan failed",

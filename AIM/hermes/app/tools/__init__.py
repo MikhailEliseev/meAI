@@ -63,10 +63,8 @@ def register_all_tools() -> None:
     from . import run_ci_analysis        # noqa: F401
     from . import find_company_financials # noqa: F401
     from . import send_telegram_file     # noqa: F401
-    from . import quick_overview         # noqa: F401
-    from . import run_background_pipeline # noqa: F401
 
-    logger.info("Registered 19 AIM operations tools: orchestrate (unified) + 18 legacy + 2 new (perplexity)")
+    logger.info("Registered 17 AIM operations tools: orchestrate (unified) + 16 legacy")
 
 
 def register_debug_tools() -> None:
