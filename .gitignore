@@ -103,7 +103,7 @@ obsidian/content-magister/
 ci-audit/
 
 # Hermes build artifacts (if any)
-hermes/
+/hermes/
 
 # Auto-generated agent results (subagent outputs)
 obsidian/intelligence-magister/

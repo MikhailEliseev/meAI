@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Client Acquisition
-status: in_progress
-stopped_at: Phase 28 Plan 01 complete. Deep Research Phase 0 created.
-last_updated: "2026-06-06T13:51:35.857Z"
-last_activity: 2026-06-06
+status: executing
+stopped_at: Phase 28 Plan 01 complete. Deep Research Phase 0 — all local files created.
+last_updated: "2026-06-17T10:16:13.105Z"
+last_activity: 2026-06-17 -- Phase 32 execution started
 progress:
   total_phases: 22
   completed_phases: 16
@@ -21,14 +21,14 @@ progress:
 See: .planning/ROADMAP.md (updated 2026-05-19)
 
 **Core value:** AI-first medical marketing agency at iamaim.ru — полный цикл захвата клиентов
-**Current focus:** Milestone complete
+**Current focus:** Phase 32 — presale-bugfixes
 
 ## Current Position
 
-Phase: 28
-Plan: 28-01 (complete)
-Status: In progress — Deep Research Phase 0
-Last activity: 2026-06-06
+Phase: 32 (presale-bugfixes) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 32
+Last activity: 2026-06-17 -- Phase 32 execution started
 
 Progress: [████████░░] 91%
 

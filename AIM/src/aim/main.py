@@ -16,7 +16,6 @@ from sqlalchemy import text
 
 # Prometheus metrics
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
-from prometheus_fastapi_instrumentator import Instrumentator
 
 # Structured logging
 from src.aim.config.logging import configure_logging, get_logger
@@ -177,8 +176,8 @@ from src.aim.metrics import (
     rate_limit_hits_total,
 )
 
-# Instrument FastAPI with Prometheus
-Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+# Prometheus instrumentation removed — prometheus-fastapi-instrumentator 8.0.0
+# crashes on FastAPI's _IncludedRouter objects. Monitoring not used in presale pipeline.
 
 
 @app.middleware("http")
