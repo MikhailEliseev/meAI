@@ -707,25 +707,68 @@ def _extract_locality_from_ld(data: dict) -> str:
     return ""
 
 
+def _address_proximity_score(text: str, match_pos: int) -> int:
+    """Score how likely a city match is the business address based on nearby markers.
+
+    Scans up to 150 characters BEFORE the match position for address-like keywords.
+    """
+    ctx_start = max(0, match_pos - 150)
+    context = text[ctx_start:match_pos].lower()
+
+    strong_markers = ["г.", "город", "адрес", "ул.", "пр-т", "проспект", "находимся", "расположен"]
+    medium_markers = ["мы в", "клиника в", "центр в"]
+
+    for marker in strong_markers:
+        if marker in context:
+            return 40
+    for marker in medium_markers:
+        if marker in context:
+            return 20
+    return 0
+
+
 def _detect_city(text: str) -> str:
-    """Detect city from full page text (no char limit)."""
-    # Strategy 1: "в Городе" pattern (common in titles/headers: "стоматология в Орле")
-    city_preposition = re.search(
-        r"\bв\s+(?:гор\.?\s*)?([А-ЯЁ][а-яё]+(?:[\s-][А-ЯЁ][а-яё]+)?)\b",
+    """Detect city from full page text with context-weighted scoring.
+
+    Three tiers with explicit priority:
+    - TIER 2 (weight 50): "в Городе" prepositional pattern
+    - TIER 3 (weight 10 + proximity bonus ≤40): body text with address markers
+    Highest total score wins; tiebreak by earliest position in text.
+    """
+    candidates: dict[str, tuple[int, int]] = {}  # city → (score, first_position)
+
+    # Strategy 1: "в Городе" pattern (weight 50)
+    for m in re.finditer(
+        r"\bв\s+(?:гор\.?\s*)?([А-ЯЁ][а-яё]+(?:[\s-][А-ЯЁ][а-яё]+)*)\b",
         text,
         re.IGNORECASE,
-    )
-    if city_preposition:
-        candidate = city_preposition.group(1)
+    ):
+        candidate = m.group(1)
         for city in _RUSSIAN_CITIES:
             if _city_matches(candidate, city):
-                return city
+                pos = m.start()
+                score = 50
+                existing = candidates.get(city)
+                if existing is None or score > existing[0]:
+                    candidates[city] = (score, pos)
+                break
 
-    # Strategy 2: Direct city name match (including declined forms) — full text
+    # Strategy 2: Direct city name match with proximity scoring (weight 10 + bonus)
     for pattern, city in _CITY_PATTERNS:
-        if pattern.search(text):
-            return city
-    return ""
+        for m in pattern.finditer(text):
+            pos = m.start()
+            score = 10 + _address_proximity_score(text, pos)
+            existing = candidates.get(city)
+            if existing is None or score > existing[0] or (
+                score == existing[0] and pos < existing[1]
+            ):
+                candidates[city] = (score, pos)
+
+    if not candidates:
+        return ""
+
+    # Highest score wins; tiebreak by earliest position (lower pos = better)
+    return max(candidates, key=lambda c: (candidates[c][0], -candidates[c][1]))
 
 
 def _match_city_name(name: str) -> str:
@@ -954,6 +997,13 @@ def _city_matches(candidate: str, city: str) -> bool:
     # Subset: "Петербург" in "Санкт-Петербург"
     if len(c) >= 4 and (c in n or n in c):
         return True
+    # Multi-word city matching: split by dash/space, match each part
+    if "-" in c or "-" in n or " " in c or " " in n:
+        c_parts = re.split(r"[-\s]", c)
+        n_parts = re.split(r"[-\s]", n)
+        if len(c_parts) == len(n_parts):
+            if all(_part_matches(cp, np) for cp, np in zip(c_parts, n_parts)):
+                return True
     # Strip common Russian case endings and compare stems
     for ending in ("е", "и", "у", "ю", "ой", "ей", "ом", "ем", "а", "я", "ы"):
         if c.endswith(ending) and len(c) > len(ending) + 1:
@@ -967,4 +1017,21 @@ def _city_matches(candidate: str, city: str) -> bool:
     # ё↔е alternation: "орле" vs "орел" — same chars, different order
     if len(c) <= 6 and set(c) == set(n):
         return True
+    return False
+
+
+def _part_matches(c_part: str, n_part: str) -> bool:
+    """Check if a single part of a multi-word city name matches."""
+    if c_part == n_part:
+        return True
+    if len(c_part) >= 3 and len(n_part) >= 3:
+        for ending in ("е", "и", "у", "ю", "ой", "ей", "ом", "ем", "а", "я", "ы"):
+            if c_part.endswith(ending) and len(c_part) > len(ending) + 1:
+                stem = c_part[:-len(ending)]
+                if n_part.startswith(stem):
+                    return True
+            if n_part.endswith(ending) and len(n_part) > len(ending) + 1:
+                stem = n_part[:-len(ending)]
+                if c_part.startswith(stem):
+                    return True
     return False
