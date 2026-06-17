@@ -1,1 +1,1 @@
-Deploy 5 bugfixes (web_search, review_platforms, ci_analysis, aim_scout, rusprofile) to Polish server
+Phase 1 fixes deployed & tested. 9/17 bugs fixed. Pipeline functional on nachalo-clinica.ru. Key finding: hermes-debug MUST be enabled (bug #17).

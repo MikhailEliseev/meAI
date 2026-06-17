@@ -37,7 +37,7 @@ meAI/                           # Command Center
 
 **User Role:** Medical marketer building AI-first agency
 **Stack:** Python 3.11+, FastAPI, PostgreSQL, Redis, Docker, Next.js
-**Deploy:** Docker локально на Mac (см. auto-memory `deploy-target.md`)
+**Deploy:** Docker на Polish server 78.17.128.169 (`ssh aim`) — см. auto-memory `deploy-target.md`
 
 ---
 

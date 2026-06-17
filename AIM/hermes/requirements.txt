@@ -10,6 +10,9 @@ telethon>=1.39.0,<2.0.0
 # AssemblyAI — voice message transcription (ogg/opus from Telegram)
 assemblyai>=0.38.0,<1.0.0
 
+# Perplexity API (OpenAI-compatible SDK)
+openai>=1.0
+
 # Additional runtime deps
 pydantic==2.12.5
 tenacity==9.1.4

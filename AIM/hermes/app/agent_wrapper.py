@@ -67,9 +67,9 @@ _AGENT_TIMEOUT = 900  # 15 minutes — overall agent run deadline (ACTIVE/ADMIN)
 _PRESALE_AGENT_TIMEOUT = 250  # 4 minutes — prescan takes up to 245s, +5s margin for model thinking
 _LEARNINGS_TIMEOUT = 60  # 1 minute — learnings extraction deadline
 
-OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "http://omniroute:20128/v1")
-OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "sk-a10f604cd99e7a50-dd1d5a-56e30050")
-DEFAULT_MODEL = os.getenv("LLM_MODEL", "ds/deepseek-v4-pro")
+OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "https://api.deepseek.com")
+OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "sk-placeholder")
+DEFAULT_MODEL = os.getenv("LLM_MODEL", "deepseek-chat")
 
 # SOUL.md cache — loaded once, reused across requests
 _soul_md_cache: Optional[str] = None
