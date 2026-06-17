@@ -336,6 +336,7 @@ async def chat_stream(
     t0 = time.time()
 
     async def generate():
+        logger.info(f"[SSE] Generator started for session: {body.session_id}")
         global _main_event_loop
         _main_event_loop = asyncio.get_running_loop()
 
@@ -366,6 +367,7 @@ async def chat_stream(
             # Phase A — Yield progress events while agent runs.
             # Also collect unique tool stage names so we can emit
             # step-start / step-end lifecycle markers in Phase C.
+            logger.info(f"[SSE] Phase A: starting agent task loop")
             while not agent_task.done():
                 if time.time() > _SSE_DEADLINE:
                     logger.error("SSE agent deadline exceeded — cancelling task")
@@ -385,11 +387,15 @@ async def chat_stream(
 
             # If deadline killed the task, skip Phase B/C — bail out
             if agent_task.cancelled():
+                logger.warning(f"[SSE] Agent task cancelled, bailing out")
                 clear_tool_progress_queue()
                 _metrics["chat_sessions_active"] = max(0, _metrics["chat_sessions_active"] - 1)
                 return
 
+            logger.info(f"[SSE] Phase A complete, agent_task.done()={agent_task.done()}, agent_result keys: {list(agent_result.keys()) if agent_result else 'empty'}")
+
             # Phase B — Drain remaining queue events
+            logger.info(f"[SSE] Phase B: draining queue, agent_result type: {type(agent_result)}, is_dict: {isinstance(agent_result, dict)}")
             while not queue.empty():
                 try:
                     event = queue.get_nowait()
@@ -401,10 +407,13 @@ async def chat_stream(
                 except asyncio.QueueEmpty:
                     break
 
+            logger.info(f"[SSE] Phase C: extracting reply from agent_result")
             reply = agent_result.get("reply", "")
+            logger.info(f"[SSE] agent_result keys: {list(agent_result.keys())}, reply type: {type(reply)}, len: {len(str(reply))}")
             if isinstance(reply, dict):
                 reply = reply.get("response", reply.get("content", str(reply)))
             reply = str(reply)
+            logger.info(f"[SSE] After extraction: reply len={len(reply)}, preview: {reply[:100]}")
 
             # Phase C — Emit tool lifecycle events (from observed progress stages).
             # Falls back to agent_result["tool_calls"] if no progress events were seen.
@@ -418,6 +427,7 @@ async def chat_stream(
                 yield f"data: {json.dumps({'type': 'step-end', 'step': tc_name}, ensure_ascii=False)}\n\n"
 
             # Stream reply token-by-token, preserving paragraph/line breaks
+            logger.info(f"[SSE] Phase C: streaming {len(reply)} chars as text-delta tokens")
             tokens = re.split(r'( +|\t+|\n+)', reply)
             for token in tokens:
                 if not token:
@@ -429,14 +439,16 @@ async def chat_stream(
                 await asyncio.sleep(0.02)
 
             # Finish signal
+            logger.info(f"[SSE] Sending finish signal, session_id: {agent_result.get('session_id')}")
             yield f"data: {json.dumps({'type': 'finish', 'session_id': agent_result.get('session_id')}, ensure_ascii=False)}\n\n"
 
         except Exception as e:
             _metrics["errors_total"] += 1
-            logger.exception("SSE chat stream failed")
+            logger.exception("[SSE] Exception in generate()")
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)}, ensure_ascii=False)}\n\n"
 
         finally:
+            logger.info(f"[SSE] Generator cleanup: clearing queue")
             clear_tool_progress_queue()
             _metrics["chat_sessions_active"] = max(0, _metrics["chat_sessions_active"] - 1)
 
