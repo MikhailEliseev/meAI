@@ -1,0 +1,535 @@
+"""generate_html_report — Hermes tool: Generate AIM design system HTML report.
+
+Reads all available data from /opt/data/sessions-archive/{session_hash}/,
+generates a self-contained HTML report page using AIM theme CSS classes,
+and publishes it to WordPress via direct DB insert.
+
+Called by:
+  - run_full_scout.py (end of full scout pipeline)
+  - finalize_research.py (when publish_html_report=True)
+"""
+
+import json
+import logging
+import os
+import random
+import string
+from datetime import datetime, timezone
+
+import pymysql
+
+from tools.registry import registry
+from app.tools.session_archive import load_all_data
+
+logger = logging.getLogger(__name__)
+
+WP_DB_HOST = os.getenv("WP_DB_HOST", "wp-db")
+WP_DB_USER = os.getenv("WP_DB_USER", "wp_user")
+WP_DB_PASSWORD = os.getenv("WP_DB_PASSWORD", "")
+WP_DB_NAME = os.getenv("WP_DB_NAME", "wordpress")
+
+
+def _esc(text: str) -> str:
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+def _fmt_num(val, default="—"):
+    if val is None:
+        return default
+    if isinstance(val, (int, float)):
+        return str(val)
+    return str(val)
+
+
+def _build_report_html(data: dict, title: str) -> str:
+    """Build full HTML page from session archive data using AIM CSS classes."""
+    metadata = data.get("metadata", {}) or {}
+    prescan = data.get("prescan", {}) or {}
+    competitors = data.get("competitors", {}) or {}
+    ci_analysis = data.get("ci_analysis", {}) or {}
+    pagespeed = data.get("pagespeed", {}) or {}
+    financials = data.get("financials", {}) or {}
+    seo_audit = data.get("seo_audit", {}) or {}
+    ads = data.get("ads_intelligence", {}) or {}
+    reviews = data.get("review_platforms", {}) or {}
+    doctors = data.get("doctor_dossiers", {}) or {}
+    instagram = data.get("instagram_content", {}) or {}
+    content_gaps = data.get("content_gaps", {}) or {}
+
+    client_name = metadata.get("company_name") or title or "Клиника"
+    client_url = metadata.get("url", "")
+    city = metadata.get("city") or prescan.get("city", "")
+    scan_date = metadata.get("scan_completed") or datetime.now(timezone.utc).isoformat()
+
+    try:
+        dt = datetime.fromisoformat(scan_date.replace("Z", "+00:00"))
+        date_str = dt.strftime("%d.%m.%Y")
+    except (ValueError, AttributeError):
+        date_str = "—"
+
+    # ── Build sections ──────────────────────────────────────────────────
+
+    sections = []
+
+    # Hero
+    sections.append(f"""<section class="section">
+  <span class="section-label">AIM Scout Report</span>
+  <h1>{_esc(client_name)}</h1>
+  <p class="text-dim">{_esc(city)}{' · ' + _esc(client_url) if client_url else ''}</p>
+  <p class="text-meta">Исследование завершено {date_str}</p>
+</section>
+<hr>""")
+
+    # ── Executive Summary ────────────────────────────────────────────────
+    metrics = []
+
+    prescan_fin = prescan.get("stage_1_financials", {}) or {}
+    revenue = prescan_fin.get("revenue_year") or prescan_fin.get("revenue")
+    if revenue:
+        metrics.append(("Выручка / год", _fmt_num(revenue)))
+
+    if prescan_fin.get("profit_year"):
+        metrics.append(("Прибыль / год", _fmt_num(prescan_fin.get("profit_year"))))
+
+    prescan_seo = prescan.get("stage_2_under_the_hood", {}) or {}
+    if prescan_seo.get("seo_health"):
+        metrics.append(("SEO health", _esc(str(prescan_seo.get("seo_health")))))
+
+    if prescan_seo.get("licenses_count"):
+        metrics.append(("Лицензий", _fmt_num(prescan_seo.get("licenses_count"))))
+
+    if prescan_seo.get("reviews_count"):
+        metrics.append(("Отзывов", _fmt_num(prescan_seo.get("reviews_count"))))
+
+    prescan_market = prescan.get("stage_3_market", {}) or {}
+    if prescan_market.get("nearby_competitors_count"):
+        metrics.append(("Конкурентов рядом", _fmt_num(prescan_market.get("nearby_competitors_count"))))
+
+    if instagram.get("followers"):
+        metrics.append(("Instagram", _fmt_num(instagram.get("followers"))))
+
+    if pagespeed:
+        mobile_ps = pagespeed.get("mobile", {}) or {}
+        if mobile_ps.get("cwv_status"):
+            metrics.append(("Core Web Vitals", _esc(str(mobile_ps.get("cwv_status")))))
+
+    if metrics:
+        metric_cards = ""
+        for label, value in metrics[:8]:
+            metric_cards += f"""<div class="metric"><div class="value">{value}</div><div class="label">{label}</div></div>\n"""
+        sections.append(f"""<section class="section">
+  <span class="section-label">Ключевые метрики</span>
+  <h2>Обзор</h2>
+  <div class="metrics">{metric_cards}</div>
+</section>
+<hr>""")
+
+    # ── Competitors ──────────────────────────────────────────────────────
+    comp_list = competitors.get("competitors", [])
+    if not comp_list:
+        comp_list = ci_analysis.get("competitors", [])
+    if comp_list:
+        comp_cards = ""
+        for c in comp_list[:6]:
+            name = c.get("name", "—")
+            segment = c.get("segment", "")
+            doctors_n = c.get("doctors_count") or c.get("doctors", "—")
+            reviews_n = c.get("reviews_prodoctorov") or c.get("reviews", "—")
+            price = c.get("price_range", "—")
+            comp_cards += f"""<div class="surface-card">
+  <h3>{_esc(str(name))}</h3>
+  {f'<p class="text-meta">{_esc(str(segment))}</p>' if segment else ''}
+  <div class="row"><span class="k">Врачей</span><span class="v">{_esc(str(doctors_n))}</span></div>
+  <div class="row"><span class="k">Отзывов</span><span class="v">{_esc(str(reviews_n))}</span></div>
+  <div class="row"><span class="k">Цены</span><span class="v">{_esc(str(price))}</span></div>
+</div>\n"""
+        sections.append(f"""<section class="section">
+  <span class="section-label">Конкуренты</span>
+  <h2>Конкурентный ландшафт</h2>
+  <div class="grid-2">{comp_cards}</div>
+</section>
+<hr>""")
+
+    # ── CI Analysis ──────────────────────────────────────────────────────
+    ci_gaps = ci_analysis.get("gaps_vs_competitors", []) or []
+    ci_advantages = ci_analysis.get("advantages", []) or []
+    if ci_gaps or ci_advantages:
+        gaps_html = ""
+        if ci_gaps:
+            gaps_html += '<h3>Что теряете</h3>\n'
+            for g in ci_gaps[:6]:
+                sev = g.get("severity", "medium")
+                sev_class = "gap-high" if sev == "high" else ("gap-medium" if sev == "medium" else "gap-low")
+                gaps_html += f"""<div class="gap {sev_class}">
+  <h4>{_esc(str(g.get('gap', '')))}</h4>
+  <p class="text-dim">{_esc(str(g.get('fix', '')))}</p>
+</div>\n"""
+
+        if ci_advantages:
+            gaps_html += '<h3>Уникальные преимущества</h3>\n'
+            for a in ci_advantages[:4]:
+                rarity = a.get("rarity", "standard")
+                rarity_tag = ""
+                if rarity == "unique":
+                    rarity_tag = '<span class="tag-badge tag-green">unique</span>'
+                elif rarity == "rare":
+                    rarity_tag = '<span class="tag-badge tag-accent">rare</span>'
+                else:
+                    rarity_tag = '<span class="tag-badge">standard</span>'
+
+                gaps_html += f"""<div class="gap gap-advantage">
+  <h4>{_esc(str(a.get('advantage', '')))} {rarity_tag}</h4>
+  <p class="text-dim">{_esc(str(a.get('monetization', '')))}</p>
+</div>\n"""
+
+        sections.append(f"""<section class="section">
+  <span class="section-label">Разрывы и преимущества</span>
+  <h2>Где сильны — где есть точки роста</h2>
+  {gaps_html}
+</section>
+<hr>""")
+
+    # ── Key Doctors ─────────────────────────────────────────────────────
+    doctor_list = doctors.get("doctors") or doctors.get("stars") or []
+    if not doctor_list:
+        doctor_list = prescan.get("doctors") or []
+    if doctor_list:
+        doc_cards = ""
+        for d in doctor_list[:6]:
+            name = d.get("full_name") or d.get("name", "—")
+            spec = d.get("specialization") or d.get("speciality", "")
+            exp = d.get("experience_years") or d.get("experience", "")
+            degree = d.get("degree", "")
+            info = " · ".join(filter(None, [spec, degree]))
+            doc_cards += f"""<div class="expert-card">
+  <h4>{_esc(str(name))}</h4>
+  {f'<p class="text-meta">{_esc(info)}</p>' if info else ''}
+  {f'<p class="text-accent-sm">{_esc(str(exp))} лет стажа</p>' if exp else ''}
+</div>\n"""
+        sections.append(f"""<section class="section">
+  <span class="section-label">Ключевые врачи</span>
+  <h2>Специалисты</h2>
+  <div class="grid-2">{doc_cards}</div>
+</section>
+<hr>""")
+
+    # ── PageSpeed ────────────────────────────────────────────────────────
+    if pagespeed:
+        mobile_ps = pagespeed.get("mobile", {}) or {}
+        if mobile_ps:
+            lcp = mobile_ps.get("lcp_seconds", "—")
+            inp = mobile_ps.get("inp_ms", "—")
+            cls = mobile_ps.get("cls", "—")
+            lcp_dist = mobile_ps.get("lcp_distribution", {}) or {}
+            inp_dist = mobile_ps.get("inp_distribution", {}) or {}
+            cls_dist = mobile_ps.get("cls_distribution", {}) or {}
+
+            sections.append(f"""<section class="section">
+  <span class="section-label">Core Web Vitals</span>
+  <h2>Скорость сайта</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Метрика</th><th>Значение</th><th>Good</th><th>Needs Improvement</th><th>Poor</th></tr>
+    <tr><td>LCP</td><td>{_esc(str(lcp))}s</td><td>{_esc(str(lcp_dist.get('good', '—')))}%</td><td>{_esc(str(lcp_dist.get('needs_improvement', '—')))}%</td><td>{_esc(str(lcp_dist.get('poor', '—')))}%</td></tr>
+    <tr><td>INP</td><td>{_esc(str(inp))}ms</td><td>{_esc(str(inp_dist.get('good', '—')))}%</td><td>{_esc(str(inp_dist.get('needs_improvement', '—')))}%</td><td>{_esc(str(inp_dist.get('poor', '—')))}%</td></tr>
+    <tr><td>CLS</td><td>{_esc(str(cls))}</td><td>{_esc(str(cls_dist.get('good', '—')))}%</td><td>{_esc(str(cls_dist.get('needs_improvement', '—')))}%</td><td>{_esc(str(cls_dist.get('poor', '—')))}%</td></tr>
+  </table>
+  </div>
+</section>
+<hr>""")
+
+    # ── SEO Audit ────────────────────────────────────────────────────────
+    seo_summary = seo_audit.get("summary") or seo_audit.get("overall_score")
+    seo_issues = seo_audit.get("issues") or seo_audit.get("critical_issues") or []
+    if seo_summary or seo_issues:
+        seo_html = f'<p>{_esc(str(seo_summary))}</p>' if seo_summary else ""
+        if seo_issues:
+            seo_html += '<div class="surface-block">\n'
+            for issue in seo_issues[:8]:
+                issue_text = issue if isinstance(issue, str) else issue.get("description", str(issue))
+                severity = issue.get("severity", "") if isinstance(issue, dict) else ""
+                seo_html += f'<div class="gap{(" gap-" + severity) if severity else ""}"><p>{_esc(str(issue_text))}</p></div>\n'
+            seo_html += '</div>\n'
+        sections.append(f"""<section class="section">
+  <span class="section-label">SEO-аудит</span>
+  <h2>Поисковая оптимизация</h2>
+  {seo_html}
+</section>
+<hr>""")
+
+    # ── Advertising ──────────────────────────────────────────────────────
+    ad_data = ads.get("yandex_direct") or ads.get("summary") or ads.get("ads", [])
+    if ad_data:
+        ad_text = ""
+        if isinstance(ad_data, str):
+            ad_text = f'<p>{_esc(ad_data)}</p>'
+        elif isinstance(ad_data, list):
+            for item in ad_data[:5]:
+                name = item.get("name", "") if isinstance(item, dict) else str(item)
+                cost = item.get("cost", "") if isinstance(item, dict) else ""
+                cost_html = ("<p class=\"text-dim\">" + _esc(str(cost)) + "</p>") if cost else ""
+                ad_text += f'<div class="surface-card"><h4>{_esc(str(name))}</h4>{cost_html}</div>\n'
+        elif isinstance(ad_data, dict):
+            ad_text = f'<p>{_esc(str(ad_data))}</p>'
+
+        sections.append(f"""<section class="section">
+  <span class="section-label">Реклама</span>
+  <h2>Рекламная активность</h2>
+  {ad_text}
+</section>
+<hr>""")
+
+    # ── Content Gaps ────────────────────────────────────────────────────
+    cg_list = content_gaps.get("gaps") or content_gaps.get("recommendations") or []
+    if cg_list:
+        cg_html = ""
+        for cg in cg_list[:8]:
+            desc = cg if isinstance(cg, str) else cg.get("description", str(cg))
+            cg_html += f'<div class="surface-card"><p>{_esc(str(desc))}</p></div>\n'
+        sections.append(f"""<section class="section">
+  <span class="section-label">Контент</span>
+  <h2>Контент-анализ</h2>
+  {cg_html}
+</section>
+<hr>""")
+
+    # ── Reviews ──────────────────────────────────────────────────────────
+    if reviews:
+        rev_html = ""
+        for platform, rdata in reviews.items():
+            if isinstance(rdata, dict):
+                rating = rdata.get("rating") or rdata.get("average_rating", "—")
+                count = rdata.get("reviews_count") or rdata.get("count", "—")
+                rev_html += f"""<div class="surface-card">
+  <h4>{_esc(str(platform))}</h4>
+  <div class="row"><span class="k">Рейтинг</span><span class="v">{_esc(str(rating))}</span></div>
+  <div class="row"><span class="k">Отзывов</span><span class="v">{_esc(str(count))}</span></div>
+</div>\n"""
+        if rev_html:
+            sections.append(f"""<section class="section">
+  <span class="section-label">Отзывы</span>
+  <h2>Репутация на платформах</h2>
+  <div class="grid-2">{rev_html}</div>
+</section>
+<hr>""")
+
+    # ── Financial ───────────────────────────────────────────────────────
+    rev_est = financials.get("revenue_estimate", {}) or {}
+    if rev_est:
+        sections.append(f"""<section class="section">
+  <span class="section-label">Финансы</span>
+  <h2>Финансовые показатели</h2>
+  <div class="metrics">
+    <div class="metric"><div class="value">{_esc(_fmt_num(rev_est.get('monthly')))}</div><div class="label">Выручка / мес</div></div>
+    <div class="metric"><div class="value">{_esc(_fmt_num(rev_est.get('annual')))}</div><div class="label">Выручка / год</div></div>
+  </div>
+  {f'<p class="text-meta">{_esc(str(rev_est.get("methodology", "")))}</p>' if rev_est.get("methodology") else ''}
+</section>
+<hr>""")
+
+    # ── Instagram ───────────────────────────────────────────────────────
+    if instagram:
+        ig_html = ""
+        if instagram.get("followers"):
+            ig_html += f'<div class="metric"><div class="value">{_esc(_fmt_num(instagram.get("followers")))}</div><div class="label">Подписчиков</div></div>'
+        if instagram.get("engagement_rate") or instagram.get("er_percent"):
+            er = instagram.get("engagement_rate") or instagram.get("er_percent")
+            ig_html += f'<div class="metric"><div class="value">{_esc(str(er))}</div><div class="label">Engagement Rate</div></div>'
+        if instagram.get("avg_likes"):
+            ig_html += f'<div class="metric"><div class="value">{_esc(_fmt_num(instagram.get("avg_likes")))}</div><div class="label">Среднее лайков</div></div>'
+
+        if ig_html:
+            sections.append(f"""<section class="section">
+  <span class="section-label">Соцсети</span>
+  <h2>Instagram</h2>
+  <div class="metrics">{ig_html}</div>
+</section>
+<hr>""")
+
+    # ── CTA ──────────────────────────────────────────────────────────────
+    sections.append("""<section class="section">
+  <div class="cta-box">
+    <h2>Готовы действовать?</h2>
+    <p>Команда AIM реализует эти рекомендации под ключ.</p>
+    <a href="https://t.me/aim_hermes_bot" class="btn" target="_blank" rel="noopener noreferrer">Связаться в Telegram</a>
+  </div>
+</section>""")
+
+    # ── Footer ───────────────────────────────────────────────────────────
+    sections.append(f"""<section class="section section-footer">
+  <p class="text-meta">
+    <a href="https://iamaim.ru" class="text-accent-link">iamaim.ru</a> · AI-first маркетинг в медицине<br>
+    Этот отчёт сгенерирован автоматически
+  </p>
+</section>""")
+
+    return '<div data-aim="report">\n' + "\n".join(sections) + '\n</div>'
+
+
+def _random_slug(length: int = 8) -> str:
+    chars = string.ascii_lowercase + string.digits
+    return "".join(random.choices(chars, k=length))
+
+
+async def handle_generate_html_report(
+    session_hash: str = None,
+    title: str = None,
+    client_name: str = None,
+    client_url: str = None,
+    **kwargs,
+) -> str:
+    """Generate and publish an AIM design system HTML report from session data.
+
+    Args:
+        session_hash: Session archive key (reads /opt/data/sessions-archive/{hash}/)
+        title: Report title (falls back to client_name, then metadata)
+        client_name: Clinic name override (optional — read from metadata if omitted)
+        client_url: Website URL override (optional — read from metadata if omitted)
+    """
+    if isinstance(session_hash, dict):
+        d = session_hash
+        session_hash = d.get("session_hash", "")
+        title = title or d.get("title", "")
+        client_name = client_name or d.get("client_name", "")
+        client_url = client_url or d.get("client_url", "")
+
+    if not session_hash:
+        return json.dumps({"error": "session_hash is required"}, ensure_ascii=False)
+
+    report_title = title or client_name or "AIM Scout Report"
+
+    # Load all data from session archive
+    data = load_all_data(session_hash)
+
+    # Merge metadata overrides
+    meta = data.get("metadata", {}) or {}
+    if client_name:
+        meta["company_name"] = client_name
+    if client_url:
+        meta["url"] = client_url
+
+    # Generate HTML
+    html = _build_report_html(data, report_title)
+
+    # Publish to WordPress
+    if not WP_DB_PASSWORD:
+        # Save locally if no DB access
+        report_path = os.path.join(
+            os.getenv("SESSIONS_ROOT", "/opt/data/sessions-archive"),
+            session_hash,
+            "report.html",
+        )
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write(html)
+        return json.dumps({
+            "status": "saved_locally",
+            "path": report_path,
+            "url": None,
+            "session_hash": session_hash,
+        }, ensure_ascii=False)
+
+    page_slug = _random_slug()
+    wp_title = f"AIM Scout — {report_title}"
+
+    conn = None
+    try:
+        conn = pymysql.connect(
+            host=WP_DB_HOST,
+            user=WP_DB_USER,
+            password=WP_DB_PASSWORD,
+            database=WP_DB_NAME,
+            charset="utf8mb4",
+            connect_timeout=5,
+        )
+
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+        with conn.cursor() as cur:
+            cur.execute("SELECT ID FROM wp_posts WHERE post_name = %s LIMIT 1", (page_slug,))
+            attempts = 0
+            while cur.fetchone() and attempts < 10:
+                page_slug = _random_slug()
+                cur.execute("SELECT ID FROM wp_posts WHERE post_name = %s LIMIT 1", (page_slug,))
+                attempts += 1
+
+            cur.execute(
+                """INSERT INTO wp_posts
+                   (post_author, post_date, post_date_gmt, post_content, post_title,
+                    post_status, comment_status, ping_status, post_name, post_type,
+                    post_excerpt, to_ping, pinged, post_content_filtered, menu_order)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (
+                    1, now, now, html, wp_title,
+                    "publish", "closed", "closed", page_slug, "page",
+                    "", "", "", "", 0,
+                ),
+            )
+            post_id = cur.lastrowid
+        conn.commit()
+
+        url = f"https://iamaim.ru/{page_slug}"
+        logger.info("HTML report published: session=%s post_id=%s url=%s", session_hash, post_id, url)
+
+        return json.dumps({
+            "status": "published",
+            "url": url,
+            "slug": page_slug,
+            "post_id": post_id,
+            "title": wp_title,
+            "session_hash": session_hash,
+        }, ensure_ascii=False)
+
+    except pymysql.Error as e:
+        logger.error("MySQL error publishing report: %s", e)
+        return json.dumps({"error": f"Database error: {str(e)}"}, ensure_ascii=False)
+    except Exception as e:
+        logger.exception("Failed to publish report")
+        return json.dumps({"error": f"Failed to publish: {str(e)}"}, ensure_ascii=False)
+    finally:
+        if conn:
+            conn.close()
+
+
+# ── Registry ──────────────────────────────────────────────────────────────
+registry.register(
+    name="generate_html_report",
+    toolset="aim-operations",
+    schema={
+        "type": "function",
+        "function": {
+            "name": "generate_html_report",
+            "description": "Генерирует и публикует HTML-отчёт в дизайн-системе AIM. "
+                           "Читает все данные из session archive (/opt/data/sessions-archive/{hash}/), "
+                           "строит секции (hero, метрики, конкуренты, врачи, SEO, реклама, отзывы, финансы), "
+                           "и публикует как WordPress страницу на iamaim.ru. "
+                           "Вызывается автоматически в конце run_full_scout.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "session_hash": {
+                        "type": "string",
+                        "description": "[REQUIRED] Ключ сессии в архиве (session_hash)",
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Заголовок отчёта (по умолчанию — название клиники из metadata)",
+                    },
+                    "client_name": {
+                        "type": "string",
+                        "description": "Название клиники (переопределяет metadata)",
+                    },
+                    "client_url": {
+                        "type": "string",
+                        "description": "URL сайта (переопределяет metadata)",
+                    },
+                },
+                "required": ["session_hash"],
+            },
+        },
+    },
+    handler=handle_generate_html_report,
+    check_fn=lambda: True,
+    is_async=True,
+    description="Generate and publish AIM design system HTML report from session archive data",
+    emoji="📊",
+)

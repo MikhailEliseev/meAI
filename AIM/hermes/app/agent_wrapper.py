@@ -56,6 +56,9 @@ DEFAULT_MODEL = os.getenv("LLM_MODEL", "ds/deepseek-v4-pro")
 # SOUL.md cache — loaded once, reused across requests
 _soul_md_cache: Optional[str] = None
 
+# 3PHASE_PIPELINE.md cache — loaded once, reused across requests
+_pipeline_md_cache: Optional[str] = None
+
 
 def load_soul_md() -> str:
     """Load SOUL.md from $HERMES_HOME/SOUL.md (cached).
@@ -79,6 +82,29 @@ def load_soul_md() -> str:
         _soul_md_cache = ""
 
     return _soul_md_cache
+
+
+def load_pipeline_md() -> str:
+    """Load 3PHASE_PIPELINE.md from $HERMES_HOME/3PHASE_PIPELINE.md (cached).
+
+    copy_soul.sh copies this file from skills/aim/ to $HERMES_HOME at startup.
+    Contains the detailed 3-phase presale flow that Hermes must follow.
+    """
+    global _pipeline_md_cache
+    if _pipeline_md_cache is not None:
+        return _pipeline_md_cache
+
+    hermes_home = os.getenv("HERMES_HOME", "/opt/data")
+    pipeline_path = Path(hermes_home) / "3PHASE_PIPELINE.md"
+
+    if pipeline_path.exists():
+        _pipeline_md_cache = pipeline_path.read_text()
+        logger.info(f"3PHASE_PIPELINE.md loaded: {len(_pipeline_md_cache)} chars from {pipeline_path}")
+    else:
+        logger.warning(f"3PHASE_PIPELINE.md not found at {pipeline_path} — Hermes won't know the full pipeline!")
+        _pipeline_md_cache = ""
+
+    return _pipeline_md_cache
 
 
 def build_system_prompt(mode: str) -> str:
@@ -124,10 +150,20 @@ def _presale_prompt() -> str:
     """PRESALE mode context — principles, not scripts.
 
     SOUL.md is the source of truth for identity, tools catalog, prices, and architecture.
-    This prompt adds only mode-specific execution context.
+    3PHASE_PIPELINE.md provides the detailed 3-phase presale flow.
     Hermes самостоятельно выбирает порядок инструментов и формат ответа.
     """
-    return """## ТЕКУЩИЙ РЕЖИМ: PRESALE
+    pipeline = load_pipeline_md()
+    pipeline_section = ""
+    if pipeline:
+        pipeline_section = (
+            "\n\n---\n\n"
+            "## 🛑 ПАЙПЛАЙН ПРЕСЕЙЛА (ОБЯЗАТЕЛЕН К ИСПОЛНЕНИЮ)\n\n"
+            + pipeline +
+            "\n\n---\n\n"
+        )
+
+    return pipeline_section + """## ТЕКУЩИЙ РЕЖИМ: PRESALE
 
 Ты общаешься с новым потенциальным клиентом на сайте iamaim.ru.
 
