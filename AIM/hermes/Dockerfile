@@ -29,7 +29,8 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 RUN pip install --no-cache-dir \
     beautifulsoup4 \
     lxml \
-    parsel
+    parsel \
+    pymysql
 
 # Instagram scraping (private API, no browser needed)
 RUN pip install --no-cache-dir \
@@ -65,9 +66,9 @@ ENV HERMES_CONFIG_QUIET=1
 # Persistent pip packages path (for pip_install tool)
 ENV PYTHONPATH=/opt/data/pip-packages:$PYTHONPATH
 
-# OMNIROUTE CONFIG (D-05)
-ENV OMNIROUTE_URL=http://193.111.152.14:7451
-ENV OMNIROUTE_AUTH=U9pjtK:hxtlqz
+# OMNIROUTE CONFIG (D-05 — overridden at runtime, empty by default)
+ENV OMNIROUTE_URL=
+ENV OMNIROUTE_AUTH=
 
 # Create data directories (Docker volume mount point per D-06)
 RUN mkdir -p /opt/data/sessions /opt/data/leads /opt/data/logs /opt/data/pip-packages

@@ -1,1 +1,1 @@
-Vanilla JS Chat SSE Flicker Fix: стриминговый механизм переписан с innerHTML на RAF + textContent, мерцание устранено, деплой на iamaim.ru проверен в браузере.
+Hermes исправлен: 37 инструментов (было 17), pipeline интегрирован в промпт, отчёты на CSS-классах, theme.css расширен. pymysql установлен. Brave Search 402 — отдельная задача.
