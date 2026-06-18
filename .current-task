@@ -1,1 +1,1 @@
-Phase 1 fixes deployed & tested. 9/17 bugs fixed. Pipeline functional on nachalo-clinica.ru. Key finding: hermes-debug MUST be enabled (bug #17).
+Vanilla JS Chat SSE Flicker Fix: стриминговый механизм переписан с innerHTML на RAF + textContent, мерцание устранено, деплой на iamaim.ru проверен в браузере.
