@@ -470,14 +470,11 @@ class PipelineEngine:
             params: dict = {}
             if name:
                 params["company_name"] = name
-            # Для review_platforms пробуем достать city из accumulated_data
+            # Для review_platforms передаём город (хендлер принимает city)
             if tool_name == "run_review_platforms":
-                perplexity = state.accumulated_data.get("PERPLEXITY", {})
-                if isinstance(perplexity, dict):
-                    inner = perplexity.get("web_search", "")
-                    if isinstance(inner, str):
-                        # Город мог быть в PERPLEXITY_interpretation
-                        pass
+                city = getattr(state, "client_city", "") or ""
+                if city:
+                    params["city"] = city
             return params
 
         if tool_name == "run_doctor_dossiers":
@@ -722,7 +719,15 @@ class PipelineEngine:
             return query
         elif phase.name == "FORUM PAINS":
             # Боли пациентов на форумах
-            return f'"{name}" отзывы пациентов форум отзовик проблемы жалобы мнения'
+            city = getattr(state, "client_city", "") or ""
+            specialization = getattr(state, "client_specialization", "") or ""
+            query = f'"{name}" отзывы пациентов форум отзовик '
+            if specialization:
+                query += f'{specialization} '
+            if city:
+                query += f'в городе {city} '
+            query += f'проблемы жалобы мнения'
+            return query
 
         # Default
         return f'"{name}" медицинский центр отзывы анализ'
