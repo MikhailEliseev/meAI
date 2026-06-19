@@ -478,10 +478,14 @@ class PipelineEngine:
             return params
 
         if tool_name == "run_doctor_dossiers":
-            # Ищем врачей по названию клиники
+            # Ищем врачей по названию клиники + специализации
+            params = {}
             if name:
-                return {"doctor_name": name}
-            return {}
+                params["doctor_name"] = name
+            spec = getattr(state, "client_specialization", "") or ""
+            if spec:
+                params["specialization"] = spec
+            return params
 
         # ── CI Analysis (нужны конкуренты) ──────────────────────────
         if tool_name == "run_ci_analysis":
