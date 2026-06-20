@@ -69,6 +69,8 @@ class CompetitorJson(BaseModel):
     match_reason: str = ""
     services: list[str] = []
     website: Optional[str] = None
+    rating: Optional[float] = None
+    reviews_count: Optional[int] = None
 
     # Multi-entity support
     inns: list[str] = []
@@ -249,7 +251,8 @@ async def analyze_competitors(body: AnalyzeCompetitorsRequest) -> AnalyzeCompeti
                 "legal_name": c.legal_name,
                 "url": c.website or "",
                 "website": c.website or "",
-                "rating": star_rating,
+                "rating": c.rating or star_rating,
+                "reviews_count": c.reviews_count or 0,
                 "revenue_year": c.revenue_year,
                 "profit_year": c.profit_year,
                 "revenue_trend": c.revenue_trend,
@@ -496,6 +499,8 @@ def _competitor_to_json(m: CompetitorMatch) -> CompetitorJson:
         match_reason=m.match_reason,
         services=m.services,
         website=m.website,
+        rating=p.rating,
+        reviews_count=p.reviews_count,
         social_links=m.social_links or p.social_links or {},
         inns=p.inns,
         licenses=p.licenses,
@@ -529,6 +534,8 @@ def _json_to_match(j: CompetitorJson) -> CompetitorMatch:
         data_source=j.data_source,
         confidence=j.confidence,
         website=j.website,
+        rating=j.rating,
+        reviews_count=j.reviews_count,
         social_links=j.social_links,
         inns=j.inns,
         licenses=j.licenses,

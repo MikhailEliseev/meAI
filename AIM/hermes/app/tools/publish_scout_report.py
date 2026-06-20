@@ -124,8 +124,9 @@ async def handle_publish_scout_report(slug=None, url=None, already_published=Fal
             "slug": slug,
         }, ensure_ascii=False)
 
-    page_slug = _random_slug()
-    wp_title = f"AIM Scout — {title}"
+    # Проверяем, есть ли уже страница-заглушка
+    placeholder_post_id = meta.get("placeholder_post_id", 0)
+    placeholder_page_url = meta.get("placeholder_page_url", "")
 
     conn = None
     try:
@@ -140,31 +141,31 @@ async def handle_publish_scout_report(slug=None, url=None, already_published=Fal
 
         now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
-        with conn.cursor() as cur:
-            cur.execute("SELECT ID FROM wp_posts WHERE post_name = %s LIMIT 1", (page_slug,))
-            attempts = 0
-            while cur.fetchone() and attempts < 10:
-                page_slug = _random_slug()
-                cur.execute("SELECT ID FROM wp_posts WHERE post_name = %s LIMIT 1", (page_slug,))
-                attempts += 1
+        if placeholder_post_id and placeholder_page_url:
+            # ── UPDATE существующей страницы-заглушки ────────────────
+            wp_title = f"AIM Scout — {title}"
+            with conn.cursor() as cur:
+                cur.execute(
+                    """UPDATE wp_posts
+                       SET post_content = %s, post_title = %s, post_modified = %s, post_modified_gmt = %s
+                       WHERE ID = %s AND post_type = 'page'""",
+                    (html, wp_title, now, now, placeholder_post_id),
+                )
+                updated = cur.rowcount
+            conn.commit()
 
-            cur.execute(
-                """INSERT INTO wp_posts
-                   (post_author, post_date, post_date_gmt, post_content, post_title,
-                    post_status, comment_status, ping_status, post_name, post_type,
-                    post_excerpt, to_ping, pinged, post_content_filtered, menu_order)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                (
-                    1, now, now, html, wp_title,
-                    "publish", "closed", "closed", page_slug, "page",
-                    "", "", "", "", 0,
-                ),
-            )
-            post_id = cur.lastrowid
-        conn.commit()
-
-        url = f"https://iamaim.ru/{page_slug}"
-        logger.info("Scout report published: slug=%s post_id=%s url=%s", slug, post_id, url)
+            if updated:
+                # Извлекаем slug из URL
+                page_slug = placeholder_page_url.rstrip("/").rsplit("/", 1)[-1]
+                post_id = placeholder_post_id
+                url = placeholder_page_url
+                logger.info("Scout report updated: post_id=%s url=%s (was placeholder)", post_id, url)
+            else:
+                # Пост не найден — fallback на INSERT
+                logger.warning("Placeholder post_id=%s not found, falling back to INSERT", placeholder_post_id)
+                page_slug, post_id, url = _insert_report_page(conn, html, title, now)
+        else:
+            page_slug, post_id, url = _insert_report_page(conn, html, title, now)
 
         # Also save locally
         report_path = os.path.join(SESSIONS_ROOT, slug, "report.html")
@@ -177,7 +178,8 @@ async def handle_publish_scout_report(slug=None, url=None, already_published=Fal
             "url": url,
             "slug": page_slug,
             "post_id": post_id,
-            "title": wp_title,
+            "title": f"AIM Scout — {title}",
+            "updated_placeholder": bool(placeholder_post_id and updated),
         }, ensure_ascii=False)
 
     except pymysql.Error as e:
@@ -189,6 +191,39 @@ async def handle_publish_scout_report(slug=None, url=None, already_published=Fal
     finally:
         if conn:
             conn.close()
+
+
+def _insert_report_page(conn, html: str, title: str, now: str) -> tuple[str, int, str]:
+    """Вставить новую страницу отчёта в wp_posts. Возвращает (slug, post_id, url)."""
+    page_slug = _random_slug()
+    wp_title = f"AIM Scout — {title}"
+
+    with conn.cursor() as cur:
+        cur.execute("SELECT ID FROM wp_posts WHERE post_name = %s LIMIT 1", (page_slug,))
+        attempts = 0
+        while cur.fetchone() and attempts < 10:
+            page_slug = _random_slug()
+            cur.execute("SELECT ID FROM wp_posts WHERE post_name = %s LIMIT 1", (page_slug,))
+            attempts += 1
+
+        cur.execute(
+            """INSERT INTO wp_posts
+               (post_author, post_date, post_date_gmt, post_content, post_title,
+                post_status, comment_status, ping_status, post_name, post_type,
+                post_excerpt, to_ping, pinged, post_content_filtered, menu_order)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            (
+                1, now, now, html, wp_title,
+                "publish", "closed", "closed", page_slug, "page",
+                "", "", "", "", 0,
+            ),
+        )
+        post_id = cur.lastrowid
+    conn.commit()
+
+    url = f"https://iamaim.ru/{page_slug}"
+    logger.info("Scout report published: page_slug=%s post_id=%s url=%s", page_slug, post_id, url)
+    return page_slug, post_id, url
 
 
 registry.register(
