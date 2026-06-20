@@ -1,42 +1,43 @@
-# Session: 2026-06-18 — Hermes: Качество отчётов и следование пайплайну ✅
+# Session: 2026-06-20 — Hermes v7 SOUL Redesign
 
-## Текущий фокус: Исправление качества работы Hermes (инструменты, pipeline, отчёты) ✅
+## Текущий фокус: Commit & cleanup deployment fixes
 
-### Диагностика (корень проблемы)
-1. **Инструменты не импортировались** — `__init__.py` регистрировал 17 из 42 доступных инструментов
-2. **3PHASE_PIPELINE.md не загружался в промпт** — был только документацией, не в system prompt
-3. **Отчёты с inline-стилями** — `publish_scout_report.py` использовал inline styles вместо CSS-классов
-4. **CSS-классы отсутствовали** — theme.css не имел классов `.gap`, `.section-label`, `.text-dim` и др.
-5. **generate_html_report.py — syntax error** — nested f-string с backslash (Python 3.11)
-6. **pymysql не установлен** — зависимость для WordPress-публикации отчётов
+### 2026-06-20: 16-Phase Pipeline — Deployed & Verified
 
-### Что сделано
-- ✅ `__init__.py` переписан: 42 инструмента с try/except защитой от импорт-ошибок
-- ✅ 37 инструментов успешно регистрируются (было 17)
-- ✅ `generate_html_report.py` — исправлен syntax error (f-string → concat) + импорт (session_archive)
-- ✅ `pymysql` установлен в контейнер
-- ✅ `publish_scout_report.py` — все inline-стили заменены на CSS-классы
-- ✅ `theme.css` +120 строк недостающих классов (`[data-aim="report"]`)
-- ✅ `agent_wrapper.py` — `load_pipeline_md()` загружает 3PHASE_PIPELINE.md в PRESALE-промпт
-- ✅ `copy_soul.sh` — копирует 3PHASE_PIPELINE.md в `$HERMES_HOME`
-- ✅ 3PHASE_PIPELINE.md (255 строк) доступен в контейнере `/opt/data/`
-- ✅ Все файлы синхронизированы: контейнер → хост → локальный репо
+| Задача | Статус |
+|--------|--------|
+| session_archive.py, run_full_scout.py, 5 стабов | ✅ Commit 293069a |
+| phases.py (13→16, float IDs), states.py (int→float) | ✅ Commit 293069a |
+| firecrawl_key_bank.py fix (classify_exhaustion, get_next_key, active_count) | ✅ Deployed |
+| agent_wrapper.py LLM_PROVIDER support | ✅ Deployed |
+| docker-compose.yml OMNIROUTE_URL | ✅ Deployed |
+| .env.production — DeepSeek API key | ✅ sk-37839c50424c4d37b0c2a071eb3d5e55 |
+| Тестовый прогон toriclinic.ru #1 | ✅ 17/17 фаз, были ошибки mark_exhausted |
+| Тестовый прогон toriclinic.ru #2 | ✅ 17/17 фаз, без ошибок, отчёт mhz6urmb |
+| Все 37 aim-operations + 15 debug тулов | ✅ Регистрируются без ImportError |
+| AIM API 500 (run_seo_audit, run_content_analysis) | ⚠️ Баги на стороне aim-app, не Hermes |
+| Firecrawl ключи | ⚠️ Большинство exhausted (402) |
 
-### Состояние контейнера aim-hermes
-- **Инструменты:** 37 AIM operations + 15 debug = 52 total
-- **Pipeline:** загружается лениво при первом PRESALE-запросе
-- **SOUL.md:** 39892 chars, загружается при каждом запросе
-- **Brave Search:** 402 ошибка (Usage limit exceeded) — нужно решить отдельно
-- **pymysql:** установлен (НЕ переживёт пересборку образа — добавить в Dockerfile!)
+### Что задеплоено
+- **16-фазный пайплайн:** tool-based ONBOARDING (LLM вызывает run_full_scout)
+- **Float phase IDs:** 0.0, 0.5, 0.75, 0.8, 1.0, 2.0, 3.0, 3.2, 3.5, 3.6, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0
+- **LLM:** DeepSeek через OMNIROUTE_URL=https://api.deepseek.com/v1
+- **Ключи:** FirecrawlKeyBank с ротацией 11 ключей
+- **Удалено:** «Проактивная автономность», Magister-архитектура, старый пресейл-флоу, уроки psyholog48, orchestrate/run_prescan
+- **Сохранено:** тон (Вы/ты, Привет зайка), 7 специализаций, КП-правила, самообучение, критические правила
 
-### Что ещё нужно
-- 🔴 Brave Search API key — usage limit exceeded, нужно пополнить/сменить ключ
-- 🟡 Добавить `pymysql` в Dockerfile (сейчас только в контейнере через pip install)
-- 🟡 Пересобрать Docker-образ, чтобы изменения в app/ коде не потерялись
-- 🟡 Обновить модель Hermes (deepseek-chat → более capable модель)
+### Архитектура контейнера hermes-20.06
+- **HERMES_HOME:** `/opt/data/SOUL.md` (volume: `/opt/hermes-data/SOUL.md`)
+- **SOUL.md в образе:** `/opt/hermes/skills/aim/SOUL.md` (обновлён)
+- **14 тулов:** `/opt/hermes/app/tools/`
+- **Pipeline:** `/opt/hermes/app/pipeline/`
+- **FastAPI:** `uvicorn app.main:app --host 0.0.0.0 --port 8000`
+- **Gateway:** `/usr/local/bin/hermes gateway run --accept-hooks`
 
-### Предыдущая задача: Telegram-идентификация ✅
-- `TELEGRAM_ADMIN_CHAT_ID=322367335` в hermes-fresh
-- Кодовое слово «Привет зайка» для ADMIN-режима
-- Тон общения: «Вы» с большой буквы для клиентов, «ты» для ADMIN
-- SOUL.md синхронизирован (809 строк)
+### 14 зарегистрированных тулов (_TOOL_HANDLERS)
+find_competitors, run_seo_audit, run_content_analysis, run_ci_analysis,
+run_pagespeed, run_smi_mentions, web_search, run_hh_analysis,
+run_review_platforms, run_doctor_dossiers, run_content_gaps,
+find_company_financials, generate_html_report, publish_scout_report
+
+### Next: тестовый прогон на toriclinic.ru для верификации всех 13 фаз

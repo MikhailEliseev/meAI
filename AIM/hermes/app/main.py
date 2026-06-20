@@ -111,6 +111,9 @@ app = FastAPI(
 async def on_startup():
     """Register tools + subscribe to EventBus + start Telegram polling.
 
+    Hermes v7: protect_config() защищает config.yaml от записи.
+    set_key_rotator() регистрирует ротатор ключей для PipelineEngine.
+
     EventBus subscriptions connect Hermes to CI execution events.
     For cross-process communication, CI Orchestrator also sends events
     via HTTP POST /api/knowledge/ingest.
@@ -119,6 +122,26 @@ async def on_startup():
     register_all_tools()
     register_debug_tools()
     logger.info("Hermes FastAPI started — tools registered")
+
+    # ── Hermes v7: защита конфига + ротатор ключей ──────────────
+    try:
+        from app.pipeline.file_guard import protect_config, set_key_rotator as _set_key_rotator
+        protect_config()
+
+        # Регистрируем ротатор ключей (использует firecrawl_key_bank)
+        def _rotate_keys() -> bool:
+            try:
+                from app.tools.firecrawl_key_bank import get_key_with_fallback
+                new_key = get_key_with_fallback()
+                return new_key is not None
+            except ImportError:
+                return False
+
+        _set_key_rotator(_rotate_keys)
+        logger.info("Hermes v7: config protected + key rotator registered")
+    except Exception as e:
+        logger.warning("Hermes v7: file_guard init skipped: %s", e)
+    # ─────────────────────────────────────────────────────────────
 
     vault = HermesKnowledgeVault()
 
@@ -465,6 +488,38 @@ async def chat_stream(
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
+    )
+
+
+# ── Pipeline Status Endpoint (Hermes v7) ──────────────────────────────
+class PipelineStatusResponse(BaseModel):
+    session_id: str
+    client_url: str
+    current_phase: int
+    total_phases: int
+    phases: list[dict]
+    started_at: str
+
+
+@app.get("/api/pipeline/status/{session_id}", response_model=PipelineStatusResponse)
+async def pipeline_status(session_id: str):
+    """Статус онбординг-пайплайна (Hermes v7).
+
+    Используется фронтендом для отображения прогресса фаз.
+    Возвращает 404 если пайплайн не найден.
+    """
+    from app.pipeline.engine import get_pipeline_state
+    state = get_pipeline_state(session_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail="Pipeline not found")
+
+    return PipelineStatusResponse(
+        session_id=state.get("session_id", session_id),
+        client_url=state.get("client_url", ""),
+        current_phase=state.get("current_phase", 0),
+        total_phases=state.get("total_phases", 14),
+        phases=state.get("phases", []),
+        started_at=state.get("started_at", ""),
     )
 
 

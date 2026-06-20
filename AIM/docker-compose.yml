@@ -78,6 +78,7 @@ services:
     environment:
       - HERMES_HOME=/opt/data
       - PYTHONUNBUFFERED=1
+      - OMNIROUTE_URL=https://api.deepseek.com/v1
       # WordPress DB — for HTML report publishing
       - WP_DB_HOST=aim-mysql
       - WP_DB_USER=wp_user

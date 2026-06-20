@@ -1,1 +1,1 @@
-Hermes исправлен: 37 инструментов (было 17), pipeline интегрирован в промпт, отчёты на CSS-классах, theme.css расширен. pymysql установлен. Brave Search 402 — отдельная задача.
+Commit deployment fixes: firecrawl_key_bank fix, agent_wrapper LLM_PROVIDER, docker-compose OMNIROUTE_URL

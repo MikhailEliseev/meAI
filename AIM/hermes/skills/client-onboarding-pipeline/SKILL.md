@@ -210,7 +210,7 @@ delegate_task(tasks=[
 
 **MTProto -- только для разведки:** поиск каналов, врачей, постов. Не чатов с клиентами.
 
-**MTProto Status (09.06.2026): ЖИВОЙ.** Telethon 1.43.2 + python-socks 2.8.1. HTTP-прокси: 193.111.152.14:7451. Аккаунт: Людмила (ID 7761664791). Доступны: поиск каналов, чтение постов, подписчики, просмотры, реакции. Для поиска врачей/каналов — прямой MTProto-запрос через Telethon. В data.json → `sources.telegram_method: "mtproto"`.
+**MTProto Status (20.06.2026): ЖИВОЙ.** Telethon 1.43.2 + python-socks 2.8.1. Сервер в Польше — прямой доступ к Telegram, прокси не требуется. Аккаунт: Людмила (ID 7761664791). Доступны: поиск каналов, чтение постов, подписчики, просмотры, реакции. Для поиска врачей/каналов — прямой MTProto-запрос через Telethon. В data.json → `sources.telegram_method: "mtproto"`.
 
 **Документация MTProto:** `references/mtproto-join-invite-link.md` — технический шаблон (Telethon + SOCKS5), инцидент ARclinic, правила использования.
 
@@ -374,8 +374,7 @@ FIRE_KEY=$(python3 /root/bin/firecrawl-rotate best 2>&1)
 **Fallback-цепочка для Firecrawl:**
 - Firecrawl ключ #1 → #2 → ... → #13
 - Все exhausted → `browser_navigate` (ручной скрап)
-- Browser не работает → `curl` с прокси 193.111.152.14:7451
-- Прокси не работает → web_search / web_extract
+- Browser не работает → web_search / web_extract
 
 ### Apify (22 ключа)
 

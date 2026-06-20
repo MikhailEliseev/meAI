@@ -7,7 +7,7 @@ enabled_toolsets=["aim-operations"] is set. MCP server mode (hermes mcp serve)
 is for EXTERNAL MCP clients only.
 
 All handlers make real HTTP calls to AIM API via internal Docker network (D-14, D-15).
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 """
 
 import logging
