@@ -1,10 +1,11 @@
 """
-run_web_search — Hermes tool: web search via Firecrawl
+run_web_search — Hermes tool: web search via Firecrawl + Brave Search fallback
 
 Searches the web and returns results with page content.
 Registered in toolset "aim-operations" so it's available in PRESALE mode.
 
-Uses the same Firecrawl key bank as hermes-debug tools.
+Primary: Firecrawl /v2/search (with key rotation)
+Fallback: Brave Search API (when all Firecrawl keys exhausted)
 """
 
 import json
@@ -17,10 +18,54 @@ from .firecrawl_key_bank import get_key_with_fallback, mark_exhausted, classify_
 logger = logging.getLogger(__name__)
 
 _FALLBACK_KEY = os.environ.get("FIRECRAWL_API_KEY", "").strip()
+_BRAVE_API_KEY = os.environ.get("BRAVE_API_KEY", "").strip()
+
+
+async def _search_via_brave(query: str, max_results: int, src: str) -> str:
+    """Search via Brave Search API.
+
+    https://api.search.brave.com/res/v1/web/search
+
+    Returns results in the same JSON format as Firecrawl for compatibility.
+    """
+    import httpx
+
+    brave_url = "https://api.search.brave.com/res/v1/web/search"
+    headers = {
+        "Accept": "application/json",
+        "Accept-Encoding": "gzip",
+        "X-Subscription-Token": _BRAVE_API_KEY,
+    }
+    params = {
+        "q": query,
+        "count": min(max_results, 20),
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(brave_url, headers=headers, params=params)
+        resp.raise_for_status()
+        data = resp.json()
+
+    web_results = data.get("web", {}).get("results", [])
+    results = []
+    for r in web_results[:max_results]:
+        results.append({
+            "title": r.get("title", ""),
+            "url": r.get("url", ""),
+            "description": r.get("description", ""),
+            "markdown": "",  # Brave doesn't provide markdown
+        })
+
+    return json.dumps({
+        "query": query,
+        "source": f"brave_{src}",
+        "results_count": len(results),
+        "results": results,
+    }, ensure_ascii=False)
 
 
 async def handle_run_web_search(query=None, limit=None, source=None, **kwargs) -> str:
-    """Search the web via Firecrawl.
+    """Search the web via Firecrawl (primary) or Brave Search (fallback).
 
     Use this to find information about competitors, clinics, doctors,
     market data, or any topic relevant to the presale conversation.
@@ -47,15 +92,16 @@ async def handle_run_web_search(query=None, limit=None, source=None, **kwargs) -
 
     logger.info("run_web_search: %s (limit=%d, source=%s)", query[:100], max_results, src)
 
+    # ── Try Firecrawl keys first ──────────────────────────────────
     for attempt in range(3):
         try:
             key = get_key_with_fallback()
         except RuntimeError:
-            return json.dumps({
-                "query": query, "source": "error",
-                "results_count": 0, "results": [],
-                "error": "search unavailable — no API keys",
-            })
+            # No keys at all — skip to Brave
+            break
+
+        if key is None:
+            break
 
         try:
             import httpx
@@ -106,26 +152,33 @@ async def handle_run_web_search(query=None, limit=None, source=None, **kwargs) -
                 mark_exhausted(key, reason)
                 logger.warning("Firecrawl credit exhausted on web_search, rotating (attempt %d)", attempt + 1)
                 continue
-            logger.warning("run_web_search failed (attempt %d): %s", attempt + 1, err[:200])
-            if attempt == 2:
-                return json.dumps({
-                    "query": query, "source": "error",
-                    "results_count": 0, "results": [],
-                    "error": f"search failed: {err[:300]}",
-                })
+            logger.warning("run_web_search Firecrawl failed (attempt %d): %s", attempt + 1, err[:200])
+
+    # ── Brave Search fallback ─────────────────────────────────────
+    if _BRAVE_API_KEY:
+        logger.info("Falling back to Brave Search for: %s", query[:100])
+        try:
+            return await _search_via_brave(query, max_results, src)
+        except Exception as e:
+            logger.warning("Brave Search also failed: %s", str(e)[:200])
+            return json.dumps({
+                "query": query, "source": "error",
+                "results_count": 0, "results": [],
+                "error": f"search failed — Firecrawl + Brave both unavailable: {str(e)[:300]}",
+            })
 
     return json.dumps({
         "query": query, "source": "error",
         "results_count": 0, "results": [],
-        "error": "all Firecrawl keys exhausted",
+        "error": "all Firecrawl keys exhausted (no Brave API key)",
     })
 
 
 def _check():
     try:
-        return active_count > 0 or bool(_FALLBACK_KEY)
+        return active_count() > 0 or bool(_BRAVE_API_KEY) or bool(_FALLBACK_KEY)
     except Exception:
-        return bool(_FALLBACK_KEY)
+        return bool(_BRAVE_API_KEY) or bool(_FALLBACK_KEY)
 
 
 registry.register(

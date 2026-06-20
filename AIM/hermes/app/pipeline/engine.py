@@ -248,7 +248,16 @@ class PipelineEngine:
                     )
                     tool_calls_made.extend(tool_names)
 
-                # Шаг 2: Проверить на NO_DATA
+                # Шаг 2: LLM-интерпретация (если нужна) — ДО проверки NO_DATA,
+                # чтобы даже при пустых/ошибочных данных LLM могла объяснить
+                # клиенту, что произошло и какие выводы из этого следуют.
+                interpretation = None
+                if phase.llm_interpret and phase.interpretation_prompt:
+                    interpretation = await self._interpret_phase(
+                        phase, tool_results, state,
+                    )
+
+                # Шаг 3: Проверить на NO_DATA
                 if self._is_no_data(tool_results, phase):
                     duration = time.time() - t0
                     return PhaseResult(
@@ -257,13 +266,7 @@ class PipelineEngine:
                         data=tool_results,
                         duration_seconds=round(duration, 1),
                         tool_calls_made=tool_calls_made,
-                    )
-
-                # Шаг 3: LLM-интерпретация (если нужна)
-                interpretation = None
-                if phase.llm_interpret and phase.interpretation_prompt:
-                    interpretation = await self._interpret_phase(
-                        phase, tool_results, state,
+                        llm_interpretation=interpretation,
                     )
 
                 duration = time.time() - t0
@@ -308,7 +311,20 @@ class PipelineEngine:
                 )
                 retries_left -= 1
 
-        # Все ретраи исчерпаны
+        # Все ретраи исчерпаны — попытаться интерпретировать даже ошибочные данные
+        interpretation = None
+        if (phase.llm_interpret and phase.interpretation_prompt
+                and tool_results and phase.contract.allow_no_data):
+            try:
+                interpretation = await self._interpret_phase(
+                    phase, tool_results, state,
+                )
+            except Exception:
+                logger.warning(
+                    "PipelineEngine: interpretation failed in retry-exhausted phase %s",
+                    phase.name, exc_info=True,
+                )
+
         duration = time.time() - t0
         status = PhaseStatus.PERMANENT_FAILURE
 
@@ -326,6 +342,7 @@ class PipelineEngine:
             error_message=last_error,
             duration_seconds=round(duration, 1),
             tool_calls_made=tool_calls_made,
+            llm_interpretation=interpretation,
         )
 
     async def _call_phase_tools(
@@ -454,7 +471,7 @@ class PipelineEngine:
 
         # ── URL-based tools ──────────────────────────────────────────
         if tool_name in ("run_pagespeed", "run_seo_audit"):
-            return {"url" if tool_name == "run_seo_audit" else "website": url}
+            return {"url": url}
 
         if tool_name == "run_content_analysis":
             return {"url": url}

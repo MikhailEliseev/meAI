@@ -34,11 +34,12 @@ def _normalize_args(first_param, defaults):
     return None
 
 
-async def handle_run_smi_mentions(url=None, **kwargs) -> str:
+async def handle_run_smi_mentions(url=None, company_name="", **kwargs) -> str:
     """Search SMI mentions for a clinic.
 
     Args:
-        url: Website URL or clinic name to search mentions for.
+        url: Website URL to search mentions for.
+        company_name: Clinic name (used as search target if url not provided).
 
     Returns:
         JSON with mentions: source, title, date, sentiment, reach.
@@ -46,14 +47,22 @@ async def handle_run_smi_mentions(url=None, **kwargs) -> str:
     unpacked = _normalize_args(url, {"url": ""})
     if unpacked:
         url = unpacked["url"]
+        company_name = unpacked.get("company_name", company_name)
 
-    if url and not url.startswith(("http://", "https://")):
-        url = "https://" + url
+    # Also extract company_name from kwargs
+    cn = kwargs.get("company_name", "")
+    if cn and not company_name:
+        company_name = cn
 
-    if not url:
+    # Search target: prefer URL, fallback to company_name
+    search_target = url or company_name or ""
+    if search_target and not search_target.startswith(("http://", "https://")):
+        search_target = "https://" + search_target
+
+    if not search_target:
         return json.dumps({"error": "URL or clinic name is required"})
 
-    cache_key = f"smi_{url}"
+    cache_key = f"smi_{search_target}"
     cached = _cache.get(cache_key)
     if cached is not None:
         cached_ts, cached_result = cached
@@ -61,16 +70,16 @@ async def handle_run_smi_mentions(url=None, **kwargs) -> str:
             return cached_result
         del _cache[cache_key]
 
-    logger.info("Searching SMI mentions for: %s", url)
+    logger.info("Searching SMI mentions for: %s", search_target)
 
     try:
         from app.main import push_tool_progress
-        push_tool_progress("smi", f"📰 Ищу упоминания в СМИ для {url}…")
+        push_tool_progress("smi", f"📰 Ищу упоминания в СМИ для {search_target}…")
 
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
             resp = await client.post(
                 f"{AIM_API_BASE}/api/smi/search",
-                json={"url": url},
+                json={"url": search_target},
             )
             resp.raise_for_status()
             data = resp.json()
