@@ -47,6 +47,7 @@ services:
       - ENVIRONMENT=production
       - REDIS_URL=redis://redis:6379/0
       - HERMES_URL=http://hermes:8000
+      - PYTHONPATH=/app/AIM:/app:/app/src
     env_file:
       - .env.production
     volumes:
