@@ -32,11 +32,13 @@ def _normalize_args(first_param, defaults):
     return None
 
 
-async def handle_run_content_gaps(url=None, **kwargs) -> str:
+async def handle_run_content_gaps(url=None, client_site=None, competitor_site=None, **kwargs) -> str:
     """Analyze content gaps between client and competitors.
 
     Args:
         url: Website URL to analyze content gaps for.
+        client_site: Client website URL (alternative to url).
+        competitor_site: Competitor website URL for comparison.
 
     Returns:
         JSON with gaps, advantages, steal-worthy tactics, and messaging strategy.
@@ -44,14 +46,26 @@ async def handle_run_content_gaps(url=None, **kwargs) -> str:
     unpacked = _normalize_args(url, {"url": ""})
     if unpacked:
         url = unpacked["url"]
+        client_site = unpacked.get("client_site", client_site)
+        competitor_site = unpacked.get("competitor_site", competitor_site)
 
-    if url and not url.startswith(("http://", "https://")):
-        url = "https://" + url
+    # Also extract from kwargs
+    cs = kwargs.get("client_site", "")
+    if cs and not client_site:
+        client_site = cs
+    comp = kwargs.get("competitor_site", "")
+    if comp and not competitor_site:
+        competitor_site = comp
 
-    if not url:
+    # Target: URL > client_site
+    target = url or client_site or ""
+    if target and not target.startswith(("http://", "https://")):
+        target = "https://" + target
+
+    if not target:
         return json.dumps({"error": "URL is required"})
 
-    cache_key = f"gaps_{url}"
+    cache_key = f"gaps_{target}"
     cached = _cache.get(cache_key)
     if cached is not None:
         cached_ts, cached_result = cached
@@ -59,16 +73,20 @@ async def handle_run_content_gaps(url=None, **kwargs) -> str:
             return cached_result
         del _cache[cache_key]
 
-    logger.info("Analyzing content gaps for: %s", url)
+    logger.info("Analyzing content gaps for: %s (competitor=%s)", target, competitor_site or "none")
 
     try:
         from app.main import push_tool_progress
-        push_tool_progress("gaps", f"🔍 Ищу контентные пробелы для {url}…")
+        push_tool_progress("gaps", f"🔍 Ищу контентные пробелы для {target}…")
+
+        payload = {"url": target}
+        if competitor_site:
+            payload["competitor_site"] = competitor_site
 
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
             resp = await client.post(
                 f"{AIM_API_BASE}/api/content/gaps",
-                json={"url": url},
+                json=payload,
             )
             resp.raise_for_status()
             data = resp.json()

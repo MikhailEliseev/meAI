@@ -30,26 +30,41 @@ def _normalize_args(first_param, defaults):
     return None
 
 
-async def handle_run_review_platforms(url=None, **kwargs) -> str:
+async def handle_run_review_platforms(url=None, company_name="", city="", **kwargs) -> str:
     """Scan review platforms for a clinic.
 
     Args:
-        url: Website URL or clinic name to search.
+        url: Website URL to search reviews for.
+        company_name: Clinic name (used as search target if url not provided).
+        city: City for geo-targeted review search.
 
     Returns:
         JSON with ratings, reviews count, positive/negative themes per platform.
     """
+    # Unpack dict-style args
     unpacked = _normalize_args(url, {"url": ""})
     if unpacked:
         url = unpacked["url"]
+        company_name = unpacked.get("company_name", company_name)
+        city = unpacked.get("city", city)
 
-    if url and not url.startswith(("http://", "https://")):
-        url = "https://" + url
+    # Also extract company_name and city from kwargs if passed as strings
+    cn = kwargs.get("company_name", "")
+    if cn and not company_name:
+        company_name = cn
+    ct = kwargs.get("city", "")
+    if ct and not city:
+        city = ct
 
-    if not url:
+    # Search target: prefer URL, fallback to company_name
+    search_target = url or company_name or ""
+    if search_target and not search_target.startswith(("http://", "https://")):
+        search_target = "https://" + search_target
+
+    if not search_target:
         return json.dumps({"error": "URL or clinic name is required"})
 
-    cache_key = f"reviews_{url}"
+    cache_key = f"reviews_{search_target}"
     cached = _cache.get(cache_key)
     if cached is not None:
         cached_ts, cached_result = cached
@@ -57,16 +72,20 @@ async def handle_run_review_platforms(url=None, **kwargs) -> str:
             return cached_result
         del _cache[cache_key]
 
-    logger.info("Scanning review platforms for: %s", url)
+    logger.info("Scanning review platforms for: %s (city=%s)", search_target, city)
 
     try:
         from app.main import push_tool_progress
-        push_tool_progress("reviews", f"⭐ Собираю отзывы для {url}…")
+        push_tool_progress("reviews", f"⭐ Собираю отзывы для {search_target}…")
+
+        payload = {"url": search_target}
+        if city:
+            payload["city"] = city
 
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
             resp = await client.post(
                 f"{AIM_API_BASE}/api/reviews/scan",
-                json={"url": url},
+                json=payload,
             )
             resp.raise_for_status()
             data = resp.json()
