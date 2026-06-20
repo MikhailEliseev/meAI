@@ -45,10 +45,9 @@ def _get_mode(chat_id: int, lead_id: str | None) -> str:
         return "ACTIVE"
     return "PRESALE"
 
-# Telegram API proxy — hosting in NL blocks Telegram IPs on port 443.
-# Old OmniRoute server at 193.111.152.14 acts as HTTP forward proxy.
-TELEGRAM_PROXY_URL = os.getenv("TELEGRAM_PROXY_URL", "http://193.111.152.14:7451")
-TELEGRAM_PROXY_AUTH = os.getenv("TELEGRAM_PROXY_AUTH", "U9pjtK:hxtlqz")
+# Telegram API proxy — server is in Poland, no proxy needed for MTProto/Bot API.
+TELEGRAM_PROXY_URL = os.getenv("TELEGRAM_PROXY_URL", "")
+TELEGRAM_PROXY_AUTH = os.getenv("TELEGRAM_PROXY_AUTH", "")
 
 
 def _get_proxy_url() -> str | None:

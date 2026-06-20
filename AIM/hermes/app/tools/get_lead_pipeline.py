@@ -1,7 +1,7 @@
 """
 get_lead_pipeline — Hermes tool: Get Sales Pipeline Overview
 
-GET http://app:8000/api/sales/pipeline
+GET http://aim-app:8000/api/sales/pipeline
 Returns the sales pipeline — conversations by status and qualification tier.
 Used by the SALES_ADMIN and ADMIN modes to view the state of the funnel.
 
@@ -17,7 +17,7 @@ from tools.registry import registry
 
 logger = logging.getLogger(__name__)
 
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 15.0
 
 

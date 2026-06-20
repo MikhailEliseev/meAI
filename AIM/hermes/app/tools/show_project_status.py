@@ -1,7 +1,7 @@
 """
 show_project_status — Hermes tool: Project Status
 
-GET http://app:8000/api/projects/{project_id}/status
+GET http://aim-app:8000/api/projects/{project_id}/status
 Shows current project status including active tasks, recent KPIs, current
 sprint progress, and any blockers. For active clients, shows business-level
 summary. For admin, shows full technical details.
@@ -18,7 +18,7 @@ from tools.registry import registry
 
 logger = logging.getLogger(__name__)
 
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 30.0  # seconds
 
 

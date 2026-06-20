@@ -1,7 +1,7 @@
 """
 qualify_lead — Hermes tool: Qualify Sales Lead
 
-POST http://app:8000/api/sales/qualify
+POST http://aim-app:8000/api/sales/qualify
 Evaluates lead quality from conversation — sets score, tier, and recommended action.
 Used by the SALES_ADMIN mode when Hermes needs to manually qualify a lead.
 
@@ -24,7 +24,7 @@ def _normalize_args(first_param, defaults):
     return None
 
 
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 15.0
 
 

@@ -1,8 +1,8 @@
 """
 run_seo_audit — Hermes tool: SEO Audit
 
-POST http://app:8000/api/seo/audit → starts async CI pipeline
-GET  http://app:8000/api/seo/audit/{task_id} → polls until done
+POST http://aim-app:8000/api/seo/audit → starts async CI pipeline
+GET  http://aim-app:8000/api/seo/audit/{task_id} → polls until done
 
 Runs a full SEO audit on a client website: technical analysis, keyword positions,
 competitor comparison, backlink profile. Returns patient acquisition potential
@@ -35,7 +35,7 @@ def _normalize_args(first_param, defaults):
     return None
 
 
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 600.0  # full async pipeline: start + polling + competitor crawling
 POLL_INTERVAL = 2.0       # seconds between status checks
 

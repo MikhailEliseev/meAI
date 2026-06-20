@@ -1,7 +1,7 @@
 """
 run_prescan — Hermes tool: 3-Stage Ultra-Deep Pre-Sale Intelligence Gathering
 
-Calls POST http://app:8000/api/presale/prescan-staged (3-stage pipeline):
+Calls POST http://aim-app:8000/api/presale/prescan-staged (3-stage pipeline):
   Stage 1 (20-30s): Financial hook — revenue, profit, legal entity, specialization
   Stage 2 (40-60s): Under the hood — licenses, founders, deep SEO, reviews, social
   Stage 3 (60-90s): Market — Yandex/Google Maps, nearby competitors, content audit
@@ -23,7 +23,7 @@ from tools.registry import registry
 
 logger = logging.getLogger(__name__)
 
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 300.0  # prescan can take 180-250s (Apify, reviews, SEO)
 
 

@@ -23,10 +23,28 @@ from app.tools.session_archive import load_all_data
 
 logger = logging.getLogger(__name__)
 
-WP_DB_HOST = os.getenv("WP_DB_HOST", "wp-db")
-WP_DB_USER = os.getenv("WP_DB_USER", "wp_user")
-WP_DB_PASSWORD = os.getenv("WP_DB_PASSWORD", "")
-WP_DB_NAME = os.getenv("WP_DB_NAME", "wordpress")
+def _env_with_dotenv_fallback(key: str, default: str = "") -> str:
+    """Read env var, falling back to /opt/hermes/.env (dotenv format)."""
+    val = os.getenv(key, "")
+    if val:
+        return val
+    # Try reading from .env file
+    for env_path in ("/opt/hermes/.env", "/opt/data/.env"):
+        try:
+            with open(env_path, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith(f"{key}=") or line.startswith(f"{key} ="):
+                        return line.split("=", 1)[1].strip().strip('"').strip("'")
+        except (OSError, IOError):
+            continue
+    return default
+
+
+WP_DB_HOST = _env_with_dotenv_fallback("WP_DB_HOST", "mysql")
+WP_DB_USER = _env_with_dotenv_fallback("WP_DB_USER", "wp_user")
+WP_DB_PASSWORD = _env_with_dotenv_fallback("WP_DB_PASSWORD", "")
+WP_DB_NAME = _env_with_dotenv_fallback("WP_DB_NAME", "wordpress")
 
 
 def _esc(text: str) -> str:
@@ -41,10 +59,195 @@ def _fmt_num(val, default="—"):
     return str(val)
 
 
+def _unwrap_tool_output(raw: dict) -> dict:
+    """Flatten tool-output wrapper {tool_name: json_string_or_dict} → actual data.
+
+    Pipeline saves tool results as ``{tool_name: "{...}"}`` (JSON string) or
+    ``{tool_name: {...}}`` (already a dict).  This function parses any JSON
+    strings and returns a flat dict with the inner keys merged.
+    """
+    if not isinstance(raw, dict):
+        return raw or {}
+    result = {}
+    for key, value in raw.items():
+        if isinstance(value, str):
+            try:
+                inner = json.loads(value)
+            except (json.JSONDecodeError, TypeError):
+                inner = value
+        elif isinstance(value, dict):
+            inner = value
+        else:
+            inner = value
+        # If inner has useful keys, merge them directly
+        if isinstance(inner, dict):
+            result.update(inner)
+        else:
+            result[key] = inner
+    return result
+
+
+def _is_error_data(val) -> bool:
+    """Check if a parsed value looks like an error response, not real data."""
+    if not isinstance(val, dict):
+        return False
+    # If only error-related keys, it's an error
+    non_error_keys = [k for k in val if k not in ("error", "detail", "status")]
+    if not non_error_keys:
+        return True
+    # If has error key and very few other keys, likely error
+    if "error" in val and len(val) <= 2:
+        return True
+    return False
+
+
+def _parse_tool_value(raw_val) -> dict | None:
+    """Parse a tool output value (JSON string or dict) into a dict, skipping errors."""
+    if isinstance(raw_val, str):
+        try:
+            parsed = json.loads(raw_val)
+        except (json.JSONDecodeError, TypeError):
+            return None
+    elif isinstance(raw_val, dict):
+        parsed = raw_val
+    else:
+        return None
+    if _is_error_data(parsed):
+        return None
+    return parsed
+
+
+def _normalize_pipeline_keys(data: dict) -> dict:
+    """Map pipeline phase-name keys to the keys _build_report_html expects.
+
+    v7 pipeline saves data under phase names (e.g. "TECH AUDIT", "COMPETITORS"),
+    with tool outputs wrapped as ``{tool_name: json_string}``.
+    This function unwraps the tool outputs and creates the aliases the report
+    builder expects (e.g. "pagespeed", "competitors", "ci_analysis").
+
+    Also copies LLM interpretations into data["interpretations"][phase_name].
+    """
+    # ── Extract LLM interpretations ────────────────────────────────
+    interpretations = {}
+    for key in list(data.keys()):
+        if key.endswith("_interpretation") and isinstance(data[key], dict):
+            phase_name = key[:-15]  # strip "_interpretation" (15 chars)
+            content = data[key].get("content", "")
+            if content:
+                interpretations[phase_name] = str(content)
+
+    data["interpretations"] = interpretations
+
+    # ── Phase → tool → expected key mapping ───────────────────────
+    _phase_tool_map = {
+        "TECH AUDIT": {
+            "run_pagespeed": "pagespeed",
+            "run_seo_audit": "seo_audit",
+        },
+        "SOCIAL VERIFIER": {
+            "run_review_platforms": "review_platforms",
+        },
+        "CONTENT ANALYSIS": {
+            "run_content_analysis": "content_analysis",
+        },
+        "KEY PERSONS": {
+            "run_hh_analysis": "hh_analysis",
+            "run_doctor_dossiers": "doctor_dossiers",
+        },
+        "SMI MENTIONS": {
+            "run_smi_mentions": "smi_mentions",
+        },
+        "COMPETITORS": {
+            "find_competitors": "competitors",
+            "run_ci_analysis": "ci_analysis",
+        },
+        "FINANCE": {
+            "find_company_financials": "financials",
+        },
+        "CONTENT PLAN": {
+            "run_content_gaps": "content_gaps",
+        },
+        "FORUM PAINS": {
+            "web_search": "forum_pains",
+        },
+        "PERPLEXITY": {
+            "web_search": "market_research",
+        },
+    }
+
+    for phase_key, tool_map in _phase_tool_map.items():
+        phase_data = data.get(phase_key, {})
+        if not isinstance(phase_data, dict):
+            continue
+        for tool_name, expected_key in tool_map.items():
+            if expected_key not in data or not data.get(expected_key):
+                if tool_name in phase_data:
+                    parsed = _parse_tool_value(phase_data[tool_name])
+                    if parsed is not None:
+                        data[expected_key] = parsed
+                else:
+                    # Try unwrapped merge
+                    unwrapped = _unwrap_tool_output(phase_data)
+                    if unwrapped and unwrapped != phase_data and not _is_error_data(unwrapped):
+                        data[expected_key] = unwrapped
+
+    # ── CI analysis needs to be set separately ───────────────────
+    if "COMPETITORS" in data and not data.get("ci_analysis"):
+        comp = data["COMPETITORS"]
+        if isinstance(comp, dict) and "run_ci_analysis" in comp:
+            parsed = _parse_tool_value(comp["run_ci_analysis"])
+            if parsed is not None:
+                data["ci_analysis"] = parsed
+
+    # ── Transform reviews from platforms[] → {platform: {rating, count}} ─
+    for review_key in ("review_platforms", "SOCIAL VERIFIER"):
+        raw = data.get(review_key, {})
+        if isinstance(raw, dict):
+            has_platforms_list = "platforms" in raw
+            if has_platforms_list:
+                platforms_list = raw.get("platforms", [])
+                transformed = {}
+                for p in platforms_list:
+                    if isinstance(p, dict) and p.get("found"):
+                        pname = p.get("platform", "Unknown")
+                        transformed[pname] = {
+                            "rating": p.get("rating"),
+                            "reviews_count": p.get("review_count", 0),
+                        }
+                if transformed:
+                    existing = data.get("review_platforms", {})
+                    if isinstance(existing, dict):
+                        existing.update(transformed)
+                    else:
+                        existing = transformed
+                    data["review_platforms"] = existing
+                break  # Only process once
+
+    # ── Extract metadata from phase data ─────────────────────────
+    meta = data.get("metadata", {}) or {}
+    if not meta.get("company_name"):
+        # Try to get from hh_analysis or doctor_dossiers
+        for src_key in ("hh_analysis", "doctor_dossiers"):
+            src = data.get(src_key, {})
+            if isinstance(src, dict) and src.get("company_name"):
+                meta["company_name"] = src["company_name"]
+                break
+    data["metadata"] = meta
+
+    return data
+
+
 def _build_report_html(data: dict, title: str) -> str:
-    """Build full HTML page from session archive data using AIM CSS classes."""
+    """Build full HTML page from session archive data using AIM CSS classes.
+
+    Supports both legacy prescan format (stage_1/2/3) and v7 pipeline format
+    (PERPLEXITY, TECH AUDIT, SOCIAL VERIFIER, etc. as phase-name keys).
+    """
+    data = _normalize_pipeline_keys(data)
+
     metadata = data.get("metadata", {}) or {}
     prescan = data.get("prescan", {}) or {}
+    market_research = data.get("market_research", {}) or {}
     competitors = data.get("competitors", {}) or {}
     ci_analysis = data.get("ci_analysis", {}) or {}
     pagespeed = data.get("pagespeed", {}) or {}
@@ -55,6 +258,9 @@ def _build_report_html(data: dict, title: str) -> str:
     doctors = data.get("doctor_dossiers", {}) or {}
     instagram = data.get("instagram_content", {}) or {}
     content_gaps = data.get("content_gaps", {}) or {}
+    forum_pains = data.get("forum_pains", {}) or {}
+    smi_mentions = data.get("smi_mentions", {}) or {}
+    interpretations = data.get("interpretations", {}) or {}
 
     client_name = metadata.get("company_name") or title or "Клиника"
     client_url = metadata.get("url", "")
@@ -83,6 +289,7 @@ def _build_report_html(data: dict, title: str) -> str:
     # ── Executive Summary ────────────────────────────────────────────────
     metrics = []
 
+    # From legacy prescan
     prescan_fin = prescan.get("stage_1_financials", {}) or {}
     revenue = prescan_fin.get("revenue_year") or prescan_fin.get("revenue")
     if revenue:
@@ -94,10 +301,8 @@ def _build_report_html(data: dict, title: str) -> str:
     prescan_seo = prescan.get("stage_2_under_the_hood", {}) or {}
     if prescan_seo.get("seo_health"):
         metrics.append(("SEO health", _esc(str(prescan_seo.get("seo_health")))))
-
     if prescan_seo.get("licenses_count"):
         metrics.append(("Лицензий", _fmt_num(prescan_seo.get("licenses_count"))))
-
     if prescan_seo.get("reviews_count"):
         metrics.append(("Отзывов", _fmt_num(prescan_seo.get("reviews_count"))))
 
@@ -105,13 +310,40 @@ def _build_report_html(data: dict, title: str) -> str:
     if prescan_market.get("nearby_competitors_count"):
         metrics.append(("Конкурентов рядом", _fmt_num(prescan_market.get("nearby_competitors_count"))))
 
-    if instagram.get("followers"):
-        metrics.append(("Instagram", _fmt_num(instagram.get("followers"))))
+    # From v7 pipeline data
+    if market_research.get("results_count"):
+        metrics.append(("Источников исследования", str(market_research.get("results_count"))))
+
+    # Total reviews from social verifier
+    total_reviews = 0
+    if isinstance(reviews, dict):
+        for rdata in reviews.values():
+            if isinstance(rdata, dict):
+                total_reviews += int(rdata.get("reviews_count", 0) or 0)
+    if total_reviews > 0:
+        metrics.append(("Всего отзывов", str(total_reviews)))
+
+    # Competitors count
+    comp_list = competitors.get("competitors", [])
+    if not comp_list:
+        comp_list = ci_analysis.get("competitors", [])
+    if comp_list:
+        metrics.append(("Конкурентов", str(len(comp_list))))
 
     if pagespeed:
-        mobile_ps = pagespeed.get("mobile", {}) or {}
+        # v7 format: {scores: {mobile: {...}}}
+        ps_scores = pagespeed.get("scores", {}) or {}
+        mobile_ps = pagespeed.get("mobile", {}) or ps_scores.get("mobile", {}) or {}
         if mobile_ps.get("cwv_status"):
             metrics.append(("Core Web Vitals", _esc(str(mobile_ps.get("cwv_status")))))
+        elif pagespeed.get("assessment"):
+            metrics.append(("Скорость", _esc(str(pagespeed.get("assessment")))))
+
+    if smi_mentions.get("total_mentions"):
+        metrics.append(("Упоминаний в СМИ", _fmt_num(smi_mentions.get("total_mentions"))))
+
+    if instagram.get("followers"):
+        metrics.append(("Instagram", _fmt_num(instagram.get("followers"))))
 
     if metrics:
         metric_cards = ""
@@ -124,6 +356,43 @@ def _build_report_html(data: dict, title: str) -> str:
 </section>
 <hr>""")
 
+    # ── Market Research (PERPLEXITY / Deep Research) ───────────────────
+    mr_data = market_research if isinstance(market_research, dict) else {}
+    mr_results = mr_data.get("results", [])
+    if not mr_results and isinstance(market_research, dict):
+        # Try prescan merged data
+        mr_results = market_research.get("stage_3_market", {}).get("competitors", []) if isinstance(market_research.get("stage_3_market"), dict) else []
+    if mr_results:
+        mr_html = ""
+        for r in mr_results[:5]:
+            if isinstance(r, str):
+                mr_html += f'<div class="surface-card"><p>{_esc(r)}</p></div>\n'
+            elif isinstance(r, dict):
+                title_r = r.get("title", r.get("name", ""))
+                snippet = r.get("snippet", r.get("description", r.get("content", "")))
+                url_r = r.get("url", r.get("link", ""))
+                mr_html += f"""<div class="surface-card">
+  {f'<h4>{_esc(str(title_r))}</h4>' if title_r else ''}
+  {f'<p class="text-dim">{_esc(str(snippet)[:300])}</p>' if snippet else ''}
+  {f'<p class="text-meta"><a href="{_esc(url_r)}" target="_blank" rel="noopener noreferrer">Источник</a></p>' if url_r else ''}
+</div>\n"""
+        sections.append(f"""<section class="section">
+  <span class="section-label">Исследование рынка</span>
+  <h2>Deep Research</h2>
+  <p class="text-meta">По запросу: {_esc(str(mr_data.get('query', '')))} · Найдено: {mr_data.get('results_count', len(mr_results))} источников</p>
+  <div class="grid-1">{mr_html}</div>
+</section>
+<hr>""")
+    elif market_research.get("query"):
+        # Minimal market research card — search was done but results are unstructured
+        sections.append(f"""<section class="section">
+  <span class="section-label">Исследование рынка</span>
+  <h2>Deep Research</h2>
+  <p>{_esc(str(market_research.get('query', '')))}</p>
+  <p class="text-dim">Исследование рынка выполнено. Подробные результаты включены в интерпретации фаз.</p>
+</section>
+<hr>""")
+
     # ── Competitors ──────────────────────────────────────────────────────
     comp_list = competitors.get("competitors", [])
     if not comp_list:
@@ -131,17 +400,18 @@ def _build_report_html(data: dict, title: str) -> str:
     if comp_list:
         comp_cards = ""
         for c in comp_list[:6]:
-            name = c.get("name", "—")
-            segment = c.get("segment", "")
-            doctors_n = c.get("doctors_count") or c.get("doctors", "—")
-            reviews_n = c.get("reviews_prodoctorov") or c.get("reviews", "—")
+            name = c.get("brand_name") or c.get("legal_name") or c.get("name", "—")
+            services = c.get("services", [])
+            segment = c.get("segment", "") or (", ".join(services[:3]) if services else "")
+            reviews_n = c.get("reviews_count") or c.get("reviews", "—")
+            revenue_y = c.get("revenue_year")
             price = c.get("price_range", "—")
             comp_cards += f"""<div class="surface-card">
   <h3>{_esc(str(name))}</h3>
   {f'<p class="text-meta">{_esc(str(segment))}</p>' if segment else ''}
-  <div class="row"><span class="k">Врачей</span><span class="v">{_esc(str(doctors_n))}</span></div>
+  {f'<div class="row"><span class="k">Выручка</span><span class="v">{_fmt_num(revenue_y)} ₽</span></div>' if revenue_y else ''}
   <div class="row"><span class="k">Отзывов</span><span class="v">{_esc(str(reviews_n))}</span></div>
-  <div class="row"><span class="k">Цены</span><span class="v">{_esc(str(price))}</span></div>
+  {f'<div class="row"><span class="k">Цены</span><span class="v">{_esc(str(price))}</span></div>' if price and price != "—" else ''}
 </div>\n"""
         sections.append(f"""<section class="section">
   <span class="section-label">Конкуренты</span>
@@ -193,6 +463,14 @@ def _build_report_html(data: dict, title: str) -> str:
     doctor_list = doctors.get("doctors") or doctors.get("stars") or []
     if not doctor_list:
         doctor_list = prescan.get("doctors") or []
+    # v7 format: single doctor dossier {doctor_name, platforms, specialization, ...}
+    if not doctor_list and isinstance(doctors, dict) and doctors.get("doctor_name"):
+        platforms_count = doctors.get("platforms_with_presence") or doctors.get("total_profiles_found", 0)
+        doctor_list = [{
+            "full_name": doctors.get("doctor_name"),
+            "specialization": doctors.get("specialization", ""),
+            "experience": f"Найден на {platforms_count} платформах" if platforms_count else "",
+        }]
     if doctor_list:
         doc_cards = ""
         for d in doctor_list[:6]:
@@ -204,7 +482,7 @@ def _build_report_html(data: dict, title: str) -> str:
             doc_cards += f"""<div class="expert-card">
   <h4>{_esc(str(name))}</h4>
   {f'<p class="text-meta">{_esc(info)}</p>' if info else ''}
-  {f'<p class="text-accent-sm">{_esc(str(exp))} лет стажа</p>' if exp else ''}
+  {f'<p class="text-accent-sm">{_esc(str(exp))}</p>' if exp else ''}
 </div>\n"""
         sections.append(f"""<section class="section">
   <span class="section-label">Ключевые врачи</span>
@@ -215,7 +493,9 @@ def _build_report_html(data: dict, title: str) -> str:
 
     # ── PageSpeed ────────────────────────────────────────────────────────
     if pagespeed:
-        mobile_ps = pagespeed.get("mobile", {}) or {}
+        # v7 format: {scores: {mobile: {...}}} or {assessment, scores, method}
+        ps_scores = pagespeed.get("scores", {}) or {}
+        mobile_ps = pagespeed.get("mobile", {}) or ps_scores.get("mobile", {}) or {}
         if mobile_ps:
             lcp = mobile_ps.get("lcp_seconds", "—")
             inp = mobile_ps.get("inp_ms", "—")
@@ -235,6 +515,15 @@ def _build_report_html(data: dict, title: str) -> str:
     <tr><td>CLS</td><td>{_esc(str(cls))}</td><td>{_esc(str(cls_dist.get('good', '—')))}%</td><td>{_esc(str(cls_dist.get('needs_improvement', '—')))}%</td><td>{_esc(str(cls_dist.get('poor', '—')))}%</td></tr>
   </table>
   </div>
+</section>
+<hr>""")
+        elif pagespeed.get("assessment"):
+            # v7 simplified format
+            sections.append(f"""<section class="section">
+  <span class="section-label">Скорость сайта</span>
+  <h2>Core Web Vitals</h2>
+  <p>{_esc(str(pagespeed.get("assessment")))}</p>
+  <p class="text-meta">Метод: {_esc(str(pagespeed.get("method", "—")))}</p>
 </section>
 <hr>""")
 
@@ -313,6 +602,62 @@ def _build_report_html(data: dict, title: str) -> str:
 </section>
 <hr>""")
 
+    # ── SMI Mentions ─────────────────────────────────────────────────────
+    smi_sources = smi_mentions.get("sources", []) or []
+    smi_media = smi_mentions.get("media_presence", "")
+    smi_total = smi_mentions.get("total_mentions", 0)
+    if smi_sources or smi_media or smi_total:
+        smi_html = ""
+        if smi_total:
+            smi_html += f'<p>Упоминаний в СМИ: <strong>{_esc(str(smi_total))}</strong></p>\n'
+        if smi_media:
+            smi_html += f'<p>{_esc(str(smi_media))}</p>\n'
+        if smi_sources:
+            for s in smi_sources[:6]:
+                if isinstance(s, dict):
+                    src_name = s.get("source", s.get("name", ""))
+                    mentions = s.get("mentions", "")
+                    url_s = s.get("url", "")
+                    smi_html += f"""<div class="surface-card">
+  <h4>{_esc(str(src_name))}</h4>
+  {f'<p class="text-dim">{_esc(str(mentions))}</p>' if mentions else ''}
+  {f'<a href="{_esc(url_s)}" target="_blank" rel="noopener noreferrer" class="text-accent-link">Ссылка</a>' if url_s else ''}
+</div>\n"""
+        if smi_html:
+            sections.append(f"""<section class="section">
+  <span class="section-label">Медийное присутствие</span>
+  <h2>Упоминания в СМИ</h2>
+  {smi_html}
+</section>
+<hr>""")
+
+    # ── Forum Pains ─────────────────────────────────────────────────────
+    fp_results = forum_pains.get("results", [])
+    if not fp_results:
+        fp_results = forum_pains.get("findings", [])
+    fp_query = forum_pains.get("query", "")
+    if fp_results:
+        fp_html = ""
+        for r in fp_results[:6]:
+            if isinstance(r, str):
+                fp_html += f'<div class="surface-card"><p>{_esc(r)}</p></div>\n'
+            elif isinstance(r, dict):
+                title_r = r.get("title", r.get("name", ""))
+                snippet = r.get("snippet", r.get("description", r.get("content", "")))
+                url_r = r.get("url", r.get("link", ""))
+                fp_html += f"""<div class="surface-card">
+  {f'<h4>{_esc(str(title_r))}</h4>' if title_r else ''}
+  {f'<p class="text-dim">{_esc(str(snippet)[:300])}</p>' if snippet else ''}
+  {f'<p class="text-meta"><a href="{_esc(url_r)}" target="_blank" rel="noopener noreferrer">Источник</a></p>' if url_r else ''}
+</div>\n"""
+        sections.append(f"""<section class="section">
+  <span class="section-label">Боли пациентов</span>
+  <h2>Что обсуждают на форумах</h2>
+  {f'<p class="text-meta">Поиск: {_esc(fp_query)}</p>' if fp_query else ''}
+  <div class="grid-1">{fp_html}</div>
+</section>
+<hr>""")
+
     # ── Financial ───────────────────────────────────────────────────────
     rev_est = financials.get("revenue_estimate", {}) or {}
     if rev_est:
@@ -343,6 +688,29 @@ def _build_report_html(data: dict, title: str) -> str:
   <span class="section-label">Соцсети</span>
   <h2>Instagram</h2>
   <div class="metrics">{ig_html}</div>
+</section>
+<hr>""")
+
+    # ── Executive Insights (LLM interpretations) ────────────────────────
+    if interpretations:
+        insight_order = [
+            "PERPLEXITY", "TECH AUDIT", "SOCIAL VERIFIER", "CONTENT ANALYSIS",
+            "KEY PERSONS", "SMI MENTIONS", "COMPETITORS", "FORUM PAINS",
+            "FINANCE", "CONTENT PLAN",
+        ]
+        insight_cards = ""
+        for phase_name in insight_order:
+            content = interpretations.get(phase_name, "")
+            if content and len(str(content).strip()) > 10:
+                insight_cards += f"""<div class="surface-card">
+  <h4>{_esc(phase_name)}</h4>
+  <p class="text-dim">{_esc(str(content)[:500])}</p>
+</div>\n"""
+        if insight_cards:
+            sections.append(f"""<section class="section">
+  <span class="section-label">Ключевые выводы</span>
+  <h2>Что это значит для бизнеса</h2>
+  <div class="grid-1">{insight_cards}</div>
 </section>
 <hr>""")
 

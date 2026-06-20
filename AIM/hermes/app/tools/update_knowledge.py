@@ -1,7 +1,7 @@
 """
 update_knowledge — Hermes tool: Update Client Knowledge Vault
 
-POST http://app:8000/api/sales/knowledge/update
+POST http://aim-app:8000/api/sales/knowledge/update
 Updates a client's knowledge vault file (services, FAQ, tone of voice, etc.).
 Used by the ADMIN mode to keep client knowledge up to date.
 
@@ -24,7 +24,7 @@ def _normalize_args(first_param, defaults):
     return None
 
 
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 15.0
 
 

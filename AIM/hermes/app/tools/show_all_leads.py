@@ -1,7 +1,7 @@
 """
 show_all_leads — Hermes tool: Show All Leads (ADMIN only)
 
-GET http://app:8000/api/leads?period={period}&status={status}
+GET http://aim-app:8000/api/leads?period={period}&status={status}
 Shows all leads captured by the AIM agency. Lists lead details including
 source, status, contact info, website, and current pipeline stage.
 Intended for ADMIN mode (Mikhail). Access control enforced at AIM API layer.
@@ -18,7 +18,7 @@ from tools.registry import registry
 
 logger = logging.getLogger(__name__)
 
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 30.0  # seconds
 
 

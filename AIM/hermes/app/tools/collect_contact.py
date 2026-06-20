@@ -1,7 +1,7 @@
 """
 collect_contact — Hermes tool: Collect Client Contact
 
-POST http://app:8000/api/leads
+POST http://aim-app:8000/api/leads
 Collects client contact information and creates a lead dossier. Saves contact
 to the AIM database and creates a Linear task for Mikhail to follow up.
 
@@ -25,7 +25,7 @@ def _normalize_args(first_param, defaults):
     return None
 
 
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 30.0  # seconds
 
 VALID_CONTACT_TYPES = {"telegram", "email", "phone"}

@@ -1,7 +1,7 @@
 """
 present_competitors — Hermes tool: Save Competitor Selection
 
-POST http://app:8000/api/competitors/save
+POST http://aim-app:8000/api/competitors/save
 Saves the final competitor selection to the lead's pre-sale/ folder.
 Handles both "client approved system suggestions" and "client suggested own URLs".
 
@@ -24,7 +24,7 @@ def _normalize_args(first_param, defaults):
     return None
 
 
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 30.0
 
 

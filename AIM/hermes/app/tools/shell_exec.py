@@ -229,7 +229,7 @@ async def handle_api_debug(url_path=None, method=None, **kwargs) -> str:
     if method not in ("GET", "POST"):
         return json.dumps({"error": f"Unsupported method: {method}"})
 
-    full_url = f"http://app:8000{url_path}" if not url_path.startswith("http") else url_path
+    full_url = f"http://aim-app:8000{url_path}" if not url_path.startswith("http") else url_path
 
     logger.info("api_debug: %s %s", method, full_url)
 
@@ -253,6 +253,10 @@ async def handle_api_debug(url_path=None, method=None, **kwargs) -> str:
 async def handle_file_write(file_path=None, content=None, **kwargs) -> str:
     """Write content to a file in the Hermes container.
 
+    Hermes v7: проверяет file_guard.is_write_allowed() первой проверкой.
+    В ONBOARDING режиме запись всегда запрещена.
+    В ADMIN режиме — только whitelist-пути.
+
     Args:
         file_path: Absolute path to the file to write.
         content: String content to write to the file.
@@ -270,6 +274,18 @@ async def handle_file_write(file_path=None, content=None, **kwargs) -> str:
         return json.dumps({"error": "file_path is required (string)"})
     if not content or not isinstance(content, str):
         return json.dumps({"error": "content is required (string)"})
+
+    # Hermes v7: file_guard — проверка режима и whitelist путей
+    try:
+        from app.pipeline.file_guard import is_write_allowed, get_current_mode
+        current_mode = get_current_mode()
+        if not is_write_allowed(file_path, current_mode):
+            return json.dumps({
+                "error": f"File write blocked by file_guard: {file_path}",
+                "mode": current_mode,
+            })
+    except ImportError:
+        logger.warning("file_guard not available — skipping mode check")
 
     # Restrict to safe paths — same as file_read
     allowed_prefixes = [

@@ -1,7 +1,7 @@
 """
 escalate_to_manager — Hermes tool: Escalate to Human Manager
 
-POST http://app:8000/api/sales/escalate
+POST http://aim-app:8000/api/sales/escalate
 Escalates a conversation to a human manager. Used when the agent cannot
 handle the situation: medical data requests (152-ФЗ), complex questions,
 threats, profanity, or explicit human requests.
@@ -25,7 +25,7 @@ def _normalize_args(first_param, defaults):
     return None
 
 
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 15.0
 
 
