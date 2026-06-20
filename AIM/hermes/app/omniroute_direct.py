@@ -17,8 +17,8 @@ from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
-OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "https://api.deepseek.com")
-OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "sk-placeholder")
+OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"))
+OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", os.getenv("DEEPSEEK_API_KEY", ""))
 DEFAULT_MODEL = os.getenv("HERMES_MODEL", "deepseek-chat")
 
 _client: Optional[OpenAI] = None

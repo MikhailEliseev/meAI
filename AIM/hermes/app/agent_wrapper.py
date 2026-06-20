@@ -55,6 +55,7 @@ _LEARNINGS_TIMEOUT = 60  # 1 minute — learnings extraction deadline
 OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"))
 OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", os.getenv("DEEPSEEK_API_KEY", ""))
 DEFAULT_MODEL = os.getenv("LLM_MODEL", "deepseek-chat")
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "custom")  # "custom" = DeepSeek/OpenAI-compat, "anthropic" = native Anthropic
 
 # SOUL.md cache — loaded once, reused across requests
 _soul_md_cache: Optional[str] = None
@@ -402,21 +403,37 @@ def _create_agent(session_id: str | None, mode: str, enabled_toolsets: list[str]
     # Hermes v7: сообщаем file_guard текущий режим для проверок file_write
     set_current_mode(mode)
 
-    return AIAgent(
-        base_url=OMNIROUTE_URL,
-        api_key=OMNIROUTE_AUTH,
-        provider="custom",
-        api_mode="openai_chat",
-        model=DEFAULT_MODEL,
-        session_id=session_id,
-        session_db=_session_db,
-        load_soul_identity=True,
-        ephemeral_system_prompt=get_mode_prompt(mode),
-        enabled_toolsets=enabled_toolsets,
-        max_iterations=25,
-        quiet_mode=True,
-        max_tokens=16000,
-    )
+    if LLM_PROVIDER == "anthropic":
+        # Native Anthropic (Claude) — использует ANTHROPIC_API_KEY
+        return AIAgent(
+            provider="anthropic",
+            model=DEFAULT_MODEL if DEFAULT_MODEL != "deepseek-chat" else "claude-sonnet-4-6",
+            session_id=session_id,
+            session_db=_session_db,
+            load_soul_identity=True,
+            ephemeral_system_prompt=get_mode_prompt(mode),
+            enabled_toolsets=enabled_toolsets,
+            max_iterations=25,
+            quiet_mode=True,
+            max_tokens=16000,
+        )
+    else:
+        # Custom OpenAI-compatible (DeepSeek, etc.)
+        return AIAgent(
+            base_url=OMNIROUTE_URL,
+            api_key=OMNIROUTE_AUTH,
+            provider="custom",
+            api_mode="openai_chat",
+            model=DEFAULT_MODEL,
+            session_id=session_id,
+            session_db=_session_db,
+            load_soul_identity=True,
+            ephemeral_system_prompt=get_mode_prompt(mode),
+            enabled_toolsets=enabled_toolsets,
+            max_iterations=25,
+            quiet_mode=True,
+            max_tokens=16000,
+        )
 
 
 def _extract_url_from_message(message: str) -> str | None:

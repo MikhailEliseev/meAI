@@ -50,6 +50,12 @@ RUN find /usr/local/lib/python3.11/site-packages -name 'run_agent.py' -exec \
 COPY app/ ./app/
 COPY knowledge/ ./knowledge/
 
+# Hermes v7: pipeline module (state machine)
+COPY app/pipeline/ ./app/pipeline/
+
+# Hermes v7 config
+COPY config.yaml ./config.yaml
+
 # Copy skills from repo (D-03: stored in repo, copied into image at build time)
 COPY skills/ ./skills/
 

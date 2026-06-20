@@ -107,10 +107,11 @@ def get_key_with_fallback() -> str | None:
     return _get_bank().get_key()
 
 
-def mark_exhausted(key: str | None = None) -> None:
+def mark_exhausted(key: str | None = None, reason: str = "") -> None:
     """Пометить текущий ключ как exhausted.
 
     Если key не указан — используется текущий ключ из банка.
+    reason — опциональная причина exhaustion (credits/401/timeout).
     """
     bank = _get_bank()
     if key:
@@ -124,3 +125,34 @@ def mark_exhausted(key: str | None = None) -> None:
 def rotate_key() -> str | None:
     """Ротировать на следующий ключ."""
     return _get_bank().rotate()
+
+
+def get_next_key() -> str | None:
+    """Псевдоним для get_key_with_fallback — получить следующий доступный ключ."""
+    return _get_bank().get_key()
+
+
+def classify_exhaustion(text_or_key: str) -> str:
+    """Классифицировать причину exhaustion ключа (402/401/credits/timeout).
+
+    Используется тулами run_web_search, run_doctor_dossiers и другими
+    для определения типа ошибки Firecrawl.
+    """
+    text_lower = text_or_key.lower()
+    if "402" in text_lower or "payment" in text_lower or "insufficient credits" in text_lower:
+        return "credits_exhausted"
+    if "401" in text_lower or "unauthorized" in text_lower:
+        return "unauthorized"
+    if "429" in text_lower or "rate" in text_lower:
+        return "rate_limited"
+    if "timeout" in text_lower or "timed out" in text_lower:
+        return "timeout"
+    if "connection" in text_lower or "dns" in text_lower or "refused" in text_lower:
+        return "connection_error"
+    return "unknown"
+
+
+def active_count() -> int:
+    """Количество активных (не-exhausted) ключей."""
+    bank = _get_bank()
+    return len([k for k in bank._keys if k not in bank._exhausted])
