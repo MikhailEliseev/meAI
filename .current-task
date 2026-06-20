@@ -1,1 +1,1 @@
-Фаза 2 TECH AUDIT завершена. run_pagespeed + run_tech_seo_audit + AI-оптимизация (llms.txt/ai.txt/Schema.org). E2E-тест пройден (87.1s).
+Фазы 2+3 перетестированы на iphk.ru (правильный тестовый сайт). DNS-сбой был transient — исправлен. Пошаговый Perplexity-запрос задеплоен.

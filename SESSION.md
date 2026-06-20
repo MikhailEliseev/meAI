@@ -1,30 +1,37 @@
-# Session: 2026-06-21 — Фаза 2 TECH AUDIT завершена ✅
+# Session: 2026-06-21 — Фазы 2+3 перетестированы на iphk.ru ✅
 
-## Текущий фокус: Фаза 2 готова. E2E-тест пройден.
+## Текущий фокус: Фазы 2 и 3 работают на правильном тестовом сайте.
 
-### Фаза 2 — что сделано
-- `run_tech_seo_audit.py` — НОВЫЙ tool: технический SEO-аудит на BeautifulSoup+httpx
-  - Проверки: meta tags, headings (H1-H6), images (alt), links (internal/external), structured data (JSON-LD), SSL, robots.txt, sitemap.xml
-  - **AI-оптимизация:** llms.txt, ai.txt, structured_data_types
-  - Chrome User-Agent для обхода QRATOR WAF
-  - Кэш 600s, max_pages=5 (до 10)
-- `phases.py` Phase 2: tools = `["run_pagespeed", "run_tech_seo_audit"]`
-- `phases.py` Phase 2: interpretation_prompt с AI-оптимизацией (секция 3: llms.txt, ai.txt, Schema.org)
-- `engine.py`: `_build_tool_params` — поддержка `run_tech_seo_audit`
-- `__init__.py`: регистрация нового tool
-- `run_seo_audit` — оставлен в реестре (используется другими фазами), из Phase 2 убран
+### Важное: DNS внутри контейнера
+- Проблема с iphk.ru была **transient-сбоем** (после рестарта контейнера)
+- Сейчас резолвится: iphk.ru → 79.174.93.31
+- Docker DNS: 127.0.0.11 → upstream 8.8.8.8 / 1.1.1.1
+- Не резолвится только blokhinclinic.ru (домен, вероятно, мёртв)
 
-### E2E-тест (docdeti.ru)
-- PageSpeed: mobile=28, desktop=71 (69.8s)
-- Tech SEO: 5 pages, AI: llms.txt=False, ai.txt=False, schema=[] (7.5s)
-- LLM (DeepSeek): качественный русский отчёт с конкретными рекомендациями (9.7s)
-- **Total: 87.1s ✅**
+### Фаза 3 — переработка
+- `run_review_platforms.py` v2: Perplexity (sonar-pro) — пошаговый запрос по платформам
+  - Шаг 1: Яндекс.Карты, Шаг 2: Google Maps, Шаг 3: ПроДокторов, Шаг 4: 2ГИС, Шаг 5: Отзовик/IRecommend/Zoon
+  - Пошаговый формат заставляет Perplexity копать глубже по каждой платформе
+  - Fallback: DeepSeek (без web search)
 
-### Почему НЕ pyseoanalyzer
-- pyseoanalyzer = pip-зависимость, неясный формат вывода, чёрный ящик
-- Свой tool на BeautifulSoup+httpx = полный контроль над JSON, все нужные проверки, нет внешних зависимостей
+### Результаты тестов на iphk.ru (Институт пластической хирургии и косметологии, Москва)
 
-### Предыдущее (Фаза 1)
+**Фаза 2 TECH AUDIT (73.9s):**
+- PageSpeed: mobile=55, desktop=83
+- Tech SEO: 96 images, 1% alt, title 81 chars (длинный), structured data: MedicalOrganization, WebSite
+- AI: llms.txt=False, ai.txt=False
+- Топ-3 проблемы: мобильная скорость, alt-теги, длинный title
+
+**Фаза 3 SOCIAL VERIFIER (27.1s):**
+- Яндекс.Карты: 5.0/5, 1152 отзыва
+- ПроДокторов: 4.5/5, 100+ отзывов
+- Google Maps, 2ГИС, Отзовик — не найдены
+- Выявлены реальные проблемы: завышение стоимости, задержки приёма, навязывание услуг
+
+### Фаза 2 (предыдущее)
+- run_tech_seo_audit + run_pagespeed + AI-оптимизация (llms.txt/ai.txt/Schema.org)
+
+### Фаза 1 (предыдущее)
 - Perplexity→конкуренты, 3 дыры закрыты, interpretation_prompt v2
 
 ---
