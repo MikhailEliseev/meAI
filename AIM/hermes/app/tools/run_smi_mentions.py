@@ -1,12 +1,11 @@
 """
 run_smi_mentions — Hermes tool: SMI (Mass Media) Mentions Search
 
-Ищет упоминания клиники в СМИ:
-- Business: forbes.ru, rbc.ru, kommersant.ru
-- Glossy: marieclaire.ru, vogue.ru
-- Medical: vademec.ru
+Ищет упоминания клиники в СМИ через DuckDuckGo:
+- Business: forbes.ru, rbc.ru, kommersant.ru, vedomosti.ru
+- Medical: vademec.ru, medvestnik.ru
 - Regional: fontanka.ru, dp.ru, sobaka.ru
-- Telegram-media: Mash, Baza, 112, SHOT
+- Telegram-media: t.me (Mash, Baza, 112, SHOT)
 """
 
 import asyncio
@@ -14,18 +13,50 @@ import json
 import logging
 import time
 
-import httpx
-
 from tools.registry import registry
 
 logger = logging.getLogger(__name__)
 
-AIM_API_BASE = "http://aim-app:8000"
-REQUEST_TIMEOUT = 120.0
-POLL_INTERVAL = 2.0
+REQUEST_TIMEOUT = 30.0
 
 _cache: dict[str, tuple[float, str]] = {}
 _CACHE_TTL = 600
+
+# Категории СМИ для поиска
+MEDIA_SOURCES = {
+    "business": {
+        "name": "Деловые СМИ",
+        "domains": [
+            "forbes.ru", "rbc.ru", "kommersant.ru", "vedomosti.ru",
+            "tass.ru", "ria.ru", "interfax.ru",
+        ],
+        "weight": 0.35,
+    },
+    "medical": {
+        "name": "Медицинские СМИ",
+        "domains": [
+            "vademec.ru", "medvestnik.ru", "medportal.ru",
+            "doctorpiter.ru", "medlinks.ru",
+        ],
+        "weight": 0.30,
+    },
+    "regional": {
+        "name": "Региональные СМИ",
+        "domains": [
+            "fontanka.ru", "dp.ru", "sobaka.ru", "mk.ru",
+            "kp.ru", "aif.ru", "rg.ru",
+        ],
+        "weight": 0.20,
+    },
+    "lifestyle": {
+        "name": "Lifestyle / Глянец",
+        "domains": [
+            "marieclaire.ru", "vogue.ru", "cosmopolitan.ru",
+            "tatler.ru", "graziamagazine.ru", "buro247.ru",
+        ],
+        "weight": 0.15,
+    },
+}
 
 
 def _normalize_args(first_param, defaults):
@@ -35,34 +66,39 @@ def _normalize_args(first_param, defaults):
 
 
 async def handle_run_smi_mentions(url=None, company_name="", **kwargs) -> str:
-    """Search SMI mentions for a clinic.
+    """Search SMI mentions for a clinic using DuckDuckGo.
+
+    Searches across business, medical, regional, and lifestyle media sources.
 
     Args:
         url: Website URL to search mentions for.
         company_name: Clinic name (used as search target if url not provided).
 
     Returns:
-        JSON with mentions: source, title, date, sentiment, reach.
+        JSON with mentions per category: source, title, url, description.
     """
     unpacked = _normalize_args(url, {"url": ""})
     if unpacked:
         url = unpacked["url"]
         company_name = unpacked.get("company_name", company_name)
 
-    # Also extract company_name from kwargs
     cn = kwargs.get("company_name", "")
     if cn and not company_name:
         company_name = cn
 
-    # Search target: prefer URL, fallback to company_name
     search_target = url or company_name or ""
-    if search_target and not search_target.startswith(("http://", "https://")):
-        search_target = "https://" + search_target
-
     if not search_target:
         return json.dumps({"error": "URL or clinic name is required"})
 
-    cache_key = f"smi_{search_target}"
+    if search_target.startswith("http"):
+        from urllib.parse import urlparse
+        parsed = urlparse(search_target)
+        domain = parsed.netloc.replace("www.", "")
+        company_name = company_name or domain
+
+    query_name = company_name or search_target
+
+    cache_key = f"smi_{query_name}"
     cached = _cache.get(cache_key)
     if cached is not None:
         cached_ts, cached_result = cached
@@ -70,50 +106,88 @@ async def handle_run_smi_mentions(url=None, company_name="", **kwargs) -> str:
             return cached_result
         del _cache[cache_key]
 
-    logger.info("Searching SMI mentions for: %s", search_target)
+    logger.info("Searching SMI mentions for: %s", query_name)
 
     try:
         from app.main import push_tool_progress
-        push_tool_progress("smi", f"📰 Ищу упоминания в СМИ для {search_target}…")
+        from app.tools._search_fallback import search as fallback_search
 
-        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
-            resp = await client.post(
-                f"{AIM_API_BASE}/api/smi/search",
-                json={"url": search_target},
-            )
-            resp.raise_for_status()
-            data = resp.json()
+        push_tool_progress("smi", f"📰 Ищу упоминания в СМИ для {query_name}…")
 
-            task_id = data.get("task_id")
-            if not task_id:
-                push_tool_progress("smi", "✅ Поиск СМИ завершён!")
-                result_json = json.dumps(data, ensure_ascii=False, indent=2)
-                _cache[cache_key] = (time.time(), result_json)
-                return result_json
+        category_results: dict[str, dict] = {}
+        all_mentions: list[dict] = []
+        providers_used: set[str] = set()
 
-            status_url = f"{AIM_API_BASE}/api/smi/search/{task_id}"
-            poll_count = 0
+        # Параллельный поиск по всем категориям
+        cat_keys = list(MEDIA_SOURCES.keys())
+        coros = []
+        for cat_key in cat_keys:
+            cat = MEDIA_SOURCES[cat_key]
+            site_filter = " OR ".join(f"site:{d}" for d in cat["domains"][:3])
+            query = f'"{query_name}" ({site_filter})'
+            coros.append(fallback_search(query, max_results=5))
+        raw_results = await asyncio.gather(*coros, return_exceptions=True)
 
-            while True:
-                await asyncio.sleep(POLL_INTERVAL)
-                poll_count += 1
-                status_resp = await client.get(status_url)
-                status_resp.raise_for_status()
-                status_data = status_resp.json()
+        # Unpack (results, provider) tuples from fallback_search
+        search_results = []
+        for item in raw_results:
+            if isinstance(item, Exception):
+                search_results.append(item)
+            elif isinstance(item, tuple) and len(item) == 2:
+                search_results.append(item[0])
+                providers_used.add(item[1])
+            else:
+                search_results.append(item)
 
-                st = status_data.get("status", "unknown")
-                if st == "done":
-                    push_tool_progress("smi", "✅ Поиск СМИ завершён!")
-                    result = status_data.get("result", {})
-                    result_json = json.dumps(result, ensure_ascii=False, indent=2)
-                    _cache[cache_key] = (time.time(), result_json)
-                    return result_json
-                if st == "error":
-                    return json.dumps({"error": "SMI search failed", "detail": status_data.get("error", "Unknown")})
+        for cat_key, results in zip(cat_keys, search_results):
+            cat = MEDIA_SOURCES[cat_key]
+            if isinstance(results, Exception):
+                logger.warning("SMI search exception for %s: %s", cat_key, results)
+                category_results[cat_key] = {
+                    "category": cat["name"],
+                    "weight": cat["weight"],
+                    "mentions_found": 0,
+                    "mentions": [],
+                }
+                continue
 
-    except httpx.HTTPStatusError as e:
-        logger.error("AIM API error for SMI: %s", e)
-        return json.dumps({"error": "AIM API error", "status": e.response.status_code, "detail": str(e)})
+            mentions = []
+            for r in results:
+                mention = {
+                    "source": r.get("url", "").split("/")[2] if "/" in r.get("url", "") else "unknown",
+                    "title": r.get("title", ""),
+                    "url": r.get("url", ""),
+                    "description": (r.get("description", "") or "")[:200],
+                    "date": r.get("age", ""),
+                }
+                mentions.append(mention)
+                all_mentions.append(mention)
+
+            category_results[cat_key] = {
+                "category": cat["name"],
+                "weight": cat["weight"],
+                "mentions_found": len(mentions),
+                "mentions": mentions,
+            }
+
+        total = sum(c["mentions_found"] for c in category_results.values())
+        categories_with_hits = sum(1 for c in category_results.values() if c["mentions_found"] > 0)
+
+        result = {
+            "search_term": query_name,
+            "total_mentions": total,
+            "categories_with_mentions": categories_with_hits,
+            "categories_total": len(MEDIA_SOURCES),
+            "categories": category_results,
+            "top_mentions": sorted(all_mentions, key=lambda m: len(m.get("description", "")))[:10],
+            "source": ", ".join(sorted(providers_used)) if providers_used else "none",
+        }
+
+        push_tool_progress("smi", f"✅ Найдено {total} упоминаний в {categories_with_hits} категориях СМИ")
+        result_json = json.dumps(result, ensure_ascii=False, indent=2)
+        _cache[cache_key] = (time.time(), result_json)
+        return result_json
+
     except Exception as e:
         logger.exception("SMI search error")
         return json.dumps({"error": "Unexpected error", "detail": str(e)})
@@ -126,7 +200,7 @@ registry.register(
         "type": "function",
         "function": {
             "name": "run_smi_mentions",
-            "description": "Search mass media mentions for a clinic across Business (Forbes, RBC), Glossy, Medical, Regional, and Telegram-media sources.",
+            "description": "Search mass media mentions for a clinic across Business (Forbes, RBC), Medical (Vademec), Regional, and Lifestyle sources.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -139,6 +213,6 @@ registry.register(
     handler=handle_run_smi_mentions,
     check_fn=lambda: True,
     is_async=True,
-    description="Search SMI/media mentions across business, medical, and regional sources",
+    description="Search SMI/media mentions across business, medical, regional, and lifestyle sources",
     emoji="📰",
 )

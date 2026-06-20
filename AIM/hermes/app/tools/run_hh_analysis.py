@@ -3,7 +3,7 @@ run_hh_analysis — Hermes tool: HeadHunter Vacancy Analysis
 
 Анализирует вакансии клиники на hh.ru:
 - Прямой поиск через hh.ru public API (employers → vacancies)
-- Brave Search fallback для случаев когда компания не найдена через API
+- DuckDuckGo fallback для случаев когда компания не найдена через API
 
 Используется для оценки кадровой ситуации клиники (рост/сжатие/стабильность).
 """
@@ -11,7 +11,6 @@ run_hh_analysis — Hermes tool: HeadHunter Vacancy Analysis
 import asyncio
 import json
 import logging
-import os
 import time
 
 import httpx
@@ -21,7 +20,6 @@ from tools.registry import registry
 logger = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT = 60.0
-_BRAVE_API_KEY = os.environ.get("BRAVE_API_KEY", "").strip()
 
 _cache: dict[str, tuple[float, str]] = {}
 _CACHE_TTL = 600
@@ -94,30 +92,18 @@ async def _search_hh_api(client: httpx.AsyncClient, company_name: str) -> dict |
     }
 
 
-async def _search_via_brave(company_name: str) -> dict | None:
-    """Search for HH vacancies via Brave Search."""
-    if not _BRAVE_API_KEY:
+async def _search_via_ddg(company_name: str) -> dict | None:
+    """Search for HH vacancies via search fallback (DDG → Crawlee → Firecrawl)."""
+    try:
+        from app.tools._search_fallback import search as fallback_search
+    except ImportError:
         return None
 
     query = f'"{company_name}" вакансии site:hh.ru'
-    headers = {
-        "Accept": "application/json",
-        "Accept-Encoding": "gzip",
-        "X-Subscription-Token": _BRAVE_API_KEY,
-    }
+    results, provider = await fallback_search(query, max_results=10)
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(
-            "https://api.search.brave.com/res/v1/web/search",
-            headers=headers,
-            params={"q": query, "count": 10},
-        )
-        resp.raise_for_status()
-        data = resp.json()
-
-    results = data.get("web", {}).get("results", [])
     links = []
-    for r in results[:10]:
+    for r in results:
         links.append({
             "title": r.get("title", ""),
             "url": r.get("url", ""),
@@ -125,16 +111,16 @@ async def _search_via_brave(company_name: str) -> dict | None:
         })
 
     return {
-        "source": "Brave Search",
+        "source": provider,
         "query": query,
         "search_results": links,
-    }
+    } if links else None
 
 
 async def handle_run_hh_analysis(url=None, company_name="", **kwargs) -> str:
     """Analyze HeadHunter vacancies for a clinic.
 
-    Searches hh.ru public API directly, then falls back to Brave Search.
+    Searches hh.ru public API directly, then falls back to DuckDuckGo.
 
     Args:
         url: Website URL or company name to search HH vacancies for.
@@ -189,14 +175,14 @@ async def handle_run_hh_analysis(url=None, company_name="", **kwargs) -> str:
             except Exception as e:
                 logger.warning("hh.ru API search failed: %s", str(e)[:150])
 
-            # Brave fallback for additional context
+            # DDG fallback for additional context
             if not result.get("vacancies"):
                 try:
-                    brave_result = await _search_via_brave(search_term)
-                    if brave_result:
-                        result.update(brave_result)
+                    ddg_result = await _search_via_ddg(search_term)
+                    if ddg_result:
+                        result.update(ddg_result)
                 except Exception as e:
-                    logger.warning("Brave HH search failed: %s", str(e)[:150])
+                    logger.warning("DDG HH search failed: %s", str(e)[:150])
 
         if not result.get("vacancies") and not result.get("search_results"):
             result["note"] = "No vacancies found on hh.ru for this clinic"

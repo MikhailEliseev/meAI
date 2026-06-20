@@ -5,13 +5,20 @@ exhaustion (402/401/Insufficient credits).
 
 Ключи берутся из переменных окружения FIRECRAWL_KEY_1, FIRECRAWL_KEY_2, ...
 или из FIRECRAWL_API_KEY (один ключ).
+
+Exhausted-метки сохраняются в JSON-файл для персистентности между
+перезапусками контейнера.
 """
 
+import json
 import logging
 import os
 import threading
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+_EXHAUSTED_FILE = Path(os.getenv("HERMES_DATA_DIR", "/opt/hermes-data")) / "firecrawl_exhausted.json"
 
 
 class FirecrawlKeyBank:
@@ -23,11 +30,12 @@ class FirecrawlKeyBank:
         self._index: int = 0
         self._lock = threading.Lock()
         self._load_keys()
+        self._load_exhausted()
 
     def _load_keys(self):
         """Загрузить ключи из переменных окружения."""
         # Множественные ключи: FIRECRAWL_KEY_1, FIRECRAWL_KEY_2, ...
-        for i in range(1, 11):
+        for i in range(1, 21):
             key = os.getenv(f"FIRECRAWL_KEY_{i}", "")
             if key and key not in self._keys:
                 self._keys.append(key)
@@ -41,6 +49,32 @@ class FirecrawlKeyBank:
             logger.info("FirecrawlKeyBank: loaded %d keys", len(self._keys))
         else:
             logger.warning("FirecrawlKeyBank: NO keys found in environment")
+
+    def _load_exhausted(self):
+        """Загрузить exhausted-метки из JSON-файла."""
+        if not _EXHAUSTED_FILE.exists():
+            return
+        try:
+            data = json.loads(_EXHAUSTED_FILE.read_text())
+            prefixes = set(data.get("exhausted_prefixes", []))
+            # Матчим по первым 12 символам ключа
+            for key in self._keys:
+                if key[:12] in prefixes:
+                    self._exhausted.add(key)
+            if self._exhausted:
+                logger.info("FirecrawlKeyBank: restored %d exhausted keys from %s",
+                           len(self._exhausted), _EXHAUSTED_FILE)
+        except Exception:
+            logger.exception("FirecrawlKeyBank: failed to load exhausted file, starting fresh")
+
+    def _save_exhausted(self):
+        """Сохранить exhausted-префиксы в JSON-файл."""
+        try:
+            _EXHAUSTED_FILE.parent.mkdir(parents=True, exist_ok=True)
+            prefixes = [k[:12] for k in self._exhausted]
+            _EXHAUSTED_FILE.write_text(json.dumps({"exhausted_prefixes": prefixes}))
+        except Exception:
+            logger.exception("FirecrawlKeyBank: failed to save exhausted file")
 
     def get_key(self) -> str | None:
         """Получить текущий не-exhausted ключ."""
@@ -62,11 +96,13 @@ class FirecrawlKeyBank:
             return None
 
     def mark_exhausted(self, key: str) -> None:
-        """Пометить ключ как exhausted."""
+        """Пометить ключ как exhausted (с персистентностью)."""
         with self._lock:
             self._exhausted.add(key)
+            available = len(self._keys) - len(self._exhausted)
             logger.warning("FirecrawlKeyBank: marked key as exhausted (%d/%d available)",
-                           len(self._keys) - len(self._exhausted), len(self._keys))
+                           available, len(self._keys))
+            self._save_exhausted()
 
     def rotate(self) -> str | None:
         """Взять следующий ключ (пометив текущий exhausted)."""

@@ -3,14 +3,13 @@ web_scraper — Hermes tools: fetch web pages, search, screenshots.
 
 Part of toolset "hermes-debug". Gives Hermes real web access:
 - web_fetch: HTTP GET + HTML parsing via beautifulsoup4
-- web_search: Brave Search API (needs BRAVE_API_KEY)
+- web_search: DuckDuckGo HTML search (free, no API key)
 - browser_screenshot: Playwright Chromium screenshot
 """
 
 import asyncio
 import json
 import logging
-import os
 import re
 import time
 
@@ -85,9 +84,9 @@ async def handle_web_fetch(url=None, parse_html=False, max_length=None, **kwargs
 
 
 async def handle_web_search(query=None, limit=None, **kwargs) -> str:
-    """Search the web via Brave Search API.
+    """Search the web via DuckDuckGo HTML search.
 
-    Requires BRAVE_API_KEY env var. Free tier: 2000 queries/month.
+    Free, no API key required. Uses DDG's HTML endpoint (non-JS version).
 
     Args:
         query: Search query string
@@ -104,45 +103,22 @@ async def handle_web_search(query=None, limit=None, **kwargs) -> str:
     if not query or not isinstance(query, str):
         return json.dumps({"error": "query is required (string)"})
 
-    api_key = os.environ.get("BRAVE_API_KEY", "")
-    if not api_key:
-        return json.dumps({"error": "BRAVE_API_KEY not set in environment"})
-
     max_results = int(limit) if limit else 10
     logger.info("web_search: %s (limit=%d)", query[:80], max_results)
 
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(
-                "https://api.search.brave.com/res/v1/web/search",
-                params={"q": query, "count": min(max_results, 20)},
-                headers={
-                    "Accept": "application/json",
-                    "Accept-Encoding": "gzip",
-                    "X-Subscription-Token": api_key,
-                },
-            )
+        from app.tools._search_fallback import search as fallback_search
+        results, provider = await fallback_search(query, max_results=min(max_results, 20))
 
-            if resp.status_code != 200:
-                return json.dumps({"error": f"Brave Search returned {resp.status_code}: {resp.text[:300]}"})
+        return json.dumps({
+            "query": query,
+            "results_count": len(results),
+            "results": results,
+            "source": provider,
+        }, ensure_ascii=False)
 
-            data = resp.json()
-            web_results = data.get("web", {}).get("results", [])
-
-            results = []
-            for r in web_results[:max_results]:
-                results.append({
-                    "title": r.get("title", ""),
-                    "url": r.get("url", ""),
-                    "description": r.get("description", ""),
-                })
-
-            return json.dumps({
-                "query": query,
-                "results_count": len(results),
-                "results": results,
-            }, ensure_ascii=False)
-
+    except ImportError:
+        return json.dumps({"error": "Search module not available"})
     except Exception as e:
         return json.dumps({"error": str(e)})
 
@@ -249,10 +225,9 @@ registry.register(
         "function": {
             "name": "web_search",
             "description": (
-                "Search the web via Brave Search API. "
+                "Search the web via DuckDuckGo (free, no API key). "
                 "Returns title, URL, and description for each result. "
-                "Use to find current information, documentation, competitors, tools. "
-                "Requires BRAVE_API_KEY environment variable."
+                "Use to find current information, documentation, competitors, tools."
             ),
             "parameters": {
                 "type": "object",

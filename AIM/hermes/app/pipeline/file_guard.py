@@ -119,6 +119,54 @@ def get_current_mode() -> str:
     return _current_mode
 
 
+# ── Shell command validation ──────────────────────────────────────
+
+# Паттерны, которые НЕЛЬЗЯ использовать в shell_exec
+_FORBIDDEN_SHELL_PATTERNS = [
+    # Запись в защищённые пути (> file, tee, dd, etc.)
+    (r"(?:>|>>)\s*/opt/hermes(?:-data)?/app/", "write to /opt/hermes/app/"),
+    (r"(?:>|>>)\s*/opt/hermes(?:-data)?/config\.yaml", "write to config.yaml"),
+    (r"(?:>|>>)\s*/opt/hermes(?:-data)?/\.env", "write to .env"),
+    # sed -i (inline edit) на защищённые пути
+    (r"sed\s+.*-i.*/opt/hermes(?:-data)?/app/", "sed -i on /opt/hermes/app/"),
+    (r"sed\s+.*-i.*/opt/hermes(?:-data)?/config\.yaml", "sed -i on config.yaml"),
+    (r"sed\s+.*-i.*/opt/hermes(?:-data)?/\.env", "sed -i on .env"),
+    # Python/Perl/Ruby запись в защищённые пути
+    (r"(?:open|write)\s*\(['\"]/opt/hermes(?:-data)?/app/", "file write via script"),
+    (r"(?:open|write)\s*\(['\"]/opt/hermes(?:-data)?/config\.yaml", "config write via script"),
+    # chmod/chown на защищённые пути (снятие защиты)
+    (r"chmod\s+.*/opt/hermes(?:-data)?/config\.yaml", "chmod on config.yaml"),
+    (r"chmod\s+.*/opt/hermes(?:-data)?/app/", "chmod on /opt/hermes/app/"),
+    # tee в защищённые пути
+    (r"tee\s+/opt/hermes(?:-data)?/app/", "tee to /opt/hermes/app/"),
+    # mv/cp в защищённые пути
+    (r"(?:mv|cp)\s+.*/opt/hermes(?:-data)?/app/.*\.py", "mv/cp to /opt/hermes/app/"),
+]
+
+
+def validate_shell_command(command: str) -> tuple[bool, str]:
+    """Проверяет shell-команду на попытки записи в защищённые пути.
+
+    Вызывается из shell_exec перед выполнением команды.
+
+    Args:
+        command: Полный текст команды.
+
+    Returns:
+        (разрешена, причина_блокировки)
+    """
+    for pattern, description in _FORBIDDEN_SHELL_PATTERNS:
+        import re as _re
+        if _re.search(pattern, command):
+            logger.warning(
+                "file_guard: BLOCKED shell command — %s (pattern: %s)",
+                description, pattern,
+            )
+            return False, description
+
+    return True, ""
+
+
 _key_rotator = None
 
 

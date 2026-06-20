@@ -36,9 +36,10 @@ def register_all_tools() -> None:
     count_before = len(_get_registry_tools())
     logger.info(f"Tools before registration: {count_before}")
 
-    # === Phase 0: Prelude (2 tools) ===
+    # === Phase 0: Prelude (4 tools) ===
     _import_tool("orchestrate")
     _import_tool("quick_overview")
+    _import_tool("perplexity_tools")
 
     # === Phase 1: Discovery / Scout (10 tools) ===
     _import_tool("run_prescan")
@@ -46,13 +47,11 @@ def register_all_tools() -> None:
     _import_tool("run_full_scout")
     _import_tool("run_background_pipeline")
     _import_tool("run_validation_check")
-    _import_tool("quality_gate")
-    _import_tool("service_categorizer")
     _import_tool("run_web_search")
     _import_tool("find_company_financials")
     _import_tool("telegram_tools")
 
-    # === Phase 2: Competitive Intelligence (11 tools) ===
+    # === Phase 2: Competitive Intelligence (14 tools) ===
     _import_tool("find_competitors")
     _import_tool("present_competitors")
     _import_tool("run_ci_analysis")
@@ -64,6 +63,8 @@ def register_all_tools() -> None:
     _import_tool("run_pagespeed")
     _import_tool("run_review_platforms")
     _import_tool("run_smi_mentions")
+    _import_tool("crawlee_web")
+    _import_tool("scrapy_runner")
 
     # === Phase 3: People & Content (5 tools) ===
     _import_tool("run_hh_analysis")

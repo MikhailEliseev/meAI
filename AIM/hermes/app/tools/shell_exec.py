@@ -119,6 +119,19 @@ async def handle_shell_exec(command=None, **kwargs) -> str:
             "command": command[:200],
         })
 
+    # Hermes v7: file_guard — проверка shell-команд на запись в защищённые пути
+    try:
+        from app.pipeline.file_guard import validate_shell_command
+        shell_ok, shell_reason = validate_shell_command(command)
+        if not shell_ok:
+            logger.warning("shell_exec blocked by file_guard: %s — %s", command[:80], shell_reason)
+            return json.dumps({
+                "error": f"Command blocked by file_guard: {shell_reason}",
+                "command": command[:200],
+            })
+    except ImportError:
+        pass  # file_guard not available — fall through to existing checks
+
     logger.info("shell_exec: %s", command[:120])
 
     try:

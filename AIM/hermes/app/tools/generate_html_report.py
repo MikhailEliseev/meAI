@@ -138,17 +138,32 @@ def _normalize_pipeline_keys(data: dict) -> dict:
 
     data["interpretations"] = interpretations
 
-    # ── Phase → tool → expected key mapping ───────────────────────
+    # ── Phase → tool → expected key mapping (v7 phase names) ──────
     _phase_tool_map = {
-        "TECH AUDIT": {
+        "PRE-FLIGHT": {
+            "web_search": "market_research",
+        },
+        "INSTAGRAM PROFILE": {
+            "web_search": "instagram_profile",
+        },
+        "INSTAGRAM CONTENT": {
+            "web_search": "instagram_content",
+        },
+        "ADS INTELLIGENCE": {
+            "web_search": "ads_intelligence",
+        },
+        "TECH AUDIT: SPEED": {
             "run_pagespeed": "pagespeed",
+        },
+        "TECH AUDIT: SEO+OSINT": {
             "run_seo_audit": "seo_audit",
         },
-        "SOCIAL VERIFIER": {
-            "run_review_platforms": "review_platforms",
+        "SOCIAL: CROSS-PLATFORM": {
+            "web_search": "social_search",
+            "run_review_platforms": "social_review_platforms",
         },
-        "CONTENT ANALYSIS": {
-            "run_content_analysis": "content_analysis",
+        "TELEGRAM CHANNELS": {
+            "web_search": "telegram_channels",
         },
         "KEY PERSONS": {
             "run_hh_analysis": "hh_analysis",
@@ -157,21 +172,19 @@ def _normalize_pipeline_keys(data: dict) -> dict:
         "SMI MENTIONS": {
             "run_smi_mentions": "smi_mentions",
         },
-        "COMPETITORS": {
+        "COMPETITOR MATRIX": {
             "find_competitors": "competitors",
             "run_ci_analysis": "ci_analysis",
         },
-        "FINANCE": {
+        "RATINGS & REVIEWS": {
+            "run_review_platforms": "review_platforms",
+        },
+        "FINANCIAL: FNS+": {
             "find_company_financials": "financials",
         },
-        "CONTENT PLAN": {
+        "GAPS & ADVANTAGES": {
             "run_content_gaps": "content_gaps",
-        },
-        "FORUM PAINS": {
-            "web_search": "forum_pains",
-        },
-        "PERPLEXITY": {
-            "web_search": "market_research",
+            "run_content_analysis": "content_analysis",
         },
     }
 
@@ -192,15 +205,15 @@ def _normalize_pipeline_keys(data: dict) -> dict:
                         data[expected_key] = unwrapped
 
     # ── CI analysis needs to be set separately ───────────────────
-    if "COMPETITORS" in data and not data.get("ci_analysis"):
-        comp = data["COMPETITORS"]
+    if "COMPETITOR MATRIX" in data and not data.get("ci_analysis"):
+        comp = data["COMPETITOR MATRIX"]
         if isinstance(comp, dict) and "run_ci_analysis" in comp:
             parsed = _parse_tool_value(comp["run_ci_analysis"])
             if parsed is not None:
                 data["ci_analysis"] = parsed
 
     # ── Transform reviews from platforms[] → {platform: {rating, count}} ─
-    for review_key in ("review_platforms", "SOCIAL VERIFIER"):
+    for review_key in ("review_platforms", "SOCIAL: CROSS-PLATFORM", "RATINGS & REVIEWS"):
         raw = data.get(review_key, {})
         if isinstance(raw, dict):
             has_platforms_list = "platforms" in raw
@@ -222,6 +235,28 @@ def _normalize_pipeline_keys(data: dict) -> dict:
                         existing = transformed
                     data["review_platforms"] = existing
                 break  # Only process once
+
+    # ── Transform financials: find_company_financials → revenue_estimate ─
+    fin = data.get("financials", {}) or {}
+    if fin and isinstance(fin, dict) and not fin.get("revenue_estimate"):
+        company = fin.get("company", {}) or {}
+        if company:
+            latest_rev = company.get("latest_revenue")
+            if latest_rev:
+                fin["revenue_estimate"] = {
+                    "annual": f"{latest_rev:,.0f} ₽".replace(",", " "),
+                    "monthly": f"{latest_rev / 12:,.0f} ₽".replace(",", " "),
+                    "methodology": "nalog.ru (ФНС)",
+                }
+        data["financials"] = fin
+
+    # ── Transform doctor_dossiers: doctor_names[] → doctors[] ─────
+    docs = data.get("doctor_dossiers", {}) or {}
+    if docs and isinstance(docs, dict) and not docs.get("doctors") and not docs.get("stars"):
+        names = docs.get("doctor_names", []) or []
+        if names:
+            docs["doctors"] = [{"full_name": n} for n in names]
+        data["doctor_dossiers"] = docs
 
     # ── Extract metadata from phase data ─────────────────────────
     meta = data.get("metadata", {}) or {}
@@ -694,9 +729,10 @@ def _build_report_html(data: dict, title: str) -> str:
     # ── Executive Insights (LLM interpretations) ────────────────────────
     if interpretations:
         insight_order = [
-            "PERPLEXITY", "TECH AUDIT", "SOCIAL VERIFIER", "CONTENT ANALYSIS",
-            "KEY PERSONS", "SMI MENTIONS", "COMPETITORS", "FORUM PAINS",
-            "FINANCE", "CONTENT PLAN",
+            "PRE-FLIGHT", "INSTAGRAM PROFILE", "INSTAGRAM CONTENT", "ADS INTELLIGENCE",
+            "TECH AUDIT: SPEED", "TECH AUDIT: SEO+OSINT", "SOCIAL: CROSS-PLATFORM",
+            "TELEGRAM CHANNELS", "KEY PERSONS", "SMI MENTIONS", "COMPETITOR MATRIX",
+            "RATINGS & REVIEWS", "FINANCIAL: FNS+", "GAPS & ADVANTAGES",
         ]
         insight_cards = ""
         for phase_name in insight_order:
