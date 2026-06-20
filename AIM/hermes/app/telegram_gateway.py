@@ -128,6 +128,11 @@ async def telegram_webhook(request: Request):
     if update.message:
         text = update.message.get("text", "")
         chat_id = update.message.get("chat", {}).get("id")
+        from_user = update.message.get("from", {})
+
+        # Ignore messages from other bots (prevents bot-to-bot infinite loops)
+        if from_user.get("is_bot"):
+            return {"status": "ignored_bot"}
 
         if text.startswith("/start ") and chat_id:
             # Extract web_session_id from deep link
@@ -382,6 +387,11 @@ def _polling_loop_sync():
                 text = message.get("text", "")
                 chat = message.get("chat", {})
                 chat_id = chat.get("id")
+                from_user = message.get("from", {})
+
+                # Ignore messages from other bots (prevents bot-to-bot infinite loops)
+                if from_user.get("is_bot"):
+                    continue
 
                 # Detect voice message — download + transcribe before processing
                 voice = message.get("voice")
