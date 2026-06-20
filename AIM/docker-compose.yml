@@ -53,8 +53,8 @@ services:
     volumes:
       - ./data/production:/app/data/production
       - ./logs:/app/logs
-      - ./AIM/obsidian:/app/AIM/obsidian
-      - ./AIM/data:/app/AIM/data
+      - ./obsidian:/app/AIM/obsidian
+      - ./data:/app/AIM/data
     depends_on:
       postgres:
         condition: service_healthy

@@ -45,8 +45,8 @@ def get_onboarding_service(db: AsyncSession = Depends(get_db)) -> OnboardingServ
     """Dependency to get OnboardingService instance with full dependency chain."""
     ocr = OCRService()
     extractor = AIExtractor(
-        api_key=os.getenv("OMNI_ROUTE_KEY", "sk-a10f604cd99e7a50-dd1d5a-56e30050"),
-        base_url=os.getenv("OMNI_ROUTE_URL", "http://138.16.224.188:20128/v1"),
+        api_key=os.getenv("DEEPSEEK_API_KEY", ""),
+        base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
     )
     validator = DocumentValidator()
     doc_processor = DocumentProcessor(ocr, extractor, validator)

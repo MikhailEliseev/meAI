@@ -2370,7 +2370,9 @@ class CIDeepAnalyzer(Agent):
                     headers={'User-Agent': user_agent}
                 ) as response:
                     if response.status == 200:
-                        return await response.text()
+                        raw = await response.read()
+                        encoding = response.get_encoding() or "utf-8"
+                        return raw.decode(encoding, errors="replace")
                     return ""
 
         except Exception as e:
@@ -2400,8 +2402,9 @@ class CIDeepAnalyzer(Agent):
                     headers={'User-Agent': user_agent}
                 ) as response:
                     if response.status == 200:
-                        html = await response.text()
-                        # Convert headers to dict
+                        raw = await response.read()
+                        encoding = response.get_encoding() or "utf-8"
+                        html = raw.decode(encoding, errors="replace")
                         headers_dict = dict(response.headers)
                         return html, headers_dict
                     return "", {}

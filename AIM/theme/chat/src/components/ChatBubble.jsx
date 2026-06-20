@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { memo } from 'react';
 
-export function ChatBubble({ role, content, timestamp, isStreaming }) {
+function ChatBubbleComponent({ role, content, timestamp, isStreaming, contentRef }) {
   const isAgent = role === 'agent';
   const isEmpty = !content || !content.trim();
 
@@ -11,16 +11,23 @@ export function ChatBubble({ role, content, timestamp, isStreaming }) {
       </div>
       <div className={'rounded-lg px-4 py-3 text-sm leading-relaxed min-w-0 overflow-hidden ' + (isAgent ? 'bg-surface-2 border border-border-hairline text-ink' : 'bg-accent text-white')}>
         {isAgent ? (
-          <div className="whitespace-pre-wrap">{content}</div>
+          <div
+            className="whitespace-pre-wrap chat-bubble-content"
+            data-streaming={isStreaming ? 'true' : 'false'}
+            ref={contentRef}
+          >
+            {isEmpty && isStreaming ? (
+              <span className="inline-flex gap-1">
+                <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
+                <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
+                <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
+              </span>
+            ) : (
+              content
+            )}
+          </div>
         ) : (
           <p className="whitespace-pre-wrap">{content}</p>
-        )}
-        {isStreaming && isEmpty && (
-          <span className="inline-flex gap-1">
-            <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
-            <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
-            <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
-          </span>
         )}
         {timestamp && (
           <span className="block text-xs mt-1 opacity-50">
@@ -31,3 +38,11 @@ export function ChatBubble({ role, content, timestamp, isStreaming }) {
     </div>
   );
 }
+
+export const ChatBubble = memo(ChatBubbleComponent, (prev, next) => {
+  return (
+    prev.content === next.content &&
+    prev.isStreaming === next.isStreaming &&
+    prev.timestamp === next.timestamp
+  );
+});

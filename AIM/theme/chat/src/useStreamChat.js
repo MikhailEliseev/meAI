@@ -22,12 +22,20 @@ function saveMessages(msgs) {
 export function useStreamChat() {
   const [messages, setMessages] = useState(loadMessages);
   const [status, setStatus] = useState('ready');
-  const [progress, setProgress] = useState(null);
   const [sessionId, setSessionId] = useState(loadSessionId);
   const abortRef = useRef(null);
-  const toolStepsRef = useRef([]);
+  const streamingRef = useRef(null);
+  const fullTextRef = useRef('');
+  const rafIdRef = useRef(null);
+  const assistantIdRef = useRef(null);
 
   useEffect(() => { saveMessages(messages); }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+    };
+  }, []);
 
   const addMessage = useCallback((role, content) => {
     const msg = { id: crypto.randomUUID(), role, content, timestamp: Date.now() };
@@ -37,16 +45,20 @@ export function useStreamChat() {
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+    fullTextRef.current = '';
     setStatus('ready');
-    setProgress(null);
   }, []);
 
   const sendMessage = useCallback(async (text) => {
     if (status === 'streaming' || status === 'submitted') return;
     addMessage('user', text);
     setStatus('submitted');
-    setProgress(null);
-    toolStepsRef.current = [];
+    fullTextRef.current = '';
+    if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -64,7 +76,24 @@ export function useStreamChat() {
 
       setStatus('streaming');
       const assistantId = crypto.randomUUID();
+      assistantIdRef.current = assistantId;
       setMessages(prev => [...prev, { id: assistantId, role: 'agent', content: '', timestamp: Date.now() }]);
+
+      // RAF loop: write text to DOM + scroll every frame
+      const rafLoop = () => {
+        if (streamingRef.current && fullTextRef.current) {
+          streamingRef.current.textContent = fullTextRef.current;
+        }
+        if (streamingRef.current) {
+          const container = streamingRef.current.closest('.overflow-y-auto');
+          if (container) container.scrollTop = container.scrollHeight;
+        }
+        rafIdRef.current = requestAnimationFrame(rafLoop);
+      };
+      // Wait for React to commit the empty bubble DOM, then start
+      setTimeout(() => {
+        rafIdRef.current = requestAnimationFrame(rafLoop);
+      }, 0);
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -75,39 +104,19 @@ export function useStreamChat() {
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        // Parse JSON-lines: one JSON object per line
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (!line.trim()) continue;
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (!data) continue;
           try {
-            const event = JSON.parse(line);
+            const event = JSON.parse(data);
             switch (event.type) {
-              case 'step-start':
-                if (event.step) {
-                  toolStepsRef.current.push(event.step);
-                  setProgress({
-                    step: event.step,
-                    stepIndex: toolStepsRef.current.length - 1,
-                    totalSteps: toolStepsRef.current.length,
-                  });
-                }
-                break;
-              case 'step-end':
-                setProgress(prev => prev ? { ...prev, liveMessage: undefined } : null);
-                break;
-              case 'tool-progress':
-                setProgress(prev => ({
-                  step: prev?.step || event.stage || 'analysing',
-                  stepIndex: prev?.stepIndex ?? 0,
-                  totalSteps: prev?.totalSteps ?? 1,
-                  liveMessage: event.message,
-                }));
-                break;
               case 'text-delta':
                 if (event.textDelta) {
-                  setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: m.content + event.textDelta } : m));
+                  fullTextRef.current += event.textDelta;
                 }
                 break;
               case 'finish':
@@ -117,24 +126,55 @@ export function useStreamChat() {
                 }
                 break;
               case 'error':
-                setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: m.content || event.message || 'Ошибка' } : m));
+                // Write error directly to the bubble, then sync to React
+                fullTextRef.current = event.message || 'Ошибка';
+                if (streamingRef.current) {
+                  streamingRef.current.textContent = fullTextRef.current;
+                }
+                setMessages(prev => {
+                  const idx = prev.findIndex(m => m.id === assistantId);
+                  if (idx === -1) return prev;
+                  const updated = [...prev];
+                  updated[idx] = { ...updated[idx], content: fullTextRef.current };
+                  return updated;
+                });
                 setStatus('error');
                 break;
+              // step-start, step-end, tool-progress — silently ignored
             }
           } catch {
             // skip invalid JSON lines
           }
         }
       }
+
+      // Stop RAF
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+
+      // ONE final React sync — triggers persistence + smooth scroll
+      const finalText = fullTextRef.current;
+      setMessages(prev => {
+        const idx = prev.findIndex(m => m.id === assistantId);
+        if (idx === -1) return prev;
+        const updated = [...prev];
+        updated[idx] = { ...updated[idx], content: finalText };
+        return updated;
+      });
+
       setStatus('ready');
-      setProgress(null);
     } catch (err) {
-      if (err.name === 'AbortError') { setStatus('ready'); setProgress(null); return; }
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      if (err.name === 'AbortError') { setStatus('ready'); return; }
       addMessage('agent', 'Извините, произошла ошибка. Попробуйте ещё раз. (' + err.message + ')');
       setStatus('error');
-      setProgress(null);
     }
   }, [status, sessionId, addMessage]);
 
-  return { messages, sendMessage, stop, status, progress, sessionId };
+  return { messages, sendMessage, stop, status, sessionId, streamingRef };
 }

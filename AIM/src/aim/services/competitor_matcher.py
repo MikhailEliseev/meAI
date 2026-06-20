@@ -42,8 +42,7 @@ from .service_extractor import extract_client_profile
 
 logger = logging.getLogger(__name__)
 
-# Limit concurrent rusprofile requests through proxy (193.111.152.14:7451 drops
-# connections when hit with 32+ parallel queries from asyncio.gather).
+# Limit concurrent rusprofile requests (server-side rate limiting).
 _RUSPROFILE_SEMAPHORE = asyncio.Semaphore(5)
 
 # ── Megalopolis cities ──────────────────────────────────────────────

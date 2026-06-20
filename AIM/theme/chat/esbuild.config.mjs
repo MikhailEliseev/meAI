@@ -4,7 +4,7 @@ await esbuild.build({
   entryPoints: ['src/index.jsx'],
   bundle: true,
   outfile: 'dist/chat-bundle.js',
-  format: 'esm',
+  format: 'iife',
   minify: true,
   external: ['react', 'react-dom'],
   jsx: 'automatic',

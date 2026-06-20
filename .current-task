@@ -1,1 +1,1 @@
-Commit deployment fixes: firecrawl_key_bank fix, agent_wrapper LLM_PROVIDER, docker-compose OMNIROUTE_URL
+Синхронизация сервера: 43 файла закоммичены/запушены/задеплоены. scrapy_crawl добавлен в блок-лист. PRESALE: 13 инструментов. ADMIN: 39. Все файлы на сервере.

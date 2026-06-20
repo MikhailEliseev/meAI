@@ -19,8 +19,8 @@ from src.aim.subagents.sales.channel_monitor_base import BaseChannelMonitor, Cha
 logger = logging.getLogger(__name__)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_PROXY_URL = os.getenv("TELEGRAM_PROXY_URL", "http://193.111.152.14:7451")
-TELEGRAM_PROXY_AUTH = os.getenv("TELEGRAM_PROXY_AUTH", "U9pjtK:hxtlqz")
+TELEGRAM_PROXY_URL = os.getenv("TELEGRAM_PROXY_URL", "")
+TELEGRAM_PROXY_AUTH = os.getenv("TELEGRAM_PROXY_AUTH", "")
 
 
 def _build_proxy_url() -> str | None:
