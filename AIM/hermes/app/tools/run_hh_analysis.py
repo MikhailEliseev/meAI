@@ -1,13 +1,17 @@
 """
 run_hh_analysis — Hermes tool: HeadHunter Vacancy Analysis
 
-Анализирует вакансии клиники на hh.ru: количество, позиции, зарплаты, требования.
+Анализирует вакансии клиники на hh.ru:
+- Прямой поиск через hh.ru public API (employers → vacancies)
+- Brave Search fallback для случаев когда компания не найдена через API
+
 Используется для оценки кадровой ситуации клиники (рост/сжатие/стабильность).
 """
 
 import asyncio
 import json
 import logging
+import os
 import time
 
 import httpx
@@ -16,9 +20,8 @@ from tools.registry import registry
 
 logger = logging.getLogger(__name__)
 
-AIM_API_BASE = "http://aim-app:8000"
-REQUEST_TIMEOUT = 120.0
-POLL_INTERVAL = 2.0
+REQUEST_TIMEOUT = 60.0
+_BRAVE_API_KEY = os.environ.get("BRAVE_API_KEY", "").strip()
 
 _cache: dict[str, tuple[float, str]] = {}
 _CACHE_TTL = 600
@@ -30,8 +33,108 @@ def _normalize_args(first_param, defaults):
     return None
 
 
+async def _search_hh_api(client: httpx.AsyncClient, company_name: str) -> dict | None:
+    """Search for employer on hh.ru public API."""
+    # Step 1: find employer
+    emp_url = "https://api.hh.ru/employers"
+    emp_resp = await client.get(emp_url, params={
+        "text": company_name,
+        "area": 113,  # Russia
+        "per_page": 5,
+        "only_with_vacancies": True,
+    })
+    emp_resp.raise_for_status()
+    employers = emp_resp.json().get("items", [])
+
+    if not employers:
+        return None
+
+    # Pick best match
+    employer = employers[0]
+    employer_id = employer["id"]
+    employer_name = employer["name"]
+
+    # Step 2: get vacancies
+    vac_url = f"https://api.hh.ru/vacancies"
+    vac_resp = await client.get(vac_url, params={
+        "employer_id": employer_id,
+        "per_page": 50,
+        "area": 113,
+    })
+    vac_resp.raise_for_status()
+    vac_data = vac_resp.json()
+
+    vacancies = []
+    for v in vac_data.get("items", []):
+        salary = v.get("salary") or {}
+        vacancies.append({
+            "name": v.get("name", ""),
+            "area": (v.get("area") or {}).get("name", ""),
+            "salary_from": salary.get("from"),
+            "salary_to": salary.get("to"),
+            "salary_currency": salary.get("currency"),
+            "published_at": v.get("published_at", ""),
+            "url": v.get("alternate_url", ""),
+        })
+
+    # Category analysis
+    categories: dict[str, int] = {}
+    for v in vacancies:
+        cat = v["name"].split("(")[0].strip()
+        categories[cat] = categories.get(cat, 0) + 1
+
+    return {
+        "source": "hh.ru API",
+        "employer_name": employer_name,
+        "employer_id": employer_id,
+        "employer_url": f"https://hh.ru/employer/{employer_id}",
+        "open_vacancies": employer.get("open_vacancies", len(vacancies)),
+        "vacancies": vacancies[:20],
+        "top_categories": dict(sorted(categories.items(), key=lambda x: x[1], reverse=True)[:5]),
+    }
+
+
+async def _search_via_brave(company_name: str) -> dict | None:
+    """Search for HH vacancies via Brave Search."""
+    if not _BRAVE_API_KEY:
+        return None
+
+    query = f'"{company_name}" вакансии site:hh.ru'
+    headers = {
+        "Accept": "application/json",
+        "Accept-Encoding": "gzip",
+        "X-Subscription-Token": _BRAVE_API_KEY,
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(
+            "https://api.search.brave.com/res/v1/web/search",
+            headers=headers,
+            params={"q": query, "count": 10},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    results = data.get("web", {}).get("results", [])
+    links = []
+    for r in results[:10]:
+        links.append({
+            "title": r.get("title", ""),
+            "url": r.get("url", ""),
+            "description": r.get("description", ""),
+        })
+
+    return {
+        "source": "Brave Search",
+        "query": query,
+        "search_results": links,
+    }
+
+
 async def handle_run_hh_analysis(url=None, company_name="", **kwargs) -> str:
     """Analyze HeadHunter vacancies for a clinic.
+
+    Searches hh.ru public API directly, then falls back to Brave Search.
 
     Args:
         url: Website URL or company name to search HH vacancies for.
@@ -42,15 +145,23 @@ async def handle_run_hh_analysis(url=None, company_name="", **kwargs) -> str:
     """
     unpacked = _normalize_args(url, {"url": "", "company_name": ""})
     if unpacked:
-        url = unpacked["url"]
+        url = unpacked.get("url", url)
         company_name = unpacked.get("company_name", company_name)
 
-    if url and not url.startswith(("http://", "https://")):
-        url = "https://" + url
+    # Also extract from kwargs
+    cn = kwargs.get("company_name", "")
+    if cn and not company_name:
+        company_name = cn
 
     search_term = company_name or url or ""
     if not search_term:
         return json.dumps({"error": "URL or company name is required"})
+
+    # Clean search term: remove protocol and www
+    if search_term.startswith("http"):
+        from urllib.parse import urlparse
+        parsed = urlparse(search_term)
+        search_term = parsed.netloc.replace("www.", "") or search_term
 
     cache_key = f"hh_{search_term}"
     cached = _cache.get(cache_key)
@@ -66,44 +177,35 @@ async def handle_run_hh_analysis(url=None, company_name="", **kwargs) -> str:
         from app.main import push_tool_progress
         push_tool_progress("hh", f"💼 Анализирую вакансии для {search_term}…")
 
+        result: dict = {"search_term": search_term}
+
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
-            resp = await client.post(
-                f"{AIM_API_BASE}/api/hh/analyze",
-                json={"query": search_term, "url": url},
-            )
-            resp.raise_for_status()
-            data = resp.json()
+            # Try hh.ru API first
+            try:
+                api_result = await _search_hh_api(client, search_term)
+                if api_result:
+                    result.update(api_result)
+                    push_tool_progress("hh", f"✅ Найдено {api_result.get('open_vacancies', 0)} вакансий на hh.ru!")
+            except Exception as e:
+                logger.warning("hh.ru API search failed: %s", str(e)[:150])
 
-            task_id = data.get("task_id")
-            if not task_id:
-                push_tool_progress("hh", "✅ Анализ вакансий готов!")
-                result_json = json.dumps(data, ensure_ascii=False, indent=2)
-                _cache[cache_key] = (time.time(), result_json)
-                return result_json
+            # Brave fallback for additional context
+            if not result.get("vacancies"):
+                try:
+                    brave_result = await _search_via_brave(search_term)
+                    if brave_result:
+                        result.update(brave_result)
+                except Exception as e:
+                    logger.warning("Brave HH search failed: %s", str(e)[:150])
 
-            status_url = f"{AIM_API_BASE}/api/hh/analyze/{task_id}"
-            poll_count = 0
+        if not result.get("vacancies") and not result.get("search_results"):
+            result["note"] = "No vacancies found on hh.ru for this clinic"
 
-            while True:
-                await asyncio.sleep(POLL_INTERVAL)
-                poll_count += 1
-                status_resp = await client.get(status_url)
-                status_resp.raise_for_status()
-                status_data = status_resp.json()
+        push_tool_progress("hh", "✅ Анализ вакансий готов!")
+        result_json = json.dumps(result, ensure_ascii=False, indent=2)
+        _cache[cache_key] = (time.time(), result_json)
+        return result_json
 
-                st = status_data.get("status", "unknown")
-                if st == "done":
-                    push_tool_progress("hh", "✅ Анализ вакансий готов!")
-                    result = status_data.get("result", {})
-                    result_json = json.dumps(result, ensure_ascii=False, indent=2)
-                    _cache[cache_key] = (time.time(), result_json)
-                    return result_json
-                if st == "error":
-                    return json.dumps({"error": "HH analysis failed", "detail": status_data.get("error", "Unknown")})
-
-    except httpx.HTTPStatusError as e:
-        logger.error("AIM API error for HH: %s", e)
-        return json.dumps({"error": "AIM API error", "status": e.response.status_code, "detail": str(e)})
     except Exception as e:
         logger.exception("HH analysis error")
         return json.dumps({"error": "Unexpected error", "detail": str(e)})

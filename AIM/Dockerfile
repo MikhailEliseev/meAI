@@ -48,7 +48,7 @@ RUN mkdir -p data/production logs AIM/data AIM/reports
 
 # Set Python path
 ENV PATH=/root/.local/bin:$PATH
-ENV PYTHONPATH=/app/AIM:/app
+ENV PYTHONPATH=/app/AIM:/app:/app/src
 
 # Install Chromium browser for Playwright (Yandex Maps search)
 RUN playwright install chromium
