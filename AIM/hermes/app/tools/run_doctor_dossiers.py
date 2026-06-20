@@ -15,16 +15,9 @@ import asyncio
 import json
 import logging
 
-import httpx
-
-from .firecrawl_key_bank import get_key_with_fallback, mark_exhausted, classify_exhaustion
 from tools.registry import registry
 
 logger = logging.getLogger(__name__)
-
-REQUEST_TIMEOUT = 180.0
-FIRECRAWL_SEARCH = "https://api.firecrawl.dev/v2/search"
-_MAX_RETRIES = 3
 
 # Platforms to search for doctor profiles
 DOCTOR_PLATFORMS = [
@@ -111,36 +104,35 @@ async def handle_run_doctor_dossiers(doctor_name=None, company_name=None, specia
     search_name = f"{doctor_name} {specialization}".strip()
 
     try:
-        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
-            results = []
+        results = []
 
-            # Search in batches of 3 to avoid rate limits
-            platforms_to_search = DOCTOR_PLATFORMS[:7]
+        # Search in batches of 3 to avoid rate limits
+        platforms_to_search = DOCTOR_PLATFORMS[:7]
 
-            for i in range(0, len(platforms_to_search), 3):
-                batch = platforms_to_search[i:i + 3]
+        for i in range(0, len(platforms_to_search), 3):
+            batch = platforms_to_search[i:i + 3]
 
-                tasks = [
-                    _search_platform(client, platform, search_name)
-                    for platform in batch
-                ]
-                batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+            tasks = [
+                _search_platform(platform, search_name)
+                for platform in batch
+            ]
+            batch_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-                for j, result in enumerate(batch_results):
-                    platform = batch[j]
-                    if isinstance(result, Exception):
-                        logger.warning("Doctor search failed for %s: %s", platform["name"], result)
-                        results.append({
-                            "platform": platform["name"],
-                            "category": platform["category"],
-                            "found": False,
-                            "error": str(result),
-                        })
-                    else:
-                        results.append(result)
+            for j, result in enumerate(batch_results):
+                platform = batch[j]
+                if isinstance(result, Exception):
+                    logger.warning("Doctor search failed for %s: %s", platform["name"], result)
+                    results.append({
+                        "platform": platform["name"],
+                        "category": platform["category"],
+                        "found": False,
+                        "error": str(result),
+                    })
+                else:
+                    results.append(result)
 
-                if i + 3 < len(platforms_to_search):
-                    await asyncio.sleep(1)
+            if i + 3 < len(platforms_to_search):
+                await asyncio.sleep(1)
 
         # Aggregate findings
         platforms_with_profiles = [r for r in results if r.get("found")]
@@ -197,78 +189,28 @@ async def handle_run_doctor_dossiers(doctor_name=None, company_name=None, specia
         return json.dumps({"error": "Doctor dossier search failed", "detail": str(e)})
 
 
-async def _search_platform(
-    client: httpx.AsyncClient, platform: dict, doctor: str
-) -> dict:
-    """Search a single platform for doctor profiles with key rotation."""
+async def _search_platform(platform: dict, doctor: str) -> dict:
+    """Search a single platform for doctor profiles using unified search fallback."""
+    from app.tools._search_fallback import search as fallback_search
+
     query = platform["query_template"].format(doctor_name=doctor)
+    results, provider = await fallback_search(query, max_results=8)
 
-    for attempt in range(_MAX_RETRIES):
-        try:
-            key = get_key_with_fallback()
-        except RuntimeError:
-            return {
-                "platform": platform["name"],
-                "category": platform["category"],
-                "found": False,
-                "count": 0,
-                "profiles": [],
-                "note": "Нет доступных ключей Firecrawl",
-            }
-
-        try:
-            response = await client.post(
-                FIRECRAWL_SEARCH,
-                headers={"Authorization": f"Bearer {key}"},
-                json={
-                    "query": query,
-                    "limit": 8,
-                    "sources": ["web"],
-                },
-            )
-            if response.status_code == 402:
-                reason = classify_exhaustion(response.text)
-                if reason:
-                    mark_exhausted(key, reason)
-                    logger.warning("Firecrawl 402 on doctor search (%s), rotating key (attempt %d)", platform["name"], attempt + 1)
-                    continue
-
-            response.raise_for_status()
-            data = response.json()
-            break  # success
-        except httpx.HTTPStatusError as e:
-            reason = classify_exhaustion(str(e))
-            if reason:
-                mark_exhausted(key, reason)
-                logger.warning("Firecrawl credit exhausted on doctor search (%s), rotating (attempt %d)", platform["name"], attempt + 1)
-                continue
-            logger.warning("Doctor search HTTP error for %s: %s", platform["name"], e)
-            return {
-                "platform": platform["name"],
-                "category": platform["category"],
-                "found": False,
-                "count": 0,
-                "profiles": [],
-            }
-    else:
-        # All retries exhausted
+    if not results:
         return {
             "platform": platform["name"],
             "category": platform["category"],
             "found": False,
             "count": 0,
             "profiles": [],
-            "note": "Все ключи Firecrawl исчерпаны",
+            "source": provider,
         }
 
-    search_data = data.get("data", [])
-    if isinstance(search_data, dict):
-        search_data = search_data.get("web", [])
     profiles = []
-    for item in search_data[:8]:
+    for item in results:
         title = item.get("title", "")
         url = item.get("url", "")
-        snippet = (item.get("description") or "")[:300]
+        snippet = (item.get("description", ""))[:300]
 
         # Try to extract rating from snippet
         rating = None
@@ -295,6 +237,7 @@ async def _search_platform(
         "found": len(profiles) > 0,
         "count": len(profiles),
         "profiles": profiles,
+        "source": provider,
     }
 
 
@@ -302,57 +245,28 @@ async def _search_platform(
 async def _search_clinic_doctors(company_name: str, specialization: str = "") -> str:
     """Search for all doctors working at a clinic.
 
-    Uses Firecrawl to find the clinic page on ProDoctorov and other platforms,
+    Uses search fallback to find the clinic page on ProDoctorov and other platforms,
     then extracts doctor names from the results.
     """
     logger.info("Clinic doctor search: %s (specialization: %s)", company_name, specialization)
 
     from app.main import push_tool_progress
+    from app.tools._search_fallback import search as fallback_search
+
     push_tool_progress("doctor-dossier", f"Ищу врачей клиники «{company_name}» на медицинских платформах…")
 
     search_query = f"{company_name} {specialization} врачи специалисты".strip()
 
     try:
-        # Search for clinic on ProDoctorov + general web
-        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
-            clinic_results = []
-            for attempt in range(_MAX_RETRIES):
-                try:
-                    key = get_key_with_fallback()
-                except RuntimeError:
-                    break
-
-                try:
-                    response = await client.post(
-                        FIRECRAWL_SEARCH,
-                        headers={"Authorization": f"Bearer {key}"},
-                        json={"query": f"{search_query} site:prodoctorov.ru", "limit": 5, "sources": ["web"]},
-                    )
-                    if response.status_code == 402:
-                        reason = classify_exhaustion(response.text)
-                        if reason:
-                            mark_exhausted(key, reason)
-                            continue
-                    response.raise_for_status()
-                    data = response.json()
-                    search_data = data.get("data", [])
-                    if isinstance(search_data, dict):
-                        search_data = search_data.get("web", [])
-                    for item in search_data[:5]:
-                        clinic_results.append({
-                            "title": item.get("title", ""),
-                            "url": item.get("url", ""),
-                            "description": (item.get("description") or "")[:500],
-                        })
-                    break
-                except Exception as e:
-                    reason = classify_exhaustion(str(e))
-                    if reason:
-                        mark_exhausted(key, reason)
-                        continue
-                    if attempt == _MAX_RETRIES - 1:
-                        logger.warning("Clinic doctor search failed: %s", e)
-                    break
+        # Search for clinic on ProDoctorov
+        clinic_results = []
+        results, provider = await fallback_search(f"{search_query} site:prodoctorov.ru", max_results=5)
+        for item in results:
+            clinic_results.append({
+                "title": item.get("title", ""),
+                "url": item.get("url", ""),
+                "description": (item.get("description", ""))[:500],
+            })
 
         # Extract doctor names from clinic page titles/descriptions
         import re
@@ -367,29 +281,13 @@ async def _search_clinic_doctors(company_name: str, specialization: str = "") ->
 
         if not doctor_names:
             # Fallback: search general web
-            clinic_results_fallback = []
-            for attempt in range(_MAX_RETRIES):
-                try:
-                    key = get_key_with_fallback()
-                except RuntimeError:
-                    break
-                try:
-                    response = await client.post(
-                        FIRECRAWL_SEARCH,
-                        headers={"Authorization": f"Bearer {key}"},
-                        json={"query": f"{search_query} врачи клиники отзывы", "limit": 5, "sources": ["web"]},
-                    )
-                    if response.status_code == 402:
-                        continue
-                    response.raise_for_status()
-                    data = response.json()
-                    search_data = data.get("data", [])
-                    if isinstance(search_data, dict):
-                        search_data = search_data.get("web", [])
-                    clinic_results = search_data[:5]
-                    break
-                except Exception:
-                    continue
+            results2, provider2 = await fallback_search(f"{search_query} врачи клиники отзывы", max_results=5)
+            for item in results2:
+                clinic_results.append({
+                    "title": item.get("title", ""),
+                    "url": item.get("url", ""),
+                    "description": (item.get("description", ""))[:500],
+                })
 
         push_tool_progress(
             "doctor-dossier",

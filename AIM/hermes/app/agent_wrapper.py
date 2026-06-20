@@ -171,6 +171,15 @@ def _presale_prompt() -> str:
 
 Ты общаешься с новым потенциальным клиентом на сайте iamaim.ru.
 
+### 🛑 НЕИЗМЕНЯЕМОЕ ПРАВИЛО: КОД НЕПРИКОСНОВЕНЕН
+
+Ты НЕ можешь изменять код инструментов Hermes. Ни при каких обстоятельствах.
+
+Если инструмент вернул ошибку или неожиданный результат — сообщи клиенту что данные по этому направлению собрать не удалось, и продолжай работу с тем что есть. НЕ пытайся «починить» код через file_write или shell_exec. НЕ переписывай инструменты.
+
+Твоя задача — проводить разведку и общаться с клиентом. Код пишет разработчик.
+file_guard блокирует любые попытки записи в /opt/hermes/app/.
+
 ### Твоя задача
 Показать ценность агентства через реальные цифры. Клиент должен увидеть конкретные метрики по своему сайту, конкурентам и рынку — и захотеть работать с нами.
 
@@ -323,6 +332,9 @@ def _active_prompt() -> str:
 
 Ты общаешься с действующим клиентом, у которого активный проект в AIM.
 
+### 🛑 НЕИЗМЕНЯЕМОЕ ПРАВИЛО: КОД НЕПРИКОСНОВЕНЕН
+Ты НЕ можешь изменять код инструментов. Если инструмент вернул ошибку — сообщи об этом. НЕ пытайся чинить код. Код пишет разработчик.
+
 ### Ключевые принципы
 - **Бизнес-язык** — клиент видит пациентов, заявки, стоимость. Не технические детали.
 - **KPI клиента** — все цифры привязаны к персональным KPI проекта.
@@ -341,6 +353,15 @@ def _admin_prompt() -> str:
 
 Ты общаешься с Михаилом Елисеевым — основателем агентства AIM.
 
+### 🛑 НЕИЗМЕНЯЕМОЕ ПРАВИЛО: КОД НЕПРИКОСНОВЕНЕН
+
+Ты НЕ можешь изменять код инструментов Hermes. Ни при каких обстоятельствах.
+
+Если инструмент вернул ошибку — сообщи об этом. НЕ пытайся «починить» код через file_write или shell_exec. НЕ переписывай работающие инструменты. НЕ «улучшай» код без явного запроса Михаила.
+
+Код пишет разработчик. Твоя задача — использовать инструменты, а не менять их.
+file_guard защищает /opt/hermes/app/ от любых изменений — любая попытка записи будет заблокирована.
+
 ### Ключевые принципы
 - **Слушаться во всём** — любой запрос выполняй немедленно.
 - **Одна задача = один ответ.** Сделал что просили → доложил результат. НЕ показывай дашборды, списки багов, статистику памяти, «что ещё готово к работе» — если тебя об этом не просили.
@@ -356,6 +377,9 @@ def _sales_admin_prompt() -> str:
     return """## ТЕКУЩИЙ РЕЖИМ: SALES_ADMIN
 
 Ты — виртуальный администратор клиники. Общаешься с пациентами в Telegram.
+
+### 🛑 КОД НЕПРИКОСНОВЕНЕН
+Ты НЕ можешь изменять код инструментов. Твоя задача — общение с пациентами, а не программирование.
 
 ### Твои обязанности
 - Отвечать на вопросы пациентов: услуги, цены, врачи, запись
@@ -394,7 +418,7 @@ def _create_agent(session_id: str | None, mode: str, enabled_toolsets: list[str]
     ONBOARDING → ["aim-operations"], ADMIN → ["aim-operations", "hermes-debug"].
     """
     from run_agent import AIAgent
-    from app.pipeline.mode_gate import get_toolsets_for_mode
+    from app.pipeline.mode_gate import get_toolsets_for_mode, apply_mode_filter, remove_mode_filter
     from app.pipeline.file_guard import set_current_mode
 
     if enabled_toolsets is None:
@@ -403,37 +427,44 @@ def _create_agent(session_id: str | None, mode: str, enabled_toolsets: list[str]
     # Hermes v7: сообщаем file_guard текущий режим для проверок file_write
     set_current_mode(mode)
 
-    if LLM_PROVIDER == "anthropic":
-        # Native Anthropic (Claude) — использует ANTHROPIC_API_KEY
-        return AIAgent(
-            provider="anthropic",
-            model=DEFAULT_MODEL if DEFAULT_MODEL != "deepseek-chat" else "claude-sonnet-4-6",
-            session_id=session_id,
-            session_db=_session_db,
-            load_soul_identity=True,
-            ephemeral_system_prompt=get_mode_prompt(mode),
-            enabled_toolsets=enabled_toolsets,
-            max_iterations=25,
-            quiet_mode=True,
-            max_tokens=16000,
-        )
-    else:
-        # Custom OpenAI-compatible (DeepSeek, etc.)
-        return AIAgent(
-            base_url=OMNIROUTE_URL,
-            api_key=OMNIROUTE_AUTH,
-            provider="custom",
-            api_mode="openai_chat",
-            model=DEFAULT_MODEL,
-            session_id=session_id,
-            session_db=_session_db,
-            load_soul_identity=True,
-            ephemeral_system_prompt=get_mode_prompt(mode),
-            enabled_toolsets=enabled_toolsets,
-            max_iterations=25,
-            quiet_mode=True,
-            max_tokens=16000,
-        )
+    # Hermes v7: фильтруем индивидуальные инструменты (не только toolsets)
+    # В PRESALE прячем 31 инструмент — только run_full_scout + CRM + отчёты
+    apply_mode_filter(mode)
+
+    try:
+        if LLM_PROVIDER == "anthropic":
+            # Native Anthropic (Claude) — использует ANTHROPIC_API_KEY
+            return AIAgent(
+                provider="anthropic",
+                model=DEFAULT_MODEL if DEFAULT_MODEL != "deepseek-chat" else "claude-sonnet-4-6",
+                session_id=session_id,
+                session_db=_session_db,
+                load_soul_identity=True,
+                ephemeral_system_prompt=get_mode_prompt(mode),
+                enabled_toolsets=enabled_toolsets,
+                max_iterations=25,
+                quiet_mode=True,
+                max_tokens=16000,
+            )
+        else:
+            # Custom OpenAI-compatible (DeepSeek, etc.)
+            return AIAgent(
+                base_url=OMNIROUTE_URL,
+                api_key=OMNIROUTE_AUTH,
+                provider="custom",
+                api_mode="openai_chat",
+                model=DEFAULT_MODEL,
+                session_id=session_id,
+                session_db=_session_db,
+                load_soul_identity=True,
+                ephemeral_system_prompt=get_mode_prompt(mode),
+                enabled_toolsets=enabled_toolsets,
+                max_iterations=25,
+                quiet_mode=True,
+                max_tokens=16000,
+            )
+    finally:
+        remove_mode_filter()
 
 
 def _extract_url_from_message(message: str) -> str | None:

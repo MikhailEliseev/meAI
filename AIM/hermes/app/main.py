@@ -123,6 +123,21 @@ async def on_startup():
     register_debug_tools()
     logger.info("Hermes FastAPI started — tools registered")
 
+    # ── Key Bank startup health check ────────────────────────────
+    try:
+        from app.key_bank import key_bank
+        report = await key_bank.check_all()
+        logger.info(
+            "Key Bank: %d/%d active, %d exhausted, %d invalid, %d unknown",
+            report["active"], report["total"],
+            report["exhausted"], report["invalid"], report["unknown"],
+        )
+        if report["exhausted"] > 0 or report["invalid"] > 0:
+            logger.warning("Key Bank: %s", key_bank.report())
+    except Exception as e:
+        logger.warning("Key Bank: startup check skipped: %s", e)
+    # ─────────────────────────────────────────────────────────────
+
     # ── Hermes v7: защита конфига + ротатор ключей ──────────────
     try:
         from app.pipeline.file_guard import protect_config, set_key_rotator as _set_key_rotator

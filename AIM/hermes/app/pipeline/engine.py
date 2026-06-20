@@ -27,8 +27,8 @@ from .file_guard import get_key_rotator
 
 logger = logging.getLogger(__name__)
 
-OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"))
-OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", os.getenv("DEEPSEEK_API_KEY", ""))
+OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "http://omniroute:20128/v1")
+OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "sk-a10f604cd99e7a50-dd1d5a-56e30050")
 DEFAULT_MODEL = os.getenv("LLM_MODEL", "ds/deepseek-v4-pro")
 
 # Короткий таймаут для tool-calling фаз (не интерпретация)
@@ -52,6 +52,15 @@ _TOOL_HANDLERS: dict[str, tuple[str, str]] = {
     "find_company_financials": ("app.tools.find_company_financials","handle_find_company_financials"),
     "generate_html_report":    ("app.tools.generate_html_report",   "handle_generate_html_report"),
     "publish_scout_report":    ("app.tools.publish_scout_report",   "handle_publish_scout_report"),
+    # ── v7.1: new tools ─────────────────────────────────────────────
+    "perplexity_search":       ("app.tools.perplexity_tools",       "handle_perplexity_search"),
+    "perplexity_deep_analyze": ("app.tools.perplexity_tools",       "handle_perplexity_deep_analyze"),
+    "firecrawl_extract":       ("app.tools.firecrawl_web",          "handle_firecrawl_extract"),
+    "firecrawl_batch_scrape":  ("app.tools.firecrawl_web",          "handle_firecrawl_batch_scrape"),
+    "firecrawl_agent":         ("app.tools.firecrawl_web",          "handle_firecrawl_agent"),
+    "crawlee_scrape":          ("app.tools.crawlee_web",            "handle_crawlee_scrape"),
+    "crawlee_search":          ("app.tools.crawlee_web",            "handle_crawlee_search"),
+    "scrapy_crawl":            ("app.tools.scrapy_runner",          "handle_scrapy_crawl"),
 }
 
 # Кеш импортированных хендлеров
@@ -157,19 +166,10 @@ class PipelineEngine:
                 client_url,
             )
 
-        # ── Детекция ИНН клиента (из /contacts) ─────────────────────
-        client_inn = await self._detect_client_inn(client_url)
-        if client_inn:
-            state.client_inn = client_inn
+        for phase in PHASES:
             logger.info(
-                "PipelineEngine: detected client INN=%s for %s",
-                client_inn, client_url,
-            )
-
-        for i, phase in enumerate(PHASES):
-            logger.info(
-                "PipelineEngine: phase %d/%d — %s (id=%.2f)",
-                i + 1, len(PHASES), phase.name, phase.id,
+                "PipelineEngine: phase %d/%d — %s",
+                phase.id + 1, len(PHASES), phase.name,
             )
             state.current_phase = phase.id
 
@@ -248,16 +248,7 @@ class PipelineEngine:
                     )
                     tool_calls_made.extend(tool_names)
 
-                # Шаг 2: LLM-интерпретация (если нужна) — ДО проверки NO_DATA,
-                # чтобы даже при пустых/ошибочных данных LLM могла объяснить
-                # клиенту, что произошло и какие выводы из этого следуют.
-                interpretation = None
-                if phase.llm_interpret and phase.interpretation_prompt:
-                    interpretation = await self._interpret_phase(
-                        phase, tool_results, state,
-                    )
-
-                # Шаг 3: Проверить на NO_DATA
+                # Шаг 2: Проверить на NO_DATA
                 if self._is_no_data(tool_results, phase):
                     duration = time.time() - t0
                     return PhaseResult(
@@ -266,7 +257,13 @@ class PipelineEngine:
                         data=tool_results,
                         duration_seconds=round(duration, 1),
                         tool_calls_made=tool_calls_made,
-                        llm_interpretation=interpretation,
+                    )
+
+                # Шаг 3: LLM-интерпретация (если нужна)
+                interpretation = None
+                if phase.llm_interpret and phase.interpretation_prompt:
+                    interpretation = await self._interpret_phase(
+                        phase, tool_results, state,
                     )
 
                 duration = time.time() - t0
@@ -311,20 +308,7 @@ class PipelineEngine:
                 )
                 retries_left -= 1
 
-        # Все ретраи исчерпаны — попытаться интерпретировать даже ошибочные данные
-        interpretation = None
-        if (phase.llm_interpret and phase.interpretation_prompt
-                and tool_results and phase.contract.allow_no_data):
-            try:
-                interpretation = await self._interpret_phase(
-                    phase, tool_results, state,
-                )
-            except Exception:
-                logger.warning(
-                    "PipelineEngine: interpretation failed in retry-exhausted phase %s",
-                    phase.name, exc_info=True,
-                )
-
+        # Все ретраи исчерпаны
         duration = time.time() - t0
         status = PhaseStatus.PERMANENT_FAILURE
 
@@ -342,7 +326,6 @@ class PipelineEngine:
             error_message=last_error,
             duration_seconds=round(duration, 1),
             tool_calls_made=tool_calls_made,
-            llm_interpretation=interpretation,
         )
 
     async def _call_phase_tools(
@@ -477,9 +460,18 @@ class PipelineEngine:
             return {"url": url}
 
         if tool_name == "find_competitors":
-            # Google Maps сам находит реальных географических соседей.
-            # Perplexity-имена используем только для Deep Research раздела отчёта.
             params = {"url": url}
+            # Пробуем извлечь имена конкурентов из Perplexity-интерпретации
+            competitor_names = self._extract_competitor_names_from_perplexity(state)
+            if competitor_names:
+                params["named_competitors"] = competitor_names
+                logger.info(
+                    "PipelineEngine: find_competitors with names from Perplexity: %s",
+                    competitor_names,
+                )
+            elif name:
+                # Fallback: название клиента (хотя бы что-то)
+                params["named_competitors"] = [name]
             return params
 
         # ── Company-based tools ──────────────────────────────────────
@@ -495,10 +487,10 @@ class PipelineEngine:
             return params
 
         if tool_name == "run_doctor_dossiers":
-            # Ищем врачей клиники по company_name + специализации
+            # Ищем врачей по названию клиники + специализации
             params = {}
             if name:
-                params["company_name"] = name
+                params["doctor_name"] = name
             spec = getattr(state, "client_specialization", "") or ""
             if spec:
                 params["specialization"] = spec
@@ -506,28 +498,10 @@ class PipelineEngine:
 
         # ── CI Analysis (нужны конкуренты) ──────────────────────────
         if tool_name == "run_ci_analysis":
-            params: dict = {"url": url}
+            params = {"url": url}
             competitors = self._extract_competitors_for_ci(state, partial_results or {})
             if competitors:
                 params["competitors"] = competitors
-                logger.info(
-                    "PipelineEngine: CI analysis with %d competitors: %s",
-                    len(competitors),
-                    [c["name"] for c in competitors],
-                )
-            else:
-                logger.warning(
-                    "PipelineEngine: CI analysis — NO competitors extracted "
-                    "(find_competitors may have failed or returned empty). "
-                    "Skipping CI analysis."
-                )
-            # Pass specialization and city for better analysis
-            spec = getattr(state, "client_specialization", "") or ""
-            if spec:
-                params["specialization"] = spec
-            city = getattr(state, "client_city", "") or ""
-            if city:
-                params["city"] = city
             return params
 
         # ── Financials (нужен INN) ──────────────────────────────────
@@ -575,6 +549,60 @@ class PipelineEngine:
                         pass
             return {"slug": state.session_id}
 
+        # ── Perplexity tools (v7.1) ─────────────────────────────────
+        if tool_name == "perplexity_search":
+            query = self._build_perplexity_query(phase, state)
+            return {"question": query, "context": self._build_accumulated_context(state)}
+
+        if tool_name == "perplexity_deep_analyze":
+            return {
+                "topic": f"Рынок частной медицины для клиники {name} в городе {getattr(state, 'client_city', '') or 'городе'}",
+                "angles": ["market_size", "competitors", "patient_needs", "growth_opportunities", "risks"],
+                "context": self._build_accumulated_context(state),
+            }
+
+        # ── Firecrawl advanced tools (v7.1) ─────────────────────────
+        if tool_name == "firecrawl_extract":
+            comp_urls = self._extract_competitor_urls(state)
+            return {
+                "urls": comp_urls if comp_urls else [url],
+                "prompt": (
+                    f"Извлеки информацию о клинике: название, специализация, "
+                    f"список врачей (имя, специализация), услуги и цены, "
+                    f"контактные данные, уникальные преимущества."
+                ),
+            }
+
+        if tool_name == "firecrawl_batch_scrape":
+            comp_urls = self._extract_competitor_urls(state)
+            target_urls = comp_urls if comp_urls else [url]
+            return {"urls": target_urls[:10], "only_main_content": True}
+
+        if tool_name == "firecrawl_agent":
+            city = getattr(state, "client_city", "") or ""
+            spec = getattr(state, "client_specialization", "") or ""
+            return {
+                "prompt": (
+                    f"Исследуй рынок частной медицины в городе {city}. "
+                    f"Специализация: {spec or 'многопрофильная'}.\n"
+                    f"Найди: топ-5 конкурентов клиники {name}, их сильные стороны, "
+                    f"цены на основные услуги, маркетинговые стратегии, "
+                    f"отзывы пациентов, активность в соцсетях."
+                ),
+                "max_credits": 10,
+            }
+
+        # ── Crawlee / Scrapy (v7.1) ──────────────────────────────────
+        if tool_name in ("crawlee_scrape", "scrapy_crawl"):
+            comp_url = self._extract_first_competitor_url(state)
+            target = comp_url if comp_url else url
+            return {"url": target, "max_pages": 10}
+
+        if tool_name == "crawlee_search":
+            city = getattr(state, "client_city", "") or ""
+            spec = getattr(state, "client_specialization", "") or ""
+            return {"query": f"клиника {name} {spec} {city} отзывы рейтинг", "limit": 5}
+
         # ── Fallback ────────────────────────────────────────────────
         logger.warning("PipelineEngine: no param mapping for %s, using empty dict", tool_name)
         return {}
@@ -592,89 +620,35 @@ class PipelineEngine:
         затем partial_results (для same-phase зависимостей: run_ci_analysis
         идёт после find_competitors в фазе COMPETITORS).
         """
-        import json as _json
-
-        raw = ""
-        source = ""
-
         # Пробуем accumulated_data (уже завершённые фазы)
+        raw = ""
         comp_data = state.accumulated_data.get("COMPETITORS", {})
         if isinstance(comp_data, dict):
             raw = comp_data.get("find_competitors", "")
-            if raw and isinstance(raw, str):
-                source = "accumulated_data"
 
         # Если accumulated_data пуст — смотрим partial_results этой же фазы
         if (not raw or not isinstance(raw, str)) and partial_results:
             raw = partial_results.get("find_competitors", "")
-            if raw and isinstance(raw, str):
-                source = "partial_results"
 
         if not raw or not isinstance(raw, str):
-            logger.warning(
-                "PipelineEngine: _extract_competitors_for_ci — "
-                "no find_competitors result in accumulated_data or partial_results"
-            )
             return None
 
-        logger.debug(
-            "PipelineEngine: _extract_competitors_for_ci from %s (%d chars)",
-            source, len(raw),
-        )
-
         try:
-            parsed = _json.loads(raw)
-        except (_json.JSONDecodeError, TypeError):
-            logger.warning(
-                "PipelineEngine: _extract_competitors_for_ci — "
-                "failed to parse find_competitors result as JSON"
-            )
+            parsed = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
             return None
 
         competitors = parsed.get("competitors", [])
-        if not competitors:
-            logger.warning(
-                "PipelineEngine: _extract_competitors_for_ci — "
-                "find_competitors returned empty competitors list. "
-                "Raw keys: %s",
-                list(parsed.keys())[:5] if isinstance(parsed, dict) else type(parsed).__name__,
-            )
-            return None
-
         result = []
         for c in competitors[:5]:
             name = c.get("brand_name") or c.get("legal_name", "")
             comp_url = c.get("website", "")
             if name and comp_url:
                 result.append({"name": name, "url": comp_url})
-
-        if not result:
-            logger.warning(
-                "PipelineEngine: _extract_competitors_for_ci — "
-                "%d competitors parsed but none have both name and website",
-                len(competitors),
-            )
-            return None
-
-        logger.info(
-            "PipelineEngine: extracted %d competitors for CI from %s",
-            len(result), source,
-        )
-        return result
+        return result if result else None
 
     def _extract_inn_from_state(self, state: PipelineState) -> str | None:
-        """Извлечь ИНН клиента для FINANCE-фазы.
-
-        Приоритет:
-        1. ИНН клиента (из scraping /contacts — client_inn)
-        2. Fallback: ИНН первого конкурента (если клиентский не найден)
-        """
-        # Приоритет 1: ИНН клиента (найден через scraping)
-        client_inn = getattr(state, "client_inn", "") or ""
-        if client_inn:
-            return str(client_inn)
-
-        # Fallback: ИНН первого конкурента
+        """Попытаться извлечь INN из данных конкурентов."""
         comp_data = state.accumulated_data.get("COMPETITORS", {})
         if not isinstance(comp_data, dict):
             return None
@@ -720,6 +694,52 @@ class PipelineEngine:
                     return website
         return None
 
+    def _extract_competitor_urls(self, state: PipelineState) -> list[str]:
+        """Извлечь URL-ы всех конкурентов (до 10)."""
+        comp_data = state.accumulated_data.get("COMPETITORS", {})
+        if not isinstance(comp_data, dict):
+            return []
+        raw = comp_data.get("find_competitors", "")
+        if not raw or not isinstance(raw, str):
+            return []
+        try:
+            parsed = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return []
+        urls = []
+        for c in parsed.get("competitors", []):
+            for url_field in ("website", "url", "site", "website_url", "link"):
+                website = c.get(url_field, "")
+                if website and website.startswith("http"):
+                    urls.append(website)
+                    break
+        return urls[:10]
+
+    def _build_perplexity_query(self, phase: Phase, state: PipelineState) -> str:
+        """Построить запрос для perplexity_search."""
+        name = state.client_name or "клиника"
+        city = getattr(state, "client_city", "") or ""
+        spec = getattr(state, "client_specialization", "") or ""
+
+        if phase.name == "PERPLEXITY":
+            query = (
+                f"Дай глубокий анализ рынка частной медицины в городе {city}. "
+                f"Клиника: {name}. Специализация: {spec or 'многопрофильная'}. "
+                f"Опиши: объём рынка, тренды, 5-7 основных конкурентов с названиями, "
+                f"портрет пациента, возможности для роста, маркетинговые каналы."
+            )
+            return query
+        return f"Проанализируй конкурентную среду для клиники {name} в городе {city}"
+
+    def _build_accumulated_context(self, state: PipelineState) -> str:
+        """Собрать накопленный контекст из предыдущих фаз."""
+        parts = []
+        for phase_name in ("PERPLEXITY", "TECH AUDIT", "SOCIAL VERIFIER", "COMPETITORS"):
+            interp = state.accumulated_data.get(f"{phase_name}_interpretation", "")
+            if interp and isinstance(interp, str) and len(interp) > 20:
+                parts.append(f"=== {phase_name} ===\n{interp[:1000]}")
+        return "\n\n".join(parts) if parts else ""
+
     def _extract_competitor_names_from_perplexity(
         self,
         state: PipelineState,
@@ -756,69 +776,22 @@ class PipelineEngine:
         except (json.JSONDecodeError, TypeError):
             pass
 
-        # ── Метод 1: Нумерованный список с болдом «Название» ─────────
-        # Формат: 1. **«Название»**, 2. **«Название»** — описание
-        for m in re.finditer(r'\d+\.\s*\*\*[«"]([^»"]+?)[»"]\*\*', interp):
-            candidate = m.group(1).strip()
-            if len(candidate) >= 4 and not candidate.startswith(("http", "www.")):
-                names.add(candidate)
-
-        if names:
-            logger.info(
-                "PipelineEngine: extracted %d competitor names from numbered list",
-                len(names),
-            )
-            return list(names)[:7]
-
-        # ── Метод 2: Любые кавычки с фильтрацией specialization-фраз ─
-        # Фильтруем фразы, которые выглядят как specialization, а не название клиники
-        _spec_keywords = [
-            "косметология", "трихология", "дерматология", "эстетическая медицина",
-            "эстетика тела", "аппаратная коррекция", "лазерная",
-            "стоматология", "хирургия", "гинекология", "урология",
-            "офтальмология", "неврология", "кардиология", "терапия",
-            "педиатрия", "рентгенология", "эндоскопия", "флебология",
-            "отоларингология", "маммология", "диетология", "нутрициология",
-            "реабилитация", "мануальная терапия", "остеопатия", "психотерапия",
-        ]
-
+        # Кавычки: «Название» или "Название"
         for m in re.finditer(r'[«"]([^»"]+?)[»"]', interp):
             candidate = m.group(1).strip()
             # Фильтруем служебные слова и короткие/URL-подобные строки
             if len(candidate) < 4:
                 continue
-            if len(candidate) > 60:  # Слишком длинное для названия клиники
-                continue
             if candidate.startswith(("http", "www.", "клиник", "медицинск")):
                 continue
-            if candidate.lower() in (
-                "санкт-петербург", "москва", "город", "находится", "ошибка",
-                "инвестиций во внешность",
-            ):
-                continue
-            # Фильтруем specialization-фразы: если текст выглядит как перечисление специализаций
-            candidate_lower = candidate.lower()
-            if " + " in candidate_lower or " и " in candidate_lower:
-                # Проверяем, не является ли это specialization-перечислением
-                spec_count = sum(
-                    1 for kw in _spec_keywords if kw in candidate_lower
-                )
-                # Если 2+ specialization-ключей и есть " + " → это не название клиники
-                if spec_count >= 2:
-                    continue
-            # Фильтруем чисто specialization-фразы без названия
-            if candidate_lower in _spec_keywords or candidate_lower.rstrip(".,;") in _spec_keywords:
+            if candidate.lower() in ("санкт-петербург", "москва", "город", "находится", "ошибка"):
                 continue
             names.add(candidate)
 
         if names:
-            logger.info(
-                "PipelineEngine: extracted %d competitor names from guillemets",
-                len(names),
-            )
-            return list(names)[:7]
+            return list(names)[:5]
 
-        # ── Метод 3: строки вида "1. Название", "— Название:", "**Название**" ─
+        # Fallback: строки вида "1. Название", "— Название:", "**Название**"
         for m in re.finditer(
             r'(?:^|\n)\s*(?:\d+\.\s*|[-–—]\s*|\*\*)\s*([А-ЯA-Z][\w\s&.\-]{3,40}?)(?::|\.|,|\n| —|$)',
             interp,
@@ -830,7 +803,7 @@ class PipelineEngine:
             ):
                 names.add(candidate)
 
-        return list(names)[:7] if names else None
+        return list(names)[:5] if names else None
 
     def _build_search_query(self, phase: Phase, state: PipelineState) -> str:
         """Построить поисковый запрос для web_search в зависимости от фазы."""
@@ -871,61 +844,6 @@ class PipelineEngine:
 
         # Default
         return f'"{name}" медицинский центр отзывы анализ'
-
-    @staticmethod
-    def _normalize_city_name(city: str) -> str:
-        """Привести название города к именительному падежу.
-
-        Regex'ы детекции захватывают город в предложном падеже
-        («в Москве», «в Санкт-Петербурге») — нормализуем в именительный.
-        """
-        if not city or len(city) < 3:
-            return city
-
-        # Таблица известных пар (предложный → именительный)
-        _prepositional_to_nominative = {
-            "москве": "Москва",
-            "санкт-петербурге": "Санкт-Петербург",
-            "екатеринбурге": "Екатеринбург",
-            "новосибирске": "Новосибирск",
-            "казани": "Казань",
-            "нижнем новгороде": "Нижний Новгород",
-            "челябинске": "Челябинск",
-            "омске": "Омск",
-            "самаре": "Самара",
-            "ростове-на-дону": "Ростов-на-Дону",
-            "уфе": "Уфа",
-            "красноярске": "Красноярск",
-            "перми": "Пермь",
-            "воронеже": "Воронеж",
-            "волгограде": "Волгоград",
-            "краснодаре": "Краснодар",
-            "сочи": "Сочи",  # несклоняемое
-            "тюмени": "Тюмень",
-            "ижевске": "Ижевск",
-            "барнауле": "Барнаул",
-            "иркутске": "Иркутск",
-            "хабаровске": "Хабаровск",
-            "владивостоке": "Владивосток",
-            "ярославле": "Ярославль",
-            "томске": "Томск",
-            "оренбурге": "Оренбург",
-            "туле": "Тула",
-            "рязани": "Рязань",
-            "пензе": "Пенза",
-            "липецке": "Липецк",
-            "астрахани": "Астрахань",
-            "калининграде": "Калининград",
-            "сургуте": "Сургут",
-            "твери": "Тверь",
-            "белгороде": "Белгород",
-            "кирове": "Киров",
-            # Составные: «в Ростове-на-Дону» regex захватит «Ростове-на-Дону»
-        }
-        key = city.lower().strip()
-        if key in _prepositional_to_nominative:
-            return _prepositional_to_nominative[key]
-        return city
 
     async def _detect_city_from_contacts(self, url: str) -> str | None:
         """Попытаться извлечь город из страницы /contacts клиники.
@@ -1065,7 +983,7 @@ class PipelineEngine:
                             found_cities.append((city, "address fallback"))
 
                 if found_cities:
-                    city = self._normalize_city_name(found_cities[0][0])
+                    city = found_cities[0][0]
                     logger.info(
                         "PipelineEngine: detected city=%r from %s (source: %s)",
                         city, contacts_url, found_cities[0][1],
@@ -1267,106 +1185,6 @@ class PipelineEngine:
             )
             return None
 
-    async def _detect_client_inn(self, url: str) -> str | None:
-        """Извлечь ИНН/ОГРН клиники из страницы /contacts или /rekvizity.
-
-        Российские медицинские сайты обязаны публиковать ИНН и ОГРН
-        (закон о защите прав потребителей). Обычно в футере /contacts.
-
-        Args:
-            url: URL сайта клиники.
-
-        Returns:
-            Строка с ИНН (10-12 цифр) или None.
-        """
-        import re
-        from urllib.parse import urljoin
-        from urllib.request import Request, urlopen
-
-        if not url:
-            return None
-
-        if not url.startswith("http"):
-            url = f"https://{url}"
-
-        # Страницы где может быть ИНН
-        inn_paths = ["/contacts", "/kontakty", "/contact", "/rekvizity", "/about"]
-
-        for path in inn_paths:
-            try:
-                page_url = urljoin(url, path)
-                logger.debug(
-                    "PipelineEngine: trying %s for INN detection",
-                    page_url,
-                )
-
-                loop = asyncio.get_running_loop()
-
-                def _fetch():
-                    req = Request(
-                        page_url,
-                        headers={
-                            "User-Agent": (
-                                "Mozilla/5.0 (compatible; HermesINNDetector/1.0)"
-                            ),
-                        },
-                    )
-                    with urlopen(req, timeout=10) as resp:
-                        if resp.status != 200:
-                            raise Exception(f"HTTP {resp.status}")
-                        return resp.read().decode("utf-8", errors="ignore")
-
-                html = await loop.run_in_executor(None, _fetch)
-
-                # Очищаем HTML
-                text = re.sub(
-                    r'<script[^>]*>.*?</script>', '', html,
-                    flags=re.DOTALL | re.IGNORECASE,
-                )
-                text = re.sub(
-                    r'<style[^>]*>.*?</style>', '', text,
-                    flags=re.DOTALL | re.IGNORECASE,
-                )
-                text = re.sub(r'<[^>]+>', ' ', text)
-                text = re.sub(r'\s+', ' ', text)
-
-                # Ищем ИНН (10 или 12 цифр)
-                inn_patterns = [
-                    r'[иИ][нН][нН][:\s]*(\d{10,12})',
-                    r'[iI][nN][nN][:\s]*(\d{10,12})',
-                    r'ИНН\s*(?:организации|компании|клиники)?[:\s]*(\d{10,12})',
-                ]
-                for pat in inn_patterns:
-                    m = re.search(pat, text)
-                    if m:
-                        inn = m.group(1)
-                        logger.info(
-                            "PipelineEngine: detected client INN=%s from %s",
-                            inn, page_url,
-                        )
-                        return inn
-
-                # ОГРН как fallback
-                ogrn_match = re.search(
-                    r'[оО][гГ][рР][нН][:\s]*(\d{13,15})', text,
-                )
-                if ogrn_match:
-                    ogrn = ogrn_match.group(1)
-                    logger.info(
-                        "PipelineEngine: detected client OGRN=%s from %s",
-                        ogrn, page_url,
-                    )
-                    return ogrn
-
-            except Exception as e:
-                logger.debug(
-                    "PipelineEngine: INN detection failed for %s: %s",
-                    page_url, e,
-                )
-                continue
-
-        return None
-
     async def _interpret_phase(
         self,
         phase: Phase,
@@ -1395,29 +1213,15 @@ class PipelineEngine:
             for name, result in tool_results.items()
         ) if tool_results else "Нет данных"
 
-        # ── QC CRITIQUE: добавляем URL HTML-отчёта ─────────────────
-        if phase.name == "QC CRITIQUE":
-            html_data = state.accumulated_data.get("HTML BUILD", {})
-            if isinstance(html_data, dict):
-                gen_result = html_data.get("generate_html_report", "")
-                if isinstance(gen_result, str):
-                    try:
-                        parsed = json.loads(gen_result)
-                        report_url = parsed.get("url", "")
-                        if report_url:
-                            data_text = (
-                                f"HTML-отчёт опубликован по адресу: {report_url}\n\n"
-                                f"Проверь отчёт по этому URL. Если не можешь открыть — "
-                                f"проверь логически по данным, которые были собраны в предыдущих фазах."
-                            )
-                    except (json.JSONDecodeError, TypeError):
-                        pass
-
         # Подготовка переменных для форматирования промпта
+        perplexity = state.accumulated_data.get("PERPLEXITY_interpretation", "")
+        if not perplexity or not isinstance(perplexity, str) or len(perplexity) < 30:
+            perplexity = "Perplexity deep research недоступен — опирайся на свои знания."
         format_vars = {
             "client_url": state.client_url,
             "client_city": getattr(state, "client_city", "") or "не определён",
             "client_specialization": getattr(state, "client_specialization", "") or "не определена",
+            "perplexity_context": perplexity,
         }
 
         prompt = (
@@ -1426,6 +1230,19 @@ class PipelineEngine:
             f"---\n\n"
             f"{phase.interpretation_prompt.format(**format_vars)}"
         )
+
+        # ── PERPLEXITY_USED enforcement (только для non-PERPLEXITY фаз) ──
+        if phase.name != "PERPLEXITY":
+            prompt += (
+                "\n\n---\n\n"
+                "PERPLEXITY_USAGE_CHECK: СНАЧАЛА напиши полный анализ как обычно. "
+                "ЗАТЕМ в САМОМ КОНЦЕ, отдельной последней строкой, укажи метку:\n"
+                "PERPLEXITY_USED: YES — <что именно использовано из контекста>\n"
+                "PERPLEXITY_USED: NO — <почему контекст не был использован>\n"
+                "PERPLEXITY_USED: N/A — Perplexity-контекст недоступен\n\n"
+                "ДОПУСТИМЫ ТОЛЬКО YES, NO, N/A. НЕ ИСПОЛЬЗУЙ PARTIAL или другие варианты.\n"
+                "ВАЖНО: основной анализ ДОЛЖЕН БЫТЬ написан. Метка — только последняя строка."
+            )
 
         try:
             from run_agent import AIAgent
@@ -1449,7 +1266,60 @@ class PipelineEngine:
             )
 
             reply = response.get("final_response", response.get("response", ""))
-            return str(reply)[:4000]
+            reply_str = str(reply)
+
+            # ── PERPLEXITY_USED enforcement: парсинг метки ──
+            if phase.name != "PERPLEXITY":
+                import re
+                pu_match = re.search(
+                    r'PERPLEXITY_USED:\s*(YES|NO|N/A|PARTIAL)\s*[-—]?\s*(.*)',
+                    reply_str,
+                    re.IGNORECASE,
+                )
+                if pu_match:
+                    pu_status = pu_match.group(1).upper()
+                    pu_detail = pu_match.group(2).strip()
+                    # Нормализация PARTIAL → YES (LLM использовал контекст, но не полностью)
+                    if pu_status == "PARTIAL":
+                        pu_status = "YES"
+                        pu_detail = f"(PARTIAL) {pu_detail}" if pu_detail else "(PARTIAL)"
+                    pu_marker = f"PERPLEXITY_USED: {pu_status} — {pu_detail}" if pu_detail else f"PERPLEXITY_USED: {pu_status}"
+                    state.accumulated_data[f"{phase.name}_perplexity_used"] = pu_marker
+
+                    if pu_status == "NO":
+                        logger.warning(
+                            "PipelineEngine: PERPLEXITY_USED=NO in phase %s: %s",
+                            phase.name, pu_detail or "no explanation",
+                        )
+                    elif pu_status == "YES":
+                        logger.info(
+                            "PipelineEngine: PERPLEXITY_USED=YES in phase %s: %s",
+                            phase.name, pu_detail or "used",
+                        )
+
+                    # Стрипаем строку с меткой из ответа
+                    reply_str = re.sub(
+                        r'\n?\s*---\s*\n?\s*PERPLEXITY_USAGE_CHECK:.*$',
+                        '',
+                        reply_str,
+                        flags=re.IGNORECASE | re.DOTALL,
+                    )
+                    # Также удаляем саму строку PERPLEXITY_USED
+                    reply_str = re.sub(
+                        r'\n?\s*PERPLEXITY_USED:\s*(YES|NO|N/A|PARTIAL).*$',
+                        '',
+                        reply_str,
+                        flags=re.IGNORECASE,
+                    )
+                    reply_str = reply_str.strip()
+                else:
+                    logger.warning(
+                        "PipelineEngine: PERPLEXITY_USED=MISSING in phase %s — LLM не вернул метку",
+                        phase.name,
+                    )
+                    state.accumulated_data[f"{phase.name}_perplexity_used"] = "PERPLEXITY_USED: MISSING"
+
+            return reply_str[:4000]
 
         except Exception as e:
             logger.error("PipelineEngine: LLM interpretation failed for %s: %s", phase.name, e)
@@ -1513,13 +1383,11 @@ class PipelineEngine:
 
     def _persist_state(self, state: PipelineState) -> None:
         """Сохранить состояние пайплайна в in-memory store для polling."""
-        # Build phase_id → name lookup (float ids, can't index list)
-        phase_names: dict[float, str] = {p.id: p.name for p in PHASES}
         phases_data = []
         for pid, pr in state.phases.items():
             phases_data.append({
                 "id": pid,
-                "name": phase_names.get(pid, f"phase_{pid}"),
+                "name": PHASES[pid].name if pid < len(PHASES) else f"phase_{pid}",
                 "status": pr.status.value,
                 "duration_seconds": pr.duration_seconds,
                 "tool_calls": pr.tool_calls_made,
@@ -1593,19 +1461,15 @@ class PipelineEngine:
             except Exception as e:
                 logger.error("PipelineEngine: key rotator failed: %s", e)
 
-        # Способ 2: firecrawl_key_bank — пометить текущий ключ и взять следующий
+        # Способ 2: key_bank — взять следующий Firecrawl ключ
         try:
-            from app.tools.firecrawl_key_bank import (
-                get_key_with_fallback,
-                mark_exhausted,
-            )
-            # Получаем следующий ключ (старый implicitly exhausted)
-            new_key = get_key_with_fallback()
+            from app.key_bank import key_bank
+            new_key = key_bank.get_firecrawl_key()
             if new_key:
-                logger.info("PipelineEngine: rotated to next Firecrawl key (bank)")
+                logger.info("PipelineEngine: rotated to next Firecrawl key (key_bank)")
                 rotated = True
         except ImportError:
-            logger.debug("PipelineEngine: firecrawl_key_bank not available")
+            logger.debug("PipelineEngine: key_bank not available")
 
         return rotated
 
