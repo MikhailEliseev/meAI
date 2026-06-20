@@ -29,7 +29,7 @@ class AIExtractor:
     def __init__(
         self,
         api_key: str,
-        base_url: str = "http://138.16.224.188:20128/v1",
+        base_url: str = "https://api.deepseek.com/v1",
         model: str = "claude-sonnet-4-20250514",
     ):
         """Initialize AI extractor.

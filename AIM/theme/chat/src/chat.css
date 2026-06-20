@@ -10,6 +10,11 @@
   box-sizing: border-box;
 }
 
+/* Only animate non-streaming content */
+#hermes-chat .chat-bubble-content:not([data-streaming="true"]) {
+  transition: all 0.05s ease-out;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }

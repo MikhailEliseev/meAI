@@ -62,7 +62,7 @@ class LLMClient:
         Initialize LLM client.
 
         Args:
-            omni_route_url: OmniRoute endpoint URL (e.g. http://138.16.224.188:20128/v1)
+            omni_route_url: LLM endpoint URL (e.g. https://api.deepseek.com/v1)
             omni_route_key: OmniRoute API key
             redis_url: Redis connection URL
             cache_ttl: Cache TTL in seconds (default: 1 hour)

@@ -245,7 +245,9 @@ class CITechAgent(Agent):
                     }
                 ) as response:
                     if response.status == 200:
-                        html = await response.text()
+                        raw = await response.read()
+                        encoding = response.get_encoding() or "utf-8"
+                        html = raw.decode(encoding, errors="replace")
                         print(f"[CI Tech] ✓ Fetched {len(html)} bytes")
                         return html
                     else:

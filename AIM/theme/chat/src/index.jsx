@@ -4,17 +4,19 @@ import { useStreamChat } from './useStreamChat.js';
 import { ChatBubble } from './components/ChatBubble.jsx';
 import { ChatInput } from './components/ChatInput.jsx';
 import { EmptyChat } from './components/EmptyChat.jsx';
-import { ProgressSteps } from './components/ProgressSteps.jsx';
 
 function HermesChat() {
-  const { messages, sendMessage, stop, status, progress } = useStreamChat();
+  const { messages, sendMessage, stop, status, streamingRef } = useStreamChat();
   const chatEndRef = useRef(null);
   const isStreaming = status === 'streaming' || status === 'submitted';
   const hasMessages = messages.length > 0;
 
+  // Smooth scroll only when NOT streaming (final message sync)
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, progress]);
+    if (!isStreaming) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isStreaming]);
 
   // Auto-start session on first load
   useEffect(() => {
@@ -38,10 +40,10 @@ function HermesChat() {
                 content={msg.content}
                 timestamp={msg.timestamp}
                 isStreaming={isLastAgent && isStreaming}
+                contentRef={isLastAgent && isStreaming ? streamingRef : undefined}
               />
             );
           })}
-          {progress && <ProgressSteps progress={progress} />}
           <div ref={chatEndRef} />
         </div>
       )}

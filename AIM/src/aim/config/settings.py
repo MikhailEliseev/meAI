@@ -15,8 +15,6 @@ class APISettings(BaseSettings):
     Attributes:
         semrush_api_key: SEMrush API key (required)
         ahrefs_api_key: Ahrefs API key (optional, fallback)
-        omni_route_url: OmniRoute LLM endpoint URL
-        omni_route_key: OmniRoute API key for all LLM calls
         max_cost_usd: Maximum API cost per request in USD
         min_keywords: Minimum keywords to return
         min_volume: Minimum search volume filter
@@ -63,17 +61,6 @@ class APISettings(BaseSettings):
     pagespeed_api_key: Optional[str] = Field(
         default=None,
         description="Google PageSpeed Insights API key (optional, free tier: 25k req/day)",
-    )
-
-    # OmniRoute LLM endpoint
-    omni_route_url: str = Field(
-        default="http://138.16.224.188:20128/v1",
-        description="OmniRoute LLM endpoint URL (OpenAI-compatible)",
-    )
-    omni_route_key: str = Field(
-        default="sk-a10f604cd99e7a50-dd1d5a-56e30050",
-        description="OmniRoute API key for all LLM calls",
-        min_length=10,
     )
 
     # File upload settings
