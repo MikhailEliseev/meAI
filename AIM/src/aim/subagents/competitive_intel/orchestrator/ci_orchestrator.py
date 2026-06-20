@@ -905,6 +905,9 @@ class CIOrchestrator(Agent):
         # ── Top recommendation ──
         top_rec = _extract_top_recommendation(findings, feature_matrix)
 
+        # ── Competitor details for Phase 1 table ──
+        competitor_details = _build_competitor_details(comp_list, auditor_result, finance_result)
+
         return {
             "narrative": narrative,
             "chat_summary": chat_summary,
@@ -915,6 +918,7 @@ class CIOrchestrator(Agent):
             "steal_worthy_tactics": steal_worthy,
             "top_recommendation": top_rec,
             "wow": wow,
+            "competitor_details": competitor_details,
         }
 
     async def _execute_single_phase(
@@ -2031,6 +2035,100 @@ def _compute_wow_from_findings(findings: Dict[str, Any]) -> Dict[str, Any]:
         "cost_per_patient_rub": cost,
         "is_estimated": True,
     }
+
+
+def _build_competitor_details(
+    comp_list: list,
+    auditor_result: Dict[str, Any],
+    finance_result: Dict[str, Any],
+) -> list[dict]:
+    """Build structured competitor_details from phase data for Phase 1 table.
+
+    Merges: find_competitors data (revenue, trend, employees, social)
+    + ci-auditor data (SEO score) + ci-finance data (revenue fallback).
+    """
+    auditor_audits = auditor_result.get("audits", []) if isinstance(auditor_result, dict) else []
+    finance_profiles = finance_result.get("financial_profiles", []) if isinstance(finance_result, dict) else []
+
+    # Index SEO scores by URL/name
+    seo_by_url: dict[str, float] = {}
+    seo_by_name: dict[str, float] = {}
+    for audit in auditor_audits:
+        if not isinstance(audit, dict):
+            continue
+        audit_url = audit.get("url", "")
+        audit_name = audit.get("name", "")
+        seo_score = _extract_auditor_seo_score({"audits": [audit]})
+        if isinstance(seo_score, (int, float)):
+            if audit_url:
+                seo_by_url[audit_url] = seo_score
+            if audit_name:
+                seo_by_name[audit_name] = seo_score
+
+    # Index financials by name
+    fin_by_name: dict[str, dict] = {}
+    for fp in finance_profiles:
+        if isinstance(fp, dict) and fp.get("name"):
+            fin_by_name[fp["name"]] = fp
+
+    details = []
+    for c in comp_list:
+        if not isinstance(c, dict):
+            continue
+
+        name = c.get("name", c.get("brand_name", c.get("legal_name", "")))
+        url = c.get("url", c.get("website", ""))
+
+        # Revenue: prefer find_competitors revenue_year, fallback to finance profiles
+        revenue = c.get("revenue_year")
+        if not revenue and name in fin_by_name:
+            revenue = fin_by_name[name].get("revenue_year")
+
+        # Revenue trend
+        revenue_trend = c.get("revenue_trend", "")
+
+        # Doctors/employees
+        doctors_count = c.get("doctors_count") or c.get("employee_count")
+
+        # Instagram from social_links
+        social = c.get("social_links", {})
+        instagram_username = ""
+        instagram_subscribers = None
+        if isinstance(social, dict):
+            ig = social.get("instagram", "")
+            if ig:
+                instagram_username = ig if isinstance(ig, str) else ig.get("username", "")
+
+        # SEO score
+        seo_score = None
+        if url and url in seo_by_url:
+            seo_score = seo_by_url[url]
+        elif name and name in seo_by_name:
+            seo_score = seo_by_name[name]
+        else:
+            # Try direct match from auditor
+            seo_score = _extract_auditor_seo_score(auditor_result, url or name)
+        if seo_score == "?":
+            seo_score = None
+
+        # Google Maps
+        gm_rating = c.get("rating")
+        gm_reviews_count = c.get("reviews_count")
+
+        details.append({
+            "name": name or "Конкурент",
+            "url": url or "",
+            "revenue": revenue,
+            "revenue_trend": revenue_trend,
+            "doctors_count": doctors_count,
+            "instagram_subscribers": instagram_subscribers,
+            "instagram_username": instagram_username,
+            "seo_score": seo_score,
+            "gm_rating": gm_rating,
+            "gm_reviews_count": gm_reviews_count,
+        })
+
+    return details
 
 
 def _extract_auditor_seo_score(auditor_result: Dict[str, Any], url: str = "") -> Any:

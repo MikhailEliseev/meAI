@@ -1027,6 +1027,7 @@ class CompetitorMatcher:
                             "profit": fs.net_profit_rub,
                             "period": fs.period,
                             "legal_name": org.short_name or "",
+                            "revenue_trend": fs.revenue_trend,
                         })
 
                     except Exception as e:
@@ -1045,6 +1046,7 @@ class CompetitorMatcher:
                     c.profit_year = entity["profit"]
                     c.financial_year = int(entity["period"]) if entity["period"].isdigit() else None
                     c.revenue_source = "tax_filed"
+                    c.revenue_trend = entity.get("revenue_trend", "")
 
                     if entity["legal_name"] and c.legal_name and len(entity["legal_name"]) > len(c.legal_name):
                         c.brand_name = c.brand_name or c.legal_name
@@ -1062,6 +1064,8 @@ class CompetitorMatcher:
                     c.financial_year = int(best_period) if best_period and best_period.isdigit() else None
                     c.revenue_source = "tax_filed"
                     c.is_multi_entity = True
+                    trends = [e.get("revenue_trend", "") for e in per_entity if e.get("revenue_trend")]
+                    c.revenue_trend = trends[0] if len(set(trends)) == 1 else ("mixed" if trends else "")
 
                     logger.info(
                         "nalog multi-entity: %s — %d entities aggregated → revenue=%d RUB, profit=%d RUB",
