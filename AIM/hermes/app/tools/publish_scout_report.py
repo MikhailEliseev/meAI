@@ -27,6 +27,7 @@ WP_DB_PASSWORD = os.getenv("WP_DB_PASSWORD", "")
 WP_DB_NAME = os.getenv("WP_DB_NAME", "wordpress")
 
 SCOUT_DATA_DIR = "/opt/data/competitors"
+SESSIONS_ARCHIVE_DIR = "/opt/data/sessions-archive"
 
 
 
@@ -274,25 +275,40 @@ def _random_slug(length: int = 8) -> str:
     return "".join(random.choices(chars, k=length))
 
 
-async def handle_publish_scout_report(slug=None, **kwargs) -> str:
+async def handle_publish_scout_report(slug=None, url=None, already_published=False, **kwargs) -> str:
     """Publish a scout report as a beautiful WordPress page.
 
     Args:
         slug: Scout data slug (e.g. 'nachalo-clinica'). Reads from /opt/data/competitors/{slug}/data.json
+        url: If the report was already published by generate_html_report, just return the URL.
+        already_published: Flag indicating the report is already live.
     """
     if isinstance(slug, dict):
         d = slug
         slug = d.get("slug", "")
+        url = d.get("url", "")
+        already_published = d.get("already_published", False)
+
+    # If the report was already published by generate_html_report — just confirm
+    if url and already_published:
+        logger.info("Scout report already published at %s, skipping duplicate", url)
+        return json.dumps({
+            "status": "already_published",
+            "url": url,
+            "message": "Report was already published by generate_html_report",
+        }, ensure_ascii=False)
 
     if not slug:
         return json.dumps({"error": "slug is required — the scout data identifier"})
 
-    # 1. Read scout data
-    data_path = os.path.join(SCOUT_DATA_DIR, slug, "data.json")
+    # 1. Read scout data — try sessions-archive first (v7 pipeline), then competitors (legacy)
+    data_path = os.path.join(SESSIONS_ARCHIVE_DIR, slug, "data.json")
+    if not os.path.exists(data_path):
+        data_path = os.path.join(SCOUT_DATA_DIR, slug, "data.json")
     if not os.path.exists(data_path):
         return json.dumps({
             "error": f"Scout data not found for slug '{slug}'",
-            "detail": f"Expected at {data_path}",
+            "detail": f"Checked {SESSIONS_ARCHIVE_DIR}/{slug}/data.json and {SCOUT_DATA_DIR}/{slug}/data.json",
             "available_slugs": _list_available_slugs(),
         })
 

@@ -1,7 +1,7 @@
 """
 run_content_analysis — Hermes tool: Content Analysis
 
-POST http://app:8000/api/content/analyze
+POST http://aim-app:8000/api/content/analyze
 Analyzes content quality on a medical clinic website. Evaluates medical accuracy,
 SEO optimization, readability, and conversion effectiveness per page type.
 
@@ -25,7 +25,7 @@ def _normalize_args(first_param, defaults):
     return None
 
 
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 30.0  # seconds
 
 

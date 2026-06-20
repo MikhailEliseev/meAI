@@ -1,7 +1,7 @@
 """
 find_competitors — Hermes tool: Find Top Competitors
 
-POST http://app:8000/api/competitors/find
+POST http://aim-app:8000/api/competitors/find
 Extracts specialization & city from client website, searches Google Maps
 via Apify for competitors, enriches with DaData + rusprofile financials,
 scores by revenue/location/services/rating, returns top-5.
@@ -28,7 +28,7 @@ def _normalize_args(first_param, defaults):
     return None
 
 
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 600.0  # full pipeline: Apify (90s) + 50-place Playwright INN extraction + nalog enrichment + scoring
 
 

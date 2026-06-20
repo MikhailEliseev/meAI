@@ -1,7 +1,7 @@
 """
 run_ads_report — Hermes tool: Ads Performance Report
 
-POST http://app:8000/api/ads/report
+POST http://aim-app:8000/api/ads/report
 Generates advertising performance report for a client project. Shows ROAS, CPC,
 CTR, conversion rates, budget utilization across Yandex.Direct, VK Ads, Telegram Ads.
 
@@ -25,7 +25,7 @@ def _normalize_args(first_param, defaults):
     return None
 
 
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 30.0  # seconds
 
 

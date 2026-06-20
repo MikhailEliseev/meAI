@@ -1,7 +1,7 @@
 """
 run_ci_analysis — Hermes tool: CI Marketing Analysis
 
-POST http://app:8000/api/competitors/analyze
+POST http://aim-app:8000/api/competitors/analyze
 Uses non-streaming endpoint because hermes-agent runs tools in a
 ThreadPoolExecutor where SSE aiter_bytes() does not work reliably.
 
@@ -45,7 +45,7 @@ def _normalize_competitor(comp) -> dict:
     return {"name": "unknown", "url": ""}
 
 
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 300.0  # parallel scraping can take 2-3 min for large competitors
 
 

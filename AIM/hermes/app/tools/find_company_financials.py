@@ -1,7 +1,7 @@
 """
 find_company_financials — Hermes tool: Real Financial Data from bo.nalog.gov.ru (ГИР БО)
 
-GET http://app:8000/api/companies/financials?inn=...
+GET http://aim-app:8000/api/companies/financials?inn=...
 Fetches official tax-filed P&L (форма 0710002) from ФНС public API —
 revenue, net profit, gross profit, operating profit, multi-year history.
 No API key needed — official government open data.
@@ -25,7 +25,7 @@ def _normalize_args(first_param, defaults):
     return None
 
 
-AIM_API_BASE = "http://app:8000"
+AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 10.0  # nalog API is fast (public JSON endpoint)
 
 
