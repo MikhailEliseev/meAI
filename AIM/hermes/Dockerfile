@@ -37,6 +37,9 @@ RUN pip install --no-cache-dir \
     instagrapi \
     instaloader
 
+# Scrapy (web scraping framework — scrapy_runner tool)
+RUN pip install --no-cache-dir scrapy
+
 # Browser automation (Playwright + Chromium)
 RUN pip install --no-cache-dir playwright && \
     playwright install --with-deps chromium
