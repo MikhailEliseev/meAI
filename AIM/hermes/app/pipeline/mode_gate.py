@@ -50,7 +50,8 @@ _ONBOARDING_BLOCKED_TOOLS = frozenset({
     "run_review_platforms",  # Отзывы на площадках
     "run_smi_mentions",      # Упоминания в СМИ
     "crawlee_web",           # Crawlee-скрапинг
-    "scrapy_runner",         # Scrapy-скрапинг
+    "scrapy_crawl",          # Scrapy-скрапинг (зарегистрирован из scrapy_runner.py)
+    "scrapy_runner",         # Scrapy-скрапинг (deprecated name)
 
     # ── Phase 3: People & Content (всё внутри пайплайна) ─────────
     "run_hh_analysis",       # Анализ вакансий HH.ru
