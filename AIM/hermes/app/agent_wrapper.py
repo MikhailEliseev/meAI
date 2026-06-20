@@ -9,6 +9,9 @@ Must wrap in loop.run_in_executor() for FastAPI async endpoints.
 Per Pitfall 8: Session persistence requires SessionDB. On container restart,
 _agent_cache is empty, but AIAgent reloads conversation history from SQLite
 via session_db. The cache is an optimisation, not the source of truth.
+
+Hermes v7: ONBOARDING mode routes to PipelineEngine (Python state machine).
+ADMIN/ACTIVE/SALES_ADMIN — unchanged (LLM-first).
 """
 
 import asyncio
@@ -45,13 +48,13 @@ _session_locks: dict[str, asyncio.Lock] = {}
 # Cache is an optimisation; SessionDB is the source of truth.
 # Each entry: (agent_instance, last_used_ts, conversation_history)
 _agent_cache: dict[str, tuple[object, float, list[dict]]] = {}
-_AGENT_CACHE_TTL = 86400  # 24 hours — cache is an optimisation, DB is source of truth
+_AGENT_CACHE_TTL = 3600  # 24 hours — cache is an optimisation, DB is source of truth
 _AGENT_TIMEOUT = 900  # 15 minutes — overall agent run deadline
 _LEARNINGS_TIMEOUT = 60  # 1 minute — learnings extraction deadline
 
-OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "http://omniroute:20128/v1")
-OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "sk-a10f604cd99e7a50-dd1d5a-56e30050")
-DEFAULT_MODEL = os.getenv("LLM_MODEL", "ds/deepseek-v4-pro")
+OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"))
+OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", os.getenv("DEEPSEEK_API_KEY", ""))
+DEFAULT_MODEL = os.getenv("LLM_MODEL", "deepseek-chat")
 
 # SOUL.md cache — loaded once, reused across requests
 _soul_md_cache: Optional[str] = None
@@ -199,35 +202,28 @@ def _presale_prompt() -> str:
 **Длина:** 3 предложения. Не 2. Не 5. ТРИ.
 
 ### 🛑 ПРАВИЛО ПЕРВОГО ИНСТРУМЕНТА (НЕРУШИМО)
-Когда клиент присылает URL — ты вызываешь **ТОЛЬКО run_prescan**. ОДИН инструмент. Больше НИЧЕГО.
+Когда клиент присылает URL — ты вызываешь **ТОЛЬКО run_full_scout**. ОДИН инструмент. Больше НИЧЕГО.
 
-НЕ вызывай find_competitors. НЕ вызывай web_search. НЕ пытайся ускорить диалог. Это САМЫЙ важный момент во всём разговоре — клиент ждёт 60-90 секунд, и он должен получить WOW-разбор своего сайта, а не вопрос «назовите конкурентов».
+НЕ вызывай find_competitors. НЕ вызывай web_search. НЕ вызывай run_prescan. НЕ пытайся ускорить диалог. run_full_scout запускает 16-фазный пайплайн, который соберёт ВСЕ данные: рынок, Instagram, реклама, тех.аудит, SEO, соцсети, Telegram, врачи, СМИ, конкуренты, отзывы, финансы, контент-анализ. Это займёт несколько минут — клиент получит ПОЛНУЮ картину.
 
-Ты покажешь find_competitors в следующем ходе — когда клиент УЖЕ впечатлён твоим анализом. Но сначала — дай ему увидеть что ты знаешь про ЕГО бизнес.
+### 🎭 16-ФАЗНАЯ РАЗВЕДКА (run_full_scout)
 
-### 🎭 ТРЁХСТАДИЙНАЯ РАЗВЕДКА (КАК ТЫ РАБОТАЕШЬ)
+Когда ты вызываешь run_full_scout — запускается 16-фазный пайплайн под управлением Python-стейт-машины (PipelineEngine). Все 16 фаз выполняются строго последовательно, LLM интерпретирует данные каждой фазы.
 
-Когда ты вызываешь run_prescan — он проходит 3 стадии. Ты получаешь результат каждой стадии в ОДНОМ ответе от инструмента — но рассказываешь их клиенту ПОСЛЕДОВАТЕЛЬНО, в трёх сообщениях подряд. Это создаёт эффект живого расследования. Клиент видит как картина строится слой за слоем.
+**Пока пайплайн работает — сообщи клиенту что происходит:**
+«Запускаю полную разведку: 16 фаз анализа. Смотрю рынок, соцсети, рекламу, тех.аудит, SEO, конкурентов, отзывы, финансы — всё что есть про ваш бизнес. Это займёт несколько минут, результат будет полным.»
 
-**После Стадии 1 (финансовый хук, ~25 сек):**
-Ты получаешь данные из stage_1_financials: revenue, profit, legal_name, specialization, city, years_on_market. СРАЗУ расскажи клиенту что видишь. Не жди остальных стадий. Формат: «Ого, смотрите что уже видно: клиника "[legal_name]" в [city], специализация — [specialization]. Оборот [revenue_year] ₽, прибыль [profit_year] ₽, на рынке [years_on_market] лет. Сейчас копаю глубже — смотрю лицензии, SEO, отзывы…»
+**Когда run_full_scout вернёт результат — ты получишь:**
+- status: "completed" или "partial"
+- phases_completed / phases_failed: сколько фаз выполнено
+- phase_results: список всех 16 фаз со статусами
+- key_findings: ключевые находки (5 пунктов)
+- report_url: ссылка на HTML-отчёт
 
-**После Стадии 2 (под капотом, ~55 сек):**
-Ты получаешь данные из stage_2_under_the_hood: licenses_count, founders, seo_score, seo_health, rating, reviews_count, web_speed, social_links. Продолжи рассказ: «Вот что ещё нашёл: [licenses_count] медицинских лицензий, учредители — [founders]. SEO-аудит: [seo_health]. Отзывов [reviews_count], рейтинг [rating]. Скорость: [web_speed]. Соцсети: [перечисли]. Сейчас финальный рывок — анализирую рынок и конкурентов…»
-
-**После Стадии 3 (рынок, ~85 сек):**
-Ты получаешь данные из stage_3_market: yandex_maps, nearby_competitors, content_audit, revenue_trend. Заверши историю: «И финальный штрих: на Яндекс.Картах рейтинг [yandex_maps.rating]. Рядом в радиусе 5 км — [nearby_competitors_count] конкурентов. Контент-аудит: [total_pages_estimated] страниц, из них [thin_content_pages] — слишком тонкие. Тренд выручки — [revenue_trend]. А теперь самое интересное — давайте посмотрим кто вокруг вас…»
-
-**ПРАВИЛА РАССКАЗА:**
-1. Рассказываешь ИСТОРИЮ, которая строится от стадии к стадии. Как детектив: сначала финансы → потом лицензии и SEO → потом конкуренты и рынок.
-2. В начале разведки скажи что-то вроде: «Запускаю 5 агентов разведки — смотрят сайт, финансы, лицензии, SEO и отзывы. Первый этап через 20-30 секунд…»
-3. НИКОГДА не молчи все 90 секунд. После каждой стадии — живой комментарий.
-4. 5 агентов — это театр. Ты можешь говорить «мои агенты нашли», «разведка показывает», «аналитический отдел докладывает». Это добавляет WOW-эффект.
-5. Если run_prescan вернул `cached: true` — данные уже есть. Сразу рассказывай всё, не говори «запускаю разведку».
-
-### ⚠️ ПРАВИЛО: НЕ ЖДИ ВСЕ СТАДИИ (КРИТИЧЕСКИ)
-
-Ты получаешь stage_1_financials, stage_2_under_the_hood, stage_3_market в ОДНОМ ответе от run_prescan. НО рассказываешь их клиенту ПОСЛЕДОВАТЕЛЬНО — в трёх сообщениях подряд. Это создаёт эффект живого расследования. Клиент видит как картина строится слой за слоем, от базовых цифр до полной картины рынка.
+**Твоя задача после получения результата:**
+1. Расскажи клиенту САМОЕ ВАЖНОЕ из key_findings — живым языком
+2. Дай ссылку на HTML-отчёт: «Я собрал полный отчёт — откройте обязательно: [report_url]»
+3. Предложи обсудить детали с Михаилом
 
 ### Как ты ведёшь диалог
 Ты ведёшь ЖИВОЙ пошаговый диалог с клиентом. Это не жёсткий скрипт и не отчёт машины — это разговор специалиста, который хочет помочь. SOUL.md описывает 7 шагов диалога. Следуй этим шагам, но адаптируй под конкретного клиента. Не перескакивай через шаги.
@@ -238,7 +234,8 @@ def _presale_prompt() -> str:
 ### Как рассказывать данные (КРИТИЧЕСКИ)
 Ты получаешь от инструментов реальные данные. Это твой материал для истории. НЕ читай их как список — собери из них живой рассказ:
 
-- **run_prescan (staged)** — инструмент возвращает 3 блока: stage_1_financials, stage_2_under_the_hood, stage_3_market плюс денормализованные поля для быстрого доступа. Расскажи клиенту историю в 3 сообщениях: сначала финансы (впечатляющие цифры!), потом SEO/лицензии/отзывы (глубина!), потом рынок (масштаб!). Не пытайся уместить всё в одно сообщение — это убивает эффект. Дай клиенту переварить каждый слой. Для скорости загрузки используй ТОЛЬКО поле web_speed — оно уже содержит готовую человеческую оценку. Для SEO — ТОЛЬКО поле seo_health. НЕ придумывай свои цифры — бери ГОТОВЫЙ ТЕКСТ.
+- **run_full_scout** — возвращает результат ВСЕХ 16 фаз. Сфокусируйся на key_findings (5 ключевых находок). Расскажи их живым языком, с интерпретацией. Дай ссылку на HTML-отчёт. Не пытайся пересказать ВСЕ 16 фаз — только самое важное.
+- **run_prescan** (deprecated, fallback) — если run_full_scout недоступен, fallback на быстрый прескан.
 - **find_competitors** — когда находятся конкуренты, подчеркни gap: «Вот смотрите, эти клиники делают на 20-50% больше по обороту при том же наборе услуг. Это ваш потенциал роста».
 - **run_ci_analysis** — из результатов выбери 2-3 самых ярких тактики. Расскажи, ПОЧЕМУ это важно: «Конкурент А собрал почти 300 отзывов с рейтингом 4.9 — представляете, насколько пациенты довольны? У них отличная репутация, но сайт практически невидим в поиске. Все эти пациенты приходят по сарафану. Представляете что будет, если добавить нормальное продвижение?»
 
@@ -300,22 +297,14 @@ def _presale_prompt() -> str:
 
 ### Инструменты для PRESALE
 Все инструменты из SOUL.md доступны. Ключевые для этого режима:
-- **run_prescan** — параллельная разведка (Шаг 2)
-- **find_competitors** — поиск конкурентов (Шаг 3)
-- **present_competitors** — сохранить утверждённый список (Шаг 5)
-- **run_ci_analysis** — глубокий анализ конкурентов (Шаг 6)
-- **file_write** — создать HTML-КП и сохранить в `/opt/data/memories/proposals/[client-slug]/proposal.html`
+- **run_full_scout** — полный 16-фазный скаутинг (ОСНОВНОЙ инструмент при URL)
+- **run_prescan** — быстрый прескан (fallback)
 - **collect_contact** — сбор контакта (Шаг 7, ТОЛЬКО после полной доставки ценности)
 
 ### ⚠️ ПРАВИЛО ПЕРВОГО ХОДА (КРИТИЧЕСКИ)
-Когда клиент присылает URL, ты делаешь РОВНО одну вещь: вызываешь **run_prescan**. НЕ вызывай find_competitors в том же ходе. НЕ пытайся ускорить процесс параллельными вызовами.
+Когда клиент присылает URL, ты делаешь РОВНО одну вещь: вызываешь **run_full_scout**. НЕ вызывай run_prescan, find_competitors или другие инструменты в том же ходе.
 
-Почему: клиент ждёт 60-90 секунд. Если после этого ты сразу скажешь «назовите конкурентов» — он разочаруется. Он ждал WOW-эффекта от разбора своего сайта, а получил вопрос. Поэтому:
-
-1. **Ход 1:** ТОЛЬКО run_prescan → дождался результат → покажи живой разбор (специализация, город, врачи, оборот, SEO-косяки, отзывы, соцсети, скорость). Каждую цифру — с интерпретацией. Расскажи ИСТОРИЮ про бизнес клиента.
-2. **Ход 2 (только после того как клиент увидел разбор):** «А теперь самое интересное — давайте посмотрим кто вокруг вас.» → вызывай find_competitors с client_revenue из prescan.
-
-НЕ ПРОПУСКАЙ шаг 1. Разбор сайта клиента — это твой главный козырь. Именно здесь клиент понимает что ты не просто бот, а реальный специалист с данными.
+run_full_scout выполнит все 16 фаз автоматически — Python-стейт-машина гарантирует последовательность. Ты получишь готовый результат со всеми данными.
 
 ### Формат ответов
 Чат клиента рендерит markdown. Используй `**жирный**` для ключевых цифр, таблицы для сравнений, `---` для разделителей. Дружеские выводы (Часть 1 отчёта) — без форматирования, простым текстом. Детальный разбор (Часть 2) — с таблицами где уместно.
@@ -399,11 +388,19 @@ def _create_agent(session_id: str | None, mode: str, enabled_toolsets: list[str]
 
     Passes persistent session_db so conversation history is loaded from
     SQLite even after container restarts (Pitfall 9).
+
+    Hermes v7: uses get_toolsets_for_mode(mode) instead of hardcoded toolset list.
+    ONBOARDING → ["aim-operations"], ADMIN → ["aim-operations", "hermes-debug"].
     """
     from run_agent import AIAgent
+    from app.pipeline.mode_gate import get_toolsets_for_mode
+    from app.pipeline.file_guard import set_current_mode
 
     if enabled_toolsets is None:
-        enabled_toolsets = ["aim-operations", "hermes-debug"]
+        enabled_toolsets = get_toolsets_for_mode(mode)
+
+    # Hermes v7: сообщаем file_guard текущий режим для проверок file_write
+    set_current_mode(mode)
 
     return AIAgent(
         base_url=OMNIROUTE_URL,
@@ -535,12 +532,149 @@ def _try_extract_learnings(agent, history: list[dict], tool_calls: list[dict], m
         logger.warning("learnings: extraction failed — %s", e)
 
 
+def _run_onboarding_pipeline(
+    message: str,
+    session_id: str,
+    client_url: str,
+    mode: str = "ONBOARDING",
+) -> dict:
+    """Run Hermes v7 PipelineEngine for ONBOARDING mode with URL.
+
+    Python-стейт-машина: выполняет фазы последовательно, LLM — только интерпретатор.
+
+    Args:
+        message: Исходное сообщение пользователя (с URL).
+        session_id: ID сессии.
+        client_url: Извлечённый URL сайта клиента.
+        mode: Режим работы.
+
+    Returns:
+        dict с reply, session_id, tool_calls.
+    """
+    from app.pipeline.engine import PipelineEngine
+    from app.tools.session_archive import save_tool_output, upsert_metadata
+
+    logger.info(
+        "PipelineEngine: starting onboarding for %s (session=%s)",
+        client_url, session_id,
+    )
+
+    engine = PipelineEngine()
+
+    try:
+        # Запускаем пайплайн синхронно (asyncio.run в отдельном потоке)
+        import asyncio as _asyncio
+
+        state = _asyncio.run(engine.execute(
+            session_id=session_id,
+            client_url=client_url,
+            mode=mode,
+        ))
+
+        # ── Сохраняем metadata (данные уже сохранены engine.py при HTML BUILD) ─
+        completed = sum(
+            1 for r in state.phases.values()
+            if r.status.value in ("completed", "no_data")
+        )
+        failed = sum(
+            1 for r in state.phases.values()
+            if r.status.value in ("permanent_failure", "tool_failed", "timed_out")
+        )
+
+        upsert_metadata(
+            session_id,
+            url=client_url,
+            completed_phases=completed,
+            failed_phases=failed,
+            total_phases=len(state.phases),
+            started_at=state.started_at,
+        )
+        logger.info(
+            "PipelineEngine: metadata saved for %s (%d/%d phases completed)",
+            session_id, completed, len(state.phases),
+        )
+
+        # ── Формируем ответ со ВСЕМИ фазами ────────────────────────
+        reply_parts = [
+            f"Разведка завершена: {completed}/{len(state.phases)} фаз собраны.",
+        ]
+
+        # Все фазы в порядке выполнения (из PHASES)
+        from app.pipeline.phases import PHASES as _PHASES
+        for phase in _PHASES:
+            interp_key = f"{phase.name}_interpretation"
+            if interp_key in state.accumulated_data:
+                interp = str(state.accumulated_data[interp_key])
+                if interp and len(interp) > 20:
+                    # Обрезаем длинные интерпретации (чат не резиновый)
+                    if len(interp) > 600:
+                        interp = interp[:600] + "..."
+                    reply_parts.append(f"\n### {phase.name}\n{interp}")
+
+        if failed > 0:
+            reply_parts.append(f"\n⚠️ {failed} фаз не удалось выполнить.")
+
+        # ── Пробуем сгенерировать HTML-отчёт ──────────────────────
+        try:
+            from app.tools.generate_html_report import handle_generate_html_report
+            report_result = _asyncio.run(handle_generate_html_report(
+                session_hash=session_id,
+                client_url=client_url,
+            ))
+            if isinstance(report_result, str):
+                report_result = json.loads(report_result)
+            if report_result.get("url"):
+                reply_parts.insert(
+                    1,
+                    f"\n📊 [Открыть полный отчёт]({report_result['url']})",
+                )
+        except Exception as _report_err:
+            logger.warning("HTML report generation skipped: %s", _report_err)
+
+        reply = "\n".join(reply_parts)
+
+        tool_calls = []
+        for pr in state.phases.values():
+            for tc in pr.tool_calls_made:
+                if tc not in [t["name"] for t in tool_calls]:
+                    tool_calls.append({"name": tc})
+
+        return {
+            "reply": reply,
+            "session_id": session_id,
+            "tool_calls": tool_calls,
+        }
+
+    except Exception as e:
+        logger.exception("PipelineEngine: onboarding failed for %s", client_url)
+        return {
+            "reply": (
+                f"Я запустил разведку вашего сайта, но произошла ошибка: {e}.\n"
+                "Дайте мне минуту и попробуйте ещё раз."
+            ),
+            "session_id": session_id,
+            "tool_calls": [],
+        }
+    finally:
+        # Очищаем in-memory state после завершения пайплайна
+        try:
+            from app.pipeline.engine import cleanup_pipeline_state
+            cleanup_pipeline_state(session_id)
+        except Exception:
+            pass
+
+
 def run_agent_sync(
     message: str,
     session_id: str | None = None,
     mode: str = "PRESALE",
 ) -> dict:
     """Run AIAgent synchronously — for Telegram (polling thread) and direct calls.
+
+    Hermes v7 routing:
+    - ONBOARDING mode + URL → PipelineEngine (Python state machine)
+    - ONBOARDING mode без URL → обычный AIAgent (приветствие)
+    - ADMIN/ACTIVE/SALES_ADMIN → без изменений (LLM-first)
 
     Returns dict with reply, session_id, tool_calls.
     Uses threading.Lock per session_id for SQLite concurrency safety (Pitfall 2).
@@ -553,6 +687,31 @@ def run_agent_sync(
     import threading
 
     sid = session_id or "new"
+
+    # ── Hermes v7: ONBOARDING routing ─────────────────────────────
+    mode_upper = mode.upper()
+    if mode_upper in ("ONBOARDING", "PRESALE"):
+        client_url = _extract_url_from_message(message)
+        if client_url:
+            # Tool-based подход: вместо прямого вызова PipelineEngine,
+            # инструктируем LLM вызвать run_full_scout.
+            # Python-стейт-машина запускается внутри tool handler'а.
+            logger.info(
+                "v7 routing: ONBOARDING + URL → tool-based run_full_scout (%s)",
+                client_url,
+            )
+            # Инжектируем инструкцию в сообщение для LLM
+            message = (
+                f"Пользователь дал ссылку: {client_url}\n\n"
+                f"Исходное сообщение: {message}\n\n"
+                f"Вызови инструмент run_full_scout с параметрами url=\"{client_url}\", client_name=\"\". "
+                f"НЕ вызывай run_prescan — используй ТОЛЬКО run_full_scout."
+            )
+            # Fallback: _run_onboarding_pipeline остаётся доступным
+            # для прямого вызова из других мест (например, Telegram webhook)
+        else:
+            logger.info("v7 routing: ONBOARDING без URL → AIAgent (приветствие)")
+    # ───────────────────────────────────────────────────────────────
 
     # Use thread lock (not asyncio.Lock) — this runs in OS threads
     lock = _get_thread_lock(sid)
