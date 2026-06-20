@@ -59,7 +59,95 @@ def _fmt_num(val, default="—"):
     return str(val)
 
 
-def _unwrap_tool_output(raw: dict) -> dict:
+def _fmt_revenue_short(val) -> str:
+    """Format revenue as human-readable: 4.3 млрд ₽, 742 млн ₽, 12.5 млн ₽."""
+    if val is None:
+        return "—"
+    if not isinstance(val, (int, float)):
+        return str(val)
+    if val >= 1_000_000_000:
+        return f"{val / 1_000_000_000:.1f} млрд ₽"
+    if val >= 1_000_000:
+        return f"{val / 1_000_000:.0f} млн ₽"
+    if val >= 1_000:
+        return f"{val / 1_000:.0f} тыс ₽"
+    return f"{int(val):,} ₽".replace(",", " ")
+
+
+def _fmt_trend(trend: str) -> str:
+    """Format revenue trend with arrow and color class."""
+    if not trend:
+        return "—"
+    t = trend.lower()
+    if t in ("growing", "↑", "up"):
+        return '<span class="trend-up">↑ Растущий</span>'
+    if t in ("declining", "↓", "down"):
+        return '<span class="trend-down">↓ Падение</span>'
+    if t in ("stable", "→"):
+        return '<span class="trend-stable">→ Стабильный</span>'
+    if t == "mixed":
+        return '<span class="trend-mixed">~ Смешанный</span>'
+    return _esc(trend)
+
+
+def _fmt_instagram(details: dict) -> str:
+    """Format Instagram: @username (~587K) or Нет."""
+    username = details.get("instagram_username", "")
+    subscribers = details.get("instagram_subscribers")
+    if not username:
+        return "Нет"
+    if subscribers and isinstance(subscribers, (int, float)) and subscribers > 0:
+        if subscribers >= 1_000_000:
+            sub_str = f"{subscribers / 1_000_000:.1f}M"
+        elif subscribers >= 1_000:
+            sub_str = f"{int(subscribers / 1_000)}K"
+        else:
+            sub_str = str(int(subscribers))
+        return f"@{username} (~{sub_str})"
+    return f"@{username}"
+
+
+def _build_competitor_table(details: list[dict], client_url: str = "") -> str:
+    """Build HTML comparison table from competitor_details."""
+    if not details:
+        return '<p class="text-dim">Нет данных о конкурентах.</p>'
+
+    rows = ""
+    for i, c in enumerate(details):
+        is_client = bool(client_url and c.get("url") == client_url)
+        row_class = ' class="client-row"' if is_client else ""
+        name = _esc(str(c.get("name", "—")))
+        if is_client:
+            name = f"<strong>{name}</strong>"
+        revenue = _fmt_revenue_short(c.get("revenue"))
+        trend = _fmt_trend(c.get("revenue_trend", ""))
+        doctors = str(c.get("doctors_count")) if c.get("doctors_count") else "—"
+        instagram = _fmt_instagram(c)
+        seo = f"{c['seo_score']}/100" if c.get("seo_score") is not None else "—"
+
+        rows += f"""<tr{row_class}>
+  <td class="comp-name">{name}</td>
+  <td class="comp-revenue">{revenue}</td>
+  <td class="comp-trend">{trend}</td>
+  <td class="comp-doctors">{doctors}</td>
+  <td class="comp-instagram">{instagram}</td>
+  <td class="comp-seo">{seo}</td>
+</tr>\n"""
+
+    return f"""<table class="comp-table">
+<thead>
+<tr>
+  <th>Конкурент</th>
+  <th>Выручка</th>
+  <th>Тренд</th>
+  <th>Врачей</th>
+  <th>Instagram</th>
+  <th>SEO</th>
+</tr>
+</thead>
+<tbody>
+{rows}</tbody>
+</table>"""
     """Flatten tool-output wrapper {tool_name: json_string_or_dict} → actual data.
 
     Pipeline saves tool results as ``{tool_name: "{...}"}`` (JSON string) or
@@ -429,26 +517,39 @@ def _build_report_html(data: dict, title: str) -> str:
 <hr>""")
 
     # ── Competitors ──────────────────────────────────────────────────────
-    comp_list = competitors.get("competitors", [])
-    if not comp_list:
-        comp_list = ci_analysis.get("competitors", [])
-    if comp_list:
-        comp_cards = ""
-        for c in comp_list[:6]:
-            name = c.get("brand_name") or c.get("legal_name") or c.get("name", "—")
-            services = c.get("services", [])
-            segment = c.get("segment", "") or (", ".join(services[:3]) if services else "")
-            reviews_n = c.get("reviews_count") or c.get("reviews", "—")
-            revenue_y = c.get("revenue_year")
-            price = c.get("price_range", "—")
-            comp_cards += f"""<div class="surface-card">
+    competitor_details = ci_analysis.get("competitor_details", [])
+
+    if competitor_details:
+        # Structured table mode (Phase 1 v2)
+        comp_table = _build_competitor_table(competitor_details, client_url)
+        sections.append(f"""<section class="section">
+  <span class="section-label">Конкуренты</span>
+  <h2>Конкурентный ландшафт</h2>
+  {comp_table}
+</section>
+<hr>""")
+    else:
+        # Legacy card mode
+        comp_list = competitors.get("competitors", [])
+        if not comp_list:
+            comp_list = ci_analysis.get("competitors", [])
+        if comp_list:
+            comp_cards = ""
+            for c in comp_list[:6]:
+                name = c.get("brand_name") or c.get("legal_name") or c.get("name", "—")
+                services = c.get("services", [])
+                segment = c.get("segment", "") or (", ".join(services[:3]) if services else "")
+                reviews_n = c.get("reviews_count") or c.get("reviews", "—")
+                revenue_y = c.get("revenue_year")
+                price = c.get("price_range", "—")
+                comp_cards += f"""<div class="surface-card">
   <h3>{_esc(str(name))}</h3>
   {f'<p class="text-meta">{_esc(str(segment))}</p>' if segment else ''}
   {f'<div class="row"><span class="k">Выручка</span><span class="v">{_fmt_num(revenue_y)} ₽</span></div>' if revenue_y else ''}
   <div class="row"><span class="k">Отзывов</span><span class="v">{_esc(str(reviews_n))}</span></div>
   {f'<div class="row"><span class="k">Цены</span><span class="v">{_esc(str(price))}</span></div>' if price and price != "—" else ''}
 </div>\n"""
-        sections.append(f"""<section class="section">
+            sections.append(f"""<section class="section">
   <span class="section-label">Конкуренты</span>
   <h2>Конкурентный ландшафт</h2>
   <div class="grid-2">{comp_cards}</div>
@@ -767,7 +868,63 @@ def _build_report_html(data: dict, title: str) -> str:
   </p>
 </section>""")
 
-    return '<div data-aim="report">\n' + "\n".join(sections) + '\n</div>'
+    comp_table_styles = """<style>
+/* ── Competitor Table (Phase 1 v2) ── */
+.comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin: 1rem 0;
+}
+.comp-table thead th {
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  font-weight: 500;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--border, #e0e0e0);
+  color: var(--text-dim, #888);
+}
+.comp-table tbody td {
+  padding: 0.7rem 0.8rem;
+  border-bottom: 1px solid var(--border, rgba(0,0,0,0.08));
+  vertical-align: middle;
+}
+.comp-table tbody tr.client-row {
+  background: var(--glass-bg, rgba(255,255,255,0.5));
+  font-weight: 500;
+}
+.comp-table tbody tr.client-row td {
+  border-bottom: 2px solid var(--accent, #c9a96e);
+}
+[data-theme="dark"] .comp-table tbody tr.client-row {
+  background: rgba(201,169,110,0.08);
+}
+.comp-table tbody tr:hover {
+  background: var(--glass-bg, rgba(0,0,0,0.02));
+}
+.trend-up { color: #2e7d32; font-weight: 500; }
+.trend-down { color: #c62828; font-weight: 500; }
+.trend-stable { color: #6d6d6d; }
+.trend-mixed { color: #e65100; }
+[data-theme="dark"] .trend-up { color: #66bb6a; }
+[data-theme="dark"] .trend-down { color: #ef5350; }
+[data-theme="dark"] .trend-stable { color: #9e9e9e; }
+[data-theme="dark"] .trend-mixed { color: #ff9800; }
+.comp-name { min-width: 160px; }
+.comp-revenue { white-space: nowrap; }
+.comp-trend { white-space: nowrap; }
+.comp-doctors { text-align: center; }
+.comp-seo { text-align: center; font-weight: 500; }
+@media (max-width: 768px) {
+  .comp-table { font-size: 0.8rem; }
+  .comp-table thead th,
+  .comp-table tbody td { padding: 0.5rem 0.4rem; }
+}
+</style>
+"""
+    return comp_table_styles + '<meta name="robots" content="noindex, nofollow">\n<div data-aim="report">\n' + "\n".join(sections) + '\n</div>'
 
 
 def _random_slug(length: int = 8) -> str:

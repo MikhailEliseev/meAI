@@ -4,18 +4,18 @@
 
 Поток данных:
   Phase 0: PERPLEXITY — deep research (рынок, город, ниша, конкуренты)
+  Phase 1: COMPETITORS — поиск (Apify) + CI-анализ
   Phase 2: TECH AUDIT — Pagespeed + SEO
   Phase 3: SOCIAL VERIFIER — отзывы, рейтинги
   Phase 4: CONTENT ANALYSIS — контент сайта
   Phase 5: KEY PERSONS — врачи, учредители
   Phase 6: SMI MENTIONS — упоминания в СМИ
-  Phase 7: COMPETITORS — поиск + CI-анализ
-  Phase 8: FORUM PAINS — боли пациентов с форумов
-  Phase 9: FINANCE — финансовые данные
-  Phase 10: CONTENT PLAN — контент-план
-  Phase 11: HTML BUILD — сборка HTML-отчёта
-  Phase 12: QC CRITIQUE — LLM-проверка качества (10 пунктов)
-  Phase 13: PRESENTATION — финальная презентация
+  Phase 7: FORUM PAINS — боли пациентов с форумов
+  Phase 8: FINANCE — финансовые данные
+  Phase 9: CONTENT PLAN — контент-план
+  Phase 10: HTML BUILD — сборка HTML-отчёта
+  Phase 11: QC CRITIQUE — LLM-проверка качества (10 пунктов)
+  Phase 12: PRESENTATION — финальная презентация
 
 Все фазы выполняются СТРОГО последовательно.
 NO_DATA — легитимный исход (не ошибка) для фаз с allow_no_data=True.
@@ -68,7 +68,7 @@ PHASE_0_PREFLIGHT = Phase(
 PHASE_0_PERPLEXITY = Phase(
     id=0,
     name="PERPLEXITY",
-    tools=["web_search"],
+    tools=["perplexity_search"],
     contract=PhaseContract(
         max_retries=1,
         retry_on_key_exhaustion=True,
@@ -76,25 +76,104 @@ PHASE_0_PERPLEXITY = Phase(
     ),
     llm_interpret=True,
     interpretation_prompt=(
-        "СПЕЦИАЛИЗАЦИЯ КЛИНИКИ: {client_specialization}. "
-        "НЕ придумывай другую специализацию — используй только указанную выше.\n\n"
-        "Ты — аналитик, а не агент. Не говори «попробую», «запускаю» — просто анализируй.\n\n"
-        "ГОРОД КЛИНИКИ УЖЕ ОПРЕДЕЛЁН: {client_city}. "
-        "НЕ пытайся определить город сам — использу указанный выше.\n\n"
-        "ШАГ 1 — ОПИШИ РЫНОК. Расскажи о рынке частной медицины в городе {client_city}: "
-        "объём, тренды, специализация.\n\n"
-        "ШАГ 2 — КОНКУРЕНТЫ. Если результаты поиска пусты или содержат ошибку — "
-        "используй свои знания. Перечисли 5-7 КОНКРЕТНЫХ частных клиник-конкурентов "
-        "В ГОРОДЕ {client_city}. Каждое название — в кавычках «».\n\n"
-        "Выдели также: (3) особенности рынка {client_city}, "
-        "(4) возможности для роста.\n"
-        "5-8 предложений. КРИТИЧНО: все конкуренты — из города {client_city}."
+        "КЛИНИКА: {client_name}. ГОРОД: {client_city}. СПЕЦИАЛИЗАЦИЯ: {client_specialization}.\n\n"
+        "Ты работаешь с ГОТОВЫМ исследовательским отчётом Perplexity. "
+        "Perplexity УЖЕ проверил источники. Твоя задача — СТРУКТУРИРОВАТЬ, а не перепроверять.\n\n"
+        "ПРАВИЛА:\n"
+        "1. ИЗВЛЕКАЙ всё, что есть в отчёте. Perplexity уже проверил достоверность.\n"
+        "2. Оценки (estimate) — легитимные данные. Извлекай их.\n"
+        "3. Если секция полностью отсутствует — «НЕТ ДАННЫХ».\n"
+        "4. Город всегда {client_city}. Другой город — игнорируй.\n"
+        "5. Только частные клиники (ООО, АО, ИП). Госучреждения — пропускай.\n"
+        "6. БУДЬ КРАТКИМ. Каждая секция — 1-5 строк. Никаких эссе и подробных описаний.\n\n"
+        "СТРУКТУРА ВЫВОДА (строго по порядку):\n\n"
+        "=== РЫНОК ===\n"
+        "- Объём рынка (рубли, год)\n"
+        "- 2-3 тренда\n"
+        "- Регулирование (лицензирование, ФЗ-152, ФЗ-38)\n\n"
+        "=== КЛИЕНТ ===\n"
+        "- ИНН: ...\n"
+        "- ОГРН: ...\n"
+        "- Полное название: ...\n"
+        "- Год основания: ...\n"
+        "- Лицензия: ...\n"
+        "- Руководитель: ...\n\n"
+        "=== ПАЦИЕНТЫ ===\n"
+        "- Портрет (возраст, пол, доход)\n"
+        "- Средний чек\n"
+        "- Как ищут клинику\n\n"
+        "=== ВОЗМОЖНОСТИ ===\n"
+        "- Слабые места конкурентов\n"
+        "- Незанятые ниши\n"
+        "- Недоиспользованные каналы\n\n"
+        "=== КОНКУРЕНТЫ ===\n"
+        "ТОЛЬКО клиники с подтверждённым URL. Для каждой — СТРОГО одна строка:\n"
+        "- Название: «...» | URL: https://... | Специализация: ... | Адрес: ...\n"
+        "Без URL — НЕ включай. Максимум 7 конкурентов. "
+        "Если нет — «НЕТ ДАННЫХ»."
     ),
 )
 
-# ── Фаза 1: TECH AUDIT ───────────────────────────────────────────────
-PHASE_1_TECH_AUDIT = Phase(
+# ── Фаза 1: COMPETITORS ──────────────────────────────────────────────
+PHASE_1_COMPETITORS = Phase(
     id=1,
+    name="COMPETITORS",
+    tools=["find_competitors", "run_ci_analysis"],
+    contract=PhaseContract(
+        max_retries=3,
+        retry_on_key_exhaustion=True,
+        timeout=600,
+    ),
+    llm_interpret=True,
+    interpretation_prompt=(
+        "Ты — старший аналитик агентства AIM. Твоя задача — построить "
+        "СТРУКТУРИРОВАННЫЙ конкурентный анализ на основе данных, собранных инструментами "
+        "find_competitors и run_ci_analysis.\n\n"
+
+        "Данные, которые ты получишь:\n"
+        "- competitor_details (список конкурентов с полями: name, url, revenue, revenue_trend, "
+        "doctors_count, instagram_subscribers, instagram_username, seo_score, gm_rating, gm_reviews_count)\n"
+        "- chat_summary (текстовый анализ из CI)\n"
+        "- feature_matrix (сравнение фич)\n\n"
+
+        "## ФОРМАТ ОТВЕТА (СТРОГО):\n\n"
+
+        "### 1. Сравнительная таблица\n"
+        "Markdown-таблица с колонками:\n"
+        "| Конкурент | Выручка | Тренд | Врачей | Instagram | SEO |\n"
+        "|-----------|---------|-------|--------|-----------|-----|\n\n"
+
+        "Правила заполнения:\n"
+        "- **Первая строка — КЛИЕНТ**, имя жирным (**Клиника X**)\n"
+        "- Выручка: «4.3 млрд ₽», «742 млн ₽», «12.5 млн ₽» — форматируй читаемо\n"
+        "- Тренд: «↑ Растущий (+79%)», «→ Стабильный», «↓ Падение (-15%)», «—»\n"
+        "- Врачей: число из doctors_count, «—» если нет\n"
+        "- Instagram: «@username (~587K)», «27K», «Нет» если нет username\n"
+        "- SEO: «85/100», «—» если нет\n"
+        "- Если данных нет — «—»\n\n"
+
+        "### 2. Главный вывод\n"
+        "> BLOCKQUOTE (1-2 предложения). Главный стратегический инсайт: "
+        "где находится клиент относительно рынка, какая ключевая возможность или угроза.\n\n"
+
+        "### 3. Сильные стороны клиента\n"
+        "2-3 пункта, каждый с конкретным фактом (цифра из competitor_details):\n"
+        "- Что у клиента лучше конкурентов? Где он уже выигрывает?\n\n"
+
+        "### 4. Точки роста\n"
+        "2-3 пункта, каждый с конкретным ориентиром (цифра конкурента-лидера):\n"
+        "- Где клиент отстаёт? Что нужно догонять?\n\n"
+
+        "**ВАЖНО:** Не выдумывай цифры. Если данных нет — честно пиши «—». "
+        "Используй ТОЛЬКО данные из competitor_details.\n\n"
+
+        "КОНТЕКСТ ОТ PERPLEXITY (рынок, тренды):\n{perplexity_context}"
+    ),
+)
+
+# ── Фаза 2: TECH AUDIT ───────────────────────────────────────────────
+PHASE_2_TECH_AUDIT = Phase(
+    id=2,
     name="TECH AUDIT",
     tools=["run_pagespeed", "run_seo_audit"],
     contract=PhaseContract(
@@ -112,9 +191,9 @@ PHASE_1_TECH_AUDIT = Phase(
     ),
 )
 
-# ── Фаза 2: SOCIAL VERIFIER ──────────────────────────────────────────
-PHASE_2_SOCIAL = Phase(
-    id=2,
+# ── Фаза 3: SOCIAL VERIFIER ──────────────────────────────────────────
+PHASE_3_SOCIAL = Phase(
+    id=3,
     name="SOCIAL VERIFIER",
     tools=["run_review_platforms"],
     contract=PhaseContract(
@@ -134,9 +213,9 @@ PHASE_2_SOCIAL = Phase(
     ),
 )
 
-# ── Фаза 3: CONTENT ANALYSIS ─────────────────────────────────────────
-PHASE_3_CONTENT = Phase(
-    id=3,
+# ── Фаза 4: CONTENT ANALYSIS ─────────────────────────────────────────
+PHASE_4_CONTENT = Phase(
+    id=4,
     name="CONTENT ANALYSIS",
     tools=["run_content_analysis"],
     contract=PhaseContract(
@@ -153,9 +232,9 @@ PHASE_3_CONTENT = Phase(
     ),
 )
 
-# ── Фаза 4: KEY PERSONS ──────────────────────────────────────────────
-PHASE_4_KEY_PERSONS = Phase(
-    id=4,
+# ── Фаза 5: KEY PERSONS ──────────────────────────────────────────────
+PHASE_5_KEY_PERSONS = Phase(
+    id=5,
     name="KEY PERSONS",
     tools=["run_hh_analysis", "run_doctor_dossiers"],
     contract=PhaseContract(
@@ -175,9 +254,9 @@ PHASE_4_KEY_PERSONS = Phase(
     ),
 )
 
-# ── Фаза 5: SMI MENTIONS ─────────────────────────────────────────────
-PHASE_5_SMI = Phase(
-    id=5,
+# ── Фаза 6: SMI MENTIONS ─────────────────────────────────────────────
+PHASE_6_SMI = Phase(
+    id=6,
     name="SMI MENTIONS",
     tools=["run_smi_mentions"],
     contract=PhaseContract(
@@ -194,29 +273,6 @@ PHASE_5_SMI = Phase(
         "Выдели: (1) тональность, "
         "(2) ключевые публикации, (3) медийный охват, "
         "(4) возможности для PR. Если упоминаний нет — отметь это. 3-5 предложений.\n\n"
-        "КОНТЕКСТ ОТ PERPLEXITY (рынок, конкуренты, тренды в нише клиента):\n{perplexity_context}"
-    ),
-)
-
-# ── Фаза 6: COMPETITORS ──────────────────────────────────────────────
-PHASE_6_COMPETITORS = Phase(
-    id=6,
-    name="COMPETITORS",
-    tools=["find_competitors", "run_ci_analysis"],
-    contract=PhaseContract(
-        max_retries=3,
-        retry_on_key_exhaustion=True,
-        timeout=600,
-    ),
-    llm_interpret=True,
-    interpretation_prompt=(
-        "Проанализируй конкурентную среду клиники. "
-        "Сверь найденных конкурентов с Perplexity-контекстом — "
-        "подтверждаются ли они? Есть ли расхождения? "
-        "Выдели: (1) топ-3 прямых конкурента "
-        "и их преимущества, (2) слабые места конкурентов (где клиника может выиграть), "
-        "(3) тактики конкурентов, которые стоит перенять, "
-        "(4) рыночные gap'ы. 5-8 предложений.\n\n"
         "КОНТЕКСТ ОТ PERPLEXITY (рынок, конкуренты, тренды в нише клиента):\n{perplexity_context}"
     ),
 )
@@ -347,12 +403,12 @@ PHASE_12_PRESENTATION = Phase(
 # ── Полный список фаз в порядке выполнения ──────────────────────────
 PHASES: list[Phase] = [
     PHASE_0_PERPLEXITY,
-    PHASE_1_TECH_AUDIT,
-    PHASE_2_SOCIAL,
-    PHASE_3_CONTENT,
-    PHASE_4_KEY_PERSONS,
-    PHASE_5_SMI,
-    PHASE_6_COMPETITORS,
+    PHASE_1_COMPETITORS,
+    PHASE_2_TECH_AUDIT,
+    PHASE_3_SOCIAL,
+    PHASE_4_CONTENT,
+    PHASE_5_KEY_PERSONS,
+    PHASE_6_SMI,
     PHASE_7_FORUM_PAINS,
     PHASE_8_FINANCE,
     PHASE_9_CONTENT_PLAN,

@@ -157,6 +157,7 @@ async def handle_run_ci_analysis(
             "best_practices": result.get("steal_worthy_tactics", []),
             "top_recommendation": result.get("top_recommendation", ""),
             "duration_seconds": result.get("duration_seconds", 0),
+            "competitor_details": result.get("competitor_details", []),
         }, ensure_ascii=False, indent=2)
 
     except httpx.HTTPStatusError as e:

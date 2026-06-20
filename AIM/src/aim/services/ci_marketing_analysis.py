@@ -94,6 +94,7 @@ class CiAnalysisResult:
     scraped_at: str = ""
     analysis_duration_seconds: float = 0.0
     error: str = ""
+    competitor_details: list = field(default_factory=list)
     # Phase 21 fields
     tier: str = "quick"
     findings: dict = field(default_factory=dict)
@@ -822,6 +823,9 @@ class CiMarketingAnalyzer:
             # 3. Generate chat summary from matrix (structural — LLM used separately via DialogueManager)
             chat_summary = self._chat_summary_from_matrix(matrix)
 
+            # 3b. Extract structured competitor details for Phase 1 table
+            competitor_details = self._build_competitor_details(matrix)
+
             # 4. Build legacy-compatible response structures
             feature_matrix = self._feature_matrix_legacy(matrix)
             pricing = self._pricing_legacy(matrix)
@@ -838,6 +842,7 @@ class CiMarketingAnalyzer:
                 top_recommendation=self._top_rec_from_matrix(matrix),
                 scraped_at=datetime.now(timezone.utc).isoformat(),
                 analysis_duration_seconds=elapsed,
+                competitor_details=competitor_details,
             )
 
         except Exception as e:
@@ -937,6 +942,29 @@ class CiMarketingAnalyzer:
             lines.append("")
 
         return "\n".join(lines)
+
+    def _build_competitor_details(self, matrix) -> list[dict]:
+        """Extract structured data from ComparisonMatrix for Phase 1 table + LLM."""
+        details = []
+        for c in matrix.competitors:
+            fin = c.get("financials", {})
+            seo = c.get("seo", {})
+            website = c.get("website", {})
+            social = c.get("social", {})
+            instagram = social.get("instagram", {}) if isinstance(social, dict) else {}
+            details.append({
+                "name": c.get("name", "Конкурент"),
+                "url": c.get("url", ""),
+                "revenue": fin.get("latest_revenue"),
+                "revenue_trend": fin.get("trend", ""),
+                "doctors_count": website.get("doctors_count"),
+                "instagram_subscribers": instagram.get("subscribers") if isinstance(instagram, dict) else None,
+                "instagram_username": instagram.get("username", ""),
+                "seo_score": seo.get("score"),
+                "gm_rating": c.get("gm_rating"),
+                "gm_reviews_count": c.get("gm_reviews_count"),
+            })
+        return details
 
     def _feature_matrix_legacy(self, matrix) -> dict:
         return {

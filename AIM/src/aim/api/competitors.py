@@ -122,6 +122,7 @@ class AnalyzeCompetitorsResponse(BaseModel):
     top_recommendation: str = ""
     duration_seconds: float = 0.0
     error: Optional[str] = None
+    competitor_details: list[dict] = []
 
 
 # ── Endpoints ──────────────────────────────────────────────────────
@@ -251,6 +252,9 @@ async def analyze_competitors(body: AnalyzeCompetitorsRequest) -> AnalyzeCompeti
                 "rating": star_rating,
                 "revenue_year": c.revenue_year,
                 "profit_year": c.profit_year,
+                "revenue_trend": c.revenue_trend,
+                "employee_count": c.employee_count,
+                "revenue_source": c.revenue_source,
                 "total_score": c.total_score,
                 "match_reason": c.match_reason,
                 "services": c.services,
@@ -321,6 +325,7 @@ async def analyze_competitors(body: AnalyzeCompetitorsRequest) -> AnalyzeCompeti
                 steal_worthy_tactics=tactics_json,
                 top_recommendation=result.get("top_recommendation", ""),
                 duration_seconds=duration,
+                competitor_details=result.get("competitor_details", []),
             ).model_dump(),
             headers={
                 "X-Deprecated-API": "true",
