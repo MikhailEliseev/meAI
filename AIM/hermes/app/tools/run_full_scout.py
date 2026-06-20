@@ -64,9 +64,17 @@ async def handle_run_full_scout(url=None, client_name="", **kwargs) -> str:
 
     mode = kwargs.get("mode", os.getenv("PIPELINE_MODE", "ONBOARDING"))
 
+    # Извлекаем chat_id из session_id (формат tg:{chat_id})
+    chat_id = 0
+    if session_id and session_id.startswith("tg:"):
+        try:
+            chat_id = int(session_id.split(":", 1)[1])
+        except (ValueError, IndexError):
+            pass
+
     logger.info(
-        "run_full_scout: starting 16-phase pipeline for %s (session=%s, mode=%s)",
-        url, session_id, mode,
+        "run_full_scout: starting 16-phase pipeline for %s (session=%s, mode=%s, chat_id=%s)",
+        url, session_id, mode, chat_id,
     )
 
     try:
@@ -79,6 +87,7 @@ async def handle_run_full_scout(url=None, client_name="", **kwargs) -> str:
             client_url=url,
             client_name=client_name,
             mode=mode,
+            chat_id=chat_id,
         )
 
         # ── Сохраняем metadata ───────────────────────────────────────

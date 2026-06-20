@@ -556,6 +556,12 @@ class CIOrchestrator(Agent):
                 }
             ))
 
+            # Enrich competitors with doctor counts from homepage scraping
+            await self._enrich_doctors(task_data)
+
+            # Enrich competitors with Instagram handles from website scraping
+            await self._enrich_instagram(task_data)
+
             # Build presale-friendly fields from findings
             presale = self._build_quick_summary(findings, task_data)
 
@@ -906,7 +912,54 @@ class CIOrchestrator(Agent):
         top_rec = _extract_top_recommendation(findings, feature_matrix)
 
         # ── Competitor details for Phase 1 table ──
-        competitor_details = _build_competitor_details(comp_list, auditor_result, finance_result)
+        # Enrich social_links with Instagram data via SocialScanner
+        try:
+            from src.aim.services.ci.social_scanner import SocialScanner
+            scanner = SocialScanner(timeout=5.0)
+            for c in comp_list:
+                if not isinstance(c, dict):
+                    continue
+                name = c.get("name", c.get("brand_name", c.get("legal_name", "")))
+                social = c.get("social_links", {}) if isinstance(c.get("social_links"), dict) else {}
+                # Enrich Instagram if no subscriber data available
+                has_subs = social.get("instagram_subscribers") is not None
+                if not has_subs and name and not social.get("instagram_handle"):
+                    try:
+                        ig_profile = scanner._find_instagram(name)
+                        if ig_profile and ig_profile.exists:
+                            social["instagram_handle"] = ig_profile.handle or ""
+                            social["instagram_subscribers"] = ig_profile.subscribers
+                            c["social_links"] = social
+                            logger.info("Instagram enriched for %s: %s (%s subs)", name, ig_profile.handle, ig_profile.subscribers)
+                    except Exception as e:
+                        logger.debug("Instagram lookup failed for %s: %s", name, e)
+            scanner.close()
+        except Exception as e:
+            logger.warning("Instagram enrichment unavailable: %s", e)
+
+        # Build client data for the first row of the competitor table
+        _client_enriched = task_data.get("_client_data", {})
+        client_url = task_data.get("url", "")
+        client_name = ""
+        if client_url:
+            import re as _client_re
+            client_name = _client_re.sub(r'https?://(?:www\.)?', '', client_url).rstrip('/')
+        _client_entry = {
+            "name": client_name,
+            "url": client_url,
+            "revenue": None,
+            "revenue_trend": "",
+            "doctors_count": _client_enriched.get("doctors_count"),
+            "instagram_username": _client_enriched.get("instagram_username", ""),
+            "instagram_subscribers": _client_enriched.get("instagram_subscribers"),
+            "gm_rating": None,
+            "gm_reviews_count": None,
+        }
+
+        competitor_details = _build_competitor_details(
+            comp_list, auditor_result, finance_result,
+            client_data=_client_entry if client_url else None,
+        )
 
         return {
             "narrative": narrative,
@@ -920,6 +973,385 @@ class CIOrchestrator(Agent):
             "wow": wow,
             "competitor_details": competitor_details,
         }
+
+    async def _enrich_doctors(self, task_data: Dict[str, Any]) -> None:
+        """Enrich competitor dicts with doctors_count from homepage + doctor page scraping.
+
+        Strategy:
+        1. Fetch homepage, count doctors there
+        2. Find links to doctor/specialist pages on the homepage
+        3. Visit the best candidate doctor page, count doctors
+        4. Fall back to standard paths (/vrachi, /specialisty, etc.)
+        5. Fall back to name+image heuristic on homepage
+
+        Runs in parallel across all competitors. Falls back gracefully.
+        """
+        import re as _re
+        import httpx as _httpx
+        from bs4 import BeautifulSoup as _BeautifulSoup
+        from src.aim.services.ci.pipeline_runner import _count_doctors
+
+        competitors = task_data.get("competitors", [])
+        client_url = task_data.get("url", "")
+
+        # Doctor page link keywords (in href or link text)
+        doctor_link_kw = [
+            "врач", "доктор", "специалист", "хирург", "косметолог",
+            "vrach", "doctor", "specialist", "surgeon", "specialisty",
+            "spetsialisty", "nashi-vrachi", "nashi_vrachi",
+            "kollektiv", "komanda", "сотрудник", "коллектив", "команда",
+            "staff", "team", "person", "expert",
+        ]
+        # Standard paths to try as last resort
+        doctor_paths = [
+            "/vrachi", "/specialisty", "/spetsialisty", "/doctors",
+            "/staff", "/team", "/nashi-vrachi", "/surgeons",
+            "/o-klinike/vrachi", "/about/doctors",
+        ]
+
+        urls_to_fetch = []
+        for c in competitors:
+            if not isinstance(c, dict):
+                continue
+            if c.get("doctors_count"):
+                continue
+            url = c.get("url", c.get("website", ""))
+            if url:
+                if not url.startswith(("http://", "https://")):
+                    url = "https://" + url
+                urls_to_fetch.append((c, url))
+
+        # Also scrape the client's own URL for doctors_count
+        _client_for_doctors = None
+        if client_url:
+            _client_for_doctors = {}
+            url_fixed = client_url
+            if not url_fixed.startswith(("http://", "https://")):
+                url_fixed = "https://" + url_fixed
+            urls_to_fetch.append((_client_for_doctors, url_fixed))
+
+        if not urls_to_fetch:
+            return
+
+        try:
+            async with _httpx.AsyncClient(timeout=_httpx.Timeout(10.0), follow_redirects=True) as client:
+                async def fetch_one(c, base_url):
+                    try:
+                        headers = {
+                            "User-Agent": "Mozilla/5.0 (compatible; AIM-CI/1.0)",
+                            "Accept": "text/html",
+                        }
+                        resp = await client.get(base_url, headers=headers)
+                        max_count = 0
+                        discovered_dr_urls = []
+
+                        if resp.status_code in (200, 301, 302):
+                            soup = _BeautifulSoup(resp.text, "html.parser")
+                            # Count doctors on homepage
+                            max_count = _count_doctors(soup)
+
+                            # Discover doctor page links from homepage
+                            base_parsed = _re.match(r'(https?://[^/]+)', base_url)
+                            base_origin = base_parsed.group(1) if base_parsed else base_url
+                            seen_dr_paths = set()
+                            for a in soup.find_all("a", href=True):
+                                href = a["href"]
+                                text = a.get_text(strip=True).lower()
+                                combined = f"{href.lower()} {text}"
+                                if any(kw in combined for kw in doctor_link_kw):
+                                    # Resolve relative URLs
+                                    if href.startswith("/"):
+                                        full_url = f"{base_origin}{href}"
+                                    elif href.startswith("http"):
+                                        full_url = href
+                                    else:
+                                        full_url = f"{base_url.rstrip('/')}/{href.lstrip('/')}"
+                                    # Deduplicate and skip homepage itself
+                                    if full_url.rstrip("/") != base_url.rstrip("/") and full_url not in seen_dr_paths:
+                                        seen_dr_paths.add(full_url)
+                                        discovered_dr_urls.append(full_url)
+
+                        # Try discovered doctor pages (up to 3)
+                        for dr_url in discovered_dr_urls[:3]:
+                            try:
+                                dr_resp = await client.get(dr_url, headers=headers)
+                                if dr_resp.status_code == 200 and len(dr_resp.text) > 500:
+                                    dr_soup = _BeautifulSoup(dr_resp.text, "html.parser")
+                                    count = _count_doctors(dr_soup)
+                                    if count > max_count:
+                                        max_count = count
+                            except Exception:
+                                continue
+
+                        # If still no doctors, try standard paths
+                        if max_count == 0:
+                            for path in doctor_paths:
+                                try:
+                                    dr_resp = await client.get(f"{base_url.rstrip('/')}{path}", headers=headers)
+                                    if dr_resp.status_code == 200 and len(dr_resp.text) > 500:
+                                        dr_soup = _BeautifulSoup(dr_resp.text, "html.parser")
+                                        count = _count_doctors(dr_soup)
+                                        if count > max_count:
+                                            max_count = count
+                                except Exception:
+                                    continue
+
+                        if max_count > 0:
+                            c["doctors_count"] = max_count
+                            logger.info("doctors_count=%d for %s", max_count, c.get("name", base_url))
+                    except Exception as e:
+                        logger.info("doctor enrichment failed for %s: %s", c.get("name", "?"), e)
+
+                await asyncio.gather(*[fetch_one(c, url) for c, url in urls_to_fetch])
+
+                # Save client's doctors_count to task_data
+                if _client_for_doctors and _client_for_doctors.get("doctors_count"):
+                    task_data.setdefault("_client_data", {})["doctors_count"] = _client_for_doctors["doctors_count"]
+                    logger.info("Client doctors_count=%d", _client_for_doctors["doctors_count"])
+        except Exception as e:
+            logger.warning("_enrich_doctors overall failure: %s", e)
+
+    async def _enrich_instagram(self, task_data: Dict[str, Any]) -> None:
+        """Enrich competitor dicts with Instagram handles.
+
+        Two approaches, executed in order:
+        1. Apify Instagram Scraper — reliable, searches by clinic name, returns username + followers
+        2. Website scraping — scrape homepage + /contacts for instagram.com links (fallback)
+        """
+        import re as _re
+        import httpx as _httpx
+        from bs4 import BeautifulSoup as _BeautifulSoup
+
+        competitors = task_data.get("competitors", [])
+        client_url = task_data.get("url", "")
+
+        # Build client name from URL (for Apify search)
+        client_name = ""
+        if client_url:
+            client_name = _re.sub(r'https?://(?:www\.)?', '', client_url).rstrip('/').split('.')[0]
+            client_name = client_name.capitalize() if client_name else ""
+
+        if not competitors and not client_url:
+            return
+
+        # Collect competitors that need Instagram enrichment
+        needs_ig = []
+        _client_ig = {}  # placeholder for client Instagram data
+        for c in competitors:
+            if not isinstance(c, dict):
+                continue
+            social = c.get("social_links", {})
+            if not isinstance(social, dict):
+                social = {}
+            # Skip if already has Instagram data
+            if social.get("instagram_handle") or social.get("instagram_subscribers"):
+                continue
+            # Get competitor name for search
+            name = c.get("name", c.get("brand_name", ""))
+            if not name:
+                url = c.get("url", c.get("website", ""))
+                if url:
+                    name = _re.sub(r'https?://(?:www\.)?', '', url).rstrip('/')
+            needs_ig.append((c, social, name))
+
+        # Add client to Instagram enrichment
+        if client_url and client_name:
+            _client_ig = {}
+            needs_ig.append((_client_ig, {}, client_name))
+
+        if not needs_ig:
+            # Save client Instagram (empty) and return
+            if client_url:
+                task_data.setdefault("_client_data", {})["instagram_username"] = ""
+                task_data["_client_data"]["instagram_subscribers"] = None
+            return
+
+        # ── Method 1: Apify Instagram Scraper (FIRST — most reliable) ──
+        try:
+            from src.aim.services import get_apify_client
+            apify_client = get_apify_client()
+
+            async def apify_search(c, social, name):
+                try:
+                    # Clean name — remove legal forms for better search
+                    search_name = _re.sub(
+                        r'\b(ООО|АО|ЗАО|ИП|ГК|ПАО|ОАО)\b\s*', '', name
+                    ).strip().strip('"').strip('«').strip('»')
+                    if not search_name:
+                        return
+
+                    logger.info("Apify IG search: %s", search_name[:60])
+                    run = await apify_client.call_actor(
+                        "apify/instagram-scraper",
+                        {
+                            "search": search_name,
+                            "searchType": "profile",
+                            "searchLimit": 3,
+                            "resultsType": "details",
+                        },
+                    )
+                    # Fetch dataset — may fail if Apify key lacks permissions
+                    try:
+                        items = await apify_client.get_dataset_items(run.default_dataset_id)
+                    except Exception as fetch_err:
+                        logger.info("Apify IG dataset fetch failed for %s: %s", search_name[:40], fetch_err)
+                        return
+
+                    if not items:
+                        logger.info("Apify IG: empty dataset for %s", search_name[:40])
+                        return
+
+                    # Search through ALL items for the best match (username + followers)
+                    # With resultsType=details: items may be mixed — some profile details,
+                    # some error entries (blocked), some post results
+                    best_username = ""
+                    best_followers = 0
+                    for item in items:
+                        uname = (
+                            item.get("username", "")
+                            or item.get("ownerUsername", "")
+                        )
+                        # Also try extracting from inputUrl (e.g. https://www.instagram.com/majorbeautyru/)
+                        if not uname:
+                            iu = item.get("inputUrl", "")
+                            if "instagram.com/" in iu:
+                                uname = iu.rstrip("/").split("instagram.com/")[-1].split("?")[0]
+                                if uname in ("", "p", "reel", "stories", "explore", "accounts"):
+                                    uname = ""
+                        if uname:
+                            fcount = item.get("followersCount", 0) or item.get("followers", 0)
+                            # Prefer item with followers, or first found
+                            if not best_username or (fcount and not best_followers):
+                                best_username = uname
+                                best_followers = fcount
+                                if fcount:
+                                    break  # Found complete data
+
+                    logger.info(
+                        "Apify IG found: @%s (%s followers) for \"%s\"",
+                        best_username, best_followers, name[:40],
+                    )
+
+                    if best_username:
+                        social["instagram_handle"] = best_username
+                        if best_followers:
+                            social["instagram_subscribers"] = best_followers
+                        c["social_links"] = social
+                except Exception as e:
+                    logger.info("Apify IG search failed for %s: %s", name[:40], e)
+
+            await asyncio.gather(*[apify_search(c, social, name) for c, social, name in needs_ig])
+
+            # Save client Instagram data from Apify
+            if client_url:
+                client_social = _client_ig.get("social_links", {}) if isinstance(_client_ig, dict) else {}
+                if client_social and client_social.get("instagram_handle"):
+                    task_data.setdefault("_client_data", {}).update({
+                        "instagram_username": client_social.get("instagram_handle", ""),
+                        "instagram_subscribers": client_social.get("instagram_subscribers"),
+                    })
+                    logger.info("Client Instagram (Apify): @%s (%s subs)",
+                        client_social.get("instagram_handle"),
+                        client_social.get("instagram_subscribers"))
+        except Exception as e:
+            logger.warning("Apify Instagram scraper unavailable: %s", e)
+
+        # ── Method 2: Website scraping (fallback for competitors still without IG) ──
+        urls_to_fetch = []
+        for c in competitors:
+            if not isinstance(c, dict):
+                continue
+            social = c.get("social_links", {})
+            if not isinstance(social, dict):
+                social = {}
+            if social.get("instagram_handle") or social.get("instagram_subscribers"):
+                continue
+            url = c.get("url", c.get("website", ""))
+            if url:
+                if not url.startswith(("http://", "https://")):
+                    url = "https://" + url
+                urls_to_fetch.append((c, url, social))
+
+        # Also scrape client website if still no Instagram
+        _client_ig_scrape = {}
+        if client_url and client_name:
+            client_social = task_data.get("_client_data", {}).get("instagram_username")
+            if not client_social:
+                url_fixed = client_url
+                if not url_fixed.startswith(("http://", "https://")):
+                    url_fixed = "https://" + url_fixed
+                urls_to_fetch.append((_client_ig_scrape, url_fixed, {}))
+
+        if not urls_to_fetch:
+            return
+
+        contact_paths = ["/contacts", "/kontakty", "/contact", "/o-klinike", "/about", "/"]
+
+        try:
+            async with _httpx.AsyncClient(timeout=_httpx.Timeout(10.0), follow_redirects=True) as client:
+                async def scrape_one(c, base_url, social):
+                    try:
+                        headers = {
+                            "User-Agent": "Mozilla/5.0 (compatible; AIM-CI/1.0)",
+                            "Accept": "text/html",
+                        }
+                        ig_username = ""
+                        seen_links = set()
+
+                        async def check_page(url):
+                            nonlocal ig_username
+                            try:
+                                resp = await client.get(url, headers=headers)
+                                if resp.status_code == 200:
+                                    soup = _BeautifulSoup(resp.text, "html.parser")
+                                    for a in soup.find_all("a", href=True):
+                                        href = a["href"]
+                                        if "instagram.com" in href and href not in seen_links:
+                                            seen_links.add(href)
+                                            m = _re.search(r'instagram\.com/([a-zA-Z0-9_.]+)/?', href)
+                                            if m:
+                                                uname = m.group(1)
+                                                if uname not in ("p", "reel", "stories", "explore", "accounts", "about", "ar"):
+                                                    ig_username = uname
+                                                    return
+                            except Exception:
+                                pass
+
+                        await check_page(base_url)
+
+                        base_parsed = _re.match(r'(https?://[^/]+)', base_url)
+                        base_origin = base_parsed.group(1) if base_parsed else base_url
+                        for path in contact_paths:
+                            if ig_username:
+                                break
+                            contact_url = f"{base_origin}{path}" if path != "/" else base_url
+                            if contact_url != base_url:
+                                await check_page(contact_url)
+
+                        if ig_username:
+                            social["instagram_handle"] = ig_username
+                            c["social_links"] = social
+                            logger.info("scrape-instagram=%s for %s", ig_username, c.get("name", base_url))
+                    except Exception as e:
+                        logger.info("instagram scrape failed for %s: %s", c.get("name", "?"), e)
+
+                await asyncio.gather(*[scrape_one(c, url, social) for c, url, social in urls_to_fetch])
+
+                # Save client Instagram data from website scraping
+                if client_url:
+                    client_social = _client_ig_scrape.get("social_links", {}) if isinstance(_client_ig_scrape, dict) else {}
+                    if client_social and client_social.get("instagram_handle"):
+                        task_data.setdefault("_client_data", {}).update({
+                            "instagram_username": client_social.get("instagram_handle", ""),
+                            "instagram_subscribers": client_social.get("instagram_subscribers"),
+                        })
+                        logger.info("Client Instagram (scrape): @%s", client_social.get("instagram_handle"))
+                    elif not task_data.get("_client_data", {}).get("instagram_username"):
+                        # No Instagram found for client
+                        task_data.setdefault("_client_data", {})["instagram_username"] = ""
+                        task_data["_client_data"]["instagram_subscribers"] = None
+        except Exception as e:
+            logger.warning("_enrich_instagram website scraping failure: %s", e)
 
     async def _execute_single_phase(
         self,
@@ -2037,15 +2469,36 @@ def _compute_wow_from_findings(findings: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _parse_instagram_username(raw: str) -> str:
+    """Extract Instagram username from URL or handle string."""
+    import re as _re
+    if not raw:
+        return ""
+    # Strip @ prefix if present
+    raw = raw.strip().lstrip("@")
+    # If it's a URL, extract the username part
+    if "instagram.com" in raw:
+        m = _re.search(r"instagram\.com/([a-zA-Z0-9_.]+)/?", raw)
+        if m:
+            return m.group(1)
+    # If it looks like a username (no slashes, no dots in domain sense)
+    if "/" not in raw and "." not in raw:
+        return raw
+    return ""
+
+
 def _build_competitor_details(
     comp_list: list,
     auditor_result: Dict[str, Any],
     finance_result: Dict[str, Any],
+    client_data: Dict[str, Any] | None = None,
 ) -> list[dict]:
     """Build structured competitor_details from phase data for Phase 1 table.
 
     Merges: find_competitors data (revenue, trend, employees, social)
     + ci-auditor data (SEO score) + ci-finance data (revenue fallback).
+
+    If client_data is provided, it's prepended as the first row.
     """
     auditor_audits = auditor_result.get("audits", []) if isinstance(auditor_result, dict) else []
     finance_profiles = finance_result.get("financial_profiles", []) if isinstance(finance_result, dict) else []
@@ -2072,6 +2525,42 @@ def _build_competitor_details(
             fin_by_name[fp["name"]] = fp
 
     details = []
+
+    # ── Prepend client as first row ──
+    if client_data and client_data.get("url"):
+        client_seo = None
+        # Look up client SEO from auditor_result
+        client_url = client_data.get("url", "")
+        if client_url:
+            client_seo = _extract_auditor_seo_score(auditor_result, client_url)
+        if client_seo == "?":
+            client_seo = None
+
+        # Look up client financials
+        client_revenue = client_data.get("revenue")
+        client_trend = client_data.get("revenue_trend", "")
+        if not client_revenue:
+            fin_profiles = finance_result.get("financial_profiles", []) if isinstance(finance_result, dict) else []
+            for fp in fin_profiles:
+                if isinstance(fp, dict) and (fp.get("website") == client_url or fp.get("url") == client_url):
+                    client_revenue = fp.get("revenue_year")
+                    if not client_trend:
+                        client_trend = fp.get("revenue_trend", "")
+                    break
+
+        details.append({
+            "name": client_data.get("name", "Клиент"),
+            "url": client_url,
+            "revenue": client_revenue,
+            "revenue_trend": client_trend,
+            "doctors_count": client_data.get("doctors_count"),
+            "instagram_subscribers": client_data.get("instagram_subscribers"),
+            "instagram_username": client_data.get("instagram_username", ""),
+            "seo_score": client_seo,
+            "gm_rating": client_data.get("gm_rating"),
+            "gm_reviews_count": client_data.get("gm_reviews_count"),
+        })
+
     for c in comp_list:
         if not isinstance(c, dict):
             continue
@@ -2097,7 +2586,19 @@ def _build_competitor_details(
         if isinstance(social, dict):
             ig = social.get("instagram", "")
             if ig:
-                instagram_username = ig if isinstance(ig, str) else ig.get("username", "")
+                if isinstance(ig, str):
+                    # Parse username from URL or handle
+                    instagram_username = _parse_instagram_username(ig)
+                elif isinstance(ig, dict):
+                    instagram_username = ig.get("username", "")
+                    instagram_subscribers = ig.get("subscribers")
+            # Check top-level instagram_enrichment from SocialScanner
+            ig_handle = social.get("instagram_handle", "")
+            ig_subs = social.get("instagram_subscribers")
+            if not instagram_username and ig_handle:
+                instagram_username = ig_handle.lstrip("@")
+            if instagram_subscribers is None and ig_subs is not None:
+                instagram_subscribers = ig_subs
 
         # SEO score
         seo_score = None
@@ -2111,9 +2612,29 @@ def _build_competitor_details(
         if seo_score == "?":
             seo_score = None
 
-        # Google Maps
+        # Google Maps — prefer numeric fields, fallback to match_reason parsing
         gm_rating = c.get("rating")
         gm_reviews_count = c.get("reviews_count")
+        # Parse match_reason for both rating and reviews count
+        # (rating may already be set by analyze_competitors, but reviews often isn't)
+        if gm_rating is None or not gm_reviews_count:
+            match_reason = c.get("match_reason", "")
+            if match_reason:
+                import re as _gm_re
+                if gm_rating is None:
+                    rm = _gm_re.search(r'рейтинг\s+(\d+\.?\d*)', match_reason)
+                    if rm:
+                        try:
+                            gm_rating = float(rm.group(1))
+                        except ValueError:
+                            pass
+                if not gm_reviews_count:
+                    rc = _gm_re.search(r'(\d+)\+?\s*отзыв', match_reason)
+                    if rc:
+                        try:
+                            gm_reviews_count = int(rc.group(1))
+                        except ValueError:
+                            pass
 
         details.append({
             "name": name or "Конкурент",

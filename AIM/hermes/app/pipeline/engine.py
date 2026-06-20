@@ -111,6 +111,7 @@ class PipelineEngine:
         client_url: str,
         client_name: str = "",
         mode: str = "ONBOARDING",
+        chat_id: int = 0,
     ) -> PipelineState:
         """Выполнить полный пайплайн онбординга.
 
@@ -119,6 +120,7 @@ class PipelineEngine:
             client_url: URL сайта клиента.
             client_name: Название клиники (если известно заранее).
             mode: Режим работы.
+            chat_id: Telegram chat_id (0 = не Telegram).
 
         Returns:
             PipelineState с результатами всех фаз.
@@ -129,6 +131,7 @@ class PipelineEngine:
             client_name=client_name,
             started_at=datetime.now(timezone.utc).isoformat(),
             mode=mode,
+            chat_id=chat_id,
         )
 
         logger.info(
@@ -187,6 +190,9 @@ class PipelineEngine:
             # Сохраняем состояние для polling
             self._persist_state(state)
 
+            # Сохраняем сырые данные фазы на диск немедленно
+            self._persist_phase_to_disk(state, phase, result)
+
             # PERMANENT_FAILURE с on_permanent_failure="abort" → останов
             if result.status == PhaseStatus.PERMANENT_FAILURE:
                 if phase.contract.on_permanent_failure == "abort":
@@ -212,6 +218,10 @@ class PipelineEngine:
                 phase.name, result.status.value, result.duration_seconds,
             )
 
+            # После PERPLEXITY (фаза 0) — отправляем промежуточное уведомление в Telegram
+            if phase.id == 0 and state.chat_id > 0:
+                await self._send_perplexity_notification(state)
+
         completed = sum(
             1 for r in state.phases.values()
             if r.status in (PhaseStatus.COMPLETED, PhaseStatus.NO_DATA)
@@ -222,6 +232,181 @@ class PipelineEngine:
         )
 
         return state
+
+    # ── Perplexity Notification ────────────────────────────────────────
+
+    async def _send_perplexity_notification(self, state: PipelineState) -> None:
+        """Отправить промежуточное Telegram-уведомление после Phase 0.
+
+        Извлекает ключевые данные из PERPLEXITY_interpretation, создаёт
+        WordPress-страницу-заглушку и отправляет клиенту сводку + ссылку.
+        """
+        import asyncio as _asyncio
+
+        try:
+            interpretation = state.accumulated_data.get("PERPLEXITY_interpretation", "")
+            client_name = state.client_name or "клиника"
+
+            # Форматируем сводку для Telegram
+            summary = self._format_perplexity_summary(interpretation, client_name)
+
+            # Создаём WordPress-страницу-заглушку
+            post_id, page_url = await self._create_placeholder_page(state)
+
+            if post_id:
+                state.placeholder_post_id = post_id
+                state.placeholder_page_url = page_url
+                state.accumulated_data["placeholder_post_id"] = post_id
+                state.accumulated_data["placeholder_page_url"] = page_url
+
+                # Сохраняем в metadata сессии
+                try:
+                    from app.tools.session_archive import upsert_metadata
+                    upsert_metadata(
+                        state.session_id,
+                        placeholder_post_id=post_id,
+                        placeholder_page_url=page_url,
+                    )
+                except Exception as meta_err:
+                    logger.warning("_send_perplexity_notification: metadata save failed: %s", meta_err)
+
+            # Отправляем Telegram-уведомление
+            message = (
+                f"{summary}\n\n"
+                f"🚀 <b>Запускаю полную разведку:</b> ещё 12 фаз анализа. Это займёт 10–15 минут."
+            )
+            if page_url:
+                message += f"\n\n📄 <b>Ваш персональный отчёт формируется здесь:</b>\n{page_url}"
+
+            from app.telegram_gateway import _send_telegram_message_sync
+            loop = _asyncio.get_running_loop()
+            await loop.run_in_executor(
+                None, _send_telegram_message_sync, state.chat_id, message,
+            )
+            logger.info(
+                "_send_perplexity_notification: sent to chat_id=%s, page=%s",
+                state.chat_id, page_url,
+            )
+
+        except Exception as e:
+            logger.exception("_send_perplexity_notification failed: %s", e)
+
+    def _format_perplexity_summary(self, interpretation: str, client_name: str) -> str:
+        """Форматировать краткую сводку из PERPLEXITY-интерпретации для Telegram."""
+        if not interpretation:
+            return f"🔍 <b>Первые данные по вашей клинике</b>\n\nАнализ рынка завершён. Данные обрабатываются."
+
+        # Обрезаем до разумной длины для Telegram
+        text = interpretation[:1500]
+        if len(interpretation) > 1500:
+            text += "\n\n_...полная сводка будет в финальном отчёте._"
+
+        return f"🔍 <b>Первые данные по вашей клинике</b>\n\n{text}"
+
+    async def _create_placeholder_page(self, state: PipelineState) -> tuple[int, str]:
+        """Создать WordPress-страницу-заглушку через прямое подключение к БД.
+
+        Возвращает (post_id, url). При ошибке возвращает (0, "").
+        """
+        import random as _random
+        import string as _string
+        import pymysql as _pymysql
+        from datetime import datetime as _dt, timezone as _tz
+
+        client_name = state.client_name or "клиника"
+        wp_db_host = os.getenv("WP_DB_HOST", "wp-db")
+        wp_db_user = os.getenv("WP_DB_USER", "wp_user")
+        wp_db_password = os.getenv("WP_DB_PASSWORD", "")
+        wp_db_name = os.getenv("WP_DB_NAME", "wordpress")
+
+        if not wp_db_password:
+            logger.warning("_create_placeholder_page: WP_DB_PASSWORD not set, skipping")
+            return 0, ""
+
+        conn = None
+        try:
+            slug = "".join(_random.choices(_string.ascii_lowercase + _string.digits, k=8))
+            post_title = f"AIM Scout — {client_name}"
+            html = self._build_placeholder_html(client_name)
+            now = _dt.now(_tz.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+            conn = _pymysql.connect(
+                host=wp_db_host,
+                user=wp_db_user,
+                password=wp_db_password,
+                database=wp_db_name,
+                charset="utf8mb4",
+                connect_timeout=5,
+            )
+
+            with conn.cursor() as cur:
+                # Проверяем уникальность slug
+                cur.execute("SELECT ID FROM wp_posts WHERE post_name = %s LIMIT 1", (slug,))
+                attempts = 0
+                while cur.fetchone() and attempts < 10:
+                    slug = "".join(_random.choices(_string.ascii_lowercase + _string.digits, k=8))
+                    cur.execute("SELECT ID FROM wp_posts WHERE post_name = %s LIMIT 1", (slug,))
+                    attempts += 1
+
+                cur.execute(
+                    """INSERT INTO wp_posts
+                       (post_author, post_date, post_date_gmt, post_content, post_title,
+                        post_status, comment_status, ping_status, post_name, post_type,
+                        post_excerpt, to_ping, pinged, post_content_filtered, menu_order)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                    (
+                        1, now, now, html, post_title,
+                        "publish", "closed", "closed", slug, "page",
+                        "", "", "", "", 0,
+                    ),
+                )
+                post_id = cur.lastrowid
+            conn.commit()
+
+            url = f"https://iamaim.ru/{slug}"
+            logger.info("_create_placeholder_page: post_id=%s url=%s", post_id, url)
+            return post_id, url
+
+        except Exception as e:
+            logger.exception("_create_placeholder_page failed: %s", e)
+            return 0, ""
+        finally:
+            if conn:
+                conn.close()
+
+    def _build_placeholder_html(self, client_name: str) -> str:
+        """Собрать HTML страницы-заглушки на CSS-классах темы AIM."""
+        name_escaped = client_name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+        return f"""<meta name="robots" content="noindex, nofollow">
+<div data-aim="report" data-theme="dark">
+<section class="section" style="text-align:center;padding-top:80px;">
+  <span class="section-label">AIM Scout</span>
+  <h1>Разведывательный отчёт</h1>
+  <p class="text-dim" style="font-size:1.125rem;margin-top:8px;">{name_escaped}</p>
+</section>
+<hr class="section-divider">
+<section class="section" style="text-align:center;padding:60px 0;">
+  <div class="metric" style="display:inline-block;text-align:center;min-width:200px;">
+    <div class="value" style="font-size:18px;animation:pulse 2s ease-in-out infinite;">●</div>
+    <div class="label">Данные собираются<br>Это займёт 10–15 минут</div>
+  </div>
+</section>
+<hr class="section-divider">
+<section class="section">
+  <div class="cta-box">
+    <h2>Страница обновится автоматически</h2>
+    <p>Когда разведка завершится, здесь появится полный отчёт со всеми данными.</p>
+  </div>
+</section>
+<section class="section section-footer">
+  <p class="text-meta">
+    <a href="https://iamaim.ru" class="text-accent-link">iamaim.ru</a> · AI-first маркетинг в медицине<br>
+    Этот отчёт генерируется автоматически
+  </p>
+</section>
+</div>"""
+
+    # ── Phase Execution ──────────────────────────────────────────────
 
     async def _execute_phase(self, phase: Phase, state: PipelineState) -> PhaseResult:
         """Выполнить одну фазу пайплайна с ретраями.
@@ -354,6 +539,22 @@ class PipelineEngine:
         # Авто-определение имени клиента если не задано
         self._resolve_client_name(state)
 
+        # ── Pre-resolve Perplexity competitors для COMPETITORS фазы ──
+        perplexity_competitors = None
+        if phase.name == "COMPETITORS":
+            perplexity_competitors = self._extract_competitors_from_perplexity(state)
+            if perplexity_competitors:
+                logger.info(
+                    "PipelineEngine: using %d Perplexity competitors, skipping Apify Google Maps",
+                    len(perplexity_competitors),
+                )
+            else:
+                logger.info(
+                    "PipelineEngine: no Perplexity competitors with URLs, will use Apify Google Maps",
+                )
+        # Сохраняем для _build_tool_params
+        self._perplexity_competitors = perplexity_competitors
+
         tool_results: dict[str, str] = {}
         tool_names: list[str] = []
         overall_timeout = min(phase.contract.timeout, _TOOL_CALL_TIMEOUT)
@@ -391,6 +592,18 @@ class PipelineEngine:
         # Выполняем инструменты последовательно (сохраняем порядок фазы)
         for tool_name in phase.tools:
             if tool_name not in already_called:
+                # Если есть Perplexity-конкуренты — пропускаем Apify, инжектим синтетический результат
+                if tool_name == "find_competitors" and perplexity_competitors:
+                    tool_results[tool_name] = json.dumps(
+                        {"source": "perplexity", "competitors": perplexity_competitors},
+                        ensure_ascii=False,
+                    )
+                    tool_names.append(tool_name)
+                    logger.info(
+                        "PipelineEngine: injected synthetic find_competitors from Perplexity (%d competitors)",
+                        len(perplexity_competitors),
+                    )
+                    continue
                 await _invoke_one(tool_name)
 
         return tool_results, tool_names
@@ -453,8 +666,18 @@ class PipelineEngine:
         url = state.client_url or ""
 
         # ── URL-based tools ──────────────────────────────────────────
-        if tool_name in ("run_pagespeed", "run_seo_audit"):
+        if tool_name == "run_pagespeed":
             return {"url": url}
+
+        if tool_name == "run_tech_seo_audit":
+            return {"url": url}
+
+        if tool_name == "run_seo_audit":
+            params = {"url": url}
+            competitors = self._extract_competitor_urls(state)
+            if competitors:
+                params["competitors"] = competitors
+            return params
 
         if tool_name == "run_content_analysis":
             return {"url": url}
@@ -462,6 +685,7 @@ class PipelineEngine:
         if tool_name == "find_competitors":
             params = {"url": url}
             # Пробуем извлечь имена конкурентов из Perplexity-интерпретации
+            # (для fallback-пути, когда URL не найдены — помогаем Apify искать по именам)
             competitor_names = self._extract_competitor_names_from_perplexity(state)
             if competitor_names:
                 params["named_competitors"] = competitor_names
@@ -499,9 +723,19 @@ class PipelineEngine:
         # ── CI Analysis (нужны конкуренты) ──────────────────────────
         if tool_name == "run_ci_analysis":
             params = {"url": url}
-            competitors = self._extract_competitors_for_ci(state, partial_results or {})
-            if competitors:
-                params["competitors"] = competitors
+            # Приоритет: Perplexity-конкуренты (извлечены в _call_phase_tools)
+            perplexity_comp = getattr(self, "_perplexity_competitors", None)
+            if perplexity_comp:
+                params["competitors"] = perplexity_comp
+                logger.info(
+                    "PipelineEngine: run_ci_analysis using %d Perplexity competitors",
+                    len(perplexity_comp),
+                )
+            else:
+                # Fallback: Apify Google Maps (старый flow)
+                competitors = self._extract_competitors_for_ci(state, partial_results or {})
+                if competitors:
+                    params["competitors"] = competitors
             return params
 
         # ── Financials (нужен INN) ──────────────────────────────────
@@ -644,31 +878,59 @@ class PipelineEngine:
             name = c.get("brand_name") or c.get("legal_name", "")
             comp_url = c.get("website", "")
             if name and comp_url:
-                result.append({"name": name, "url": comp_url})
+                result.append({
+                    "brand_name": name,
+                    "legal_name": c.get("legal_name", name),
+                    "website": comp_url,
+                    "revenue_year": c.get("revenue_year"),
+                    "profit_year": c.get("profit_year"),
+                    "revenue_trend": c.get("revenue_trend"),
+                    "employee_count": c.get("employee_count"),
+                    "rating": c.get("rating"),
+                    "reviews_count": c.get("reviews_count"),
+                    "social_links": c.get("social_links", {}),
+                    "services": c.get("services", []),
+                })
         return result if result else None
 
     def _extract_inn_from_state(self, state: PipelineState) -> str | None:
-        """Попытаться извлечь INN из данных конкурентов."""
+        """Попытаться извлечь INN клиента.
+
+        Порядок поиска:
+        1. COMPETITORS.find_competitors (Apify — данные юрлиц конкурентов)
+        2. PERPLEXITY_interpretation (ИНН клиента из Phase 0)
+        """
+        import re
+
+        # Источник 1: данные конкурентов (Apify, если был вызван)
         comp_data = state.accumulated_data.get("COMPETITORS", {})
-        if not isinstance(comp_data, dict):
-            return None
+        if isinstance(comp_data, dict):
+            raw = comp_data.get("find_competitors", "")
+            if raw and isinstance(raw, str):
+                try:
+                    parsed = json.loads(raw)
+                    for c in parsed.get("competitors", []):
+                        inns = c.get("inns", [])
+                        if inns:
+                            return str(inns[0])
+                        inn = c.get("inn", "")
+                        if inn:
+                            return str(inn)
+                except (json.JSONDecodeError, TypeError):
+                    pass
 
-        raw = comp_data.get("find_competitors", "")
-        if not raw or not isinstance(raw, str):
-            return None
+        # Источник 2: Perplexity-интерпретация (ИНН клиента: 7728398483)
+        interp = state.accumulated_data.get("PERPLEXITY_interpretation", "")
+        if interp and isinstance(interp, str):
+            m = re.search(r'ИНН[:\s]+(\d{10,12})', interp)
+            if m:
+                return m.group(1)
 
-        try:
-            parsed = json.loads(raw)
-        except (json.JSONDecodeError, TypeError):
-            return None
+        # Источник 3: явное поле в состоянии
+        inn = getattr(state, "client_inn", "")
+        if inn:
+            return str(inn)
 
-        for c in parsed.get("competitors", []):
-            inns = c.get("inns", [])
-            if inns:
-                return str(inns[0])
-            inn = c.get("inn", "")
-            if inn:
-                return str(inn)
         return None
 
     def _extract_first_competitor_url(self, state: PipelineState) -> str | None:
@@ -716,20 +978,65 @@ class PipelineEngine:
         return urls[:10]
 
     def _build_perplexity_query(self, phase: Phase, state: PipelineState) -> str:
-        """Построить запрос для perplexity_search."""
+        """Построить запрос для perplexity_search (v7.10 — профиль-матчинг конкурентов)."""
         name = state.client_name or "клиника"
         city = getattr(state, "client_city", "") or ""
         spec = getattr(state, "client_specialization", "") or ""
 
         if phase.name == "PERPLEXITY":
+            spec_line = f"Специализация: {spec}." if spec else ""
+            spec_patient = f" направления «{spec}»" if spec else ""
+            spec_market = f" Отдельно — по направлению «{spec}»." if spec else ""
+            # Профиль-матчинг для конкурентов: похожий профиль, схожий масштаб
+            profile_line = (
+                f"Ищи конкурентов С ТАКИМ ЖЕ ПРОФИЛЕМ: {spec}. "
+                f"Приоритет — клиники схожего или чуть большего масштаба по выручке. "
+                f"Если {city} — мегаполис (Москва, СПб), бери ближайший район/округ. "
+                f"Если город небольшой — бери весь город."
+            ) if spec else (
+                f"Приоритет — клиники схожего или чуть большего масштаба по выручке. "
+                f"Если {city} — мегаполис (Москва, СПб), бери ближайший район/округ. "
+                f"Если город небольшой — бери весь город."
+            )
             query = (
-                f"Дай глубокий анализ рынка частной медицины в городе {city}. "
-                f"Клиника: {name}. Специализация: {spec or 'многопрофильная'}. "
-                f"Опиши: объём рынка, тренды, 5-7 основных конкурентов с названиями, "
-                f"портрет пациента, возможности для роста, маркетинговые каналы."
+                f"Мне нужна ключевая информация для конкурентного анализа. "
+                f"Клиника: «{name}», город {city}. {spec_line}\n\n"
+                f"1. Найди ИНН, ОГРН, полное юридическое название, год основания, "
+                f"юридический адрес клиники «{name}» (источники: РБК Компании, rusprofile, "
+                f"zachestnyibiznes, list-org). "
+                f"Также найди лицензию, генерального директора, главного врача.\n\n"
+                f"2. Дай данные по объёму рынка платных медицинских услуг в городе {city} "
+                f"за последние 2-3 года (в рублях, с темпами роста)."
+                f"{spec_market} "
+                f"Если точных цифр по специализации нет — оцени на основе данных "
+                f"по рынку города {city} в целом.\n\n"
+                f"3. Найди 5-7 частных клиник-конкурентов клиники «{name}» в городе {city}. "
+                f"{profile_line}\n"
+                f"Для каждой ОБЯЗАТЕЛЬНО укажи: полное название, ТОЧНЫЙ URL "
+                f"(не «домен легко ищется», а конкретный https://...), "
+                f"физический адрес, чем отличается от клиники «{name}». "
+                f"Для каждого конкурента укажи рейтинг и количество отзывов "
+                f"на ПроДокторов, НаПоправку, Яндекс Карты (если есть). "
+                f"Не включай саму клинику «{name}» в список конкурентов. "
+                f"Источники: Яндекс Карты, 2ГИС, ПроДокторов, НаПоправку.\n\n"
+                f"4. Опиши типичного пациента клиник{spec_patient} в городе {city}: "
+                f"возраст, пол, доход, средний чек, как ищет клинику "
+                f"(поиск, карты, соцсети, сарафанное радио), критерии выбора.\n\n"
+                f"5. Опиши тренды рынка частной медицины в городе {city}: цифровизация, "
+                f"телемедицина, превентивная медицина, укрупнение сетей. "
+                f"Регулирование: лицензирование, ФЗ-152, ФЗ-38 «О рекламе».\n\n"
+                f"6. Найди слабые места конкурентов клиники «{name}», незанятые ниши "
+                f"и недоиспользованные маркетинговые каналы в городе {city}. "
+                f"На чём конкуренты теряют пациентов?\n\n"
+                f"ВАЖНО: Где есть точные цифры — укажи с источником. "
+                f"Где точных цифр нет — дай обоснованную оценку. "
+                f"НЕ пиши «нет данных» если можно дать аргументированную оценку."
             )
             return query
-        return f"Проанализируй конкурентную среду для клиники {name} в городе {city}"
+        return (
+            f"Проведи исследование конкурентной среды для клиники «{name}» "
+            f"в городе {city}. Найди конкретных конкурентов с адресами и сайтами."
+        )
 
     def _build_accumulated_context(self, state: PipelineState) -> str:
         """Собрать накопленный контекст из предыдущих фаз."""
@@ -740,53 +1047,136 @@ class PipelineEngine:
                 parts.append(f"=== {phase_name} ===\n{interp[:1000]}")
         return "\n\n".join(parts) if parts else ""
 
+    def _extract_competitors_from_perplexity(
+        self,
+        state: PipelineState,
+    ) -> list[dict] | None:
+        """Извлечь конкурентов с URL из Perplexity-данных (Multi-pass).
+
+        Pass 1 — Interpretation text (структурированный формат):
+          «Название: «СМ-Клиника» | URL: https://www.smclinic.ru/plastic/ | ...»
+
+        Pass 2 — Raw Perplexity answer (Markdown таблица):
+          | Конкурент | URL | ... |
+
+        Pass 3 — Fallback: только имена (без URL) → возвращаем None
+                 (сигнал использовать Apify Google Maps)
+
+        Returns:
+            list[dict] с ключами brand_name, website (минимум 1, максимум 7)
+            или None если не удалось извлечь конкурентов с URL.
+        """
+        import re
+
+        # ── Pass 1: Interpretation text (структурированный формат) ──────
+        interp = state.accumulated_data.get("PERPLEXITY_interpretation", "")
+        if interp and isinstance(interp, str) and len(interp) >= 30:
+            # Пропускаем «технические» ответы
+            if not any(phrase in interp for phrase in (
+                "запускаю", "попробую", "обойти ошибку", "ротацию ключей",
+            )):
+                competitors = []
+                # Формат: Название: «Имя» | URL: https://... | Специализация: ...
+                for m in re.finditer(
+                    r'Название:\s*[«"]([^»"]+?)[»"]\s*\|\s*URL:\s*(https?://[^\s|]+)',
+                    interp,
+                ):
+                    name = m.group(1).strip()
+                    website = m.group(2).strip().rstrip("/")
+                    if len(name) >= 3 and not website.startswith("http://localhost"):
+                        # Дедупликация по имени (lowercase)
+                        if not any(c["brand_name"].lower() == name.lower() for c in competitors):
+                            competitors.append({"brand_name": name, "website": website})
+
+                if competitors:
+                    logger.info(
+                        "PipelineEngine: Pass 1 — extracted %d competitors from interpretation",
+                        len(competitors),
+                    )
+                    return competitors[:7]
+
+        # ── Pass 2: Raw Perplexity answer (Markdown таблица) ─────────────
+        perplexity_data = state.accumulated_data.get("PERPLEXITY", {})
+        if isinstance(perplexity_data, dict):
+            raw_search = perplexity_data.get("perplexity_search", "")
+            if isinstance(raw_search, str) and raw_search:
+                try:
+                    raw_json = json.loads(raw_search)
+                    answer = ""
+                    if isinstance(raw_json, dict):
+                        answer = raw_json.get("answer") or raw_json.get("content") or raw_json.get("text") or ""
+                    if not answer and isinstance(raw_json, list):
+                        # Может быть список сообщений
+                        for item in raw_json:
+                            if isinstance(item, dict):
+                                answer = item.get("answer") or item.get("content") or ""
+                                if answer:
+                                    break
+                    if not answer:
+                        answer = str(raw_json)
+                except (json.JSONDecodeError, TypeError):
+                    answer = raw_search
+
+                if answer and len(answer) > 50:
+                    competitors = []
+                    # Ищем Markdown-таблицу: строки с | Конкурент | URL |
+                    # Формат: | **1. «Имя»** | [url](url) или url |
+                    table_pattern = re.compile(
+                        r'\|\s*\*?\*?\d+\.\s*[«"]([^»"]+?)[»"]\*?\*?\s*\|'
+                        r'\s*(?:\[([^\]]+)\]\(([^)]+)\)|(https?://[^\s|]+))',
+                        re.IGNORECASE,
+                    )
+                    for m in table_pattern.finditer(answer):
+                        name = m.group(1).strip()
+                        # URL может быть в markdown-ссылке или plain
+                        website = m.group(3) or m.group(4) or ""
+                        website = website.strip().rstrip("/")
+                        if len(name) >= 3 and website and not website.startswith("http://localhost"):
+                            if not any(c["brand_name"].lower() == name.lower() for c in competitors):
+                                competitors.append({"brand_name": name, "website": website})
+
+                    if competitors:
+                        logger.info(
+                            "PipelineEngine: Pass 2 — extracted %d competitors from raw answer",
+                            len(competitors),
+                        )
+                        return competitors[:7]
+
+        # ── Pass 3: Нет конкурентов с URL → сигнал использовать Apify ──
+        logger.info("PipelineEngine: no competitors with URLs from Perplexity, will fallback to Apify")
+        return None
+
     def _extract_competitor_names_from_perplexity(
         self,
         state: PipelineState,
     ) -> list[str] | None:
-        """Извлечь имена конкурентов из PERPLEXITY-интерпретации.
+        """Извлечь только ИМЕНА конкурентов из Perplexity-интерпретации.
 
-        Perplexity (deep research) должен обнаружить основных конкурентов
-        в городе/нише клиента. LLM-интерпретация перечисляет их имена.
+        Используется в fallback-пути: когда URL не найдены, но имена есть —
+        передаём их в find_competitors (Apify) как named_competitors.
 
-        Возвращает список имён (до 5) или None если не удалось извлечь.
+        Returns:
+            list[str] (до 5 имён) или None.
         """
+        import re
+
         interp = state.accumulated_data.get("PERPLEXITY_interpretation", "")
         if not interp or not isinstance(interp, str) or len(interp) < 30:
             return None
 
-        # Пропускаем «технические» ответы (LLM пытается что-то «запустить»)
+        # Пропускаем «технические» ответы
         if any(phrase in interp for phrase in (
             "запускаю", "попробую", "обойти ошибку", "ротацию ключей",
         )):
-            logger.warning("PipelineEngine: PERPLEXITY_interpretation looks like agent-talk, skipping")
             return None
-
-        import re
 
         names = set()
 
-        # Пытаемся распарсить как JSON (если LLM вернула структурированно)
-        try:
-            parsed = json.loads(interp)
-            if isinstance(parsed, dict):
-                json_names = parsed.get("competitors") or parsed.get("ключевые_игроки") or []
-                if isinstance(json_names, list) and json_names:
-                    return [str(n) for n in json_names[:5] if isinstance(n, str) and len(n) > 1]
-        except (json.JSONDecodeError, TypeError):
-            pass
-
-        # Кавычки: «Название» или "Название"
-        for m in re.finditer(r'[«"]([^»"]+?)[»"]', interp):
+        # Приоритет: структурированный формат "Название: «Имя»"
+        for m in re.finditer(r'Название:\s*[«"]([^»"]+?)[»"]', interp):
             candidate = m.group(1).strip()
-            # Фильтруем служебные слова и короткие/URL-подобные строки
-            if len(candidate) < 4:
-                continue
-            if candidate.startswith(("http", "www.", "клиник", "медицинск")):
-                continue
-            if candidate.lower() in ("санкт-петербург", "москва", "город", "находится", "ошибка"):
-                continue
-            names.add(candidate)
+            if len(candidate) >= 4 and not candidate.startswith(("http", "www.")):
+                names.add(candidate)
 
         if names:
             return list(names)[:5]
@@ -799,7 +1189,7 @@ class PipelineEngine:
             candidate = m.group(1).strip()
             if len(candidate) > 4 and candidate.lower() not in (
                 "клиника", "центр", "медицинский", "стоматология", "вывод", "заключение",
-                "город", "шаг", "конкуренты", "анализ", "результат",
+                "город", "шаг", "конкуренты", "анализ", "результат", "название",
             ):
                 names.add(candidate)
 
@@ -814,21 +1204,39 @@ class PipelineEngine:
             city = getattr(state, "client_city", "") or ""
             specialization = getattr(state, "client_specialization", "") or ""
             if city:
-                # Город уже определён через scraping /contacts — точный поиск
+                # v7.3: Естественный язык для Perplexity (LLM-поисковик).
+                # Keyword-строки («ИНН ОГРН клиника Москва») Perplexity не понимает —
+                # ему нужен человеческий запрос с явным интентом.
+                spec_text = f"Специализация клиники: {specialization}." if specialization else ""
                 query = (
-                    f'частные клиники конкуренты "{name}" в городе {city} '
+                    f"Найди информацию о частной клинике «{name}» в городе {city}. {spec_text}\n\n"
+                    f"Мне нужны ТОЛЬКО факты из источников:\n"
+                    f"1. ИНН, ОГРН, полное юридическое название, год основания клиники «{name}».\n"
+                    f"2. Объём рынка частной медицины в {city} "
+                    f"{'по специализации ' + specialization if specialization else ''}"
+                    f"— в рублях, с указанием года.\n"
+                    f"3. 5-7 главных конкурентов «{name}» в {city} — частные клиники. "
+                    f"Для каждой: полное название и физический адрес.\n"
+                    f"4. Портрет пациента в {city}"
+                    f"{' для специализации ' + specialization if specialization else ''}"
+                    f": возраст, доход, как ищет клиники, средний чек.\n"
+                    f"5. Тренды и регулирование рынка"
+                    f"{' ' + specialization if specialization else ' частной медицины'}"
+                    f" в России (лицензирование, законы, ФЗ-152).\n\n"
+                    f"Если по какому-то пункту данных нет — напиши «нет данных». "
+                    f"Никаких предположений, только подтверждённые цифры и факты."
                 )
-                if specialization:
-                    query += f'{specialization} в {city} '
-                query += f'медицинские центры {city} отзывы рейтинг'
                 return query
-            # Fallback: поиск с URL (старое поведение)
+            # Fallback: город не определён — ищем город + базовую информацию
+            spec_text = f"Специализация: {specialization}." if specialization else ""
             query = (
-                f'"{name}" {url} адрес город контакты где находится клиника '
+                f"Найди информацию о частной клинике «{name}» (сайт: {url}). {spec_text}\n\n"
+                f"Мне нужны ТОЛЬКО факты из источников:\n"
+                f"1. В каком городе находится клиника «{name}»? Полный адрес.\n"
+                f"2. ИНН, ОГРН, полное юридическое название, год основания.\n"
+                f"3. Кто главные конкуренты в этом городе? Названия и адреса.\n"
+                f"Если по какому-то пункту данных нет — напиши «нет данных»."
             )
-            if specialization:
-                query += f'{specialization} '
-            query += f'конкуренты медицинские центры частные клиники отзывы рейтинг'
             return query
         elif phase.name == "FORUM PAINS":
             # Боли пациентов на форумах
@@ -1208,20 +1616,38 @@ class PipelineEngine:
             return ""
 
         # Формируем данные для интерпретации
-        data_text = "\n\n".join(
-            f"### {name}\n{result[:3000]}"
-            for name, result in tool_results.items()
-        ) if tool_results else "Нет данных"
+        data_parts = []
+        for name, result in tool_results.items():
+            # Для perplexity_search — извлекаем answer из JSON, остальное — мусор
+            if name == "perplexity_search" and isinstance(result, str):
+                try:
+                    parsed = json.loads(result)
+                    answer = parsed.get("answer", "")
+                    if answer:
+                        data_parts.append(f"### {name}\n{answer[:10000]}")
+                        continue
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            data_parts.append(f"### {name}\n{result[:6000]}")
+        data_text = "\n\n".join(data_parts) if data_parts else "Нет данных"
 
         # Подготовка переменных для форматирования промпта
         perplexity = state.accumulated_data.get("PERPLEXITY_interpretation", "")
         if not perplexity or not isinstance(perplexity, str) or len(perplexity) < 30:
             perplexity = "Perplexity deep research недоступен — опирайся на свои знания."
+
+        # Контекст конкурентов из Фазы 1 (COMPETITORS) — доступен фазам 2+
+        competitors_ctx = state.accumulated_data.get("COMPETITORS_interpretation", "")
+        if not competitors_ctx or not isinstance(competitors_ctx, str) or len(competitors_ctx) < 20:
+            competitors_ctx = "Конкурентный анализ ещё не завершён — сравнивай с данными из Perplexity."
+
         format_vars = {
             "client_url": state.client_url,
+            "client_name": state.client_name or state.client_url or "клиника",
             "client_city": getattr(state, "client_city", "") or "не определён",
             "client_specialization": getattr(state, "client_specialization", "") or "не определена",
             "perplexity_context": perplexity,
+            "competitors_context": competitors_ctx,
         }
 
         prompt = (
@@ -1256,7 +1682,7 @@ class PipelineEngine:
                 enabled_toolsets=[],  # Без инструментов — чистый LLM
                 max_iterations=1,
                 quiet_mode=True,
-                max_tokens=4000,
+                max_tokens=8000,
             )
 
             loop = asyncio.get_running_loop()
@@ -1403,6 +1829,48 @@ class PipelineEngine:
             "phases": phases_data,
             "started_at": state.started_at,
         })
+
+    def _persist_phase_to_disk(
+        self, state: PipelineState, phase: Phase, result: PhaseResult
+    ) -> None:
+        """Сохранить сырые данные одной фазы на диск немедленно после выполнения.
+
+        В отличие от _persist_session_to_disk (полный дамп в конце),
+        этот метод пишет только данные только что завершённой фазы.
+        """
+        try:
+            from app.tools.session_archive import save_tool_output
+
+            if result.data:
+                save_tool_output(state.session_id, phase.name, result.data)
+                # Для каждого инструмента внутри фазы — отдельный файл
+                if isinstance(result.data, dict):
+                    for tool_name, tool_result in result.data.items():
+                        if isinstance(tool_result, (dict, list)):
+                            save_tool_output(state.session_id, f"{phase.name}/{tool_name}", tool_result)
+                        elif isinstance(tool_result, str) and len(tool_result.strip()) > 10:
+                            save_tool_output(
+                                state.session_id,
+                                f"{phase.name}/{tool_name}",
+                                {"content": str(tool_result)},
+                            )
+
+            if result.llm_interpretation:
+                save_tool_output(
+                    state.session_id,
+                    f"{phase.name}_interpretation",
+                    {"content": result.llm_interpretation},
+                )
+
+            logger.info(
+                "PipelineEngine: persisted phase %s to session_archive/%s",
+                phase.name, state.session_id[:12],
+            )
+        except Exception as e:
+            logger.warning(
+                "PipelineEngine: per-phase persist failed for %s: %s",
+                phase.name, e,
+            )
 
     def _persist_session_to_disk(self, state: PipelineState) -> None:
         """Сохранить накопленные данные пайплайна в session_archive на диск.

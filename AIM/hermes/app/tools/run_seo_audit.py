@@ -212,13 +212,14 @@ def _compact_audit_result(data: dict) -> dict:
     }
 
 
-async def handle_run_seo_audit(url=None, **kwargs) -> str:
+async def handle_run_seo_audit(url=None, competitors=None, **kwargs) -> str:
     """Run a full SEO audit on a client website.
 
     Starts async CI pipeline, polls until complete, returns compact result.
 
     Args:
         url: Website URL to audit (e.g., "https://clinic.ru")
+        competitors: Optional list of competitor URLs for comparison
 
     Returns:
         JSON string with audit results including:
@@ -226,23 +227,30 @@ async def handle_run_seo_audit(url=None, **kwargs) -> str:
         - time_to_result: estimated weeks to first results
         - cost_per_patient: estimated acquisition cost
     """
-    unpacked = _normalize_args(url, {"url": ""})
+    unpacked = _normalize_args(url, {"url": "", "competitors": None})
     if unpacked:
         url = unpacked["url"]
+        if competitors is None:
+            competitors = unpacked.get("competitors")
     # Auto-prepend https:// if URL has no protocol
     if url and not url.startswith(("http://", "https://")):
         url = "https://" + url
 
+    # Build cache key: URL + sorted competitor list fingerprint
+    _cache_key = url or ""
+    if competitors:
+        _cache_key += "|" + ",".join(sorted(str(c) for c in competitors))
+
     # Check cache — prevent duplicate API calls within the same session
-    cached = _seo_cache.get(url)
+    cached = _seo_cache.get(_cache_key)
     if cached is not None:
         cached_ts, cached_result = cached
         if time.time() - cached_ts < _SEO_CACHE_TTL:
-            logger.info("SEO audit cache HIT for URL: %s (age=%.0fs)", url, time.time() - cached_ts)
+            logger.info("SEO audit cache HIT for key: %s (age=%.0fs)", _cache_key, time.time() - cached_ts)
             return cached_result
         else:
-            del _seo_cache[url]
-            logger.info("SEO audit cache EXPIRED for URL: %s", url)
+            del _seo_cache[_cache_key]
+            logger.info("SEO audit cache EXPIRED for key: %s", _cache_key)
 
     logger.info("Running SEO audit for URL: %s", url)
 
@@ -256,7 +264,7 @@ async def handle_run_seo_audit(url=None, **kwargs) -> str:
             push_tool_progress("seo", "⚙️ Запускаю технический аудит…")
             start_response = await client.post(
                 f"{AIM_API_BASE}/api/seo/audit",
-                json={"url": url, "tier": "quick"},
+                json={"url": url, "tier": "quick", "competitors": competitors or []},
             )
             start_response.raise_for_status()
             start_data = start_response.json()
@@ -273,8 +281,8 @@ async def handle_run_seo_audit(url=None, **kwargs) -> str:
                 push_tool_progress("seo", "✅ SEO-аудит готов!")
                 compact = _compact_quick_result(start_data)
                 result_json = json.dumps(compact, ensure_ascii=False, indent=2)
-                _seo_cache[url] = (time.time(), result_json)
-                logger.info("SEO audit quick tier completed: compacted %d chars, cached", len(result_json))
+                _seo_cache[_cache_key] = (time.time(), result_json)
+                logger.info("SEO audit quick tier completed: compacted %d chars, cached (key=%s)", len(result_json), _cache_key)
                 return result_json
 
             logger.info("SEO audit task started (deep/full): %s", task_id)
@@ -305,7 +313,7 @@ async def handle_run_seo_audit(url=None, **kwargs) -> str:
                     data = status_data.get("result", {})
                     compact = _compact_audit_result(data)
                     result_json = json.dumps(compact, ensure_ascii=False, indent=2)
-                    _seo_cache[url] = (time.time(), result_json)
+                    _seo_cache[_cache_key] = (time.time(), result_json)
                     logger.info("SEO audit completed (task %s): %d polls, compacted %d chars, cached",
                                 task_id, poll_count, len(result_json))
                     return result_json

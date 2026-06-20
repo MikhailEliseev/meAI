@@ -61,6 +61,7 @@ def register_all_tools() -> None:
     _import_tool("run_ads_report")
     _import_tool("run_ads_intelligence")
     _import_tool("run_pagespeed")
+    _import_tool("run_tech_seo_audit")
     _import_tool("run_review_platforms")
     _import_tool("run_smi_mentions")
     _import_tool("crawlee_web")

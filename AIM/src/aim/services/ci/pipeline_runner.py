@@ -686,13 +686,17 @@ def _detect_features(soup) -> list[str]:
 
 
 def _count_doctors(soup) -> int:
-    """Count unique doctor/staff profile elements by CSS classes and card patterns."""
+    """Count unique doctor/staff profile elements by CSS classes, card patterns,
+    and Russian name+image heuristic (ФИО in img alt text).
+    """
+    import re as _re
+    seen: set[int] = set()
+
+    # ── Method 1: CSS class matching ──
     doctor_selectors = [
         "doctor", "specialist", "employee", "staff", "vrach",
         "врач", "специалист", "сотрудник", "доктор",
     ]
-
-    seen: set[int] = set()
     for selector in doctor_selectors:
         for el in soup.find_all(
             class_=lambda c, s=selector: (
@@ -707,7 +711,39 @@ def _count_doctors(soup) -> int:
         ):
             seen.add(id(el))
 
-    # Fallback: detect repeating card patterns with person-related content
+    # ── Method 2: Russian full-name pattern in img alt text ──
+    # Matches patterns like "Якимец Валерий Григорьевич" or "Иванова Мария"
+    name_pattern = _re.compile(
+        r'[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+(?:\s+[А-ЯЁ][а-яё]+)?'
+    )
+    for img in soup.find_all("img", alt=True):
+        alt = img.get("alt", "").strip()
+        if name_pattern.search(alt):
+            # Walk up to find the card container (up to 3 levels)
+            parent = img.parent
+            for _ in range(3):
+                if parent is None:
+                    break
+                parent = parent.parent
+            if parent is not None:
+                seen.add(id(parent))
+            else:
+                seen.add(id(img))
+
+    # ── Method 3: Elements containing both image and name text ──
+    if not seen:
+        for container in soup.find_all(["div", "li", "article", "section"]):
+            imgs = container.find_all("img", alt=True)
+            if not imgs:
+                continue
+            has_name_img = any(
+                name_pattern.search(img.get("alt", ""))
+                for img in imgs
+            )
+            if has_name_img:
+                seen.add(id(container))
+
+    # ── Method 4: Card patterns with person-related content ──
     if not seen:
         cards = soup.find_all("article") or soup.find_all(
             "li", class_=lambda c: (
@@ -722,6 +758,15 @@ def _count_doctors(soup) -> int:
             text = card.get_text().lower()
             if any(kw in text for kw in person_keywords):
                 seen.add(id(card))
+
+    # ── Method 5: Single-doctor bio page (h1 with Russian full name) ──
+    if not seen:
+        h1 = soup.find("h1")
+        if h1:
+            h1_text = h1.get_text(strip=True)
+            if name_pattern.search(h1_text):
+                # Single-doctor bio page — count as 1
+                seen.add(id(h1))
 
     return len(seen)
 

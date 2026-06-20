@@ -42,7 +42,7 @@ def _build_system_prompt() -> str:
     )
 
 
-async def _call_perplexity(prompt: str, model: str = None, temperature: float = 0.3, max_tokens: int = 3000) -> str:
+async def _call_perplexity(prompt: str, model: str = None, temperature: float = 0.3, max_tokens: int = 12000) -> str:
     """Call Perplexity API (OpenAI-compatible)."""
     from openai import AsyncOpenAI
 
@@ -64,7 +64,7 @@ async def _call_perplexity(prompt: str, model: str = None, temperature: float = 
     return response.choices[0].message.content or ""
 
 
-async def _call_llm(prompt: str, temperature: float = 0.3, max_tokens: int = 3000) -> str:
+async def _call_llm(prompt: str, temperature: float = 0.3, max_tokens: int = 12000) -> str:
     """Call configured LLM (DeepSeek via OMNIROUTE)."""
     from openai import AsyncOpenAI
 

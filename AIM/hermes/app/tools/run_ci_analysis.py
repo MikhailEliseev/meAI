@@ -25,24 +25,38 @@ def _normalize_args(first_param, defaults):
 
 
 def _normalize_competitor(comp) -> dict:
-    """Normalize a competitor to {'name': str, 'url': str} dict.
+    """Normalize a competitor dict for the AIM API.
 
     LLM may pass bare strings, objects with 'website' instead of 'url',
-    or clinic names without URLs. This handles all cases gracefully.
+    or clinic names without URLs. Preserves all extra data (revenue, trend,
+    rating, social_links) so the CI pipeline can use it.
     """
     if isinstance(comp, str):
         if comp.startswith(("http://", "https://")):
             name = comp.split("//")[-1].split("/")[0].replace("www.", "")[:40]
-            return {"name": name, "url": comp}
-        # Clinic name without URL — pass as name, API needs a url too
-        return {"name": comp, "url": ""}
+            return {"brand_name": name, "website": comp}
+        return {"brand_name": comp, "website": ""}
     if isinstance(comp, dict):
-        url = comp.get("url", comp.get("website", ""))
-        name = comp.get("name", comp.get("brand_name", ""))
+        # Use website key to match CompetitorJson schema, preserve all extra data
+        url = comp.get("website", comp.get("url", ""))
+        name = comp.get("brand_name") or comp.get("legal_name") or comp.get("name", "")
         if not name and url:
             name = url.split("//")[-1].split("/")[0].replace("www.", "")[:40]
-        return {"name": name or "unknown", "url": url}
-    return {"name": "unknown", "url": ""}
+        result = {
+            "brand_name": name or "unknown",
+            "legal_name": comp.get("legal_name", name or ""),
+            "website": url,
+            "revenue_year": comp.get("revenue_year"),
+            "profit_year": comp.get("profit_year"),
+            "revenue_trend": comp.get("revenue_trend"),
+            "employee_count": comp.get("employee_count"),
+            "rating": comp.get("rating"),
+            "reviews_count": comp.get("reviews_count"),
+            "social_links": comp.get("social_links", {}),
+            "services": comp.get("services", []),
+        }
+        return result
+    return {"brand_name": "unknown", "website": ""}
 
 
 AIM_API_BASE = "http://aim-app:8000"
@@ -112,8 +126,8 @@ async def handle_run_ci_analysis(
     # Normalize competitors: LLM may pass bare strings or {website} objects
     competitors = [_normalize_competitor(c) for c in competitors]
     # Filter out competitors without URLs — warn but don't fail
-    no_url = [c["name"] for c in competitors if not c["url"]]
-    competitors = [c for c in competitors if c["url"]]
+    no_url = [c.get("brand_name", "unknown") for c in competitors if not c.get("website")]
+    competitors = [c for c in competitors if c.get("website")]
     if not competitors:
         return json.dumps({
             "error": "No competitors with valid URLs",

@@ -89,3 +89,6 @@ class PipelineState:
     accumulated_data: dict[str, Any] = field(default_factory=dict)
     started_at: str = ""
     mode: str = "ONBOARDING"
+    chat_id: int = 0  # Telegram chat_id (0 = не Telegram)
+    placeholder_page_url: str = ""  # URL страницы-заглушки
+    placeholder_post_id: int = 0  # WordPress post_id заглушки
