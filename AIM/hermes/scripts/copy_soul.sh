@@ -34,19 +34,8 @@ else
     echo "[copy_soul] SOUL.md already present at $TARGET (up to date)"
 fi
 
-# Copy supplementary knowledge files referenced by SOUL.md
-# SOUL.md line 13: "services.md, processes.md, kpi.md (загружаются отдельно AIAgent)"
-# These provide detailed service descriptions, processes, and KPIs
-for FILE in services.md processes.md kpi.md; do
-    SRC="/opt/hermes/skills/aim/$FILE"
-    DST="${HERMES_HOME}/$FILE"
-    if [ -f "$SRC" ]; then
-        cp "$SRC" "$DST"
-        echo "[copy_soul] $FILE copied to $DST ($(wc -l < "$DST") lines)"
-    else
-        echo "[copy_soul] WARNING: $FILE not found at $SRC" >&2
-    fi
-done
+# Supplementary knowledge files (services.md, processes.md, kpi.md) are no longer
+# required — they don't exist anymore. SOUL.md is the single source of truth.
 
 # ── Trigger bootstrap self-study in background ───────────────────────
 if [ -x /opt/hermes/scripts/bootstrap.sh ]; then

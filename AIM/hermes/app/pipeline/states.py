@@ -53,7 +53,7 @@ class PhaseResult:
         tool_calls_made: Список инструментов, которые были вызваны.
         llm_interpretation: LLM-интерпретация данных фазы (текст).
     """
-    phase_id: int
+    phase_id: float
     status: PhaseStatus
     data: Optional[dict] = None
     error_message: Optional[str] = None
@@ -70,7 +70,7 @@ class PipelineState:
         session_id: ID сессии чата.
         client_url: URL сайта клиента.
         client_name: Название клиники (заполняется из prescan).
-        current_phase: Индекс текущей фазы (0-based).
+        current_phase: Индекс текущей фазы (float: 0.0, 0.5, 1.0, ...).
         phases: Словарь {phase_id: PhaseResult} результатов всех фаз.
         retry_counts: Словарь {phase_id: int} счётчиков ретраев.
         accumulated_data: Накопленные данные из всех фаз.
@@ -81,10 +81,11 @@ class PipelineState:
     client_url: str
     client_name: str = ""
     client_city: str = ""  # Определяется из /contacts страницы
-    client_specialization: str = ""  # Определяется из главной страницы сайта (до PERPLEXITY)
-    current_phase: int = 0
-    phases: dict[int, PhaseResult] = field(default_factory=dict)
-    retry_counts: dict[int, int] = field(default_factory=dict)
+    client_specialization: str = ""  # Определяется из главной страницы сайта (до PRE-FLIGHT)
+    client_inn: str = ""  # ИНН клиники (из /contacts или /rekvizity, до FINANCE)
+    current_phase: float = 0.0
+    phases: dict[float, PhaseResult] = field(default_factory=dict)
+    retry_counts: dict[float, int] = field(default_factory=dict)
     accumulated_data: dict[str, Any] = field(default_factory=dict)
     started_at: str = ""
     mode: str = "ONBOARDING"
