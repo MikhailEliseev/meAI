@@ -1004,8 +1004,6 @@ try:
         name="run_aim_scout",
         toolset="aim-operations",
         schema={
-            "type": "function",
-            "function": {
                 "name": "run_aim_scout",
                 "description": (
                     "16-фазная глубокая разведка конкурента (aim-scout pipeline). "
@@ -1037,7 +1035,6 @@ try:
                     "required": ["name", "website"],
                 },
             },
-        },
         handler=run_aim_scout_pipeline,
         check_fn=lambda: True,
         is_async=True,

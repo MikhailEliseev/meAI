@@ -281,8 +281,6 @@ registry.register(
     name="run_background_pipeline",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "run_background_pipeline",
             "description": (
                 "BACKGROUND pipeline for Phase 2+3 of presale. "
@@ -317,7 +315,6 @@ registry.register(
                 "required": ["session_hash", "url"],
             },
         },
-    },
     handler=handle_run_background_pipeline,
     check_fn=lambda: True,
     is_async=True,

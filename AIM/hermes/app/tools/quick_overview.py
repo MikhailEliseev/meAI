@@ -156,8 +156,6 @@ registry.register(
     name="quick_overview",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "quick_overview",
             "description": (
                 "RAPID Perplexity-powered overview of a clinic website (~5 seconds). "
@@ -180,7 +178,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_quick_overview,
     check_fn=lambda: bool(PERPLEXITY_API_KEY),
     is_async=True,

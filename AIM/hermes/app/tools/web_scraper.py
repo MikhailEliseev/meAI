@@ -77,6 +77,53 @@ async def handle_web_fetch(url=None, parse_html=False, max_length=None, **kwargs
                 "content": content,
             }, ensure_ascii=False)
 
+        # ── Framework-level JS fallback (v3.3++ Plan A++) ────────────────
+        # If HTML is suspiciously short (< 5KB) or contains JS-render markers,
+        # automatically retry via crawlee_scrape which executes JavaScript.
+        # This bypasses the LLM needing to detect JS sites explicitly.
+        try:
+            content = resp.text  # full raw HTML for JS detection
+            js_markers = [
+                '<div id="root"></div>',
+                '<div id="app"></div>',
+                '<div id="root"/>',
+                'You need to enable JavaScript',
+                'Please enable JavaScript',
+            ]
+            looks_like_js_shell = (
+                len(resp.text) < 5000
+                or any(marker in resp.text for marker in js_markers)
+            )
+            if looks_like_js_shell and "text/html" in content_type:
+                logger.info("web_fetch: JS-rendered site detected (%d bytes), auto-fallback to crawlee_scrape", len(resp.text))
+                try:
+                    from .crawlee_web import handle_crawlee_scrape
+                    crawlee_result = await handle_crawlee_scrape(url=url)
+                    # crawlee returns JSON string; parse it and merge metadata
+                    import json as _json
+                    try:
+                        cl_data = _json.loads(crawlee_result)
+                        if isinstance(cl_data, dict) and cl_data.get("content"):
+                            cl_content = cl_data["content"][:max_len]
+                            return _json.dumps({
+                                "status_code": resp.status_code,
+                                "content_type": content_type,
+                                "url": str(resp.url),
+                                "length": len(cl_data.get("content", "")),
+                                "returned_chars": len(cl_content),
+                                "content": cl_content,
+                                "via": "crawlee_scrape (auto-fallback: JS site)",
+                                "original_length": len(resp.text),
+                            }, ensure_ascii=False)
+                    except Exception:
+                        pass  # fall through to normal return
+                except ImportError:
+                    logger.debug("crawlee_web not available for JS fallback")
+                except Exception as exc:
+                    logger.debug("crawlee fallback failed: %s", exc)
+        except Exception:
+            pass
+
     except httpx.TimeoutException:
         return json.dumps({"error": f"Timeout fetching {url[:120]}"})
     except Exception as e:
@@ -182,8 +229,6 @@ registry.register(
     name="web_fetch",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "web_fetch",
             "description": (
                 "Fetch a web page and return its content. "
@@ -209,7 +254,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_web_fetch,
     check_fn=lambda: True,
     is_async=True,
@@ -221,8 +265,6 @@ registry.register(
     name="web_search",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "web_search",
             "description": (
                 "Search the web via DuckDuckGo (free, no API key). "
@@ -244,7 +286,6 @@ registry.register(
                 "required": ["query"],
             },
         },
-    },
     handler=handle_web_search,
     check_fn=lambda: True,
     is_async=True,
@@ -256,8 +297,6 @@ registry.register(
     name="browser_screenshot",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "browser_screenshot",
             "description": (
                 "Take a screenshot of a web page using headless Chromium (Playwright). "
@@ -279,7 +318,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_browser_screenshot,
     check_fn=lambda: True,
     is_async=True,

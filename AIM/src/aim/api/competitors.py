@@ -275,6 +275,8 @@ async def analyze_competitors(body: AnalyzeCompetitorsRequest) -> AnalyzeCompeti
             "tier": body.tier,
             "target_audience": body.target_audience or "",
             "price_segment": body.price_segment or "mid",
+            "client_revenue": body.client_revenue,
+            "client_rating": body.client_rating,
         })
 
         # Map dict result to backwards-compatible response fields.

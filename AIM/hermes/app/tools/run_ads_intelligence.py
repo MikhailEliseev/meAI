@@ -273,8 +273,6 @@ registry.register(
     name="run_ads_intelligence",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "run_ads_intelligence",
             "description": (
                 "Analyse a competitor's advertising strategy across Facebook/Instagram "
@@ -301,7 +299,6 @@ registry.register(
                 "required": ["company_name"],
             },
         },
-    },
     handler=handle_run_ads_intelligence,
     check_fn=lambda: True,
     is_async=True,

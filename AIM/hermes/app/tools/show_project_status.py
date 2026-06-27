@@ -69,8 +69,6 @@ registry.register(
     name="show_project_status",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "show_project_status",
             "description": (
                 "Show current project status including active tasks, recent KPIs, "
@@ -88,7 +86,6 @@ registry.register(
                 "required": ["project_id"],
             },
         },
-    },
     handler=handle_show_project_status,
     check_fn=lambda: True,
     is_async=True,

@@ -104,8 +104,6 @@ registry.register(
     name="update_knowledge",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "update_knowledge",
             "description": (
                 "Update a client's knowledge vault file. "
@@ -136,7 +134,6 @@ registry.register(
                 "required": ["client_id", "filename", "content"],
             },
         },
-    },
     handler=handle_update_knowledge,
     check_fn=lambda: True,
     is_async=True,

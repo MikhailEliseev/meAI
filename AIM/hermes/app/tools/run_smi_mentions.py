@@ -197,8 +197,6 @@ registry.register(
     name="run_smi_mentions",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "run_smi_mentions",
             "description": "Search mass media mentions for a clinic across Business (Forbes, RBC), Medical (Vademec), Regional, and Lifestyle sources.",
             "parameters": {
@@ -209,7 +207,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_run_smi_mentions,
     check_fn=lambda: True,
     is_async=True,

@@ -70,8 +70,6 @@ registry.register(
     name="get_lead_pipeline",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "get_lead_pipeline",
             "description": (
                 "Get the sales pipeline overview — total conversations, "
@@ -89,7 +87,6 @@ registry.register(
                 "required": [],
             },
         },
-    },
     handler=handle_get_lead_pipeline,
     check_fn=lambda: True,
     is_async=True,

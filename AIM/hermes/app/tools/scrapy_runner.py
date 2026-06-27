@@ -191,8 +191,6 @@ registry.register(
     name="scrapy_crawl",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "scrapy_crawl",
             "description": (
                 "Crawl a website using Scrapy framework. Follows internal links, "
@@ -215,7 +213,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_scrapy_crawl,
     check_fn=_check_scrapy,
     is_async=True,

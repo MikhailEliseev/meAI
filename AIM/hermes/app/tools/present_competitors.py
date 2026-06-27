@@ -106,8 +106,6 @@ registry.register(
     name="present_competitors",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "present_competitors",
             "description": (
                 "Save the final competitor selection to the lead's pre-sale/ folder. "
@@ -142,7 +140,6 @@ registry.register(
                 "required": ["lead_id", "status"],
             },
         },
-    },
     handler=handle_present_competitors,
     check_fn=lambda: True,
     is_async=True,

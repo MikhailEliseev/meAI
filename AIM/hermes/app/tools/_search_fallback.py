@@ -37,6 +37,20 @@ async def _perplexity_search(query: str, max_results: int) -> list[dict]:
         logger.info("_search_fallback: Perplexity — no API key, skipping")
         return []
 
+    # P5: file cache check
+    import hashlib
+    cache_key = f"search_{hashlib.sha256((query + str(max_results)).encode()).hexdigest()[:24]}"
+    try:
+        from app.tools._file_cache import file_cache
+        import json as _json
+        cached = await file_cache.get(cache_key)
+        if cached is not None:
+            results = _json.loads(cached)
+            logger.info("_search_fallback: Perplexity cache HIT %d results for '%s'", len(results), query[:60])
+            return results
+    except Exception:
+        pass
+
     # ── Определяем, site-specific ли это запрос ─────────────────
     site_domain = ""
     search_topic = query
@@ -118,20 +132,16 @@ async def _perplexity_search(query: str, max_results: int) -> list[dict]:
             results = []
             seen_urls = set()
 
-            # First, use citations (most reliable — actual URLs Perplexity searched)
-            for url in citations:
-                if url not in seen_urls:
-                    seen_urls.add(url)
-                    # Try to find a matching title in the content
-                    title = _extract_title_for_url(content, url)
-                    description = _extract_snippet_for_url(content, url)
-                    results.append({
-                        "title": title or url.split("//")[-1].split("/")[0],
-                        "url": url,
-                        "description": description or "",
-                    })
+            # Parse content using citation markers [N] (Perplexity's standard format)
+            # Format: "- **Title** — description.[N]" where N is 1-based index into citations[]
+            parsed_from_content = _parse_perplexity_content(content, citations)
 
-            # If not enough from citations, parse the numbered list from content
+            for item in parsed_from_content:
+                if item["url"] not in seen_urls:
+                    seen_urls.add(item["url"])
+                    results.append(item)
+
+            # If not enough from citation markers, try legacy parsing
             if len(results) < max_results:
                 parsed = _parse_numbered_results(content)
                 for item in parsed:
@@ -139,50 +149,289 @@ async def _perplexity_search(query: str, max_results: int) -> list[dict]:
                         seen_urls.add(item["url"])
                         results.append(item)
 
+            # Fallback 3: narrative format — Perplexity returned prose with
+            # inline citation markers [N] instead of bullet list.
+            # Extract sentences around each unique citation.
+            if not results and citations:
+                parsed = _parse_narrative_citations(content, citations)
+                for item in parsed:
+                    if item["url"] not in seen_urls and len(results) < max_results:
+                        seen_urls.add(item["url"])
+                        results.append(item)
+
+            # Fallback 4: last resort — use citations directly with URL-derived titles
+            if not results and citations:
+                from urllib.parse import urlparse
+                for url in citations[:max_results]:
+                    if url not in seen_urls:
+                        seen_urls.add(url)
+                        parsed_url = urlparse(url)
+                        domain = parsed_url.netloc.replace("www.", "")
+                        path = parsed_url.path.strip("/")
+                        # Try to extract meaningful title from content
+                        title = _extract_title_for_url(content, url)
+                        if not title:
+                            title = f"{domain}/{path.split('/')[-1]}" if path else domain
+                        results.append({
+                            "title": title[:200],
+                            "url": url,
+                            "description": _extract_snippet_for_url(content, url),
+                        })
+
             if results:
                 logger.info("_search_fallback: Perplexity returned %d results for '%s'",
                            len(results), query[:60])
+                # P5: save to file cache
+                try:
+                    import json as _json
+                    from app.tools._file_cache import file_cache
+                    await file_cache.set(cache_key, _json.dumps(results[:max_results]))
+                except Exception:
+                    pass
                 return results[:max_results]
 
             logger.info("_search_fallback: Perplexity 0 results for '%s'", query[:60])
+            # P5: cache empty results too (prevent repeat calls for sites with no content)
+            try:
+                import json as _json
+                from app.tools._file_cache import file_cache
+                await file_cache.set(cache_key, _json.dumps([]))
+            except Exception:
+                pass
             return []
 
     except Exception as e:
         logger.warning("_search_fallback: Perplexity error: %s", str(e)[:120])
         return []
+    finally:
+        # P5: cleanup expired cache entries to prevent directory growth
+        try:
+            from app.tools._file_cache import file_cache
+            file_cache.cleanup_expired()
+        except Exception:
+            pass
+
+
+def _parse_perplexity_content(content: str, citations: list[str]) -> list[dict]:
+    """Parse Perplexity response using citation markers [N].
+
+    Perplexity format:
+      "- **Title** — description.[N]"
+    where [N] is a 1-based index into the citations array.
+
+    Returns list[dict] with {title, url, description}.
+    """
+    results = []
+    if not citations:
+        return results
+
+    # Split content into lines and process each one
+    for line in content.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+
+        # Find citation markers like [7], [3], [12] at end of line or within text
+        cite_matches = list(re.finditer(r'\[(\d+)\]', line))
+        if not cite_matches:
+            continue
+
+        # Use the last citation number in the line
+        last_cite = cite_matches[-1]
+        cite_num = int(last_cite.group(1))
+
+        # Convert 1-based to 0-based index
+        if cite_num < 1 or cite_num > len(citations):
+            continue
+        url = citations[cite_num - 1]
+
+        # Remove the citation marker(s) from the line for clean text
+        clean_line = re.sub(r'\s*\[\d+\]', '', line).strip()
+
+        # Remove leading list markers: "- ", "• ", "* ", "1. ", "2. "
+        clean_line = re.sub(r'^[-•*]\s*', '', clean_line)
+        clean_line = re.sub(r'^\d+[\.\)]\s*', '', clean_line)
+
+        # Extract title from **bold** markers
+        title = ""
+        bold_match = re.search(r'\*\*(.+?)\*\*', clean_line)
+        if bold_match:
+            title = bold_match.group(1).strip()
+            # Description is everything after the bold part
+            after_bold = clean_line[bold_match.end():].strip()
+            # Remove leading " — " or " - " separator
+            description = re.sub(r'^[—\-]\s*', '', after_bold).strip()
+        else:
+            # No bold — use the whole line as title (up to first separator)
+            sep_match = re.search(r'\s*[—\-]\s*', clean_line)
+            if sep_match:
+                title = clean_line[:sep_match.start()].strip()
+                description = clean_line[sep_match.end():].strip()
+            else:
+                title = clean_line
+                description = ""
+
+        # Clean up title: remove common artifacts
+        title = title.strip(" -*•#0123456789. ")
+        title = re.sub(r'\*+', '', title).strip()
+
+        if title and len(title) > 3:
+            results.append({
+                "title": title[:200],
+                "url": url,
+                "description": description[:300] if description else "",
+            })
+
+    return results
+
+
+def _parse_narrative_citations(content: str, citations: list[str]) -> list[dict]:
+    """Parse narrative-format Perplexity response with inline citation markers.
+
+    Format: "text...[N]...text...[M]..." where [N] are inline citation markers
+    embedded in prose paragraphs (not bullet lists).
+
+    Extracts the sentence or text segment around each unique citation marker
+    and pairs it with the corresponding URL from the citations array.
+    """
+    results = []
+    if not citations:
+        return results
+
+    seen_cites = set()
+    for m in re.finditer(r'\[(\d+)\]', content):
+        cite_num = int(m.group(1))
+        if cite_num < 1 or cite_num > len(citations):
+            continue
+        if cite_num in seen_cites:
+            continue
+        seen_cites.add(cite_num)
+
+        # Extract context around citation: look backwards and forwards
+        # for sentence boundaries to get a meaningful snippet
+        pos = m.start()
+        sentence_start = max(0, pos - 250)
+        text_before = content[sentence_start:pos]
+
+        # Find last sentence boundary before citation
+        for sep in ['. ', '! ', '? ', '.\n', '!\n', '?\n', ': ']:
+            last_sep = text_before.rfind(sep)
+            if last_sep > 30:
+                sentence_start = sentence_start + last_sep + len(sep)
+                break
+
+        sentence_end = min(len(content), pos + 250)
+        text_after = content[pos:sentence_end]
+        for sep in ['. ', '! ', '? ', '\n']:
+            next_sep = text_after.find(sep, 5)
+            if next_sep > 30:
+                sentence_end = pos + next_sep + 1
+                break
+
+        snippet = content[sentence_start:sentence_end].strip()
+        # Remove citation markers and extra whitespace
+        snippet = re.sub(r'\s*\[\d+\]', '', snippet)
+        snippet = re.sub(r'\s+', ' ', snippet).strip()
+
+        if snippet and len(snippet) > 10:
+            results.append({
+                "title": snippet[:200],
+                "url": citations[cite_num - 1],
+                "description": "",
+            })
+
+    return results
 
 
 def _extract_title_for_url(content: str, url: str) -> str:
     """Try to find a page title associated with a URL in Perplexity's response."""
     domain = url.split("//")[-1].split("/")[0].replace("www.", "")
-    # Look for patterns like "Title (domain.com)" or "[Title](url)"
+
+    # Strategy 1: Find the specific URL in the text and extract the preceding title.
+    # Perplexity often returns: **Title** — https://url.com/... — Description
+    # Or: **Title** (https://url.com/...) — Description
+    url_escaped = re.escape(url)
+    # Look for "**Title** — URL" or "Title — URL" pattern
+    title_url_pattern = re.compile(
+        r'\*{0,2}([^*\n]{5,200}?)\*{0,2}\s*[—\-]\s*' + url_escaped,
+        re.IGNORECASE,
+    )
+    match = title_url_pattern.search(content)
+    if match:
+        title = match.group(1).strip(" -*•#0123456789. ")
+        if len(title) > 5:
+            return title[:200]
+
+    # Strategy 2: Find a shorter segment around the URL (max 2 URLs in same line)
     for line in content.split("\n"):
-        if domain in line or url.split("/")[-1] in line:
-            # Extract text before the URL/domain
-            cleaned = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', line)
-            cleaned = re.sub(r'\([^)]*\)', '', cleaned)
-            cleaned = cleaned.strip(" -•*#0123456789. ")
-            if cleaned and len(cleaned) > 5:
-                return cleaned[:200]
+        if url not in line and domain not in line:
+            continue
+        # If line is very long (>500 chars), it contains many results. Extract segment around URL.
+        if len(line) > 500:
+            url_pos = line.find(url)
+            if url_pos < 0:
+                url_pos = line.find(domain)
+            if url_pos >= 0:
+                # Look backwards for a title separator (—, **, •)
+                segment_start = max(0, url_pos - 300)
+                prefix = line[segment_start:url_pos]
+                # Find the last title-like marker before URL
+                for sep in [" — ", " - ", " • ", "  "]:
+                    last_sep = prefix.rfind(sep)
+                    if last_sep > 20:
+                        candidate = prefix[last_sep + len(sep):].strip(" -*•#0123456789. ")
+                        if 5 < len(candidate) < 200:
+                            return candidate
+                # Fallback: last **text** before URL
+                bold_matches = list(re.finditer(r'\*\*(.+?)\*\*', prefix))
+                if bold_matches:
+                    candidate = bold_matches[-1].group(1).strip()
+                    if len(candidate) > 3:
+                        return candidate[:200]
+        # Shorter line — use the whole thing
+        cleaned = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', line)
+        cleaned = re.sub(r'\([^)]*\)', '', cleaned)
+        cleaned = cleaned.strip(" -•*#0123456789. ")
+        if cleaned and len(cleaned) > 5 and len(cleaned) < 300:
+            return cleaned[:200]
+        # Strip markdown bold
+        cleaned = re.sub(r'\*+', '', cleaned).strip()
+        if cleaned and 5 < len(cleaned) < 300:
+            return cleaned[:200]
+
     return ""
 
 
 def _extract_snippet_for_url(content: str, url: str) -> str:
     """Try to find a description snippet for a URL."""
     domain = url.split("//")[-1].split("/")[0].replace("www.", "")
-    lines = content.split("\n")
-    for i, line in enumerate(lines):
-        if domain in line or url.split("/")[-1] in line:
-            # Look at the next line for a description
-            if i + 1 < len(lines):
-                next_line = lines[i + 1].strip(" -•*#0123456789. ")
-                if next_line and len(next_line) > 10:
-                    return next_line[:300]
-            # Or the current line after the URL
-            after_url = line.split(url)[-1] if url in line else line.split(domain)[-1]
-            after_url = after_url.strip(" -•:*#()[]")
+    url_escaped = re.escape(url)
+
+    # Strategy 1: "URL — Description" or "URL — **Description**" pattern
+    snippet_pattern = re.compile(
+        url_escaped + r'\s*[—\-]\s*\*{0,2}([^*\n]{20,300}?)\*{0,2}(?:\s*[—\-]|\s*$)',
+        re.IGNORECASE,
+    )
+    match = snippet_pattern.search(content)
+    if match:
+        desc = match.group(1).strip(" -*•#0123456789. ")
+        if len(desc) > 10:
+            return desc[:300]
+
+    # Strategy 2: Look for text after URL in the same line
+    for line in content.split("\n"):
+        if url not in line and domain not in line:
+            continue
+        after_url = line.split(url)[-1] if url in line else ""
+        if after_url:
+            # Take text up to next URL or line end
+            next_url = re.search(r'https?://', after_url)
+            if next_url:
+                after_url = after_url[:next_url.start()]
+            after_url = after_url.strip(" -•:*#()[]↔→\n")
             if after_url and len(after_url) > 10:
                 return after_url[:300]
+
     return ""
 
 

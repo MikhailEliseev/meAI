@@ -1,0 +1,581 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]: AIM
+    - navigation [ref=e4]:
+      - link "Type" [ref=e5] [cursor=pointer]:
+        - /url: https://iamaim.ru/wp-content/themes/aim-theme/design-showcase-dual-theme.html#typography
+      - link "Colors" [ref=e6] [cursor=pointer]:
+        - /url: https://iamaim.ru/wp-content/themes/aim-theme/design-showcase-dual-theme.html#colors
+      - link "Badges" [ref=e7] [cursor=pointer]:
+        - /url: https://iamaim.ru/wp-content/themes/aim-theme/design-showcase-dual-theme.html#badges
+      - link "Cards" [ref=e8] [cursor=pointer]:
+        - /url: https://iamaim.ru/wp-content/themes/aim-theme/design-showcase-dual-theme.html#cards
+      - link "Forms" [ref=e9] [cursor=pointer]:
+        - /url: https://iamaim.ru/wp-content/themes/aim-theme/design-showcase-dual-theme.html#forms
+      - link "Metrics" [ref=e10] [cursor=pointer]:
+        - /url: https://iamaim.ru/wp-content/themes/aim-theme/design-showcase-dual-theme.html#metrics
+    - button "Toggle theme" [ref=e11] [cursor=pointer]: 🌓
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - generic [ref=e14]: Design System
+      - heading "Dual Theme Design System" [level=1] [ref=e15]:
+        - text: Dual Theme
+        - text: Design System
+      - paragraph [ref=e16]: Один набор шрифтов, две личности. Светлая тема — монохромный минимализм. Тёмная тема — роскошь Art Deco с золотом.
+      - generic [ref=e17]:
+        - button "Primary Button" [ref=e18] [cursor=pointer]
+        - button "Outline Button" [ref=e19] [cursor=pointer]
+    - separator [ref=e20]
+    - generic [ref=e21]:
+      - generic [ref=e22]: Typography
+      - heading "Fonts — Universal" [level=2] [ref=e23]
+      - paragraph [ref=e24]: Playfair Display (serif) для заголовков + Jost (geometric sans) для текста. Одинаковые в обеих темах. Чистая геометрия и королевская элегантность.
+      - heading "Display" [level=1] [ref=e25]
+      - heading "Heading — Playfair Display 400" [level=2] [ref=e26]
+      - heading "Subheading — Playfair Display 500" [level=3] [ref=e27]
+      - paragraph [ref=e28]: Body text uses Jost, a geometric sans-serif with clean lines. Perfect for UI elements and longer content.
+      - paragraph [ref=e29]: Jost (regular) — основной текст, 15–16px, line-height 1.7
+      - paragraph [ref=e30]: Jost (small) — детали, кепшены, подписи
+      - text: Jost (label) — uppercase лейблы
+    - separator [ref=e31]
+    - generic [ref=e32]:
+      - generic [ref=e33]: Palette & Indicators
+      - heading "Color System" [level=2] [ref=e34]
+      - paragraph [ref=e35]: "Светлая тема: чёрный + белый + серый. Тёмная тема: чёрный + золото #c9a96e. Автоматическая инверсия при переключении."
+      - generic [ref=e36]:
+        - generic [ref=e38]: Background
+        - generic [ref=e40]: Text / Accent
+        - generic [ref=e42]: Surface
+        - generic [ref=e44]: Accent
+      - heading "Metric Tags — Indicators" [level=3] [ref=e45]
+      - paragraph [ref=e46]: "Цветные маркеры для показателей: зелёный (отлично), жёлтый (внимание), красный (критично), синий (инфо), серый (нейтрально)"
+      - generic [ref=e47]:
+        - generic [ref=e48]: Отлично
+        - generic [ref=e50]: Внимание
+        - generic [ref=e52]: Критично
+        - generic [ref=e54]: Информация
+        - generic [ref=e56]: Нейтрально
+    - separator [ref=e58]
+    - generic [ref=e59]:
+      - generic [ref=e60]: Labels
+      - heading "Badges & Tags" [level=2] [ref=e61]
+      - paragraph [ref=e62]: Лаконичные бейджи с точкой-индикатором. Категории, теги, статусы.
+      - generic [ref=e63]:
+        - generic [ref=e64]: Active
+        - generic [ref=e66]: Healthcare
+        - generic [ref=e68]: B2B
+        - generic [ref=e70]: Medical
+        - generic [ref=e72]: Premium
+    - separator [ref=e74]
+    - generic [ref=e75]:
+      - generic [ref=e76]: Navigation
+      - heading "Expandable Tabs" [level=2] [ref=e77]
+      - paragraph [ref=e78]: Анимированные табы с иконками. При выборе раскрывается текстовый label. Адаптация компонента с 21st.dev — чистый CSS, без JavaScript.
+      - generic [ref=e79]:
+        - button "Tasks" [ref=e80] [cursor=pointer]:
+          - img [ref=e81]
+          - generic [ref=e84]: Tasks
+        - button "Chat" [ref=e86] [cursor=pointer]:
+          - img [ref=e87]
+          - generic: Chat
+        - button "Activity" [ref=e90] [cursor=pointer]:
+          - img [ref=e91]
+          - generic: Activity
+      - paragraph [ref=e93]: Кликни по табу — лейбл раскроется с анимацией
+    - separator [ref=e94]
+    - generic [ref=e95]:
+      - generic [ref=e96]: Data Display
+      - heading "Stats & Highlights" [level=2] [ref=e97]
+      - paragraph [ref=e98]: Геройские цифры, акцентные блоки и glass-карточки.
+      - heading "Hero Stats" [level=4] [ref=e99]
+      - generic [ref=e100]:
+        - generic [ref=e101]:
+          - generic [ref=e102]: 12.5 млн ₽
+          - generic [ref=e103]: Выручка 2025
+        - generic [ref=e104]:
+          - generic [ref=e105]: "4.8"
+          - generic [ref=e106]: Рейтинг Яндекс
+        - generic [ref=e107]:
+          - generic [ref=e108]: "245"
+          - generic [ref=e109]: Отзывов
+        - generic [ref=e110]:
+          - generic [ref=e111]: "18"
+          - generic [ref=e112]: Врачей
+      - heading "Surface Block" [level=4] [ref=e113]
+      - paragraph [ref=e115]: Акцентный блок с левой границей. Используется для важных заметок, выводов и инсайтов в отчётах.
+      - heading "Glass Card" [level=4] [ref=e116]
+      - generic [ref=e117]:
+        - heading "Glass-эффект" [level=3] [ref=e118]
+        - paragraph [ref=e119]: "backdrop-filter: blur(20px) saturate(1.4). «Дышащая» анимация card-breathe. Используется для акцентных блоков поверх фона с водяными кольцами."
+    - separator [ref=e120]
+    - generic [ref=e121]:
+      - generic [ref=e122]: Glass Data
+      - heading "Glass Statistics" [level=2] [ref=e123]
+      - paragraph [ref=e124]: Матовое стекло с blur-эффектом. Каждая цифра в своей «льдинке». Hover усиливает прозрачность и поднимает карточку.
+      - generic [ref=e125]:
+        - generic [ref=e126]:
+          - generic [ref=e127]: "127"
+          - generic [ref=e128]: Клиник
+        - generic [ref=e129]:
+          - generic [ref=e130]: "340"
+          - generic [ref=e131]: Пресейлов
+        - generic [ref=e132]:
+          - generic [ref=e133]: 94%
+          - generic [ref=e134]: Точность AI
+        - generic [ref=e135]:
+          - generic [ref=e136]: "4.8"
+          - generic [ref=e137]: Рейтинг
+      - heading "Glass Panel" [level=4] [ref=e138]
+      - generic [ref=e139]:
+        - heading "Матовое стекло + акцентная линия" [level=3] [ref=e140]
+        - paragraph [ref=e141]: Полупрозрачный блок с левой accent-границей. Идеален для инсайтов, ключевых выводов и важных сообщений в отчётах. blur(20px) + saturate(1.4).
+    - separator [ref=e142]
+    - generic [ref=e143]:
+      - generic [ref=e144]: Glass Layout
+      - heading "Glass Card Grids" [level=2] [ref=e145]
+      - paragraph [ref=e146]: Те же 1px gap, но с матовым стеклом. Каждая карточка — «льдинка» с blur и полупрозрачностью. При наведении стекло «очищается».
+      - heading "Glass Cards × 3" [level=4] [ref=e147]
+      - generic [ref=e148]:
+        - generic [ref=e149]:
+          - heading "Пресейл-анализ" [level=3] [ref=e150]
+          - paragraph [ref=e151]: "Автоматический сбор данных о клинике: SEO, контент, конкуренты, реклама. 24 часа от заявки до КП."
+        - generic [ref=e152]:
+          - heading "Конкурентная разведка" [level=3] [ref=e153]
+          - paragraph [ref=e154]: Глубокий анализ до 15 конкурентов одновременно. 50+ метрик на каждого.
+        - generic [ref=e155]:
+          - heading "AI-стратегия" [level=3] [ref=e156]
+          - paragraph [ref=e157]: Hermes формирует стратегию продвижения на основе данных, без человеческих ошибок.
+      - heading "Glass Cards × 2" [level=4] [ref=e158]
+      - generic [ref=e159]:
+        - generic [ref=e160]:
+          - heading "Для маркетологов" [level=3] [ref=e161]
+          - paragraph [ref=e162]: Замените рутину на AI. Автоматизируйте сбор данных, освободите время для стратегии и креатива.
+        - generic [ref=e163]:
+          - heading "Для владельцев клиник" [level=3] [ref=e164]
+          - paragraph [ref=e165]: Прозрачная аналитика без «воды». Принимайте решения на основе цифр, а не интуиции.
+    - separator [ref=e166]
+    - generic [ref=e167]:
+      - generic [ref=e168]: Glass Metrics
+      - heading "Glass Table & Tags" [level=2] [ref=e169]
+      - paragraph [ref=e170]: Таблица и карточки с metric tags внутри матового стекла. Вся аналитика в одном визуальном стиле.
+      - heading "Glass Metric Cards" [level=4] [ref=e171]
+      - generic [ref=e172]:
+        - generic [ref=e173]:
+          - heading "Яндекс.Директ" [level=3] [ref=e174]
+          - paragraph [ref=e175]: CTR 12.4%, конверсия 8.2%
+          - generic [ref=e176]: Выше рынка
+        - generic [ref=e178]:
+          - heading "SEO-продвижение" [level=3] [ref=e179]
+          - paragraph [ref=e180]: Позиции по 23 запросам из 45
+          - generic [ref=e181]: Растёт
+        - generic [ref=e183]:
+          - heading "Социальные сети" [level=3] [ref=e184]
+          - paragraph [ref=e185]: Охват снизился на 34%
+          - generic [ref=e186]: Падение
+      - heading "Glass Table" [level=4] [ref=e188]
+      - table [ref=e190]:
+        - rowgroup [ref=e191]:
+          - row "Показатель Ваша клиника Рынок Статус" [ref=e192]:
+            - columnheader "Показатель" [ref=e193]
+            - columnheader "Ваша клиника" [ref=e194]
+            - columnheader "Рынок" [ref=e195]
+            - columnheader "Статус" [ref=e196]
+        - rowgroup [ref=e197]:
+          - row "Рейтинг на Яндекс.Картах 4.8 4.2 Лидер" [ref=e198]:
+            - cell "Рейтинг на Яндекс.Картах" [ref=e199]:
+              - strong [ref=e200]: Рейтинг на Яндекс.Картах
+            - cell "4.8" [ref=e201]
+            - cell "4.2" [ref=e202]
+            - cell "Лидер" [ref=e203]:
+              - generic [ref=e204]: Лидер
+          - row "Скорость сайта (PageSpeed) 65 58 Выше среднего" [ref=e206]:
+            - cell "Скорость сайта (PageSpeed)" [ref=e207]
+            - cell "65" [ref=e208]
+            - cell "58" [ref=e209]
+            - cell "Выше среднего" [ref=e210]:
+              - generic [ref=e211]: Выше среднего
+          - row "Количество отзывов 245 180 Отлично" [ref=e213]:
+            - cell "Количество отзывов" [ref=e214]
+            - cell "245" [ref=e215]
+            - cell "180" [ref=e216]
+            - cell "Отлично" [ref=e217]:
+              - generic [ref=e218]: Отлично
+          - row "Конверсия сайта 2.1% 3.4% Ниже рынка" [ref=e220]:
+            - cell "Конверсия сайта" [ref=e221]
+            - cell "2.1%" [ref=e222]
+            - cell "3.4%" [ref=e223]
+            - cell "Ниже рынка" [ref=e224]:
+              - generic [ref=e225]: Ниже рынка
+          - row "Доля рекламного трафика 68% 45% Зависимость" [ref=e227]:
+            - cell "Доля рекламного трафика" [ref=e228]
+            - cell "68%" [ref=e229]
+            - cell "45%" [ref=e230]
+            - cell "Зависимость" [ref=e231]:
+              - generic [ref=e232]: Зависимость
+    - separator [ref=e234]
+    - generic [ref=e235]:
+      - generic [ref=e236]: Forms
+      - heading "Glass Input Fields" [level=2] [ref=e237]
+      - paragraph [ref=e238]: Поля ввода с матовым стеклом. При фокусе — accent-бордер и мягкое свечение. Минималистично и функционально.
+      - generic [ref=e239]:
+        - generic [ref=e240]:
+          - generic [ref=e241]: Название компании
+          - textbox "ООО «Ваша клиника»" [ref=e242]
+        - generic [ref=e243]:
+          - generic [ref=e244]: Email
+          - textbox "hello@clinic.ru" [ref=e245]
+        - generic [ref=e246]:
+          - generic [ref=e247]: Телефон
+          - textbox "+7 (999) 123-45-67" [ref=e248]
+        - generic [ref=e249]:
+          - generic [ref=e250]: Сообщение
+          - textbox "Опишите вашу задачу или задайте вопрос..." [ref=e251]
+        - button "Отправить заявку" [ref=e252] [cursor=pointer]
+    - separator [ref=e253]
+    - generic [ref=e254]:
+      - generic [ref=e255]: Social Proof
+      - heading "Glass Testimonial" [level=2] [ref=e256]
+      - paragraph [ref=e257]: Отзыв в матовом стекле с «дышащей» анимацией. Playfair Display italic для цитаты.
+      - generic [ref=e258]:
+        - blockquote [ref=e259]: «AIM сделал пресейл за сутки. Мы получили разбор конкурентов, SEO-аудит и готовое КП. Ни один маркетолог не давал такой глубины.»
+        - text: — Анна В., владелец клиники «Эстетика», г. Казань
+    - separator [ref=e260]
+    - generic [ref=e261]:
+      - generic [ref=e262]: Conversion
+      - heading "Glass CTA Block" [level=2] [ref=e263]
+      - paragraph [ref=e264]: Финальный призыв к действию в матовом стекле с accent-бордером. Усиленный blur для максимального контраста с фоном.
+      - generic [ref=e265]:
+        - heading "Готовы вырастить клинику?" [level=2] [ref=e266]
+        - paragraph [ref=e267]: Бесплатный пресейл-анализ за 24 часа. Без обязательств, без предоплаты.
+        - button "Получить анализ" [ref=e268] [cursor=pointer]
+    - separator [ref=e269]
+    - generic [ref=e270]:
+      - generic [ref=e271]: Layout
+      - heading "Card Grids" [level=2] [ref=e272]
+      - paragraph [ref=e273]: 1px gap между карточками, hover с lift-эффектом. Две и три колонки.
+      - heading "Grid × 2" [level=4] [ref=e274]
+      - generic [ref=e275]:
+        - generic [ref=e276]:
+          - heading "AI-First Подход" [level=3] [ref=e277]
+          - paragraph [ref=e278]: Hermes AI анализирует рынок, конкурентов, SEO и контент. Без рутины и человеческого фактора.
+        - generic [ref=e279]:
+          - heading "Глубокая Аналитика" [level=3] [ref=e280]
+          - paragraph [ref=e281]: Каждое решение основано на данных — от поиска конкурентов до финального КП.
+      - heading "Grid × 3" [level=4] [ref=e282]
+      - generic [ref=e283]:
+        - generic [ref=e284]:
+          - heading "Скорость" [level=3] [ref=e285]
+          - paragraph [ref=e286]: Пресейл за 24 часа вместо недель. Автоматический сбор и анализ данных.
+        - generic [ref=e287]:
+          - heading "Точность" [level=3] [ref=e288]
+          - paragraph [ref=e289]: AI не пропускает деталей. 50+ метрик по каждому конкуренту.
+        - generic [ref=e290]:
+          - heading "Масштаб" [level=3] [ref=e291]
+          - paragraph [ref=e292]: Одновременный анализ до 15 конкурентов. Без увеличения команды.
+      - heading "Cards with Lists" [level=4] [ref=e293]
+      - generic [ref=e294]:
+        - generic [ref=e295]:
+          - heading "Инструменты" [level=3] [ref=e296]
+          - list [ref=e297]:
+            - listitem [ref=e298]: — Конкурентная разведка
+            - listitem [ref=e299]: — SEO-аудит
+            - listitem [ref=e300]: — Контент-анализ
+            - listitem [ref=e301]: — Отчёт по рекламе
+        - generic [ref=e302]:
+          - heading "Результаты" [level=3] [ref=e303]
+          - list [ref=e304]:
+            - listitem [ref=e305]: — SWOT-анализ
+            - listitem [ref=e306]: — Рекомендации по позиционированию
+            - listitem [ref=e307]: — План продвижения
+            - listitem [ref=e308]: — Финансовая модель
+    - separator [ref=e309]
+    - generic [ref=e310]:
+      - generic [ref=e311]: Metrics
+      - heading "Cards & Table with Tags" [level=2] [ref=e312]
+      - paragraph [ref=e313]: Метрики с цветовыми индикаторами в карточках и таблицах. Быстрая оценка состояния проекта.
+      - heading "Cards with Metric Tags" [level=4] [ref=e314]
+      - generic [ref=e315]:
+        - generic [ref=e316]:
+          - heading "SEO-оптимизация" [level=3] [ref=e317]
+          - paragraph [ref=e318]: Видимость в поисковых системах
+          - generic [ref=e319]: Отличный результат
+        - generic [ref=e321]:
+          - heading "Скорость загрузки" [level=3] [ref=e322]
+          - paragraph [ref=e323]: "PageSpeed Insights: 65/100"
+          - generic [ref=e324]: Требует внимания
+        - generic [ref=e326]:
+          - heading "Мобильная версия" [level=3] [ref=e327]
+          - paragraph [ref=e328]: Критические ошибки адаптива
+          - generic [ref=e329]: Нужен редизайн
+      - heading "Competitor Table with Tags" [level=4] [ref=e331]
+      - table [ref=e333]:
+        - rowgroup [ref=e334]:
+          - row "Конкурент Рейтинг Отзывов Врачей Статус" [ref=e335]:
+            - columnheader "Конкурент" [ref=e336]
+            - columnheader "Рейтинг" [ref=e337]
+            - columnheader "Отзывов" [ref=e338]
+            - columnheader "Врачей" [ref=e339]
+            - columnheader "Статус" [ref=e340]
+        - rowgroup [ref=e341]:
+          - row "Ваша клиника 4.8 245 18 Лидер" [ref=e342]:
+            - cell "Ваша клиника" [ref=e343]:
+              - strong [ref=e344]: Ваша клиника
+            - cell "4.8" [ref=e345]
+            - cell "245" [ref=e346]
+            - cell "18" [ref=e347]
+            - cell "Лидер" [ref=e348]:
+              - generic [ref=e349]: Лидер
+          - row "Конкурент 1 4.5 180 12 Средний" [ref=e351]:
+            - cell "Конкурент 1" [ref=e352]
+            - cell "4.5" [ref=e353]
+            - cell "180" [ref=e354]
+            - cell "12" [ref=e355]
+            - cell "Средний" [ref=e356]:
+              - generic [ref=e357]: Средний
+          - row "Конкурент 2 4.6 220 15 Сильный" [ref=e359]:
+            - cell "Конкурент 2" [ref=e360]
+            - cell "4.6" [ref=e361]
+            - cell "220" [ref=e362]
+            - cell "15" [ref=e363]
+            - cell "Сильный" [ref=e364]:
+              - generic [ref=e365]: Сильный
+          - row "Конкурент 3 3.9 95 8 Слабый" [ref=e367]:
+            - cell "Конкурент 3" [ref=e368]
+            - cell "3.9" [ref=e369]
+            - cell "95" [ref=e370]
+            - cell "8" [ref=e371]
+            - cell "Слабый" [ref=e372]:
+              - generic [ref=e373]: Слабый
+      - heading "Timeline" [level=4] [ref=e375]
+      - generic [ref=e376]:
+        - generic [ref=e377]:
+          - generic [ref=e378]: Шаг 1
+          - heading "Глубокий анализ" [level=3] [ref=e379]
+          - paragraph [ref=e380]: Собираем данные о конкурентах, SEO, контенте, рекламе
+        - generic [ref=e381]:
+          - generic [ref=e382]: Шаг 2
+          - heading "SWOT-анализ" [level=3] [ref=e383]
+          - paragraph [ref=e384]: Выявляем сильные и слабые стороны, возможности, угрозы
+        - generic [ref=e385]:
+          - generic [ref=e386]: Шаг 3
+          - heading "Стратегия" [level=3] [ref=e387]
+          - paragraph [ref=e388]: Формируем план действий на основе данных
+    - separator [ref=e389]
+    - generic [ref=e390]:
+      - generic [ref=e391]: Hermes AI
+      - heading "Task Orchestrator" [level=2] [ref=e392]
+      - paragraph [ref=e393]: Живая панель задач Hermes. Адаптация компонента agent-plan в dual-theme стиле. Кликай по задачам — разворачивай сабтаски, меняй статусы.
+      - generic [ref=e394]:
+        - generic [ref=e395]:
+          - generic [ref=e397]: Task Orchestrator
+          - generic [ref=e398]: 5 pending
+          - button "▶ Demo" [ref=e399] [cursor=pointer]
+        - list [ref=e400]:
+          - listitem [ref=e401]:
+            - generic [ref=e402] [cursor=pointer]:
+              - img [ref=e405]
+              - generic [ref=e407]:
+                - generic [ref=e408]: Research Project Requirements
+                - generic [ref=e410]: pending
+              - img [ref=e411]
+            - list [ref=e415]:
+              - listitem [ref=e416]:
+                - generic [ref=e417] [cursor=pointer]:
+                  - img [ref=e420]
+                  - generic [ref=e422]: Interview stakeholders
+                - generic [ref=e423]:
+                  - paragraph [ref=e424]: Conduct interviews with key stakeholders to understand needs
+                  - generic [ref=e425]: MCP Servers
+                  - generic [ref=e426]:
+                    - generic [ref=e427]: communication-agent
+                    - generic [ref=e428]: meeting-scheduler
+              - listitem [ref=e429]:
+                - generic [ref=e430] [cursor=pointer]:
+                  - img [ref=e433]
+                  - generic [ref=e435]: Review existing documentation
+                - generic [ref=e436]:
+                  - paragraph [ref=e437]: Go through all available documentation and extract requirements
+                  - generic [ref=e438]: MCP Servers
+                  - generic [ref=e439]:
+                    - generic [ref=e440]: file-system
+                    - generic [ref=e441]: browser
+              - listitem [ref=e442]:
+                - generic [ref=e443] [cursor=pointer]:
+                  - img [ref=e446]
+                  - generic [ref=e448]: Compile findings report
+                - generic [ref=e449]:
+                  - paragraph [ref=e450]: Create a comprehensive report of all gathered information
+                  - generic [ref=e451]: MCP Servers
+                  - generic [ref=e452]:
+                    - generic [ref=e453]: file-system
+                    - generic [ref=e454]: markdown-processor
+          - listitem [ref=e455]:
+            - generic [ref=e456] [cursor=pointer]:
+              - img [ref=e459]
+              - generic [ref=e461]:
+                - generic [ref=e462]: Design System Architecture
+                - generic [ref=e464]: pending
+              - img [ref=e465]
+            - list [ref=e469]:
+              - listitem [ref=e470]:
+                - generic [ref=e471] [cursor=pointer]:
+                  - img [ref=e474]
+                  - generic [ref=e476]: Define component structure
+                - generic [ref=e477]:
+                  - paragraph [ref=e478]: Map out all required components and their interactions
+                  - generic [ref=e479]: MCP Servers
+                  - generic [ref=e480]:
+                    - generic [ref=e481]: architecture-planner
+                    - generic [ref=e482]: diagramming-tool
+              - listitem [ref=e483]:
+                - generic [ref=e484] [cursor=pointer]:
+                  - img [ref=e487]
+                  - generic [ref=e489]: Create data flow diagrams
+                - generic [ref=e490]:
+                  - paragraph [ref=e491]: Design diagrams showing how data will flow through the system
+                  - generic [ref=e492]: MCP Servers
+                  - generic [ref=e493]:
+                    - generic [ref=e494]: diagramming-tool
+                    - generic [ref=e495]: file-system
+              - listitem [ref=e496]:
+                - generic [ref=e497] [cursor=pointer]:
+                  - img [ref=e500]
+                  - generic [ref=e502]: Document API specifications
+                - generic [ref=e503]:
+                  - paragraph [ref=e504]: Write detailed specifications for all APIs in the system
+                  - generic [ref=e505]: MCP Servers
+                  - generic [ref=e506]:
+                    - generic [ref=e507]: api-designer
+                    - generic [ref=e508]: openapi-generator
+          - listitem [ref=e509]:
+            - generic [ref=e510] [cursor=pointer]:
+              - img [ref=e513]
+              - generic [ref=e515]:
+                - generic [ref=e516]: Implementation Planning
+                - generic [ref=e517]:
+                  - generic [ref=e518]: "1"
+                  - generic [ref=e519]: "2"
+                  - generic [ref=e520]: pending
+              - img [ref=e521]
+            - list [ref=e525]:
+              - listitem [ref=e526]:
+                - generic [ref=e527] [cursor=pointer]:
+                  - img [ref=e530]
+                  - generic [ref=e532]: Resource allocation
+                - generic [ref=e533]:
+                  - paragraph [ref=e534]: Determine required resources and allocate them to tasks
+                  - generic [ref=e535]: MCP Servers
+                  - generic [ref=e536]:
+                    - generic [ref=e537]: project-manager
+                    - generic [ref=e538]: resource-calculator
+              - listitem [ref=e539]:
+                - generic [ref=e540] [cursor=pointer]:
+                  - img [ref=e543]
+                  - generic [ref=e545]: Timeline development
+                - generic [ref=e546]:
+                  - paragraph [ref=e547]: Create a timeline with milestones and deadlines
+                  - generic [ref=e548]: MCP Servers
+                  - generic [ref=e549]:
+                    - generic [ref=e550]: timeline-generator
+                    - generic [ref=e551]: gantt-chart-creator
+              - listitem [ref=e552]:
+                - generic [ref=e553] [cursor=pointer]:
+                  - img [ref=e556]
+                  - generic [ref=e558]: Risk assessment
+                - generic [ref=e559]:
+                  - paragraph [ref=e560]: Identify potential risks and develop mitigation strategies
+                  - generic [ref=e561]: MCP Servers
+                  - generic [ref=e563]: risk-analyzer
+          - listitem [ref=e564]:
+            - generic [ref=e565] [cursor=pointer]:
+              - img [ref=e568]
+              - generic [ref=e570]:
+                - generic [ref=e571]: Development Environment Setup
+                - generic [ref=e573]: pending
+              - img [ref=e574]
+            - list [ref=e578]:
+              - listitem [ref=e579]:
+                - generic [ref=e580] [cursor=pointer]:
+                  - img [ref=e583]
+                  - generic [ref=e585]: Install development tools
+                - generic [ref=e586]:
+                  - paragraph [ref=e587]: Set up IDEs, version control, and other necessary development tools
+                  - generic [ref=e588]: MCP Servers
+                  - generic [ref=e589]:
+                    - generic [ref=e590]: shell
+                    - generic [ref=e591]: package-manager
+              - listitem [ref=e592]:
+                - generic [ref=e593] [cursor=pointer]:
+                  - img [ref=e596]
+                  - generic [ref=e598]: Configure CI/CD pipeline
+                - generic [ref=e599]:
+                  - paragraph [ref=e600]: Set up continuous integration and deployment pipelines
+                  - generic [ref=e601]: MCP Servers
+                  - generic [ref=e602]:
+                    - generic [ref=e603]: github-actions
+                    - generic [ref=e604]: gitlab-ci
+                    - generic [ref=e605]: jenkins-connector
+              - listitem [ref=e606]:
+                - generic [ref=e607] [cursor=pointer]:
+                  - img [ref=e610]
+                  - generic [ref=e612]: Set up testing framework
+                - generic [ref=e613]:
+                  - paragraph [ref=e614]: Configure automated testing frameworks for the project
+                  - generic [ref=e615]: MCP Servers
+                  - generic [ref=e616]:
+                    - generic [ref=e617]: test-runner
+                    - generic [ref=e618]: shell
+          - listitem [ref=e619]:
+            - generic [ref=e620] [cursor=pointer]:
+              - img [ref=e623]
+              - generic [ref=e625]:
+                - generic [ref=e626]: Initial Development Sprint
+                - generic [ref=e627]:
+                  - generic [ref=e628]: "4"
+                  - generic [ref=e629]: pending
+              - img [ref=e630]
+            - list [ref=e634]:
+              - listitem [ref=e635]:
+                - generic [ref=e636] [cursor=pointer]:
+                  - img [ref=e639]
+                  - generic [ref=e641]: Implement core features
+                - generic [ref=e642]:
+                  - paragraph [ref=e643]: Develop the essential features identified in the requirements
+                  - generic [ref=e644]: MCP Servers
+                  - generic [ref=e645]:
+                    - generic [ref=e646]: code-assistant
+                    - generic [ref=e647]: github
+                    - generic [ref=e648]: file-system
+                    - generic [ref=e649]: shell
+              - listitem [ref=e650]:
+                - generic [ref=e651] [cursor=pointer]:
+                  - img [ref=e654]
+                  - generic [ref=e656]: Perform unit testing
+                - generic [ref=e657]:
+                  - paragraph [ref=e658]: Create and execute unit tests for implemented features
+                  - generic [ref=e659]: MCP Servers
+                  - generic [ref=e660]:
+                    - generic [ref=e661]: test-runner
+                    - generic [ref=e662]: code-coverage-analyzer
+              - listitem [ref=e663]:
+                - generic [ref=e664] [cursor=pointer]:
+                  - img [ref=e667]
+                  - generic [ref=e669]: Document code
+                - generic [ref=e670]:
+                  - paragraph [ref=e671]: Create documentation for the implemented code
+                  - generic [ref=e672]: MCP Servers
+                  - generic [ref=e673]:
+                    - generic [ref=e674]: documentation-generator
+                    - generic [ref=e675]: markdown-processor
+    - separator [ref=e676]
+    - generic [ref=e677]:
+      - generic [ref=e678]: Call to Action
+      - heading "Conversion Block" [level=2] [ref=e679]
+      - paragraph [ref=e680]: Финальный CTA-блок с жирной рамкой и акцентной кнопкой.
+      - generic [ref=e681]:
+        - heading "Готовы начать?" [level=2] [ref=e682]
+        - paragraph [ref=e683]: Получите бесплатный пресейл-анализ вашей клиники за 24 часа
+        - button "Получить анализ" [ref=e684] [cursor=pointer]
+  - generic [ref=e685]:
+    - paragraph [ref=e686]: Dual Theme Design System —
+    - paragraph [ref=e687]: Переключи тему кнопкой 🌓 в шапке

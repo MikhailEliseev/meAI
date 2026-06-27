@@ -1,0 +1,150 @@
+{
+  "success": true,
+  "chat_summary": "Аудит рынка пластическая хирургия и косметология в Москва. Найдено 5 конкурентов. Интенсивность конкуренции: средняя. Уровень диджитализации: unknown. Потенциал: ~35 пациентов/мес (первые результаты — 12 нед.).",
+  "feature_matrix": {
+    "competitor_0": {
+      "url": "",
+      "seo_score": "?",
+      "seo_label": "не проверен",
+      "rating": null,
+      "reputation_label": "нет данных",
+      "pricing_visible": false,
+      "online_booking": false
+    },
+    "competitor_1": {
+      "url": "",
+      "seo_score": "?",
+      "seo_label": "не проверен",
+      "rating": null,
+      "reputation_label": "нет данных",
+      "pricing_visible": false,
+      "online_booking": false
+    },
+    "competitor_2": {
+      "url": "",
+      "seo_score": "?",
+      "seo_label": "не проверен",
+      "rating": null,
+      "reputation_label": "нет данных",
+      "pricing_visible": false,
+      "online_booking": false
+    },
+    "competitor_3": {
+      "url": "",
+      "seo_score": "?",
+      "seo_label": "не проверен",
+      "rating": null,
+      "reputation_label": "нет данных",
+      "pricing_visible": false,
+      "online_booking": false
+    },
+    "competitor_4": {
+      "url": "",
+      "seo_score": "?",
+      "seo_label": "не проверен",
+      "rating": null,
+      "reputation_label": "нет данных",
+      "pricing_visible": false,
+      "online_booking": false
+    }
+  },
+  "pricing_comparison": {
+    "competitor_0": {
+      "primary_consult": null,
+      "popular_service": null,
+      "price_positioning": "неизвестно"
+    },
+    "competitor_1": {
+      "primary_consult": null,
+      "popular_service": null,
+      "price_positioning": "неизвестно"
+    },
+    "competitor_2": {
+      "primary_consult": null,
+      "popular_service": null,
+      "price_positioning": "неизвестно"
+    },
+    "competitor_3": {
+      "primary_consult": null,
+      "popular_service": null,
+      "price_positioning": "неизвестно"
+    },
+    "competitor_4": {
+      "primary_consult": null,
+      "popular_service": null,
+      "price_positioning": "неизвестно"
+    }
+  },
+  "positioning_map": {
+    "competitive_intensity": "средняя",
+    "digital_maturity": "unknown",
+    "market_size": "средний",
+    "readable": "Рынок пластическая хирургия и косметология в Москва: конкуренция средняя, уровень диджитализации unknown. Найдено 5 конкурентов."
+  },
+  "steal_worthy_tactics": [],
+  "top_recommendation": "Проведите полный SEO-аудит для выявления точек роста.",
+  "duration_seconds": 0.0,
+  "error": null,
+  "competitor_details": [
+    {
+      "name": "competitor_0",
+      "url": "",
+      "revenue": null,
+      "revenue_trend": null,
+      "doctors_count": null,
+      "instagram_subscribers": null,
+      "instagram_username": "",
+      "seo_score": null,
+      "gm_rating": null,
+      "gm_reviews_count": null
+    },
+    {
+      "name": "competitor_1",
+      "url": "",
+      "revenue": null,
+      "revenue_trend": null,
+      "doctors_count": null,
+      "instagram_subscribers": null,
+      "instagram_username": "",
+      "seo_score": null,
+      "gm_rating": null,
+      "gm_reviews_count": null
+    },
+    {
+      "name": "competitor_2",
+      "url": "",
+      "revenue": null,
+      "revenue_trend": null,
+      "doctors_count": null,
+      "instagram_subscribers": null,
+      "instagram_username": "",
+      "seo_score": null,
+      "gm_rating": null,
+      "gm_reviews_count": null
+    },
+    {
+      "name": "competitor_3",
+      "url": "",
+      "revenue": null,
+      "revenue_trend": null,
+      "doctors_count": null,
+      "instagram_subscribers": null,
+      "instagram_username": "",
+      "seo_score": null,
+      "gm_rating": null,
+      "gm_reviews_count": null
+    },
+    {
+      "name": "competitor_4",
+      "url": "",
+      "revenue": null,
+      "revenue_trend": null,
+      "doctors_count": null,
+      "instagram_subscribers": null,
+      "instagram_username": "",
+      "seo_score": null,
+      "gm_rating": null,
+      "gm_reviews_count": null
+    }
+  ]
+}

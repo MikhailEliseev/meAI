@@ -124,8 +124,6 @@ registry.register(
     name="run_geo_audit",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "run_geo_audit",
             "description": (
                 "Run a full GEO (Generative Engine Optimization) audit on a website. "
@@ -150,7 +148,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_run_geo_audit,
     is_async=True,
     description="Run a full GEO (Generative Engine Optimization) audit on a website",

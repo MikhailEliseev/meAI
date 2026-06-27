@@ -119,8 +119,6 @@ registry.register(
     name="orchestrate",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "orchestrate",
             "description": (
                 "Unified orchestrator for ALL AIM operations. "
@@ -168,7 +166,6 @@ registry.register(
                 "required": ["operation", "params"],
             },
         },
-    },
     handler=handle_orchestrate,
     check_fn=lambda: True,
     is_async=True,

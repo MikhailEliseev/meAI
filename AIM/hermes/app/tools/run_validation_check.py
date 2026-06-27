@@ -224,8 +224,6 @@ registry.register(
     name="run_validation_check",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "run_validation_check",
             "description": (
                 "Cross-validate all collected data about a competitor for internal consistency. "
@@ -273,7 +271,6 @@ registry.register(
                 "required": ["company_name"],
             },
         },
-    },
     handler=handle_run_validation_check,
     check_fn=lambda: True,
     is_async=True,

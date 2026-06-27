@@ -82,8 +82,6 @@ registry.register(
     name="run_ads_report",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "run_ads_report",
             "description": (
                 "Generate advertising performance report for a client project. "
@@ -106,7 +104,6 @@ registry.register(
                 "required": ["project_id"],
             },
         },
-    },
     handler=handle_run_ads_report,
     check_fn=lambda: True,
     is_async=True,

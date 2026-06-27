@@ -178,21 +178,51 @@ class KeyBank:
                 os.path.join(os.path.dirname(__file__), "..", "..", "..", "apify_keys.json"),
             )
             apify_keys_path = os.path.abspath(apify_keys_path)
+            if not os.path.exists(apify_keys_path):
+                # Fallback: /opt/data/apify_keys.json (production path)
+                apify_keys_path = "/opt/data/apify_keys.json"
+
             if os.path.exists(apify_keys_path):
                 with open(apify_keys_path) as f:
                     keys_data = _json.load(f)
-                if isinstance(keys_data, list):
-                    for i, key in enumerate(keys_data):
-                        if isinstance(key, str) and key.strip():
-                            name = f"APIFY_KEY_{i + 1}"
-                            self._keys[name] = KeyEntry(
-                                name=name, value=key.strip(), source="apify_pool",
-                                service="Apify", category="russian_market",
-                                check_method="http_401",
-                                check_url="https://api.apify.com/v2/users/me",
-                                check_auth="bearer",
-                            )
-                    logger.info("KeyBank: loaded %d Apify keys from %s", len(keys_data), apify_keys_path)
+
+                # Support two formats:
+                # 1. {"keys": [{"key": "...", "label": "...", "status": "active"}, ...]}
+                # 2. ["key1", "key2", ...] (legacy)
+                key_objects = []
+                if isinstance(keys_data, dict):
+                    key_objects = keys_data.get("keys", [])
+                elif isinstance(keys_data, list):
+                    key_objects = keys_data
+
+                for i, entry in enumerate(key_objects):
+                    if isinstance(entry, str) and entry.strip():
+                        key_value = entry.strip()
+                        key_status = "unknown"
+                    elif isinstance(entry, dict):
+                        key_value = entry.get("key") or entry.get("token", "")
+                        key_status = entry.get("status", "unknown")
+                    else:
+                        continue
+
+                    if not key_value:
+                        continue
+
+                    name = f"APIFY_KEY_{i + 1}"
+                    self._keys[name] = KeyEntry(
+                        name=name, value=key_value, source="apify_pool",
+                        service="Apify", category="russian_market",
+                        status=key_status,
+                        check_method="http_401",
+                        check_url="https://api.apify.com/v2/users/me",
+                        check_auth="bearer",
+                    )
+
+                apify_keys = [e for e in self._keys.values() if e.service == "Apify" and e.source == "apify_pool"]
+                if apify_keys:
+                    active = sum(1 for e in apify_keys if e.status == "active")
+                    logger.info("KeyBank: loaded %d Apify keys (%d active) from %s",
+                               len(apify_keys), active, apify_keys_path)
         except Exception as e:
             logger.debug("KeyBank: Apify keys load skipped: %s", e)
 
@@ -227,6 +257,29 @@ class KeyBank:
             if entry.value == key:
                 entry.status = "exhausted"
                 entry.exhausted_at = time.time()
+
+    def get_apify_keys(self, active_only: bool = True) -> list[str]:
+        """Get Apify keys from the pool.
+
+        Args:
+            active_only: If True, return only keys with status='active'.
+
+        Returns:
+            List of Apify API key strings.
+        """
+        apify_entries = [e for e in self._keys.values()
+                         if e.service == "Apify" and e.source == "apify_pool"]
+        if active_only:
+            apify_entries = [e for e in apify_entries if e.status == "active"]
+        return [e.value for e in apify_entries]
+
+    def mark_apify_exhausted(self, key: str) -> None:
+        """Mark an Apify key as exhausted."""
+        for entry in self._keys.values():
+            if entry.value == key:
+                entry.status = "exhausted"
+                entry.exhausted_at = time.time()
+                logger.warning("KeyBank: marked Apify key %s as exhausted", entry.name)
 
     def active_count(self) -> int:
         """Count of active keys."""

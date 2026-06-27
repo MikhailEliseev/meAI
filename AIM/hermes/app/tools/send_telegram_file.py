@@ -180,8 +180,6 @@ registry.register(
     name="send_telegram_file",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "send_telegram_file",
             "description": (
                 "Send a file (image, document, screenshot) to a Telegram chat. "
@@ -208,7 +206,6 @@ registry.register(
                 "required": ["file_path"],
             },
         },
-    },
     handler=handle_send_telegram_file,
     is_async=True,
     description="Send files (screenshots, documents) to Telegram chats via Bot API",

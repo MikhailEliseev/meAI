@@ -1,35 +1,19 @@
-# Hermes v7 Configuration
-# ========================
+# Hermes v3.3 Configuration (restored 2026-06-25)
+# ==================================================
+# v7 state machine and 14-phase pipeline removed.
+# LLM (Hermes) is the sole orchestrator via tools.registry.
 
-# ── Pipeline (v7 State Machine) ──────────────────────────────────────
-pipeline:
-  # Таймауты фаз (в секундах)
-  timeouts:
-    preflight: 30
-    perplexity: 120
-    tech_audit: 300
-    social_verifier: 180
-    content_analysis: 120
-    key_persons: 180
-    smi_mentions: 120
-    competitors: 600
-    forum_pains: 120
-    finance: 60
-    content_plan: 120
-    html_build: 120
-    qc_critique: 90
-    presentation: 60
+# ── Overall runtime ─────────────────────────────────────────────────
+runtime:
+  # Total deadline for a single run_agent() call (seconds).
+  # Was 900 in v3.3; bumped to 1800 for deeper PRESALE runs with 28 tools.
+  total_timeout: 1800
 
-  # Максимальное время всего пайплайна (секунд)
-  total_timeout: 900
-
-  # Ретраи
-  max_retries_default: 1
-  competitor_max_retries: 3
-
-# ── File Protection ─────────────────────────────────────────────────
+# ── File Protection (file_guard) ─────────────────────────────────────
+# These values are read by app/file_guard.py at startup. The guard
+# protects critical config files from LLM-driven writes in any mode
+# and restricts ADMIN-mode writes to a whitelist.
 file_protection:
-  # Заблокированные пути (всегда, для любого режима)
   blocked_paths:
     - /opt/hermes-data/app/
     - /opt/hermes/app/
@@ -38,7 +22,6 @@ file_protection:
     - /opt/hermes-data/.env
     - /opt/hermes/.env
 
-  # Whitelist для ADMIN режима
   admin_whitelist:
     - /opt/hermes-data/skills/
     - /opt/hermes-data/memory/
@@ -46,26 +29,15 @@ file_protection:
     - /opt/hermes/skills/
     - /opt/hermes/memory/
 
-  # Chmod для config.yaml при старте
   config_chmod: "0444"
 
-# ── Mode Gate ───────────────────────────────────────────────────────
-mode_gate:
-  # ONBOARDING блокирует эти инструменты даже если они в aim-operations
-  onboarding_blocked_tools:
-    - orchestrate
-    - search_chats
-    - send_message_as_user
-    - show_all_leads
-    - get_lead_pipeline
-    - file_write
-    - shell_exec
-    - restart_myself
-
-  # Toolset'ы по режимам
-  toolsets:
-    onboarding: ["aim-operations"]
-    presale: ["aim-operations"]
-    admin: ["aim-operations", "hermes-debug"]
-    active: ["aim-operations", "hermes-debug"]
-    sales_admin: ["aim-operations", "hermes-debug"]
+# ── Toolsets ────────────────────────────────────────────────────────
+# Hermes enables toolsets based on mode. PRESALE gets business tools only;
+# ADMIN/ACTIVE/SALES_ADMIN additionally get hermes-debug for shell/file access.
+# Note: Mode Gate for ONBOARDING was removed (it was blocking file_write and
+# shell_exec in PRESALE — which broke report generation).
+toolsets:
+  PRESALE:     ["aim-operations"]
+  ACTIVE:      ["aim-operations", "hermes-debug"]
+  ADMIN:       ["aim-operations", "hermes-debug"]
+  SALES_ADMIN: ["aim-operations", "hermes-debug"]

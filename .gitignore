@@ -92,8 +92,8 @@ plans/cleanup-linear-tasks.md
 *.png
 *.html
 
-# Planning artifacts (large, auto-generated)
-.planning/
+# Planning artifacts — tracking enabled per user decision 2026-06-22
+# .planning/
 
 # Obsidian raw imports and generated results
 obsidian/architect/raw/
@@ -128,3 +128,5 @@ aim_audit_report.html
 chat-before-test.png
 med-det-report-v2.png
 .dockerignore
+hermes-backup-*/*.tar.gz
+hermes-backup-*/

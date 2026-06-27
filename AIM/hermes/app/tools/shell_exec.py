@@ -121,7 +121,7 @@ async def handle_shell_exec(command=None, **kwargs) -> str:
 
     # Hermes v7: file_guard — проверка shell-команд на запись в защищённые пути
     try:
-        from app.pipeline.file_guard import validate_shell_command
+        from app.file_guard import validate_shell_command
         shell_ok, shell_reason = validate_shell_command(command)
         if not shell_ok:
             logger.warning("shell_exec blocked by file_guard: %s — %s", command[:80], shell_reason)
@@ -263,7 +263,7 @@ async def handle_api_debug(url_path=None, method=None, **kwargs) -> str:
         return json.dumps({"error": str(e)})
 
 
-async def handle_file_write(file_path=None, content=None, **kwargs) -> str:
+async def handle_file_write(file_path=None, content=None, append=None, **kwargs) -> str:
     """Write content to a file in the Hermes container.
 
     Hermes v7: проверяет file_guard.is_write_allowed() первой проверкой.
@@ -273,6 +273,9 @@ async def handle_file_write(file_path=None, content=None, **kwargs) -> str:
     Args:
         file_path: Absolute path to the file to write.
         content: String content to write to the file.
+        append: If true, open in append mode ("a") instead of write ("w").
+            Useful for multi-turn file assembly (e.g. writing long narrative
+            reports in chunks when LLM response size is bounded).
 
     Returns:
         JSON string with path, size_bytes, lines_written.
@@ -282,6 +285,8 @@ async def handle_file_write(file_path=None, content=None, **kwargs) -> str:
         file_path = d.get("file_path", "")
         if not content:
             content = d.get("content", "")
+        if append is None:
+            append = d.get("append")
 
     if not file_path or not isinstance(file_path, str):
         return json.dumps({"error": "file_path is required (string)"})
@@ -290,7 +295,7 @@ async def handle_file_write(file_path=None, content=None, **kwargs) -> str:
 
     # Hermes v7: file_guard — проверка режима и whitelist путей
     try:
-        from app.pipeline.file_guard import is_write_allowed, get_current_mode
+        from app.file_guard import is_write_allowed, get_current_mode
         current_mode = get_current_mode()
         if not is_write_allowed(file_path, current_mode):
             return json.dumps({
@@ -313,18 +318,21 @@ async def handle_file_write(file_path=None, content=None, **kwargs) -> str:
             "requested": file_path,
         })
 
-    logger.info("file_write: %s (%d chars)", file_path, len(content))
+    mode = "a" if append else "w"
+    logger.info("file_write: %s mode=%s (%d chars)", file_path, mode, len(content))
 
     try:
-        with open(file_path, "w") as f:
+        with open(file_path, mode) as f:
             f.write(content)
 
         lines = content.count("\n") + (1 if content and not content.endswith("\n") else 0)
-        size = len(content)
+        size_after = os.path.getsize(file_path)
 
         return json.dumps({
             "path": file_path,
-            "size_bytes": size,
+            "mode": mode,
+            "bytes_appended": len(content),
+            "size_bytes": size_after,
             "lines_written": lines,
         }, ensure_ascii=False)
 
@@ -454,8 +462,6 @@ registry.register(
     name="shell_exec",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "shell_exec",
             "description": (
                 "Execute a read-only shell command in the Hermes container. "
@@ -474,7 +480,6 @@ registry.register(
                 "required": ["command"],
             },
         },
-    },
     handler=handle_shell_exec,
     check_fn=lambda: True,
     is_async=True,
@@ -486,8 +491,6 @@ registry.register(
     name="file_read",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "file_read",
             "description": (
                 "Read a file from the Hermes container. "
@@ -505,7 +508,6 @@ registry.register(
                 "required": ["file_path"],
             },
         },
-    },
     handler=handle_file_read,
     check_fn=lambda: True,
     is_async=True,
@@ -517,8 +519,6 @@ registry.register(
     name="api_debug",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "api_debug",
             "description": (
                 "Make a raw HTTP request to the AIM API (app:8000) and return the full response. "
@@ -540,7 +540,6 @@ registry.register(
                 "required": ["url_path"],
             },
         },
-    },
     handler=handle_api_debug,
     check_fn=lambda: True,
     is_async=True,
@@ -552,13 +551,13 @@ registry.register(
     name="file_write",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "file_write",
             "description": (
                 "Write content to a file in the Hermes container. "
                 "Allowed paths: /opt/hermes/, /opt/data/, /tmp/. "
-                "Use for fixing tool code, updating SOUL.md, writing configuration."
+                "Use for fixing tool code, updating SOUL.md, writing configuration. "
+                "Set append=true to add to an existing file instead of overwriting "
+                "(useful for multi-turn narrative assembly when LLM response size is bounded)."
             ),
             "parameters": {
                 "type": "object",
@@ -571,11 +570,17 @@ registry.register(
                         "type": "string",
                         "description": "Content to write to the file",
                     },
+                    "append": {
+                        "type": "boolean",
+                        "description": (
+                            "If true, append to the file instead of overwriting. "
+                            "Default: false (overwrite)."
+                        ),
+                    },
                 },
                 "required": ["file_path", "content"],
             },
         },
-    },
     handler=handle_file_write,
     check_fn=lambda: True,
     is_async=True,
@@ -587,8 +592,6 @@ registry.register(
     name="pip_install",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "pip_install",
             "description": (
                 "Install a Python package into /opt/data/pip-packages/ (persistent volume). "
@@ -607,7 +610,6 @@ registry.register(
                 "required": ["package"],
             },
         },
-    },
     handler=handle_pip_install,
     check_fn=lambda: True,
     is_async=True,
@@ -619,8 +621,6 @@ registry.register(
     name="restart_myself",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "restart_myself",
             "description": (
                 "Gracefully restart the Hermes uvicorn server via SIGHUP. "
@@ -632,7 +632,6 @@ registry.register(
                 "properties": {},
             },
         },
-    },
     handler=handle_restart_myself,
     check_fn=lambda: True,
     is_async=True,

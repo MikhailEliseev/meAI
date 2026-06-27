@@ -199,8 +199,6 @@ registry.register(
     name="run_ci_analysis",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "run_ci_analysis",
             "description": (
                 "Run full competitive intelligence analysis on selected competitors. "
@@ -253,7 +251,6 @@ registry.register(
                 "required": ["url", "competitors"],
             },
         },
-    },
     handler=handle_run_ci_analysis,
     check_fn=lambda: True,
     is_async=True,

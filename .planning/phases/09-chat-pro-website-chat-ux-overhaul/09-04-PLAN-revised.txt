@@ -1,0 +1,112 @@
+BLOCKER 4 FIX: Add frontend validation task for contact collection
+BLOCKER 5 FIX: Change depends_on to ["09-02"] and wave to 2
+
+Add after Task 3 (escalate_to_manager tool):
+
+<task type="auto">
+  <name>Task 4: Add frontend validation for contact collection</name>
+  <files>/var/www/iamaim.ru/wp-content/themes/aim-theme/chat/chat.js</files>
+  <action>
+    BLOCKER 4 FIX: Per D-25, add email regex and name validation before collect_contact.
+    
+    SSH to server and edit chat.js. Locate where the chat handles user input (likely in message send handler or where Hermes responses are processed).
+    
+    Add validation helper functions:
+    
+    ```javascript
+    // Email validation (RFC 5322 simplified)
+    function isValidEmail(email) {
+      const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return regex.test(email);
+    }
+    
+    // Name validation
+    function isValidName(name) {
+      return name && name.trim().length > 0;
+    }
+    
+    // Display validation error in chat
+    function showValidationError(message) {
+      const messagesContainer = document.querySelector('.messages-container');
+      const errorBubble = document.createElement('div');
+      errorBubble.className = 'message error-message';
+      errorBubble.innerHTML = `
+        <div class="message-content">
+          <span class="error-icon">⚠️</span>
+          <span>${message}</span>
+        </div>
+      `;
+      messagesContainer.appendChild(errorBubble);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      
+      // Auto-remove after 5 seconds
+      setTimeout(() => errorBubble.remove(), 5000);
+    }
+    ```
+    
+    Add CSS for error messages in chat.css:
+    
+    ```css
+    .message.error-message {
+      background: rgba(220, 38, 38, 0.1);
+      border-left: 3px solid var(--error, #dc2626);
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+    }
+    
+    .message.error-message .error-icon {
+      margin-right: 0.5rem;
+      font-size: 1.25rem;
+    }
+    ```
+    
+    Intercept contact collection flow:
+    When Hermes asks for email/name, validate user input BEFORE sending to backend:
+    
+    ```javascript
+    // Example integration point (adjust based on actual chat.js structure)
+    function validateContactInput(type, value) {
+      if (type === 'email') {
+        if (!isValidEmail(value)) {
+          showValidationError('Пожалуйста, введите корректный email (например: name@example.com)');
+          return false;
+        }
+      } else if (type === 'name') {
+        if (!isValidName(value)) {
+          showValidationError('Пожалуйста, введите ваше имя');
+          return false;
+        }
+      }
+      return true;
+    }
+    
+    // Hook into message send handler
+    // if (conversationContext === 'collecting-email') {
+    //   if (!validateContactInput('email', userMessage)) {
+    //     return; // Block send, show error
+    //   }
+    // }
+    ```
+    
+    **Note:** Exact integration point depends on chat.js architecture. The key requirement per D-25:
+    - Email must match regex `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`
+    - Name must be non-empty after trim
+    - Show error bubble if validation fails
+    - Block message from being sent to backend if invalid
+    
+    This implements frontend validation per D-25 to prevent invalid contact data reaching collect_contact tool.
+  </action>
+  <verify>
+    <automated>ssh aim "grep -c 'isValidEmail\|isValidName' /var/www/iamaim.ru/wp-content/themes/aim-theme/chat/chat.js"</automated>
+    Should return 2 (both validation functions present).
+  </verify>
+  <done>Frontend validation added: email regex check, name non-empty check, error bubble display, invalid input blocked before backend</done>
+</task>
+
+Update frontmatter:
+- depends_on: ["09-02"]  (BLOCKER 5 FIX - requires 09-02 WOW-COMMENTARY to complete first)
+- wave: 2  (was 2, keep as 2 - now after 09-02 completes)
+- files_modified: add "/var/www/iamaim.ru/wp-content/themes/aim-theme/chat/chat.css"
+- autonomous: false (has checkpoint? no - all tasks are auto, keep true)
+

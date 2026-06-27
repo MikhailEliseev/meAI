@@ -230,8 +230,6 @@ registry.register(
     name="crawlee_scrape",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "crawlee_scrape",
             "description": (
                 "Scrape a website using Crawlee (Apify) with headless Chromium. "
@@ -254,7 +252,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_crawlee_scrape,
     check_fn=_check_crawlee,
     is_async=True,
@@ -266,8 +263,6 @@ registry.register(
     name="crawlee_search",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "crawlee_search",
             "description": (
                 "Search Google via Playwright (headless browser) and return top results. "
@@ -289,7 +284,6 @@ registry.register(
                 "required": ["query"],
             },
         },
-    },
     handler=handle_crawlee_search,
     check_fn=_check_crawlee,
     is_async=True,

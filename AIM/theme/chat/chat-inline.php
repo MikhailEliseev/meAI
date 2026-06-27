@@ -1,5 +1,12 @@
-<!-- Hermes Chat Inline - Fully Scoped -->
+<!-- Hermes Chat Inline - Fully Scoped + AIM Pro Phase Tracker -->
 
+<?php
+// AIM Pro extension (phase tracker + report preview + fallback form)
+$pro_path = __DIR__ . '/chat-inline-pro.php';
+if (file_exists($pro_path)) {
+    include $pro_path;
+}
+?>
 <meta charset="utf-8">
 <!-- FingerprintJS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
@@ -1269,6 +1276,17 @@
                                         messages.push({ role: 'assistant-progress', content: displayMessage, done: false });
                                         renderMessages();
                                     }
+                                    // AIM Pro: track phase for visual tracker
+                                    if (window.aimProTrackPhase) {
+                                        window.aimProTrackPhase(data.stage || data.tool || '', data.message);
+                                    }
+                                }
+
+                                // AIM Pro: detect report URL in finish event or final text
+                                if (data.type === 'finish') {
+                                    if (window.aimProFinish && window.aimProFinish(data)) {
+                                        // Returning true means we already showed report preview
+                                    }
                                 }
 
                                 // Handle text streaming — RAF + textContent, no innerHTML flicker
@@ -1308,6 +1326,33 @@
                 // Push final assistant message and render ONCE with markdown parsing
                 if (assistantMessage) {
                     messages.push({ role: 'assistant', content: assistantMessage });
+
+                    // AIM Pro: detect report URL in final message and show preview
+                    if (window.aimProShowReport) {
+                        // URL formats: https://iamaim.ru/abc123 or iamaim.ru/abc123
+                        const urlMatch = assistantMessage.match(/(?:https?:\/\/)?(?:www\.)?iamaim\.ru\/([a-z0-9-]{6,})/i);
+                        if (urlMatch) {
+                            const slug = urlMatch[1];
+                            const fullUrl = 'https://iamaim.ru/' + slug;
+                            // Extract clinic name from text (best effort)
+                            const titleMatch = assistantMessage.match(/(?:Клиника|Клиники|Центр|Институт)\s+[«"]?([А-Яа-яA-Za-z0-9\-\s]{3,40})[»"]?/);
+                            const clinicName = titleMatch ? titleMatch[1].trim() : 'Разведка пресейла';
+                            // Extract basic stats from message
+                            const stats = [];
+                            const revMatch = assistantMessage.match(/(\d+(?:[.,]\d+)?)\s*(млн|млрд|тыс\.?)\s*₽?/i);
+                            if (revMatch) stats.push({ value: revMatch[1] + ' ' + revMatch[2], label: 'Выручка' });
+                            const compMatch = assistantMessage.match(/(\d+)\s*конкурент/i);
+                            if (compMatch) stats.push({ value: compMatch[1], label: 'Конкурентов' });
+                            const rev2Match = assistantMessage.match(/(\d+)\s*отзыв/i);
+                            if (rev2Match) stats.push({ value: rev2Match[1], label: 'Отзывов' });
+                            window.aimProShowReport({
+                                url: fullUrl,
+                                title: clinicName + ' — Разведка AIM',
+                                client: 'Готово к просмотру',
+                                stats: stats,
+                            });
+                        }
+                    }
                 }
                 renderMessages();
 

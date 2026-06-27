@@ -60,8 +60,6 @@ registry.register(
     name="run_web_search",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "run_web_search",
             "description": (
                 "Search the web for information about any topic. "
@@ -91,7 +89,6 @@ registry.register(
                 "required": ["query"],
             },
         },
-    },
     handler=handle_run_web_search,
     check_fn=_check,
     is_async=True,

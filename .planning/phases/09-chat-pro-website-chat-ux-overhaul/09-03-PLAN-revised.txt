@@ -1,0 +1,93 @@
+Add after Task 3 (before Task 4):
+
+<task type="checkpoint:human-action">
+  <name>Task 4: Configure WordPress Authentication</name>
+  <what>WordPress REST API requires authentication to publish pages. Hermes needs credentials.</what>
+  <steps>
+    1. SSH to server: ssh aim
+    2. Access WordPress admin at https://iamaim.ru/wp-admin/
+    3. Create user "aim-bot" with Editor role (Pages-only permission)
+    4. Navigate to Users → Profile → Application Passwords
+    5. Generate new application password with name "Hermes Report Publisher"
+    6. Copy the generated password (format: xxxx xxxx xxxx xxxx xxxx xxxx)
+    7. Add to .env file on server:
+       WP_AUTH_USER="aim-bot"
+       WP_AUTH_PASSWORD="xxxx xxxx xxxx xxxx xxxx xxxx"
+    8. Update generate_report.py line 439:
+       Remove comment, change to:
+       auth=(os.getenv("WP_AUTH_USER"), os.getenv("WP_AUTH_PASSWORD"))
+    9. Restart gateway: docker exec aim-hermes supervisorctl restart gateway
+  </steps>
+  <resume-signal>Type "wordpress-auth-configured" when complete</resume-signal>
+  <done>WordPress authentication configured, aim-bot user created, credentials in .env, generate_report.py updated with auth</done>
+</task>
+
+<task type="auto">
+  <name>Task 5: Update PRESALE prompt to invoke generate_report</name>
+  <files>AIM/hermes/app/agent_wrapper_optimized.py</files>
+  <action>
+    BLOCKER 3 FIX: Add instruction to call generate_report after competitor analysis.
+    
+    Locate the ФАЗА 3 section (currently around line 150-180 after WOW-COMMENTARY from Plan 09-02).
+    
+    Replace the existing ФАЗА 3 text with:
+    
+    ```python
+    ### 📡 ФАЗА 3 - Генерация полного отчёта (опционально)
+    
+    Если клиент хочет ПОЛНЫЙ отчёт со всеми секциями (как ИПХиК референс) — после завершения основного анализа (run_prescan, find_competitors, wow-комментарии) вызови `generate_report`:
+    
+    ```
+    generate_report(
+      session_hash="[8-char hash]",
+      clinic_name="[название клиники]",
+      orchestrator_data={
+        "financials": {...},
+        "competitors": {...},
+        "instagram": {...},
+        "seo": {...},
+        "content": {...},
+        "whitefields": {...}
+      }
+    )
+    ```
+    
+    **Что происходит:**
+    1. Python генерирует HTML-отчёт из канонического шаблона (не LLM!)
+    2. Отчёт публикуется на WordPress (iamaim.ru/report/{slug}/)
+    3. SSE-событие `report-ready` отправляет URL клиенту
+    4. Frontend показывает кнопку "Ваш отчёт готов 🎉 [Открыть отчёт]"
+    
+    **Когда вызывать:**
+    - После collect_contact (если клиент дал email для отправки)
+    - ИЛИ если клиент явно просит "полный отчёт", "презентацию", "все данные"
+    - ИЛИ после завершения всех основных инструментов (prescan, competitors, instagram, seo)
+    
+    **orchestrator_data структура:**
+    Передай все собранные данные как dict. Структура:
+    - financials: данные из find_company_financials
+    - competitors: данные из find_competitors + run_ci_analysis
+    - instagram: данные из run_instagram_content
+    - seo: данные из run_seo_audit
+    - content: данные из run_content_analysis
+    - whitefields: данные из gaps-анализа
+    - clinic_metrics: данные из run_prescan (reviews, speed, lighthouse)
+    
+    Если какой-то секции нет (инструмент не вызывался) — просто не включай ключ.
+    ```
+    
+    Insert this section replacing the existing short ФАЗА 3 text (around line 150-180).
+    
+    This tells the LLM when and how to call generate_report per BLOCKER 3 fix.
+  </action>
+  <verify>
+    <automated>grep -c "generate_report.*session_hash\|report-ready" AIM/hermes/app/agent_wrapper_optimized.py</automated>
+    Should return at least 1 (generate_report instruction added).
+  </verify>
+  <done>_presale_prompt() includes generate_report invocation instructions with timing, orchestrator_data structure, and report-ready SSE event explanation</done>
+</task>
+
+Update frontmatter:
+- files_modified: add "AIM/hermes/app/agent_wrapper_optimized.py"
+- wave: 1 (not 2, to avoid conflict with 09-04)
+

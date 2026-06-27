@@ -101,8 +101,6 @@ registry.register(
     name="call_api",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "call_api",
             "description": (
                 "Make an HTTP request to ANY external API or web service. "
@@ -134,7 +132,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_call_api,
     check_fn=lambda: True,
     is_async=True,

@@ -139,6 +139,15 @@ async def handle_find_competitors(url=None, named_competitors=None, client_reven
                     "у клиента его прямых конкурентов. "
                     "Передай их имена в параметр named_competitors при следующем вызове."
                 )
+
+            # Example wow-comment integration (COMMENTED OUT - LLM generates via prompt)
+            # To enable manual triggers if LLM needs help, uncomment and customize:
+            # from app.main import push_wow_comment  # Lazy import avoids circular dependency
+            # if len(compact) > 0:
+            #     top_revenue = compact[0].get("revenue_year", 0)
+            #     if top_revenue and top_revenue > 50_000_000:
+            #         push_wow_comment(f"Найдено {len(compact)} сильных конкурентов, лидер с выручкой {top_revenue:,} ₽", "warning")
+
             return json.dumps(result, ensure_ascii=False, indent=2)
 
     except httpx.HTTPStatusError as e:
@@ -166,8 +175,6 @@ registry.register(
     name="find_competitors",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "find_competitors",
             "description": (
                 "Find top competitors for a client clinic website. "
@@ -203,7 +210,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_find_competitors,
     check_fn=lambda: True,
     is_async=True,

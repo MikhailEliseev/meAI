@@ -535,8 +535,6 @@ registry.register(
     name="firecrawl_scrape",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "firecrawl_scrape",
             "description": (
                 "Scrape a single URL and return clean markdown via Firecrawl. "
@@ -564,7 +562,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_firecrawl_scrape,
     check_fn=_check,
     is_async=True,
@@ -576,8 +573,6 @@ registry.register(
     name="firecrawl_search",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "firecrawl_search",
             "description": (
                 "Search the web via Firecrawl and return results with full page content. "
@@ -605,7 +600,6 @@ registry.register(
                 "required": ["query"],
             },
         },
-    },
     handler=handle_firecrawl_search,
     check_fn=_check,
     is_async=True,
@@ -617,8 +611,6 @@ registry.register(
     name="firecrawl_crawl",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "firecrawl_crawl",
             "description": (
                 "Crawl multiple pages from a domain and return combined markdown. "
@@ -640,7 +632,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_firecrawl_crawl,
     check_fn=_check,
     is_async=True,
@@ -652,8 +643,6 @@ registry.register(
     name="firecrawl_map",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "firecrawl_map",
             "description": (
                 "Discover all URLs on a website without scraping content. "
@@ -671,7 +660,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_firecrawl_map,
     check_fn=_check,
     is_async=True,
@@ -685,8 +673,6 @@ registry.register(
     name="firecrawl_extract",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "firecrawl_extract",
             "description": (
                 "Extract structured data from web pages using Firecrawl LLM. "
@@ -715,7 +701,6 @@ registry.register(
                 "required": ["urls", "prompt"],
             },
         },
-    },
     handler=handle_firecrawl_extract,
     check_fn=_check,
     is_async=True,
@@ -727,8 +712,6 @@ registry.register(
     name="firecrawl_batch_scrape",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "firecrawl_batch_scrape",
             "description": (
                 "Scrape MULTIPLE URLs at once and return their markdown content. "
@@ -757,7 +740,6 @@ registry.register(
                 "required": ["urls"],
             },
         },
-    },
     handler=handle_firecrawl_batch_scrape,
     check_fn=_check,
     is_async=True,
@@ -769,8 +751,6 @@ registry.register(
     name="firecrawl_agent",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "firecrawl_agent",
             "description": (
                 "Launch an AUTONOMOUS web research agent. The agent independently searches, "
@@ -805,7 +785,6 @@ registry.register(
                 "required": ["prompt"],
             },
         },
-    },
     handler=handle_firecrawl_agent,
     check_fn=_check,
     is_async=True,
@@ -817,8 +796,6 @@ registry.register(
     name="firecrawl_agent_status",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "firecrawl_agent_status",
             "description": (
                 "Check the status of a running firecrawl_agent job. "
@@ -836,7 +813,6 @@ registry.register(
                 "required": ["job_id"],
             },
         },
-    },
     handler=handle_firecrawl_agent_status,
     check_fn=_check,
     is_async=True,
@@ -848,8 +824,6 @@ registry.register(
     name="firecrawl_parse",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "firecrawl_parse",
             "description": (
                 "Parse a local file (PDF, DOCX, HTML, XLSX) into clean markdown. "
@@ -872,7 +846,6 @@ registry.register(
                 "required": ["file_path"],
             },
         },
-    },
     handler=handle_firecrawl_parse,
     check_fn=_check,
     is_async=True,
