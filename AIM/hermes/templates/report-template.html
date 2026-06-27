@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ clinic_name }} — Пресейл-отчёт AIM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* === DUAL THEME SYSTEM === */
+        /* Light: Monochrome Black/White */
+        /* Dark: Art Deco Gold/Black */
+
+        /* LIGHT THEME — Monochrome */
+        :root {
+            --bg: #ffffff;
+            --surface: #F5F5F5;
+            --hover: #EBEBEB;
+            --border: #E0E0E0;
+            --border-strong: #CFCFCF;
+            --text: #1A1A1A;
+            --text-secondary: #666666;
+            --text-dim: #767676;
+            --accent: #1A1A1A;
+            --accent-hover: #333333;
+            --card-bg: #ffffff;
+            --card-hover: #F5F5F5;
+            --glass-bg: rgba(255,255,255,0.85);
+            --glass-border: rgba(0,0,0,0.10);
+            --glow-outer: rgba(0,0,0,0.07);
+            --glow-inner: rgba(0,0,0,0.025);
+        }
+
+        /* DARK THEME — Art Deco Gold */
+        [data-theme="dark"] {
+            --bg: #0d0d0d;
+            --surface: #1a1a1a;
+            --hover: #262626;
+            --border: rgba(201,169,110,.18);
+            --border-strong: rgba(201,169,110,.35);
+            --text: #f5f0e8;
+            --text-secondary: #9e9489;
+            --text-dim: #7a7268;
+            --accent: #c9a96e;
+            --accent-hover: #e8cfa0;
+            --card-bg: #1a1a1a;
+            --card-hover: rgba(201,169,110,.05);
+            --glass-bg: rgba(13,13,13,0.85);
+            --glass-border: rgba(201,169,110,.10);
+            --glow-outer: rgba(201,169,110,0.08);
+            --glow-inner: rgba(201,169,110,0.03);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html {
+            scroll-behavior: smooth;
+            font-size: 16px;
+        }
+
+        body {
+            font-family: 'Jost', sans-serif;
+            font-weight: 400;
+            font-size: 16px;
+            line-height: 1.7;
+            background: var(--bg);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            transition: background .3s, color .3s;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Playfair Display', serif;
+            font-weight: 500;
+            line-height: 1.15;
+            color: var(--text);
+            letter-spacing: -.01em;
+        }
+
+        /* === WATER RIPPLE ANIMATIONS === */
+        @keyframes water-ripple {
+            0% {
+                width: 0; height: 0;
+                opacity: 0.77;
+                border-width: 1.4px;
+            }
+            5% {
+                opacity: 0.64;
+                border-width: 1.2px;
+            }
+            15% {
+                opacity: 0.48;
+                border-width: 1.0px;
+            }
+            35% {
+                opacity: 0.28;
+                border-width: 0.7px;
+            }
+            60% {
+                opacity: 0.11;
+                border-width: 0.4px;
+            }
+            85% {
+                opacity: 0.035;
+                border-width: 0.25px;
+            }
+            100% {
+                width: 850px; height: 850px;
+                opacity: 0;
+                border-width: 0.12px;
+            }
+        }
+
+        @keyframes card-breathe {
+            0%, 100% { box-shadow: 0 2px 12px rgba(0,0,0,0.03); }
+            50% { box-shadow: 0 6px 24px rgba(0,0,0,0.07); }
+        }
+
+        @keyframes glass-glow {
+            0%, 100% {
+                box-shadow: 0 0 14px var(--glow-outer),
+                            inset 0 0 20px var(--glow-inner);
+            }
+            50% {
+                box-shadow: 0 0 22px var(--glow-outer),
+                            inset 0 0 30px var(--glow-inner);
+            }
+        }
+
+        .water-ripples {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none; z-index: 0; overflow: hidden;
+        }
+
+        [data-theme="dark"] .water-ripples {
+            display: none;
+        }
+
+        .ripple-origin {
+            position: absolute;
+            width: 4px; height: 4px;
+            border-radius: 50%;
+            background: var(--text);
+            opacity: 0.08;
+            transform: translate(-50%, -50%);
+        }
+
+        .ripple-origin-1 { top: 50%; left: 50%; }
+        .ripple-origin-2 { top: 18%; left: 14%; }
+        .ripple-origin-3 { top: 72%; right: 12%; }
+        .ripple-origin-4 { top: 30%; right: 18%; }
+        .ripple-origin-5 { top: 62%; left: 20%; }
+        .ripple-origin-6 { top: 44%; right: 28%; }
+
+        .ripple-ring {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border-style: solid;
+            border-color: var(--text);
+            background: none;
+            opacity: 0;
+            width: 0; height: 0;
+            animation: water-ripple cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+        }
+
+        /* Origin 1 — center, drops every 10s */
+        .ripple-origin-1 .ripple-ring { animation-duration: 10s; }
+        .ripple-origin-1 .ripple-ring:nth-child(1) { animation-delay: 0s; }
+        .ripple-origin-1 .ripple-ring:nth-child(2) { animation-delay: 0.18s; }
+        .ripple-origin-1 .ripple-ring:nth-child(3) { animation-delay: 0.36s; }
+        .ripple-origin-1 .ripple-ring:nth-child(4) { animation-delay: 0.54s; }
+        .ripple-origin-1 .ripple-ring:nth-child(5) { animation-delay: 0.72s; }
+
+        /* Origin 2 — top-left, drops every 11s, offset +1.5s */
+        .ripple-origin-2 .ripple-ring { animation-duration: 11s; }
+        .ripple-origin-2 .ripple-ring:nth-child(1) { animation-delay: 1.5s; }
+        .ripple-origin-2 .ripple-ring:nth-child(2) { animation-delay: 1.68s; }
+        .ripple-origin-2 .ripple-ring:nth-child(3) { animation-delay: 1.86s; }
+        .ripple-origin-2 .ripple-ring:nth-child(4) { animation-delay: 2.04s; }
+        .ripple-origin-2 .ripple-ring:nth-child(5) { animation-delay: 2.22s; }
+
+        /* Origin 3 — bottom-right, drops every 9s, offset +3s */
+        .ripple-origin-3 .ripple-ring { animation-duration: 9s; }
+        .ripple-origin-3 .ripple-ring:nth-child(1) { animation-delay: 3s; }
+        .ripple-origin-3 .ripple-ring:nth-child(2) { animation-delay: 3.2s; }
+        .ripple-origin-3 .ripple-ring:nth-child(3) { animation-delay: 3.4s; }
+        .ripple-origin-3 .ripple-ring:nth-child(4) { animation-delay: 3.6s; }
+        .ripple-origin-3 .ripple-ring:nth-child(5) { animation-delay: 3.8s; }
+
+        /* Origin 4 — middle-right, drops every 12s, offset +0.8s */
+        .ripple-origin-4 .ripple-ring { animation-duration: 12s; }
+        .ripple-origin-4 .ripple-ring:nth-child(1) { animation-delay: 0.8s; }
+        .ripple-origin-4 .ripple-ring:nth-child(2) { animation-delay: 1s; }
+        .ripple-origin-4 .ripple-ring:nth-child(3) { animation-delay: 1.2s; }
+        .ripple-origin-4 .ripple-ring:nth-child(4) { animation-delay: 1.4s; }
+        .ripple-origin-4 .ripple-ring:nth-child(5) { animation-delay: 1.6s; }
+
+        /* Origin 5 — bottom-left, drops every 10.5s, offset +2.2s */
+        .ripple-origin-5 .ripple-ring { animation-duration: 10.5s; }
+        .ripple-origin-5 .ripple-ring:nth-child(1) { animation-delay: 2.2s; }
+        .ripple-origin-5 .ripple-ring:nth-child(2) { animation-delay: 2.4s; }
+        .ripple-origin-5 .ripple-ring:nth-child(3) { animation-delay: 2.6s; }
+        .ripple-origin-5 .ripple-ring:nth-child(4) { animation-delay: 2.8s; }
+        .ripple-origin-5 .ripple-ring:nth-child(5) { animation-delay: 3s; }
+
+        /* Origin 6 — center-right, drops every 8.5s, offset +4.5s */
+        .ripple-origin-6 .ripple-ring { animation-duration: 8.5s; }
+        .ripple-origin-6 .ripple-ring:nth-child(1) { animation-delay: 4.5s; }
+        .ripple-origin-6 .ripple-ring:nth-child(2) { animation-delay: 4.7s; }
+        .ripple-origin-6 .ripple-ring:nth-child(3) { animation-delay: 4.9s; }
+        .ripple-origin-6 .ripple-ring:nth-child(4) { animation-delay: 5.1s; }
+        .ripple-origin-6 .ripple-ring:nth-child(5) { animation-delay: 5.3s; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .ripple-ring { animation: none; display: none; }
+        }
+
+        @media (max-width: 768px) {
+            .water-ripples { display: none; }
+        }
+
+        /* === HEADER === */
+        .header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            padding: 20px 64px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px) saturate(1.4);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background .3s, border-color .3s;
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -.02em;
+        }
+
+        .tagline {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Jost', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            color: var(--text-secondary);
+        }
+
+        .theme-toggle {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .2s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--hover);
+            transform: scale(1.05);
+        }
+
+        .theme-toggle svg {
+            width: 14px;
+            height: 14px;
+            fill: var(--text);
+        }
+
+        .sun-icon { display: none; }
+        .moon-icon { display: block; }
+        [data-theme="dark"] .sun-icon { display: block; }
+        [data-theme="dark"] .moon-icon { display: none; }
+
+        /* === CONTAINER === */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 64px;
+            position: relative;
+            z-index: 1;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 32px;
+            }
+            .header {
+                padding: 16px 32px;
+            }
+            .tagline {
+                display: none;
+            }
+        }
+
+        /* === SECTIONS === */
+        .report-section {
+            padding: 80px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .report-section:first-of-type {
+            padding-top: 120px;
+        }
+
+        .report-section:last-of-type {
+            border-bottom: none;
+        }
+
+        .report-section h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(32px, 4vw, 48px);
+            font-weight: 400;
+            line-height: 1.1;
+            margin-bottom: 32px;
+            letter-spacing: -.01em;
+        }
+
+        /* === GLASS CARDS === */
+        .card-glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px) saturate(1.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 32px;
+            margin: 24px 0;
+            animation: card-breathe 4s ease-in-out infinite, glass-glow 5s ease-in-out infinite;
+        }
+
+        .card-glass h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 20px;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+
+        .card-glass p {
+            font-family: 'Jost', sans-serif;
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* === METRIC TAGS === */
+        .metric-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Jost', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 12px;
+            letter-spacing: 0.5px;
+            margin: 4px 6px 4px 0;
+        }
+
+        .metric-tag-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        /* Green */
+        .metric-tag-green {
+            background: #E8F5E9; color: #2E7D32;
+        }
+        .metric-tag-green .metric-tag-dot { background: #2E7D32; }
+        [data-theme="dark"] .metric-tag-green {
+            background: #1B5E20; color: #81C784;
+        }
+        [data-theme="dark"] .metric-tag-green .metric-tag-dot { background: #81C784; }
+
+        /* Yellow */
+        .metric-tag-yellow {
+            background: #FFF9C4; color: #F57F17;
+        }
+        .metric-tag-yellow .metric-tag-dot { background: #F57F17; }
+        [data-theme="dark"] .metric-tag-yellow {
+            background: #F57F17; color: #FFF9C4;
+        }
+        [data-theme="dark"] .metric-tag-yellow .metric-tag-dot { background: #FFF9C4; }
+
+        /* Red */
+        .metric-tag-red {
+            background: #FFEBEE; color: #C62828;
+        }
+        .metric-tag-red .metric-tag-dot { background: #C62828; }
+        [data-theme="dark"] .metric-tag-red {
+            background: #C62828; color: #FFCDD2;
+        }
+        [data-theme="dark"] .metric-tag-red .metric-tag-dot { background: #FFCDD2; }
+
+        /* Blue */
+        .metric-tag-blue {
+            background: #E3F2FD; color: #1565C0;
+        }
+        .metric-tag-blue .metric-tag-dot { background: #1565C0; }
+        [data-theme="dark"] .metric-tag-blue {
+            background: #1A237E; color: #90CAF9;
+        }
+        [data-theme="dark"] .metric-tag-blue .metric-tag-dot { background: #90CAF9; }
+
+        /* Gray (neutral) */
+        .metric-tag-gray {
+            background: var(--surface); color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+        .metric-tag-gray .metric-tag-dot { background: var(--text-secondary); }
+
+        /* === TABLE STYLING === */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 24px 0;
+            font-family: 'Jost', sans-serif;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--text-secondary);
+        }
+
+        td {
+            font-size: 15px;
+            color: var(--text);
+        }
+
+        tbody tr:hover {
+            background: var(--surface);
+        }
+
+        /* === LIST STYLING === */
+        ul, ol {
+            margin: 16px 0;
+            padding-left: 24px;
+        }
+
+        li {
+            margin: 8px 0;
+            line-height: 1.7;
+        }
+    </style>
+</head>
+<body>
+    <!-- Water ripples background (hidden in dark theme) -->
+    <div class="water-ripples">
+        <div class="ripple-origin ripple-origin-1">
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+        </div>
+        <div class="ripple-origin ripple-origin-2">
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+        </div>
+        <div class="ripple-origin ripple-origin-3">
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+        </div>
+        <div class="ripple-origin ripple-origin-4">
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+        </div>
+        <div class="ripple-origin ripple-origin-5">
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+        </div>
+        <div class="ripple-origin ripple-origin-6">
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+            <div class="ripple-ring"></div>
+        </div>
+    </div>
+
+    <!-- Fixed header with theme toggle -->
+    <header class="header">
+        <div class="logo">AIM</div>
+        <div class="tagline">AI-first маркетинг в медицине</div>
+        <button class="theme-toggle" onclick="toggleTheme()">
+            <svg class="sun-icon" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            <svg class="moon-icon" viewBox="0 0 24 24">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+        </button>
+    </header>
+
+    <main class="container">
+        <!-- Section 1: Clinic Overview -->
+        <section class="report-section">
+            <h2>О клинике</h2>
+            {{ clinic_overview_html|safe }}
+        </section>
+
+        <!-- Section 2: Competitors -->
+        <section class="report-section">
+            <h2>Конкуренты</h2>
+            {{ competitors_html|safe }}
+        </section>
+
+        <!-- Section 3: Experts (Top-5 Doctors) -->
+        <section class="report-section">
+            <h2>Эксперты</h2>
+            {{ experts_html|safe }}
+        </section>
+
+        <!-- Section 4: Content Analysis -->
+        <section class="report-section">
+            <h2>Контент-анализ</h2>
+            {{ content_analysis_html|safe }}
+        </section>
+
+        <!-- Section 5: Whitefields -->
+        <section class="report-section">
+            <h2>Белые поля</h2>
+            {{ whitefields_html|safe }}
+        </section>
+
+        <!-- Section 6: SEO -->
+        <section class="report-section">
+            <h2>SEO</h2>
+            {{ seo_html|safe }}
+        </section>
+
+        <!-- Section 7: Ads -->
+        <section class="report-section">
+            <h2>Реклама</h2>
+            {{ ads_html|safe }}
+        </section>
+
+        <!-- Section 8: Technical Audit -->
+        <section class="report-section">
+            <h2>Технический аудит</h2>
+            {{ tech_audit_html|safe }}
+        </section>
+
+        <!-- Section 9: Strategy -->
+        <section class="report-section">
+            <h2>Стратегия</h2>
+            {{ strategy_html|safe }}
+        </section>
+
+        <!-- Section 10: Offer -->
+        <section class="report-section">
+            <h2>Что AIM может сделать для вас</h2>
+            {{ offer_html|safe }}
+        </section>
+    </main>
+
+    <script>
+        // Theme toggle from design-showcase
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('aim-theme', newTheme);
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('aim-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</body>
+</html>

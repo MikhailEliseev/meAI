@@ -104,6 +104,14 @@ async def handle_run_prescan(url=None, **kwargs) -> str:
         # ── Build merged summary ────────────────────────────────────────
         summary = _build_merged_summary(url, data, stage_1, stage_2, stage_3, errors)
 
+        # Example wow-comment integration (COMMENTED OUT - LLM generates via prompt)
+        # To enable manual triggers if LLM needs help, uncomment and customize:
+        # from app.main import push_wow_comment  # Lazy import avoids circular dependency
+        # if stage_2.get("web_speed", {}).get("load_time_seconds", 0) > 4:
+        #     push_wow_comment("Главная страница загружается 4.2 секунды — теряете пациентов", "warning")
+        # if stage_1.get("financials", {}).get("revenue_rub"):
+        #     push_wow_comment(f"Выручка {stage_1['financials']['revenue_rub']} ₽ — солидная клиника", "info")
+
         return json.dumps(summary, ensure_ascii=False, indent=2)
 
     except httpx.HTTPStatusError as e:
@@ -482,8 +490,6 @@ registry.register(
     name="run_prescan",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "run_prescan",
             "description": (
                 "3-stage ultra-deep intelligence pipeline for a client website: "
@@ -508,7 +514,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_run_prescan,
     check_fn=lambda: True,
     is_async=True,

@@ -358,8 +358,6 @@ registry.register(
     name="run_seo_audit",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "run_seo_audit",
             "description": (
                 "Run a full SEO audit on a client website: technical analysis, "
@@ -378,7 +376,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_run_seo_audit,
     check_fn=lambda: True,
     is_async=True,

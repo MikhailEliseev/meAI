@@ -209,8 +209,6 @@ registry.register(
     name="perplexity_search",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "perplexity_search",
             "description": (
                 "Flexible AI-powered research query. Ask any question and get a "
@@ -240,7 +238,6 @@ registry.register(
                 "required": ["question"],
             },
         },
-    },
     handler=handle_perplexity_search,
     check_fn=_check_perplexity,
     is_async=True,
@@ -252,8 +249,6 @@ registry.register(
     name="perplexity_deep_analyze",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "perplexity_deep_analyze",
             "description": (
                 "Deep multi-angle analysis of any topic. Analyzes from multiple "
@@ -283,7 +278,6 @@ registry.register(
                 "required": ["topic"],
             },
         },
-    },
     handler=handle_perplexity_deep_analyze,
     check_fn=_check_perplexity,
     is_async=True,

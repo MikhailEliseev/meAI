@@ -398,8 +398,6 @@ registry.register(
     name="run_tech_seo_audit",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "run_tech_seo_audit",
             "description": (
                 "Full technical SEO audit of a website. Crawls homepage + internal "
@@ -423,7 +421,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_run_tech_seo_audit,
     check_fn=lambda: True,
     is_async=True,

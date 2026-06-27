@@ -74,8 +74,6 @@ registry.register(
     name="show_all_leads",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "show_all_leads",
             "description": (
                 "Show all leads captured by the AIM agency. Lists lead details "
@@ -101,7 +99,6 @@ registry.register(
                 },
             },
         },
-    },
     handler=handle_show_all_leads,
     check_fn=lambda: True,
     is_async=True,

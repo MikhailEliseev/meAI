@@ -44,6 +44,9 @@ RUN pip install --no-cache-dir scrapy
 RUN pip install --no-cache-dir playwright && \
     playwright install --with-deps chromium
 
+# Lighthouse CLI (self-hosted PageSpeed, no Google API dependency)
+RUN npm install -g lighthouse
+
 # Patch AIAgent: remove stream_options which causes HTTP 400 from OmniRoute
 # when include_usage is requested but provider doesn't support it.
 RUN find /usr/local/lib/python3.11/site-packages -name 'run_agent.py' -exec \

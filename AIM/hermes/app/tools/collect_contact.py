@@ -121,8 +121,6 @@ registry.register(
     name="collect_contact",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "collect_contact",
             "description": (
                 "Collect client contact information and create a lead dossier. "
@@ -157,7 +155,6 @@ registry.register(
                 "required": [],
             },
         },
-    },
     handler=handle_collect_contact,
     check_fn=lambda: True,
     is_async=True,

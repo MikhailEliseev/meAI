@@ -60,16 +60,49 @@ def clear_tool_progress_queue() -> None:
     _tool_progress_queue = None
 
 
+# ── Telegram progress hook ─────────────────────────────────────────────
+# v8 streaming: first progress → sendMessage, subsequent → editMessageText
+# This gives a "floating status" effect — one message updates in place.
+_telegram_progress_chat_id: int | None = None
+_telegram_progress_msg_id: int | None = None
+_telegram_progress_lines: list[str] = []  # accumulated status lines
+
+
+def set_telegram_progress_target(chat_id: int) -> None:
+    """Set Telegram chat_id to receive tool-progress messages."""
+    global _telegram_progress_chat_id, _telegram_progress_msg_id, _telegram_progress_lines
+    _telegram_progress_chat_id = chat_id
+    _telegram_progress_msg_id = None
+    _telegram_progress_lines = []
+
+
+def clear_telegram_progress_target() -> None:
+    """Clear Telegram progress target (status message stays in chat)."""
+    global _telegram_progress_chat_id, _telegram_progress_msg_id, _telegram_progress_lines
+    _telegram_progress_chat_id = None
+    _telegram_progress_msg_id = None
+    _telegram_progress_lines = []
+
+
 def push_tool_progress(stage: str, message: str, competitor: str = "") -> None:
     """Push a progress event from any thread (thread-safe).
 
     Tool handlers call this during long-running operations.
     Uses call_soon_threadsafe to safely cross from tool thread to event loop.
     Falls back to logging if no active queue or loop.
+    Also sends progress to Telegram if target is set (v8 streaming).
     """
+    # ── Log always ──────────────────────────────────────────────────
+    logger.info("[tool-progress] %s: %s", stage, message)
+
+    # ── Telegram progress (v8) ──────────────────────────────────────
+    tg_chat = _telegram_progress_chat_id
+    if tg_chat is not None:
+        _send_telegram_progress_sync(tg_chat, stage, message)
+
+    # ── SSE queue ───────────────────────────────────────────────────
     q = _tool_progress_queue
     if q is None:
-        logger.info("[tool-progress] %s: %s", stage, message)
         return
     event = {"type": "tool-progress", "stage": stage, "message": message, "competitor": competitor}
     loop = _main_event_loop
@@ -77,9 +110,128 @@ def push_tool_progress(stage: str, message: str, competitor: str = "") -> None:
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
-            logger.info("[tool-progress] %s: %s (no event loop)", stage, message)
             return
     loop.call_soon_threadsafe(q.put_nowait, event)
+
+
+def push_wow_comment(insight: str, severity: str = "info") -> None:
+    """Push a wow-comment event (LLM-generated business insight).
+
+    Args:
+        insight: Business insight text (2-4 sentences)
+        severity: "info" (positive), "warning" (growth point), "critical" (gap)
+
+    Thread-safe, works from any tool handler.
+    """
+    logger.info("[wow-comment] [%s] %s", severity, insight[:100])
+
+    # Validate severity
+    if severity not in ("info", "warning", "critical"):
+        logger.warning("Invalid severity '%s', defaulting to 'info'", severity)
+        severity = "info"
+
+    # SSE queue
+    q = _tool_progress_queue
+    if q is None:
+        return
+    event = {"type": "wow-comment", "insight": insight, "severity": severity}
+    loop = _main_event_loop
+    if loop is None:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+    loop.call_soon_threadsafe(q.put_nowait, event)
+
+
+def push_report_ready(report_url: str, session_hash: str) -> None:
+    """Push a report-ready event (SSE notification with URL).
+
+    Args:
+        report_url: Full URL to published WordPress report page
+        session_hash: 8-char session identifier
+
+    Per D-19: Delivers report URL to frontend for CTA button.
+    Thread-safe, works from any tool handler.
+    """
+    logger.info("[report-ready] %s", report_url)
+
+    q = _tool_progress_queue
+    if q is None:
+        return
+    event = {
+        "type": "report-ready",
+        "url": report_url,
+        "session_hash": session_hash
+    }
+    loop = _main_event_loop
+    if loop is None:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+    loop.call_soon_threadsafe(q.put_nowait, event)
+
+
+def _send_telegram_progress_sync(chat_id: int, stage: str, message: str) -> None:
+    """Send/update progress in Telegram — first sendMessage, then editMessageText."""
+    global _telegram_progress_msg_id, _telegram_progress_lines
+    import httpx
+
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    if not token:
+        return
+
+    emoji_map = {
+        "quick_overview": "⚡", "competitors": "🗺️", "reviews": "⭐",
+        "pagespeed": "🚀", "lighthouse": "🚀", "seo": "🔍",
+        "content": "📝", "hh": "💼", "doctor": "👨‍⚕️",
+        "perplexity": "🔍", "scrapy": "🕸️", "smi": "📰",
+        "instagram": "📸", "gaps": "📊", "financials": "💰",
+        "web_search": "🔎",
+    }
+    emoji = emoji_map.get(stage, "⏳")
+    text = message[:150] + "…" if len(message) > 150 else message
+    line = f"{emoji} {text}"
+
+    # Keep last 8 lines max
+    _telegram_progress_lines.append(line)
+    if len(_telegram_progress_lines) > 8:
+        _telegram_progress_lines = _telegram_progress_lines[-8:]
+
+    full_text = "\n".join(_telegram_progress_lines)
+
+    try:
+        with httpx.Client(timeout=5) as client:
+            if _telegram_progress_msg_id is not None:
+                # Edit existing message
+                resp = client.post(
+                    f"https://api.telegram.org/bot{token}/editMessageText",
+                    json={
+                        "chat_id": chat_id,
+                        "message_id": _telegram_progress_msg_id,
+                        "text": full_text,
+                    },
+                )
+                if resp.status_code != 200:
+                    # Message might have been deleted — fall back to new message
+                    _telegram_progress_msg_id = None
+            else:
+                # First message
+                resp = client.post(
+                    f"https://api.telegram.org/bot{token}/sendMessage",
+                    json={
+                        "chat_id": chat_id,
+                        "text": full_text,
+                        "disable_notification": True,
+                    },
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    result = data.get("result", {})
+                    _telegram_progress_msg_id = result.get("message_id")
+    except Exception:
+        pass
 
 
 # ── Metrics ──────────────────────────────────────────────────────────
@@ -140,7 +292,7 @@ async def on_startup():
 
     # ── Hermes v7: защита конфига + ротатор ключей ──────────────
     try:
-        from app.pipeline.file_guard import protect_config, set_key_rotator as _set_key_rotator
+        from app.file_guard import protect_config, set_key_rotator as _set_key_rotator
         protect_config()
 
         # Регистрируем ротатор ключей (использует firecrawl_key_bank)
@@ -506,36 +658,7 @@ async def chat_stream(
     )
 
 
-# ── Pipeline Status Endpoint (Hermes v7) ──────────────────────────────
-class PipelineStatusResponse(BaseModel):
-    session_id: str
-    client_url: str
-    current_phase: int
-    total_phases: int
-    phases: list[dict]
-    started_at: str
-
-
-@app.get("/api/pipeline/status/{session_id}", response_model=PipelineStatusResponse)
-async def pipeline_status(session_id: str):
-    """Статус онбординг-пайплайна (Hermes v7).
-
-    Используется фронтендом для отображения прогресса фаз.
-    Возвращает 404 если пайплайн не найден.
-    """
-    from app.pipeline.engine import get_pipeline_state
-    state = get_pipeline_state(session_id)
-    if state is None:
-        raise HTTPException(status_code=404, detail="Pipeline not found")
-
-    return PipelineStatusResponse(
-        session_id=state.get("session_id", session_id),
-        client_url=state.get("client_url", ""),
-        current_phase=state.get("current_phase", 0),
-        total_phases=state.get("total_phases", 14),
-        phases=state.get("phases", []),
-        started_at=state.get("started_at", ""),
-    )
+# ── Pipeline Status Endpoint removed (v3.3 restoration: no v7 state machine)
 
 
 # ── Error handlers ────────────────────────────────────────────────────

@@ -313,8 +313,6 @@ registry.register(
     name="run_doctor_dossiers",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "run_doctor_dossiers",
             "description": (
                 "Search for doctor profiles or find all doctors at a clinic's professional profiles across Russian medical platforms: "
@@ -349,7 +347,6 @@ registry.register(
                 "required": [],
             },
         },
-    },
     handler=handle_run_doctor_dossiers,
     check_fn=lambda: True,
     is_async=True,

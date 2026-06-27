@@ -283,6 +283,24 @@ async def _get_updates(offset: int = 0, timeout: int = 30) -> list[dict]:
     return _get_updates_sync(offset, timeout)
 
 
+def _get_latest_update_id() -> int:
+    """Get the latest update_id to skip all pending updates from before startup."""
+    if not TELEGRAM_BOT_TOKEN:
+        return 0
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
+    try:
+        with httpx.Client(timeout=10) as client:
+            response = client.post(url, json={"offset": -1, "timeout": 0, "allowed_updates": []})
+            data = response.json()
+            if data.get("ok"):
+                results = data.get("result", [])
+                if results:
+                    return results[-1].get("update_id", 0)
+    except Exception:
+        pass
+    return 0
+
+
 def _get_updates_sync(offset: int = 0, timeout: int = 30) -> list[dict]:
     """Fetch pending updates from Telegram via long-polling — synchronous, for thread."""
     if not TELEGRAM_BOT_TOKEN:
@@ -313,6 +331,12 @@ def _process_update_sync(message_data: dict, chat_id: int, text: str):
 
     logger.info(f"Processing tg message: chat_id={chat_id} mode={mode} text={text[:80]}")
     _send_chat_action_sync(chat_id)
+
+    # v8: enable Telegram progress streaming — ONLY for PRESALE (not ADMIN)
+    from .main import set_telegram_progress_target, clear_telegram_progress_target
+    if mode != "ADMIN":
+        set_telegram_progress_target(chat_id)
+
     try:
         reply = _call_hermes_agent(mode=mode, user_message=text, session_id=f"tg:{chat_id}")
         logger.info(f"Agent reply received: {len(reply)} chars. Sending to Telegram chat {chat_id}...")
@@ -328,6 +352,8 @@ def _process_update_sync(message_data: dict, chat_id: int, text: str):
             _send_telegram_message_sync(chat_id, f"❌ Ошибка при обработке: {str(e)[:200]}")
         except Exception:
             pass
+    finally:
+        clear_telegram_progress_target()
 
 
 def _call_hermes_agent(mode: str, user_message: str, session_id: str) -> str:
@@ -366,6 +392,10 @@ def _polling_loop_sync():
     logger.info("Telegram polling started (getUpdates, sync thread)")
     consecutive_errors = 0
     poll_count = 0
+
+    # First poll: drop all pending updates from before startup
+    _last_update_id = _get_latest_update_id()
+    logger.info(f"Polling: dropped stale updates, starting from update_id={_last_update_id}")
 
     while not _polling_stop:
         try:

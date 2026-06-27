@@ -343,8 +343,6 @@ registry.register(
     name="bitrix_scrape",
     toolset="hermes-debug",
     schema={
-        "type": "function",
-        "function": {
             "name": "bitrix_scrape",
             "description": (
                 "Scrape a Bitrix (1C-Bitrix) website using Playwright Chromium. "
@@ -371,7 +369,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_bitrix_scrape,
     check_fn=lambda: True,
     is_async=True,

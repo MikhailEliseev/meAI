@@ -72,8 +72,6 @@ registry.register(
     name="search_telegram_chats",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "search_telegram_chats",
             "description": "Search Telegram chats and channels by name. Useful for finding client conversations, monitoring industry channels, and checking partner activity.",
             "parameters": {
@@ -85,7 +83,6 @@ registry.register(
                 "required": ["query"],
             },
         },
-    },
     handler=handle_search_chats,
     is_async=True,
     description="Search Telegram chats and channels by name",
@@ -113,8 +110,6 @@ registry.register(
     name="send_telegram_message",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "send_telegram_message",
             "description": "Send a Telegram message as Mikhail (the agency founder). Use this to personally reach out to clients, partners, or team members. Requires ADMIN mode.",
             "parameters": {
@@ -126,7 +121,6 @@ registry.register(
                 "required": ["peer", "message"],
             },
         },
-    },
     handler=handle_send_message_as_user,
     is_async=True,
     description="Send Telegram message as Mikhail (user account, not bot)",

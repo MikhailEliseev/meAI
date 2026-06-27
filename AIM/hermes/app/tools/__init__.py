@@ -7,7 +7,7 @@ enabled_toolsets=["aim-operations"] is set. MCP server mode (hermes mcp serve)
 is for EXTERNAL MCP clients only.
 
 All handlers make real HTTP calls to AIM API via internal Docker network (D-14, D-15).
-AIM_API_BASE = "http://aim-app:8000"
+AIM_API_BASE = "http://app:8000"
 """
 
 import logging
@@ -15,100 +15,110 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def _import_tool(module_name: str) -> bool:
-    """Import a tool module by name. Returns True on success, logs and returns False on error."""
-    try:
-        __import__(f"app.tools.{module_name}", fromlist=[module_name])
-        return True
-    except Exception as e:
-        logger.error(f"Failed to import tool {module_name}: {e}")
-        return False
-
-
 def register_all_tools() -> None:
     """Register all AIM operation tools in the Hermes registry.
 
-    Called once at FastAPI app startup.
-    Each tool module registers itself via registry.register() at module level.
-    Imports are wrapped so one broken tool doesn't kill the rest.
+    Called once at FastAPI app startup. Each tool module imports itself
+    and calls registry.register() at module level, so importing them
+    here is sufficient to register.
+
+    UNIFIED TOOL (replaces 16 individual tools):
+    - orchestrate           -> POST http://app:8000/api/hermes/orchestrate
+
+    Legacy tools (kept for backward compatibility):
+    - run_seo_audit        -> POST http://app:8000/api/seo/audit
+    - run_content_analysis -> POST http://app:8000/api/content/analyze
+    - run_ads_report       -> POST http://app:8000/api/ads/report
+    - show_project_status  -> GET  http://app:8000/api/projects/{project_id}/status
+    - collect_contact      -> POST http://app:8000/api/leads
+    - show_all_leads       -> GET  http://app:8000/api/leads
+    - qualify_lead         -> POST http://app:8000/api/sales/qualify
+    - escalate_to_manager  -> POST http://app:8000/api/sales/escalate
+    - get_lead_pipeline    -> GET  http://app:8000/api/sales/pipeline
+    - update_knowledge     -> PUT  http://app:8000/api/sales/knowledge/update
+    - run_prescan          -> POST http://app:8000/api/presale/prescan
+    - find_competitors     -> POST http://app:8000/api/competitors/find
+    - present_competitors  -> POST http://app:8000/api/competitors/save
+    - run_ci_analysis      -> POST http://app:8000/api/competitors/analyze
+    - find_company_financials -> GET http://app:8000/api/companies/financials
+    - send_telegram_file   -> Bot API sendDocument/sendPhoto
     """
+    # Unified orchestrator — PRIMARY tool
+    from . import orchestrate           # noqa: F401
 
-    count_before = len(_get_registry_tools())
-    logger.info(f"Tools before registration: {count_before}")
+    # Legacy tools — kept for backward compatibility
+    from . import run_seo_audit          # noqa: F401
+    from . import run_content_analysis   # noqa: F401
+    from . import run_ads_report         # noqa: F401
+    from . import show_project_status    # noqa: F401
+    from . import collect_contact        # noqa: F401
+    from . import show_all_leads         # noqa: F401
+    from . import qualify_lead           # noqa: F401
+    from . import escalate_to_manager    # noqa: F401
+    from . import get_lead_pipeline      # noqa: F401
+    from . import update_knowledge       # noqa: F401
+    from . import run_prescan          # noqa: F401
+    from . import find_competitors       # noqa: F401
+    from . import present_competitors    # noqa: F401
+    from . import run_ci_analysis        # noqa: F401
+    from . import find_company_financials # noqa: F401
+    from . import send_telegram_file     # noqa: F401
 
-    # === Phase 0: Prelude (4 tools) ===
-    _import_tool("orchestrate")
-    _import_tool("quick_overview")
-    _import_tool("perplexity_tools")
+    # v3.3 restoration: activate new tools (previously dead code)
+    from . import perplexity_tools         # noqa: F401  (perplexity_search, perplexity_deep_analyze)
+    from . import crawlee_web              # noqa: F401  (crawlee_scrape, crawlee_search)
+    from . import scrapy_runner            # noqa: F401  (scrapy_crawl)
+    from . import find_doctor_handles      # noqa: F401
+    from . import run_forum_pains          # noqa: F401
+    from . import run_media_urls           # noqa: F401
+    from . import run_lighthouse           # noqa: F401
+    from . import run_tech_seo_audit       # noqa: F401
+    from . import read_report_reference    # noqa: F401
+    from . import post_report              # noqa: F401
+    from . import generate_html_report     # noqa: F401
+    # v3.3++: activate review + social tools (were missed in original activation)
+    from . import run_review_platforms     # noqa: F401  (Yandex Maps, 2GIS, ProDoctorov, Otzovik)
+    from . import run_instagram_content    # noqa: F401  (deep Instagram audit for doctors/clinic)
+    # v3.3++: z.ai Coding Plan integrations (free under quota)
+    from . import zai_tools                # noqa: F401  (zai_reader, zai_search, zai_zread)
 
-    # === Phase 1: Discovery / Scout (10 tools) ===
-    _import_tool("run_prescan")
-    _import_tool("run_aim_scout")
-    _import_tool("run_full_scout")
-    _import_tool("run_background_pipeline")
-    _import_tool("run_validation_check")
-    _import_tool("run_web_search")
-    _import_tool("find_company_financials")
-    _import_tool("telegram_tools")
-
-    # === Phase 2: Competitive Intelligence (14 tools) ===
-    _import_tool("find_competitors")
-    _import_tool("present_competitors")
-    _import_tool("run_ci_analysis")
-    _import_tool("run_seo_audit")
-    _import_tool("run_content_analysis")
-    _import_tool("run_content_gaps")
-    _import_tool("run_ads_report")
-    _import_tool("run_ads_intelligence")
-    _import_tool("run_pagespeed")
-    _import_tool("run_tech_seo_audit")
-    _import_tool("run_review_platforms")
-    _import_tool("run_smi_mentions")
-    _import_tool("crawlee_web")
-    _import_tool("scrapy_runner")
-
-    # === Phase 3: People & Content (5 tools) ===
-    _import_tool("run_hh_analysis")
-    _import_tool("run_doctor_dossiers")
-    _import_tool("run_instagram_content")
-    _import_tool("geo_optimizer_tools")
-    _import_tool("finalize_research")
-
-    # === Phase 3.5: Report Generation (2 tools) ===
-    _import_tool("publish_scout_report")
-    _import_tool("generate_html_report")
-
-    # === Sales / CRM (8 tools) ===
-    _import_tool("collect_contact")
-    _import_tool("qualify_lead")
-    _import_tool("escalate_to_manager")
-    _import_tool("show_all_leads")
-    _import_tool("get_lead_pipeline")
-    _import_tool("show_project_status")
-    _import_tool("update_knowledge")
-    _import_tool("send_telegram_file")
-
-    count_after = len(_get_registry_tools())
-    logger.info(
-        f"Registered {count_after} AIM operations tools "
-        f"(+{count_after - count_before} new)"
-    )
-
-
-def _get_registry_tools():
-    """Get the internal _tools dict from the framework registry."""
-    from tools.registry import registry
-    return registry._tools
+    logger.info("Registered 33 AIM operations tools: orchestrate + 16 legacy + 16 new")
 
 
 def register_debug_tools() -> None:
-    """Register Hermes debug tools."""
-    _import_tool("shell_exec")
-    _import_tool("web_scraper")
-    _import_tool("external_api")
-    _import_tool("bitrix_scraper")
-    _import_tool("firecrawl_web")
-    logger.info("Registered 15 debug tools")
+    """Register Hermes debug tools — shell_exec, file_read, api_debug, file_write,
+    pip_install, restart_myself, web_fetch, web_search, browser_screenshot, call_api,
+    bitrix_scrape.
+
+    Toolset "hermes-debug" gives Hermes full access to the container
+    for self-diagnostics, web access, package management, browser automation, and self-restart.
+
+    v3.3++ optimization: deregister dead firecrawl tools that were never called
+    in production (firecrawl_agent, firecrawl_agent_status, firecrawl_batch_scrape,
+    firecrawl_parse). They overlap with perplexity_search / firecrawl_scrape and
+    only add noise to the tool catalog exposed to the LLM.
+    """
+    from . import shell_exec  # noqa: F401
+    from . import web_scraper  # noqa: F401
+    from . import external_api  # noqa: F401
+    from . import bitrix_scraper  # noqa: F401
+    from . import firecrawl_web  # noqa: F401
+
+    # Deregister dead/overlapping firecrawl tools (0 calls in production)
+    # Per usage stats: firecrawl_agent/_status/batch_scrape/parse never used
+    try:
+        from tools.registry import registry
+        for dead in ("firecrawl_agent", "firecrawl_agent_status",
+                     "firecrawl_batch_scrape", "firecrawl_parse"):
+            try:
+                registry.deregister(dead)
+                logger.info("Deregistered dead tool: %s", dead)
+            except Exception:
+                pass  # tool may not be registered
+    except ImportError:
+        pass
+
+    logger.info("Registered 15 debug tools: shell_exec, file_read, api_debug, file_write, pip_install, restart_myself, web_fetch, web_search, browser_screenshot, call_api, bitrix_scrape, firecrawl_scrape, firecrawl_search, firecrawl_crawl, firecrawl_map")
 
 
 __all__ = ["register_all_tools", "register_debug_tools"]

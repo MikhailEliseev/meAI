@@ -230,8 +230,6 @@ registry.register(
     name="publish_scout_report",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "publish_scout_report",
             "description": "Публикует готовый scout-отчёт как красивую страницу на iamaim.ru. "
                            "Читает данные из /opt/data/sessions-archive/{slug}/, "
@@ -249,7 +247,6 @@ registry.register(
                 "required": ["slug"],
             },
         },
-    },
     handler=handle_publish_scout_report,
     check_fn=lambda: bool(WP_DB_PASSWORD),
     is_async=True,

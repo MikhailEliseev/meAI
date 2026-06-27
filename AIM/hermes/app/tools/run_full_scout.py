@@ -200,8 +200,6 @@ registry.register(
     name="run_full_scout",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "run_full_scout",
             "description": (
                 "Запустить полный 16-фазный скаутинг конкурентной разведки для сайта клиники. "
@@ -224,7 +222,6 @@ registry.register(
                 "required": ["url"],
             },
         },
-    },
     handler=handle_run_full_scout,
     check_fn=lambda: True,
     is_async=True,

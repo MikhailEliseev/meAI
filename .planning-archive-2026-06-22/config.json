@@ -1,0 +1,27 @@
+{
+  "mode": "yolo",
+  "granularity": "coarse",
+  "model_profile": "inherit",
+  "workflow": {
+    "research": false,
+    "plan_check": true,
+    "verifier": true,
+    "auto_advance": true,
+    "nyquist_validation": false,
+    "security_enforcement": false,
+    "post_planning_gaps": false,
+    "_auto_chain_active": true
+  },
+  "planning": {
+    "commit_docs": true
+  },
+  "parallelization": {
+    "enabled": false,
+    "plan_level": false,
+    "task_level": false
+  },
+  "ship": {
+    "pr_body_sections": []
+  },
+  "project_code": "AIM"
+}

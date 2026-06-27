@@ -231,8 +231,6 @@ registry.register(
     name="finalize_research",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "finalize_research",
             "description": (
                 "Finalize a deep research session and generate a report link for the client. "
@@ -271,7 +269,6 @@ registry.register(
                 "required": ["session_id"],
             },
         },
-    },
     handler=handle_finalize_research,
     check_fn=lambda: True,
     is_async=True,

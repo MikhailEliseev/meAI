@@ -1,16 +1,14 @@
 """
-escalate_to_manager — Hermes tool: Escalate to Human Manager
+escalate_to_manager — Hermes tool: Escalate Lead to Manager
 
-POST http://aim-app:8000/api/sales/escalate
-Escalates a conversation to a human manager. Used when the agent cannot
-handle the situation: medical data requests (152-ФЗ), complex questions,
-threats, profanity, or explicit human requests.
+Sends Telegram notification to Mikhail with client contact + summary.
 
-Registered in Hermes internal registry under toolset "aim-operations".
+Per D-34: CTA button "Обсудить с менеджером" triggers this tool.
 """
 
 import json
 import logging
+import os
 
 import httpx
 
@@ -18,139 +16,107 @@ from tools.registry import registry
 
 logger = logging.getLogger(__name__)
 
-
-def _normalize_args(first_param, defaults):
-    if isinstance(first_param, dict):
-        return {k: first_param.get(k, defaults[k]) for k in defaults}
-    return None
-
-
-AIM_API_BASE = "http://aim-app:8000"
-REQUEST_TIMEOUT = 15.0
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_ADMIN_CHAT_ID = os.getenv("TELEGRAM_ADMIN_CHAT_ID", "")
 
 
 async def handle_escalate_to_manager(
-    conversation_id=None,
-    reason=None,
-    severity="urgent",
-    notes="",
-    **kwargs,
+    lead_info: str,
+    clinic_name: str,
+    website: str,
+    summary: str,
+    **kwargs
 ) -> str:
-    """Escalate a conversation to a human manager.
-
-    Use when: patient asks for medical history (152-ФЗ), complex question
-    agent cannot answer, threats or profanity, explicit human request,
-    or technical failures.
+    """Escalate lead to manager via Telegram notification.
 
     Args:
-        conversation_id: The conversation ID to escalate.
-        reason: Escalation reason: medical_data_request, complex_question,
-                inappropriate_behavior, human_request, technical_failure.
-        severity: immediate (stop now), urgent (within 5 min), routine (flag for review).
-        notes: Additional context for the manager.
+        lead_info: Contact info (name, email, phone)
+        clinic_name: Clinic name
+        website: Clinic URL
+        summary: Brief summary of findings + offered services
 
     Returns:
-        JSON string with status and escalation details.
+        JSON with status
     """
-    unpacked = _normalize_args(conversation_id, {
-        "conversation_id": "", "reason": "", "severity": "urgent", "notes": ""
-    })
-    if unpacked:
-        conversation_id = unpacked["conversation_id"]
-        reason = unpacked["reason"]
-        severity = unpacked.get("severity", "urgent")
-        notes = unpacked.get("notes", "")
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_ADMIN_CHAT_ID:
+        logger.error("Telegram credentials missing, cannot escalate")
+        return json.dumps({"error": "Telegram not configured"})
 
-    if not conversation_id:
-        return json.dumps({"error": "conversation_id is required"})
-
-    valid_reasons = [
-        "medical_data_request", "complex_question",
-        "inappropriate_behavior", "human_request", "technical_failure",
-    ]
-    if reason not in valid_reasons:
-        return json.dumps({
-            "error": f"Invalid reason. Must be one of: {', '.join(valid_reasons)}"
-        })
-
-    logger.info("Escalating: conv=%s reason=%s severity=%s", conversation_id, reason, severity)
     try:
-        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+        # Build notification message
+        message = f"""🔥 <b>Новый горячий лид!</b>
+
+<b>Клиника:</b> {clinic_name}
+<b>Сайт:</b> {website}
+
+<b>Контакт:</b>
+{lead_info}
+
+<b>Резюме:</b>
+{summary}
+
+<i>Клиент хочет обсудить детали. Свяжись в течение 15 минут!</i>
+"""
+
+        # Send to Telegram
+        async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.post(
-                f"{AIM_API_BASE}/api/sales/escalate",
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
                 json={
-                    "conversation_id": conversation_id,
-                    "reason": reason,
-                    "severity": severity,
-                    "notes": str(notes),
-                },
+                    "chat_id": TELEGRAM_ADMIN_CHAT_ID,
+                    "text": message,
+                    "parse_mode": "HTML"
+                }
             )
             response.raise_for_status()
-            data = response.json()
-            logger.info("Escalated: conv=%s", conversation_id)
-            return json.dumps(data, ensure_ascii=False, indent=2)
+
+            logger.info("Lead escalated to manager: %s", clinic_name)
+            return json.dumps({
+                "status": "escalated",
+                "clinic": clinic_name,
+                "message": "Менеджер получил уведомление и свяжется с вами в ближайшее время"
+            }, ensure_ascii=False)
+
     except httpx.HTTPStatusError as e:
-        logger.error("AIM API returned error for escalation: %s", e)
-        return json.dumps({
-            "error": "AIM API returned an error",
-            "status": e.response.status_code,
-            "detail": str(e),
-        })
-    except httpx.RequestError as e:
-        logger.error("Cannot reach AIM API for escalation: %s", e)
-        return json.dumps({"error": "Cannot reach AIM API", "detail": str(e)})
+        logger.error("Telegram API error: %s", e)
+        return json.dumps({"error": "Failed to send notification", "detail": str(e)})
     except Exception as e:
-        logger.exception("Unexpected error in escalate_to_manager handler")
-        return json.dumps({"error": "Unexpected error", "detail": str(e)})
+        logger.exception("Escalation failed")
+        return json.dumps({"error": str(e)})
 
 
 registry.register(
     name="escalate_to_manager",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
-            "name": "escalate_to_manager",
-            "description": (
-                "Escalate a conversation to a human manager. "
-                "Use when: medical data request (152-ФЗ), complex question, "
-                "threats/profanity, explicit human request, or technical failures."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "conversation_id": {
-                        "type": "string",
-                        "description": "The conversation ID to escalate",
-                    },
-                    "reason": {
-                        "type": "string",
-                        "description": "Escalation reason",
-                        "enum": [
-                            "medical_data_request",
-                            "complex_question",
-                            "inappropriate_behavior",
-                            "human_request",
-                            "technical_failure",
-                        ],
-                    },
-                    "severity": {
-                        "type": "string",
-                        "description": "Escalation severity level",
-                        "enum": ["immediate", "urgent", "routine"],
-                    },
-                    "notes": {
-                        "type": "string",
-                        "description": "Additional context for the manager",
-                    },
+        "name": "escalate_to_manager",
+        "description": "Escalate lead to manager — sends Telegram notification to Mikhail",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "lead_info": {
+                    "type": "string",
+                    "description": "Contact info: name, email, phone"
                 },
-                "required": ["conversation_id", "reason"],
+                "clinic_name": {
+                    "type": "string",
+                    "description": "Clinic name"
+                },
+                "website": {
+                    "type": "string",
+                    "description": "Clinic website URL"
+                },
+                "summary": {
+                    "type": "string",
+                    "description": "Brief summary: findings + offered services"
+                }
             },
-        },
+            "required": ["lead_info", "clinic_name", "website", "summary"]
+        }
     },
     handler=handle_escalate_to_manager,
     check_fn=lambda: True,
     is_async=True,
-    description="Escalate a conversation to a human manager",
-    emoji="🚨",
+    description="Escalate lead to manager via Telegram",
+    emoji="🔥"
 )

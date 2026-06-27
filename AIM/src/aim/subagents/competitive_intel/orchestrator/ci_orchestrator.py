@@ -947,13 +947,13 @@ class CIOrchestrator(Agent):
         _client_entry = {
             "name": client_name,
             "url": client_url,
-            "revenue": None,
-            "revenue_trend": "",
+            "revenue": task_data.get("client_revenue"),
+            "revenue_trend": _client_enriched.get("revenue_trend", ""),
             "doctors_count": _client_enriched.get("doctors_count"),
             "instagram_username": _client_enriched.get("instagram_username", ""),
             "instagram_subscribers": _client_enriched.get("instagram_subscribers"),
-            "gm_rating": None,
-            "gm_reviews_count": None,
+            "gm_rating": task_data.get("client_rating"),
+            "gm_reviews_count": _client_enriched.get("gm_reviews_count"),
         }
 
         competitor_details = _build_competitor_details(
@@ -1038,8 +1038,13 @@ class CIOrchestrator(Agent):
                 async def fetch_one(c, base_url):
                     try:
                         headers = {
-                            "User-Agent": "Mozilla/5.0 (compatible; AIM-CI/1.0)",
-                            "Accept": "text/html",
+                            "User-Agent": (
+                                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                                "Chrome/131.0.0.0 Safari/537.36"
+                            ),
+                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                            "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
                         }
                         resp = await client.get(base_url, headers=headers)
                         max_count = 0
@@ -1292,8 +1297,13 @@ class CIOrchestrator(Agent):
                 async def scrape_one(c, base_url, social):
                     try:
                         headers = {
-                            "User-Agent": "Mozilla/5.0 (compatible; AIM-CI/1.0)",
-                            "Accept": "text/html",
+                            "User-Agent": (
+                                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                                "Chrome/131.0.0.0 Safari/537.36"
+                            ),
+                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                            "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
                         }
                         ig_username = ""
                         seen_links = set()

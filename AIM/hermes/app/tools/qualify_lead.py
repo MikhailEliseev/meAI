@@ -99,8 +99,6 @@ registry.register(
     name="qualify_lead",
     toolset="aim-operations",
     schema={
-        "type": "function",
-        "function": {
             "name": "qualify_lead",
             "description": (
                 "Manually qualify a lead in a sales conversation. "
@@ -133,7 +131,6 @@ registry.register(
                 "required": ["conversation_id", "score", "tier"],
             },
         },
-    },
     handler=handle_qualify_lead,
     check_fn=lambda: True,
     is_async=True,

@@ -170,5 +170,17 @@ export function useChatStream() {
     }
   }, [status, sessionId, addMessage]);
 
-  return { messages, sendMessage, stop, status, sessionId, streamingRef };
+  const reset = useCallback(() => {
+    stop();
+    setMessages([]);
+    setSessionId(null);
+    fullTextRef.current = '';
+    messageIdRef.current = null;
+    try {
+      localStorage.removeItem(SESSION_ID_KEY);
+      localStorage.removeItem(MESSAGES_KEY);
+    } catch {}
+  }, [stop]);
+
+  return { messages, sendMessage, stop, reset, status, sessionId, streamingRef };
 }
