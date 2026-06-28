@@ -1,207 +1,135 @@
-# Session: 2026-06-27 — Phase 9 Context Complete
+# Session: 2026-06-28 — Phase 09 Deployed
 
 ## Текущий фокус
 
-**Ожидание отката сервера на 2 дня назад**
+**Phase 09 развёрнут и готов к тестированию**
 
-**Что произошло:**
-- Phase 09 задеплоена на сервер (27.06 23:18)
-- WordPress откачен на версию ДО Phase 09 (25.06)
-- Обнаружена потеря HeadroomGuard обёртки (не закоммичена, не забэкаплена)
-- Пользователь откатывает весь сервер на 2 дня назад
+**Что сделано:**
+- ✅ Hermes backend: report_url в finish event (main.py модифицирован, backup создан)
+- ✅ WordPress frontend: hermes-chat-pro.html с Phase Tracker (1020 строк)
+- ✅ WordPress backend: aim-pro-endpoints.php с fallback REST API (172 строки)
+- ✅ functions.php обновлён для подключения endpoints (backup создан)
+- ✅ Hermes контейнер перезапущен (04:56:47 UTC)
+- ✅ Fallback endpoint протестирован (работает)
 
-**Phase 09 полностью сохранена:**
-- `~/Desktop/phase09-COMPLETE-20260628-022838.tar.gz` (446 KB)
-- Содержит: AIM/hermes/app/, AIM/theme/, SESSION.md, .current-task
-- Все файлы верифицированы по MD5
+**Что добавляет Phase 09:**
+1. **Phase Tracker** — 8 фаз пресейла с real-time прогрессом
+2. **Report Preview** — WOW-карточка с готовым отчётом + CTA
+3. **Fallback Form** — сбор email/telegram для отправки отчёта
 
-**Новые правила добавлены:**
-- ✅ `scripts/auto-commit-deploy.sh` — автокоммит перед деплоем
-- ✅ `.git/hooks/pre-push` — автокоммит перед push
-- ✅ CLAUDE.md обновлён с правилом Auto-Commit Before Deploy
+**URL для тестирования:**
+- Dev: `https://iamaim.ru/wp-content/themes/aim-theme/chat/hermes-chat-pro.html`
+- Legacy: `https://iamaim.ru/wp-content/themes/aim-theme/chat/hermes-chat.html`
 
-**После отката сервера:**
-1. Восстановить Phase 09 из бэкапа
-2. Попытаться найти HeadroomGuard в серверных бэкапах (20-27 июня)
-3. Если нет — интегрировать заново из https://github.com/headroomlabs-ai/headroom.git
+**Что нужно протестировать (Task #2):**
+1. Открыть hermes-chat-pro.html
+2. Отправить URL клиники
+3. Проверить Phase Tracker (фазы меняются: pending → working → done)
+4. Дождаться Report Preview
+5. Тестировать Fallback Form (email submit)
 
----
+**После успешного теста:**
+```bash
+ssh aim
+cd /var/www/iamaim.ru/wp-content/themes/aim-theme/chat/
+mv hermes-chat.html hermes-chat-legacy.html
+mv hermes-chat-pro.html hermes-chat.html
+```
 
-## Что сделано за сессию (2026-06-27)
+**Rollback:** См. PHASE09-DEPLOYMENT.md
 
-### Phase 9: Chat Pro — Website Chat UX Overhaul
-
-**Статус:** Context gathering complete, ready for planning
-
-**35 решений зафиксировано:**
-- **D-01 to D-06:** Telegram-style floating progress status (одно сообщение обновляется)
-- **D-07 to D-13:** LLM wow-commentary после каждого инструмента с бизнес-языком
-- **D-14 to D-20:** Canonical template approach для фикса generate_html_report.py
-- **D-21 to D-27:** Нативный диалоговый сбор контактов (не формы)
-- **D-28 to D-34:** Services sales assistant с semantic matching
-- **D-35:** 4 плана реализации
-
-**10 канонических референсов:**
-1. design-showcase-dual-theme.html — единственный канон дизайна
-2. theme.css — CSS variables
-3. hermes-chat.html — текущий чат (нужно переработать SSE handling)
-4. main.py — SSE streaming, push_tool_progress()
-5. agent_wrapper.py — AIAgent lifecycle
-6. agent_wrapper_optimized.py — mode prompts
-7. collect_contact.py — существующий tool
-8. generate_html_report.py — сломан, нужен фикс
-9. ИПХиК (2).html — референс отчёта (10 секций, 965 строк)
-10. services.md — catalogue AIM услуг (создать если отсутствует)
-
-**6 идей отложено в backlog:**
-- A/B тестирование UX
-- Multi-language поддержка
-- Voice input в web chat
-- Real-time preview отчёта
-- Nише-специфичные шаблоны
-- CRM интеграция
+**HeadroomGuard:** Активен параллельно, не затронут Phase 09 изменениями.
 
 ---
 
-## Предыдущая сессия (2026-06-26)
+## Предыдущая работа (2026-06-27)
 
-### Plan A++ закрыт (13 коммитов)
-- 33 AIM tools + 16 debug = 51 всего
-- HTML отчёты 42-49KB стабильно
-- glm-5 через z.ai Coding Plan
-- Backup: `/opt/backups/plan-a-plus-plus-final-20260625-224113.tar.gz`
+### WordPress Golden Master бэкап
 
-### Chat PRO добавлен (1 коммит + fix)
-- Phase tracker (8 фаз пресейла)
-- Live counters (конкуренты, отзывы, врачи)
-- Report preview card с WOW reveal анимацией
-- Fallback form для email/telegram
-- Endpoint `/wp-json/aim/v1/fallback` — тест прошёл
+**Создан эталонный бэкап WordPress темы:**
+- `AIM/wp-golden-master.tar.gz` (8.5 MB)
+- `AIM/WP-GOLDEN-MASTER-README.md` — документация
+- Содержит reference дизайн: `design-showcase-dual-theme.html` (102 KB)
+- Все чат компоненты, assets, theme.css
 
-### Auto-URL extraction в run_prescan
-LLM иногда забывает передать URL (особенно glm-5). Добавлен fallback: если URL не передан, инструмент сам ищет URL в последних 3 user сообщениях через state.db.
+### Auto-commit система
 
-## Backup после всех изменений
+**Добавлена защита от потери незакоммиченных изменений:**
+- `scripts/auto-commit-deploy.sh` — автокоммит перед деплоем
+- `.git/hooks/pre-push` — автокоммит перед push
+- CLAUDE.md обновлён с правилом Auto-Commit Before Deploy
 
-**`/opt/backups/hermes-with-chat-pro-20260626-060335.tar.gz`** (146KB, 17 файлов)
+### Phase 09 откат
 
-Включает:
-- Hermes backend (Python)
-- SOUL.md (106KB)
-- config.yaml
-- WordPress (PHP: chat-inline, chat-inline-pro, aim-pro-endpoints, functions)
+**Откат сервера на 2 дня назад:**
+- Причина: потеря HeadroomGuard обёртки (не закоммичена, не забэкаплена)
+- Phase 09 полностью сохранена: `~/Desktop/phase09-COMPLETE-20260628-022838.tar.gz` (446 KB)
+- SOUL.md восстановлен: 104 KB, 1410 строк, 25 июня 22:21
+- Hermes app/ файлы: версия от 25 июня (до Phase 09)
 
-## Что протестировано
+---
 
-✅ **Backend tests passed:**
-- POST /wp-json/aim/v1/fallback (email) → 200 OK
-- POST /wp-json/aim/v1/fallback (telegram) → 200 OK
-- Homepage 200 OK
-- run_prescan auto-URL extraction
-- z.ai integration (zai_reader, zai_search, zai_zread)
-- Phase tracker / report preview деплой
+## План интеграции HeadroomGuard (выполнен)
 
-❌ **Что НЕ удалось протестировать из-за 429:**
-- Phase tracker UI в живом пресейле
-- Report preview reveal анимация
-- Полный end-to-end flow (URL → отчёт → ссылка)
+### Phase 1: Docker Sidecar (✅ DONE)
 
-## Текущее состояние production
+- [x] Docker-compose конфигурация создана
+- [x] Образ скачан: `ghcr.io/chopratejas/headroom:latest`
+- [x] Контейнер запущен на порту 8787
+- [x] Hermes переключён на прокси
+- [x] Healthcheck работает
+
+### Phase 2: Testing (⏳ IN PROGRESS)
+
+- [ ] Тест через iamaim.ru чат
+- [ ] Проверка метрик компрессии
+- [ ] Валидация качества отчётов
+- [ ] Измерение латенси
+- [ ] Мониторинг 24 часа
+
+### Phase 3: DeepSeek Fallback (BACKLOG)
+
+HeadroomGuard не умеет fallback между провайдерами. Опции:
+1. LiteLLM Router в agent_wrapper.py
+2. Portkey как отдельный sidecar
+3. Самописный if/else с try/except
+
+---
+
+## Текущая конфигурация production
 
 ```yaml
-LLM_MODEL: glm-5 (z.ai Coding Plan через OMNIROUTE_URL)
-PRESALE iter: 15, tokens: 12000
-reasoning_config: {"enabled": False}
-SOUL.md: 106KB (12 few-shot сценариев)
-AIM tools: 33 зарегистрировано (16 стабильно используются LLM)
-Debug tools: 16 (4 мёртвых удалено)
+HeadroomGuard:
+  container: aim-headroom-proxy
+  port: 8787
+  upstream: https://api.z.ai/api/coding/paas/v4
+  mode: optimize
+  compress_tools: false
+  keep_turns: 2
 
-WordPress:
-- chat-inline.php (с hook points для pro)
-- chat-inline-pro.php (phase tracker + report + fallback)
-- aim-pro-endpoints.php (REST endpoints)
-- functions.php (include endpoints)
+Hermes:
+  container: aim-hermes
+  OMNIROUTE_URL: http://headroom-proxy:8787/v1
+  LLM_MODEL: glm-5
+  OMNIROUTE_AUTH: 6fd916373bd7462499481201277a7ad0.aCqG4YQTsePka6tI
+
+SOUL.md: 104KB (1410 строк)
+AIM tools: 33 зарегистрировано
 ```
 
-## 16 коммитов за сессию
+## Файлы интеграции
 
-Plan A++ (13):
-1. da08350 activate 11 new tools + remove v7
-2. 25ca532 auto-pick + PRESALE=15
-3. be9d14a rich narrative_md
-4. 8737eb9 multi-turn infrastructure
-5. bb625d2 review_platforms + instagram_content
-6. d7ee17f redundancy philosophy
-7. e00e01c scraper optimization
-8. 3ca06ea 8 few-shot examples
-9. af2edf9 few-shot v2 (crawlee + extract)
-10. 8fed791 framework-level multi-turn + JS fallback
-11. 942f767 z.ai integration
-12. 1f0d8f1 few-shot v3 (zai triggers)
-13. 7be2f47 close Plan A++
+- `AIM/docker-compose.headroom.yml` — sidecar конфигурация
+- `AIM/hermes/HEADROOM-INTEGRATION-PLAN.md` — архитектура и фазы
+- `AIM/hermes/HEADROOM-DEPLOY.md` — пошаговый деплой
+- `/opt/aim/AIM/.env.headroom` — переменные окружения на сервере
 
-Chat PRO (2):
-14. f94b4a4 chat-pro phase tracker + report preview + fallback
-15. 52d7a7c document chat-pro deployment
+## Commits
 
-Auto-URL fix (1):
-16. (run_prescan.py auto-URL extraction — deployed но не закоммичен в git separately, в backup включён)
-
-## Deploy state на сервере
-
-```
-aim-hermes (healthy):
-- /opt/hermes/app/tools/run_prescan.py (auto-URL extraction)
-- /opt/hermes/app/tools/zai_tools.py
-- /opt/hermes/app/tools/generate_html_report.py (framework quality gate)
-- /opt/hermes/app/tools/web_scraper.py (JS auto-fallback)
-- /opt/hermes/app/tools/__init__.py (33 tools, 4 dead deregistered)
-- /opt/hermes/app/tools/shell_exec.py (file_write append=true)
-- /opt/hermes/app/agent_wrapper.py (_mode_limits + auto-pick)
-- /opt/data/SOUL.md (106KB)
-- /opt/hermes/config.yaml (v3.3 minimal)
-
-aim-wordpress (healthy):
-- /var/www/html/wp-content/themes/aim-theme/chat-inline.php (+3 hooks)
-- /var/www/html/wp-content/themes/aim-theme/chat-inline-pro.php (NEW)
-- /var/www/html/wp-content/themes/aim-theme/aim-pro-endpoints.php (NEW)
-- /var/www/html/wp-content/themes/aim-theme/functions.php (+include)
-```
-
-## Memory обновлён
-
-- `MEMORY.md` — добавлен указатель на zai-coding-plan-limits.md
-- `zai-coding-plan-limits.md` — peak/off-peak часы, стратегия
-- `hermes-plan-a-plus-plus.md` — полный референс архитектуры
-
-## Что делать после 13:00 МСК
-
-1. Очистить localStorage в браузере (F12 → Application → Local Storage → iamaim.ru)
-2. Открыть iamaim.ru (Ctrl+F5)
-3. Отправить URL клиники в чат
-4. Наблюдать:
-   - Phase tracker (8 фаз) должен появиться
-   - Live counters (5 конкурентов, 22 врача и т.д.)
-   - Финальный report preview с CTA на https://iamaim.ru/{slug}
-   - Если нужно уйти — fallback form
-
-## Deploy constraints
-
-- aim-hermes: НЕ `docker compose up` (затрёт docker cp). Только restart.
-- aim-wordpress: можно `docker compose up` (файлы в volume aim_wp_content)
-- Backup перед любым изменением: `/opt/backups/...`
-
-## Ключевые архитектурные принципы
-
-1. **LLM = единственный оркестратор** (без Python state machines)
-2. **Избыточность = фича** (dedicated + perplexity = cross-validation)
-3. **Framework handles correctness** (auto-URL, JS fallback, narrative gate)
-4. **Mode-based limits** (PRESALE=15, ADMIN=12, ACTIVE=6)
-5. **z.ai Coding Plan exploitation** (бесплатно: LLM, reader, search, zread)
+- `1af0506` — HeadroomGuard integration prep (28 июня 03:11)
 
 ## Что НЕ делать
 
-- ❌ Тестировать в 09:00-13:00 МСК (peak в Китае)
-- ❌ Добавлять ещё few-shot в SOUL.md (потолок 100KB достигнут)
-- ❌ Возвращать PipelineEngine или state machines
-- ❌ Удалять perplexity_search (избыточность = фича)
+- ❌ Менять `HEADROOM_COMPRESS_TOOLS` на true (сломает tool calling)
+- ❌ Удалять HeadroomGuard без тестирования rollback плана
+- ❌ Деплоить без backup текущей конфигурации

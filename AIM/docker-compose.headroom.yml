@@ -11,6 +11,8 @@ services:
     restart: unless-stopped
     ports:
       - "8787:8787"
+    env_file:
+      - .env.headroom
     environment:
       # Целевой LLM API (z.ai)
       - HEADROOM_UPSTREAM_URL=https://api.z.ai/api/coding/paas/v4
@@ -33,7 +35,7 @@ services:
 
       # Логирование
       - LOG_LEVEL=INFO
-    command: headroom proxy --port 8787 --host 0.0.0.0
+    command: ["--port", "8787", "--host", "0.0.0.0"]
     networks:
       - aim-network
     healthcheck:
@@ -44,7 +46,7 @@ services:
       start_period: 10s
 
   # Hermes — добавляем зависимость от headroom-proxy
-  aim-hermes:
+  hermes:
     depends_on:
       headroom-proxy:
         condition: service_healthy
@@ -57,4 +59,5 @@ services:
 
 networks:
   aim-network:
+    name: aim_aim-network
     external: true

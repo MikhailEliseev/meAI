@@ -1,0 +1,45 @@
+--- a/AIM/hermes/app/main.py
++++ b/AIM/hermes/app/main.py
+@@ -571,8 +571,45 @@
+                     yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': token}, ensure_ascii=False)}\n\n"
+                 await asyncio.sleep(0.02)
+
++            # Phase 09: Extract report data from generate_html_report tool result
++            report_data = {}
++            for tool_call in agent_result.get("tool_calls", []):
++                tool_name = tool_call.get("name") or tool_call.get("function", {}).get("name")
++                if tool_name == "generate_html_report":
++                    result_str = tool_call.get("result", "")
++                    if result_str:
++                        try:
++                            result_json = json.loads(result_str)
++                            if result_json.get("status") == "published" and result_json.get("url"):
++                                report_data["report_url"] = result_json["url"]
++                                report_data["report_title"] = result_json.get("title", "Разведка пресейла")
++                                # Extract stats from session metadata (optional)
++                                # For now, frontend can fetch these via /api/session/<hash>
++                                report_data["session_hash"] = result_json.get("session_hash", "")
++                                logger.info(f"[SSE] Report data extracted: {report_data}")
++                        except json.JSONDecodeError:
++                            logger.warning(f"[SSE] Failed to parse generate_html_report result: {result_str[:200]}")
++                    break
++
+             # Finish signal
+-            logger.info(f"[SSE] Sending finish signal, session_id: {agent_result.get('session_id')}")
+-            yield f"data: {json.dumps({'type': 'finish', 'session_id': agent_result.get('session_id')}, ensure_ascii=False)}\n\n"
++            finish_event = {
++                'type': 'finish',
++                'session_id': agent_result.get('session_id'),
++            }
++
++            # Add report data if available (Phase 09)
++            if report_data:
++                finish_event.update(report_data)
++                logger.info(f"[SSE] Sending finish signal with report_url: {report_data.get('report_url')}")
++            else:
++                logger.info(f"[SSE] Sending finish signal, session_id: {agent_result.get('session_id')}")
++
++            yield f"data: {json.dumps(finish_event, ensure_ascii=False)}\n\n"
+
+         except Exception as e:
+             _metrics["errors_total"] += 1
