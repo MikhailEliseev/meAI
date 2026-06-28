@@ -1,12 +1,16 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useStreamChat } from './useStreamChat.js';
 import { ChatBubble } from './components/ChatBubble.jsx';
 import { ChatInput } from './components/ChatInput.jsx';
 import { EmptyChat } from './components/EmptyChat.jsx';
+import { PhaseTracker } from './components/PhaseTracker.jsx';
+import { ReportPreview } from './components/ReportPreview.jsx';
+import { FallbackForm } from './components/FallbackForm.jsx';
 
 function HermesChat() {
-  const { messages, sendMessage, stop, status, streamingRef } = useStreamChat();
+  const { messages, sendMessage, stop, status, streamingRef, phases, reportData, sessionId } = useStreamChat();
+  const [showFallback, setShowFallback] = useState(false);
   const chatEndRef = useRef(null);
   const isStreaming = status === 'streaming' || status === 'submitted';
   const hasMessages = messages.length > 0;
@@ -44,6 +48,20 @@ function HermesChat() {
               />
             );
           })}
+
+          {/* Phase 09: Phase Tracker appears when first tool-progress event arrives */}
+          {phases.some(p => p.status !== 'pending') && (
+            <PhaseTracker phases={phases} />
+          )}
+
+          {/* Phase 09: Report Preview appears when finish event contains report_url */}
+          {reportData && (
+            <ReportPreview
+              data={reportData}
+              onRequestEmail={() => setShowFallback(true)}
+            />
+          )}
+
           <div ref={chatEndRef} />
         </div>
       )}
@@ -56,6 +74,15 @@ function HermesChat() {
             disabled={!isStreaming && status === 'error'}
           />
         </div>
+      )}
+
+      {/* Phase 09: Fallback Form modal */}
+      {showFallback && (
+        <FallbackForm
+          sessionId={sessionId}
+          reportUrl={reportData?.url}
+          onClose={() => setShowFallback(false)}
+        />
       )}
     </div>
   );

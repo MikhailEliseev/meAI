@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { PHASES } from './components/PhaseTracker';
 
 const LS_SESSION_KEY = 'aim_session_id';
 const LS_MESSAGES_KEY = 'aim_messages';
@@ -23,6 +24,8 @@ export function useStreamChat() {
   const [messages, setMessages] = useState(loadMessages);
   const [status, setStatus] = useState('ready');
   const [sessionId, setSessionId] = useState(loadSessionId);
+  const [phases, setPhases] = useState(() => PHASES.map(p => ({ ...p, status: 'pending', counter: null })));
+  const [reportData, setReportData] = useState(null);
   const abortRef = useRef(null);
   const streamingRef = useRef(null);
   const fullTextRef = useRef('');
@@ -41,6 +44,21 @@ export function useStreamChat() {
     const msg = { id: crypto.randomUUID(), role, content, timestamp: Date.now() };
     setMessages(prev => [...prev, msg]);
     return msg;
+  }, []);
+
+  const updatePhase = useCallback((stage, message) => {
+    const phase = PHASES.find(p => p.stages.includes(stage));
+    if (!phase) return;
+
+    setPhases(prev => prev.map(p => {
+      if (p.id !== phase.id) return p;
+
+      // Extract counter from message: "Найдено 5 конкурентов" → "5 конкурентов"
+      const counterMatch = message.match(/(\d+)\s+(конкурент|врач|отзыв|упоминани|страниц|стат|доктор|клиник)/i);
+      const counter = counterMatch ? `${counterMatch[1]} ${counterMatch[2]}` : null;
+
+      return { ...p, status: 'working', counter };
+    }));
   }, []);
 
   const stop = useCallback(() => {
@@ -119,10 +137,25 @@ export function useStreamChat() {
                   fullTextRef.current += event.textDelta;
                 }
                 break;
+              case 'tool-progress':
+                if (event.stage && event.message) {
+                  updatePhase(event.stage, event.message);
+                }
+                break;
               case 'finish':
                 if (event.session_id) {
                   setSessionId(event.session_id);
                   try { localStorage.setItem(LS_SESSION_KEY, event.session_id); } catch {}
+                }
+                // Phase 09: Extract report data
+                if (event.report_url) {
+                  setReportData({
+                    url: event.report_url,
+                    title: event.report_title || 'Разведка пресейла',
+                    stats: event.session_hash ? [] : [], // Stats will be fetched separately if needed
+                  });
+                  // Mark all phases as done
+                  setPhases(prev => prev.map(p => ({ ...p, status: 'done' })));
                 }
                 break;
               case 'error':
@@ -140,7 +173,6 @@ export function useStreamChat() {
                 });
                 setStatus('error');
                 break;
-              // step-start, step-end, tool-progress — silently ignored
             }
           } catch {
             // skip invalid JSON lines
@@ -174,7 +206,7 @@ export function useStreamChat() {
       addMessage('agent', 'Извините, произошла ошибка. Попробуйте ещё раз. (' + err.message + ')');
       setStatus('error');
     }
-  }, [status, sessionId, addMessage]);
+  }, [status, sessionId, addMessage, updatePhase]);
 
-  return { messages, sendMessage, stop, status, sessionId, streamingRef };
+  return { messages, sendMessage, stop, status, sessionId, streamingRef, phases, reportData };
 }
