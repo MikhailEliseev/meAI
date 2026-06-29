@@ -44,14 +44,14 @@ def save_tool_output(session_id: str, key: str, value: dict) -> str:
     data_dir.mkdir(parents=True, exist_ok=True)
 
     filepath = data_dir / f"{key}.json"
-    # Ensure parent directory exists (key may contain subdirectories, e.g. "PHASE/tool")
+
+    # Ensure parent directories exist (e.g. data/TECH AUDIT/)
     filepath.parent.mkdir(parents=True, exist_ok=True)
 
-    # Clean key for use as temp file prefix (replace / with _)
-    safe_key = key.replace("/", "_")
     try:
+        safe_key = key.replace("/", "_").replace(" ", "_")
         fd, tmp_path = tempfile.mkstemp(
-            suffix=".json", prefix=f".{safe_key}_", dir=str(filepath.parent)
+            suffix=".json", prefix=f".{safe_key}_", dir=str(data_dir)
         )
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(value, f, ensure_ascii=False, indent=2, default=str)

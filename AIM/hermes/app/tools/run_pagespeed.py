@@ -1,26 +1,25 @@
-"""
-run_pagespeed — Hermes tool: PageSpeed Insights
+"""run_pagespeed — Hermes tool: Lighthouse Performance Audit.
 
-Вызывает Google PageSpeed Insights API v5 напрямую (бесплатно, без ключа).
-Возвращает Core Web Vitals: Performance score, LCP, FCP, TBT, CLS.
+Uses Google Lighthouse (Node.js CLI) with headless Chromium
+to measure Core Web Vitals: Performance score, LCP, FCP, TBT, CLS.
 """
 
 import asyncio
 import json
 import logging
+import os
+import subprocess
 import time
-
-import httpx
 
 from tools.registry import registry
 
 logger = logging.getLogger(__name__)
 
-PAGESPEED_API = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
-REQUEST_TIMEOUT = 60.0
-
-_cache: dict[str, tuple[float, str]] = {}
-_CACHE_TTL = 600
+# Chromium from Playwright installation
+_CHROME_PATH = os.path.expanduser(
+    os.getenv("CHROME_PATH", "~/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome")
+)
+_LIGHTHOUSE_TIMEOUT = 120  # seconds — Lighthouse can be slow
 
 
 def _normalize_args(first_param, defaults):
@@ -29,141 +28,188 @@ def _normalize_args(first_param, defaults):
     return None
 
 
-async def _run_pagespeed_for_strategy(client: httpx.AsyncClient, url: str, strategy: str) -> dict:
-    """Run PageSpeed for one strategy (mobile/desktop) with retry on 429."""
-    from app.key_bank import key_bank
-    google_key = key_bank.get("GOOGLE_API_KEY")
-    params: dict = {"url": url, "strategy": strategy, "category": "performance"}
-    if google_key:
-        params["key"] = google_key
+async def _run_lighthouse(url: str) -> dict:
+    """Run Lighthouse CLI and return parsed performance results."""
+    chrome_path = os.path.expanduser(_CHROME_PATH)
+    if not os.path.exists(chrome_path):
+        # Try to find chromium automatically
+        import glob
+        candidates = glob.glob(os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux64/chrome"))
+        if candidates:
+            chrome_path = candidates[0]
+        else:
+            return {"error": "Chromium not found", "detail": f"Tried: {_CHROME_PATH}"}
 
-    last_error = None
-    for attempt in range(3):
-        try:
-            resp = await client.get(
-                PAGESPEED_API,
-                params=params,
-                timeout=REQUEST_TIMEOUT,
-            )
-            resp.raise_for_status()
-            break
-        except httpx.HTTPStatusError as e:
-            last_error = e
-            if e.response.status_code == 429 and attempt < 2:
-                await asyncio.sleep(2.0 * (attempt + 1))
-                continue
-            raise
-    else:
-        raise last_error  # type: ignore[misc]
-
-    data = resp.json()
-
-    lighthouse = data.get("lighthouseResult", {})
-    categories = lighthouse.get("categories", {})
-    audits = lighthouse.get("audits", {})
-
-    performance = categories.get("performance", {})
-    score = int((performance.get("score", 0) or 0) * 100)
-
-    # Core Web Vitals из audits
-    def _audit_value(audit_id: str, metric: str = "displayValue") -> str:
-        a = audits.get(audit_id, {})
-        return a.get(metric, a.get("numericValue", "N/A"))
-
-    return {
-        "strategy": strategy,
-        "performance_score": score,
-        "lcp": _audit_value("largest-contentful-paint"),
-        "fcp": _audit_value("first-contentful-paint"),
-        "tbt": _audit_value("total-blocking-time"),
-        "cls": _audit_value("cumulative-layout-shift"),
-        "si": _audit_value("speed-index"),
-        "tti": _audit_value("interactive"),
-    }
+    flags = "--headless --no-sandbox --disable-gpu --disable-dev-shm-usage"
+    
+    cmd = [
+        "lighthouse", url,
+        "--output=json",
+        f"--chrome-flags={flags}",
+        "--only-categories=performance",
+        "--quiet",
+    ]
+    
+    env = {**os.environ, "CHROME_PATH": chrome_path}
+    
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=env,
+        )
+        stdout, stderr = await asyncio.wait_for(
+            proc.communicate(), timeout=_LIGHTHOUSE_TIMEOUT
+        )
+        
+        if proc.returncode != 0:
+            error_msg = stderr.decode()[:500] if stderr else f"exit code {proc.returncode}"
+            logger.error("Lighthouse failed for %s: %s", url, error_msg)
+            return {"error": "Lighthouse audit failed", "detail": error_msg}
+        
+        data = json.loads(stdout)
+        
+        # Extract key metrics
+        categories = data.get("categories", {})
+        perf = categories.get("performance", {})
+        score = int((perf.get("score") or 0) * 100)
+        
+        audits = data.get("audits", {})
+        
+        def _get_audit(audit_id: str) -> dict | None:
+            a = audits.get(audit_id, {})
+            if not a:
+                return None
+            return {
+                "displayValue": a.get("displayValue", ""),
+                "numericValue": a.get("numericValue"),
+                "score": int((a.get("score") or 0) * 100),
+            }
+        
+        # Core Web Vitals
+        lcp = _get_audit("largest-contentful-paint")
+        fcp = _get_audit("first-contentful-paint")
+        tbt = _get_audit("total-blocking-time")
+        cls = _get_audit("cumulative-layout-shift")
+        si = _get_audit("speed-index")
+        tti = _get_audit("interactive")
+        
+        # Distribution (CrUX-like: good / needs improvement / poor)
+        lcp_dist = {}
+        fcp_dist = {}
+        tbt_dist = {}
+        cls_dist = {}
+        for audit_id, dist_dict in [
+            ("largest-contentful-paint", lcp_dist),
+            ("first-contentful-paint", fcp_dist),
+            ("total-blocking-time", tbt_dist),
+            ("cumulative-layout-shift", cls_dist),
+        ]:
+            a = audits.get(audit_id, {})
+            if a:
+                dist_dict["good"] = a.get("displayValue", "")
+        
+        result = {
+            "url": url,
+            "performance_score": score,
+            "method": "Lighthouse",
+            "lcp": lcp.get("displayValue", "—") if lcp else "—",
+            "lcp_seconds": lcp.get("numericValue", 0) / 1000 if lcp and lcp.get("numericValue") else None,
+            "fcp": fcp.get("displayValue", "—") if fcp else "—",
+            "fcp_seconds": fcp.get("numericValue", 0) / 1000 if fcp and fcp.get("numericValue") else None,
+            "tbt": tbt.get("displayValue", "—") if tbt else "—",
+            "tbt_ms": int(tbt.get("numericValue", 0)) if tbt and tbt.get("numericValue") else None,
+            "cls": cls.get("displayValue", "—") if cls else "—",
+            "cls_value": cls.get("numericValue") if cls else None,
+            "si": si.get("displayValue", "—") if si else "—",
+            "si_seconds": si.get("numericValue", 0) / 1000 if si and si.get("numericValue") else None,
+            "tti": tti.get("displayValue", "—") if tti else "—",
+            "tti_seconds": tti.get("numericValue", 0) / 1000 if tti and tti.get("numericValue") else None,
+            "analyzed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+        
+        return result
+        
+    except asyncio.TimeoutError:
+        logger.error("Lighthouse timed out for %s after %ds", url, _LIGHTHOUSE_TIMEOUT)
+        return {"error": f"Lighthouse timed out after {_LIGHTHOUSE_TIMEOUT}s", "url": url}
+    except json.JSONDecodeError as e:
+        logger.error("Lighthouse JSON parse error for %s: %s", url, e)
+        return {"error": "Lighthouse output parse error", "detail": str(e)}
+    except Exception as e:
+        logger.exception("Lighthouse unexpected error for %s", url)
+        return {"error": "Lighthouse unexpected error", "detail": str(e)}
 
 
 async def handle_run_pagespeed(url=None, **kwargs) -> str:
-    """Run Google PageSpeed Insights analysis on a website.
+    """Run Lighthouse performance audit on a website.
 
     Args:
         url: Website URL to analyze.
 
     Returns:
-        JSON with performance metrics and Core Web Vitals for mobile + desktop.
+        JSON with performance score and Core Web Vitals.
     """
     unpacked = _normalize_args(url, {"url": ""})
     if unpacked:
         url = unpacked["url"]
 
     if not url:
-        return json.dumps({"error": "URL is required"})
+        return json.dumps({"error": "URL is required"}, ensure_ascii=False)
 
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
-    cached = _cache.get(url)
-    if cached is not None:
-        cached_ts, cached_result = cached
-        if time.time() - cached_ts < _CACHE_TTL:
-            logger.info("PageSpeed cache HIT for: %s", url)
-            return cached_result
-        del _cache[url]
-
-    logger.info("Running PageSpeed for: %s", url)
+    logger.info("Running Lighthouse for: %s", url)
 
     try:
         from app.main import push_tool_progress
+        push_tool_progress("pagespeed", f"🚀 Lighthouse: замеряю скорость {url}…")
+    except Exception:
+        pass
 
-        push_tool_progress("pagespeed", f"🚀 Замеряю скорость {url}…")
+    result = await _run_lighthouse(url)
+    
+    try:
+        from app.main import push_tool_progress
+        if "error" in result:
+            push_tool_progress("pagespeed", f"⚠️ Lighthouse: {result.get('error', 'unknown error')}")
+        else:
+            push_tool_progress("pagespeed", f"✅ Lighthouse: {result.get('performance_score', '?')}/100")
+    except Exception:
+        pass
 
-        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
-            # Запускаем mobile + desktop последовательно (Google rate-limits parallel)
-            mobile = await _run_pagespeed_for_strategy(client, url, "mobile")
-            await asyncio.sleep(1.5)
-            desktop = await _run_pagespeed_for_strategy(client, url, "desktop")
-
-        result = {
-            "url": url,
-            "mobile": mobile,
-            "desktop": desktop,
-            "analyzed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        }
-
-        push_tool_progress("pagespeed", "✅ PageSpeed готов!")
-        result_json = json.dumps(result, ensure_ascii=False, indent=2)
-        _cache[url] = (time.time(), result_json)
-        return result_json
-
-    except httpx.HTTPStatusError as e:
-        logger.error("Google PageSpeed API error: %s", e)
-        detail = str(e)
-        if e.response.status_code == 429:
-            detail = "Rate limited by Google. Set GOOGLE_API_KEY env var for higher quota (free from Google Cloud Console)."
-        elif e.response.status_code == 403:
-            detail = "Access denied. May need valid GOOGLE_API_KEY."
-        return json.dumps({"error": "PageSpeed API error", "status": e.response.status_code, "detail": detail})
-    except Exception as e:
-        logger.exception("PageSpeed error")
-        return json.dumps({"error": "Unexpected error", "detail": str(e)})
+    return json.dumps(result, ensure_ascii=False, indent=2)
 
 
 registry.register(
     name="run_pagespeed",
     toolset="aim-operations",
     schema={
+        "type": "function",
+        "function": {
             "name": "run_pagespeed",
-            "description": "Run Google PageSpeed Insights analysis: Performance, Accessibility, Best Practices, SEO scores + Core Web Vitals (LCP, FCP, TBT, CLS).",
+            "description": (
+                "Запустить Lighthouse-аудит скорости сайта. "
+                "Использует Google Lighthouse с headless Chromium. "
+                "Возвращает Performance score и Core Web Vitals (LCP, FCP, TBT, CLS)."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "url": {"type": "string", "description": "Website URL to analyze"},
+                    "url": {
+                        "type": "string",
+                        "description": "URL сайта для аудита",
+                    },
                 },
                 "required": ["url"],
             },
         },
+    },
     handler=handle_run_pagespeed,
     check_fn=lambda: True,
     is_async=True,
-    description="Run Google PageSpeed Insights: performance scores and Core Web Vitals",
+    description="Запустить Lighthouse-аудит скорости сайта",
     emoji="🚀",
 )

@@ -126,7 +126,8 @@ async def handle_run_ci_analysis(
     # Normalize competitors: LLM may pass bare strings or {website} objects
     competitors = [_normalize_competitor(c) for c in competitors]
     # Filter out competitors without URLs — warn but don't fail
-    no_url = [c.get("brand_name", "unknown") for c in competitors if not c.get("website")]
+    # _normalize_competitor maps 'url' → 'website', so check 'website' key
+    no_url = [c.get("brand_name", c.get("legal_name", "?")) for c in competitors if not c.get("website")]
     competitors = [c for c in competitors if c.get("website")]
     if not competitors:
         return json.dumps({
@@ -199,6 +200,8 @@ registry.register(
     name="run_ci_analysis",
     toolset="aim-operations",
     schema={
+        "type": "function",
+        "function": {
             "name": "run_ci_analysis",
             "description": (
                 "Run full competitive intelligence analysis on selected competitors. "
@@ -251,6 +254,7 @@ registry.register(
                 "required": ["url", "competitors"],
             },
         },
+    },
     handler=handle_run_ci_analysis,
     check_fn=lambda: True,
     is_async=True,
