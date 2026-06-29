@@ -73,8 +73,8 @@ function HermesChat() {
             );
           })}
 
-          {/* Phase Tracker — visible during streaming AND persists once phases start updating */}
-          {((isStreaming && messages.length > 2) || phases.some(p => p.status !== 'pending')) && (
+          {/* Phase Tracker — visible during streaming OR whenever phases have been activated */}
+          {(isStreaming || phases.some(p => p.status !== 'pending')) && (
             <PhaseTracker phases={phases} />
           )}
 
