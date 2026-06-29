@@ -70,6 +70,11 @@ class HermesKnowledgeVault:
         Searches: wiki/patterns/, wiki/learnings/{domain}/, decisions/rules/,
                   /opt/data/memories/learnings/ (auto-learnings),
                   knowledge/learnings/ (teacher reports)
+
+        Filtering strategy:
+          - patterns/rules: strict — match by stem (filename) against domain/keyword
+          - learnings/auto/teacher: content-based — match by keywords in file body + tags
+            Returns empty list when no keywords match (no false positives).
         """
         patterns = self._list_files(self.wiki_patterns)
         learnings = self._list_files(self.wiki_learnings / domain)
@@ -80,13 +85,15 @@ class HermesKnowledgeVault:
         relevant = {"patterns": [], "learnings": [], "rules": [], "auto_learnings": [], "teacher_reports": [], "query": f"{domain}:{action}"}
 
         keyword = action.split("_")[0] if "_" in action else action
+        keywords = self._extract_keywords(action, domain)
 
         for p in patterns:
             if domain in p.stem or keyword in p.stem:
                 relevant["patterns"].append({"name": p.stem, "content": p.read_text(encoding="utf-8")[:2000]})
 
         for l in learnings:
-            relevant["learnings"].append({"name": l.stem, "content": l.read_text(encoding="utf-8")[:2000]})
+            if self._matches_content(l, keywords):
+                relevant["learnings"].append({"name": l.stem, "content": l.read_text(encoding="utf-8")[:2000]})
 
         for r in rules:
             if domain in r.stem or keyword in r.stem:
@@ -94,11 +101,13 @@ class HermesKnowledgeVault:
 
         # Auto-learnings from Hermes runtime
         for a in auto_learnings:
-            relevant["auto_learnings"].append({"name": a.stem, "content": a.read_text(encoding="utf-8")[:2000]})
+            if self._matches_content(a, keywords):
+                relevant["auto_learnings"].append({"name": a.stem, "content": a.read_text(encoding="utf-8")[:2000]})
 
         # Teacher reports
         for t in teacher_reports:
-            relevant["teacher_reports"].append({"name": t.stem, "content": t.read_text(encoding="utf-8")[:2000]})
+            if self._matches_content(t, keywords):
+                relevant["teacher_reports"].append({"name": t.stem, "content": t.read_text(encoding="utf-8")[:2000]})
 
         return relevant
 
@@ -147,6 +156,90 @@ class HermesKnowledgeVault:
         }
 
     # ── Helpers ────────────────────────────────────────────────────────
+
+    # Words that would match vacuously across many files:
+    # - YAML frontmatter keys (domain, type, tags, ...)
+    # - Common English words frequently appearing in teacher reports
+    # - Structural/metadata terms
+    _STOP_WORDS = frozenset({
+        # YAML frontmatter keys
+        "domain", "type", "tags", "learning", "pattern", "rule",
+        "created_at", "source", "name", "content", "title", "date",
+        "category", "severity", "status",
+        # Generic metadata
+        "general", "hermes", "auto", "teacher", "report", "quality",
+        # Common English words (too frequent to be useful search terms)
+        "some", "the", "and", "for", "that", "this", "with", "from",
+        "have", "been", "what", "when", "were", "they", "them", "then",
+        "also", "than", "into", "over", "each", "said", "does",
+        "which", "their", "there", "about", "would", "could", "should",
+        "your", "will", "just", "like", "make", "made", "part",
+        "first", "next", "last", "well", "most", "more", "much",
+        "only", "other", "very", "rate", "add", "set", "get", "use",
+    })
+
+    @staticmethod
+    def _extract_keywords(action: str, domain: str) -> list[str]:
+        """Extract meaningful keywords from action string for content matching.
+
+        Handles both underscore-separated action names ("competitive_analysis")
+        and natural-language queries ("стоматология москва конкуренты").
+
+        Returns deduplicated list of lowercase keywords >= 3 chars,
+        excluding structural/metadata words (stop words).
+        """
+        # Replace underscores, dots, hyphens with spaces, then split
+        raw = action.replace("_", " ").replace(".", " ").replace("-", " ")
+        tokens = raw.lower().split()
+
+        # Filter: >= 3 chars, not numeric, not the domain, not stop words
+        domain_clean = domain.lower().replace("www.", "").split(".")[0] if domain else ""
+        keywords = []
+        for t in tokens:
+            if (
+                len(t) >= 3
+                and not t.isdigit()
+                and t != domain_clean
+                and t not in HermesKnowledgeVault._STOP_WORDS
+            ):
+                keywords.append(t)
+
+        return list(dict.fromkeys(keywords))  # dedup preserving order
+
+    @staticmethod
+    def _matches_content(file_path: Path, keywords: list[str]) -> bool:
+        """Check if file content (body after YAML frontmatter) or stem
+        contains any of the keywords.
+
+        Skips YAML frontmatter (between --- delimiters) to avoid
+        false matches on structural keys like "domain", "type", "tags".
+
+        When keywords list is empty, returns False.
+        """
+        if not keywords:
+            return False
+
+        try:
+            raw = file_path.read_text(encoding="utf-8")
+        except Exception:
+            return False
+
+        stem = file_path.stem.lower().replace("_", " ").replace("-", " ")
+
+        # Skip YAML frontmatter: content between first and second "---"
+        body = raw
+        if raw.startswith("---"):
+            parts = raw.split("---", 2)
+            if len(parts) >= 3:
+                body = parts[2]  # Everything after the second "---"
+
+        body_lower = body.lower()
+
+        for kw in keywords:
+            if kw in stem or kw in body_lower:
+                return True
+
+        return False
 
     def _list_files(self, directory: Path) -> list[Path]:
         if not directory.exists():
