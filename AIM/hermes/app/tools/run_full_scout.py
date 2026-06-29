@@ -77,6 +77,31 @@ async def handle_run_full_scout(url=None, client_name="", **kwargs) -> str:
         url, session_id, mode, chat_id,
     )
 
+    # ── Проверяем knowledge vault перед запуском pipeline ─────────────
+    # Извлекаем город/специализацию из URL для поиска релевантной памяти
+    try:
+        from urllib.parse import urlparse
+        domain = urlparse(url).netloc.replace("www.", "")
+        # Ищем память о похожих клиниках в этом регионе/нише
+        kb_query = f"клиника {domain} конкуренты паттерны"
+
+        logger.info("run_full_scout: checking knowledge vault: %s", kb_query)
+
+        from app.tools.orchestrate import handle_orchestrate
+        kb_result = await handle_orchestrate(
+            operation="knowledge_query",
+            params={"query": kb_query, "top_k": 5}
+        )
+
+        # Если есть релевантная память — логируем её
+        if kb_result and "no relevant" not in kb_result.lower():
+            logger.info("run_full_scout: knowledge vault returned: %s", kb_result[:500])
+        else:
+            logger.info("run_full_scout: no relevant memory found in knowledge vault")
+    except Exception as kb_err:
+        # Ошибка проверки памяти НЕ должна блокировать pipeline
+        logger.warning("run_full_scout: knowledge vault check failed: %s", kb_err)
+
     try:
         from app.pipeline.engine import PipelineEngine
         import asyncio
