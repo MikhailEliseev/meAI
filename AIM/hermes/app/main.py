@@ -609,10 +609,11 @@ async def chat_stream(
                 "message": "Анализирую ваш запрос...",
             })
 
-            # Hard deadline for the entire agent run (7 min).
+            # Hard deadline for the entire agent run (10 min).
+            # Full 13-phase scout pipeline takes 7-9 minutes end-to-end.
             # find_competitors (Apify Google Maps + Playwright INN + nalog.ru)
-            # can take 4-6 minutes end-to-end.
-            _SSE_DEADLINE = time.time() + 420
+            # can take 4-6 minutes alone.
+            _SSE_DEADLINE = time.time() + 600
 
             # Phase A — Yield progress events while agent runs.
             # Also collect unique tool stage names so we can emit
