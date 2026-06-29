@@ -7,6 +7,8 @@
     "build": "node esbuild.config.mjs"
   },
   "dependencies": {
-    "esbuild": "^0.24.0"
+    "esbuild": "^0.24.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }

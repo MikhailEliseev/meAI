@@ -1,0 +1,20 @@
+# Z.ai Integration — Direct connection
+# Usage: docker compose -f docker-compose.yml -f docker-compose.zai.yml up -d
+#
+# API endpoint: https://api.z.ai/api/coding/paas/v4/chat/completions
+# Quota reset: check with curl https://api.z.ai/api/coding/paas/v4/models
+
+version: '3.8'
+
+services:
+  hermes:
+    environment:
+      # Z.ai API (OpenAI-compatible, /v4 prefix already includes version)
+      - OMNIROUTE_URL=https://api.z.ai/api/coding/paas/v4
+      - OMNIROUTE_AUTH=6fd916373bd7462499481201277a7ad0.aCqG4YQTsePka6tI
+
+      # Model configuration
+      - LLM_MODEL=glm-5
+      - LLM_PROVIDER=openai
+      - LLM_BASE_URL=https://api.z.ai/api/coding/paas/v4
+      - LLM_API_KEY=6fd916373bd7462499481201277a7ad0.aCqG4YQTsePka6tI

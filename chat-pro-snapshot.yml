@@ -1,0 +1,7 @@
+- generic [active] [ref=e1]:
+  - button "🌙" [ref=e2]
+  - generic [ref=e4]:
+    - generic [ref=e5]: Hermes Chat Ready
+    - generic [ref=e6]:
+      - textbox "Напишите сообщение..." [ref=e7]
+      - button "Отправить" [ref=e8]
