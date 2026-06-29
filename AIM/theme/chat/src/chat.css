@@ -1,3 +1,6 @@
+@import './chat-utilities.css';
+@import './chat-theme.css';
+
 #hermes-chat {
   height: 100%;
   display: flex;
@@ -13,6 +16,11 @@
 /* Only animate non-streaming content */
 #hermes-chat .chat-bubble-content:not([data-streaming="true"]) {
   transition: all 0.05s ease-out;
+}
+
+/* Hide loading dots once streaming text arrives (stream-target gets textContent from RAF) */
+#hermes-chat .stream-target:not(:empty) ~ .inline-flex {
+  display: none;
 }
 
 @keyframes fadeIn {

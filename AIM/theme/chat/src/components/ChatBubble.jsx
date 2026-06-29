@@ -14,8 +14,10 @@ function ChatBubbleComponent({ role, content, timestamp, isStreaming, contentRef
           <div
             className="whitespace-pre-wrap chat-bubble-content"
             data-streaming={isStreaming ? 'true' : 'false'}
-            ref={contentRef}
           >
+            {/* Dedicated streaming target — React NEVER puts children here, RAF writes textContent.
+                Visible only during active streaming; hidden when dots or final content show. */}
+            <span ref={contentRef} className="stream-target" style={{display: (isEmpty && isStreaming) ? 'inline' : 'none'}} />
             {isEmpty && isStreaming ? (
               <span className="inline-flex gap-1">
                 <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{animationDelay: '0ms'}} />

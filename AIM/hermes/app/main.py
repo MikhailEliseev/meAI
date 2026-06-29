@@ -549,6 +549,15 @@ async def chat_stream(
 
             agent_task = asyncio.create_task(run_agent_task())
 
+            # Signal frontend immediately — analysis has started.
+            # Without this, the frontend gets no event until the LLM
+            # finishes processing and calls a tool (30-40s with 69KB SOUL.md).
+            queue.put_nowait({
+                "type": "tool-progress",
+                "stage": "starting",
+                "message": "Анализирую ваш запрос...",
+            })
+
             # Hard deadline for the entire agent run (7 min).
             # find_competitors (Apify Google Maps + Playwright INN + nalog.ru)
             # can take 4-6 minutes end-to-end.

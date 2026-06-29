@@ -71,6 +71,16 @@ export function useStreamChat() {
     setStatus('ready');
   }, []);
 
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+    setPhases(PHASES.map(p => ({ ...p, status: 'pending', counter: null })));
+    setReportData(null);
+    setSessionId(null);
+    fullTextRef.current = '';
+    try { localStorage.removeItem(LS_MESSAGES_KEY); } catch {}
+    try { localStorage.removeItem(LS_SESSION_KEY); } catch {}
+  }, []);
+
   const sendMessage = useCallback(async (text) => {
     if (status === 'streaming' || status === 'submitted') return;
     addMessage('user', text);
@@ -152,9 +162,18 @@ export function useStreamChat() {
                   setReportData({
                     url: event.report_url,
                     title: event.report_title || 'Разведка пресейла',
-                    stats: event.session_hash ? [] : [], // Stats will be fetched separately if needed
+                    stats: event.session_hash ? [] : [],
                   });
-                  // Mark all phases as done
+                  setPhases(prev => prev.map(p => ({ ...p, status: 'done' })));
+                }
+                break;
+              case 'report-ready':
+                if (event.url) {
+                  setReportData({
+                    url: event.url,
+                    title: event.title || 'Разведка пресейла',
+                    stats: [],
+                  });
                   setPhases(prev => prev.map(p => ({ ...p, status: 'done' })));
                 }
                 break;
@@ -208,5 +227,5 @@ export function useStreamChat() {
     }
   }, [status, sessionId, addMessage, updatePhase]);
 
-  return { messages, sendMessage, stop, status, sessionId, streamingRef, phases, reportData };
+  return { messages, sendMessage, clearMessages, stop, status, sessionId, streamingRef, phases, reportData };
 }

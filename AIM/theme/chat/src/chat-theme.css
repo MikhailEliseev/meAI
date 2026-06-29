@@ -1,0 +1,406 @@
+/* ═══════════════════════════════════════════════════════
+   Chat Visual Theme — точная копия стилей chat-inline.php
+   Переопределяет React-компоненты под дизайн старого чата
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Chat Wrapper (восстановлено из chat-inline.php) ── */
+#hermes-chat.chat-wrapper {
+  width: 80vw;
+  max-width: 1600px;
+  height: 85vh;
+  max-height: 85vh;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px var(--shadow-color);
+  overflow: hidden;
+  font-family: 'Jost', sans-serif;
+  color: var(--text);
+}
+
+/* React root — прозрачный фон */
+#hermes-chat > .relative.flex.flex-col {
+  background: transparent;
+  height: 100%;
+}
+
+/* ── Messages Scroll Area ── */
+#hermes-chat > .relative > .overflow-y-auto {
+  flex: 1;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: none !important;
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+/* Kill the 768px constraint on ALL message containers and input areas */
+#hermes-chat .max-w-3xl.mx-auto {
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* ═══ MESSAGE BUBBLES (только внутри области сообщений) ═══ */
+
+/* Agent bubble */
+#hermes-chat .overflow-y-auto .bg-surface-2.rounded-lg {
+  max-width: 75% !important;
+  padding: 16px 20px !important;
+  border-radius: 20px 20px 20px 6px !important;
+  font-size: 15px;
+  line-height: 1.7;
+  background: var(--surface) !important;
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border) !important;
+  color: var(--text);
+}
+
+/* User bubble */
+#hermes-chat .overflow-y-auto .bg-accent.rounded-lg {
+  max-width: 75% !important;
+  padding: 16px 20px !important;
+  border-radius: 20px 20px 6px 20px !important;
+  font-size: 15px;
+  line-height: 1.7;
+  background: var(--accent) !important;
+  color: var(--bg) !important;
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+/* Message row */
+#hermes-chat .overflow-y-auto > .flex {
+  animation: chatSlideUp 0.4s ease-out;
+}
+
+/* Message row max-width override */
+#hermes-chat .overflow-y-auto .max-w-\[85\%\] {
+  max-width: 75% !important;
+}
+
+/* Agent bubble inner text */
+#hermes-chat .overflow-y-auto .chat-bubble-content {
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* Timestamp */
+#hermes-chat .overflow-y-auto .text-xs.mt-1 {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* ═══ AVATAR ═══ */
+#hermes-chat .overflow-y-auto .w-8.h-8.rounded-full {
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+}
+
+/* ═══ INPUT AREA ═══ */
+#hermes-chat .sticky.bottom-0 {
+  padding: 24px 32px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  backdrop-filter: blur(20px);
+}
+
+#hermes-chat .sticky.bottom-0 .p-4 {
+  padding: 0;
+}
+
+/* Input field */
+#hermes-chat textarea.flex-1.resize-none {
+  padding: 14px 20px !important;
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  color: var(--text);
+  font-family: 'Jost', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+#hermes-chat textarea.flex-1.resize-none::placeholder {
+  color: var(--text-dim);
+}
+
+#hermes-chat textarea.flex-1.resize-none:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.08);
+}
+
+[data-theme="dark"] #hermes-chat textarea.flex-1.resize-none:focus {
+  box-shadow: 0 0 0 3px rgba(201, 169, 110, 0.12);
+}
+
+/* Input gap */
+#hermes-chat .sticky .flex.gap-3 {
+  gap: 12px;
+}
+
+/* Send button → text button like old chat */
+#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-accent {
+  width: auto !important;
+  height: auto !important;
+  min-width: 80px;
+  padding: 14px 24px !important;
+  border-radius: 16px !important;
+  font-family: 'Jost', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  background: var(--accent) !important;
+  color: var(--bg) !important;
+  transition: all 0.2s ease;
+}
+
+#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-accent svg {
+  display: none;
+}
+
+#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-accent::after {
+  content: 'Отправить';
+}
+
+#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-accent:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--shadow-color);
+}
+
+#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-accent:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Stop button */
+#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-red-500 {
+  width: auto !important;
+  height: auto !important;
+  min-width: 80px;
+  padding: 14px 24px !important;
+  border-radius: 16px !important;
+}
+
+#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-red-500 svg {
+  display: none;
+}
+
+#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-red-500::after {
+  content: 'Стоп';
+  font-family: 'Jost', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ═══ EMPTY CHAT (welcome screen) ═══ */
+#hermes-chat .flex.flex-col.items-center.justify-center.flex-1.px-4 {
+  flex: 1;
+  padding: 48px 32px !important;
+}
+
+#hermes-chat .flex.flex-col.items-center.justify-center h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+  line-height: 1.25;
+}
+
+#hermes-chat .flex.flex-col.items-center.justify-center > .text-center p {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* EmptyChat URL input */
+#hermes-chat input[placeholder*="Введите адрес сайта"] {
+  padding: 14px 20px !important;
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  color: var(--text);
+  font-family: 'Jost', sans-serif;
+  font-size: 15px;
+  flex: 1;
+}
+
+#hermes-chat input[placeholder*="Введите адрес сайта"]::placeholder {
+  color: var(--text-dim);
+}
+
+#hermes-chat input[placeholder*="Введите адрес сайта"]:focus {
+  border-color: var(--accent) !important;
+  outline: none;
+}
+
+/* EmptyChat send button */
+#hermes-chat .flex.flex-col.items-center.justify-center button.shrink-0.w-10.h-10.bg-accent {
+  width: auto !important;
+  height: auto !important;
+  min-width: 80px;
+  padding: 14px 24px !important;
+  border-radius: 16px !important;
+  font-family: 'Jost', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  background: var(--accent) !important;
+  color: var(--bg) !important;
+}
+
+#hermes-chat .flex.flex-col.items-center.justify-center button.shrink-0.w-10.h-10.bg-accent svg {
+  display: none;
+}
+
+#hermes-chat .flex.flex-col.items-center.justify-center button.shrink-0.w-10.h-10.bg-accent::after {
+  content: 'Отправить';
+}
+
+/* EmptyChat quick action buttons */
+#hermes-chat .flex.flex-wrap.gap-2.mt-4 button {
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* EmptyChat trust badges */
+#hermes-chat .flex.items-center.justify-center.gap-4.mt-6 {
+  margin-top: 32px;
+}
+
+/* ═══ SCROLLBAR ═══ */
+#hermes-chat .overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+#hermes-chat .overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+#hermes-chat .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+#hermes-chat .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+}
+
+/* ═══ PHASE TRACKER — full-width status bar ═══ */
+#hermes-chat .phase-tracker {
+  margin-left: -32px;
+  margin-right: -32px;
+  padding: 20px 32px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Progress bar */
+#hermes-chat .phase-tracker-bar {
+  width: 100%;
+  height: 3px;
+  background: var(--surface-3);
+  border-radius: 2px;
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+#hermes-chat .phase-tracker-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+/* Labels row — horizontal, wrap */
+#hermes-chat .phase-tracker-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+}
+
+#hermes-chat .phase-label {
+  font-size: 13px;
+  color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: color 0.3s;
+}
+
+#hermes-chat .phase-label.done {
+  color: var(--text-secondary);
+}
+
+#hermes-chat .phase-label.working {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Spinner for active phase */
+#hermes-chat .phase-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--accent);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* Checkmark */
+#hermes-chat .phase-check {
+  width: 12px;
+  height: 12px;
+  color: #22c55e;
+  flex-shrink: 0;
+}
+
+/* Counter */
+#hermes-chat .phase-counter {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+/* Current action text */
+#hermes-chat .phase-current {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* ═══ REPORT PREVIEW ═══ */
+#hermes-chat .max-w-3xl.mx-auto > .bg-surface-2.rounded-lg.p-6 {
+  border-radius: 16px;
+  padding: 24px 28px !important;
+}
+
+/* ═══ FALLBACK FORM ═══ */
+#hermes-chat .fixed.inset-0 .bg-surface-2.rounded-lg {
+  border-radius: 20px;
+}
+
+#hermes-chat .fixed.inset-0 input {
+  padding: 14px 20px !important;
+  border-radius: 16px !important;
+  font-size: 15px;
+}
+
+#hermes-chat .fixed.inset-0 button.rounded-lg.bg-accent {
+  border-radius: 16px !important;
+  padding: 14px 24px !important;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ═══ ANIMATIONS ═══ */
+@keyframes chatSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}

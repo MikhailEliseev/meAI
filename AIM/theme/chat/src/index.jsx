@@ -9,11 +9,35 @@ import { ReportPreview } from './components/ReportPreview.jsx';
 import { FallbackForm } from './components/FallbackForm.jsx';
 
 function HermesChat() {
-  const { messages, sendMessage, stop, status, streamingRef, phases, reportData, sessionId } = useStreamChat();
+  const { messages, sendMessage, clearMessages, stop, status, streamingRef, phases, reportData, sessionId } = useStreamChat();
   const [showFallback, setShowFallback] = useState(false);
   const chatEndRef = useRef(null);
   const isStreaming = status === 'streaming' || status === 'submitted';
   const hasMessages = messages.length > 0;
+
+  // Expose methods for WordPress integration
+  useEffect(() => {
+    window.aimChatSend = (text) => {
+      if (typeof text === 'string' && text.trim()) {
+        sendMessage(text.trim());
+      }
+    };
+    window.aimChatClear = () => {
+      clearMessages();
+    };
+    return () => {
+      delete window.aimChatSend;
+      delete window.aimChatClear;
+    };
+  }, [sendMessage, clearMessages]);
+
+  // Clean up old localStorage keys from vanilla JS chat
+  useEffect(() => {
+    try {
+      const oldKeys = ['hermes_messages', 'hermes_session', 'hermes_sessions'];
+      oldKeys.forEach(k => localStorage.removeItem(k));
+    } catch {}
+  }, []);
 
   // Smooth scroll only when NOT streaming (final message sync)
   useEffect(() => {
@@ -49,8 +73,8 @@ function HermesChat() {
             );
           })}
 
-          {/* Phase 09: Phase Tracker appears when first tool-progress event arrives */}
-          {phases.some(p => p.status !== 'pending') && (
+          {/* Phase Tracker — visible during streaming AND persists once phases start updating */}
+          {((isStreaming && messages.length > 2) || phases.some(p => p.status !== 'pending')) && (
             <PhaseTracker phases={phases} />
           )}
 

@@ -77,6 +77,13 @@ async def handle_run_full_scout(url=None, client_name="", **kwargs) -> str:
         url, session_id, mode, chat_id,
     )
 
+    # Signal frontend that the full scout pipeline has started
+    try:
+        from app.main import push_tool_progress
+        push_tool_progress("run_full_scout", "🔭 Запускаю 16-фазную разведку: анализирую сайт, конкурентов, соцсети, отзывы, SEO, финансы...")
+    except Exception:
+        pass
+
     # ── Проверяем knowledge vault перед запуском pipeline ─────────────
     # Извлекаем город/специализацию из URL для поиска релевантной памяти
     try:
@@ -182,6 +189,13 @@ async def handle_run_full_scout(url=None, client_name="", **kwargs) -> str:
             "run_full_scout: pipeline complete — %d/%d phases done",
             completed, len(state.phases),
         )
+
+        # Signal frontend that pipeline is complete
+        try:
+            from app.main import push_tool_progress
+            push_tool_progress("run_full_scout", f"✅ Разведка завершена: {completed}/{len(state.phases)} фаз собраны. Формирую отчёт...")
+        except Exception:
+            pass
 
         return json.dumps(result, ensure_ascii=False, indent=2)
 
