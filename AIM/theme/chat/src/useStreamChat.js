@@ -92,7 +92,7 @@ export function useStreamChat() {
     abortRef.current = controller;
 
     try {
-      const response = await fetch('/wp-json/aim/v1/chat/stream', {
+      const response = await fetch('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, session_id: sessionId, mode: 'PRESALE' }),
