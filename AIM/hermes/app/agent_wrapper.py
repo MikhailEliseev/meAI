@@ -390,13 +390,21 @@ qualify_lead, escalate_to_manager, get_lead_pipeline
 """
 
 
-def _create_agent(session_id: str | None, mode: str, enabled_toolsets: list[str] | None = None):
+def _create_agent(session_id: str | None, mode: str, enabled_toolsets: list[str] | None = None,
+                  ephemeral_override: str | None = None, skip_soul: bool = False):
     """Create AIAgent with standard config. Shared by web and Telegram paths.
 
     Passes persistent session_db so conversation history is loaded from
     SQLite even after container restarts (Pitfall 9).
 
     Per-mode iteration/output limits via _mode_limits (v3.3 restoration).
+
+    Args:
+        session_id: Session identifier
+        mode: PRESALE / ACTIVE / ADMIN / SALES_ADMIN
+        enabled_toolsets: Toolset names to enable
+        ephemeral_override: If set, use this instead of get_mode_prompt(mode)
+        skip_soul: If True, skip SOUL.md loading (for fast initial scout calls)
     """
     from run_agent import AIAgent
 
@@ -411,6 +419,27 @@ def _create_agent(session_id: str | None, mode: str, enabled_toolsets: list[str]
 
     iters, out_tokens = _mode_limits.get(mode, (8, 8000))
 
+    # For fast initial scout calls: skip 69KB SOUL.md, use minimal prompt
+    # The LLM processes ~300 bytes in 1-2s instead of 30-60s.
+    # Next turn will create a full agent with SOUL.md (not cached).
+    if skip_soul:
+        return AIAgent(
+            base_url=OMNIROUTE_URL,
+            api_key=OMNIROUTE_AUTH,
+            provider="custom",
+            api_mode="openai_chat",
+            model=DEFAULT_MODEL,
+            session_id=session_id,
+            session_db=_session_db,
+            load_soul_identity=False,
+            ephemeral_system_prompt=ephemeral_override or get_mode_prompt(mode),
+            enabled_toolsets=enabled_toolsets,
+            max_iterations=2,  # Just enough: call tool + process result
+            quiet_mode=True,
+            max_tokens=2000,
+            reasoning_config=_reasoning_cfg,
+        )
+
     return AIAgent(
         base_url=OMNIROUTE_URL,
         api_key=OMNIROUTE_AUTH,
@@ -420,7 +449,7 @@ def _create_agent(session_id: str | None, mode: str, enabled_toolsets: list[str]
         session_id=session_id,
         session_db=_session_db,
         load_soul_identity=True,
-        ephemeral_system_prompt=get_mode_prompt(mode),
+        ephemeral_system_prompt=ephemeral_override or get_mode_prompt(mode),
         enabled_toolsets=enabled_toolsets,
         max_iterations=iters,
         quiet_mode=True,
@@ -451,6 +480,28 @@ def _extract_url_from_message(message: str) -> str | None:
     if match:
         return match.group(1)
     return None
+
+
+def _scout_url_prompt(url: str) -> str:
+    """Minimal prompt (~300 bytes) for the initial scout tool call.
+
+    Instead of loading the full 69KB SOUL.md, this lightweight prompt
+    tells the LLM to call exactly one tool: run_full_scout.
+
+    The LLM processes this in 1-2 seconds instead of 30-60 seconds,
+    so the frontend gets the status bar almost instantly.
+    """
+    return f"""## РЕЖИМ: PRESALE (быстрый старт)
+
+Ты Hermes — AI-разведчик агентства AIM.
+
+Клиент прислал URL: {url}
+
+ТВОЁ ЕДИНСТВЕННОЕ ДЕЙСТВИЕ: вызови инструмент run_full_scout с параметрами:
+- url: "{url}"
+
+Не спрашивай ничего. Не анализируй. Просто вызови ОДИН инструмент.
+После вызова ничего не пиши — пайплайн отработает и вернёт результат."""
 
 
 def _apply_markdown_formatting(text: str) -> str:
@@ -567,7 +618,32 @@ def run_agent_sync(
     with lock:
         # Pitfall 8: Reuse cached agent + conversation history
         agent, _, history = _agent_cache.get(sid, (None, 0, []))
-        if agent is None:
+
+        # ── Fast path: first message with URL in PRESALE mode ──────
+        # Skip 69KB SOUL.md to avoid 30-60s LLM processing delay.
+        # Use minimal ~300 byte prompt → LLM calls run_full_scout in 1-2s.
+        # The pipeline tool runs for 5-8 min; next user turn gets full SOUL.md.
+        is_first_presale_with_url = (
+            mode == "PRESALE"
+            and not history
+            and agent is None
+            and _extract_url_from_message(message) is not None
+        )
+        if is_first_presale_with_url:
+            url = _extract_url_from_message(message)
+            logger.info(
+                "Fast-path scout: skipping SOUL.md for URL %s (session=%s)",
+                url, sid,
+            )
+            agent = _create_agent(
+                session_id, mode,
+                ephemeral_override=_scout_url_prompt(url),
+                skip_soul=True,
+            )
+            history = []
+            # DO NOT cache this lightweight agent — next turn
+            # must create a full agent with SOUL.md.
+        elif agent is None:
             agent = _create_agent(session_id, mode)
             if not history:
                 history = []
@@ -624,8 +700,11 @@ def run_agent_sync(
         history.append({"role": "assistant", "content": reply_text})
 
         # Cache under REAL session_id so frontend can resume across requests.
-        cache_key = agent.session_id
-        _agent_cache[cache_key] = (agent, time.time(), history)
+        # Skip caching for fast-path scout agents — next turn must create
+        # a full agent with SOUL.md to continue the conversation properly.
+        if not is_first_presale_with_url:
+            cache_key = agent.session_id
+            _agent_cache[cache_key] = (agent, time.time(), history)
 
         # Expire old agents (lazy cleanup)
         _expire_stale_agents()

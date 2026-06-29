@@ -326,7 +326,7 @@
 }
 
 #hermes-chat .phase-label {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-dim);
   display: inline-flex;
   align-items: center;

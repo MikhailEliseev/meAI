@@ -173,6 +173,57 @@ def push_report_ready(report_url: str, session_hash: str) -> None:
     loop.call_soon_threadsafe(q.put_nowait, event)
 
 
+def push_phase_progress(
+    phase_id: int,
+    phase_name: str,
+    phase_label: str,
+    status: str,
+    message: str = "",
+    duration_seconds: float | None = None,
+    progress: dict | None = None,
+) -> None:
+    """Push a structured phase-progress event (thread-safe).
+
+    Called by PipelineEngine via progress_callback during scout execution.
+    Lifecycle: started → completed | no_data | failed | skipped
+
+    Args:
+        phase_id: 0-based phase index
+        phase_name: Internal phase name (e.g. "PERPLEXITY")
+        phase_label: Russian label (e.g. "Исследование рынка")
+        status: One of "started", "completed", "no_data", "failed", "skipped"
+        message: Human-readable status message
+        duration_seconds: Phase duration (for completed/no_data/failed)
+        progress: {"current": N, "total": 13} progress info
+    """
+    logger.info(
+        "[phase-progress] #%d %s (%s): %s — %s",
+        phase_id, phase_name, phase_label, status, message,
+    )
+
+    # ── SSE queue ───────────────────────────────────────────────────
+    q = _tool_progress_queue
+    if q is None:
+        return
+    event = {
+        "type": "phase-progress",
+        "phase_id": phase_id,
+        "phase_name": phase_name,
+        "phase_label": phase_label,
+        "status": status,
+        "message": message,
+        "duration_seconds": duration_seconds,
+        "progress": progress or {"current": phase_id + 1, "total": 13},
+    }
+    loop = _main_event_loop
+    if loop is None:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+    loop.call_soon_threadsafe(q.put_nowait, event)
+
+
 def _send_telegram_progress_sync(chat_id: int, stage: str, message: str) -> None:
     """Send/update progress in Telegram — first sendMessage, then editMessageText."""
     global _telegram_progress_msg_id, _telegram_progress_lines

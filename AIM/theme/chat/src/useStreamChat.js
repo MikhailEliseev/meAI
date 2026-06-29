@@ -152,6 +152,21 @@ export function useStreamChat() {
                   updatePhase(event.stage, event.message);
                 }
                 break;
+              case 'phase-progress':
+                if (event.phase_id !== undefined && event.status) {
+                  setPhases(prev => prev.map(p => {
+                    if (p.id !== event.phase_id) return p;
+                    const newStatus = event.status === 'started' ? 'working'
+                      : (event.status === 'completed' || event.status === 'no_data') ? 'done'
+                      : 'pending';
+                    return {
+                      ...p,
+                      status: newStatus,
+                      counter: event.message || p.counter,
+                    };
+                  }));
+                }
+                break;
               case 'finish':
                 if (event.session_id) {
                   setSessionId(event.session_id);

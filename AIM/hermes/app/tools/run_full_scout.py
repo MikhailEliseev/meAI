@@ -20,6 +20,60 @@ from tools.registry import registry
 
 logger = logging.getLogger(__name__)
 
+# ── Phase labels & start messages for SSE progress ────────────────────
+_TOTAL_PHASES = 13
+
+_PHASE_LABELS: dict[int, str] = {
+    0: "Исследование рынка",
+    1: "Конкуренты",
+    2: "Технический аудит",
+    3: "Отзывы и рейтинги",
+    4: "Контент-анализ",
+    5: "Врачи и эксперты",
+    6: "Упоминания в СМИ",
+    7: "Боли пациентов",
+    8: "Финансы",
+    9: "Контент-план",
+    10: "Сборка отчёта",
+    11: "Проверка качества",
+    12: "Публикация",
+}
+
+_PHASE_START_MESSAGES: dict[int, str] = {
+    0: "Ищу информацию о клинике, рынке, трендах через Perplexity...",
+    1: "Ищу конкурентов и анализирую их стратегию...",
+    2: "Проверяю скорость сайта и технический SEO-аудит...",
+    3: "Собираю отзывы на 2ГИС, Яндекс.Картах, ПроДокторов...",
+    4: "Анализирую контент сайта: темы, качество, gaps...",
+    5: "Ищу врачей, их соцсети, экспертизу...",
+    6: "Проверяю упоминания в СМИ: Forbes, РБК, Vademecum...",
+    7: "Анализирую боли пациентов с форумов...",
+    8: "Собираю финансовые данные из ГИР БО...",
+    9: "Формирую контент-план по результатам анализа...",
+    10: "Собираю HTML-отчёт со всеми данными...",
+    11: "Проверяю качество отчёта по чек-листу...",
+    12: "Публикую отчёт...",
+}
+
+
+def _phase_progress(phase_id: int, phase_name: str, status: str,
+                    message: str = "", duration_seconds: float | None = None) -> None:
+    """Callback for PipelineEngine — pushes structured phase events to SSE."""
+    try:
+        from app.main import push_phase_progress
+        label = _PHASE_LABELS.get(phase_id, phase_name)
+        push_phase_progress(
+            phase_id=phase_id,
+            phase_name=phase_name,
+            phase_label=label,
+            status=status,
+            message=message or _PHASE_START_MESSAGES.get(phase_id, ""),
+            duration_seconds=duration_seconds,
+            progress={"current": phase_id + 1, "total": _TOTAL_PHASES},
+        )
+    except Exception:
+        pass
+
 
 def _normalize_args(first_param, defaults):
     """Если hermes-agent передаёт весь arguments object как first_param, извлечь значения."""
@@ -120,6 +174,7 @@ async def handle_run_full_scout(url=None, client_name="", **kwargs) -> str:
             client_name=client_name,
             mode=mode,
             chat_id=chat_id,
+            progress_callback=_phase_progress,
         )
 
         # ── Сохраняем metadata ───────────────────────────────────────
