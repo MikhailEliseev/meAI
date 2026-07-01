@@ -1,0 +1,190 @@
+=== IDENTICAL (26 files) ===
+  ✅ agent_wrapper.py
+  ✅ auth.py
+  ✅ knowledge_router.py
+  ✅ main.py
+  ✅ omniroute_direct.py
+  ✅ pipeline/engine.py
+  ✅ pipeline/phases.py
+  ✅ pipeline/states.py
+  ✅ routers/session_api.py
+  ✅ session_context.py
+  ✅ token_economy.py
+  ✅ tools/_ddg.py
+  ✅ tools/build_report.py
+  ✅ tools/deep_research_merge.py
+  ✅ tools/find_company_financials.py
+  ✅ tools/firecrawl_key_bank.py
+  ✅ tools/publish_scout_report.py
+  ✅ tools/quality_gate.py
+  ✅ tools/run_ci_analysis.py
+  ✅ tools/run_full_scout.py
+  ✅ tools/run_pagespeed.py
+  ✅ tools/service_categorizer.py
+  ✅ tools/session_archive.py
+  ✅ tools/test_deep_research_merge.py
+  ✅ tools/test_service_categorizer.py
+  ✅ voice_transcriber.py
+
+=== DIFFERENT (45 files) ===
+  ⚠️ agent_wrapper_optimized.py
+     local=054df3d9d503d9e79c521e881922cb3f
+     server=51eb33a9f77bfecdf7bd1cb87a56f612
+  ⚠️ key_bank.py
+     local=86f64448e803a5fd38a054312003f688
+     server=08b85127602ece29bae001fc36834de8
+  ⚠️ pipeline/__init__.py
+     local=d41d8cd98f00b204e9800998ecf8427e
+     server=f24c84a55a46361f2677c79fe5cb1a00
+  ⚠️ telegram_gateway.py
+     local=b5caf31b9537d6d1d995475ae316c226
+     server=48bc6b0d134df68117646715da68a7a8
+  ⚠️ tools/__init__.py
+     local=3377881115d00e1f7244bffde948248a
+     server=16bc758240b54a01a2ed4719b762c023
+  ⚠️ tools/_search_fallback.py
+     local=bb80de32dd4d4618139163dccf931460
+     server=6bb5dd16c39186bdd2903276d9ff409a
+  ⚠️ tools/bitrix_scraper.py
+     local=2ba96f3aa51109fe055c4064acd1449b
+     server=65a12711ffc383722026139dab986298
+  ⚠️ tools/collect_contact.py
+     local=571b382136653a5338cb85d330a87bf3
+     server=180a7c4bd632414d1f345ab969cf635f
+  ⚠️ tools/crawlee_web.py
+     local=298ffc32c209d8ee65850245b72d362c
+     server=e9a108d802416ed0a06e25c2662375de
+  ⚠️ tools/escalate_to_manager.py
+     local=d6a68c8719c03c76f4cba824a27f5253
+     server=bcb936ae16c691934ec33cedf60082eb
+  ⚠️ tools/external_api.py
+     local=acd18b999ff2f7c1d122c5d1c54d9225
+     server=e4e08a4dc9963a0d009c2513f295e3ae
+  ⚠️ tools/finalize_research.py
+     local=0296c1c7da6f9c836d6784aeee29ac8c
+     server=0d0b73e4eb2e1e90b24a55d0260ebcc2
+  ⚠️ tools/find_competitors.py
+     local=7b4b172be5c21f823adb2c14502a0e13
+     server=f105fabc4bfb1eb24e210813c3cb9455
+  ⚠️ tools/firecrawl_web.py
+     local=4fa76bd8cda9a39bf7c0c5b9080067a3
+     server=02f9001d7878a822018ba18408b7d7f8
+  ⚠️ tools/geo_optimizer_tools.py
+     local=d4fe67948fc87436335097ae86b848a0
+     server=94cced737c826d1da94ce9f657101dfc
+  ⚠️ tools/get_lead_pipeline.py
+     local=67febd9fb3989363efdecb09ef466e25
+     server=3727a2d14e47e05d9438bc417cbfd601
+  ⚠️ tools/orchestrate.py
+     local=724b84a4af5142560326f6fd74fa5bfd
+     server=4f40ec105d8b405b0ae4c0ac19a679d9
+  ⚠️ tools/perplexity_tools.py
+     local=2b56595074344bda52a6b407536e9e35
+     server=a1c3a33411047e3cf12f8882faafc29f
+  ⚠️ tools/present_competitors.py
+     local=7f798c53cf656246cd9cf9eb94cacfc1
+     server=10aca63d38fce34bf2f1e9ab9488da87
+  ⚠️ tools/qualify_lead.py
+     local=eabf7905571d4cc82af79272a32c681e
+     server=95cfb963fc6776fc13db07afee1766f6
+  ⚠️ tools/quick_overview.py
+     local=8fa6c04d093db9cf284ea5a3ebc1a336
+     server=809386109d816327f29a582f0c3e7614
+  ⚠️ tools/run_ads_intelligence.py
+     local=b4e92ced77212d5cc3f1ae770756bdf9
+     server=db740c13276caa4e2b606c18390d45e1
+  ⚠️ tools/run_ads_report.py
+     local=9123f10203f5ff84bd5388938f605811
+     server=6536e91f9b539f81a737776098cc1449
+  ⚠️ tools/run_aim_scout.py
+     local=14e37dffc3e2c66058aed36ebbdeb1fc
+     server=39f5168eeb5ae0abcc626bdf57e48d0f
+  ⚠️ tools/run_background_pipeline.py
+     local=d9b4f629188cf62cd7c9865e38fde681
+     server=52b97faaf8f1691f491c874e90b3a613
+  ⚠️ tools/run_content_analysis.py
+     local=b423161857a85a832da20058f0dccd96
+     server=6e482389349916ff63d36b4e1134d2a1
+  ⚠️ tools/run_content_gaps.py
+     local=7828b416e74e5185518e978041f44537
+     server=8dba2e08278635e90ada17b8dfb381f4
+  ⚠️ tools/run_doctor_dossiers.py
+     local=071071b27781a2938fae75917bd1c965
+     server=a5e9c6c05e773f7d9afa925ad2b14f38
+  ⚠️ tools/run_fact_check.py
+     local=a87f851cf797f10b2fd28786df0c8288
+     server=239617dfc76faa6a4bde71b50d488f82
+  ⚠️ tools/run_hh_analysis.py
+     local=fb29fb6812e010201c691fd084f90b8e
+     server=dac0d870515955891becdc87c87aa908
+  ⚠️ tools/run_instagram_content.py
+     local=e571f6f9bc13308c7ba04a27a872bc8a
+     server=a7a7a1dde5dc4cfc8bf8b6c1543c122f
+  ⚠️ tools/run_prescan.py
+     local=44ef6d96378fb86cec664ba1860ee865
+     server=a8dcc3f929561a7ea4465b2523bafce8
+  ⚠️ tools/run_review_platforms.py
+     local=1fd5c165c29ff676aec7a8505f4689b0
+     server=d62d94a6286719a60b4e3352653d550f
+  ⚠️ tools/run_seo_audit.py
+     local=6e526974155d8a5957b5c932a87b46e8
+     server=856abd158830fe9b2e1a2d13a9423f4e
+  ⚠️ tools/run_smi_mentions.py
+     local=a0061baac16f9127b9c639533be55bc6
+     server=f00f4a2afef40b9a7a87e297fa830cb5
+  ⚠️ tools/run_validation_check.py
+     local=e008fceb461d6639265ef69dca8a9282
+     server=6057f0763181905d9fc5a37302f5e7b1
+  ⚠️ tools/run_web_search.py
+     local=9bc03998d869ec5ff39d140c6bd6d9a6
+     server=1794b51c6d44af25fe8873ddddc44a71
+  ⚠️ tools/scrapy_runner.py
+     local=23f64aeb0b4a57d6ab6f734b63db8d54
+     server=de2c1d204f976ca7539267bbbd248db1
+  ⚠️ tools/send_telegram_file.py
+     local=de9209b849f687d1738b457c18c4f960
+     server=ee5166a86c906c97612acdf6020a418b
+  ⚠️ tools/shell_exec.py
+     local=abc2a9aff88f88d1ea372e7a51146a81
+     server=705bb4d18b72b3ca8a0aa68abdc94339
+  ⚠️ tools/show_all_leads.py
+     local=ffe70dfcaba33cd099367f5ee19a8671
+     server=ef93dadd6cf507e6c784c7cb6ae15dc2
+  ⚠️ tools/show_project_status.py
+     local=e6d4df7ae7333be3bd7d177cf2f3d794
+     server=2b5637688e2a0107f4eac540adc4b7f2
+  ⚠️ tools/telegram_tools.py
+     local=0f193bd408e38525557f845110341b31
+     server=c86e22f21d2f496f2e127c1ab656b229
+  ⚠️ tools/update_knowledge.py
+     local=03735b1d2a38cdbb1a58421aaad8b341
+     server=966ab9287052c82bfc76fbd0dbb15c99
+  ⚠️ tools/web_scraper.py
+     local=0a00a35bc326565cfbd8ecfb80d00add
+     server=b438ae926364ce12b634399ed2ca6950
+
+=== ONLY LOCAL (14 files) ===
+  + file_guard.py
+  + qc_checklist.py
+  + tools/_file_cache.py
+  + tools/find_doctor_handles.py
+  + tools/generate_report.py
+  + tools/post_report.py
+  + tools/read_report_reference.py
+  + tools/run_forum_pains.py
+  + tools/run_lighthouse.py
+  + tools/run_media_urls.py
+  + tools/run_tech_seo_audit.py
+  + tools/test_financials_dynamics.py
+  + tools/test_regalia_extraction.py
+  + tools/zai_tools.py
+
+=== ONLY SERVER (8 files) ===
+  - pipeline/file_guard.py
+  - pipeline/mode_gate.py
+  - pipeline/test_all_phases.py
+  - pipeline/test_phase.py
+  - pipeline/test_tools.py
+  - tools/engine.py
+  - tools/generate_html_report.py
+  - tools/test_presale_pipeline.py

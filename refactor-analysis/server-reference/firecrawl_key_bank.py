@@ -1,0 +1,194 @@
+"""firecrawl_key_bank — Firecrawl API key rotation.
+
+Engine.py использует этот модуль для ротации Firecrawl-ключей при
+exhaustion (402/401/Insufficient credits).
+
+Ключи берутся из переменных окружения FIRECRAWL_KEY_1, FIRECRAWL_KEY_2, ...
+или из FIRECRAWL_API_KEY (один ключ).
+
+Exhausted-метки сохраняются в JSON-файл для персистентности между
+перезапусками контейнера.
+"""
+
+import json
+import logging
+import os
+import threading
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+_EXHAUSTED_FILE = Path(os.getenv("HERMES_DATA_DIR", "/opt/hermes-data")) / "firecrawl_exhausted.json"
+
+
+class FirecrawlKeyBank:
+    """Пул Firecrawl API-ключей с ротацией."""
+
+    def __init__(self):
+        self._keys: list[str] = []
+        self._exhausted: set[str] = set()
+        self._index: int = 0
+        self._lock = threading.Lock()
+        self._load_keys()
+        self._load_exhausted()
+
+    def _load_keys(self):
+        """Загрузить ключи из переменных окружения."""
+        # Множественные ключи: FIRECRAWL_KEY_1, FIRECRAWL_KEY_2, ...
+        for i in range(1, 21):
+            key = os.getenv(f"FIRECRAWL_KEY_{i}", "")
+            if key and key not in self._keys:
+                self._keys.append(key)
+
+        # Один ключ: FIRECRAWL_API_KEY
+        single_key = os.getenv("FIRECRAWL_API_KEY", "")
+        if single_key and single_key not in self._keys:
+            self._keys.append(single_key)
+
+        if self._keys:
+            logger.info("FirecrawlKeyBank: loaded %d keys", len(self._keys))
+        else:
+            logger.warning("FirecrawlKeyBank: NO keys found in environment")
+
+    def _load_exhausted(self):
+        """Загрузить exhausted-метки из JSON-файла."""
+        if not _EXHAUSTED_FILE.exists():
+            return
+        try:
+            data = json.loads(_EXHAUSTED_FILE.read_text())
+            prefixes = set(data.get("exhausted_prefixes", []))
+            # Матчим по первым 12 символам ключа
+            for key in self._keys:
+                if key[:12] in prefixes:
+                    self._exhausted.add(key)
+            if self._exhausted:
+                logger.info("FirecrawlKeyBank: restored %d exhausted keys from %s",
+                           len(self._exhausted), _EXHAUSTED_FILE)
+        except Exception:
+            logger.exception("FirecrawlKeyBank: failed to load exhausted file, starting fresh")
+
+    def _save_exhausted(self):
+        """Сохранить exhausted-префиксы в JSON-файл."""
+        try:
+            _EXHAUSTED_FILE.parent.mkdir(parents=True, exist_ok=True)
+            prefixes = [k[:12] for k in self._exhausted]
+            _EXHAUSTED_FILE.write_text(json.dumps({"exhausted_prefixes": prefixes}))
+        except Exception:
+            logger.exception("FirecrawlKeyBank: failed to save exhausted file")
+
+    def get_key(self) -> str | None:
+        """Получить текущий не-exhausted ключ."""
+        with self._lock:
+            available = [k for k in self._keys if k not in self._exhausted]
+            if not available:
+                return None
+
+            if self._index >= len(self._keys):
+                self._index = 0
+
+            # Найти следующий доступный
+            for _ in range(len(self._keys)):
+                candidate = self._keys[self._index % len(self._keys)]
+                self._index = (self._index + 1) % len(self._keys)
+                if candidate not in self._exhausted:
+                    return candidate
+
+            return None
+
+    def mark_exhausted(self, key: str) -> None:
+        """Пометить ключ как exhausted (с персистентностью)."""
+        with self._lock:
+            self._exhausted.add(key)
+            available = len(self._keys) - len(self._exhausted)
+            logger.warning("FirecrawlKeyBank: marked key as exhausted (%d/%d available)",
+                           available, len(self._keys))
+            self._save_exhausted()
+
+    def rotate(self) -> str | None:
+        """Взять следующий ключ (пометив текущий exhausted)."""
+        with self._lock:
+            available = [k for k in self._keys if k not in self._exhausted]
+            if not available:
+                logger.error("FirecrawlKeyBank: ALL keys exhausted")
+                return None
+            return available[0]
+
+    def reset(self) -> None:
+        """Сбросить exhausted-метки (для нового пайплайна)."""
+        with self._lock:
+            self._exhausted.clear()
+            self._index = 0
+            logger.info("FirecrawlKeyBank: reset — all keys available")
+
+
+# Глобальный экземпляр
+_bank: FirecrawlKeyBank | None = None
+_bank_lock = threading.Lock()
+
+
+def _get_bank() -> FirecrawlKeyBank:
+    """Ленивая инициализация глобального банка ключей."""
+    global _bank
+    with _bank_lock:
+        if _bank is None:
+            _bank = FirecrawlKeyBank()
+    return _bank
+
+
+def get_key_with_fallback() -> str | None:
+    """Получить ключ с fallback-логикой.
+
+    Используется engine.py при ротации ключей.
+    """
+    return _get_bank().get_key()
+
+
+def mark_exhausted(key: str | None = None, reason: str = "") -> None:
+    """Пометить текущий ключ как exhausted.
+
+    Если key не указан — используется текущий ключ из банка.
+    reason — опциональная причина exhaustion (credits/401/timeout).
+    """
+    bank = _get_bank()
+    if key:
+        bank.mark_exhausted(key)
+    else:
+        current = bank.get_key()
+        if current:
+            bank.mark_exhausted(current)
+
+
+def rotate_key() -> str | None:
+    """Ротировать на следующий ключ."""
+    return _get_bank().rotate()
+
+
+def get_next_key() -> str | None:
+    """Псевдоним для get_key_with_fallback — получить следующий доступный ключ."""
+    return _get_bank().get_key()
+
+
+def classify_exhaustion(text_or_key: str) -> str:
+    """Классифицировать причину exhaustion ключа (402/401/credits/timeout).
+
+    Используется тулами run_web_search, run_doctor_dossiers и другими
+    для определения типа ошибки Firecrawl.
+    """
+    text_lower = text_or_key.lower()
+    if "402" in text_lower or "payment" in text_lower or "insufficient credits" in text_lower:
+        return "credits_exhausted"
+    if "401" in text_lower or "unauthorized" in text_lower:
+        return "unauthorized"
+    if "429" in text_lower or "rate" in text_lower:
+        return "rate_limited"
+    if "timeout" in text_lower or "timed out" in text_lower:
+        return "timeout"
+    if "connection" in text_lower or "dns" in text_lower or "refused" in text_lower:
+        return "connection_error"
+    return "unknown"
+
+
+def active_count() -> int:
+    """Количество активных (не-exhausted) ключей."""
+    bank = _get_bank()
+    return len([k for k in bank._keys if k not in bank._exhausted])
