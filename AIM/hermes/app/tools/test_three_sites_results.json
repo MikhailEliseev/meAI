@@ -1,0 +1,399 @@
+{
+  "test_started_at": "2026-07-01T12:59:12",
+  "test_finished_at": "2026-07-01T12:59:12",
+  "total_elapsed_sec": 32.7,
+  "sites_tested": 3,
+  "sites_total": 3,
+  "results": [
+    {
+      "url": "https://iphk.ru",
+      "label": "IPHC",
+      "timestamp": "2026-07-01T12:58:39",
+      "tools": {
+        "hh": {
+          "status": "ok",
+          "elapsed_sec": 3.1,
+          "data": {
+            "search_term": "iphk.ru",
+            "note": "No vacancies found on hh.ru for this clinic"
+          }
+        },
+        "reviews": {
+          "status": "ok",
+          "elapsed_sec": 3.4,
+          "data": {
+            "search_term": "iphk.ru",
+            "total_mentions": 0,
+            "platforms_with_results": 0,
+            "platforms_total": 7,
+            "platforms": {
+              "prodoctorov": {
+                "platform": "ПроДокторов",
+                "found": 0,
+                "links": []
+              },
+              "yandex_maps": {
+                "platform": "Яндекс.Карты",
+                "found": 0,
+                "links": []
+              },
+              "2gis": {
+                "platform": "2ГИС",
+                "found": 0,
+                "links": []
+              },
+              "google_maps": {
+                "platform": "Google Maps",
+                "found": 0,
+                "links": []
+              },
+              "otzovik": {
+                "platform": "Отзовик",
+                "found": 0,
+                "links": []
+              },
+              "irecommend": {
+                "platform": "IRecommend",
+                "found": 0,
+                "links": []
+              },
+              "zoon": {
+                "platform": "Zoon",
+                "found": 0,
+                "links": []
+              }
+            },
+            "top_links": [],
+            "source": "DuckDuckGo"
+          }
+        },
+        "smi": {
+          "status": "ok",
+          "elapsed_sec": 2.8,
+          "data": {
+            "search_term": "iphk.ru",
+            "total_mentions": 0,
+            "categories_with_mentions": 0,
+            "categories_total": 4,
+            "categories": {
+              "business": {
+                "category": "Деловые СМИ",
+                "weight": 0.35,
+                "mentions_found": 0,
+                "mentions": []
+              },
+              "medical": {
+                "category": "Медицинские СМИ",
+                "weight": 0.3,
+                "mentions_found": 0,
+                "mentions": []
+              },
+              "regional": {
+                "category": "Региональные СМИ",
+                "weight": 0.2,
+                "mentions_found": 0,
+                "mentions": []
+              },
+              "lifestyle": {
+                "category": "Lifestyle / Глянец",
+                "weight": 0.15,
+                "mentions_found": 0,
+                "mentions": []
+              }
+            },
+            "top_mentions": [],
+            "source": "perplexity"
+          }
+        }
+      }
+    },
+    {
+      "url": "https://arclinic.ru",
+      "label": "Arclinic",
+      "timestamp": "2026-07-01T12:58:48",
+      "tools": {
+        "hh": {
+          "status": "ok",
+          "elapsed_sec": 2.6,
+          "data": {
+            "search_term": "arclinic.ru",
+            "note": "No vacancies found on hh.ru for this clinic"
+          }
+        },
+        "reviews": {
+          "status": "ok",
+          "elapsed_sec": 4.7,
+          "data": {
+            "search_term": "arclinic.ru",
+            "total_mentions": 8,
+            "platforms_with_results": 3,
+            "platforms_total": 7,
+            "platforms": {
+              "prodoctorov": {
+                "platform": "ПроДокторов",
+                "found": 2,
+                "links": [
+                  {
+                    "title": "На сайте prodoctorov.ru найдены страницы с отзывами о клинике «АРклиник» :",
+                    "url": "https://prodoctorov.ru/spb/lpu/47082-arclinic/",
+                    "description": "найдены страницы с отзывами о клинике «АРклиник» (arclinic.ru"
+                  },
+                  {
+                    "title": "На сайте prodoctorov.ru найдены страницы с отзывами о клинике «АРклиник» :",
+                    "url": "https://prodoctorov.ru/spb/lpu/47082-arclinic/otzivi/",
+                    "description": "найдены страницы с отзывами о клинике «АРклиник» (arclinic.ru"
+                  }
+                ]
+              },
+              "yandex_maps": {
+                "platform": "Яндекс.Карты",
+                "found": 0,
+                "links": []
+              },
+              "2gis": {
+                "platform": "2ГИС",
+                "found": 3,
+                "links": [
+                  {
+                    "title": "gis.ru содержит страницы с отзывами о **Arclinic**  в Санкт-Петербурге, где указан средний рейтинг 4.9 и более 85 отзывов",
+                    "url": "https://2gis.ru/spb/search/Arclinic",
+                    "description": "содержит страницы с отзывами о **Arclinic** (www.arclinic.ru) в Санкт-Петербурге, где указан средний рейтинг 4.9 и более 85 отзывов."
+                  },
+                  {
+                    "title": "gis.ru содержит страницы с отзывами о **Arclinic**  в Санкт-Петербурге, где указан средний рейтинг 4.9 и более 85 отзывов",
+                    "url": "https://2gis.ru/spb/firm/70000001063502604/tab/prices",
+                    "description": "содержит страницы с отзывами о **Arclinic** (www.arclinic.ru) в Санкт-Петербурге, где указан средний рейтинг 4.9 и более 85 отзывов."
+                  },
+                  {
+                    "title": "gis.ru содержит страницы с отзывами о **Arclinic**  в Санкт-Петербурге, где указан средний рейтинг 4.9 и более 85 отзывов",
+                    "url": "https://2gis.ru/spb/branches/70000001028247429",
+                    "description": "содержит страницы с отзывами о **Arclinic** (www.arclinic.ru) в Санкт-Петербурге, где указан средний рейтинг 4.9 и более 85 отзывов."
+                  }
+                ]
+              },
+              "google_maps": {
+                "platform": "Google Maps",
+                "found": 0,
+                "links": []
+              },
+              "otzovik": {
+                "platform": "Отзовик",
+                "found": 0,
+                "links": []
+              },
+              "irecommend": {
+                "platform": "IRecommend",
+                "found": 0,
+                "links": []
+              },
+              "zoon": {
+                "platform": "Zoon",
+                "found": 3,
+                "links": [
+                  {
+                    "title": "zoon.ru содержит несколько страниц с отзывами о центре эстетической медицины **Arclinic** , включая общие отзывы о клинике и отзывы о конкретных врачах",
+                    "url": "https://zoon.ru/spb/medical/tsentr_esteticheskoi_meditsiny_arclinic_na_vereiskoi_ulitse/specialist/",
+                    "description": "содержит несколько страниц с отзывами о центре эстетической медицины **Arclinic** (который соответствует запросу \"arclinic.ru\"), включая общие отзывы о клинике и отзывы о конкретных врачах."
+                  },
+                  {
+                    "title": "zoon.ru содержит несколько страниц с отзывами о центре эстетической медицины **Arclinic** , включая общие отзывы о клинике и отзывы о конкретных врачах",
+                    "url": "https://zoon.ru/spb/medical/tsentr_esteticheskoi_meditsiny_arclinic_na_vereiskoi_ulitse/",
+                    "description": "содержит несколько страниц с отзывами о центре эстетической медицины **Arclinic** (который соответствует запросу \"arclinic.ru\"), включая общие отзывы о клинике и отзывы о конкретных врачах."
+                  },
+                  {
+                    "title": "zoon.ru содержит несколько страниц с отзывами о центре эстетической медицины **Arclinic** , включая общие отзывы о клинике и отзывы о конкретных врачах",
+                    "url": "https://zoon.ru/spb/medical/tsentr_esteticheskoj_meditsiny_arclinic_na_varshavskoj_ulitse/",
+                    "description": "содержит несколько страниц с отзывами о центре эстетической медицины **Arclinic** (который соответствует запросу \"arclinic.ru\"), включая общие отзывы о клинике и отзывы о конкретных врачах."
+                  }
+                ]
+              }
+            },
+            "top_links": [
+              {
+                "title": "На сайте prodoctorov.ru найдены страницы с отзывами о клинике «АРклиник» :",
+                "url": "https://prodoctorov.ru/spb/lpu/47082-arclinic/",
+                "description": "найдены страницы с отзывами о клинике «АРклиник» (arclinic.ru"
+              },
+              {
+                "title": "На сайте prodoctorov.ru найдены страницы с отзывами о клинике «АРклиник» :",
+                "url": "https://prodoctorov.ru/spb/lpu/47082-arclinic/otzivi/",
+                "description": "найдены страницы с отзывами о клинике «АРклиник» (arclinic.ru"
+              },
+              {
+                "title": "gis.ru содержит страницы с отзывами о **Arclinic**  в Санкт-Петербурге, где указан средний рейтинг 4.9 и более 85 отзывов",
+                "url": "https://2gis.ru/spb/search/Arclinic",
+                "description": "содержит страницы с отзывами о **Arclinic** (www.arclinic.ru) в Санкт-Петербурге, где указан средний рейтинг 4.9 и более 85 отзывов."
+              },
+              {
+                "title": "gis.ru содержит страницы с отзывами о **Arclinic**  в Санкт-Петербурге, где указан средний рейтинг 4.9 и более 85 отзывов",
+                "url": "https://2gis.ru/spb/firm/70000001063502604/tab/prices",
+                "description": "содержит страницы с отзывами о **Arclinic** (www.arclinic.ru) в Санкт-Петербурге, где указан средний рейтинг 4.9 и более 85 отзывов."
+              },
+              {
+                "title": "gis.ru содержит страницы с отзывами о **Arclinic**  в Санкт-Петербурге, где указан средний рейтинг 4.9 и более 85 отзывов",
+                "url": "https://2gis.ru/spb/branches/70000001028247429",
+                "description": "содержит страницы с отзывами о **Arclinic** (www.arclinic.ru) в Санкт-Петербурге, где указан средний рейтинг 4.9 и более 85 отзывов."
+              },
+              {
+                "title": "zoon.ru содержит несколько страниц с отзывами о центре эстетической медицины **Arclinic** , включая общие отзывы о клинике и отзывы о конкретных врачах",
+                "url": "https://zoon.ru/spb/medical/tsentr_esteticheskoi_meditsiny_arclinic_na_vereiskoi_ulitse/specialist/",
+                "description": "содержит несколько страниц с отзывами о центре эстетической медицины **Arclinic** (который соответствует запросу \"arclinic.ru\"), включая общие отзывы о клинике и отзывы о конкретных врачах."
+              },
+              {
+                "title": "zoon.ru содержит несколько страниц с отзывами о центре эстетической медицины **Arclinic** , включая общие отзывы о клинике и отзывы о конкретных врачах",
+                "url": "https://zoon.ru/spb/medical/tsentr_esteticheskoi_meditsiny_arclinic_na_vereiskoi_ulitse/",
+                "description": "содержит несколько страниц с отзывами о центре эстетической медицины **Arclinic** (который соответствует запросу \"arclinic.ru\"), включая общие отзывы о клинике и отзывы о конкретных врачах."
+              },
+              {
+                "title": "zoon.ru содержит несколько страниц с отзывами о центре эстетической медицины **Arclinic** , включая общие отзывы о клинике и отзывы о конкретных врачах",
+                "url": "https://zoon.ru/spb/medical/tsentr_esteticheskoj_meditsiny_arclinic_na_varshavskoj_ulitse/",
+                "description": "содержит несколько страниц с отзывами о центре эстетической медицины **Arclinic** (который соответствует запросу \"arclinic.ru\"), включая общие отзывы о клинике и отзывы о конкретных врачах."
+              }
+            ],
+            "source": "DuckDuckGo"
+          }
+        },
+        "smi": {
+          "status": "ok",
+          "elapsed_sec": 2.7,
+          "data": {
+            "search_term": "arclinic.ru",
+            "total_mentions": 0,
+            "categories_with_mentions": 0,
+            "categories_total": 4,
+            "categories": {
+              "business": {
+                "category": "Деловые СМИ",
+                "weight": 0.35,
+                "mentions_found": 0,
+                "mentions": []
+              },
+              "medical": {
+                "category": "Медицинские СМИ",
+                "weight": 0.3,
+                "mentions_found": 0,
+                "mentions": []
+              },
+              "regional": {
+                "category": "Региональные СМИ",
+                "weight": 0.2,
+                "mentions_found": 0,
+                "mentions": []
+              },
+              "lifestyle": {
+                "category": "Lifestyle / Глянец",
+                "weight": 0.15,
+                "mentions_found": 0,
+                "mentions": []
+              }
+            },
+            "top_mentions": [],
+            "source": "perplexity"
+          }
+        }
+      }
+    },
+    {
+      "url": "https://erasmile.ru",
+      "label": "EraSmile",
+      "timestamp": "2026-07-01T12:58:58",
+      "tools": {
+        "hh": {
+          "status": "ok",
+          "elapsed_sec": 5.7,
+          "data": {
+            "search_term": "erasmile.ru",
+            "note": "No vacancies found on hh.ru for this clinic"
+          }
+        },
+        "reviews": {
+          "status": "ok",
+          "elapsed_sec": 4.9,
+          "data": {
+            "search_term": "erasmile.ru",
+            "total_mentions": 0,
+            "platforms_with_results": 0,
+            "platforms_total": 7,
+            "platforms": {
+              "prodoctorov": {
+                "platform": "ПроДокторов",
+                "found": 0,
+                "links": []
+              },
+              "yandex_maps": {
+                "platform": "Яндекс.Карты",
+                "found": 0,
+                "links": []
+              },
+              "2gis": {
+                "platform": "2ГИС",
+                "found": 0,
+                "links": []
+              },
+              "google_maps": {
+                "platform": "Google Maps",
+                "found": 0,
+                "links": []
+              },
+              "otzovik": {
+                "platform": "Отзовик",
+                "found": 0,
+                "links": []
+              },
+              "irecommend": {
+                "platform": "IRecommend",
+                "found": 0,
+                "links": []
+              },
+              "zoon": {
+                "platform": "Zoon",
+                "found": 0,
+                "links": []
+              }
+            },
+            "top_links": [],
+            "source": "DuckDuckGo"
+          }
+        },
+        "smi": {
+          "status": "ok",
+          "elapsed_sec": 2.7,
+          "data": {
+            "search_term": "erasmile.ru",
+            "total_mentions": 0,
+            "categories_with_mentions": 0,
+            "categories_total": 4,
+            "categories": {
+              "business": {
+                "category": "Деловые СМИ",
+                "weight": 0.35,
+                "mentions_found": 0,
+                "mentions": []
+              },
+              "medical": {
+                "category": "Медицинские СМИ",
+                "weight": 0.3,
+                "mentions_found": 0,
+                "mentions": []
+              },
+              "regional": {
+                "category": "Региональные СМИ",
+                "weight": 0.2,
+                "mentions_found": 0,
+                "mentions": []
+              },
+              "lifestyle": {
+                "category": "Lifestyle / Глянец",
+                "weight": 0.15,
+                "mentions_found": 0,
+                "mentions": []
+              }
+            },
+            "top_mentions": [],
+            "source": "perplexity"
+          }
+        }
+      }
+    }
+  ]
+}

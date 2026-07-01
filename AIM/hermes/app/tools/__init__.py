@@ -63,6 +63,7 @@ def register_all_tools() -> None:
     from . import run_ci_analysis        # noqa: F401
     from . import find_company_financials # noqa: F401
     from . import send_telegram_file     # noqa: F401
+    from . import run_fact_check         # noqa: F401
 
     # v3.3 restoration: activate new tools (previously dead code)
     from . import perplexity_tools         # noqa: F401  (perplexity_search, perplexity_deep_analyze)
