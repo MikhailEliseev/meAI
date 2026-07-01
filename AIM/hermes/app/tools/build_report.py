@@ -92,8 +92,8 @@ import re as _re
 # Селекторы для определения "это уже HTML или markdown?"
 _HTML_TAG_RE = _re.compile(r'<(h[1-6]|div|span|p|ul|ol|li|table|strong|em)\b', _re.IGNORECASE)
 _STATS_BLOCK_RE = _re.compile(
-    r'STATS:\s*\n((?:.*\n)*?)(?=\n\s*\n|\n#|\Z)',
-    _re.IGNORECASE,
+    r'STATS:\s*\n((?:\s*-\s*value:.*?\n(?:\s*label:.*?\n|\s*-\s*label:.*?\n)?)+)',
+    _re.IGNORECASE | _re.DOTALL,
 )
 _STATS_VALUE_RE = _re.compile(r'-\s*value:\s*(.+?)\s*$', _re.IGNORECASE)
 _STATS_LABEL_RE = _re.compile(r'-\s*label:\s*(.+?)\s*$', _re.IGNORECASE)
@@ -239,17 +239,53 @@ def _markdown_table_to_html(table_text: str) -> str:
 
 
 def _inline_markdown(text: str) -> str:
-    """Преобразовать inline markdown (bold, italic) в HTML.
+    """Преобразовать inline markdown в HTML.
 
-    **bold** → <strong>bold</strong>
-    *italic* → <em>italic</em>
+    Поддерживает (порядок важен):
+    - `code` → <code> (обработать ПЕРВЫМ, чтобы не парсить markdown внутри code)
+    - [text](url) → <a href="url" target="_blank">text</a>
+    - **bold** → <strong>bold</strong>
+    - *italic* → <em>italic</em>
 
     Защищаем уже существующие HTML теги от двойной обработки.
     """
+    # Code: `text` → <code>text</code> (must be FIRST to protect content)
+    text = _re.sub(r'`([^`\n]+?)`', r'<code>\1</code>', text)
+
+    # Links: [text](url) — must process before bold since text may contain *
+    def _link_replacer(m):
+        link_text = m.group(1).strip()
+        url = m.group(2).strip()
+        # Skip obviously invalid URLs
+        if not url or ' ' in url:
+            return m.group(0)
+        # Apply nested markdown to link text (bold inside link)
+        link_text = _re.sub(r'\*\*([^*]+?)\*\*', r'<strong>\1</strong>', link_text)
+        # Escape URL for HTML attribute
+        url_esc = url.replace('"', '&quot;')
+        return f'<a href="{url_esc}" target="_blank" rel="noopener">{link_text}</a>'
+    text = _re.sub(r'\[([^\]]+?)\]\(([^)\s]+)\)', _link_replacer, text)
+
     # Bold: **text** → <strong>text</strong>
     text = _re.sub(r'\*\*([^*\n]+?)\*\*', r'<strong>\1</strong>', text)
     # Italic: *text* → <em>text</em> (только если ещё не <strong>)
     text = _re.sub(r'(?<!\*)\*([^*\n]+?)\*(?!\*)', r'<em>\1</em>', text)
+
+    # Metric tags: !!color:text!! → <span class="metric-tag metric-tag-color">
+    #              <span class="metric-tag-dot"></span>text</span>
+    # Colors: green, yellow, red, blue, gray
+    def _metric_tag_replacer(m):
+        color = m.group(1).strip().lower()
+        text_inner = m.group(2).strip()
+        valid_colors = {'green', 'yellow', 'red', 'blue', 'gray'}
+        if color not in valid_colors:
+            return m.group(0)  # leave as-is if invalid color
+        return (
+            f'<span class="metric-tag metric-tag-{color}">'
+            f'<span class="metric-tag-dot"></span>{text_inner}</span>'
+        )
+    text = _re.sub(r'!!(green|yellow|red|blue|gray):\s*([^!\n]+?)!!', _metric_tag_replacer, text)
+
     return text
 
 
@@ -305,13 +341,17 @@ def _markdown_to_html(text: str) -> str:
                 html_parts.append(f'<p>{text_buf}</p>')
             in_paragraph = []
 
-    for line in lines:
+    # Process line-by-line with index (allows lookahead for blockquotes)
+    i = 0
+    while i < len(lines):
+        line = lines[i]
         stripped = line.strip()
 
         # Empty line — flush paragraph
         if not stripped:
             flush_paragraph()
             close_lists()
+            i += 1
             continue
 
         # Table placeholder
@@ -320,6 +360,7 @@ def _markdown_to_html(text: str) -> str:
             close_lists()
             idx = int(stripped.replace('__TABLE_', '').replace('__', ''))
             html_parts.append(tables[idx])
+            i += 1
             continue
 
         # Headers
@@ -328,18 +369,60 @@ def _markdown_to_html(text: str) -> str:
             close_lists()
             content = _inline_markdown(stripped[4:].strip())
             html_parts.append(f'<h3>{content}</h3>')
+            i += 1
             continue
         if stripped.startswith('## '):
             flush_paragraph()
             close_lists()
             content = _inline_markdown(stripped[3:].strip())
             html_parts.append(f'<h2>{content}</h2>')
+            i += 1
             continue
         if stripped.startswith('# '):
             flush_paragraph()
             close_lists()
             content = _inline_markdown(stripped[2:].strip())
             html_parts.append(f'<h2>{content}</h2>')  # h1 reserved for company name
+            i += 1
+            continue
+
+        # === Section header === (LLM использует в PERPLEXITY фазе)
+        eq_header_match = _re.match(r'^={2,}\s*(.+?)\s*={2,}$', stripped)
+        if eq_header_match:
+            flush_paragraph()
+            close_lists()
+            content = _inline_markdown(eq_header_match.group(1).strip())
+            html_parts.append(f'<h3>{content}</h3>')
+            i += 1
+            continue
+
+        # Horizontal rule: --- or *** or ___ (3+ chars, alone on line)
+        if _re.match(r'^(-{3,}|\*{3,}|_{3,})$', stripped):
+            flush_paragraph()
+            close_lists()
+            html_parts.append('<hr>')
+            i += 1
+            continue
+
+        # Blockquote: > text → <blockquote>
+        if stripped.startswith('> '):
+            flush_paragraph()
+            close_lists()
+            # Collect consecutive > lines
+            quote_lines = [stripped[2:].strip()]
+            j = i + 1
+            while j < len(lines):
+                next_stripped = lines[j].strip()
+                if next_stripped.startswith('> '):
+                    quote_lines.append(next_stripped[2:].strip())
+                    j += 1
+                else:
+                    break
+            quote_text = ' '.join(quote_lines)
+            quote_text = _inline_markdown(quote_text)
+            html_parts.append(f'<blockquote class="surface-block">{quote_text}</blockquote>')
+            i = j  # skip already-processed lines
+            i += 1
             continue
 
         # Unordered list item
@@ -353,6 +436,7 @@ def _markdown_to_html(text: str) -> str:
                 in_ul = True
             item = _inline_markdown(stripped[2:].strip())
             html_parts.append(f'<li>{item}</li>')
+            i += 1
             continue
 
         # Ordered list item
@@ -367,10 +451,12 @@ def _markdown_to_html(text: str) -> str:
                 in_ol = True
             item = _inline_markdown(ol_match.group(2).strip())
             html_parts.append(f'<li>{item}</li>')
+            i += 1
             continue
 
         # Default: paragraph line (buffer it)
         in_paragraph.append(stripped)
+        i += 1
 
     # Flush remaining
     flush_paragraph()
@@ -391,11 +477,14 @@ def _interpretation_to_html(content: str) -> str:
     Делает:
       1. STATS: блок → .glass-stats-wrap
       2. Markdown таблицы → .glass-table-wrap
-      3. Inline markdown (**bold**, *italic*)
+      3. Inline markdown (**bold**, *italic*, !!color:tag!!)
       4. ## headers → <h2>/<h3>
       5. - lists → <ul>/<ol>
-      6. Параграфы → <p>
-      7. Сохраняет existing HTML если он есть
+      6. > blockquote → .surface-block
+      7. --- horizontal rule → <hr>
+      8. === Header === → <h3>
+      9. Параграфы → <p>
+      10. Сохраняет existing HTML если он есть
 
     Args:
         content: Текст interpretation от LLM.
@@ -412,6 +501,93 @@ def _interpretation_to_html(content: str) -> str:
         return f'<p class="text-dim">{_esc(content)}</p>'
 
     return _markdown_to_html(content)
+
+
+def validate_interpretation(content: str) -> dict:
+    """Проверить interpretation на соответствие контракту.
+
+    Возвращает dict с предупреждениями:
+    {
+        "has_stats": bool,           # STATS: блок использован?
+        "has_headers": bool,         # ## или === заголовки есть?
+        "has_lists": bool,           # - или 1. списки есть?
+        "has_metric_tags": bool,     # !!color:text!! метки есть?
+        "has_bold": bool,            # **bold** использовано?
+        "has_blockquote": bool,      # > цитата есть?
+        "length_chars": int,         # длина текста
+        "warnings": list[str],       # список предупреждений
+        "score": int,                # 0-100 quality score
+    }
+
+    Используется в QC фазе для оценки качества interpretation.
+    """
+    if not content:
+        return {
+            "has_stats": False, "has_headers": False, "has_lists": False,
+            "has_metric_tags": False, "has_bold": False, "has_blockquote": False,
+            "length_chars": 0, "warnings": ["Empty content"], "score": 0,
+        }
+
+    warnings = []
+
+    # Feature detection
+    has_stats = bool(_re.search(r'^STATS:', content, _re.MULTILINE | _re.IGNORECASE))
+    has_h2 = bool(_re.search(r'^##\s+', content, _re.MULTILINE))
+    has_h3 = bool(_re.search(r'^###\s+', content, _re.MULTILINE))
+    has_eq_header = bool(_re.search(r'^={2,}\s*\w+\s*={2,}$', content, _re.MULTILINE))
+    has_headers = has_h2 or has_h3 or has_eq_header
+
+    has_ul = bool(_re.search(r'^[-*]\s+', content, _re.MULTILINE))
+    has_ol = bool(_re.search(r'^\d+\.\s+', content, _re.MULTILINE))
+    has_lists = has_ul or has_ol
+
+    has_metric_tags = bool(_re.search(r'!!(green|yellow|red|blue|gray):', content))
+    has_bold = '**' in content
+    has_blockquote = bool(_re.search(r'^>\s+', content, _re.MULTILINE))
+
+    length = len(content)
+
+    # Quality score (0-100)
+    score = 0
+    if has_headers:
+        score += 25
+    if has_lists:
+        score += 20
+    if has_bold:
+        score += 15
+    if has_stats:
+        score += 20  # bonus for using STATS
+    if has_blockquote:
+        score += 10
+    if has_metric_tags:
+        score += 10  # bonus for using metric tags
+    score = min(score, 100)
+
+    # Warnings
+    if not has_headers:
+        warnings.append("No headers (## or ===) — section will be wall of text")
+    if not has_lists:
+        warnings.append("No lists (- or 1.) — content may be hard to scan")
+    if not has_bold:
+        warnings.append("No **bold** — key points not highlighted")
+    if not has_stats and length > 500:
+        warnings.append("No STATS: block despite substantial content — key metrics not visualized")
+    if length > 4000:
+        warnings.append(f"Length {length} > 4000 chars — will be truncated")
+    if length < 100:
+        warnings.append(f"Very short ({length} chars) — may be insufficient analysis")
+
+    return {
+        "has_stats": has_stats,
+        "has_headers": has_headers,
+        "has_lists": has_lists,
+        "has_metric_tags": has_metric_tags,
+        "has_bold": has_bold,
+        "has_blockquote": has_blockquote,
+        "length_chars": length,
+        "warnings": warnings,
+        "score": score,
+    }
 
 
 
