@@ -236,6 +236,65 @@ docker exec aim-hermes sh -c 'cd /opt/hermes && tar cf - app/' | \
 
 ---
 
+## 📌 ОБНОВЛЕНИЕ ОТ 1 ИЮЛЯ 19:00 — ЗАВЕРШЁННЫЕ РЕШЕНИЯ
+
+После создания этого документа были исследованы 2 "критичных" файла-сироты. Результаты:
+
+### `tools/engine.py` (1641 строк, только на сервере) — LEGACY DUPLICATE
+
+**Вердикт:** мёртвый код, дубликат `pipeline/engine.py`.
+
+**Доказательства:**
+- `tools/engine.py` создан **20 июня**, `pipeline/engine.py` обновлён **1 июля**
+- Никакой код не делает `from app.tools.engine import` (0 упоминаний)
+- Весь код использует `from app.pipeline.engine import PipelineEngine`
+- Содержимое — старая версия Pipeline Engine (до refactor)
+
+**Рекомендация:** удалить с сервера (destructive — требует подтверждения Михаила).
+
+### `tools/generate_html_report.py` (704 строк, только на сервере) — ВОССТАНОВЛЕН
+
+**Вердикт:** активный файл, **скопирован в локал**.
+
+**Доказательства:**
+- `tools/__init__.py:79` делает `from . import generate_html_report` → регистрирует как LLM tool
+- Без этого файла **локальная установка ломается** с ImportError
+- Handler `handle_generate_html_report` регистрируется через `registry.register`
+- Локальный `scripts/generate_html_report.py` (430 строк, Jinja2) — это **другая экспериментальная версия**, не заменяет серверную
+
+**Особенность:** есть **два пути** для генерации отчётов:
+- **Pipeline internal:** `pipeline/engine.py:53` → `build_report.handle_generate_html_report`
+- **LLM direct call:** через toolset → `generate_html_report.handle_generate_html_report`
+
+`build_report.py` (750 строк, identical локал vs сервер) — это canonical HTML builder (Google Fonts, 14 классов). Используется в pipeline.
+
+**Действие:** ✅ Скопирован в `AIM/hermes/app/tools/generate_html_report.py`. MD5 совпадает с сервером.
+
+### `tools/test_presale_pipeline.py` (206 строк, только на сервере) — ЕЩЁ НЕ ИССЛЕДОВАН
+
+Оставлен на будущее. Скорее всего smoke test для presale flow.
+
+### Текущая статистика после восстановления
+
+| Метрика | До | После |
+|---|---|---|
+| Идентичных файлов | 32 (42%) | **33 (43%)** |
+| Различающихся | 44 | 44 |
+| Только локально | 14 | 14 |
+| Только на сервере | 3 | **2** (убрали generate_html_report) |
+
+---
+
+## 🎯 ОСТАЁТСЯ НЕ РЕШЁННЫМ
+
+1. **44 различающихся файлов** — нужно для каждого индивидуальное ревью
+2. **`tools/engine.py` legacy** (на сервере) — удалять или нет?
+3. **`tools/test_presale_pipeline.py`** — скопировать локально или игнорировать?
+4. **`scripts/generate_html_report.py`** (локальный Jinja2 эксперимент) — архивировать или развивать?
+5. **14 файлов только локально** — деплоить на сервер или удалить из локала?
+
+---
+
 ## ✅ СЛЕДУЮЩИЕ ДЕЙСТВИЯ (ПРИОРИТЕТ)
 
 1. **🔴 СЕГОДНЯ:** Восстановить `pipeline/` файлы локально (Этап 1)
