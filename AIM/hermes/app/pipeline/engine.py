@@ -50,7 +50,7 @@ _TOOL_HANDLERS: dict[str, tuple[str, str]] = {
     "run_smi_mentions":        ("app.tools.run_smi_mentions",       "handle_run_smi_mentions"),
     "run_content_gaps":        ("app.tools.run_content_gaps",       "handle_run_content_gaps"),
     "find_company_financials": ("app.tools.find_company_financials","handle_find_company_financials"),
-    "generate_html_report":    ("app.tools.generate_html_report",   "handle_generate_html_report"),
+    "generate_html_report":    ("app.tools.build_report",          "handle_generate_html_report"),
     "publish_scout_report":    ("app.tools.publish_scout_report",   "handle_publish_scout_report"),
     # ── v7.1: new tools ─────────────────────────────────────────────
     "perplexity_search":       ("app.tools.perplexity_tools",       "handle_perplexity_search"),

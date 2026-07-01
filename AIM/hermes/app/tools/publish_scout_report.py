@@ -103,12 +103,12 @@ async def handle_publish_scout_report(slug=None, url=None, already_published=Fal
                 "available_slugs": _list_available_slugs(),
             })
 
-    # 2. Build HTML using the same builder as generate_html_report
-    from app.tools.generate_html_report import _build_report_html
+    # 2. Build HTML using canonical builder (1 июля 2026: Google Fonts + 14 классов)
+    from app.tools.build_report import build_report_html
 
     meta = data.get("metadata", {}) or {}
     title = meta.get("company_name") or slug
-    html = _build_report_html(data, title)
+    html = build_report_html(data, title)
 
     # 3. Publish to WordPress
     if not WP_DB_PASSWORD:
