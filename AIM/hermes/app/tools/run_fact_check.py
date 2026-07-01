@@ -124,7 +124,7 @@ def _extract_pagespeed_facts(interpretations: dict) -> dict:
     """
     facts = {}
 
-    tech_audit = interpretations.get("TECH_AUDIT_interpretation", {})
+    tech_audit = interpretations.get("TECH AUDIT_interpretation", {})
     content = tech_audit.get("content", "") if isinstance(tech_audit, dict) else ""
 
     # Паттерны
@@ -132,30 +132,30 @@ def _extract_pagespeed_facts(interpretations: dict) -> dict:
     if score_match:
         facts["score"] = int(score_match.group(1))
 
-    lcp_match = re.search(r'LCP[^\d]*([\d.]+)\s*с', content)
+    lcp_match = re.search(r'LCP[^\d]*([\d.,]+)\s*с', content)
     if lcp_match:
-        facts["lcp"] = float(lcp_match.group(1))
+        facts["lcp"] = float(lcp_match.group(1).replace(',', '.'))
 
-    fcp_match = re.search(r'FCP[^\d]*([\d.]+)\s*с', content)
+    fcp_match = re.search(r'FCP[^\d]*([\d.,]+)\s*с', content)
     if fcp_match:
-        facts["fcp"] = float(fcp_match.group(1))
+        facts["fcp"] = float(fcp_match.group(1).replace(',', '.'))
 
-    tti_match = re.search(r'TTI[^\d]*([\d.]+)\s*с', content)
+    tti_match = re.search(r'TTI[^\d]*([\d.,]+)\s*с', content)
     if tti_match:
-        facts["tti"] = float(tti_match.group(1))
+        facts["tti"] = float(tti_match.group(1).replace(',', '.'))
 
     tbt_match = re.search(r'TBT[^\d]*([\d,\s]+)\s*мс', content)
     if tbt_match:
         tbt_str = tbt_match.group(1).replace(',', '').replace(' ', '')
         facts["tbt"] = int(tbt_str)
 
-    cls_match = re.search(r'CLS[^\d]*([\d.]+)', content)
+    cls_match = re.search(r'CLS[^\d]*([\d.,]+)', content)
     if cls_match:
-        facts["cls"] = float(cls_match.group(1))
+        facts["cls"] = float(cls_match.group(1).replace(',', '.'))
 
-    si_match = re.search(r'SI[^\d]*([\d.]+)\s*с', content)
+    si_match = re.search(r'SI[^\d]*([\d.,]+)\s*с', content)
     if si_match:
-        facts["si"] = float(si_match.group(1))
+        facts["si"] = float(si_match.group(1).replace(',', '.'))
 
     return facts
 
@@ -514,7 +514,7 @@ async def _verify_pagespeed_facts(extracted: dict, client_url: str) -> dict:
                 "critical": False,
             }
 
-        metrics = result.get("metrics", {})
+        metrics = result
         details = []
         mismatches = []
 
@@ -546,7 +546,7 @@ async def _verify_pagespeed_facts(extracted: dict, client_url: str) -> dict:
         # Проверка LCP (допуск ±15%)
         if "lcp" in extracted:
             claimed = extracted["lcp"]
-            actual = metrics.get("lcp")
+            actual = metrics.get("lcp_seconds")
             if actual is not None:
                 diff_percent = abs((actual - claimed) / claimed * 100) if claimed > 0 else 0
                 match = diff_percent <= 15
@@ -570,7 +570,7 @@ async def _verify_pagespeed_facts(extracted: dict, client_url: str) -> dict:
         # Проверка FCP (допуск ±15%)
         if "fcp" in extracted:
             claimed = extracted["fcp"]
-            actual = metrics.get("fcp")
+            actual = metrics.get("fcp_seconds")
             if actual is not None:
                 diff_percent = abs((actual - claimed) / claimed * 100) if claimed > 0 else 0
                 match = diff_percent <= 15
@@ -593,7 +593,7 @@ async def _verify_pagespeed_facts(extracted: dict, client_url: str) -> dict:
         # Проверка TTI (допуск ±15%)
         if "tti" in extracted:
             claimed = extracted["tti"]
-            actual = metrics.get("tti")
+            actual = metrics.get("tti_seconds")
             if actual is not None:
                 diff_percent = abs((actual - claimed) / claimed * 100) if claimed > 0 else 0
                 match = diff_percent <= 15
@@ -616,7 +616,7 @@ async def _verify_pagespeed_facts(extracted: dict, client_url: str) -> dict:
         # Проверка TBT (допуск ±20%)
         if "tbt" in extracted:
             claimed = extracted["tbt"]
-            actual = metrics.get("tbt")
+            actual = metrics.get("tbt_ms")
             if actual is not None:
                 diff_percent = abs((actual - claimed) / claimed * 100) if claimed > 0 else 0
                 match = diff_percent <= 20
@@ -639,7 +639,7 @@ async def _verify_pagespeed_facts(extracted: dict, client_url: str) -> dict:
         # Проверка CLS (допуск ±0.05)
         if "cls" in extracted:
             claimed = extracted["cls"]
-            actual = metrics.get("cls")
+            actual = metrics.get("cls_value")
             if actual is not None:
                 diff = abs(actual - claimed)
                 match = diff <= 0.05
@@ -662,7 +662,7 @@ async def _verify_pagespeed_facts(extracted: dict, client_url: str) -> dict:
         # Проверка SI (допуск ±15%)
         if "si" in extracted:
             claimed = extracted["si"]
-            actual = metrics.get("si")
+            actual = metrics.get("si_seconds")
             if actual is not None:
                 diff_percent = abs((actual - claimed) / claimed * 100) if claimed > 0 else 0
                 match = diff_percent <= 15
@@ -1189,6 +1189,8 @@ async def handle_run_fact_check(session_hash=None, client_url=None, **kwargs) ->
         # 2. Извлечь факты из интерпретаций
         legal_facts = _extract_legal_facts(all_data)
         pagespeed_facts = _extract_pagespeed_facts(all_data)
+        logger.info("DEBUG: all_data keys = %s", list(all_data.keys())[:10])
+        logger.info("DEBUG: pagespeed_facts = %s", pagespeed_facts)
         competitors_facts = _extract_competitors_facts(all_data)
         review_facts = _extract_review_platforms_facts(all_data)
         hh_facts = _extract_hh_facts(all_data)
