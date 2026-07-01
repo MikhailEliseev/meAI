@@ -658,10 +658,8 @@ def build_report_html(data: dict, title: str) -> str:
     company_name = meta.get("company_name", title)
     url = meta.get("url", "")
 
-    # Extract interpretations
-    interpretations = data.get("interpretations", {}) or {}
-
-    # Build phase sections
+    # Extract interpretations from *_interpretation.json files
+    # load_all_data() returns: {"PERPLEXITY_interpretation": {"content": "..."}, ...}
     phase_sections = []
 
     phase_order = [
@@ -678,7 +676,9 @@ def build_report_html(data: dict, title: str) -> str:
     ]
 
     for phase_key, phase_label in phase_order:
-        interpretation = interpretations.get(phase_key, "")
+        # Read from PHASE_NAME_interpretation.json → {"content": "..."}
+        interp_data = data.get(f"{phase_key}_interpretation", {})
+        interpretation = interp_data.get("content", "") if isinstance(interp_data, dict) else ""
         if not interpretation:
             continue
 
