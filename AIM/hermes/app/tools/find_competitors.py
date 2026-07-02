@@ -92,6 +92,71 @@ async def _find_competitors_via_perplexity(url: str) -> list:
         return []
 
 
+async def _enrich_competitor_with_financials(comp: dict, client_city: str = "") -> dict:
+    """Для одного конкурента: найти INN через Perplexity + выручку через nalog.ru.
+
+    Стоимость: ~1 Perplexity call + 1 nalog call (~$0.002).
+    Возвращает comp с добавленными полями inn, revenue_year, profit_year, revenue_trend.
+    """
+    import json as _json
+    import re as _re
+    try:
+        from app.tools.perplexity_tools import handle_perplexity_search
+
+        brand = comp.get("brand_name", "")
+        website = comp.get("website", "")
+        if not brand and not website:
+            return comp
+
+        # 1. Получаем INN через Perplexity
+        q = (
+            f'Найди ИНН клиники "{brand}" (сайт {website}) — основное юрлицо, '
+            f'медицинская деятельность (ОКВЭД 86.x). Верни только 10-значный ИНН и название юрлица.'
+        )
+        r = await handle_perplexity_search(question=q, context="")
+        d = _json.loads(r)
+        answer = d.get("answer", "") if isinstance(d, dict) else ""
+        inn_match = _re.search(r'\b(\d{10})\b', answer)
+        if not inn_match:
+            return comp
+        inn = inn_match.group(1)
+        comp["inn"] = inn
+        comp["inns"] = [inn]
+
+        # 2. Получаем финансы через aim-app (nalog.ru)
+        import httpx as _httpx
+        async with _httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                "http://aim-app:8000/api/companies/financials",
+                params={"inn": inn},
+            )
+            if resp.status_code != 200:
+                return comp
+            data = resp.json()
+            if not data.get("success"):
+                return comp
+            company = data.get("company", {})
+            revenue = company.get("revenue", {})
+            profit = company.get("profit", {})
+            if revenue:
+                latest_year = sorted(revenue.keys(), reverse=True)[0]
+                comp["revenue_year"] = revenue[latest_year]
+                comp["financial_year"] = int(latest_year)
+                comp["revenue_source"] = "tax_filed"
+                comp["data_source"] = "nalog"
+                comp["legal_name"] = company.get("full_name") or company.get("short_name") or brand
+                comp["revenue_trend"] = company.get("revenue_trend")
+                comp["profit_year"] = profit.get(latest_year)
+                logger.info(
+                    "find_competitors: enriched %s (inn=%s) revenue=%s",
+                    brand, inn, comp["revenue_year"]
+                )
+        return comp
+    except Exception as e:
+        logger.debug("enrich competitor %s failed: %s", comp.get("brand_name", "?"), e)
+        return comp
+
+
 async def handle_find_competitors(url=None, named_competitors=None, client_revenue=None, **kwargs) -> str:
     """Find top competitors for a clinic website.
 
@@ -159,15 +224,22 @@ async def handle_find_competitors(url=None, named_competitors=None, client_reven
             logger.info("Found %d competitors for URL: %s (megalopolis=%s)", len(competitors), url, is_megalopolis)
 
             # Fallback: если Google Maps не дал результатов — спросить Perplexity
-            # (1 API call, ~$0.005). Возвращает 5 топ-конкурентов с выручкой/INN.
+            # (1 API call, ~$0.005). Возвращает 5 топ-конкурентов.
             if not competitors:
                 push_tool_progress("competitors", "🔄 Google Maps пустой — спрашиваю Perplexity о топ-конкурентах…")
                 perplexity_comps = await _find_competitors_via_perplexity(url)
                 if perplexity_comps:
-                    competitors = perplexity_comps
+                    # Enrich каждого конкурента: INN + финансы через nalog.ru (~$0.01 за конкурента)
+                    push_tool_progress("competitors", f"💰 Тяну финансы для {len(perplexity_comps)} конкурентов…")
+                    import asyncio as _aio
+                    enriched = await _aio.gather(
+                        *[_enrich_competitor_with_financials(c) for c in perplexity_comps],
+                        return_exceptions=False,
+                    )
+                    competitors = [c for c in enriched if c]
                     is_megalopolis = False  # сбрасываем suggestion
-                    logger.info("Perplexity fallback found %d competitors", len(competitors))
-                    push_tool_progress("competitors", f"✅ Perplexity нашёл {len(competitors)} конкурентов")
+                    logger.info("Perplexity fallback found %d competitors (enriched)", len(competitors))
+                    push_tool_progress("competitors", f"✅ {len(competitors)} конкурентов с финансами")
 
             push_tool_progress("competitors", f"✅ Найдено конкурентов: {len(competitors)}")
 

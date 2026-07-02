@@ -770,6 +770,121 @@ li { margin: 6px 0; }
     z-index: 1;
 }
 
+/* === REVENUE vs COMPETITORS BLOCK (вау-блок в начале) === */
+.revenue-block {
+    margin: 40px 0 60px;
+    padding: 32px 28px;
+    background: var(--surface);
+    border-radius: 16px;
+    border-left: 4px solid var(--accent);
+    position: relative;
+}
+.revenue-block h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 400;
+    line-height: 1.2;
+    margin-bottom: 8px;
+}
+.revenue-block .text-dim {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+}
+.wow-banner {
+    background: linear-gradient(90deg, var(--accent), transparent);
+    color: var(--bg);
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin: 16px 0;
+    font-size: 16px;
+    font-weight: 500;
+}
+[data-theme="dark"] .wow-banner {
+    color: var(--bg);
+    background: linear-gradient(90deg, var(--accent), rgba(255,255,255,0.05));
+}
+.wow-banner strong {
+    letter-spacing: 0.05em;
+}
+.comp-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 14px;
+}
+.comp-table thead th {
+    text-align: left;
+    padding: 12px 14px;
+    border-bottom: 2px solid var(--border-strong);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+.comp-table thead th:nth-child(3),
+.comp-table thead th:nth-child(4) {
+    text-align: center;
+}
+.comp-row {
+    border-bottom: 1px solid var(--border);
+    transition: background .2s;
+}
+.comp-row:hover {
+    background: var(--hover);
+}
+.comp-row.row-client {
+    background: var(--hover);
+    font-weight: 600;
+}
+.comp-row.row-client .comp-name,
+.comp-row.row-client .comp-revenue {
+    color: var(--accent);
+    font-weight: 700;
+}
+.comp-row td {
+    padding: 14px;
+    vertical-align: middle;
+}
+.comp-rank {
+    width: 40px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--text-dim);
+}
+.comp-rank.rank-gold { color: #D4AF37; }
+.comp-rank.rank-silver { color: #A8A8A8; }
+.comp-rank.rank-bronze { color: #CD7F32; }
+.comp-name {
+    font-size: 15px;
+}
+.comp-revenue {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+.comp-trend {
+    text-align: center;
+    font-size: 18px;
+}
+.comp-trend.trend-up { color: var(--green); }
+.comp-trend.trend-down { color: var(--red); }
+.comp-trend.trend-stable { color: var(--text-dim); }
+.comp-source {
+    font-size: 11px !important;
+    color: var(--text-dim);
+    margin-top: 12px !important;
+    text-align: right;
+}
+.sec-tag-highlight {
+    background: var(--accent) !important;
+    color: var(--bg) !important;
+    font-weight: 600;
+}
+
 /* === SECTION === */
 .section {
     padding: 48px 0;
@@ -1209,6 +1324,164 @@ async def handle_generate_html_report(
             conn.close()
 
 
+def _build_revenue_vs_competitors_block(data: dict, company_name: str) -> str:
+    """Построить блок 'Выручка vs Конкуренты' для вау-эффекта в начале отчёта.
+
+    Читает:
+    - FINANCE.json → find_company_financials → latest_revenue клиента
+    - COMPETITORS.json → find_competitors → competitors[] с revenue_year
+
+    Возвращает HTML блока или пустую строку если данных нет.
+    """
+    import json as _json
+    import re as _re
+
+    # 1. Выручка клиента
+    client_revenue = None
+    client_trend = None
+    fin_phase = data.get("FINANCE", {})
+    if isinstance(fin_phase, dict):
+        fin_raw = fin_phase.get("find_company_financials", "")
+        if isinstance(fin_raw, str) and fin_raw:
+            try:
+                fin = _json.loads(fin_raw)
+                comp = fin.get("company", {})
+                client_revenue = comp.get("latest_revenue")
+                client_trend = comp.get("revenue_trend")
+            except (_json.JSONDecodeError, TypeError):
+                pass
+
+    # 2. Конкуренты с финансами
+    competitors = []
+    comp_phase = data.get("COMPETITORS", {})
+    if isinstance(comp_phase, dict):
+        comp_raw = comp_phase.get("find_competitors", "")
+        if isinstance(comp_raw, str) and comp_raw:
+            try:
+                parsed = _json.loads(comp_raw)
+                competitors = parsed.get("competitors", [])
+            except (_json.JSONDecodeError, TypeError):
+                pass
+
+    # Оставляем только конкурентов с реальной выручкой
+    competitors_with_rev = [
+        c for c in competitors
+        if c.get("revenue_year") and c.get("revenue_year") > 0
+    ]
+
+    if not client_revenue and not competitors_with_rev:
+        return ""
+
+    # Сортируем по убыванию выручки — клиент + конкуренты вместе
+    all_rows = []
+    if client_revenue:
+        all_rows.append({
+            "name": company_name,
+            "is_client": True,
+            "revenue": client_revenue,
+            "trend": client_trend,
+            "inn": None,
+        })
+    for c in competitors_with_rev:
+        brand = c.get("brand_name") or c.get("legal_name") or "Конкурент"
+        all_rows.append({
+            "name": brand,
+            "is_client": False,
+            "revenue": c.get("revenue_year", 0),
+            "trend": c.get("revenue_trend"),
+            "inn": c.get("inn", ""),
+        })
+    all_rows.sort(key=lambda r: r["revenue"], reverse=True)
+
+    # VAU-блок: позиция клиента
+    client_position = next(
+        (i + 1 for i, r in enumerate(all_rows) if r["is_client"]),
+        None
+    )
+
+    # Парсим trend → emoji/цвет
+    def _trend_marker(t):
+        if not t:
+            return ("—", "")
+        t_lower = t.lower()
+        if "grow" in t_lower or t_lower == "растущий":
+            return ("▲", "trend-up")
+        if "declining" in t_lower or "fall" in t_lower or "пад" in t_lower:
+            return ("▼", "trend-down")
+        if "stable" in t_lower or "стаб" in t_lower:
+            return ("▬", "trend-stable")
+        return ("—", "")
+
+    # Считаем VAU-инсайт: кратность лидера к ближайшему конкуренту
+    wow_html = ""
+    if client_revenue and len(competitors_with_rev) > 0:
+        top_comp_revenue = max(c.get("revenue_year", 0) for c in competitors_with_rev)
+        if top_comp_revenue > 0:
+            ratio = client_revenue / top_comp_revenue
+            if ratio >= 1.2 and client_position == 1:
+                wow_html = (
+                    f'<div class="wow-banner">'
+                    f'<strong>ВАУ:</strong> {company_name} в '
+                    f'<strong>{ratio:.1f} раза</strong> больше ближайшего конкурента.'
+                    f'</div>'
+                )
+
+    # Строим таблицу
+    rows_html = []
+    for i, row in enumerate(all_rows, 1):
+        revenue_str = _fmt_revenue_short(row["revenue"])
+        trend_emoji, trend_class = _trend_marker(row["trend"])
+        client_class = " row-client" if row["is_client"] else ""
+        rank_class = " rank-gold" if i == 1 else (" rank-silver" if i == 2 else (" rank-bronze" if i == 3 else ""))
+        rows_html.append(
+            f'<tr class="comp-row{client_class}">'
+            f'<td class="comp-rank{rank_class}">{i}</td>'
+            f'<td class="comp-name">{_esc(row["name"])}</td>'
+            f'<td class="comp-revenue">{revenue_str}</td>'
+            f'<td class="comp-trend {trend_class}">{trend_emoji}</td>'
+            f'</tr>'
+        )
+    rows_html_str = "".join(rows_html)
+
+    # Если клиент не найден — показываем только конкурентов
+    title_str = (
+        f"{company_name} vs {len(competitors_with_rev)} главных конкурента"
+        if client_revenue
+        else f"Топ-{len(competitors_with_rev)} конкурентов {company_name}"
+    )
+
+    subtitle = ""
+    if client_revenue and client_position == 1 and len(competitors_with_rev) >= 2:
+        subtitle = f"Лидер рынка. Выручка 2025 по данным ФНС."
+    elif client_revenue and client_position:
+        subtitle = f"{client_position}-е место среди сравниваемых клиник. Выручка 2025 по данным ФНС."
+    else:
+        subtitle = "Выручка конкурентов 2025 по данным ФНС (bo.nalog.gov.ru)."
+
+    return f"""
+<section class="revenue-block">
+  <span class="sec-tag sec-tag-highlight">СРАВНЕНИЕ С КОНКУРЕНТАМИ</span>
+  <h2>{_esc(title_str)}</h2>
+  <p class="text-dim">{subtitle}</p>
+  {wow_html}
+  <table class="comp-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Клиника</th>
+        <th>Выручка</th>
+        <th>Тренд</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows_html_str}
+    </tbody>
+  </table>
+  <p class="text-dim comp-source">Источник: ФНС, bo.nalog.gov.ru (налоговая отчётность)</p>
+</section>
+"""
+
+
 def build_report_html(data: dict, title: str) -> str:
     """Build canonical HTML report with Google Fonts + all 14 classes.
 
@@ -1281,12 +1554,17 @@ def build_report_html(data: dict, title: str) -> str:
     sections_html = ''.join(phase_sections).replace('\n', ' ').replace('\r', '')
     cta_min = cta_html.replace('\n', ' ').replace('\r', '')
 
+    # ВАУ-блок "Выручка vs Конкуренты" — в начало отчёта
+    revenue_block_html = _build_revenue_vs_competitors_block(data, company_name)
+    revenue_block_min = revenue_block_html.replace('\n', ' ').replace('\r', '') if revenue_block_html else ''
+
     html = (
         '<style>' + css_minified.replace('<style>', '').replace('</style>', '') + '</style>'
         + '<div class="aim-report-scope">'
         + '<div class="report-container">'
         + f'<h1>{_esc(company_name)}</h1>'
         + (f'<p class="text-dim">URL: <a href="{_esc(url)}" target="_blank">{_esc(url)}</a></p>' if url else '')
+        + revenue_block_min
         + sections_html
         + cta_min
         + '</div>'
