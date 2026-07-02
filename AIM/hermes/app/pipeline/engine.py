@@ -567,6 +567,14 @@ class PipelineEngine:
         # Авто-определение имени клиента если не задано
         self._resolve_client_name(state)
 
+        # Pre-resolve INN через Perplexity если фаза использует find_company_financials
+        # и INN ещё не известен (1 API call, ~$0.001)
+        if "find_company_financials" in phase.tools and not state.client_inn:
+            inn = await self._resolve_inn_via_perplexity(state)
+            if inn:
+                state.client_inn = inn
+                logger.info("PipelineEngine: pre-resolved INN=%s via Perplexity", inn)
+
         tool_results: dict[str, str] = {}
         tool_names: list[str] = []
         overall_timeout = min(phase.contract.timeout, _TOOL_CALL_TIMEOUT)
@@ -729,7 +737,8 @@ class PipelineEngine:
             inn = self._extract_inn_from_state(state)
             if inn:
                 return {"inn": inn}
-            return {}  # Без INN хендлер вернёт ошибку
+            return {}  # Без INN хендлер вернёт ошибку.
+            # INN резолвится заранее в _run_phase_tools через _resolve_inn_via_perplexity
 
         # ── Content Gaps (нужен конкурент) ─────────────────────────
         if tool_name == "run_content_gaps":
@@ -933,6 +942,38 @@ class PipelineEngine:
                     state.client_inn = inn
                     return inn
 
+        return None
+
+    async def _resolve_inn_via_perplexity(self, state: PipelineState) -> str | None:
+        """Last-resort INN resolver: спросить Perplexity (1 call).
+
+        Используется когда Competitors/Perplexity phases не дали INN напрямую.
+        Стоимость: ~$0.001 за вызов.
+        """
+        import re as _re
+        name = state.client_name or ""
+        url = state.client_url or ""
+        if not name and not url:
+            return None
+        try:
+            from app.tools.perplexity_tools import handle_perplexity_search
+            question = (
+                f'Какой ИНН у ОСНОВНОГО юридического лица клиники "{name}" (сайт {url})? '
+                f'Нужно именно клиническое юрлицо (медицинская деятельность, ОКВЭД 86.10), '
+                f'не фармацевтика и не холдинг. Верни только 10-значный ИНН и название юрлица.'
+            )
+            result_json = await handle_perplexity_search(question=question, context="")
+            data = json.loads(result_json)
+            answer = data.get("answer", "") if isinstance(data, dict) else ""
+            # Find all 10-digit numbers, prefer those with medical context
+            candidates = _re.findall(r'\b(\d{10})\b', answer)
+            if candidates:
+                # Take the first one (Perplexity usually returns the answer first)
+                inn = candidates[0]
+                logger.info("PipelineEngine: INN=%s via Perplexity resolver (answer: %.100s)", inn, answer)
+                return inn
+        except Exception as e:
+            logger.warning("PipelineEngine: Perplexity INN resolver failed: %s", e)
         return None
 
     def _extract_first_competitor_url(self, state: PipelineState) -> str | None:

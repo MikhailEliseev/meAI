@@ -271,18 +271,67 @@ async def _search_clinic_doctors(company_name: str, specialization: str = "") ->
         # Extract doctor names from clinic page titles/descriptions
         import re
         doctor_names = set()
+        STOP_WORDS = ("клиник", "центр", "город", "медицинск", "отзыв", "запись",
+                      "приём", "консультаци", "врач", "косметолог", "хирург",
+                      "пластик", "эстетич", "услуг", "цена", "прайс", "Москва",
+                      "акция", "кабинет", "Москва", "адрес", "телефон")
+
+        def _extract_names(text: str) -> list:
+            """Извлечь ФИО из текста. Ищет 2-3 заглавных русских слова подряд."""
+            found = []
+            # Сначала 3 слова (ФИО), потом 2 (Фамилия Имя)
+            for pattern in (
+                r'[А-Я][а-яё]+\s+[А-Я][а-яё]+\s+[А-Я][а-яё]+',
+                r'[А-Я][а-яё]+\s+[А-Я][а-яё]+',
+            ):
+                for name in re.findall(pattern, text):
+                    if len(name) < 10:
+                        continue
+                    lower = name.lower()
+                    if any(w.lower() in lower for w in STOP_WORDS):
+                        continue
+                    found.append(name)
+            return found
+
         for r in clinic_results:
             combined = r["title"] + " " + r["description"]
-            # Russian name patterns: Surname Firstname Patronymic
-            name_pattern = re.findall(r'[А-Я][а-яё]+\s+[А-Я][а-яё]+(?:\s+[А-Я][а-яё]+)?', combined)
-            for name in name_pattern:
-                if len(name) > 10 and not any(w in name.lower() for w in ("клиник", "центр", "город", "медицинск", "отзыв", "запись", "приём", "консультаци")):
-                    doctor_names.add(name)
+            for name in _extract_names(combined):
+                doctor_names.add(name)
 
         if not doctor_names:
             # Fallback: search general web
             results2, provider2 = await fallback_search(f"{search_query} врачи клиники отзывы", max_results=5)
             for item in results2:
+                clinic_results.append({
+                    "title": item.get("title", ""),
+                    "url": item.get("url", ""),
+                    "description": (item.get("description", ""))[:500],
+                })
+                # Пытаемся извлечь имена из второго поиска тоже
+                combined = item.get("title", "") + " " + item.get("description", "")
+                for name in _extract_names(combined):
+                    doctor_names.add(name)
+
+        # Если до сих пор мало (< 5) — спросить Perplexity напрямую
+        if len(doctor_names) < 5:
+            try:
+                from app.tools.perplexity_tools import handle_perplexity_search
+                extra_q = (
+                    f'Найди по 2-3 известных врача (ФИО полностью) клиники "{company_name}" в Москве. '
+                    f'Только реальные имена, которые упоминаются в отзывах на ПроДокторов, 2ГИС, medsi.ru, '
+                    f'статьях или на сайте самой клиники. Верни в формате "Фамилия Имя Отчество — специализация".'
+                )
+                extra_r = await handle_perplexity_search(question=extra_q, context="")
+                extra_d = json.loads(extra_r)
+                extra_answer = extra_d.get("answer", "") if isinstance(extra_d, dict) else ""
+                if extra_answer:
+                    # Извлекаем ФИО + специализацию
+                    for line in extra_answer.split("\n"):
+                        for name in _extract_names(line):
+                            doctor_names.add(name)
+                    logger.info("run_doctor_dossiers: extra Perplexity pass → %d total names", len(doctor_names))
+            except Exception as ex:
+                logger.warning("run_doctor_dossiers: extra Perplexity pass failed: %s", ex)
                 clinic_results.append({
                     "title": item.get("title", ""),
                     "url": item.get("url", ""),

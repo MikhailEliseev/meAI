@@ -32,6 +32,66 @@ AIM_API_BASE = "http://aim-app:8000"
 REQUEST_TIMEOUT = 600.0  # full pipeline: Apify (90s) + 50-place Playwright INN extraction + nalog enrichment + scoring
 
 
+async def _find_competitors_via_perplexity(url: str) -> list:
+    """Fallback: найти топ-5 конкурентов через Perplexity (1 API call).
+
+    Используется когда Apify/Google Maps вернули пустой результат.
+    Возвращает структуру как main path, но с полями из Perplexity ответа.
+    Стоимость: ~$0.005.
+    """
+    import json as _json
+    import re as _re
+    try:
+        from app.tools.perplexity_tools import handle_perplexity_search
+        question = (
+            f'Для клиники с сайтом {url}: назови 5 её главных прямых конкурентов в той же специализации '
+            f'и том же городе (только частные коммерческие клиники, НЕ государственные). '
+            f'Формат ответа: строго 5 пунктов, каждый в одну строку: '
+            f'"Бренд | сайт | специализация". Без ИНН и выручки — только идентификаторы. '
+            f'Пример: "GMTClinic | gtmcinic.ru | пластическая хирургия".'
+        )
+        result_json = await handle_perplexity_search(question=question, context="")
+        data = _json.loads(result_json)
+        answer = data.get("answer", "") if isinstance(data, dict) else ""
+        if not answer:
+            return []
+
+        # Парсим формат "Бренд | сайт | специализация"
+        competitors = []
+        for line in answer.split("\n"):
+            line = line.strip()
+            # Ищем нумерованные пункты: "1. ... | ... | ..."
+            m = _re.match(r'^\d+[\.\)]\s*(.+)$', line)
+            if not m:
+                continue
+            content = m.group(1)
+            parts = [p.strip().lstrip('*') for p in content.split("|")]
+            if len(parts) >= 2:
+                brand = parts[0].strip().rstrip('.,;')[:80]
+                website_part = parts[1].strip().rstrip('.,;')
+                # Нормализуем сайт
+                url_m = _re.search(r'(https?://[^\s)]+|[\w-]+\.\w{2,})', website_part)
+                website = url_m.group(1) if url_m else ""
+                if website and not website.startswith("http"):
+                    website = "https://" + website
+                spec = parts[2].strip() if len(parts) > 2 else ""
+                if brand and brand.lower() not in ("бренд", "brand", "-"):
+                    competitors.append({
+                        "brand_name": brand,
+                        "website": website,
+                        "services": [spec] if spec else [],
+                        "data_source": "perplexity",
+                        "revenue_source": "perplexity",
+                    })
+            if len(competitors) >= 5:
+                break
+
+        return competitors[:5]
+    except Exception as e:
+        logger.warning("Perplexity competitors fallback failed: %s", e)
+        return []
+
+
 async def handle_find_competitors(url=None, named_competitors=None, client_revenue=None, **kwargs) -> str:
     """Find top competitors for a clinic website.
 
@@ -97,6 +157,18 @@ async def handle_find_competitors(url=None, named_competitors=None, client_reven
             competitors = data.get("competitors", [])
             is_megalopolis = data.get("is_megalopolis", False)
             logger.info("Found %d competitors for URL: %s (megalopolis=%s)", len(competitors), url, is_megalopolis)
+
+            # Fallback: если Google Maps не дал результатов — спросить Perplexity
+            # (1 API call, ~$0.005). Возвращает 5 топ-конкурентов с выручкой/INN.
+            if not competitors:
+                push_tool_progress("competitors", "🔄 Google Maps пустой — спрашиваю Perplexity о топ-конкурентах…")
+                perplexity_comps = await _find_competitors_via_perplexity(url)
+                if perplexity_comps:
+                    competitors = perplexity_comps
+                    is_megalopolis = False  # сбрасываем suggestion
+                    logger.info("Perplexity fallback found %d competitors", len(competitors))
+                    push_tool_progress("competitors", f"✅ Perplexity нашёл {len(competitors)} конкурентов")
+
             push_tool_progress("competitors", f"✅ Найдено конкурентов: {len(competitors)}")
 
             # Compact for LLM consumption — keep key fields
