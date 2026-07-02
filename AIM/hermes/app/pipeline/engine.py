@@ -945,16 +945,29 @@ class PipelineEngine:
         return None
 
     async def _resolve_inn_via_perplexity(self, state: PipelineState) -> str | None:
-        """Last-resort INN resolver: спросить Perplexity (1 call).
+        """Last-resort INN resolver: bo.nalog.gov.ru search → Perplexity.
+
+        Приоритет:
+        1. bo.nalog.gov.ru search по русскому имени (бесплатно, без API key)
+        2. Perplexity (1 call, ~$0.001) — для английских транслитерированных имён
 
         Используется когда Competitors/Perplexity phases не дали INN напрямую.
-        Стоимость: ~$0.001 за вызов.
         """
         import re as _re
         name = state.client_name or ""
         url = state.client_url or ""
         if not name and not url:
             return None
+
+        # 1. Попытка через bo.nalog.gov.ru search (бесплатно)
+        try:
+            inn = await self._resolve_inn_via_nalog(name, url)
+            if inn:
+                return inn
+        except Exception as e:
+            logger.warning("PipelineEngine: nalog INN resolver failed: %s", e)
+
+        # 2. Fallback через Perplexity
         try:
             from app.tools.perplexity_tools import handle_perplexity_search
             question = (
@@ -975,6 +988,108 @@ class PipelineEngine:
         except Exception as e:
             logger.warning("PipelineEngine: Perplexity INN resolver failed: %s", e)
         return None
+
+    async def _resolve_inn_via_nalog(self, name: str, url: str) -> str | None:
+        """Искать INN через bo.nalog.gov.ru search (бесплатно, без ключа).
+
+        Пробует несколько вариантов имени:
+        - Известное имя + медицинские суффиксы (медикал, клиник, мед)
+        - Домен сайта как часть имени (seline.ru → "Селин")
+        Возвращает первый медицинский результат (ОКВЭД 86.x).
+        """
+        import httpx as _httpx
+        # Кандидаты имени для поиска
+        candidates = []
+        if name:
+            # Если имя английское — транслитерируем
+            ru_name = self._transliterate_simple(name)
+            if not ru_name and name.isascii():
+                # Пытаемся простым правилом для домена
+                pass
+            elif ru_name:
+                candidates.append(ru_name)
+                candidates.append(f"{ru_name} медикал")
+                candidates.append(f"{ru_name} клиник")
+            else:
+                candidates.append(name)
+                candidates.append(f"{name} медикал")
+                candidates.append(f"{name} клиник")
+
+        # Извлекаем из URL
+        if url:
+            from urllib.parse import urlparse
+            parsed = urlparse(url if "://" in url else f"https://{url}")
+            domain = parsed.netloc.removeprefix("www.").split(".")[0]
+            if domain and len(domain) > 3:
+                ru_domain = self._transliterate_simple(domain)
+                if ru_domain:
+                    candidates.append(ru_domain)
+                    candidates.append(f"{ru_domain} медикал")
+                    candidates.append(f"{ru_domain} клиник")
+
+        # Убираем дубли
+        seen = set()
+        unique_candidates = []
+        for c in candidates:
+            if c and c not in seen:
+                seen.add(c)
+                unique_candidates.append(c)
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+            "Accept": "application/json",
+        }
+        client = _httpx.AsyncClient(timeout=10.0, headers=headers)
+        try:
+            for query in unique_candidates[:5]:  # не больше 5 попыток
+                try:
+                    resp = await client.get(
+                        "https://bo.nalog.gov.ru/advanced-search/organizations/search",
+                        params={"query": query, "page": 0, "size": 20},
+                    )
+                    if resp.status_code != 200:
+                        continue
+                    data = resp.json()
+                    items = data.get("content", [])
+                    # Ищем медицинский (ОКВЭД 86.x) и активный
+                    medical_okveds = ("86.10", "86.21", "86.22", "86.23", "86.24", "86.29", "86.90")
+                    for item in items:
+                        okved = item.get("okved2", "")
+                        status = item.get("statusCode", "")
+                        inn = item.get("inn", "")
+                        if okved in medical_okveds and status == "ACTIVE" and inn:
+                            short = item.get("shortName", "")
+                            logger.info(
+                                "PipelineEngine: INN=%s via nalog.ru (query=%r, name=%r, okved=%s)",
+                                inn, query, short, okved
+                            )
+                            return inn
+                except Exception as e:
+                    logger.debug("nalog.ru query %r failed: %s", query, e)
+                    continue
+        finally:
+            await client.aclose()
+        return None
+
+    @staticmethod
+    def _transliterate_simple(text: str) -> str:
+        """Простая транслитерация domain → русский (seline → Селин).
+
+        Только для fallback. Если не уверены — возвращаем пустую строку.
+        """
+        # Минимальный словарик частых корней
+        # В реальности лучше использовать библиотеку, но это дешёвый fallback
+        mapping = {
+            "seline": "Селин",
+            "mira": "Мира",
+            "med": "Мед",
+            "clinic": "Клиник",
+            "iphk": "ИПХиК",
+            "gmtclinic": "ГМТ Клиник",
+            "arclinic": "Ар Клиник",
+        }
+        text_lower = text.lower()
+        return mapping.get(text_lower, "")
 
     def _extract_first_competitor_url(self, state: PipelineState) -> str | None:
         """Извлечь URL первого конкурента для content_gaps."""

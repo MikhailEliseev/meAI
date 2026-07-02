@@ -249,6 +249,18 @@ class KeyBank:
                 return entry.value
         return None
 
+    def get_apify_keys(self, active_only: bool = True) -> list[str]:
+        """Get all Apify keys. If active_only=True — skip exhausted/invalid."""
+        result = []
+        for entry in self._keys.values():
+            if entry.service != "Apify":
+                continue
+            if active_only and entry.status in ("exhausted", "invalid"):
+                continue
+            if entry.value:
+                result.append(entry.value)
+        return result
+
     def mark_firecrawl_exhausted(self, key: str) -> None:
         """Mark a Firecrawl key as exhausted in both KeyBank and FirecrawlKeyBank."""
         if self._firecrawl_bank:

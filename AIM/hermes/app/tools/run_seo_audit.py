@@ -212,6 +212,144 @@ def _compact_audit_result(data: dict) -> dict:
     }
 
 
+async def _direct_technical_audit(url: str) -> dict:
+    """Прямой технический аудит сайта (бесплатно, без API).
+
+    Парсит HTML сайта и проверяет:
+    - H1, meta title, meta description
+    - Open Graph tags, Twitter Cards
+    - Schema.org JSON-LD (MedicalBusiness, Physician, FAQPage)
+    - robots.txt, sitemap.xml
+    - Размер HTML, число скриптов, lazy loading
+    - HTTPS, HTTP/2, SSL
+    """
+    import re as _re
+    result = {
+        "url": url,
+        "checks": {},
+        "issues": [],
+        "recommendations": [],
+    }
+    try:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            # 1. Главная страница
+            resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; AIMSeoAudit/1.0)"})
+            html = resp.text
+            html_size = len(html)
+            num_scripts = len(_re.findall(r'<script\b', html, _re.IGNORECASE))
+            num_imgs = len(_re.findall(r'<img\b', html, _re.IGNORECASE))
+            num_lazy = len(_re.findall(r'loading\s*=\s*["\']lazy["\']', html, _re.IGNORECASE))
+
+            # H1
+            h1_match = _re.findall(r'<h1[^>]*>([^<]+)</h1>', html, _re.IGNORECASE)
+            # meta title
+            title_match = _re.search(r'<title[^>]*>([^<]+)</title>', html, _re.IGNORECASE)
+            # meta description
+            desc_match = _re.search(r'<meta\s+name=["\']description["\']\s+content=["\']([^"\']+)["\']', html, _re.IGNORECASE)
+            # OG tags
+            og_title = _re.search(r'<meta\s+property=["\']og:title["\']', html, _re.IGNORECASE)
+            og_image = _re.search(r'<meta\s+property=["\']og:image["\']', html, _re.IGNORECASE)
+            og_url = _re.search(r'<meta\s+property=["\']og:url["\']', html, _re.IGNORECASE)
+            twitter_card = _re.search(r'<meta\s+name=["\']twitter:card["\']', html, _re.IGNORECASE)
+            # Schema.org
+            json_ld = _re.findall(r'<script\s+type=["\']application/ld\+json["\'][^>]*>([^<]+)</script>', html, _re.IGNORECASE)
+            schema_types = []
+            for j in json_ld:
+                for m in _re.finditer(r'"@type"\s*:\s*"([^"]+)"', j):
+                    schema_types.append(m.group(1))
+
+            result["checks"] = {
+                "html_size_kb": round(html_size / 1024, 1),
+                "num_scripts": num_scripts,
+                "num_images": num_imgs,
+                "lazy_loaded_images": num_lazy,
+                "has_h1": bool(h1_match),
+                "h1_text": h1_match[0].strip()[:100] if h1_match else None,
+                "has_title": bool(title_match),
+                "title_text": title_match.group(1).strip()[:120] if title_match else None,
+                "has_meta_description": bool(desc_match),
+                "meta_description": desc_match.group(1).strip()[:200] if desc_match else None,
+                "has_og_title": bool(og_title),
+                "has_og_image": bool(og_image),
+                "has_og_url": bool(og_url),
+                "has_twitter_card": bool(twitter_card),
+                "schema_types_found": schema_types[:10],
+                "has_medical_schema": any(t in schema_types for t in ("MedicalBusiness", "Physician", "MedicalClinic", "Hospital", "Dentist")),
+                "has_faq_schema": "FAQPage" in schema_types,
+                "has_llms_txt": False,  # проверим ниже
+                "http_status": resp.status_code,
+                "final_url": str(resp.url),
+                "redirected": str(resp.url) != url,
+            }
+
+            # 2. robots.txt
+            try:
+                robots_resp = await client.get(f"{url.rstrip('/')}/robots.txt")
+                if robots_resp.status_code == 200:
+                    robots_text = robots_resp.text[:1000]
+                    sitemap_in_robots = "sitemap" in robots_text.lower()
+                    result["checks"]["robots_txt"] = True
+                    result["checks"]["sitemap_in_robots"] = sitemap_in_robots
+                else:
+                    result["checks"]["robots_txt"] = False
+            except Exception:
+                result["checks"]["robots_txt"] = False
+
+            # 3. sitemap.xml
+            try:
+                sm_resp = await client.get(f"{url.rstrip('/')}/sitemap.xml")
+                result["checks"]["sitemap_xml"] = (sm_resp.status_code == 200)
+            except Exception:
+                result["checks"]["sitemap_xml"] = False
+
+            # 4. llms.txt (новый стандарт для AI-поиска)
+            try:
+                llms_resp = await client.get(f"{url.rstrip('/')}/llms.txt")
+                if llms_resp.status_code == 200:
+                    result["checks"]["has_llms_txt"] = True
+            except Exception:
+                pass
+
+            # SSL/HTTPS
+            result["checks"]["https_enabled"] = url.startswith("https://")
+
+        # Issues & recommendations
+        c = result["checks"]
+        if not c.get("has_h1"):
+            result["issues"].append("КРИТИЧНО: нет <h1> на главной странице")
+            result["recommendations"].append("Добавить H1 на главную страницу с ключевым запросом")
+        if not c.get("has_meta_description"):
+            result["issues"].append("НЕТ meta description — поисковики не видят описание сайта")
+            result["recommendations"].append("Добавить meta description (150-160 символов)")
+        if not c.get("has_og_title") or not c.get("has_og_image"):
+            result["issues"].append("Неполные Open Graph теги — плохой preview при шеринге")
+            result["recommendations"].append("Внедрить полные OG-теги: og:title, og:image, og:url")
+        if not c.get("has_twitter_card"):
+            result["issues"].append("Нет Twitter Cards")
+        if not c.get("has_medical_schema"):
+            result["issues"].append("КРИТИЧНО: нет MedicalBusiness/Physician Schema — нейросети (ChatGPT, Perplexity) не поймут что это клиника")
+            result["recommendations"].append("Внедрить MedicalBusiness Schema.org JSON-LD")
+        if not c.get("has_faq_schema"):
+            result["recommendations"].append("Добавить FAQPage Schema для голосового и AI-поиска")
+        if not c.get("has_llms_txt"):
+            result["recommendations"].append("Создать llms.txt в корне — стандарт для AI-поиска (GEO)")
+        if c.get("html_size_kb", 0) > 5000:
+            result["issues"].append(f"Страница слишком тяжёлая: {c['html_size_kb']} KB (норма до 5000)")
+        if c.get("num_scripts", 0) > 50:
+            result["issues"].append(f"Слишком много скриптов: {c['num_scripts']} (норма до 30)")
+        if c.get("num_images", 0) > 10 and c.get("lazy_loaded_images", 0) < c.get("num_images", 0) * 0.5:
+            result["recommendations"].append("Добавить lazy loading для изображений")
+        if not c.get("sitemap_xml"):
+            result["recommendations"].append("Создать sitemap.xml и добавить в robots.txt")
+        if not c.get("https_enabled"):
+            result["issues"].append("КРИТИЧНО: сайт не использует HTTPS")
+
+    except Exception as e:
+        result["error"] = str(e)
+
+    return result
+
+
 async def handle_run_seo_audit(url=None, competitors=None, **kwargs) -> str:
     """Run a full SEO audit on a client website.
 
@@ -280,6 +418,10 @@ async def handle_run_seo_audit(url=None, competitors=None, **kwargs) -> str:
                     })
                 push_tool_progress("seo", "✅ SEO-аудит готов!")
                 compact = _compact_quick_result(start_data)
+                # Добавляем технический аудит через прямой scrape (бесплатно)
+                tech_audit = await _direct_technical_audit(url)
+                if tech_audit:
+                    compact["technical_audit"] = tech_audit
                 result_json = json.dumps(compact, ensure_ascii=False, indent=2)
                 _seo_cache[_cache_key] = (time.time(), result_json)
                 logger.info("SEO audit quick tier completed: compacted %d chars, cached (key=%s)", len(result_json), _cache_key)

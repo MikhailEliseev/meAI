@@ -173,6 +173,53 @@ async def handle_run_smi_mentions(url=None, company_name="", **kwargs) -> str:
         total = sum(c["mentions_found"] for c in category_results.values())
         categories_with_hits = sum(1 for c in category_results.values() if c["mentions_found"] > 0)
 
+        # Fallback: если site:search дал 0 — широкий запрос через Perplexity
+        if total == 0:
+            try:
+                from app.tools.perplexity_tools import handle_perplexity_search
+                broad_q = (
+                    f'Найди упоминания клиники "{query_name}" в российских СМИ. '
+                    f'Проверь Forbes, РБК, Коммерсантъ, Vademecum, Медвестник, региональную прессу. '
+                    f'Также проверь Telegram-каналы (Mash, Baza, 112, SHOT). '
+                    f'Для каждого упоминания верни: название издания, заголовок статьи, URL, дата. '
+                    f'Если публикаций нет — честно скажи "не найдено в открытых источниках".'
+                )
+                broad_r = await handle_perplexity_search(question=broad_q, context="")
+                broad_d = json.loads(broad_r)
+                broad_answer = broad_d.get("answer", "") if isinstance(broad_d, dict) else ""
+                if broad_answer and len(broad_answer) > 50:
+                    # Простой парсинг: ищем URL'ы в ответе
+                    import re as _re
+                    urls = _re.findall(r'https?://[^\s)<>"]+', broad_answer)
+                    # Каждое упоминание = URL + контекст
+                    fallback_mentions = []
+                    if urls:
+                        # Группируем по домену в категорию
+                        for url in urls[:10]:
+                            domain = url.split("/")[2] if "/" in url else ""
+                            fallback_mentions.append({
+                                "source": domain,
+                                "title": "",
+                                "url": url,
+                                "description": "",
+                                "date": "",
+                            })
+                    # Добавляем ответ Perplexity как "broad" категорию
+                    category_results["broad_search"] = {
+                        "category": "Широкий поиск (Perplexity)",
+                        "weight": 0.40,
+                        "mentions_found": len(fallback_mentions),
+                        "mentions": fallback_mentions,
+                        "analysis": broad_answer[:2000],
+                    }
+                    all_mentions.extend(fallback_mentions)
+                    providers_used.add("perplexity")
+                    total = sum(c["mentions_found"] for c in category_results.values())
+                    categories_with_hits = sum(1 for c in category_results.values() if c["mentions_found"] > 0)
+                    logger.info("SMI fallback (broad Perplexity) → %d mentions", len(fallback_mentions))
+            except Exception as e:
+                logger.warning("SMI broad fallback failed: %s", e)
+
         result = {
             "search_term": query_name,
             "total_mentions": total,
