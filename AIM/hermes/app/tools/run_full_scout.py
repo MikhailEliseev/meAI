@@ -20,60 +20,6 @@ from tools.registry import registry
 
 logger = logging.getLogger(__name__)
 
-# ── Phase labels & start messages for SSE progress ────────────────────
-_TOTAL_PHASES = 13
-
-_PHASE_LABELS: dict[int, str] = {
-    0: "Исследование рынка",
-    1: "Конкуренты",
-    2: "Технический аудит",
-    3: "Отзывы и рейтинги",
-    4: "Контент-анализ",
-    5: "Врачи и эксперты",
-    6: "Упоминания в СМИ",
-    7: "Боли пациентов",
-    8: "Финансы",
-    9: "Контент-план",
-    10: "Сборка отчёта",
-    11: "Проверка качества",
-    12: "Публикация",
-}
-
-_PHASE_START_MESSAGES: dict[int, str] = {
-    0: "Ищу информацию о клинике, рынке, трендах через Perplexity...",
-    1: "Ищу конкурентов и анализирую их стратегию...",
-    2: "Проверяю скорость сайта и технический SEO-аудит...",
-    3: "Собираю отзывы на 2ГИС, Яндекс.Картах, ПроДокторов...",
-    4: "Анализирую контент сайта: темы, качество, gaps...",
-    5: "Ищу врачей, их соцсети, экспертизу...",
-    6: "Проверяю упоминания в СМИ: Forbes, РБК, Vademecum...",
-    7: "Анализирую боли пациентов с форумов...",
-    8: "Собираю финансовые данные из ГИР БО...",
-    9: "Формирую контент-план по результатам анализа...",
-    10: "Собираю HTML-отчёт со всеми данными...",
-    11: "Проверяю качество отчёта по чек-листу...",
-    12: "Публикую отчёт...",
-}
-
-
-def _phase_progress(phase_id: int, phase_name: str, status: str,
-                    message: str = "", duration_seconds: float | None = None) -> None:
-    """Callback for PipelineEngine — pushes structured phase events to SSE."""
-    try:
-        from app.main import push_phase_progress
-        label = _PHASE_LABELS.get(phase_id, phase_name)
-        push_phase_progress(
-            phase_id=phase_id,
-            phase_name=phase_name,
-            phase_label=label,
-            status=status,
-            message=message or _PHASE_START_MESSAGES.get(phase_id, ""),
-            duration_seconds=duration_seconds,
-            progress={"current": phase_id + 1, "total": _TOTAL_PHASES},
-        )
-    except Exception:
-        pass
-
 
 def _normalize_args(first_param, defaults):
     """Если hermes-agent передаёт весь arguments object как first_param, извлечь значения."""
@@ -118,54 +64,53 @@ async def handle_run_full_scout(url=None, client_name="", **kwargs) -> str:
 
     mode = kwargs.get("mode", os.getenv("PIPELINE_MODE", "ONBOARDING"))
 
-    # Извлекаем chat_id из session_id (формат tg:{chat_id})
-    chat_id = 0
-    if session_id and session_id.startswith("tg:"):
-        try:
-            chat_id = int(session_id.split(":", 1)[1])
-        except (ValueError, IndexError):
-            pass
-
     logger.info(
-        "run_full_scout: starting 16-phase pipeline for %s (session=%s, mode=%s, chat_id=%s)",
-        url, session_id, mode, chat_id,
+        "run_full_scout: starting 16-phase pipeline for %s (session=%s, mode=%s)",
+        url, session_id, mode,
     )
-
-    # Signal frontend that the full scout pipeline has started
-    try:
-        from app.main import push_tool_progress
-        push_tool_progress("run_full_scout", "🔭 Запускаю 16-фазную разведку: анализирую сайт, конкурентов, соцсети, отзывы, SEO, финансы...")
-    except Exception:
-        pass
-
-    # ── Проверяем knowledge vault перед запуском pipeline ─────────────
-    # Извлекаем город/специализацию из URL для поиска релевантной памяти
-    try:
-        from urllib.parse import urlparse
-        domain = urlparse(url).netloc.replace("www.", "")
-        # Ищем память о похожих клиниках в этом регионе/нише
-        kb_query = f"клиника {domain} конкуренты паттерны"
-
-        logger.info("run_full_scout: checking knowledge vault: %s", kb_query)
-
-        from app.tools.orchestrate import handle_orchestrate
-        kb_result = await handle_orchestrate(
-            operation="knowledge_query",
-            params={"query": kb_query, "top_k": 5}
-        )
-
-        # Если есть релевантная память — логируем её
-        if kb_result and "no relevant" not in kb_result.lower():
-            logger.info("run_full_scout: knowledge vault returned: %s", kb_result[:500])
-        else:
-            logger.info("run_full_scout: no relevant memory found in knowledge vault")
-    except Exception as kb_err:
-        # Ошибка проверки памяти НЕ должна блокировать pipeline
-        logger.warning("run_full_scout: knowledge vault check failed: %s", kb_err)
 
     try:
         from app.pipeline.engine import PipelineEngine
+        from app.pipeline.phases import PHASES
+        from app.main import push_phase_progress
         import asyncio
+
+        # ── Russian labels для phase-progress events (фронтенд их покажет) ──
+        phase_labels = {
+            "PERPLEXITY": "Исследование рынка",
+            "COMPETITORS": "Конкуренты",
+            "TECH AUDIT": "Технический аудит",
+            "SOCIAL VERIFIER": "Отзывы и рейтинги",
+            "CONTENT ANALYSIS": "Контент сайта",
+            "KEY PERSONS": "Врачи и ключевые лица",
+            "SMI MENTIONS": "Упоминания в СМИ",
+            "FORUM PAINS": "Паттерны болей пациентов",
+            "FINANCE": "Финансовые данные",
+            "CONTENT PLAN": "Контент-план",
+            "HTML BUILD": "Сборка HTML-отчёта",
+            "QC CRITIQUE": "Проверка качества",
+            "PRESENTATION": "Финальная презентация",
+        }
+
+        def _progress_cb(phase_id, phase_name, status, message="", duration_seconds=None, **_):
+            """Bridge: PipelineEngine → SSE push_phase_progress.
+
+            Engine вызывает с kwargs: phase_id, phase_name, status, message, duration_seconds.
+            push_phase_progress отправляет в _tool_progress_queue → SSE → chat-bundle.js.
+            """
+            label = phase_labels.get(phase_name, phase_name)
+            try:
+                push_phase_progress(
+                    phase_id=phase_id,
+                    phase_name=phase_name,
+                    phase_label=label,
+                    status=status,
+                    message=message or "",
+                    duration_seconds=duration_seconds,
+                    progress={"current": phase_id + 1, "total": len(PHASES)},
+                )
+            except Exception as cb_err:
+                logger.warning("push_phase_progress failed: %s", cb_err)
 
         engine = PipelineEngine()
         state = await engine.execute(
@@ -173,8 +118,7 @@ async def handle_run_full_scout(url=None, client_name="", **kwargs) -> str:
             client_url=url,
             client_name=client_name,
             mode=mode,
-            chat_id=chat_id,
-            progress_callback=_phase_progress,
+            progress_callback=_progress_cb,
         )
 
         # ── Сохраняем metadata ───────────────────────────────────────
@@ -245,13 +189,6 @@ async def handle_run_full_scout(url=None, client_name="", **kwargs) -> str:
             completed, len(state.phases),
         )
 
-        # Signal frontend that pipeline is complete
-        try:
-            from app.main import push_tool_progress
-            push_tool_progress("run_full_scout", f"✅ Разведка завершена: {completed}/{len(state.phases)} фаз собраны. Формирую отчёт...")
-        except Exception:
-            pass
-
         return json.dumps(result, ensure_ascii=False, indent=2)
 
     except Exception as e:
@@ -294,6 +231,8 @@ registry.register(
     name="run_full_scout",
     toolset="aim-operations",
     schema={
+        "type": "function",
+        "function": {
             "name": "run_full_scout",
             "description": (
                 "Запустить полный 16-фазный скаутинг конкурентной разведки для сайта клиники. "
@@ -316,6 +255,7 @@ registry.register(
                 "required": ["url"],
             },
         },
+    },
     handler=handle_run_full_scout,
     check_fn=lambda: True,
     is_async=True,

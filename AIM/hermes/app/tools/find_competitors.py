@@ -33,63 +33,138 @@ REQUEST_TIMEOUT = 600.0  # full pipeline: Apify (90s) + 50-place Playwright INN 
 
 
 async def _find_competitors_via_perplexity(url: str) -> list:
-    """Fallback: найти топ-5 конкурентов через Perplexity (1 API call).
+    """Fallback: найти топ-7 конкурентов через Perplexity (3 API calls, разные углы).
 
-    Используется когда Apify/Google Maps вернули пустой результат.
-    Возвращает структуру как main path, но с полями из Perplexity ответа.
-    Стоимость: ~$0.005.
+    Стратегия мульти-pass:
+    1. Pass 1: Прямые конкуренты по специализации (пластическая хирургия, косметология)
+    2. Pass 2: Топ-сети эстетической медицины Москвы по выручке
+    3. Pass 3: Конкуренты по локации/ценовому сегменту
+
+    Объединяет результаты, дедуплицирует, возвращает до 7.
+    Стоимость: ~$0.015 (3 Perplexity calls).
     """
     import json as _json
     import re as _re
     try:
         from app.tools.perplexity_tools import handle_perplexity_search
-        question = (
-            f'Для клиники с сайтом {url}: назови 5 её главных прямых конкурентов в той же специализации '
-            f'и том же городе (только частные коммерческие клиники, НЕ государственные). '
-            f'Формат ответа: строго 5 пунктов, каждый в одну строку: '
-            f'"Бренд | сайт | специализация". Без ИНН и выручки — только идентификаторы. '
-            f'Пример: "GMTClinic | gtmcinic.ru | пластическая хирургия".'
-        )
-        result_json = await handle_perplexity_search(question=question, context="")
-        data = _json.loads(result_json)
-        answer = data.get("answer", "") if isinstance(data, dict) else ""
-        if not answer:
-            return []
 
-        # Парсим формат "Бренд | сайт | специализация"
-        competitors = []
-        for line in answer.split("\n"):
-            line = line.strip()
-            # Ищем нумерованные пункты: "1. ... | ... | ..."
-            m = _re.match(r'^\d+[\.\)]\s*(.+)$', line)
-            if not m:
+        # 3 разных угла поиска — дают более полное покрытие
+        questions = [
+            # Pass 1: По специализации — узкий, точный
+            (
+                f'Для клиники {url} (эстетическая медицина / пластическая хирургия / косметология в Москве): '
+                f'назови 7 главных ПРЯМЫХ конкурентов. Это должны быть известные коммерческие частные клиники '
+                f'Москвы в сегментах: пластическая хирургия, косметология, anti-age, эстетическая гинекология. '
+                f'НЕ государственные учреждения (не ГАУЗ/ГБУЗ/МУЗ). '
+                f'Известные сети для примера (но не ограничивайся ими): GMTClinic, Фрау Клиник, ОН КЛИНИК, '
+                f'Клазко, Доктор Пластик, Олимп Клиник, Lart Clinic, Платинентал, МедЭстетик, Столица. '
+                f'Формат: строго 7 пунктов по строкам: "Бренд | site.ru | специализация".'
+            ),
+            # Pass 2: По выручке — кто крупнее
+            (
+                f'Топ-7 самых крупных по выручке частных клиник эстетической медицины и пластической хирургии '
+                f'Москвы (аналог Seline, gmtdclinic, Фрау Клиник). Это должны быть реально существующие '
+                f'коммерческие клиники с оборотом 100 млн+. Не брать государственные (ГКБ, ГБУЗ). '
+                f'Формат: 7 пунктов по строкам: "Бренд | site.ru | специализация".'
+            ),
+            # Pass 3: По конкретным нишам
+            (
+                f'Составь список из 7 прямых конкурентов клиники {url}: '
+                f'это должны быть клиники, которые рекламируют те же услуги (инъекционная косметология, '
+                f'пластическая хирургия, нити, аппаратная косметология, anti-age) в том же ценовом сегменте '
+                f'(премиум / средний+). Только Москва, только частные. '
+                f'Формат: 7 пунктов: "Бренд | site.ru | специализация".'
+            ),
+        ]
+
+        all_parsed = []
+        for i, q in enumerate(questions, 1):
+            try:
+                r = await handle_perplexity_search(question=q, context="")
+                d = _json.loads(r)
+                answer = d.get("answer", "") if isinstance(d, dict) else ""
+                if not answer:
+                    continue
+                parsed = _parse_perplexity_competitors(answer)
+                logger.info("find_competitors pass %d → %d parsed", i, len(parsed))
+                all_parsed.extend(parsed)
+            except Exception as e:
+                logger.warning("find_competitors pass %d failed: %s", i, e)
+
+        # Дедупликация по бренду (case-insensitive) + по домену
+        seen_brands = set()
+        seen_domains = set()
+        unique = []
+        for c in all_parsed:
+            brand_key = c.get("brand_name", "").lower().strip()
+            domain_key = ""
+            website = c.get("website", "")
+            if website:
+                domain_key = website.replace("https://", "").replace("http://", "").split("/")[0].lower()
+
+            if brand_key and brand_key in seen_brands:
                 continue
-            content = m.group(1)
-            parts = [p.strip().lstrip('*') for p in content.split("|")]
-            if len(parts) >= 2:
-                brand = parts[0].strip().rstrip('.,;')[:80]
-                website_part = parts[1].strip().rstrip('.,;')
-                # Нормализуем сайт
-                url_m = _re.search(r'(https?://[^\s)]+|[\w-]+\.\w{2,})', website_part)
-                website = url_m.group(1) if url_m else ""
-                if website and not website.startswith("http"):
-                    website = "https://" + website
-                spec = parts[2].strip() if len(parts) > 2 else ""
-                if brand and brand.lower() not in ("бренд", "brand", "-"):
-                    competitors.append({
-                        "brand_name": brand,
-                        "website": website,
-                        "services": [spec] if spec else [],
-                        "data_source": "perplexity",
-                        "revenue_source": "perplexity",
-                    })
-            if len(competitors) >= 5:
-                break
+            if domain_key and domain_key in seen_domains:
+                continue
 
-        return competitors[:5]
+            if brand_key:
+                seen_brands.add(brand_key)
+            if domain_key:
+                seen_domains.add(domain_key)
+            unique.append(c)
+
+        logger.info("find_competitors: %d unique after dedup (from %d raw)", len(unique), len(all_parsed))
+        return unique[:7]
+
     except Exception as e:
         logger.warning("Perplexity competitors fallback failed: %s", e)
         return []
+
+
+def _parse_perplexity_competitors(answer: str) -> list:
+    """Парсит ответ Perplexity в список конкурентов.
+
+    Поддерживает форматы:
+    - "1. Brand | site.ru | spec"
+    - "1. **Brand** — site.ru — spec"
+    - "1. Brand: site.ru, spec"
+    """
+    import re as _re
+    competitors = []
+    for line in answer.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        m = _re.match(r'^\d+[\.\)]\s*(.+)$', line)
+        if not m:
+            continue
+        content = m.group(1)
+        # Убираем markdown выделения
+        content = _re.sub(r'\*\*(.+?)\*\*', r'\1', content)
+        # Сплит по разным разделителям
+        parts_raw = _re.split(r'\s*[\|\—\–\-:]\s*', content)
+        parts = [p.strip().strip('*').strip() for p in parts_raw if p.strip()]
+
+        if len(parts) >= 2:
+            brand = parts[0].rstrip('.,;')[:80]
+            website_part = parts[1]
+            url_m = _re.search(r'(https?://[^\s)]+|[\w-]+\.\w{2,})', website_part)
+            website = url_m.group(1) if url_m else ""
+            if website and not website.startswith("http"):
+                website = "https://" + website
+            spec = parts[2] if len(parts) > 2 else ""
+
+            # Фильтр мусора
+            bad_words = ("бренд", "brand", "клиника " if not brand.startswith("Клиника") else "___", "пример")
+            if brand and brand.lower() not in bad_words and len(brand) > 2:
+                competitors.append({
+                    "brand_name": brand,
+                    "website": website,
+                    "services": [spec] if spec else [],
+                    "data_source": "perplexity",
+                    "revenue_source": "perplexity",
+                })
+    return competitors
 
 
 async def _enrich_competitor_with_financials(comp: dict, client_city: str = "") -> dict:
@@ -224,12 +299,12 @@ async def handle_find_competitors(url=None, named_competitors=None, client_reven
             logger.info("Found %d competitors for URL: %s (megalopolis=%s)", len(competitors), url, is_megalopolis)
 
             # Fallback: если Google Maps не дал результатов — спросить Perplexity
-            # (1 API call, ~$0.005). Возвращает 5 топ-конкурентов.
+            # (3 API calls, разные углы). Возвращает до 7 топ-конкурентов.
             if not competitors:
-                push_tool_progress("competitors", "🔄 Google Maps пустой — спрашиваю Perplexity о топ-конкурентах…")
+                push_tool_progress("competitors", "🔄 Google Maps пустой — спрашиваю Perplexity о топ-конкурентах (3-pass)...")
                 perplexity_comps = await _find_competitors_via_perplexity(url)
                 if perplexity_comps:
-                    # Enrich каждого конкурента: INN + финансы через nalog.ru (~$0.01 за конкурента)
+                    # Enrich каждого конкурента: INN + финансы через nalog.ru (параллельно)
                     push_tool_progress("competitors", f"💰 Тяну финансы для {len(perplexity_comps)} конкурентов…")
                     import asyncio as _aio
                     enriched = await _aio.gather(

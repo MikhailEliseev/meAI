@@ -173,6 +173,13 @@ async def handle_publish_scout_report(slug=None, url=None, already_published=Fal
         url = f"https://iamaim.ru/{page_slug}"
         logger.info("Scout report published: slug=%s post_id=%s url=%s", slug, post_id, url)
 
+        # ── Уведомить фронтенд: отчёт готов (SSE report-ready → chat-bundle.js) ──
+        try:
+            from app.main import push_report_ready
+            push_report_ready(report_url=url, session_hash=slug)
+        except Exception as ready_err:
+            logger.warning("push_report_ready failed: %s", ready_err)
+
         # Also save locally
         report_path = os.path.join(SESSIONS_ROOT, slug, "report.html")
         os.makedirs(os.path.dirname(report_path), exist_ok=True)
