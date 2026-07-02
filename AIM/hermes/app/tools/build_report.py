@@ -797,8 +797,14 @@ li { margin: 6px 0; }
     font-weight: 600;
     padding: 5px 12px;
     border-radius: 12px;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
     margin: 4px 6px 4px 0;
+    max-width: 100%;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    line-height: 1.3;
 }
 
 .metric-tag-dot {
@@ -883,7 +889,7 @@ li { margin: 6px 0; }
 /* === GLASS STATS === */
 .glass-stats-wrap {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 16px;
     margin: 24px 0;
 }
@@ -893,10 +899,16 @@ li { margin: 6px 0; }
     backdrop-filter: blur(16px) saturate(1.3);
     border: 1px solid var(--glass-border);
     border-radius: 6px;
-    padding: 36px 28px;
+    padding: 28px 20px;
     text-align: center;
     transition: transform .3s, box-shadow .3s, border-color .3s;
     animation: glass-glow 5s ease-in-out infinite;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .glass-stat:hover {
@@ -907,20 +919,30 @@ li { margin: 6px 0; }
 
 .glass-stat-value {
     font-family: 'Playfair Display', serif;
-    font-size: clamp(32px, 4vw, 48px);
+    font-size: clamp(22px, 2.5vw, 38px);
     font-weight: 400;
     color: var(--accent);
-    line-height: 1;
+    line-height: 1.15;
     margin-bottom: 12px;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    width: 100%;
 }
 
 .glass-stat-label {
     font-family: 'Jost', sans-serif;
     font-size: 12px;
     font-weight: 500;
-    letter-spacing: .06em;
-    text-transform: uppercase;
+    letter-spacing: .02em;
+    text-transform: none;
     color: var(--text-secondary);
+    line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    -webkit-hyphens: auto;
 }
 
 /* === GLASS TABLE === */
@@ -1018,7 +1040,17 @@ li { margin: 6px 0; }
 @media (max-width: 768px) {
     .report-container { padding: 60px 24px 40px; }
     .glass-stats-wrap { grid-template-columns: 1fr; }
+    .glass-stat { padding: 24px 16px; }
+    .glass-stat-value { font-size: clamp(20px, 6vw, 28px); }
+    .glass-stat-label { font-size: 11px; }
     .cta-box { padding: 40px 24px; }
+}
+
+@media (max-width: 480px) {
+    .glass-stats-wrap { grid-template-columns: 1fr; gap: 12px; }
+    .glass-stat { padding: 20px 14px; }
+    .glass-stat-value { font-size: clamp(18px, 5vw, 24px); margin-bottom: 8px; }
+    .metric-tag { font-size: 10px; padding: 4px 10px; }
 }
 </style>"""
 
