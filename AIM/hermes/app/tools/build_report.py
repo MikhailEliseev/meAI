@@ -92,7 +92,7 @@ import re as _re
 # Селекторы для определения "это уже HTML или markdown?"
 _HTML_TAG_RE = _re.compile(r'<(h[1-6]|div|span|p|ul|ol|li|table|strong|em)\b', _re.IGNORECASE)
 _STATS_BLOCK_RE = _re.compile(
-    r'STATS:\s*\n((?:\s*-\s*value:.*?\n(?:\s*label:.*?\n|\s*-\s*label:.*?\n)?)+)',
+    r'STATS:\s*\n((?:\s*-\s*value:.*?\n(?:\s*label:.*?(?:\n|$|\s*-\s*value:)|\s*-\s*label:.*?(?:\n|$|\s*-\s*value:))?)+)',
     _re.IGNORECASE | _re.DOTALL,
 )
 _STATS_VALUE_RE = _re.compile(r'-\s*value:\s*(.+?)\s*$', _re.IGNORECASE)
@@ -105,37 +105,62 @@ _MD_TABLE_RE = _re.compile(
 
 
 def _extract_stats_block(text: str) -> tuple[str, str]:
-    """Извлечь STATS: блок из текста, вернуть (text_without_stats, stats_html).
+    """Извлечь ВСЕ STATS: блоки из текста (LLM может писать несколько в одном interpretation).
 
     Формат:
         STATS:
         - value: "4,1 млрд ₽"
           label: "Выручка 2024"
-        - value: "+24%"
-          label: "Рост за год"
 
-    Поддерживаемые варианты:
-      - value: X \\n label: Y       (label на новой строке с отступом)
-      - value: X \\n - label: Y     (label с дефисом)
-      - value: X | label: Y          (в одну строку через |)
+    Возвращает (text_without_stats, html_all_blocks).
 
-    Возвращает HTML:
-        <div class="glass-stats-wrap">
-          <div class="glass-stat">
-            <div class="glass-stat-value">4,1 млрд ₽</div>
-            <div class="glass-stat-label">Выручка 2024</div>
-          </div>
-          ...
-        </div>
+    HTML содержит ОДИН <div class="glass-stats-wrap"> с объединёнными карточками.
+    Блоки разделяются пустой строкой.
     """
-    match = _STATS_BLOCK_RE.search(text)
-    if not match:
-        return text, ""
+    all_items: list[tuple[str, str]] = []
+    blocks_found = 0
 
-    block = match.group(1)
+    while True:
+        match = _STATS_BLOCK_RE.search(text)
+        if not match:
+            break
+
+        blocks_found += 1
+        block = match.group(1)
+        items_in_block = _parse_stats_items(block)
+        all_items.extend(items_in_block)
+
+        # Remove this STATS block from text
+        text = text[:match.start()] + '\n\n__STATS_PLACEHOLDER_' + str(blocks_found) + '__\n\n' + text[match.end():]
+
+    if not all_items:
+        return text.replace('\n\n__STATS_PLACEHOLDER_1__\n\n', '') if blocks_found == 0 else text, ""
+
+    # Build HTML
+    stats_html_parts = ['<div class="glass-stats-wrap">']
+    for value, label in all_items:
+        stats_html_parts.append(
+            f'<div class="glass-stat">'
+            f'<div class="glass-stat-value">{_esc(value)}</div>'
+            f'<div class="glass-stat-label">{_esc(label)}</div>'
+            f'</div>'
+        )
+    stats_html_parts.append('</div>')
+    stats_html = '\n'.join(stats_html_parts)
+
+    # Replace placeholders with the same HTML (or just remove if we'll insert once at end)
+    # Simpler: replace all placeholders with empty, return stats_html once
+    import re as _re_inline
+    text_clean = _re_inline.sub(r'\n\n__STATS_PLACEHOLDER_\d+__\n\n', '\n\n', text)
+    text_clean = _re_inline.sub(r'__STATS_PLACEHOLDER_\d+', '', text_clean)
+    text_clean = _re_inline.sub(r'\n{3,}', '\n\n', text_clean).strip()
+
+    return text_clean, stats_html
+
+
+def _parse_stats_items(block: str) -> list[tuple[str, str]]:
+    """Парсит один STATS блок, возвращает [(value, label), ...]."""
     items: list[tuple[str, str]] = []
-
-    # Парсим построчно. Ищем пары value/label.
     lines = block.split('\n')
     i = 0
     while i < len(lines):
@@ -153,7 +178,7 @@ def _extract_stats_block(text: str) -> tuple[str, str]:
                 i += 1
                 continue
 
-            # Label on next non-empty line (usually "label: ..." possibly with indent)
+            # Label on next non-empty line
             label = ""
             j = i + 1
             while j < len(lines):
@@ -161,7 +186,12 @@ def _extract_stats_block(text: str) -> tuple[str, str]:
                 if not next_line:
                     j += 1
                     continue
-                # Try "label: X" pattern (with or without leading "-")
+                # Stop if it's another value or unrelated content
+                if next_line.startswith('- ') and not _STATS_LABEL_INDENT_RE.search(next_line) and 'label' not in next_line.lower():
+                    # It's a list item, but not a label
+                    if not _STATS_VALUE_RE.search(next_line):
+                        break
+                # Try "label: X" pattern
                 label_match = _STATS_LABEL_INDENT_RE.search(next_line)
                 if label_match:
                     label = label_match.group(1).strip().strip('"').strip("'")
@@ -176,22 +206,7 @@ def _extract_stats_block(text: str) -> tuple[str, str]:
             items.append((value, label))
         i += 1
 
-    if not items:
-        return text, ""
-
-    stats_html_parts = ['<div class="glass-stats-wrap">']
-    for value, label in items:
-        stats_html_parts.append(
-            f'<div class="glass-stat">'
-            f'<div class="glass-stat-value">{_esc(value)}</div>'
-            f'<div class="glass-stat-label">{_esc(label)}</div>'
-            f'</div>'
-        )
-    stats_html_parts.append('</div>')
-
-    # Remove STATS block from text (from start of "STATS:" to end of block)
-    text_clean = text[:match.start()] + text[match.end():]
-    return text_clean, '\n'.join(stats_html_parts)
+    return items
 
 
 def _markdown_table_to_html(table_text: str) -> str:
@@ -226,12 +241,14 @@ def _markdown_table_to_html(table_text: str) -> str:
 
     html_parts = ['<div class="glass-table-wrap"><table><thead><tr>']
     for cell in header:
-        html_parts.append(f'<th>{_esc(cell)}</th>')
+        # Process inline markdown: !!color:tag!!, **bold**, *italic*, `code`, [link](url)
+        html_parts.append(f'<th>{_inline_markdown(cell)}</th>')
     html_parts.append('</tr></thead><tbody>')
     for row in body_rows:
         html_parts.append('<tr>')
         for cell in row:
-            html_parts.append(f'<td>{_esc(cell)}</td>')
+            # Process inline markdown in cells — supports !!color:tag!!, **bold**, etc.
+            html_parts.append(f'<td>{_inline_markdown(cell)}</td>')
         html_parts.append('</tr>')
     html_parts.append('</tbody></table></div>')
 
@@ -720,8 +737,8 @@ li { margin: 6px 0; }
 @media (prefers-reduced-motion: reduce) { .ripple-ring { animation: none; display: none; } }
 @media (max-width: 768px) { .water-ripples { display: none; } }
 
-/* === THEME TOGGLE === */
-.theme-toggle {
+/* === THEME TOGGLE (scoped to report) — does not affect WP theme toggle === */
+.aim-report-scope .theme-toggle-report {
     position: fixed;
     top: 24px;
     right: 24px;
@@ -739,15 +756,10 @@ li { margin: 6px 0; }
     z-index: 100;
 }
 
-.theme-toggle:hover {
+.aim-report-scope .theme-toggle-report:hover {
     background: var(--hover);
     transform: scale(1.05);
 }
-
-.theme-icon-sun { display: none; }
-.theme-icon-moon { display: block; }
-[data-theme="dark"] .theme-icon-sun { display: block; }
-[data-theme="dark"] .theme-icon-moon { display: none; }
 
 /* === CONTAINER === */
 .report-container {
@@ -1258,47 +1270,33 @@ def build_report_html(data: dict, title: str) -> str:
 </div>
 """
 
-    # Assemble full HTML
-    html = f"""<!DOCTYPE html>
-<html lang="ru" data-theme="light">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{_esc(title)} — AIM Scout</title>
+    # Compress CSS to single line — wpautop() wraps multi-line content in <p> tags
+    import re as _re_inline
+    css_minified = _re_inline.sub(r'\s+', ' ', _CANONICAL_CSS).strip()
 
-    <!-- CRITICAL: Google Fonts (Playfair Display + Jost) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    # WordPress theme has its own theme-toggle button in header.
+    # We must NOT include our own button/script — it conflicts.
 
-    {_CANONICAL_CSS}
-</head>
-<body>
-    <!-- Water ripples (visible only in light theme) -->
-    <div class="water-ripples">
-        <div class="ripple-ring"></div>
-    </div>
+    # Assemble INNER HTML as SINGLE LINE per block element to survive wpautop()
+    sections_html = ''.join(phase_sections).replace('\n', ' ').replace('\r', '')
+    cta_min = cta_html.replace('\n', ' ').replace('\r', '')
 
-    <!-- Theme toggle -->
-    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
-        <span class="theme-icon-sun">☀️</span>
-        <span class="theme-icon-moon">🌙</span>
-    </button>
-
-    <div class="report-container">
-        <!-- Header -->
-        <h1>{_esc(company_name)}</h1>
-        {f'<p class="text-dim">URL: <a href="{_esc(url)}" target="_blank">{_esc(url)}</a></p>' if url else ''}
-
-        <!-- Phase sections -->
-        {''.join(phase_sections)}
-
-        <!-- CTA -->
-        {cta_html}
-    </div>
-
-    {_THEME_TOGGLE_SCRIPT}
-</body>
-</html>"""
+    html = (
+        '<style>' + css_minified.replace('<style>', '').replace('</style>', '') + '</style>'
+        + '<div class="aim-report-scope">'
+        + '<div class="report-container">'
+        + f'<h1>{_esc(company_name)}</h1>'
+        + (f'<p class="text-dim">URL: <a href="{_esc(url)}" target="_blank">{_esc(url)}</a></p>' if url else '')
+        + sections_html
+        + cta_min
+        + '</div>'
+        + '</div>'
+    )
 
     return html
+
+
+# Alias for backward compatibility with publish_scout_report.py
+# Old code imports _build_report_html from generate_html_report.py
+# New code should use build_report_html from build_report.py
+_build_report_html = build_report_html

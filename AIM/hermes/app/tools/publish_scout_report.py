@@ -107,7 +107,12 @@ async def handle_publish_scout_report(slug=None, url=None, already_published=Fal
     from app.tools.build_report import build_report_html
 
     meta = data.get("metadata", {}) or {}
-    title = meta.get("company_name") or slug
+    # Try multiple fields: company_name → client_name → title → slug (last resort)
+    title = meta.get("company_name") or meta.get("client_name") or slug
+    # Persist for build_report_html
+    if not meta.get("company_name") and title != slug:
+        meta["company_name"] = title
+        data["metadata"] = meta
     html = build_report_html(data, title)
 
     # 3. Publish to WordPress
