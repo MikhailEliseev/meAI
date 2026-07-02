@@ -15,8 +15,8 @@ LLM вызывает ОДИН инструмент. Python (PipelineEngine) га
 import json
 import logging
 import os
-import re
 
+from app.tools._url_utils import recover_url_from_context
 from tools.registry import registry
 
 logger = logging.getLogger(__name__)
@@ -27,107 +27,6 @@ def _normalize_args(first_param, defaults):
     if isinstance(first_param, dict):
         return {k: first_param.get(k, defaults[k]) for k in defaults}
     return None
-
-
-# ── URL extraction fallback для моделей типа glm-5.2 ────────────────────
-# GLM-5.2 иногда не передаёт URL в arguments tool_call, только в сообщении.
-# Эти regex и функция _recover_url_from_context решают эту проблему.
-
-_TLD_LIST = (
-    "ru|com|net|org|рф|su|io|pro|dev|digital|agency|"
-    "club|online|site|tech|med|health|clinic|center|care|"
-    "msk|spb|rf|info|biz"
-)
-_FULL_URL_RE = re.compile(r'https?://[^\s<>"{}|\\^`\[\]]+')
-_BARE_DOMAIN_RE = re.compile(
-    r'(?:^|\s)([a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?\.'
-    r'(?:' + _TLD_LIST + r'))'
-    r'(?:\s|$|[,.!?;:")]|$|/)'
-)
-
-
-def _extract_url_anywhere(text: str) -> str | None:
-    """Извлечь первый URL или bare domain из произвольного текста."""
-    if not text:
-        return None
-    m = _FULL_URL_RE.search(text)
-    if m:
-        return m.group(0)
-    m = _BARE_DOMAIN_RE.search(text)
-    if m:
-        return m.group(1)
-    return None
-
-
-def _recover_url_from_context(session_id: str, kwargs: dict) -> str:
-    """Fallback: восстановить URL из kwargs или истории сессии.
-
-    Пробуем по порядку:
-      1. kwargs.get('url'/'client_url'/'user_url')
-      2. kwargs.get('context') dict
-      3. kwargs.get('_user_message'/'user_message'/'message')
-      4. История сессии через SessionDB
-      5. PIPELINE_CLIENT_URL env var (set by agent_wrapper)
-    """
-    # 1. Прямые kwargs
-    for key in ("url", "client_url", "user_url"):
-        val = kwargs.get(key)
-        if val and isinstance(val, str) and val.strip():
-            extracted = _extract_url_anywhere(val)
-            if extracted:
-                return extracted
-
-    # 2. context dict
-    context = kwargs.get("context") or {}
-    if isinstance(context, dict):
-        for key in ("url", "client_url", "user_url", "message"):
-            val = context.get(key)
-            if val and isinstance(val, str):
-                extracted = _extract_url_anywhere(val)
-                if extracted:
-                    return extracted
-
-    # 3. user_message в kwargs
-    user_msg = (
-        kwargs.get("_user_message")
-        or kwargs.get("user_message")
-        or kwargs.get("message")
-    )
-    if user_msg and isinstance(user_msg, str):
-        extracted = _extract_url_anywhere(user_msg)
-        if extracted:
-            logger.info("run_full_scout: URL from kwargs.message: %s", extracted)
-            return extracted
-
-    # 4. История сессии через SessionDB
-    if session_id:
-        try:
-            from hermes_state import SessionDB  # type: ignore[import-not-found]
-
-            sdb = SessionDB()
-            msgs = sdb.load_messages(session_id, role="user", limit=5) or []
-            for msg in reversed(msgs):
-                content = msg.get("content") if isinstance(msg, dict) else None
-                if content and isinstance(content, str):
-                    extracted = _extract_url_anywhere(content)
-                    if extracted:
-                        logger.info(
-                            "run_full_scout: URL from session history: %s",
-                            extracted,
-                        )
-                        return extracted
-        except Exception as hist_err:
-            logger.warning("run_full_scout: session history lookup failed: %s", hist_err)
-
-    # 5. PIPELINE_CLIENT_URL env var
-    env_url = os.getenv("PIPELINE_CLIENT_URL", "")
-    if env_url:
-        extracted = _extract_url_anywhere(env_url)
-        if extracted:
-            logger.info("run_full_scout: URL from env PIPELINE_CLIENT_URL: %s", extracted)
-            return extracted
-
-    return ""
 
 
 async def handle_run_full_scout(url=None, client_name="", **kwargs) -> str:
@@ -158,7 +57,7 @@ async def handle_run_full_scout(url=None, client_name="", **kwargs) -> str:
             "run_full_scout: url missing from arguments, trying context fallback (session=%s)",
             session_id,
         )
-        recovered = _recover_url_from_context(session_id, kwargs)
+        recovered = recover_url_from_context(session_id, kwargs)
         if recovered:
             url = recovered
             if not url.startswith(("http://", "https://")):

@@ -19,12 +19,14 @@ Combined with run_pagespeed (Google PSI), this forms the TECH AUDIT phase.
 
 import json
 import logging
+import os
 import time
 from urllib.parse import urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
 
+from app.tools._url_utils import recover_url_from_context
 from tools.registry import registry
 
 logger = logging.getLogger(__name__)
@@ -283,6 +285,14 @@ async def handle_run_tech_seo_audit(url=None, max_pages=None, **kwargs) -> str:
         url = unpacked["url"]
         max_pages = unpacked.get("max_pages", MAX_PAGES)
 
+    if not url:
+        session_id_local = kwargs.get("session_id", "") or os.getenv("PIPELINE_SESSION_ID", "")
+        recovered = recover_url_from_context(session_id_local, kwargs)
+        if recovered:
+            url = recovered
+            if not url.startswith(("http://", "https://")):
+                url = "https://" + url
+            logger.info("run_tech_seo_audit: URL recovered via fallback: %s", url)
     if not url:
         return json.dumps({"error": "URL is required"}, ensure_ascii=False)
 

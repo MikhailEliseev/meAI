@@ -180,7 +180,7 @@ function aim_proxy_chat_stream($request) {
             }
             return strlen($header);
         },
-        CURLOPT_TIMEOUT        => 120,
+        CURLOPT_TIMEOUT        => 600,  // 10 минут — соответствует nginx proxy_read_timeout
     ]);
 
     curl_exec($ch);

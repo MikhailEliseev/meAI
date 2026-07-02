@@ -14,9 +14,11 @@ Registered in Hermes internal registry under toolset "aim-operations".
 
 import json
 import logging
+import os
 
 import httpx
 
+from app.tools._url_utils import recover_url_from_context
 from tools.registry import registry
 
 logger = logging.getLogger(__name__)
@@ -259,6 +261,14 @@ async def handle_find_competitors(url=None, named_competitors=None, client_reven
         named_competitors = unpacked.get("named_competitors")
         client_revenue = unpacked.get("client_revenue")
 
+    if not url:
+        session_id_local = kwargs.get("session_id", "") or os.getenv("PIPELINE_SESSION_ID", "")
+        recovered = recover_url_from_context(session_id_local, kwargs)
+        if recovered:
+            url = recovered
+            if not url.startswith(("http://", "https://")):
+                url = "https://" + url
+            logger.info("find_competitors: URL recovered via fallback: %s", url)
     if not url:
         return json.dumps({"error": "url is required"})
     # Auto-prepend https:// if URL has no protocol

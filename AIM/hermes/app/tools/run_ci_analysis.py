@@ -10,9 +10,11 @@ Registered in Hermes internal registry under toolset "aim-operations".
 
 import json
 import logging
+import os
 
 import httpx
 
+from app.tools._url_utils import recover_url_from_context
 from tools.registry import registry
 
 logger = logging.getLogger(__name__)
@@ -116,6 +118,14 @@ async def handle_run_ci_analysis(
         client_revenue = unpacked["client_revenue"]
         client_rating = unpacked["client_rating"]
 
+    if not url:
+        session_id_local = kwargs.get("session_id", "") or os.getenv("PIPELINE_SESSION_ID", "")
+        recovered = recover_url_from_context(session_id_local, kwargs)
+        if recovered:
+            url = recovered
+            if not url.startswith(("http://", "https://")):
+                url = "https://" + url
+            logger.info("run_ci_analysis: URL recovered via fallback: %s", url)
     if not url:
         return json.dumps({"error": "url is required"})
     if not competitors or len(competitors) == 0:

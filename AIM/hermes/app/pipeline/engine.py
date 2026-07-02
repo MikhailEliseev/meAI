@@ -1927,14 +1927,16 @@ class PipelineEngine:
             if result.data:
                 save_tool_output(state.session_id, phase.name, result.data)
                 # Для каждого инструмента внутри фазы — отдельный файл
+                # ВАЖНО: используем "_" вместо "/" — tempfile.mkstemp(prefix=...)
+                # не умеет создавать поддиректории. См. session_archive.py:safe_key
                 if isinstance(result.data, dict):
                     for tool_name, tool_result in result.data.items():
                         if isinstance(tool_result, (dict, list)):
-                            save_tool_output(state.session_id, f"{phase.name}/{tool_name}", tool_result)
+                            save_tool_output(state.session_id, f"{phase.name}_{tool_name}", tool_result)
                         elif isinstance(tool_result, str) and len(tool_result.strip()) > 10:
                             save_tool_output(
                                 state.session_id,
-                                f"{phase.name}/{tool_name}",
+                                f"{phase.name}_{tool_name}",
                                 {"content": str(tool_result)},
                             )
 

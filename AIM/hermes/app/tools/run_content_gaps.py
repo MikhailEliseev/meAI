@@ -10,10 +10,12 @@ run_content_gaps — Hermes tool: Content Gap Analysis
 import asyncio
 import json
 import logging
+import os
 import re
 import time
 
 from app.key_bank import key_bank
+from app.tools._url_utils import recover_url_from_context
 from tools.registry import registry
 
 logger = logging.getLogger(__name__)
@@ -160,6 +162,14 @@ async def handle_run_content_gaps(url=None, client_site=None, competitor_site=No
     if target and not target.startswith(("http://", "https://")):
         target = "https://" + target
 
+    if not target:
+        session_id_local = kwargs.get("session_id", "") or os.getenv("PIPELINE_SESSION_ID", "")
+        recovered = recover_url_from_context(session_id_local, kwargs)
+        if recovered:
+            target = recovered
+            if not target.startswith(("http://", "https://")):
+                target = "https://" + target
+            logger.info("run_content_gaps: URL recovered via fallback: %s", target)
     if not target:
         return json.dumps({"error": "URL is required"})
 

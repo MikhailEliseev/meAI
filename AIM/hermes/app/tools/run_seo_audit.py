@@ -14,10 +14,12 @@ Registered in Hermes internal registry under toolset "aim-operations".
 import asyncio
 import json
 import logging
+import os
 import time
 
 import httpx
 
+from app.tools._url_utils import recover_url_from_context
 from tools.registry import registry
 
 logger = logging.getLogger(__name__)
@@ -370,6 +372,17 @@ async def handle_run_seo_audit(url=None, competitors=None, **kwargs) -> str:
         url = unpacked["url"]
         if competitors is None:
             competitors = unpacked.get("competitors")
+
+    # ── Fallback: GLM-5.2 не передаёт URL в arguments, только в сообщении ──
+    if not url:
+        session_id_local = kwargs.get("session_id", "") or os.getenv("PIPELINE_SESSION_ID", "")
+        recovered = recover_url_from_context(session_id_local, kwargs)
+        if recovered:
+            url = recovered
+            if not url.startswith(("http://", "https://")):
+                url = "https://" + url
+            logger.info("run_seo_audit: URL recovered via fallback: %s", url)
+
     # Auto-prepend https:// if URL has no protocol
     if url and not url.startswith(("http://", "https://")):
         url = "https://" + url

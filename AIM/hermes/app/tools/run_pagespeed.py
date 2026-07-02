@@ -11,6 +11,7 @@ import os
 import subprocess
 import time
 
+from app.tools._url_utils import recover_url_from_context
 from tools.registry import registry
 
 logger = logging.getLogger(__name__)
@@ -155,6 +156,14 @@ async def handle_run_pagespeed(url=None, **kwargs) -> str:
     if unpacked:
         url = unpacked["url"]
 
+    if not url:
+        session_id_local = kwargs.get("session_id", "") or os.getenv("PIPELINE_SESSION_ID", "")
+        recovered = recover_url_from_context(session_id_local, kwargs)
+        if recovered:
+            url = recovered
+            if not url.startswith(("http://", "https://")):
+                url = "https://" + url
+            logger.info("run_pagespeed: URL recovered via fallback: %s", url)
     if not url:
         return json.dumps({"error": "URL is required"}, ensure_ascii=False)
 
