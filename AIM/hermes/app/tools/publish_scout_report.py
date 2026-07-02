@@ -52,7 +52,7 @@ def _list_available_slugs() -> list:
     return sorted(set(slugs))
 
 
-async def handle_publish_scout_report(slug=None, url=None, already_published=False, **kwargs) -> str:
+async def handle_publish_scout_report(slug=None, url=None, already_published=False, client_name=None, **kwargs) -> str:
     """Publish a scout report as a beautiful WordPress page.
 
     Reads scout data from /opt/data/sessions-archive/{slug}/ (v7 pipeline format),
@@ -62,12 +62,14 @@ async def handle_publish_scout_report(slug=None, url=None, already_published=Fal
         slug: Scout data slug (e.g. 'full-test-toriclinic'). Reads from sessions-archive.
         url: If already published, just return the URL.
         already_published: Flag indicating the report is already live.
+        client_name: Override client name for title (takes precedence over metadata).
     """
     if isinstance(slug, dict):
         d = slug
         slug = d.get("slug", "")
         url = d.get("url", "")
         already_published = d.get("already_published", False)
+        client_name = client_name or d.get("client_name", "")
 
     # Already published — just confirm
     if url and already_published:
@@ -107,8 +109,8 @@ async def handle_publish_scout_report(slug=None, url=None, already_published=Fal
     from app.tools.build_report import build_report_html
 
     meta = data.get("metadata", {}) or {}
-    # Try multiple fields: company_name → client_name → title → slug (last resort)
-    title = meta.get("company_name") or meta.get("client_name") or slug
+    # Priority: explicit client_name → metadata.company_name → metadata.client_name → slug
+    title = client_name or meta.get("company_name") or meta.get("client_name") or slug
     # Persist for build_report_html
     if not meta.get("company_name") and title != slug:
         meta["company_name"] = title

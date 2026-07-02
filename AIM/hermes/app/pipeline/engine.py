@@ -767,7 +767,7 @@ class PipelineEngine:
                             return {"url": parsed["url"], "already_published": True}
                     except (json.JSONDecodeError, TypeError):
                         pass
-            return {"slug": state.session_id}
+            return {"slug": state.session_id, "client_name": state.client_name}
 
         # ── Perplexity tools (v7.1) ─────────────────────────────────
         if tool_name == "perplexity_search":
