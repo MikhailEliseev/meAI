@@ -476,10 +476,11 @@ async def chat_stream(
 
             agent_task = asyncio.create_task(run_agent_task())
 
-            # Hard deadline for the entire agent run (7 min).
-            # find_competitors (Apify Google Maps + Playwright INN + nalog.ru)
-            # can take 4-6 minutes end-to-end.
-            _SSE_DEADLINE = time.time() + 420
+            # Hard deadline for the entire agent run (20 min).
+            # Full 13-phase pipeline (run_full_scout) takes ~16 min end-to-end.
+            # WordPress CURLOPT_TIMEOUT=600s + nginx proxy_read_timeout=600s
+            # also cover this window. Keep deadline > 16 min to avoid false timeout.
+            _SSE_DEADLINE = time.time() + 1200
 
             # Phase A — Yield progress events while agent runs.
             # Also collect unique tool stage names so we can emit
