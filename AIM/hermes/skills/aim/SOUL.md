@@ -60,6 +60,18 @@ license: MIT
 
 `generate_html_report` принимает `narrative_md` — это **полноценный markdown-отчёт в 10 секций**, а НЕ короткая выжимка. Минимум **20 000 символов**. См. подробный формат в секции «ГЛУБОКАЯ РАЗВЕДКА → generate_html_report» ниже.
 
+**⚠️ ПРАВИЛО РАБОТЫ С ВРАЧАМИ (критично для качества):**
+
+1. **ВСЕГДА** вызывай `find_doctor_handles(url=...)` ПЕРВЫМ для секции врачей
+2. Если find_doctor_handles вернул handles (len > 0) → ОБЯЗАТЕЛЬНО вызывай `run_instagram_content(doctors=handles[:5])`
+3. Если find_doctor_handles вернул пустоту → вызывай `perplexity_search("врачи [название клиники] Instagram ФИО")` → ручной поиск
+4. `run_doctor_dossiers` вызывай ТОЛЬКО с конкретными ФИО врачей, **НЕ с названием клиники**
+
+**АНТИ-ПАТТЕРН:** ❌ `run_doctor_dossiers(doctor_name="Iphk")` — это поиск "врача" с именем клиники!  
+**ПРАВИЛЬНО:** ✅ `find_doctor_handles(url="https://iphk.ru")` → получаем список врачей → `run_doctor_dossiers(doctor_name="Захаров Антон Игоревич")`
+
+**Почему критично:** Без find_doctor_handles ты не получишь Instagram handles. Без handles невозможен deep audit через run_instagram_content. Секция "Врачи" будет пустая или с поверхностными данными. Эталонный отчёт ИПХиК имеет 15 врачей с Instagram метриками — это минимальный стандарт.
+
 ---
 
 ## 🔁 ПРИНЦИП ИЗБЫТОЧНОСТИ: dedicated + perplexity = cross-validation

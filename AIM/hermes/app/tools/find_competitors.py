@@ -234,6 +234,43 @@ async def _enrich_competitor_with_financials(comp: dict, client_city: str = "") 
         return comp
 
 
+def _competitors_quality_score(competitors: list) -> float:
+    """Оценка качества списка конкурентов (0-1).
+    
+    Критерии:
+    - Есть выручка: +0.4
+    - Есть website: +0.2
+    - Не affiliated с клиентом (не ЛАНЦЕТЪ): +0.2
+    - rating/reviews: +0.2
+    
+    Returns:
+        Средний score по всем конкурентам (0.0 - 1.0)
+    """
+    if not competitors:
+        return 0.0
+    
+    scores = []
+    for c in competitors:
+        score = 0.0
+        # Есть финансы
+        if c.get("revenue_year"):
+            score += 0.4
+        # Есть валидный website (не affiliated)
+        website = c.get("website", "")
+        if website and not any(x in website.lower() for x in ["lancette", "ланцет"]):
+            score += 0.2
+        # Есть рейтинг и отзывы
+        if c.get("rating") and c.get("reviews_count", 0) > 10:
+            score += 0.2
+        # Валидное название бренда
+        brand = c.get("brand_name", "")
+        if brand and brand not in ["ЛАНЦЕТЪ", "Ланцетъ"]:
+            score += 0.2
+        scores.append(score)
+    
+    return sum(scores) / len(scores) if scores else 0.0
+
+
 async def handle_find_competitors(url=None, named_competitors=None, client_revenue=None, **kwargs) -> str:
     """Find top competitors for a clinic website.
 
@@ -308,10 +345,27 @@ async def handle_find_competitors(url=None, named_competitors=None, client_reven
             is_megalopolis = data.get("is_megalopolis", False)
             logger.info("Found %d competitors for URL: %s (megalopolis=%s)", len(competitors), url, is_megalopolis)
 
-            # Fallback: если Google Maps не дал результатов — спросить Perplexity
+            # Оценка качества данных
+            quality_score = _competitors_quality_score(competitors)
+            logger.info("Competitors quality score: %.2f (threshold: 0.3)", quality_score)
+
+            # Fallback: если Google Maps не дал результатов ИЛИ качество низкое — спросить Perplexity
             # (3 API calls, разные углы). Возвращает до 7 топ-конкурентов.
-            if not competitors:
-                push_tool_progress("competitors", "🔄 Google Maps пустой — спрашиваю Perplexity о топ-конкурентах (3-pass)...")
+            should_fallback = not competitors or len(competitors) < 3 or quality_score < 0.3
+            
+            if should_fallback:
+                reason = []
+                if not competitors:
+                    reason.append("пустой список")
+                if len(competitors) < 3:
+                    reason.append(f"мало конкурентов ({len(competitors)})")
+                if quality_score < 0.3:
+                    reason.append(f"низкое качество (score={quality_score:.2f})")
+                
+                reason_str = ", ".join(reason)
+                push_tool_progress("competitors", f"🔄 {reason_str} — спрашиваю Perplexity о топ-конкурентах (3-pass)...")
+                logger.warning("Triggering Perplexity fallback: %s", reason_str)
+                
                 perplexity_comps = await _find_competitors_via_perplexity(url)
                 if perplexity_comps:
                     # Enrich каждого конкурента: INN + финансы через nalog.ru (параллельно)

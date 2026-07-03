@@ -932,6 +932,46 @@ def _random_slug(length: int = 8) -> str:
     return "".join(random.choices(chars, k=length))
 
 
+def _validate_report_quality(data: dict) -> tuple[bool, list[str]]:
+    """Валидация минимального качества отчёта перед публикацией.
+    
+    Returns:
+        (is_valid, list_of_warnings)
+    """
+    warnings = []
+    
+    # 1. Проверка конкурентов
+    competitors = data.get("COMPETITORS", {})
+    if isinstance(competitors, dict):
+        comp_list = competitors.get("competitors", [])
+    else:
+        comp_list = []
+    
+    if len(comp_list) < 3:
+        warnings.append(f"⚠️ Найдено только {len(comp_list)} конкурентов (минимум 3)")
+    
+    # 2. Проверка врачей (если есть KEY PERSONS)
+    key_persons = data.get("KEY PERSONS", {}) or data.get("KEY_PERSONS", {})
+    if isinstance(key_persons, dict):
+        doctors = key_persons.get("doctors", [])
+        doctors_with_handles = [d for d in doctors if d.get("instagram") or d.get("instagram_username")]
+        if len(doctors_with_handles) < 3:
+            warnings.append(f"⚠️ Найдено только {len(doctors_with_handles)} врачей с Instagram (минимум 3)")
+    
+    # 3. Проверка interpretation контента (если есть)
+    for phase_name in ["COMPETITORS_interpretation", "KEY PERSONS_interpretation"]:
+        interpretation = data.get(phase_name, {})
+        if isinstance(interpretation, dict):
+            content = interpretation.get("content", "")
+            if len(content) < 500:
+                warnings.append(f"⚠️ {phase_name} слишком короткая ({len(content)} символов)")
+    
+    # Решение: блокируем только если 2+ критичных предупреждения
+    is_valid = len(warnings) < 2
+    
+    return is_valid, warnings
+
+
 async def handle_generate_html_report(
     session_hash: str = None,
     title: str = None,
@@ -961,6 +1001,27 @@ async def handle_generate_html_report(
 
     # Load all data from session archive
     data = load_all_data(session_hash)
+
+    # Валидация качества данных
+    is_valid, warnings = _validate_report_quality(data)
+    
+    if not is_valid:
+        logger.error(f"Report quality validation failed for session {session_hash}: {warnings}")
+        from app.main import push_wow_comment
+        push_wow_comment(
+            f"⚠️ Качество отчёта ниже минимума:\n" + "\n".join(warnings), 
+            "error"
+        )
+        return json.dumps({
+            "error": "Report quality below minimum threshold",
+            "warnings": warnings,
+            "session_hash": session_hash,
+            "suggestion": "Retry pipeline with named_competitors or ensure find_doctor_handles was called"
+        }, ensure_ascii=False)
+    
+    # Логируем warnings даже если valid
+    if warnings:
+        logger.warning(f"Report quality warnings for session {session_hash}: {warnings}")
 
     # Merge metadata overrides
     meta = data.get("metadata", {}) or {}
