@@ -1,1 +1,1 @@
-Fix 4 chat bugs deployed. E2E test needed: URL → 10min stream → report. https://iamaim.ru
+Pipeline v5 E2E WORKING. 3 clients tested (arclinic.ru, mira-med.ru, iphk.ru). State fixed: git tag pipeline-v5-working-e2e + backup at ~/Desktop/Dev/meAI_1-backups/pipeline-v5-working-20260703/
