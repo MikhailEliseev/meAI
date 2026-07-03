@@ -180,7 +180,7 @@ function aim_proxy_chat_stream($request) {
             }
             return strlen($header);
         },
-        CURLOPT_TIMEOUT        => 600,  // 10 минут — соответствует nginx proxy_read_timeout
+        CURLOPT_TIMEOUT        => 1200,  // 20 минут — соответствует Hermes _SSE_DEADLINE
     ]);
 
     curl_exec($ch);
