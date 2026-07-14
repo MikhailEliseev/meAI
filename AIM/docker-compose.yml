@@ -119,6 +119,59 @@ services:
     sysctls:
       - net.ipv6.conf.all.disable_ipv6=1
 
+  # Гермес v2 — интерактивная переработка (Walking Skeleton, Phase 1).
+  # Тонкий «мозг»: FastAPI + один тул find_competitors (прокси к aim-app).
+  # Старый сервис hermes НЕ трогаем — страховка отката.
+  hermes-v2:
+    build: ./hermes-v2
+    image: aim-hermes-v2:latest
+    container_name: aim-hermes-v2
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      # Phase 1: единственный обязательный env
+      - AIM_API_BASE=http://aim-app:8000
+      # Phase 2-3: LLM (заложены, используются начиная со следующей фазы)
+      - OMNIROUTE_URL=${OMNIROUTE_URL:-}
+      - LLM_MODEL=deepseek-chat
+      - PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY:-}
+      - APIFY_API_TOKEN=${APIFY_API_TOKEN:-}
+      - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY:-}
+      # Phase 5: WordPress DB для публикации отчётов
+      - WP_DB_HOST=aim-mysql
+      - WP_DB_USER=wp_user
+      - WP_DB_PASSWORD=${WP_DB_PASSWORD}
+      - WP_DB_NAME=wordpress
+      - SESSIONS_ROOT=/opt/data/sessions-archive
+      - ARCHIVE_BASE_URL=https://iamaim.ru/wp-json/aim/v1/session
+    env_file:
+      - .env.production
+    volumes:
+      - /opt/hermes-v2-data:/opt/data
+    networks:
+      - aim-network
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   frontend:
     build: ./frontend
     image: aim-frontend:latest
