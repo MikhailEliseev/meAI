@@ -9,7 +9,7 @@ import { ReportPreview } from './components/ReportPreview.jsx';
 import { FallbackForm } from './components/FallbackForm.jsx';
 
 function HermesChat() {
-  const { messages, sendMessage, clearMessages, stop, status, streamingRef, phases, reportData, sessionId } = useStreamChat();
+  const { messages, sendMessage, clearMessages, stop, status, streamingRef, phases, reportData, sessionId, etaSeconds, connectionWarning } = useStreamChat();
   const [showFallback, setShowFallback] = useState(false);
   const chatEndRef = useRef(null);
   const isStreaming = status === 'streaming' || status === 'submitted';
@@ -69,13 +69,15 @@ function HermesChat() {
                 timestamp={msg.timestamp}
                 isStreaming={isLastAgent && isStreaming}
                 contentRef={isLastAgent && isStreaming ? streamingRef : undefined}
+                buttons={msg.buttons}
+                onSuggestionClick={sendMessage}
               />
             );
           })}
 
           {/* Phase Tracker — visible during streaming OR whenever phases have been activated */}
           {(isStreaming || phases.some(p => p.status !== 'pending')) && (
-            <PhaseTracker phases={phases} />
+            <PhaseTracker phases={phases} etaSeconds={etaSeconds} connectionWarning={connectionWarning} />
           )}
 
           {/* Phase 09: Report Preview appears when finish event contains report_url */}

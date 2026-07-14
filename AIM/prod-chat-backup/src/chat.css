@@ -1,0 +1,53 @@
+#hermes-chat {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+#hermes-chat *,
+#hermes-chat *::before,
+#hermes-chat *::after {
+  box-sizing: border-box;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes chatSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#hermes-chat .chat-message-enter {
+  animation: chatSlideUp 0.3s ease-out;
+}
+
+/* ═══ SUGGESTION CHIPS (кнопки под ответом ассистента) ═══ */
+#hermes-chat .chat-suggestion-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  line-height: 1.4;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 100px;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, transform .1s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+#hermes-chat .chat-suggestion-chip:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+#hermes-chat .chat-suggestion-chip:active {
+  transform: scale(0.97);
+}

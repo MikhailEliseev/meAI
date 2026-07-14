@@ -145,137 +145,269 @@
   gap: 12px;
 }
 
-/* Send button → text button like old chat */
-#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-accent {
-  width: auto !important;
-  height: auto !important;
-  min-width: 80px;
-  padding: 14px 24px !important;
-  border-radius: 16px !important;
+/* ═══ CHAT INPUT BAR ═══ */
+#hermes-chat .chat-input-bar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  padding: 0;
+}
+
+#hermes-chat .chat-input-field {
+  flex: 1;
+  resize: none;
+  padding: 14px 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text);
+  font-family: 'Jost', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#hermes-chat .chat-input-field::placeholder {
+  color: var(--text-dim);
+}
+
+#hermes-chat .chat-input-field:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.08);
+}
+
+[data-theme="dark"] #hermes-chat .chat-input-field:focus {
+  box-shadow: 0 0 0 3px rgba(201, 169, 110, 0.12);
+}
+
+/* ═══ BUTTON SYSTEM — чистые классы без ::after хаков ═══ */
+#hermes-chat .chat-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-family: 'Jost', sans-serif;
   font-size: 15px;
   font-weight: 600;
-  background: var(--accent) !important;
-  color: var(--bg) !important;
+  border: none;
+  cursor: pointer;
+  border-radius: 16px;
+  padding: 14px 24px;
   transition: all 0.2s ease;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
-#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-accent svg {
-  display: none;
+#hermes-chat .chat-btn-primary {
+  background: var(--accent);
+  color: var(--bg);
 }
 
-#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-accent::after {
-  content: 'Отправить';
-}
-
-#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-accent:hover {
+#hermes-chat .chat-btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px var(--shadow-color);
+  filter: brightness(1.1);
 }
 
-#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-accent:disabled {
+#hermes-chat .chat-btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
 
-/* Stop button */
-#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-red-500 {
-  width: auto !important;
-  height: auto !important;
-  min-width: 80px;
-  padding: 14px 24px !important;
-  border-radius: 16px !important;
+#hermes-chat .chat-btn-danger {
+  background: #ef4444;
+  color: #fff;
 }
 
-#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-red-500 svg {
-  display: none;
+#hermes-chat .chat-btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
 }
 
-#hermes-chat .sticky button.shrink-0.w-10.h-10.bg-red-500::after {
-  content: 'Стоп';
-  font-family: 'Jost', sans-serif;
-  font-size: 15px;
-  font-weight: 600;
+#hermes-chat .chat-btn-secondary {
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid var(--border);
 }
 
-/* ═══ EMPTY CHAT (welcome screen) ═══ */
-#hermes-chat .flex.flex-col.items-center.justify-center.flex-1.px-4 {
+#hermes-chat .chat-btn-secondary:hover {
+  background: var(--hover);
+  transform: translateY(-1px);
+}
+
+#hermes-chat .chat-btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+#hermes-chat .chat-btn-ghost:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+#hermes-chat .chat-btn-full {
   flex: 1;
-  padding: 48px 32px !important;
 }
 
-#hermes-chat .flex.flex-col.items-center.justify-center h1 {
+/* ═══ EMPTY CHAT SCREEN ═══ */
+#hermes-chat .chat-empty-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 32px;
+  animation: fadeIn 0.6s ease-out;
+}
+
+#hermes-chat .chat-empty-title-block {
+  text-align: center;
+  max-width: 520px;
+  margin-bottom: 40px;
+}
+
+#hermes-chat .chat-empty-title-block h1 {
   font-family: 'Playfair Display', serif;
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 600;
   color: var(--text);
   margin-bottom: 12px;
   line-height: 1.25;
 }
 
-#hermes-chat .flex.flex-col.items-center.justify-center > .text-center p {
+#hermes-chat .chat-empty-title-block p {
   font-size: 15px;
   color: var(--text-secondary);
   line-height: 1.6;
 }
 
-/* EmptyChat URL input */
-#hermes-chat input[placeholder*="Введите адрес сайта"] {
-  padding: 14px 20px !important;
-  background: var(--glass-bg) !important;
+#hermes-chat .chat-empty-input-block {
+  width: 100%;
+  max-width: 520px;
+}
+
+#hermes-chat .chat-empty-input-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+#hermes-chat .chat-empty-input {
+  flex: 1;
+  padding: 14px 20px;
+  background: var(--glass-bg);
   backdrop-filter: blur(10px);
-  border: 1px solid var(--border) !important;
-  border-radius: 16px !important;
+  border: 1px solid var(--border);
+  border-radius: 16px;
   color: var(--text);
   font-family: 'Jost', sans-serif;
   font-size: 15px;
-  flex: 1;
+  transition: border-color 0.2s;
 }
 
-#hermes-chat input[placeholder*="Введите адрес сайта"]::placeholder {
+#hermes-chat .chat-empty-input::placeholder {
   color: var(--text-dim);
 }
 
-#hermes-chat input[placeholder*="Введите адрес сайта"]:focus {
-  border-color: var(--accent) !important;
+#hermes-chat .chat-empty-input:focus {
+  border-color: var(--accent);
   outline: none;
 }
 
-/* EmptyChat send button */
-#hermes-chat .flex.flex-col.items-center.justify-center button.shrink-0.w-10.h-10.bg-accent {
-  width: auto !important;
-  height: auto !important;
-  min-width: 80px;
-  padding: 14px 24px !important;
-  border-radius: 16px !important;
-  font-family: 'Jost', sans-serif;
-  font-size: 15px;
-  font-weight: 600;
-  background: var(--accent) !important;
-  color: var(--bg) !important;
+#hermes-chat .chat-empty-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 24px;
 }
 
-#hermes-chat .flex.flex-col.items-center.justify-center button.shrink-0.w-10.h-10.bg-accent svg {
-  display: none;
+#hermes-chat .chat-empty-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 24px;
 }
 
-#hermes-chat .flex.flex-col.items-center.justify-center button.shrink-0.w-10.h-10.bg-accent::after {
-  content: 'Отправить';
+#hermes-chat .chat-badge {
+  font-size: 12px;
+  color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
-/* EmptyChat quick action buttons */
-#hermes-chat .flex.flex-wrap.gap-2.mt-4 button {
-  padding: 8px 16px;
-  border-radius: 12px;
+/* ═══ REPORT PREVIEW CARD ═══ */
+#hermes-chat .chat-report-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  animation: fadeIn 0.5s ease-out;
+}
+
+#hermes-chat .chat-report-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  padding: 6px 14px;
+  border-radius: 100px;
   font-size: 13px;
   font-weight: 500;
+  margin-bottom: 16px;
 }
 
-/* EmptyChat trust badges */
-#hermes-chat .flex.items-center.justify-center.gap-4.mt-6 {
-  margin-top: 32px;
+#hermes-chat .chat-report-badge-icon {
+  width: 16px;
+  height: 16px;
+}
+
+#hermes-chat .chat-report-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 20px;
+}
+
+#hermes-chat .chat-report-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+#hermes-chat .chat-report-stat {
+  text-align: center;
+}
+
+#hermes-chat .chat-report-stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+#hermes-chat .chat-report-stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+#hermes-chat .chat-report-actions {
+  display: flex;
+  gap: 12px;
 }
 
 /* ═══ SCROLLBAR ═══ */
@@ -299,6 +431,32 @@
   margin-right: -32px;
   padding: 20px 32px 16px;
   border-bottom: 1px solid var(--border);
+}
+
+/* Header: count + ETA */
+#hermes-chat .phase-tracker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+#hermes-chat .phase-tracker-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+#hermes-chat .phase-tracker-eta {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+#hermes-chat .phase-tracker-done-badge {
+  font-size: 13px;
+  font-weight: 600;
+  color: #22c55e;
 }
 
 /* Progress bar */
@@ -375,6 +533,14 @@
   color: var(--text-secondary);
 }
 
+/* Connection warning */
+#hermes-chat .phase-connection-warning {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #f59e0b;
+  font-weight: 500;
+}
+
 /* ═══ REPORT PREVIEW ═══ */
 #hermes-chat .max-w-3xl.mx-auto > .bg-surface-2.rounded-lg.p-6 {
   border-radius: 16px;
@@ -403,4 +569,51 @@
 @keyframes chatSlideUp {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Loading indicator: "Пожалуйста, подождите…" */
+#hermes-chat .chat-loading-text {
+  display: inline-flex;
+  align-items: center;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+#hermes-chat .chat-loading-label {
+  font-weight: 500;
+  margin-right: 4px;
+}
+
+/* ═══ SUGGESTION CHIPS (кнопки под ответом ассистента) ═══ */
+/* Ghost-стиль: контурная кнопка, переиспользует CSS-переменные темы.
+   Светлая тема: чёрный контур (#1A1A1A). Тёмная: золотой (#c9a96e). */
+#hermes-chat .chat-suggestion-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  line-height: 1.4;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 100px;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, transform .1s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+#hermes-chat .chat-suggestion-chip:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+#hermes-chat .chat-suggestion-chip:active {
+  transform: scale(0.97);
+}
+
+#hermes-chat .chat-suggestions {
+  border-color: var(--glass-border) !important;
 }

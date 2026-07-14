@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 
-function ChatBubbleComponent({ role, content, timestamp, isStreaming, contentRef }) {
+function ChatBubbleComponent({ role, content, timestamp, isStreaming, contentRef, buttons, onSuggestionClick }) {
   const isAgent = role === 'agent';
   const isEmpty = !content || !content.trim();
 
@@ -19,10 +19,13 @@ function ChatBubbleComponent({ role, content, timestamp, isStreaming, contentRef
                 Visible only during active streaming; hidden when dots or final content show. */}
             <span ref={contentRef} className="stream-target" style={{display: (isEmpty && isStreaming) ? 'inline' : 'none'}} />
             {isEmpty && isStreaming ? (
-              <span className="inline-flex gap-1">
-                <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
-                <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
-                <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
+              <span className="chat-loading-text">
+                <span className="chat-loading-label">Пожалуйста, подождите</span>
+                <span className="inline-flex gap-1 ml-1">
+                  <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
+                  <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
+                  <span className="w-1.5 h-1.5 bg-accent/70 rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
+                </span>
               </span>
             ) : (
               content
@@ -31,6 +34,23 @@ function ChatBubbleComponent({ role, content, timestamp, isStreaming, contentRef
         ) : (
           <p className="whitespace-pre-wrap">{content}</p>
         )}
+
+        {/* Кнопки suggestions — только у agent-сообщений, после стриминга */}
+        {isAgent && buttons && buttons.length > 0 && !isStreaming && (
+          <div className="chat-suggestions flex flex-wrap gap-2 mt-3 pt-3 border-t border-border-hairline">
+            {buttons.map((btn, i) => (
+              <button
+                key={i}
+                type="button"
+                className="chat-suggestion-chip"
+                onClick={() => onSuggestionClick && onSuggestionClick(btn.label)}
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {timestamp && (
           <span className="block text-xs mt-1 opacity-50">
             {new Date(timestamp).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}
@@ -45,6 +65,7 @@ export const ChatBubble = memo(ChatBubbleComponent, (prev, next) => {
   return (
     prev.content === next.content &&
     prev.isStreaming === next.isStreaming &&
-    prev.timestamp === next.timestamp
+    prev.timestamp === next.timestamp &&
+    prev.buttons === next.buttons
   );
 });
