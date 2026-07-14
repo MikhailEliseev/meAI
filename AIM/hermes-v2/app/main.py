@@ -7,6 +7,7 @@
 """
 import json
 import logging
+import re
 import uuid
 
 from fastapi import FastAPI
@@ -64,6 +65,39 @@ async def startup():
     logger.info("startup: SQLite + tools registered")
 
 
+# Fallback кнопки (если модель не дала [SUGGESTIONS] маркер)
+_FALLBACK_SUGGESTIONS = [
+    {"label": "Глубокий анализ конкурентов", "tool": "run_ci_analysis"},
+    {"label": "Упоминания в СМИ", "tool": "run_smi_mentions"},
+    {"label": "Анализ отзывов", "tool": "run_review_platforms"},
+    {"label": "Анализ соцсетей", "tool": "run_instagram_content"},
+]
+
+_SUGGESTIONS_RE = re.compile(
+    r"\[SUGGESTIONS\]\s*\n(.*?)\[/SUGGESTIONS\]", re.DOTALL
+)
+
+
+def extract_suggestions(text: str) -> tuple[str, list[dict]]:
+    """Парсит [SUGGESTIONS]...[/SUGGESTIONS] из текста.
+
+    Returns: (clean_text_without_marker, buttons_list)
+    Если маркера нет — (text, fallback_suggestions).
+    """
+    m = _SUGGESTIONS_RE.search(text)
+    if not m:
+        return text, _FALLBACK_SUGGESTIONS
+    block = m.group(1)
+    buttons = []
+    for line in block.strip().split("\n"):
+        line = line.strip()
+        if "|" in line:
+            label, tool = line.rsplit("|", 1)
+            buttons.append({"label": label.strip(), "tool": tool.strip()})
+    clean = _SUGGESTIONS_RE.sub("", text).rstrip()
+    return clean, (buttons if buttons else _FALLBACK_SUGGESTIONS)
+
+
 @app.post("/api/chat/stream")
 async def chat_stream(req: ChatRequest):
     """SSE-диалог: стримит токены deepseek-chat, сохраняет историю per-session.
@@ -84,12 +118,29 @@ async def chat_stream(req: ChatRequest):
             history.append({"role": "user", "content": req.message})
 
             full_response = []
+            # Буфер для перехвата [SUGGESTIONS] маркера (стримится токенами).
+            # Держим хвост буфера незакрытым, пока не убедимся что это не маркер.
+            MARKER = "[SUGGESTIONS]"
+            sent_idx = 0  # сколько символов уже отправлено
+
             try:
                 async for event in chat_with_tools(history):
                     kind = event[0]
                     if kind == "text":
                         full_response.append(event[1])
-                        yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': event[1]}, ensure_ascii=False)}\n\n"
+                        accumulated = "".join(full_response)
+                        # Найдём позицию начала маркера — не стримим оттуда
+                        marker_pos = accumulated.find(MARKER)
+                        if marker_pos != -1:
+                            safe_end = marker_pos
+                        else:
+                            # Не стримим последние len(MARKER)-1 символов —
+                            # они могут быть началом маркера
+                            safe_end = max(sent_idx, len(accumulated) - len(MARKER) + 1)
+                        if safe_end > sent_idx:
+                            chunk = accumulated[sent_idx:safe_end]
+                            yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': chunk}, ensure_ascii=False)}\n\n"
+                            sent_idx = safe_end
                     elif kind == "tool_start":
                         tool_name, tool_args = event[1], event[2]
                         yield f"data: {json.dumps({'type': 'tool-progress', 'tool': tool_name, 'status': 'start', 'args': tool_args}, ensure_ascii=False)}\n\n"
@@ -103,10 +154,21 @@ async def chat_stream(req: ChatRequest):
                 yield f"data: {json.dumps({'type': 'error', 'message': str(e)}, ensure_ascii=False)}\n\n"
                 return
 
-            # Сохранить ответ ассистента в историю
-            assistant_text = "".join(full_response)
-            if assistant_text:
-                await async_save_message(session_id, "assistant", assistant_text)
+            # Финальная обработка: дослать остаток текста (без маркера) + suggestions
+            accumulated = "".join(full_response)
+            clean_text, buttons = extract_suggestions(accumulated)
+            # Дослать текст, который не стримился (между sent_idx и концом чистого текста)
+            clean_len = len(clean_text)
+            if clean_len > sent_idx:
+                yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': clean_text[sent_idx:]}, ensure_ascii=False)}\n\n"
+
+            # Сохранить ЧИСТЫЙ ответ (без маркера) в историю
+            if clean_text:
+                await async_save_message(session_id, "assistant", clean_text)
+
+            # Эмитить suggestions (CHAT-01, CHAT-05)
+            if buttons:
+                yield f"data: {json.dumps({'type': 'suggestions', 'buttons': buttons}, ensure_ascii=False)}\n\n"
 
             yield f"data: {json.dumps({'type': 'finish', 'session_id': session_id}, ensure_ascii=False)}\n\n"
 
