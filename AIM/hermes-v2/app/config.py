@@ -12,7 +12,10 @@ REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "600.0"))
 
 # --- Phase 2: LLM / диалог -------------------------------------------------
 OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "")
-LLM_MODEL = os.getenv("LLM_MODEL", "deepseek-chat")
+# OMNIROUTE_AUTH — отдельный Z.AI токен (из .env.production), НЕ DeepSeek-ключ.
+OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "")
+LLM_MODEL = os.getenv("LLM_MODEL", "glm-5.2")
+SESSIONS_DB_PATH = os.getenv("SESSIONS_DB_PATH", "/opt/data/sessions.db")
 
 # --- Phase 3: ключи внешних сервисов (заготовки) ---------------------------
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY", "")

@@ -1,5 +1,6 @@
-# Phase 1 Walking Skeleton — минимальный набор.
-# Тяжёлые deps (openai, playwright, apify-client, pymysql) добавятся в Phase 3.
+# Phase 1 Walking Skeleton + Phase 2 Диалог.
+# Тяжёлые deps (playwright, apify-client, pymysql) добавятся в Phase 3.
 fastapi
 uvicorn
 httpx==0.28.1
+openai
