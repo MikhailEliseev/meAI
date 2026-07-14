@@ -1,0 +1,223 @@
+"""Perplexity-тулы: quick_overview + perplexity_search + run_smi_mentions + run_review_platforms.
+
+Перенесены из бэкапа старого hermes, адаптированы под наш registry
+и общий perplexity-клиент (app.lib.perplexity).
+"""
+import json
+import logging
+
+from app.lib.perplexity import USE_PERPLEXITY, perplexity_chat
+from app.tools.registry import register
+
+logger = logging.getLogger(__name__)
+
+
+def _normalize_url(url) -> str:
+    if isinstance(url, dict):
+        url = url.get("url", "")
+    if not url:
+        return ""
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    return url
+
+
+# --- quick_overview --------------------------------------------------------
+
+QUICK_OVERVIEW_PROMPT = """Ты — AI-аналитик медицинского маркетинга. Изучи клинику по URL {url}.
+Собери структурированно:
+- БИЗНЕС: название, юрлицо, ИНН, выручка (если есть), город, специализация
+- ВРАЧИ: 3-5 ключевых врачей (имя, специализация)
+- КОНКУРЕНТЫ: 3-5 ближайших конкурентов в том же городе/сегменте
+- СОЦСЕТИ: Instagram, VK, Telegram, YouTube, Яндекс.Карты — ссылки если есть
+- САЙТ: платформа (Tilda/Bitrix/WordPress...), качество, кол-во страниц
+- ЗАЦЕПКА: один неожиданный факт для владельца клиники
+
+Каждый факт со ссылкой на источник. Ответ на русском, структурированно."""
+
+
+async def handle_quick_overview(url=None, **kwargs) -> str:
+    """Быстрый обзор клиники через Perplexity (~5-10 сек)."""
+    url = _normalize_url(url)
+    if not url:
+        return json.dumps({"error": "url is required"})
+    if not USE_PERPLEXITY:
+        return json.dumps({"error": "PERPLEXITY_API_KEY not configured"})
+    try:
+        prompt = QUICK_OVERVIEW_PROMPT.format(url=url)
+        text = await perplexity_chat([
+            {"role": "system", "content": "Ты — AI-аналитик медицинского маркетинга. Отвечай на русском, структурированно, с источниками."},
+            {"role": "user", "content": prompt},
+        ])
+        logger.info("quick_overview OK: %s (%d chars)", url, len(text))
+        return text
+    except Exception as e:
+        logger.exception("quick_overview failed: %s", url)
+        return json.dumps({"error": str(e)})
+
+
+register(
+    name="quick_overview",
+    schema={
+        "type": "function",
+        "function": {
+            "name": "quick_overview",
+            "description": (
+                "Быстрый обзор клиники через Perplexity (~5-10 сек). "
+                "Возвращает: название, юрлицо, ИНН, выручка, город, специализация, "
+                "3-5 врачей, 3-5 конкурентов, соцсети, платформу сайта, "
+                "один неожиданный факт. ВЫЗЫВАЙ ОДИН РАЗ на старте, когда клиент прислал URL."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "URL сайта клиники (например 'https://clinic.ru')"},
+                },
+                "required": ["url"],
+            },
+        },
+    },
+    handler=handle_quick_overview,
+    check_fn=lambda: USE_PERPLEXITY,
+)
+
+
+# --- perplexity_search -----------------------------------------------------
+
+async def handle_perplexity_search(question=None, **kwargs) -> str:
+    """Гибкий Perplexity-поиск по любому вопросу."""
+    if isinstance(question, dict):
+        question = question.get("question", "")
+    if not question:
+        return json.dumps({"error": "question is required"})
+    if not USE_PERPLEXITY:
+        return json.dumps({"error": "PERPLEXITY_API_KEY not configured"})
+    try:
+        text = await perplexity_chat([
+            {"role": "system", "content": "Ты — AI-ассистент. Отвечай на русском, по делу, с источниками."},
+            {"role": "user", "content": question},
+        ])
+        logger.info("perplexity_search OK: %s (%d chars)", question[:60], len(text))
+        return text
+    except Exception as e:
+        logger.exception("perplexity_search failed")
+        return json.dumps({"error": str(e)})
+
+
+register(
+    name="perplexity_search",
+    schema={
+        "type": "function",
+        "function": {
+            "name": "perplexity_search",
+            "description": (
+                "Гибкий поиск через Perplexity по любому вопросу (рынок, ниша, тренды). "
+                "Используй когда нужен свежий поиск с источниками."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "question": {"type": "string", "description": "Вопрос для поиска"},
+                },
+                "required": ["question"],
+            },
+        },
+    },
+    handler=handle_perplexity_search,
+    check_fn=lambda: USE_PERPLEXITY,
+)
+
+
+# --- run_smi_mentions ------------------------------------------------------
+
+async def handle_run_smi_mentions(url=None, query=None, **kwargs) -> str:
+    """Поиск упоминаний клиники в СМИ через Perplexity."""
+    url = _normalize_url(url)
+    if not url and not query:
+        return json.dumps({"error": "url или query требуется"})
+    if not USE_PERPLEXITY:
+        return json.dumps({"error": "PERPLEXITY_API_KEY not configured"})
+    try:
+        search_query = query or f"упоминания в СМИ клиники по адресу {url}"
+        text = await perplexity_chat([
+            {"role": "system", "content": "Ты — аналитик медиа. Найди упоминания компании в СМИ. Отвечай на русском, со ссылками."},
+            {"role": "user", "content": f"Найди упоминания в СМИ, статьях, новостях: {search_query}. Перечисли найденные упоминания с источниками и датой."},
+        ])
+        logger.info("run_smi_mentions OK: %s (%d chars)", search_query[:60], len(text))
+        return text
+    except Exception as e:
+        logger.exception("run_smi_mentions failed")
+        return json.dumps({"error": str(e)})
+
+
+register(
+    name="run_smi_mentions",
+    schema={
+        "type": "function",
+        "function": {
+            "name": "run_smi_mentions",
+            "description": (
+                "Поиск упоминаний клиники в СМИ, статьях, новостях. "
+                "Возвращает список упоминаний с источниками. "
+                "ВЫЗЫВАЙ только когда клиент попросил 'проверить упоминания в СМИ'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "URL сайта клиники"},
+                    "query": {"type": "string", "description": "Поисковый запрос (если не URL)"},
+                },
+            },
+        },
+    },
+    handler=handle_run_smi_mentions,
+    check_fn=lambda: USE_PERPLEXITY,
+)
+
+
+# --- run_review_platforms --------------------------------------------------
+
+async def handle_run_review_platforms(url=None, query=None, **kwargs) -> str:
+    """Анализ отзывов и рейтингов клиники по платформам."""
+    url = _normalize_url(url)
+    if not url and not query:
+        return json.dumps({"error": "url или query требуется"})
+    if not USE_PERPLEXITY:
+        return json.dumps({"error": "PERPLEXITY_API_KEY not configured"})
+    try:
+        search_query = query or f"отзывы и рейтинги клиники {url}"
+        text = await perplexity_chat([
+            {"role": "system", "content": "Ты — аналитик репутации. Найди отзывы и рейтинги на платформах (Яндекс.Карты, 2ГИС, Google, ПроДокторов). Отвечай на русском."},
+            {"role": "user", "content": f"Найди отзывы и рейтинги: {search_query}. Укажи платформу, рейтинг, кол-во отзывов, типичные плюсы/минусы."},
+        ])
+        logger.info("run_review_platforms OK: %s (%d chars)", search_query[:60], len(text))
+        return text
+    except Exception as e:
+        logger.exception("run_review_platforms failed")
+        return json.dumps({"error": str(e)})
+
+
+register(
+    name="run_review_platforms",
+    schema={
+        "type": "function",
+        "function": {
+            "name": "run_review_platforms",
+            "description": (
+                "Анализ отзывов и рейтингов клиники по платформам "
+                "(Яндекс.Карты, 2ГИС, Google, ПроДокторов). "
+                "Возвращает рейтинги, кол-во отзывов, типичные плюсы/минусы. "
+                "ВЫЗЫВАЙ когда клиент попросил 'проверить отзывы'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "URL сайта клиники"},
+                    "query": {"type": "string", "description": "Поисковый запрос"},
+                },
+            },
+        },
+    },
+    handler=handle_run_review_platforms,
+    check_fn=lambda: USE_PERPLEXITY,
+)

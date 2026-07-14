@@ -13,13 +13,14 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 
-from app.llm import stream_chat
+from app.llm import chat_with_tools
 from app.session import (
     async_init_db,
     async_load_history,
     async_save_message,
     get_session_lock,
 )
+from app.tools import register_all
 from app.tools.competitors import find_competitors
 
 logging.basicConfig(
@@ -57,9 +58,10 @@ class ChatRequest(BaseModel):
 
 @app.on_event("startup")
 async def startup():
-    """Создаёт таблицу messages при старте (идемпотентно)."""
+    """Создаёт таблицу messages + регистрирует тулы."""
     await async_init_db()
-    logger.info("startup: SQLite init done")
+    register_all()
+    logger.info("startup: SQLite + tools registered")
 
 
 @app.post("/api/chat/stream")
@@ -83,9 +85,19 @@ async def chat_stream(req: ChatRequest):
 
             full_response = []
             try:
-                async for token in stream_chat(history):
-                    full_response.append(token)
-                    yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': token}, ensure_ascii=False)}\n\n"
+                async for event in chat_with_tools(history):
+                    kind = event[0]
+                    if kind == "text":
+                        full_response.append(event[1])
+                        yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': event[1]}, ensure_ascii=False)}\n\n"
+                    elif kind == "tool_start":
+                        tool_name, tool_args = event[1], event[2]
+                        yield f"data: {json.dumps({'type': 'tool-progress', 'tool': tool_name, 'status': 'start', 'args': tool_args}, ensure_ascii=False)}\n\n"
+                    elif kind == "tool_result":
+                        tool_name, result = event[1], event[2]
+                        yield f"data: {json.dumps({'type': 'tool-progress', 'tool': tool_name, 'status': 'done', 'result': result}, ensure_ascii=False)}\n\n"
+                    elif kind == "finish":
+                        break
             except Exception as e:
                 logger.error("chat_stream LLM error: %s", e)
                 yield f"data: {json.dumps({'type': 'error', 'message': str(e)}, ensure_ascii=False)}\n\n"
