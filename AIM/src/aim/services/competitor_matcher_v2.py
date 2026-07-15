@@ -139,6 +139,48 @@ def _format_revenue(revenue: Optional[int]) -> str:
     return f"{revenue:,} руб"
 
 
+def _same_address(addr1: str, addr2: str) -> bool:
+    """Проверяет что два адреса — одно здание (улица + дом совпадают)."""
+    if not addr1 or not addr2:
+        return False
+    # Нормализуем: нижний регистр, убираем лишнее
+    import re
+    def _norm(a: str) -> str:
+        a = a.lower().strip()
+        # Извлекаем улицу + дом (грубо: всё до запятой после "ул"/"улица"/"пр")
+        a = re.sub(r"[,;]", " ", a)
+        a = re.sub(r"\s+", " ", a)
+        return a
+    n1, n2 = _norm(addr1), _norm(addr2)
+    # Проверяем что один содержит ключевые части другого
+    # Извлекаем дом (число после "д" или в конце)
+    house1 = re.search(r"(?:д\.?\s*|дом\s*)(\d+)", n1)
+    house2 = re.search(r"(?:д\.?\s*|дом\s*)(\d+)", n2)
+    if house1 and house2:
+        return house1.group(1) == house2.group(1) and _street_match(n1, n2)
+    # Fallback: проверяем что 80% одного адреса есть в другом
+    shorter = n1 if len(n1) < len(n2) else n2
+    longer = n2 if len(n1) < len(n2) else n1
+    words = [w for w in shorter.split() if len(w) > 3]
+    if not words:
+        return False
+    matches = sum(1 for w in words if w in longer)
+    return matches / len(words) >= 0.8
+
+
+def _street_match(addr1: str, addr2: str) -> bool:
+    """Проверяет что улица совпадает (хотя бы 3 буквы корня)."""
+    import re
+    # Извлекаем название улицы (слово перед "ул"/"улица"/"пр")
+    for pattern in [r"([а-яё]{4,})\s*(?:ул|улица|пр|проспект|пер|переулок)", r"(?:ул|улица)\s*([а-яё]{4,})"]:
+        m1 = re.search(pattern, addr1)
+        m2 = re.search(pattern, addr2)
+        if m1 and m2:
+            root = min(m1.group(1), m2.group(1), key=len)[:4]
+            return root in m1.group(1) and root in m2.group(1)
+    return True  # если не определили улицу — не блокируем
+
+
 def _dedup_brands(brands: list[str]) -> list[str]:
     """Deduplicate brand names case-insensitively, preserving order."""
     seen = set()
@@ -283,9 +325,20 @@ class CompetitorMatcherV2:
         # ── STAGE 3: Enrich with ФНС financials + filter + sort ───────
         enriched = await self._enrich_all(valid, perplexity_brands)
 
-        # Dedup by ИНН — multiple brand variants may resolve to the same legal entity
-        # (e.g. "СМ-Клиника Волгоградский" and "СМ-Клиника Сенежская" → same ИНН)
+        # Dedup by ИНН
         enriched = self._dedup_by_inn(enriched)
+
+        # Filter out competitors at the same address as client (subsidiaries/branches)
+        if client_inn:
+            before_addr = len(enriched)
+            enriched = [
+                c for c in enriched
+                if c.profile.inn != client_inn
+                and not (c.profile.legal_address and client_profile.get("address")
+                         and _same_address(c.profile.legal_address, client_profile["address"]))
+            ]
+            if len(enriched) < before_addr:
+                logger.info("address_filter: removed %d same-address competitors", before_addr - len(enriched))
 
         # Revenue corridor filter
         filtered = self._filter_by_revenue_corridor(enriched, effective_revenue)

@@ -190,11 +190,89 @@ async def resolve_brand_to_inn(
                 brand_name, result.inn, result.okved,
                 f"{result.latest_revenue:,}" if result.latest_revenue else "N/A",
             )
-        else:
-            logger.info("brand_not_found_in_fns: brand=%s", brand_name)
-        return result
+            return result
+
+        # ── Perplexity fallback: бренд не найден в ФНС по названию ──
+        # Perplexity знает рыночные бренды, но мы не доверяем ИНН от него
+        # напрямую. Вместо этого: Perplexity даёт ИНН → мы валидируем через ФНС.
+        result = await _resolve_via_perplexity(brand_name, okved_prefix, client, brand_original)
+        if result:
+            logger.info(
+                "brand_resolved_perplexity: brand=%s → inn=%s okved=%s revenue=%s",
+                brand_name, result.inn, result.okved,
+                f"{result.latest_revenue:,}" if result.latest_revenue else "N/A",
+            )
+            return result
+
+        logger.info("brand_not_found_in_fns: brand=%s", brand_name)
+        return None
     except Exception:
         raise
+
+
+async def _resolve_via_perplexity(
+    brand_name: str,
+    okved_prefix: str,
+    client: "BfoNalogClient",
+    brand_original: str,
+) -> Optional[ResolvedBrand]:
+    """Perplexity fallback для brand resolution.
+
+    Если bo.nalog не нашёл бренд по названию, просим Perplexity найти ИНН.
+    Затем валидируем ИНН через bo.nalog (анти-галлюцинация).
+    """
+    import re
+    try:
+        from src.aim.services.competitor_matcher_v2 import perplexity_configured, perplexity_chat
+    except ImportError:
+        return None
+
+    if not perplexity_configured():
+        return None
+
+    try:
+        prompt = (
+            f"Найди ИНН медицинской клиники: \"{brand_name}\". "
+            "Верни ТОЛЬКО число (10 цифр). Без пояснений."
+        )
+        raw = await perplexity_chat(
+            [{"role": "user", "content": prompt}],
+            temperature=0.0,
+        )
+        # Извлекаем ИНН (10 цифр)
+        inn_match = re.findall(r"\b(\d{10})\b", raw.strip())
+        if not inn_match:
+            return None
+
+        inn = inn_match[0]
+
+        # Валидация: ищем этот ИНН в bo.nalog
+        search_results = await asyncio.to_thread(client.search, inn)
+        if not search_results:
+            return None
+
+        org = search_results[0]
+        # Проверка ОКВЭД
+        if okved_prefix and okved_prefix not in (org.okved2 or ""):
+            return None
+
+        # Получаем финансы
+        statements = await asyncio.to_thread(client.get_financials, org.id)
+        latest_rev = statements[0].revenue_rub if statements else None
+
+        return ResolvedBrand(
+            inn=org.inn,
+            org_id=org.id,
+            legal_name=org.short_name,
+            brand_query=brand_original,
+            okved=org.okved2,
+            latest_revenue=latest_rev,
+            status="resolved_perplexity",
+            address=org.address,
+        )
+    except Exception as e:
+        logger.debug("Perplexity brand resolution failed for %s: %s", brand_name, str(e)[:80])
+        return None
 
 
 async def resolve_brands_batch(
