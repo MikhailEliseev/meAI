@@ -637,34 +637,45 @@ class CompetitorMatcherV2:
     # ── Stage 3: Filtering ───────────────────────────────────────────
 
     def _dedup_by_inn(self, competitors: list[CompetitorMatch]) -> list[CompetitorMatch]:
-        """Remove duplicates by ИНН — keep the one with the best brand name.
+        """Remove true duplicates: same ИНН AND same normalized brand.
 
-        Multiple brand queries (e.g. "СМ-Клиника Волгоградский",
-        "СМ-Клиника Сенежская") may resolve to the same legal entity (same ИНН).
-        We keep the first occurrence (most specific brand name) per ИНН.
-        Logs which brands were merged for observability.
+        We do NOT collapse different brands that happen to share an ИНН —
+        a holding company (ООО with one ИНН) may operate multiple distinct
+        clinic brands (СМ-Клиника, Estetik International, Возрождение).
+        Collapsing them into one result loses real competitors.
+
+        Only collapses: "СМ-Клиника Волгоградский" and "СМ-Клиника Сенежская"
+        (same brand family resolving to same ИНН — near-identical names).
         """
-        seen_inns: dict[str, CompetitorMatch] = {}
+        seen_keys: dict[str, CompetitorMatch] = {}
         no_inn: list[CompetitorMatch] = []
-        inn_brands: dict[str, list[str]] = {}  # inn → all brand names for logging
+        inn_groups: dict[str, list[str]] = {}  # inn → brands for logging
 
         for c in competitors:
             inn = c.profile.inn.strip()
-            brand = c.profile.brand_name or c.profile.legal_name or "?"
+            brand = (c.profile.brand_name or c.profile.legal_name or "?").strip().lower()
             if not inn:
                 no_inn.append(c)
-            else:
-                inn_brands.setdefault(inn, []).append(brand)
-                if inn not in seen_inns:
-                    seen_inns[inn] = c
+                continue
 
-        # Log duplicates
-        duplicates = len(competitors) - len(seen_inns) - len(no_inn)
-        if duplicates > 0:
-            logger.info("dedup_by_inn: removed %d duplicates (same INN)", duplicates)
-            for inn, brands in inn_brands.items():
-                if len(brands) > 1:
-                    logger.info("dedup_merged: inn=%s brands=%s", inn, brands)
+            inn_groups.setdefault(inn, []).append(c.profile.brand_name or c.profile.legal_name or "?")
+
+            # Dedup key = ИНН + first 2 words of brand (brand family)
+            # "СМ-Клиника Волгоградский" and "СМ-Клиника Сенежская" → same key
+            # "СМ-Клиника" and "Estetik International" → different keys
+            brand_words = brand.split()
+            brand_family = " ".join(brand_words[:2]) if len(brand_words) >= 2 else brand
+            dedup_key = f"{inn}:{brand_family}"
+
+            if dedup_key not in seen_keys:
+                seen_keys[dedup_key] = c
+
+        # Log brands sharing the same ИНН (potential holding companies)
+        for inn, brands in inn_groups.items():
+            if len(set(b.lower() for b in brands)) > 1:
+                logger.info("dedup_same_inn_different_brands: inn=%s brands=%s", inn, brands)
+
+        return list(seen_keys.values()) + no_inn
 
         return list(seen_inns.values()) + no_inn
 
