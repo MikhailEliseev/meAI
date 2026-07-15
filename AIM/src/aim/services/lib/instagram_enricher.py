@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 APIFY_BASE = "https://api.apify.com/v2"
 ACTOR_ID = "apify~instagram-profile-scraper"
-APIFY_KEYS_PATH = os.getenv("APIFY_KEYS_PATH", "/opt/data/apify_keys.json")
+APIFY_KEYS_PATH = os.getenv("APIFY_KEYS_PATH", "/app/AIM/data/apify_keys.json")
 APIFY_TIMEOUT = 120.0
 SITE_SCRAPE_TIMEOUT = 10.0
 
@@ -170,16 +170,44 @@ async def get_instagram_followers(handle: str) -> Optional[int]:
     return None
 
 
+async def _resolve_website_via_perplexity(brand_name: str, city: str) -> Optional[str]:
+    """Find a clinic's website URL via Perplexity when not available from scraping."""
+    from src.aim.services.lib.perplexity_client import perplexity_chat, is_configured
+
+    if not is_configured() or not brand_name:
+        return None
+    try:
+        prompt = (
+            f"Найди официальный сайт клиники \"{brand_name}\""
+            f"{', ' + city if city else ''}. "
+            "Верни ТОЛЬКО URL (с https://) или null."
+        )
+        raw = await perplexity_chat(
+            [{"role": "user", "content": prompt}],
+            temperature=0.0,
+        )
+        # Extract URL from response
+        import re as _re
+        url_match = _re.search(r"https?://[^\s<>\"')]+", raw.strip())
+        if url_match:
+            return url_match.group(0).rstrip(".")
+    except Exception as e:
+        logger.debug("website resolve failed for %s: %s", brand_name, e)
+    return None
+
+
 async def enrich_instagram_batch(
     competitors: list[CompetitorMatch],
     max_count: int = 5,
+    city: str = "",
 ) -> None:
     """Enrich top-N competitors with Instagram follower counts.
 
     For each competitor (up to max_count):
-      1. Find IG handle from their website
-      2. Fetch follower count via Apify
-      3. Store in profile.social_links["instagram"] and set a flag
+      1. Resolve website if missing (Perplexity fallback)
+      2. Find IG handle from their website
+      3. Fetch follower count via Apify
+      4. Store in profile.social_links
 
     Modifies competitors in place. Non-blocking on failure.
     """
@@ -187,18 +215,28 @@ async def enrich_instagram_batch(
         return
 
     targets = competitors[:max_count]
-    semaphore = asyncio.Semaphore(3)  # Don't spam Apify
+    semaphore = asyncio.Semaphore(3)  # Don't spam Apify/Perplexity
 
     async def _enrich_one(comp: CompetitorMatch) -> None:
         async with semaphore:
-            website = comp.website or comp.profile.website or ""
             brand = comp.profile.brand_name or comp.profile.legal_name or ""
 
+            # Step 1: Get website
+            website = comp.website or comp.profile.website or ""
+            if not website:
+                website = await _resolve_website_via_perplexity(brand, city)
+                if website:
+                    comp.website = website
+                    comp.profile.website = website
+                    logger.info("website_resolved: %s → %s", brand, website)
+
+            # Step 2: Find IG handle
             handle = await find_instagram_handle(website, brand)
             if not handle:
-                logger.debug("instagram: no handle found for %s", brand)
+                logger.debug("instagram: no handle found for %s (website=%s)", brand, website)
                 return
 
+            # Step 3: Get followers
             followers = await get_instagram_followers(handle)
             if followers is not None:
                 comp.profile.social_links["instagram"] = f"@{handle}"

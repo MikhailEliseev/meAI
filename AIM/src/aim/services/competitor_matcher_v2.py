@@ -261,7 +261,7 @@ class CompetitorMatcherV2:
         if result:
             await asyncio.gather(
                 self._enrich_surgeons_batch(result, city, count),
-                enrich_instagram_batch(result, count),
+                enrich_instagram_batch(result, count, city),
                 return_exceptions=True,
             )
 
