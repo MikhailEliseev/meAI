@@ -221,3 +221,81 @@ register(
     handler=handle_run_review_platforms,
     check_fn=lambda: USE_PERPLEXITY,
 )
+
+
+# --- extract_clinic_profile (structured) -----------------------------------
+
+EXTRACT_PROFILE_PROMPT = """Изучи клинику по URL {url}. Верни ТОЛЬКО JSON (без markdown обёртки, без ```json):
+{{
+  "inn": "ИНН компании или null",
+  "company_name": "Название юрлица",
+  "brand_name": "Бренд/торговое название клиники",
+  "specialization": "основная специализация (стоматология, косметология, etc.)",
+  "city": "город",
+  "address": "полный физический адрес клиники (улица, дом, корпус)",
+  "services": ["услуга1", "услуга2"],
+  "website_platform": "Tilda/Bitrix/WordPress/SiteEdit/другое или null"
+}}
+Если ИНН не найден на сайте — попробуй найти по названию юрлица в открытых источниках.
+НЕ выдумывай данные — ставь null если не уверен.
+Верни ТОЛЬКО JSON объект, без пояснений."""
+
+
+async def handle_extract_clinic_profile(url=None, **kwargs) -> str:
+    """Извлекает структурированный профиль клиники через Perplexity."""
+    url = _normalize_url(url)
+    if not url:
+        return json.dumps({"error": "url is required"}, ensure_ascii=False)
+    if not USE_PERPLEXITY:
+        return json.dumps({"error": "PERPLEXITY_API_KEY not configured"}, ensure_ascii=False)
+    try:
+        prompt = EXTRACT_PROFILE_PROMPT.format(url=url)
+        raw = await perplexity_chat([
+            {"role": "system", "content": "Ты — AI-аналитик. Извлекаешь данные о компаниях. Отвечай ТОЛЬКО валидным JSON, без markdown. Русский язык."},
+            {"role": "user", "content": prompt},
+        ])
+        # Strip markdown fences if present
+        text = raw.strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[-1]
+            if text.endswith("```"):
+                text = text[:-3].strip()
+        # Validate JSON
+        data = json.loads(text)
+        # Ensure required keys exist
+        for key in ("inn", "company_name", "brand_name", "specialization", "city", "address", "services", "website_platform"):
+            if key not in data:
+                data[key] = None
+        logger.info("extract_clinic_profile OK: %s — inn=%s city=%s", url, data.get("inn"), data.get("city"))
+        return json.dumps(data, ensure_ascii=False)
+    except json.JSONDecodeError as e:
+        logger.warning("extract_clinic_profile: invalid JSON from Perplexity: %s", str(e)[:200])
+        return json.dumps({"error": "invalid JSON from Perplexity", "raw": raw.strip()[:500]}, ensure_ascii=False)
+    except Exception as e:
+        logger.exception("extract_clinic_profile failed: %s", url)
+        return json.dumps({"error": str(e)}, ensure_ascii=False)
+
+
+register(
+    name="extract_clinic_profile",
+    schema={
+        "type": "function",
+        "function": {
+            "name": "extract_clinic_profile",
+            "description": (
+                "Извлекает структурированный профиль клиники через Perplexity: ИНН, юрлицо, "
+                "бренд, специализация, город, точный адрес, услуги, платформа сайта. "
+                "ВЫЗЫВАЙ ПЕРВЫМ когда клиент прислал URL — результат нужен для find_competitors."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "URL сайта клиники"},
+                },
+                "required": ["url"],
+            },
+        },
+    },
+    handler=handle_extract_clinic_profile,
+    check_fn=lambda: USE_PERPLEXITY,
+)

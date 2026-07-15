@@ -1,8 +1,10 @@
 """LLM-клиент Гермеса v2 — glm-5.2 через Z.AI-шлюз.
 
+Phase 7: параллельное выполнение tool_calls через asyncio.gather.
 Сырой openai SDK (нативный streaming + tool-calling). Z.AI-шлюз OpenAI-совместимый.
 Системный промпт подставляется автоматически как messages[0] (DIALOG-03).
 """
+import asyncio
 import json
 import logging
 
@@ -32,6 +34,39 @@ def get_client() -> openai.AsyncClient:
     return _client
 
 
+async def _execute_single_tool(tc, profile_cache: dict):
+    """Выполняет один tool_call. Возвращает (tool_call, result_str)."""
+    tool_name = tc.function.name
+    try:
+        tool_args = json.loads(tc.function.arguments or "{}")
+    except json.JSONDecodeError:
+        tool_args = {}
+
+    # Auto-inject: if find_competitors called without client_inn/client_address
+    # and extract_clinic_profile was called before, merge its result
+    if tool_name == "find_competitors" and profile_cache:
+        if not tool_args.get("client_inn") and profile_cache.get("inn"):
+            tool_args["client_inn"] = profile_cache["inn"]
+            logger.info("auto-inject: client_inn=%s into find_competitors", profile_cache["inn"])
+        if not tool_args.get("client_address") and profile_cache.get("address"):
+            tool_args["client_address"] = profile_cache["address"]
+            logger.info("auto-inject: client_address=%s into find_competitors", profile_cache["address"][:60])
+
+    result = await execute(tool_name, tool_args)
+    result_str = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
+
+    # Cache extract_clinic_profile result for auto-inject into find_competitors
+    if tool_name == "extract_clinic_profile" and isinstance(result, str):
+        try:
+            profile_cache.update(json.loads(result_str))
+            logger.info("profile cache updated: inn=%s city=%s",
+                         profile_cache.get("inn"), profile_cache.get("city"))
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    return tc, result_str
+
+
 async def chat_with_tools(history: list[dict]):
     """Диалог с tool-calling. Возвращает генератор событий для SSE.
 
@@ -43,12 +78,13 @@ async def chat_with_tools(history: list[dict]):
 
     Цикл:
     1. non-streaming вызов с tools= для определения хочет ли модель тул.
-    2. Если tool_calls → выполняем → добавляем tool message → повтор.
+    2. Если tool_calls → выполняем ПАРАЛЛЕЛЬНО через asyncio.gather.
     3. Если нет tool_calls → streaming финального ответа.
     """
     messages = [{"role": "system", "content": SYSTEM_PROMPT}] + list(history)
     tools = get_openai_tools()
     client = get_client()
+    profile_cache: dict = {}  # caches extract_clinic_profile result for auto-inject
 
     for turn in range(5):  # максимум 5 раундов tool-calling
         logger.info("chat_with_tools turn=%d tools=%d msgs=%d", turn, len(tools), len(messages))
@@ -74,19 +110,70 @@ async def chat_with_tools(history: list[dict]):
                     for tc in msg.tool_calls
                 ],
             })
+
+            # Phase 7: ПАРАЛЛЕЛЬНОЕ выполнение всех tool_calls
+            n_tools = len(msg.tool_calls)
+            if n_tools > 1:
+                logger.info("parallel execution: %d tools", n_tools)
+
+            # Проблема: extract_clinic_profile должен выполниться ПЕРЕД find_competitors
+            # (для auto-inject ИНН), но мы хотим параллельность для остальных.
+            # Решение: двухфазная стратегия:
+            # Фаза 1: extract_clinic_profile (если есть) → получаем ИНН
+            # Фаза 2: все остальные тулы параллельно (с ИНН в profile_cache)
+
+            profile_tc = None
+            other_tcs = []
             for tc in msg.tool_calls:
-                tool_name = tc.function.name
-                try:
-                    tool_args = json.loads(tc.function.arguments or "{}")
-                except json.JSONDecodeError:
-                    tool_args = {}
-                yield ("tool_start", tool_name, tool_args)
+                if tc.function.name == "extract_clinic_profile":
+                    profile_tc = tc
+                else:
+                    other_tcs.append(tc)
 
-                result = await execute(tool_name, tool_args)
-                result_str = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
-                yield ("tool_result", tool_name, result_str)
+            # Фаза 1: extract_clinic_profile (если есть) — сначала, для auto-inject
+            if profile_tc:
+                yield ("tool_start", profile_tc.function.name,
+                       json.loads(profile_tc.function.arguments or "{}"))
+                profile_tc, profile_result = await _execute_single_tool(profile_tc, profile_cache)
+                yield ("tool_result", profile_tc.function.name, profile_result)
+                messages.append({
+                    "role": "tool", "tool_call_id": profile_tc.id,
+                    "content": profile_result,
+                })
 
-                messages.append({"role": "tool", "tool_call_id": tc.id, "content": result_str})
+            # Фаза 2: остальные тулы параллельно
+            if other_tcs:
+                # Отправляем tool_start события для всех
+                for tc in other_tcs:
+                    try:
+                        args = json.loads(tc.function.arguments or "{}")
+                    except json.JSONDecodeError:
+                        args = {}
+                    yield ("tool_start", tc.function.name, args)
+
+                # Параллельное выполнение
+                results = await asyncio.gather(
+                    *[_execute_single_tool(tc, profile_cache) for tc in other_tcs],
+                    return_exceptions=True,
+                )
+
+                # Обрабатываем результаты (в порядке тулов)
+                for tc, result in zip(other_tcs, results):
+                    if isinstance(result, Exception):
+                        error_str = json.dumps({"error": str(result)}, ensure_ascii=False)
+                        yield ("tool_result", tc.function.name, error_str)
+                        messages.append({
+                            "role": "tool", "tool_call_id": tc.id,
+                            "content": error_str,
+                        })
+                    else:
+                        _, result_str = result
+                        yield ("tool_result", tc.function.name, result_str)
+                        messages.append({
+                            "role": "tool", "tool_call_id": tc.id,
+                            "content": result_str,
+                        })
+
             continue  # следующий раунд
 
         # Нет tool_calls (или тулов нет) → streaming финального ответа

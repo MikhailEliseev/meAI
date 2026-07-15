@@ -1,9 +1,9 @@
-"""FastAPI-приложение Гермес v2.
+"""FastAPI-приложение Гермес v2 — Phase 7.
 
 Маршруты:
-  GET  /health                 — healthcheck (Phase 1).
-  POST /tools/find-competitors — прозрачный прокси к aim-app:8000 (Phase 1).
-  POST /api/chat/stream        — SSE-диалог через deepseek-chat (Phase 2).
+  GET  /health                 — healthcheck
+  POST /tools/find-competitors — прозрачный прокси к aim-app:8000
+  POST /api/chat/stream        — SSE-диалог через LLM с tool-calling
 """
 import json
 import logging
@@ -30,10 +30,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Гермес v2", version="0.2.0")
+app = FastAPI(title="Гермес v2", version="0.3.0")
 
 
-# --- Phase 1: health + find_competitors ------------------------------------
+# --- Health + find_competitors -----------------------------------------------
 
 class FindCompetitorsRequest(BaseModel):
     url: str
@@ -42,7 +42,7 @@ class FindCompetitorsRequest(BaseModel):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "hermes-v2"}
+    return {"status": "ok", "service": "hermes-v2", "version": "0.3.0"}
 
 
 @app.post("/tools/find-competitors")
@@ -50,7 +50,7 @@ async def tools_find_competitors(req: FindCompetitorsRequest):
     return await find_competitors(req.url, req.count)
 
 
-# --- Phase 2: диалоговый SSE -----------------------------------------------
+# --- SSE диалог ---------------------------------------------------------------
 
 class ChatRequest(BaseModel):
     session_id: str | None = None
@@ -100,12 +100,14 @@ def extract_suggestions(text: str) -> tuple[str, list[dict]]:
 
 @app.post("/api/chat/stream")
 async def chat_stream(req: ChatRequest):
-    """SSE-диалог: стримит токены deepseek-chat, сохраняет историю per-session.
+    """SSE-диалог: стримит токены LLM, сохраняет историю per-session.
 
-    SSE-события (совместимы с Theme-чатом useStreamChat.js):
-      text-delta — токен ответа.
-      finish     — конец ответа, содержит session_id.
-      error      — ошибка.
+    SSE-события (совместимы с Theme-чатом useStreamChat.js и chat-inline.php):
+      text-delta   — токен ответа.
+      tool-progress — начало/конец вызова тулза.
+      suggestions  — кнопки действий.
+      finish       — конец ответа, содержит session_id.
+      error        — ошибка.
     """
     session_id = req.session_id or str(uuid.uuid4())
     lock = get_session_lock(session_id)
