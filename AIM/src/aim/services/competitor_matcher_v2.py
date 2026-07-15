@@ -586,13 +586,13 @@ class CompetitorMatcherV2:
                 self.nalog.get_organization, resolved.org_id
             )
             if org_raw and isinstance(org_raw, dict):
-                # bo.nalom.gov.ru: dtRegister / registrationDate
+                # bo.nalog.gov.ru: registrationDate (подтверждено из raw dict)
                 registration_date = (
-                    org_raw.get("dtRegister")
-                    or org_raw.get("registrationDate")
+                    org_raw.get("registrationDate")
+                    or org_raw.get("dtRegister")
                     or org_raw.get("regDate")
                 )
-                # СЧЛ: sclCount / averageEmployees / employeeCount
+                # СЧЛ: нет в get_organization, проверяем bfo/msp категории
                 scl_count = (
                     org_raw.get("sclCount")
                     or org_raw.get("averageEmployees")
