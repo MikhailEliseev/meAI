@@ -529,6 +529,8 @@ def _competitor_to_json(m: CompetitorMatch) -> CompetitorJson:
         licenses=p.licenses,
         is_multi_entity=p.is_multi_entity,
         surgeons_count=p.employee_count,  # v2 stores surgeon estimates in employee_count
+        instagram_handle=p.social_links.get("instagram"),
+        instagram_followers=int(p.social_links.get("instagram_followers")) if p.social_links.get("instagram_followers") else None,
     )
 
 

@@ -32,6 +32,7 @@ from typing import Optional
 from src.aim.services.brand_resolver import ResolvedBrand, resolve_brand_to_inn, resolve_brands_batch
 from src.aim.services.lib.perplexity_client import perplexity_chat, is_configured as perplexity_configured
 from src.aim.services.lib.searxng_client import searxng_search
+from src.aim.services.lib.instagram_enricher import enrich_instagram_batch
 from src.aim.services.nalog import BfoNalogClient
 from src.aim.services.rusprofile.models import CompanyProfile, CompetitorMatch
 from src.aim.services.service_extractor import extract_client_profile
@@ -169,12 +170,15 @@ class CompetitorMatcherV2:
             url, specialization, city, company_name, client_inn or "None",
         )
 
-        # If INN not on site → resolve via bo.nalog by company name
-        if not client_inn and company_name:
-            resolved_client = await resolve_brand_to_inn(company_name, nalog=self.nalog)
-            if resolved_client:
-                client_inn = resolved_client.inn
-                logger.info("Client INN resolved via ФНС: %s → %s", company_name, client_inn)
+        # Resolve client INN with multi-level fallback
+        if not client_inn:
+            client_inn, inn_source = await self._resolve_client_inn(
+                company_name, city, url, specialization
+            )
+            logger.info(
+                "Client INN resolution: source=%s inn=%s",
+                inn_source, client_inn or "None",
+            )
 
         # Get real client revenue from ФНС
         client_revenue_real = await self._get_revenue_by_inn(client_inn)
@@ -184,9 +188,10 @@ class CompetitorMatcherV2:
             or client_profile.get("estimated_revenue")
         )
         logger.info(
-            "Client revenue: real=%s effective=%s",
+            "Client revenue: real=%s effective=%s source=%s",
             f"{client_revenue_real:,}" if client_revenue_real else "None",
             f"{effective_revenue:,}" if effective_revenue else "None",
+            "ФНС" if client_revenue_real else "estimate",
         )
 
         # ── STAGE 1: Discover brands (2 channels parallel) ───────────
@@ -251,10 +256,24 @@ class CompetitorMatcherV2:
 
         result = filtered[:count]
 
+        # ── STAGE 3.5: Post-selection enrichment (surgeons + Instagram) ─
+        # Only for the final top-N to keep it fast
+        if result:
+            await asyncio.gather(
+                self._enrich_surgeons_batch(result, city, count),
+                enrich_instagram_batch(result, count),
+                return_exceptions=True,
+            )
+
         elapsed = time.monotonic() - t0
+        surgeons_filled = sum(1 for r in result if r.profile.employee_count)
+        ig_filled = sum(1 for r in result if r.profile.social_links.get("instagram"))
         logger.info(
-            "CompetitorMatcherV2 done: url=%s competitors=%d elapsed=%.1fs",
+            "CompetitorMatcherV2 done: url=%s competitors=%d elapsed=%.1fs "
+            "client_revenue=%s surgeons_filled=%d instagram_filled=%d",
             url, len(result), elapsed,
+            f"{effective_revenue:,}" if effective_revenue else "None",
+            surgeons_filled, ig_filled,
         )
         return result
 
@@ -274,6 +293,63 @@ class CompetitorMatcherV2:
         except Exception as e:
             logger.warning("Failed to get client revenue for inn=%s: %s", inn, e)
         return None
+
+    async def _resolve_client_inn(
+        self,
+        company_name: Optional[str],
+        city: str,
+        url: str,
+        specialization: str,
+    ) -> tuple[str, str]:
+        """Resolve client INN with multi-level fallback.
+
+        Tries in order:
+          1. bo.nalog search by company_name (from site scrape)
+          2. Perplexity: "какой ИНН у клиники X" → bo.nalog validation
+          3. Gives up (returns empty)
+
+        Returns:
+            Tuple of (inn, source) where source ∈ {"bo_nalog", "perplexity", "failed"}.
+        """
+        # Level 1: bo.nalog search by company name
+        if company_name:
+            resolved = await resolve_brand_to_inn(company_name, nalog=self.nalog)
+            if resolved and resolved.inn:
+                return resolved.inn, "bo_nalog"
+
+        # Level 2: Perplexity → extract INN → bo.nalog validate
+        if perplexity_configured():
+            query_name = company_name or specialization or url
+            prompt = (
+                f"Найди ИНН медицинской организации: {query_name}"
+                f"{', ' + city if city else ''}. "
+                f"Сайт: {url}\n"
+                "Верни ТОЛЬКО число (10 или 12 цифр) или null. Без пояснений."
+            )
+            try:
+                raw = await perplexity_chat(
+                    [{"role": "user", "content": prompt}],
+                    temperature=0.0,
+                )
+                # Extract digits from response
+                inn_match = re.findall(r"\b(\d{10}|\d{12})\b", raw.strip())
+                if inn_match:
+                    candidate_inn = inn_match[0]
+                    # Validate: does this INN exist in ФНС?
+                    validated = await self._get_revenue_by_inn(candidate_inn)
+                    if validated and validated > 0:
+                        logger.info(
+                            "Client INN via Perplexity: %s (revenue=%s)",
+                            candidate_inn, f"{validated:,}",
+                        )
+                        return candidate_inn, "perplexity"
+                    logger.warning(
+                        "Perplexity INN %s not validated in ФНС", candidate_inn,
+                    )
+            except Exception as e:
+                logger.warning("Perplexity INN resolution failed: %s", e)
+
+        return "", "failed"
 
     # ── Stage 1: Discovery channels ──────────────────────────────────
 
@@ -440,6 +516,59 @@ class CompetitorMatcherV2:
             match_reason=", ".join(reason_parts),
             data_quality=0.95 if latest else 0.6,
             total_score=1.0 if latest else 0.5,  # placeholder; revenue_proximity used for sorting
+        )
+
+    async def _enrich_surgeons_batch(
+        self,
+        competitors: list[CompetitorMatch],
+        city: str,
+        max_count: int = 5,
+    ) -> None:
+        """Fill missing surgeon counts via Perplexity for top-N competitors.
+
+        Only enriches competitors where employee_count (surgeons) is None.
+        Uses Perplexity to estimate the number of doctors/surgeons.
+        Modifies competitors in place.
+        """
+        if not perplexity_configured():
+            return
+
+        targets = [
+            c for c in competitors[:max_count]
+            if c.profile.employee_count is None
+        ]
+        if not targets:
+            return
+
+        semaphore = asyncio.Semaphore(3)  # Perplexity rate limit
+
+        async def _ask_surgeons(comp: CompetitorMatch) -> None:
+            async with semaphore:
+                brand = comp.profile.brand_name or comp.profile.legal_name or ""
+                prompt = (
+                    f"Сколько врачей или хирургов работает в клинике \"{brand}\""
+                    f"{', ' + city if city else ''}? "
+                    "Верни ТОЛЬКО целое число (примерная оценка) или null."
+                )
+                try:
+                    raw = await perplexity_chat(
+                        [{"role": "user", "content": prompt}],
+                        temperature=0.0,
+                    )
+                    # Parse number from response
+                    numbers = re.findall(r"\b(\d+)\b", raw.strip())
+                    if numbers:
+                        count = int(numbers[0])
+                        if 1 <= count <= 1000:  # sanity check
+                            comp.profile.employee_count = count
+                            comp.match_reason += f", ~{count} врачей"
+                            logger.info("surgeons_estimate: %s → %d", brand, count)
+                except Exception as e:
+                    logger.debug("surgeons_estimate failed for %s: %s", brand, e)
+
+        await asyncio.gather(
+            *[_ask_surgeons(c) for c in targets],
+            return_exceptions=True,
         )
 
     # ── Stage 3: Filtering ───────────────────────────────────────────

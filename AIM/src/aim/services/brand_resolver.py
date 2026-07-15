@@ -10,7 +10,8 @@ with a reliable bo.nalog.gov.ru lookup (validated on Фрау Клиник, Кл
 
 import asyncio
 import logging
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from typing import Optional
 
 from src.aim.services.nalog import BfoNalogClient
@@ -23,12 +24,62 @@ MEDICAL_OKVED_PREFIXES = ("86.",)
 # Minimum INN length for a valid legal entity
 _MIN_INN_LEN = 10
 
+# ── Brand normalization ────────────────────────────────────────────────
+# Regex patterns for geo-attachments and address suffixes to strip from
+# brand names before resolving. Applied in order.
+_GEO_STRIP_PATTERNS = [
+    # "на Ленинском проспекте" / "на Тверской улице" / "на Кутузовском шоссе"
+    re.compile(r"\s+на\s+[\w\s-]*(?:проспект[е]?|улиц[ае]?|шоссе|набережной|площади)\s*$", re.I),
+    # "в Орловском переулке" / "в Столовом переулке"
+    re.compile(r"\s+в\s+[\w\s-]*(?:переулке|проезде|тупике|аллее)\s*$", re.I),
+    # "метро Таганская" / "м. Тверская"
+    re.compile(r"\s+(?:метро|m\.?)\s+[\w-]+\s*$", re.I),
+    # "г. Москва" / "город Москва"
+    re.compile(r",?\s*(?:г\.|город)\s+[\w\s-]+\s*$", re.I),
+    # "№ 5" / "№5"
+    re.compile(r"\s+№\s*\d+\s*$", re.I),
+    # "на Соколе" / "на Арбате" (short metro/area names — 1-2 words after "на")
+    re.compile(r"\s+на\s+[\w]+\s*$", re.I),
+]
+
+
+def normalize_brand_name(brand: str) -> str:
+    """Strip geo-attachments and address suffixes from a brand name.
+
+    Perplexity and SearXNG sometimes return brand names with location
+    qualifiers like "Медиал на Ленинском проспекте" or "ЕМС в Орловском
+    переулке". These confuse bo.nalog search (finds small branch entities
+    instead of the main legal entity).
+
+    Args:
+        brand: Raw brand name potentially containing geo-attachments.
+
+    Returns:
+        Cleaned brand name with geo-attachments removed.
+
+    Examples:
+        >>> normalize_brand_name("Медиал на Ленинском проспекте")
+        'Медиал'
+        >>> normalize_brand_name("ЕМС в Орловском переулке")
+        'ЕМС'
+        >>> normalize_brand_name("ОН Клиник на Таганке")
+        'ОН Клиник'
+        >>> normalize_brand_name("Клазко")
+        'Клазко'
+    """
+    if not brand:
+        return brand
+    result = brand.strip()
+    for pattern in _GEO_STRIP_PATTERNS:
+        result = pattern.sub("", result).strip()
+    return result if result else brand.strip()
+
 
 @dataclass
 class ResolvedBrand:
     """A brand resolved to a real legal entity in ФНС."""
 
-    brand_query: str  # original brand name queried
+    brand_query: str  # cleaned brand name (after normalization)
     inn: str
     org_id: int  # bo.nalog numeric ID for financials lookup
     legal_name: str
@@ -36,6 +87,7 @@ class ResolvedBrand:
     latest_revenue: Optional[int]  # RUB (gainSum × 1000)
     status: str = ""
     address: str = ""
+    brand_original: str = ""  # original brand before normalization (for logging)
 
     @property
     def is_medical(self) -> bool:
@@ -46,6 +98,7 @@ def _resolve_sync(
     nalog: BfoNalogClient,
     brand_name: str,
     okved_prefix: str,
+    brand_original: str = "",
 ) -> Optional[ResolvedBrand]:
     """Synchronous resolution — called via asyncio.to_thread."""
     results = nalog.search(brand_name)
@@ -76,6 +129,7 @@ def _resolve_sync(
         latest_revenue=revenue_rub,
         status=best.status,
         address=best.address,
+        brand_original=brand_original or brand_name,
     )
 
 
@@ -83,10 +137,12 @@ async def resolve_brand_to_inn(
     brand_name: str,
     okved_prefix: str = "86.",
     nalog: Optional[BfoNalogClient] = None,
+    skip_normalize: bool = False,
 ) -> Optional[ResolvedBrand]:
     """Resolve a brand name to a legal entity (ИНН) via bo.nalog.gov.ru.
 
     Pipeline:
+      0. Normalize brand name (strip geo-attachments)
       1. Search ФНС by brand name
       2. Filter by OKVED prefix (medical = 86.xx)
       3. Pick the entity with highest revenue (most likely the real operator)
@@ -99,14 +155,21 @@ async def resolve_brand_to_inn(
         brand_name: Brand name to resolve (e.g. "Клазко", "GMTClinic").
         okved_prefix: OKVED prefix to filter (default: "86." for medical).
         nalog: Optional BfoNalogClient instance (creates one if not provided).
+        skip_normalize: If True, skip geo-attachment normalization.
 
     Returns:
         ResolvedBrand with INN and org_id, or None if not found in ФНС.
     """
+    brand_original = brand_name
+    if not skip_normalize:
+        brand_name = normalize_brand_name(brand_name)
+        if brand_name != brand_original:
+            logger.info("brand_normalized: \"%s\" → \"%s\"", brand_original, brand_name)
+
     own_client = nalog is None
     client = nalog or BfoNalogClient()
     try:
-        result = await asyncio.to_thread(_resolve_sync, client, brand_name, okved_prefix)
+        result = await asyncio.to_thread(_resolve_sync, client, brand_name, okved_prefix, brand_original)
         if result:
             logger.info(
                 "brand_resolved: brand=%s → inn=%s okved=%s revenue=%s",
@@ -128,6 +191,7 @@ async def resolve_brands_batch(
 ) -> list[Optional[ResolvedBrand]]:
     """Resolve multiple brands to INNs concurrently.
 
+    Each brand is normalized (geo-attachments stripped) before resolving.
     Uses a single shared BfoNalogClient (its internal rate limiter handles
     concurrency at 5 req/s). Results are in the same order as input.
 
