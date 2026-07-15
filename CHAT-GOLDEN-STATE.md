@@ -71,3 +71,62 @@
 > Запрещено: CSS, HTML структура, сообщения прогресса, welcome text, верстка.
 
 При любом сомнении — спроси владельца.
+
+---
+
+## V2 Competitor Pipeline (зафиксировано 2026-07-15)
+
+### Что изменилось
+Заменён Google Maps как единственный источник подбора конкурентов на гибридный пайплайн: **Perplexity + SearXNG → bo.nalog → ФНС**. Найдены реальные бизнес-конкуренты по масштабу, а не соседи по карте.
+
+### Архитектура (4 этапа, ~15с)
+```
+КЛИЕНТ (URL)
+  ↓ Этап 0: extract_client_profile + _resolve_client_inn (Perplexity→ФНС)
+  ↓ Этап 1: Perplexity (бренды) + SearXNG (рейтинги) параллельно
+  ↓ Этап 2: brand_resolver → normalize_brand_name → bo.nalog (ИНН, ОКВЭД)
+  ↓ Этап 3: ФНС финансы + коридор 0.1×–10× + дедуп по ИНН
+  ↓ Этап 3.5: SearXNG Instagram (handle+подписчики из сниппетов) + Perplexity врачи
+  → таблица: Конкурент | Выручка | Тренд | Врачи | Instagram
+```
+
+### Ключевые файлы (aim-app)
+| Файл | Назначение |
+|------|-----------|
+| `services/competitor_matcher_v2.py` | Оркестратор (4 этапа) |
+| `services/brand_resolver.py` | бренд→ИНН + normalize_brand_name |
+| `services/lib/searxng_client.py` | SearXNG meta-search |
+| `services/lib/perplexity_client.py` | Perplexity API для aim-app |
+| `services/lib/instagram_enricher.py` | IG handle+подписчики через SearXNG сниппеты |
+| `api/competitors.py` | strategy dispatch (v1/v2), CompetitorJson |
+| `docker-compose.yml` | SearXNG сервис + PERPLEXITY_API_KEY |
+
+### Endpoint
+```
+POST /api/competitors/find
+{"url": "https://...", "count": 5, "strategy": "v2"}
+```
+`strategy=v1` — откат на Google Maps (старый пайплайн)
+
+### Что решено (vs Google Maps v1)
+| Параметр | V1 (Google Maps) | V2 (Perplexity+ФНС) |
+|---|---|---|
+| Источник | Соседи по карте | Бизнес-конкуренты по масштабу |
+| Выручка | 0/5 (нет) | 5/5 (ФНС, точно) |
+| ИНН | 0/5 (пустые) | 5/5 |
+| ОКВЭД | 0/5 (None) | 5/5 |
+| Instagram | 0/5 | 4/5 (SearXNG) |
+| Время | 75с | ~15с |
+
+### Ключевые решения
+- **Instagram через SearXNG** (не Apify) — 3с, бесплатно, обходит блокировку РФ
+- **«Врачи»** (не «хирурги») — обобщение для любой специализации
+- **Коридор 0.1×–10×** — широкий, для крупных и мелких клиентов
+- **ИНН клиента через Perplexity** → ФНС валидация (site scrape → bo.nalog → Perplexity fallback)
+- **Нормализация брендов** — «Медиал на Ленинском» → «Медиал» перед резолвом
+
+### Известные ограничения
+- Perplexity недетерминирован — иногда perplexity=0 (нужен retry)
+- Сельские клиники (не мегаполис) — не тестировались
+- SearXNG Instagram: ~0 означает «найден аккаунт, но подписчиков <1000»
+
