@@ -378,27 +378,13 @@ class CompetitorMatcherV2:
             except Exception:
                 pass
 
-        # Level 1: bo.nalog search by company name
+        # Level 1: bo.nalog search by company name (точное совпадение)
         if company_name:
             resolved = await resolve_brand_to_inn(company_name, nalog=self.nalog)
             if resolved and resolved.inn:
                 return resolved.inn, "bo_nalog"
-            # Level 1b: bo.nalog search по специализации (если точное имя не нашло)
-            if specialization:
-                try:
-                    results = await asyncio.to_thread(self.nalog.search, f"{specialization} {city}")
-                    if results:
-                        # Берём первую с ОКВЭД 86
-                        for org in results[:5]:
-                            if "86" in (org.okved2 or ""):
-                                rev = await self._get_revenue_by_inn(org.inn)
-                                if rev and rev > 0:
-                                    logger.info("Client INN via bo.nalog spec search: %s", org.inn)
-                                    return org.inn, "bo_nalog_spec"
-                except Exception as e:
-                    logger.debug("bo.nalog spec search failed: %s", e)
 
-        # Level 2: Perplexity → extract INN → bo.nalog validate
+        # Level 2: Perplexity → extract INN → bo.nalog validate (ТОЧНЕЕ чем spec search)
         if perplexity_configured():
             query_name = company_name or specialization or url
             prompt = (
@@ -429,6 +415,21 @@ class CompetitorMatcherV2:
                     )
             except Exception as e:
                 logger.warning("Perplexity INN resolution failed: %s", e)
+
+        # Level 3 (LAST RESORT): bo.nalog spec search — берёт первую компанию
+        # по специализации. Менее точный, но лучше чем ничего.
+        if specialization:
+            try:
+                results = await asyncio.to_thread(self.nalog.search, f"{specialization} {city}")
+                if results:
+                    for org in results[:5]:
+                        if "86" in (org.okved2 or ""):
+                            rev = await self._get_revenue_by_inn(org.inn)
+                            if rev and rev > 0:
+                                logger.info("Client INN via bo.nalog spec search (last resort): %s", org.inn)
+                                return org.inn, "bo_nalog_spec"
+            except Exception as e:
+                logger.debug("bo.nalog spec search failed: %s", e)
 
         return "", "failed"
 
