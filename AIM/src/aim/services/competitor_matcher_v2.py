@@ -380,12 +380,21 @@ class CompetitorMatcherV2:
                 domain = urlparse(url_parsed).netloc.replace("www.", "").split(".")[0]
                 client_name_lower = domain
             before_rel = len(enriched)
+            # Также используем legal_name клиента из ФНС (через INN resolution)
+            client_legal_name = ""
+            try:
+                client_results = await asyncio.to_thread(self.nalog.search, client_inn)
+                if client_results:
+                    client_legal_name = client_results[0].short_name.lower()
+            except Exception:
+                pass
             enriched = [
                 c for c in enriched
                 if c.profile.inn != client_inn
                 and not (c.profile.legal_address and client_profile.get("address")
                          and _same_address(c.profile.legal_address, client_profile["address"]))
                 and not _is_related_entity(c.profile.legal_name, client_name_lower)
+                and not (client_legal_name and _is_related_entity(c.profile.legal_name, client_legal_name))
             ]
             removed = before_rel - len(enriched)
             if removed:
