@@ -115,12 +115,12 @@ _CMS_PATTERNS = {
 
 
 async def scrape_website(url: str) -> dict:
-    """Скрапит сайт → CMS, размер страницы, HTML meta.
+    """Скрапит сайт → CMS, размер страницы, кол-во внутренних ссылок.
 
     Returns:
-        {"cms": "Tilda"|None, "page_size_kb": int|None, "title": str|None}
+        {"cms": "Tilda"|None, "page_size_kb": int|None, "title": str|None, "links": int|None}
     """
-    result = {"cms": None, "page_size_kb": None, "title": None}
+    result = {"cms": None, "page_size_kb": None, "title": None, "links": None}
 
     data = await _firecrawl_request(FIRECRAWL_SCRAPE, {
         "url": url,
@@ -133,20 +133,30 @@ async def scrape_website(url: str) -> dict:
 
     page_data = data.get("data", {})
     html_content = page_data.get("markdown", "") or page_data.get("html", "")
+    raw_html = page_data.get("html", "") or ""
 
     # Размер
     if html_content:
         result["page_size_kb"] = round(len(html_content.encode("utf-8")) / 1024, 1)
 
+    # Количество внутренних ссылок (считаем из metadata если есть)
+    links = page_data.get("links", [])
+    if links:
+        result["links"] = len(links)
+    elif raw_html:
+        # Считаем <a href> на главной странице как approximation
+        internal_links = re.findall(r'href=["\'](/[a-z]', raw_html, re.I)
+        result["links"] = len(set(internal_links))
+
     # CMS detection
-    html_lower = html_content.lower()
+    html_lower = (html_content + " " + raw_html).lower()
     for cms, patterns in _CMS_PATTERNS.items():
         if any(p in html_lower for p in patterns):
             result["cms"] = cms
             break
 
     # <meta generator>
-    gen_match = re.search(r'<meta[^>]+name=["\']generator["\'][^>]+content=["\']([^"\']+)', html_content, re.I)
+    gen_match = re.search(r'<meta[^>]+name=["\']generator["\'][^>]+content=["\']([^"\']+)', raw_html, re.I)
     if gen_match and not result["cms"]:
         gen = gen_match.group(1).strip()
         for cms, patterns in _CMS_PATTERNS.items():
@@ -157,7 +167,7 @@ async def scrape_website(url: str) -> dict:
             result["cms"] = gen[:30]
 
     # Title
-    title_match = re.search(r"<title[^>]*>([^<]+)", html_content, re.I)
+    title_match = re.search(r"<title[^>]*>([^<]+)", raw_html, re.I)
     if title_match:
         result["title"] = title_match.group(1).strip()[:100]
 
@@ -264,41 +274,52 @@ async def search_instagram_handle(brand_name: str, city: str = "") -> Optional[s
 async def enrich_websites_batch(competitors: list, max_count: int = 5) -> None:
     """Обогащает список конкурентов: CMS, страницы, врачи.
 
-    Modifies competitors in-place (добавляет в social_links и website).
-    competitors: list[CompetitorMatch] — но импорт круговой, поэтому duck typing.
+    Если website неизвестен — ищет через Firecrawl search по названию бренда.
+    Modifies competitors in place.
     """
-    sem = asyncio.Semaphore(3)  # максимум 3 параллельных Firecrawl запроса
+    sem = asyncio.Semaphore(3)
 
     async def _enrich_single(comp):
         async with sem:
+            brand = ""
+            if hasattr(comp, "profile"):
+                brand = comp.profile.brand_name or comp.profile.legal_name or ""
+            if not brand:
+                return
+
+            # Шаг 1: найти website (если не задан)
             website = None
-            # website из профиля
             if hasattr(comp, "website") and comp.website:
                 website = comp.website
             elif hasattr(comp, "profile") and comp.profile.website:
                 website = comp.profile.website
+
             if not website:
+                # Поиск сайта через Firecrawl search
+                website = await _find_clinic_website(brand)
+                if website:
+                    if hasattr(comp, "profile"):
+                        comp.profile.website = website
+                    if hasattr(comp, "website"):
+                        comp.website = website
+
+            if not website:
+                logger.debug("Firecrawl enrich: no website for %s", brand[:30])
                 return
 
             try:
-                # CMS + размер
+                # Шаг 2: CMS + размер страницы + ссылки
                 site_data = await scrape_website(website)
                 if site_data.get("cms"):
                     comp.profile.social_links["website_cms"] = site_data["cms"]
                 if site_data.get("page_size_kb"):
                     comp.profile.social_links["website_size_kb"] = str(site_data["page_size_kb"])
+                if site_data.get("links"):
+                    comp.profile.social_links["website_pages"] = str(site_data["links"])
 
-                # Количество страниц (опционально, не блокирующее)
-                try:
-                    pages = await map_website(website)
-                    if pages:
-                        comp.profile.social_links["website_pages"] = str(pages)
-                except Exception:
-                    pass
-
-                # Врачи (заменяет Perplexity оценку)
+                # Шаг 3: Врачи (если СЧЛ неизвестен)
                 if not comp.profile.employee_count:
-                    doctors = await scrape_doctors(website, comp.profile.brand_name or "")
+                    doctors = await scrape_doctors(website, brand)
                     if doctors:
                         comp.profile.employee_count = doctors
 
@@ -308,3 +329,27 @@ async def enrich_websites_batch(competitors: list, max_count: int = 5) -> None:
     tasks = [_enrich_single(c) for c in competitors[:max_count]]
     await asyncio.gather(*tasks, return_exceptions=True)
     logger.info("Firecrawl enrich: %d competitors processed", len(competitors[:max_count]))
+
+
+async def _find_clinic_website(brand_name: str) -> Optional[str]:
+    """Находит сайт клиники через Firecrawl search."""
+    query = f"сайт клиники {brand_name}"
+    data = await _firecrawl_request(FIRECRAWL_SEARCH, {"query": query, "limit": 5})
+    if not data:
+        return None
+
+    results = data.get("data", data.get("results", []))
+    for res in results:
+        url = res.get("url", "") if isinstance(res, dict) else ""
+        # Фильтр: только сайты клиник (не агрегаторы)
+        if not url:
+            continue
+        skip = ("instagram.com", "vk.com", "youtube.com", "facebook.com",
+                "prodoctorov.ru", "yandex.ru", "2gis.ru", "docdoc.ru",
+                "zoon.ru", "nashe-tagil.ru", "avito.ru")
+        if any(s in url.lower() for s in skip):
+            continue
+        # Возвращаем первый подходящий URL
+        return url
+
+    return None
