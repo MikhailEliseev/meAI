@@ -60,7 +60,6 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - HERMES_URL=http://hermes:8000
       - PYTHONPATH=/app/AIM:/app:/app/src
-      - PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY}
       - SEARXNG_URL=http://aim-searxng:8080
     env_file:
       - .env.production
