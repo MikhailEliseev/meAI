@@ -10,6 +10,7 @@ with a reliable bo.nalog.gov.ru lookup (validated on Фрау Клиник, Кл
 
 import asyncio
 import logging
+import os
 import re
 from dataclasses import dataclass, field
 from typing import Optional
@@ -153,17 +154,16 @@ async def resolve_brand_to_inn(
     nalog: Optional[BfoNalogClient] = None,
     skip_normalize: bool = False,
 ) -> Optional[ResolvedBrand]:
-    """Resolve a brand name to a legal entity (ИНН) via bo.nalog.gov.ru.
+    """Resolve a brand name to a legal entity (ИНН) via multi-level fallback.
 
     Pipeline:
-      0. Normalize brand name (strip geo-attachments)
-      1. Search ФНС by brand name
-      2. Filter by OKVED prefix (medical = 86.xx)
-      3. Pick the entity with highest revenue (most likely the real operator)
-      4. Return ResolvedBrand or None if not found
+      Level 0: Normalize brand name (strip geo-attachments)
+      Level 1: bo.nalog search by brand name (exact match)
+      Level 2: Firecrawl scrape website → ИНН from footer/policy → ФНС validate
+      Level 3: Perplexity → ИНН → ФНС validate (last resort)
 
-    Anti-hallucination: if a brand doesn't exist in ФНС, returns None.
-    This naturally filters out fabricated competitors from LLM outputs.
+    Anti-hallucination: every level validates through ФНС. A brand that
+    doesn't exist in ФНС returns None — filters out fabricated competitors.
 
     Args:
         brand_name: Brand name to resolve (e.g. "Клазко", "GMTClinic").
@@ -238,8 +238,6 @@ async def _resolve_via_website_scrape(
     Returns:
         ResolvedBrand или None.
     """
-    import os
-
     # Шаг 1: найти URL сайта через Perplexity (быстрый поиск)
     website_url = await _find_brand_website(brand_name)
     if not website_url:
@@ -257,7 +255,7 @@ async def _resolve_via_website_scrape(
 async def _find_brand_website(brand_name: str) -> Optional[str]:
     """Находит сайт клиники через Perplexity."""
     try:
-        from src.aim.services.competitor_matcher_v2 import perplexity_configured, perplexity_chat
+        from src.aim.services.lib.perplexity_client import perplexity_chat, is_configured as perplexity_configured
     except ImportError:
         return None
     if not perplexity_configured():
@@ -288,7 +286,7 @@ async def _scrape_inn_from_website(website_url: str) -> Optional[str]:
     2. Если нет → найти ссылку на политику → скрапить её
     3. Если нет → попробовать /policy, /privacy, /kontakty, /o-klinike
     """
-    import httpx
+    import httpx  # lazy import — не нужен если функция не вызывается
 
     # Загружаем Firecrawl ключи
     fc_key = _get_firecrawl_key()
@@ -335,8 +333,8 @@ async def _scrape_inn_from_website(website_url: str) -> Optional[str]:
         for path in ["/policy", "/privacy", "/kontakty", "/o-klinike", "/about", "/requisites"]:
             candidate_urls.append(website_url.rstrip("/") + path)
 
-        # Шаг 2: скрапить каждую кандидатную страницу (максимум 5)
-        for curl in candidate_urls[1:6]:  # пропускаем главную (уже проверили)
+        # Шаг 2: скрапить каждую кандидатную страницу (максимум 3 — экономия ключей)
+        for curl in candidate_urls[1:4]:  # пропускаем главную (уже проверили)
             try:
                 r = await http.post("https://api.firecrawl.dev/v1/scrape",
                     headers={"Authorization": f"Bearer {fc_key}", "Content-Type": "application/json"},
@@ -355,7 +353,6 @@ async def _scrape_inn_from_website(website_url: str) -> Optional[str]:
 
 def _get_firecrawl_key() -> Optional[str]:
     """Возвращает первый доступный Firecrawl ключ."""
-    import os
     for prefix in ("FIRECRAWL_API_KEY_", "FIRECRAWL_KEY_"):
         for i in range(1, 21):
             k = os.getenv(f"{prefix}{i:02d}", "") or os.getenv(f"{prefix}{i}", "")
@@ -397,14 +394,9 @@ async def _resolve_via_perplexity(
     client: "BfoNalogClient",
     brand_original: str,
 ) -> Optional[ResolvedBrand]:
-    """Perplexity fallback для brand resolution.
-
-    Если bo.nalog не нашёл бренд по названию, просим Perplexity найти ИНН.
-    Затем валидируем ИНН через bo.nalog (анти-галлюцинация).
-    """
-    import re
+    """Perplexity fallback для brand resolution."""
     try:
-        from src.aim.services.competitor_matcher_v2 import perplexity_configured, perplexity_chat
+        from src.aim.services.lib.perplexity_client import perplexity_chat, is_configured as perplexity_configured
     except ImportError:
         return None
 
