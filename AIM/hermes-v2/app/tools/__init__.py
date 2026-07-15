@@ -20,16 +20,15 @@ def _register_find_competitors():
             "function": {
                 "name": "find_competitors",
                 "description": (
-                    "Найти top-3 конкурента для сайта клиники. Возвращает имя, рейтинг, "
-                    "кол-во отзывов, причину совпадения. "
-                    "ВЫЗЫВАЙ ОДИН РАЗ на старте когда клиент прислал URL сайта. "
-                    "⚠️ Занимает ~60-120 секунд (Google Maps через Apify)."
+                    "Найти топ-5 конкурентов для сайта клиники. Возвращает выручку, "
+                    "ИНН, ОКВЭД, тренд, врачей, Instagram. "
+                    "ВЫЗЫВАЙ ОДИН РАЗ на старте когда клиент прислал URL сайта."
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "url": {"type": "string", "description": "URL сайта клиники"},
-                        "count": {"type": "integer", "description": "Сколько конкурентов (по умолчанию 3)", "default": 3},
+                        "count": {"type": "integer", "description": "Сколько конкурентов (default 5)", "default": 5},
                     },
                     "required": ["url"],
                 },

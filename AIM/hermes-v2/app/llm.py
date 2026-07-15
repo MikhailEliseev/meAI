@@ -187,6 +187,7 @@ async def chat_with_tools(history: list[dict]):
     tools = get_openai_tools()
     client = get_client()
     profile_cache: dict = {}  # caches extract_clinic_profile result for auto-inject
+    formatted_shown = False  # prevent showing data blocks twice across turns
 
     for turn in range(5):  # максимум 5 раундов tool-calling
         logger.info("chat_with_tools turn=%d tools=%d msgs=%d", turn, len(tools), len(messages))
@@ -287,10 +288,12 @@ async def chat_with_tools(history: list[dict]):
             # Формируем готовые Markdown блоки из tool results и показываем
             # пользователю ДО того как LLM начнёт генерировать ответ.
             # LLM получает instruction делать только выводы по этим данным.
-            formatted_blocks = _build_formatted_blocks(
-                collected_results, profile_cache
-            )
-            if formatted_blocks:
+            if not formatted_shown:
+                formatted_blocks = _build_formatted_blocks(
+                    collected_results, profile_cache
+                )
+                if formatted_blocks:
+                    formatted_shown = True
                 # Показываем таблицы пользователю (как text-delta)
                 for block in formatted_blocks:
                     yield ("text", block + "\n\n")
