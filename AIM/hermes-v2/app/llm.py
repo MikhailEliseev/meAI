@@ -7,6 +7,7 @@ Phase 7: параллельное выполнение tool_calls через asy
 import asyncio
 import json
 import logging
+import re
 
 import openai
 
@@ -15,8 +16,62 @@ from app.prompts.dialogue import SYSTEM_PROMPT
 from app.tools.registry import execute, get_openai_tools
 from app.formatters.competitors import format_competitors
 from app.formatters.profile import format_profile
+from app.formatters.overview import format_overview
 
 logger = logging.getLogger(__name__)
+
+# ── Анти-галлюцинация: скрытие raw JSON от LLM ──────────────────────────
+# Тулы, чьи результаты показаны пользователю как точные таблицы/факты из кода.
+# Их raw JSON скрывается от LLM — LLM не видит галлюцинированные цифры Perplexity
+# (выручка, ИНН, визиты), только таблицу из кода + качественный обзор.
+# Качественные тулы (quick_overview, perplexity_search) — НЕ скрыты: из них
+# LLM берёт врачей, соцсети, услуги.
+_FORMATTED_TOOLS = frozenset({"find_competitors", "extract_clinic_profile"})
+
+_TOOL_RESULT_HIDDEN = (
+    "[Данные получены и отображены пользователю в виде таблицы выше. "
+    "Используй данные из таблицы для выводов. Сырой JSON скрыт для предотвращения галлюцинаций.]"
+)
+
+
+def _filtered_tool_content(tool_name: str, result_str: str) -> str:
+    """Возвращает content для role:tool message.
+
+    Для форматированных тулов — заглушка (raw JSON скрыт).
+    Для остальных — как есть (качественные данные).
+    """
+    if tool_name in _FORMATTED_TOOLS:
+        return _TOOL_RESULT_HIDDEN
+    return result_str
+
+
+# Паттерны подозрительных формулировок (галлюцинации в выводах LLM)
+_HALLUCINATION_PATTERNS = [
+    (re.compile(r"[~≈]\s*[\d\s,]+", re.I), "оценочное число (~ или ≈)"),
+    (re.compile(r"примерно\s+\d", re.I), "слово «примерно» + число"),
+    (re.compile(r"около\s+\d", re.I), "слово «около» + число"),
+    (re.compile(r"\d+\s*(?:тыс|млн|млрд)\s*визит", re.I), "оценка визитов"),
+    (re.compile(r"\d+\s*(?:тыс|млн|млрд)\s*посетит", re.I), "оценка посетителей"),
+]
+
+
+def _check_hallucinations(llm_text: str, formatted_shown: bool) -> None:
+    """Лёгкая пост-проверка ответа LLM на галлюцинации.
+
+    НЕ блокирует (текст уже отправлен) — только логирует warnings
+    для подозрительных формулировок. Телеметрия для следующей итерации.
+    """
+    if not llm_text or not formatted_shown:
+        return
+    for pattern, label in _HALLUCINATION_PATTERNS:
+        matches = pattern.findall(llm_text)
+        if matches:
+            logger.warning(
+                "ANTI-HALLUCINATION: LLM ответ содержит «%s»: %s — "
+                "возможная галлюцинация (данных нет в таблицах)",
+                label, matches[:3],
+            )
+
 
 # Человекочитаемые сообщения прогресса для каждого тула (для UX)
 _TOOL_MESSAGES = {
@@ -154,6 +209,13 @@ def _build_formatted_blocks(
         if profile_md:
             blocks.append(profile_md)
 
+    # Overview block (from quick_overview — врачи, соцсети, платформа)
+    overview_result = collected_results.get("quick_overview")
+    if overview_result:
+        overview_md = format_overview(overview_result)
+        if overview_md:
+            blocks.append(overview_md)
+
     # Competitors block (from find_competitors)
     competitors_result = collected_results.get("find_competitors")
     if competitors_result:
@@ -244,7 +306,7 @@ async def chat_with_tools(history: list[dict]):
                        _tool_msg(tool_name, "done"))
                 messages.append({
                     "role": "tool", "tool_call_id": profile_tc.id,
-                    "content": profile_result,
+                    "content": _filtered_tool_content(tool_name, profile_result),
                 })
 
             # Фаза 2: остальные тулы параллельно
@@ -281,7 +343,7 @@ async def chat_with_tools(history: list[dict]):
                         yield ("tool_result", tool_name, result_str, _tool_msg(tool_name, "done"))
                         messages.append({
                             "role": "tool", "tool_call_id": tc.id,
-                            "content": result_str,
+                            "content": _filtered_tool_content(tool_name, result_str),
                         })
 
             # ── FORMAT DATA BLOCKS: точные таблицы из кода, не из LLM ──
@@ -294,9 +356,10 @@ async def chat_with_tools(history: list[dict]):
                 )
                 if formatted_blocks:
                     formatted_shown = True
-                # Показываем таблицы пользователю (как text-delta)
+                # Показываем таблицы пользователю (как formatted event —
+                # отличается от LLM text, чтобы main.py мог сохранить в историю)
                 for block in formatted_blocks:
-                    yield ("text", block + "\n\n")
+                    yield ("formatted", block + "\n\n")
 
                 # Instruction для LLM: данные выше — факты, делай только выводы
                 messages.append({
@@ -321,10 +384,18 @@ async def chat_with_tools(history: list[dict]):
         stream = await client.chat.completions.create(
             model=LLM_MODEL, messages=messages, stream=True,
         )
+        llm_text = []  # накапливаем для пост-проверки (анти-галлюцинация)
         async for chunk in stream:
             delta = chunk.choices[0].delta.content
             if delta:
+                llm_text.append(delta)
                 yield ("text", delta)
+
+        # ── Пост-проверка (анти-галлюцинация) ──────────────────────────
+        # Текст уже отправлен — не блокируем. Но логируем подозрительные
+        # числа которых нет в formatted blocks (телеметрия для итерации).
+        _check_hallucinations("".join(llm_text), formatted_shown)
+
         yield ("finish",)
         return
 

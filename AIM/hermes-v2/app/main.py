@@ -120,6 +120,7 @@ async def chat_stream(req: ChatRequest):
             history.append({"role": "user", "content": req.message})
 
             full_response = []
+            formatted_parts = []  # таблицы/факты из кода (анти-галлюцинация)
             # Буфер для перехвата [SUGGESTIONS] маркера (стримится токенами).
             # Держим хвост буфера незакрытым, пока не убедимся что это не маркер.
             MARKER = "[SUGGESTIONS]"
@@ -128,7 +129,13 @@ async def chat_stream(req: ChatRequest):
             try:
                 async for event in chat_with_tools(history):
                     kind = event[0]
-                    if kind == "text":
+                    if kind == "formatted":
+                        # Точные данные из кода (таблицы ФНС, профиль).
+                        # Стримим пользователю как text-delta, но храним отдельно
+                        # чтобы prepend к clean_text перед сохранением в историю.
+                        formatted_parts.append(event[1])
+                        yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': event[1]}, ensure_ascii=False)}\n\n"
+                    elif kind == "text":
                         full_response.append(event[1])
                         accumulated = "".join(full_response)
                         # Найдём позицию начала маркера — не стримим оттуда
@@ -164,9 +171,13 @@ async def chat_stream(req: ChatRequest):
             if clean_len > sent_idx:
                 yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': clean_text[sent_idx:]}, ensure_ascii=False)}\n\n"
 
-            # Сохранить ЧИСТЫЙ ответ (без маркера) в историю
-            if clean_text:
-                await async_save_message(session_id, "assistant", clean_text)
+            # Сохранить ЧИСТЫЙ ответ (без маркера) в историю.
+            # ВАЖНО: prepend formatted_parts (таблицы из кода) — иначе при
+            # перезагрузке сессии таблицы исчезнут, останутся только выводы LLM.
+            formatted_text = "".join(formatted_parts)
+            full_clean = formatted_text + clean_text if clean_text else formatted_text
+            if full_clean:
+                await async_save_message(session_id, "assistant", full_clean)
 
             # Эмитить suggestions (CHAT-01, CHAT-05)
             if buttons:

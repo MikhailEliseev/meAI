@@ -44,6 +44,10 @@ logger = logging.getLogger(__name__)
 _REVENUE_CORRIDOR_MIN = 0.1
 _REVENUE_CORRIDOR_MAX = 10.0
 
+# Wider corridor fallback (used when too few competitors in the main corridor)
+_CORRIDOR_WIDE_MIN = 0.05
+_CORRIDOR_WIDE_MAX = 20.0
+
 # If fewer than this many competitors in the corridor, return all with revenue
 _CORRIDOR_WIDEN_THRESHOLD = 3
 
