@@ -184,11 +184,16 @@ async def enrich_instagram_batch(
     competitors: list[CompetitorMatch],
     max_count: int = 5,
     city: str = "",
+    use_apify_fallback: bool = True,
 ) -> None:
-    """Enrich top-N competitors with Instagram data via SearXNG.
+    """Enrich top-N competitors with Instagram data.
 
-    For each competitor: finds IG handle + extracts follower count from
-    search snippets. Fast (~3-5s total, parallel) — no Apify needed.
+    Цепочка источников: SearXNG → Firecrawl search → Apify.
+    Каждый инструмент пробует если предыдущий не дал результата.
+
+    SearXNG: быстрый (~3с), но мёртвый движками → часто None.
+    Firecrawl search: находит IG handle, но не подписчиков.
+    Apify: точные followersCount + postsCount, но ~5-10с на профиль.
 
     Modifies competitors in place. Non-blocking on failure.
     """
@@ -204,7 +209,45 @@ async def enrich_instagram_batch(
             if not brand:
                 return
 
+            # Источник 1: SearXNG (быстрый, но ненадёжный)
             handle, followers = await get_instagram_via_searxng(brand, city)
+
+            # Источник 2: Firecrawl search (если SearXNG не нашёл handle)
+            if not handle:
+                try:
+                    from src.aim.services.lib.firecrawl_enricher import search_instagram_handle
+                    handle = await search_instagram_handle(brand, city)
+                except Exception:
+                    pass
+
+            # Источник 3: Apify (если handle найден, но нет followers; или вообще ничего)
+            if use_apify_fallback and handle:
+                # Если handle есть, но followers нет → Apify для точных данных
+                if followers is None:
+                    try:
+                        apify_result = await _get_instagram_via_apify(handle)
+                        if apify_result:
+                            followers = apify_result.get("followers")
+                            posts = apify_result.get("posts")
+                            if posts is not None:
+                                comp.profile.social_links["instagram_posts"] = str(posts)
+                    except Exception as e:
+                        logger.debug("Apify IG fallback failed for %s: %s", brand, str(e)[:60])
+            elif use_apify_fallback and not handle:
+                # Нет handle вообще → пробуем Apify по названию бренда
+                try:
+                    from src.aim.services.lib.firecrawl_enricher import search_instagram_handle
+                    handle2 = await search_instagram_handle(brand, city)
+                    if handle2:
+                        handle = handle2
+                        apify_result = await _get_instagram_via_apify(handle)
+                        if apify_result:
+                            followers = apify_result.get("followers")
+                            posts = apify_result.get("posts")
+                            if posts is not None:
+                                comp.profile.social_links["instagram_posts"] = str(posts)
+                except Exception:
+                    pass
 
             if handle:
                 comp.profile.social_links["instagram"] = f"@{handle}"
@@ -225,3 +268,28 @@ async def enrich_instagram_batch(
         *[_enrich_one(c) for c in targets],
         return_exceptions=True,
     )
+
+
+async def _get_instagram_via_apify(handle: str) -> dict | None:
+    """Получает Instagram профиль через Apify instagram-profile-scraper.
+
+    Returns:
+        {"followers": int, "posts": int} или None.
+    """
+    try:
+        from src.aim.services import get_apify_client
+        client = get_apify_client()
+        run = await client.call_actor(
+            actor_id="apify~instagram-profile-scraper",
+            run_input={"usernames": [handle], "resultsLimit": 1},
+        )
+        items = await client.get_dataset_items(run.default_dataset_id)
+        if items and isinstance(items, list) and items[0]:
+            p = items[0]
+            return {
+                "followers": p.get("followersCount"),
+                "posts": p.get("postsCount"),
+            }
+    except Exception as e:
+        logger.debug("Apify IG failed for @%s: %s", handle, str(e)[:80])
+    return None

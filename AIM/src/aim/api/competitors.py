@@ -86,6 +86,14 @@ class CompetitorJson(BaseModel):
     surgeons_count: Optional[int] = None
     instagram_followers: Optional[int] = None
     instagram_handle: Optional[str] = None
+    instagram_posts: Optional[int] = None
+
+    # Deep ФНС + Firecrawl enrichment
+    registration_date: Optional[str] = None
+    revenue_change_3yr: Optional[float] = None
+    website_cms: Optional[str] = None
+    website_pages: Optional[int] = None
+    website_size_kb: Optional[float] = None
 
 
 class FindCompetitorsResponse(BaseModel):
@@ -528,9 +536,14 @@ def _competitor_to_json(m: CompetitorMatch) -> CompetitorJson:
         inns=p.inns,
         licenses=p.licenses,
         is_multi_entity=p.is_multi_entity,
-        surgeons_count=p.employee_count,  # v2 stores surgeon estimates in employee_count
+        surgeons_count=p.employee_count,  # v2 stores surgeon/employee estimates in employee_count
         instagram_handle=p.social_links.get("instagram"),
         instagram_followers=int(p.social_links.get("instagram_followers")) if p.social_links.get("instagram_followers") else None,
+        instagram_posts=int(p.social_links.get("instagram_posts")) if p.social_links.get("instagram_posts") else None,
+        registration_date=p.registration_date,
+        website_cms=p.social_links.get("website_cms"),
+        website_pages=int(p.social_links.get("website_pages")) if p.social_links.get("website_pages") else None,
+        website_size_kb=float(p.social_links.get("website_size_kb")) if p.social_links.get("website_size_kb") else None,
     )
 
 

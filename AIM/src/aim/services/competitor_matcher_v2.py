@@ -294,12 +294,14 @@ class CompetitorMatcherV2:
             result.extend(backfill)
             logger.info("backfill_from_okved: added %d competitors (total now %d)", len(backfill), len(result))
 
-        # ── STAGE 3.5b: Post-selection enrichment (doctors + Instagram) ─
+        # ── STAGE 3.5b: Post-selection enrichment (doctors + Instagram + website) ─
         # Only for the final top-N to keep it fast
         if result:
+            from src.aim.services.lib.firecrawl_enricher import enrich_websites_batch
             await asyncio.gather(
                 self._enrich_doctors_batch(result, city, count),
                 enrich_instagram_batch(result, count, city),
+                enrich_websites_batch(result, count),
                 return_exceptions=True,
             )
 
@@ -561,7 +563,7 @@ class CompetitorMatcherV2:
         return [e for e in enriched if isinstance(e, CompetitorMatch)]
 
     async def _enrich_one(self, resolved: ResolvedBrand) -> CompetitorMatch:
-        """Enrich a single resolved brand with ФНС financials."""
+        """Enrich a single resolved brand with ФНС financials + deep org data."""
         # Get financial statements (sync → thread)
         try:
             statements = await asyncio.to_thread(
@@ -576,10 +578,45 @@ class CompetitorMatcherV2:
         trend = latest.revenue_trend if latest else ""
         profit = latest.net_profit_rub if latest else None
 
+        # ── Deep org data: registration_date + СЧЛ ──
+        registration_date = None
+        scl_count = None  # среднесписочная численность (все сотрудники)
+        try:
+            org_raw = await asyncio.to_thread(
+                self.nalog.get_organization, resolved.org_id
+            )
+            if org_raw and isinstance(org_raw, dict):
+                # bo.nalom.gov.ru: dtRegister / registrationDate
+                registration_date = (
+                    org_raw.get("dtRegister")
+                    or org_raw.get("registrationDate")
+                    or org_raw.get("regDate")
+                )
+                # СЧЛ: sclCount / averageEmployees / employeeCount
+                scl_count = (
+                    org_raw.get("sclCount")
+                    or org_raw.get("averageEmployees")
+                    or org_raw.get("employeeCount")
+                )
+                if scl_count is not None:
+                    try:
+                        scl_count = int(scl_count)
+                    except (ValueError, TypeError):
+                        scl_count = None
+        except Exception as e:
+            logger.debug("get_organization failed for org_id=%s: %s", resolved.org_id, e)
+
+        # ── Multi-year revenue dynamics ──
+        from src.aim.services.nalog.models import compute_revenue_dynamics
+        dynamics = compute_revenue_dynamics(statements) if statements else {"change_3yr_pct": None, "history": []}
+
         # Lookup doctors estimate from Perplexity discovery (if available)
         doctors = None
         if hasattr(self, "_perplexity_estimates"):
             doctors = self._perplexity_estimates.get(resolved.brand_query.lower())
+
+        # СЧЛ приоритетнее Perplexity-оценки (реальные данные ФНС)
+        employee_count = scl_count or doctors
 
         # Build match_reason
         reason_parts = []
@@ -588,9 +625,13 @@ class CompetitorMatcherV2:
             reason_parts.append(f"выручка {_format_revenue(revenue)}")
         if trend and trend in _TREND_RU:
             reason_parts.append(f"тренд: {_TREND_RU[trend]}")
+        if dynamics.get("change_3yr_pct") is not None:
+            reason_parts.append(f"динамика 3г: {dynamics['change_3yr_pct']:+.0f}%")
         if resolved.okved:
             reason_parts.append(f"ОКВЭД: {resolved.okved}")
-        if doctors:
+        if scl_count:
+            reason_parts.append(f"СЧЛ: {scl_count}")
+        elif doctors:
             reason_parts.append(f"~{doctors} врачей")
 
         profile = CompanyProfile(
@@ -604,10 +645,14 @@ class CompetitorMatcherV2:
             financial_year=int(latest.period) if latest else None,
             revenue_source="tax_filed" if latest else ("estimated" if resolved.latest_revenue else "none"),
             legal_address=resolved.address,
-            employee_count=doctors,
+            employee_count=employee_count,
+            registration_date=registration_date,
             data_source="bo_nalog_v2",
             confidence=0.95 if latest else 0.7,
         )
+
+        # Сохраняем dynamics в profile для последующей сериализации
+        profile.scraped_services = dynamics.get("history", [])  # временный hack: храним в scraped_services
 
         return CompetitorMatch(
             profile=profile,

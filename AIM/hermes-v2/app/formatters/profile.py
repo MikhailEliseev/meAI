@@ -37,6 +37,7 @@ def format_profile(result: str) -> tuple[str, dict]:
     specialization = data.get("specialization") or ""
     address = data.get("address") or ""
     services = data.get("services") or []
+    website_platform = data.get("website_platform") or ""
 
     if name:
         parts.append(f"**{name}**")
@@ -50,6 +51,8 @@ def format_profile(result: str) -> tuple[str, dict]:
         parts.append(f"Специализация: {specialization}")
     if address:
         parts.append(f"Адрес: {address}")
+    if website_platform:
+        parts.append(f"Платформа сайта: {website_platform}")
 
     if services:
         parts.append(f"\nУслуги: {', '.join(services[:10])}")

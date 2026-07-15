@@ -17,6 +17,8 @@ class OrganizationResult:
     status: str = ""
     latest_period: Optional[str] = None
     latest_revenue: Optional[int] = None
+    registration_date: Optional[str] = None  # Дата регистрации (ISO)
+    employee_count: Optional[int] = None  # СЧЛ — среднесписочная численность
 
 
 @dataclass
@@ -61,3 +63,30 @@ class FinancialStatement:
             else:
                 return "stable"
         return ""
+
+
+def compute_revenue_dynamics(statements: list["FinancialStatement"]) -> dict:
+    """Вычисляет динамику выручки за несколько лет из списка отчётов ФНС.
+
+    Args:
+        statements: Список FinancialStatement, отсортированный от новых к старым.
+
+    Returns:
+        {
+            "change_3yr_pct": +79.2 (или None),
+            "history": [{"year": "2025", "revenue_rub": 4300000000}, ...],
+        }
+    """
+    history = []
+    for s in statements[:4]:  # максимум 4 года
+        if s.revenue_rub:
+            history.append({"year": s.period, "revenue_rub": s.revenue_rub})
+
+    change_3yr = None
+    if len(history) >= 3:
+        latest = history[0]["revenue_rub"]
+        oldest = history[-1]["revenue_rub"]
+        if oldest and oldest > 0:
+            change_3yr = round((latest - oldest) / oldest * 100, 1)
+
+    return {"change_3yr_pct": change_3yr, "history": history}
