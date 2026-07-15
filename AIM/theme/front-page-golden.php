@@ -82,14 +82,14 @@ bash: warning: setlocale: LC_ALL: cannot change locale (ru_RU.UTF-8)
         <div class="glass-panel">
           <div class="rule-number">01</div>
           <h3 class="rule-title">Что делает система</h3>
-          <p class="rule-desc">Система мониторит ваших конкурентов и ваши маркетинговые показатели 24/7. Регулярно собирает: позиции в поиске, цены на услуги, новые доктора, изменения на сайтах, отзывы. Всё попадает в дашборд с трендами и аномалиями. Вы видите, что работает у конкурентов и где они проседают: до того, как это заметят они.</p>
+          <p class="rule-desc">Системы AIM используют самые передовые AI-модели — от генерации контента до сложных аналитических задач. Мы обеспечиваем стабильный поток пациентов в клинику: анализируем рынок, конкурентов, отзывы и рекламу, чтобы вы получали предсказуемый результат.</p>
         </div>
 
         <!-- Rule 2: AI -->
         <div class="glass-panel">
           <div class="rule-number">02</div>
           <h3 class="rule-title">AI снижает человеческий фактор</h3>
-          <p class="rule-desc">Люди устают. AI — нет. Он мониторит конкурентов 24/7, отслеживает позиции каждый час, замечает изменения на лендингах. Пока ваши конкуренты спят, AI работает. Люди делают стратегию, AI — рутину.</p>
+          <p class="rule-desc">Люди устают. AI — нет. Берёт на себя рутину: сбор данных, анализ сайтов конкурентов, проверку отзывов, подготовку отчётов. Пока AI делает тяжёлую работу, специалисты AIM фокусируются на стратегии и результате. Человек принимает решения, AI — обеспечивает данными.</p>
         </div>
 
         <!-- Rule 3: Flexibility -->
@@ -188,6 +188,8 @@ bash: warning: setlocale: LC_ALL: cannot change locale (ru_RU.UTF-8)
     var frost = document.getElementById('frost-overlay');
     var chat  = document.getElementById('chat-emerge');
     var page  = document.getElementById('page-content');
+    var btn   = document.getElementById('floatingChatBtn');
+    if (btn) btn.style.display = 'none';
 
     if (frost) frost.classList.add('active');
     setTimeout(function(){

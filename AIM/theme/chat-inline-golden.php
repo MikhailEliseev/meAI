@@ -78,7 +78,7 @@
             box-shadow: 0 8px 24px var(--shadow);
         }
 
-        /* Chat Container */
+        /* Chat Container — сплошной фон (не glass), чтобы frost-overlay не просвечивал */
         .chat-wrapper {
             width: 88vw;
             max-width: 1400px;
@@ -87,11 +87,14 @@
             margin: 0 auto;
             display: flex;
             flex-direction: column;
-            background: var(--glass-bg);
+            background: #ffffff;
             border: 1px solid var(--glass-border);
             border-radius: 24px;
             box-shadow: 0 20px 60px var(--shadow);
             overflow: hidden;
+        }
+        [data-theme="dark"] .chat-wrapper {
+            background: #0f0f0f;
         }
 
         /* Header */
