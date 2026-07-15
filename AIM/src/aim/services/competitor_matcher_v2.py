@@ -92,6 +92,26 @@ BRAND_EXTRACTION_PROMPT = """Ниже — результаты поиска о �
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
+_html_tag_re = re.compile(r"<[^>]+>")
+
+
+def _strip_html_tags(text: str) -> str:
+    """Strip HTML tags from bo.nalog API response (shortName contains <strong>)."""
+    return _html_tag_re.sub("", text).strip()
+
+
+def _build_org_address(item: dict) -> str:
+    """Build address from bo.nalog org dict."""
+    parts = [
+        item.get("index"),
+        item.get("region"),
+        item.get("city"),
+        item.get("street"),
+        item.get("house"),
+    ]
+    return ", ".join(p for p in parts if p)
+
+
 def _strip_markdown(text: str) -> str:
     """Strip markdown code fences from LLM response."""
     text = text.strip()
@@ -258,7 +278,19 @@ class CompetitorMatcherV2:
 
         result = filtered[:count]
 
-        # ── STAGE 3.5: Post-selection enrichment (surgeons + Instagram) ─
+        # ── STAGE 3.5a: Backfill from ОКВЭД registry if not enough competitors ─
+        # If Perplexity+SearXNG gave fewer than requested, top up from
+        # bo.nalog registry: top medical companies by revenue in the corridor.
+        if len(result) < count:
+            needed = count - len(result)
+            existing_inns = {r.profile.inn for r in result if r.profile.inn}
+            backfill = await self._backfill_from_okved_registry(
+                specialization, city, effective_revenue, needed, existing_inns
+            )
+            result.extend(backfill)
+            logger.info("backfill_from_okved: added %d competitors (total now %d)", len(backfill), len(result))
+
+        # ── STAGE 3.5b: Post-selection enrichment (doctors + Instagram) ─
         # Only for the final top-N to keep it fast
         if result:
             await asyncio.gather(
@@ -635,6 +667,118 @@ class CompetitorMatcherV2:
         )
 
     # ── Stage 3: Filtering ───────────────────────────────────────────
+
+    async def _backfill_from_okved_registry(
+        self,
+        specialization: str,
+        city: str,
+        client_revenue: Optional[int],
+        needed: int,
+        exclude_inns: set[str],
+    ) -> list[CompetitorMatch]:
+        """Backfill competitors from bo.nalog ОКВЭД registry.
+
+        When Perplexity+SearXNG don't yield enough, query bo.nalog with
+        broad specialization terms + ОКВЭД 86.xx filter, sort by revenue
+        in the client's corridor, and add the top-N not already in the list.
+
+        These are legal entities (not brands) — we use their short_name as
+        both brand and legal name, and flag data_source='okved_registry'.
+        """
+        if needed <= 0:
+            return []
+
+        # Broad query terms based on specialization
+        spec = specialization or "медицина"
+        # Map specializations to search terms
+        search_terms_map = {
+            "пластическая хирургия": ["пластик", "хирург", "косметолог", "эстет"],
+            "косметология": ["косметолог", "эстет", "клиник"],
+            "стоматология": ["стоматолог", "дент", "зуб"],
+            "наркология": ["нарколог", "наркот"],
+            "гинекология": ["гинеколог", "женск"],
+        }
+        terms = search_terms_map.get(spec.lower(), ["клиник", "медиц"])
+
+        # Region code (77=Москва, 78=СПб, etc.)
+        region_map = {"москва": "77", "санкт-петербург": "78", "спб": "78"}
+        region = region_map.get((city or "").lower(), "77")
+
+        # Collect orgs from multiple broad queries
+        all_orgs: dict[str, dict] = {}  # inn → org dict (dedup by INN)
+        from urllib.parse import quote_plus
+
+        for term in terms:
+            try:
+                path = (
+                    f"/advanced-search/organizations/search?"
+                    f"query={quote_plus(term)}&okved=86.&region={region}"
+                    f"&page=0&size=20"
+                )
+                data = await asyncio.to_thread(self.nalog._get, path)
+                for org in data.get("content", []):
+                    inn = org.get("inn", "").strip()
+                    if inn and inn not in exclude_inns and inn not in all_orgs:
+                        bfo = org.get("bfo") or {}
+                        gain = bfo.get("gainSum") or 0
+                        if gain > 0:  # only companies with actual revenue
+                            all_orgs[inn] = {
+                                "inn": inn,
+                                "org_id": org.get("id"),
+                                "name": _strip_html_tags(org.get("shortName", "")),
+                                "okved": org.get("okved2", ""),
+                                "gain": gain,  # тыс.руб
+                                "address": _build_org_address(org),
+                            }
+            except Exception as e:
+                logger.warning("okved_registry query failed for '%s': %s", term, e)
+
+        if not all_orgs:
+            logger.info("backfill_from_okved: no companies found")
+            return []
+
+        # Sort by revenue desc, filter to corridor
+        sorted_orgs = sorted(all_orgs.values(), key=lambda o: o["gain"], reverse=True)
+
+        # Corridor: same 0.1×-10× as main pipeline
+        if client_revenue and client_revenue > 0:
+            min_gain = (client_revenue * _REVENUE_CORRIDOR_MIN) / 1000  # RUB → тыс.руб
+            max_gain = (client_revenue * _REVENUE_CORRIDOR_MAX) / 1000
+            in_corridor = [o for o in sorted_orgs if min_gain <= o["gain"] <= max_gain]
+            if len(in_corridor) >= 2:
+                sorted_orgs = in_corridor
+            # else: keep all sorted (corridor too narrow)
+
+        # Take top-N needed
+        selected = sorted_orgs[:needed]
+        logger.info(
+            "backfill_from_okved: %d candidates found, %d in corridor, selecting %d",
+            len(all_orgs), len(sorted_orgs), len(selected),
+        )
+
+        # Convert to CompetitorMatch
+        result: list[CompetitorMatch] = []
+        for org in selected:
+            revenue_rub = org["gain"] * 1000  # тыс.руб → RUB
+            profile = CompanyProfile(
+                inn=org["inn"],
+                legal_name=org["name"],
+                brand_name=org["name"],  # legal name as brand
+                okved_main=org["okved"],
+                revenue_year=revenue_rub,
+                revenue_source="estimated",  # gainSum is approximate
+                legal_address=org["address"],
+                data_source="okved_registry",
+                confidence=0.7,
+            )
+            result.append(CompetitorMatch(
+                profile=profile,
+                match_reason=f"{org['name']}, выручка {_format_revenue(revenue_rub)} (реестр ФНС)",
+                data_quality=0.6,
+                total_score=0.5,
+            ))
+
+        return result
 
     def _dedup_by_inn(self, competitors: list[CompetitorMatch]) -> list[CompetitorMatch]:
         """Confident-resolve dedup: one brand per ИНН.
