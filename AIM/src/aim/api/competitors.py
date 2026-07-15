@@ -103,6 +103,9 @@ class FindCompetitorsResponse(BaseModel):
     is_megalopolis: bool = False
     client_revenue: Optional[int] = None
     client_profit: Optional[int] = None
+    client_cms: Optional[str] = None
+    client_socials: Optional[dict] = None
+    client_doctors: Optional[int] = None
     error: Optional[str] = None
 
 
@@ -182,6 +185,9 @@ async def find_competitors(body: FindCompetitorsRequest) -> FindCompetitorsRespo
             is_megalopolis=getattr(matcher, "last_is_megalopolis", False),
             client_revenue=getattr(matcher, "last_client_revenue", None),
             client_profit=getattr(matcher, "last_client_profit", None),
+            client_cms=getattr(matcher, "last_client_cms", None),
+            client_socials=getattr(matcher, "last_client_socials", None),
+            client_doctors=getattr(matcher, "last_client_doctors", None),
         )
 
     except Exception as e:

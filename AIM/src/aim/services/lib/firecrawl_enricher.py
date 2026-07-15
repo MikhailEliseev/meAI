@@ -130,16 +130,17 @@ _CMS_PATTERNS = {
 
 
 async def scrape_website(url: str) -> dict:
-    """Скрапит сайт → CMS, размер страницы, кол-во внутренних ссылок.
+    """Скрапит сайт → CMS, размер, ссылки, соцсети.
 
     Returns:
-        {"cms": "Tilda"|None, "page_size_kb": int|None, "title": str|None, "links": int|None}
+        {"cms": str|None, "page_size_kb": float|None, "title": str|None,
+         "links": int|None, "socials": dict|None}
     """
-    result = {"cms": None, "page_size_kb": None, "title": None, "links": None}
+    result = {"cms": None, "page_size_kb": None, "title": None, "links": None, "socials": None}
 
     data = await _firecrawl_request(FIRECRAWL_SCRAPE, {
         "url": url,
-        "formats": ["markdown"],
+        "formats": ["markdown", "html"],
         "onlyMainContent": False,
         "waitFor": 3000,
     })
@@ -160,7 +161,7 @@ async def scrape_website(url: str) -> dict:
         result["links"] = len(links)
     elif raw_html:
         # Считаем <a href> на главной странице как approximation
-        internal_links = re.findall(r'href=["\'](/[a-z]', raw_html, re.I)
+        internal_links = re.findall(r'href=["\'](/[a-z])', raw_html, re.I)
         result["links"] = len(set(internal_links))
 
     # CMS detection
@@ -186,7 +187,38 @@ async def scrape_website(url: str) -> dict:
     if title_match:
         result["title"] = title_match.group(1).strip()[:100]
 
+    # Соцсети из HTML (реальные href ссылки, не Perplexity-текст)
+    socials = _extract_socials_from_html(raw_html)
+    if socials:
+        result["socials"] = socials
+
     return result
+
+
+def _extract_socials_from_html(html: str) -> dict:
+    """Извлекает реальные ссылки на соцсети из HTML.
+
+    Ищет href ссылки на instagram.com, vk.com, t.me, youtube.com.
+    Возвращает {platform: url} или пустой dict.
+    """
+    socials = {}
+    patterns = [
+        ("instagram", r'href=["\']([^"\']*instagram\.com/[^"\'/?#]+)'),
+        ("vk", r'href=["\']([^"\']*vk\.com/[^"\'/?#]+)'),
+        ("telegram", r'href=["\']([^"\']*(?:t\.me|telegram\.me)/[^"\'/?#]+)'),
+        ("youtube", r'href=["\']([^"\']*youtube\.com/[^"\'/?#@]+)'),
+    ]
+    for platform, pattern in patterns:
+        matches = re.findall(pattern, html, re.I)
+        if matches:
+            # Берём первую не-мусорную ссылку
+            for url in matches:
+                handle = url.split("/")[-1].lower()
+                if handle not in ("p", "reel", "explore", "accounts", "stories",
+                                  "watch", "feed", "channel", "share"):
+                    socials[platform] = url
+                    break
+    return socials
 
 
 # ── Количество страниц (/map) ───────────────────────────────────────
@@ -202,7 +234,13 @@ async def map_website(url: str) -> int:
 
 # ── Врачи (скрап /vrachi или /team) ──────────────────────────────────
 
-_DOCTOR_URL_PATTERNS = ["/vrachi", "/doctors", "/team", "/specialists", "/staff", "/about/doctors", "/o-klinike/vrachi"]
+_DOCTOR_URL_PATTERNS = [
+    "/vrachi", "/doctors", "/team", "/specialists", "/staff",
+    "/about/doctors", "/o-klinike/vrachi",
+    "/specialisty", "/our-team", "/kollektiv",  # русские варианты
+    "/klinika/komanda", "/klinik/vrachi", "/klinika/vrachi",
+    "/o-nas/komanda", "/o-nas/vrachi", "/nashi-spetsialisty",
+]
 
 
 async def scrape_doctors(url: str, brand_name: str = "") -> Optional[int]:

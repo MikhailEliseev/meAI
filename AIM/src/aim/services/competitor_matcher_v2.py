@@ -181,6 +181,24 @@ def _street_match(addr1: str, addr2: str) -> bool:
     return True  # если не определили улицу — не блокируем
 
 
+def _is_related_entity(competitor_name: str, client_name: str) -> bool:
+    """Проверяет, является ли конкурент связанным юрлицом клиента.
+
+    Связанные = дочерняя компания, филиал, тот же бренд.
+    Эвристика: 3+ значимых слова из названия клиента есть в названии конкурента.
+    Пример: IPHK "Институт пластической хирургии" → ЛАНЦЕТЪ "Институт пластической хирургии ЛАНЦЕТЪ" = related.
+    """
+    if not competitor_name or not client_name:
+        return False
+    comp_lower = competitor_name.lower()
+    client_words = [w for w in client_name.split() if len(w) > 3]
+    if not client_words:
+        return False
+    matches = sum(1 for w in client_words if w in comp_lower)
+    # Если 3+ слова совпадают — почти точно связанное юрлицо
+    return matches >= 3 and matches / len(client_words) >= 0.5
+
+
 def _dedup_brands(brands: list[str]) -> list[str]:
     """Deduplicate brand names case-insensitively, preserving order."""
     seen = set()
@@ -328,17 +346,20 @@ class CompetitorMatcherV2:
         # Dedup by ИНН
         enriched = self._dedup_by_inn(enriched)
 
-        # Filter out competitors at the same address as client (subsidiaries/branches)
+        # Filter out competitors related to client (same INN, same address, or name overlap)
         if client_inn:
-            before_addr = len(enriched)
+            client_name_lower = (company_name or client_profile.get("company_name") or "").lower()
+            before_rel = len(enriched)
             enriched = [
                 c for c in enriched
                 if c.profile.inn != client_inn
                 and not (c.profile.legal_address and client_profile.get("address")
                          and _same_address(c.profile.legal_address, client_profile["address"]))
+                and not _is_related_entity(c.profile.legal_name, client_name_lower)
             ]
-            if len(enriched) < before_addr:
-                logger.info("address_filter: removed %d same-address competitors", before_addr - len(enriched))
+            removed = before_rel - len(enriched)
+            if removed:
+                logger.info("related_entity_filter: removed %d related competitors", removed)
 
         # Revenue corridor filter
         filtered = self._filter_by_revenue_corridor(enriched, effective_revenue)
@@ -364,7 +385,6 @@ class CompetitorMatcherV2:
             logger.info("backfill_from_okved: added %d competitors (total now %d)", len(backfill), len(result))
 
         # ── STAGE 3.5b: Post-selection enrichment (doctors + Instagram + website) ─
-        # Only for the final top-N to keep it fast
         if result:
             from src.aim.services.lib.firecrawl_enricher import enrich_websites_batch
             await asyncio.gather(
@@ -373,6 +393,32 @@ class CompetitorMatcherV2:
                 enrich_websites_batch(result, count),
                 return_exceptions=True,
             )
+
+        # ── STAGE 3.5c: CLIENT website enrichment (Firecrawl) ──────────
+        # Скрапим сайт клиента для ТОЧНЫХ данных (CMS, соцсети, врачи).
+        # Раньше всё бралось из Perplexity (угадывал). Теперь — реальный HTML.
+        self.last_client_cms = None
+        self.last_client_socials = None
+        self.last_client_doctors = None
+        if url:
+            try:
+                from src.aim.services.lib.firecrawl_enricher import scrape_website, scrape_doctors
+                client_site = await scrape_website(url)
+                if client_site.get("cms"):
+                    self.last_client_cms = client_site["cms"]
+                if client_site.get("socials"):
+                    self.last_client_socials = client_site["socials"]
+                client_doc_count = await scrape_doctors(url, company_name or "")
+                if client_doc_count:
+                    self.last_client_doctors = client_doc_count
+                logger.info(
+                    "Client site enriched: cms=%s socials=%s doctors=%s",
+                    self.last_client_cms,
+                    list(self.last_client_socials.keys()) if self.last_client_socials else None,
+                    self.last_client_doctors,
+                )
+            except Exception as e:
+                logger.warning("Client site enrichment failed: %s", str(e)[:100])
 
         elapsed = time.monotonic() - t0
         surgeons_filled = sum(1 for r in result if r.profile.employee_count)

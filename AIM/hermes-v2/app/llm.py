@@ -218,20 +218,46 @@ def _build_formatted_blocks(
 
     # Competitors block (from find_competitors)
     competitors_result = collected_results.get("find_competitors")
+    client_pipeline_data = {}
     if competitors_result:
-        # Извлечь client_revenue из ответа find_competitors если есть
-        client_rev = None
-        client_profit = None
+        # Извлечь client data из ответа find_competitors
         try:
             comp_data = json.loads(competitors_result) if isinstance(competitors_result, str) else competitors_result
             client_rev = comp_data.get("client_revenue")
             client_profit = comp_data.get("client_profit")
+            client_pipeline_data = {
+                "client_cms": comp_data.get("client_cms"),
+                "client_socials": comp_data.get("client_socials"),
+                "client_doctors": comp_data.get("client_doctors"),
+            }
         except (json.JSONDecodeError, TypeError):
-            pass
+            client_rev = None
+            client_profit = None
         comp_md = format_competitors(competitors_result, client_revenue=client_rev,
                                       client_profit=client_profit)
         if comp_md:
             blocks.append(comp_md)
+
+    # ── Override profile with real scraped data (если pipeline дал) ──
+    if profile_md and client_pipeline_data:
+        # Переписать CMS с реальной (Firecrawl), не Perplexity
+        if client_pipeline_data.get("client_cms"):
+            profile_result = profile_cache.get("_raw_result") or collected_results.get("extract_clinic_profile")
+            if profile_result:
+                try:
+                    pdata = json.loads(profile_result) if isinstance(profile_result, str) else profile_result
+                    pdata["website_platform"] = client_pipeline_data["client_cms"]
+                    # Добавить соцсети
+                    if client_pipeline_data.get("client_socials"):
+                        pdata["socials_found"] = client_pipeline_data["client_socials"]
+                    if client_pipeline_data.get("client_doctors"):
+                        pdata["doctors_count"] = client_pipeline_data["client_doctors"]
+                    # Переформатировать профиль с обновлёнными данными
+                    new_md, _ = format_profile(json.dumps(pdata, ensure_ascii=False))
+                    if new_md:
+                        blocks[0] = new_md  # заменить профиль
+                except (json.JSONDecodeError, TypeError):
+                    pass
 
     return blocks
 

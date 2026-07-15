@@ -133,6 +133,21 @@ def format_profile(result: str, client_data: dict | None = None) -> tuple[str, d
     if website_platform:
         parts.append(f"**Сайт:** {website_platform}")
 
+    # ── Врачи (из Firecrawl скрапа, если есть) ──
+    doctors_count = data.get("doctors_count")
+    if doctors_count:
+        parts.append(f"**Врачей:** {doctors_count}")
+
+    # ── Соцсети (из Firecrawl скрапа, если есть) ──
+    socials_found = data.get("socials_found")
+    if socials_found and isinstance(socials_found, dict):
+        social_parts = []
+        for platform, url in socials_found.items():
+            emoji = {"instagram": "📸", "vk": "🔵", "telegram": "✈️", "youtube": "▶️"}.get(platform, "🔗")
+            social_parts.append(f"{emoji} [{platform}]({url})")
+        if social_parts:
+            parts.append(f"**Соцсети:** {' | '.join(social_parts)}")
+
     # ── Финансовая динамика ──
     profit = data.get("profit") or data.get("profit_year")
     trend = data.get("revenue_trend") or data.get("trend")
