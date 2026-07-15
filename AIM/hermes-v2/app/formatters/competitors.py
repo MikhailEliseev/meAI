@@ -71,13 +71,17 @@ def _format_posts(posts: int | None) -> str:
 
 
 def format_competitors(result: str, client_revenue: int | None = None,
-                       client_profit: int | None = None) -> str:
+                       client_profit: int | None = None,
+                       client_reg_date: str | None = None,
+                       client_scl: int | None = None) -> str:
     """Формирует Markdown таблицу конкурентов из JSON pipeline.
 
     Args:
         result: JSON строка от find_competitors (или dict).
         client_revenue: Выручка клиента для строки «Вы».
         client_profit: Прибыль клиента.
+        client_reg_date: Дата регистрации клиента (для возраста).
+        client_scl: СЧЛ клиента.
 
     Returns:
         Markdown строка с таблицей. Пустая строка если нет данных.
@@ -101,9 +105,11 @@ def format_competitors(result: str, client_revenue: int | None = None,
     # Строка клиента (позиционирование в таблице)
     if client_revenue:
         client_profit_str = _format_profit(client_profit) if client_profit else "—"
+        client_age = _format_age(client_reg_date)
+        client_scl_str = str(client_scl) if client_scl else "—"
         lines.append(
             f"| **ВЫ (клиент)** | **{_format_revenue(client_revenue)}** "
-            f"| {client_profit_str} | — | — | — | — | — | — | — |"
+            f"| {client_profit_str} | — | {client_age} | {client_scl_str} | — | — | — | — |"
         )
 
     for c in comps:

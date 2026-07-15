@@ -166,10 +166,7 @@ def format_overview(result: str) -> str:
             parts.append(f"- {platform}: {url}")
         parts.append("")
 
-    # Платформа сайта
-    platform = _extract_platform(cleaned)
-    if platform:
-        parts.append(f"**Платформа сайта:** {platform}")
+    # Платформа сайта — убрано (показывается в SEO аудит блоке из Firecrawl, точнее)
 
     # Если ничего не извлекли — не показываем пустой блок
     result_md = "\n".join(parts).strip()

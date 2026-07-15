@@ -277,14 +277,32 @@ class CompetitorMatcherV2:
         # Сохранить для API response
         self.last_client_revenue = effective_revenue
         self.last_client_profit = None
+        self.last_client_reg_date = None
+        self.last_client_scl = None
         if client_inn and effective_revenue:
             try:
-                # Получить прибыль клиента тоже
                 results = await asyncio.to_thread(self.nalog.search, client_inn)
                 if results:
-                    fins = await asyncio.to_thread(self.nalog.get_financials, results[0].id)
+                    org = results[0]
+                    fins = await asyncio.to_thread(self.nalog.get_financials, org.id)
                     if fins:
                         self.last_client_profit = fins[0].net_profit_rub
+                    # Deep org data для клиента
+                    org_raw = await asyncio.to_thread(self.nalog.get_organization, org.id)
+                    if org_raw and isinstance(org_raw, dict):
+                        self.last_client_reg_date = (
+                            org_raw.get("registrationDate")
+                            or org_raw.get("dtRegister")
+                        )
+                        scl = (
+                            org_raw.get("sclCount")
+                            or org_raw.get("averageEmployees")
+                        )
+                        if scl:
+                            try:
+                                self.last_client_scl = int(scl)
+                            except (ValueError, TypeError):
+                                pass
             except Exception:
                 pass
 
@@ -348,7 +366,19 @@ class CompetitorMatcherV2:
 
         # Filter out competitors related to client (same INN, same address, or name overlap)
         if client_inn:
-            client_name_lower = (company_name or client_profile.get("company_name") or "").lower()
+            # Собираем имя клиента из всех источников
+            client_name_lower = (
+                company_name
+                or client_profile.get("company_name")
+                or client_profile.get("brand_name")
+                or ""
+            ).lower()
+            # Если имени нет — извлекаем из URL домена
+            if not client_name_lower and url:
+                from urllib.parse import urlparse
+                url_parsed = url if "://" in url else "https://" + url
+                domain = urlparse(url_parsed).netloc.replace("www.", "").split(".")[0]
+                client_name_lower = domain
             before_rel = len(enriched)
             enriched = [
                 c for c in enriched
@@ -359,7 +389,7 @@ class CompetitorMatcherV2:
             ]
             removed = before_rel - len(enriched)
             if removed:
-                logger.info("related_entity_filter: removed %d related competitors", removed)
+                logger.info("related_entity_filter: removed %d related competitors (client_name=%s)", removed, client_name_lower[:30])
 
         # Revenue corridor filter
         filtered = self._filter_by_revenue_corridor(enriched, effective_revenue)

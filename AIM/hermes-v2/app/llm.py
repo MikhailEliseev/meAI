@@ -202,25 +202,12 @@ def _build_formatted_blocks(
     """
     blocks = []
 
-    # Profile block (from extract_clinic_profile)
-    profile_result = profile_cache.get("_raw_result") or collected_results.get("extract_clinic_profile")
-    if profile_result:
-        profile_md, profile_data = format_profile(profile_result)
-        if profile_md:
-            blocks.append(profile_md)
-
-    # Overview block (from quick_overview — врачи, соцсети, платформа)
-    overview_result = collected_results.get("quick_overview")
-    if overview_result:
-        overview_md = format_overview(overview_result)
-        if overview_md:
-            blocks.append(overview_md)
-
-    # Competitors block (from find_competitors)
+    # Сначала парсим competitors — там лежат client_cms, client_socials, client_audit
     competitors_result = collected_results.get("find_competitors")
     client_pipeline_data = {}
+    client_rev = None
+    client_profit = None
     if competitors_result:
-        # Извлечь client data из ответа find_competitors
         try:
             comp_data = json.loads(competitors_result) if isinstance(competitors_result, str) else competitors_result
             client_rev = comp_data.get("client_revenue")
@@ -230,43 +217,58 @@ def _build_formatted_blocks(
                 "client_socials": comp_data.get("client_socials"),
                 "client_doctors": comp_data.get("client_doctors"),
                 "client_audit": comp_data.get("client_audit"),
+                "client_registration_date": comp_data.get("client_registration_date"),
+                "client_employee_count": comp_data.get("client_employee_count"),
             }
         except (json.JSONDecodeError, TypeError):
-            client_rev = None
-            client_profit = None
-        comp_md = format_competitors(competitors_result, client_revenue=client_rev,
-                                      client_profit=client_profit)
-        if comp_md:
-            blocks.append(comp_md)
+            pass
 
-    # ── Override profile with real scraped data (если pipeline дал) ──
-    if profile_md and client_pipeline_data:
-        # Переписать CMS с реальной (Firecrawl), не Perplexity
-        if client_pipeline_data.get("client_cms"):
-            profile_result = profile_cache.get("_raw_result") or collected_results.get("extract_clinic_profile")
-            if profile_result:
-                try:
-                    pdata = json.loads(profile_result) if isinstance(profile_result, str) else profile_result
-                    pdata["website_platform"] = client_pipeline_data["client_cms"]
-                    # Добавить соцсети
-                    if client_pipeline_data.get("client_socials"):
-                        pdata["socials_found"] = client_pipeline_data["client_socials"]
-                    if client_pipeline_data.get("client_doctors"):
-                        pdata["doctors_count"] = client_pipeline_data["client_doctors"]
-                    # Переформатировать профиль с обновлёнными данными
-                    new_md, _ = format_profile(json.dumps(pdata, ensure_ascii=False))
-                    if new_md:
-                        blocks[0] = new_md  # заменить профиль
-                except (json.JSONDecodeError, TypeError):
-                    pass
+    # ── Profile block — с override данных из pipeline (CMS, соцсети, врачи) ──
+    profile_result = profile_cache.get("_raw_result") or collected_results.get("extract_clinic_profile")
+    if profile_result:
+        try:
+            pdata = json.loads(profile_result) if isinstance(profile_result, str) else profile_result
+            # Override CMS из Firecrawl audit (точнее чем Perplexity)
+            if client_pipeline_data.get("client_cms"):
+                pdata["website_platform"] = client_pipeline_data["client_cms"]
+            # Добавить соцсети из Firecrawl
+            if client_pipeline_data.get("client_socials"):
+                pdata["socials_found"] = client_pipeline_data["client_socials"]
+            # Добавить врачей из Firecrawl
+            if client_pipeline_data.get("client_doctors"):
+                pdata["doctors_count"] = client_pipeline_data["client_doctors"]
+            profile_result = json.dumps(pdata, ensure_ascii=False) if isinstance(profile_result, str) else pdata
+        except (json.JSONDecodeError, TypeError):
+            pass
+        profile_md, profile_data = format_profile(profile_result)
+        if profile_md:
+            blocks.append(profile_md)
+
+    # Overview block — БЕЗ платформы (она в audit блоке)
+    overview_result = collected_results.get("quick_overview")
+    if overview_result:
+        overview_md = format_overview(overview_result)
+        if overview_md:
+            blocks.append(overview_md)
 
     # ── SEO + GEO аудит блок ──
     audit = client_pipeline_data.get("client_audit")
     if audit:
         audit_md = _format_audit_block(audit)
         if audit_md:
-            # Вставить перед таблицей конкурентов (после профиля)
-            blocks.insert(-1, audit_md)
+            blocks.append(audit_md)
+
+    # ── Competitors block ──
+    if competitors_result:
+        comp_md = format_competitors(
+            competitors_result,
+            client_revenue=client_rev,
+            client_profit=client_profit,
+            client_reg_date=client_pipeline_data.get("client_registration_date"),
+            client_scl=client_pipeline_data.get("client_employee_count"),
+        )
+        if comp_md:
+            blocks.append(comp_md)
 
     return blocks
 
