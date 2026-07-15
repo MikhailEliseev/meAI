@@ -192,9 +192,19 @@ async def resolve_brand_to_inn(
             )
             return result
 
-        # ── Perplexity fallback: бренд не найден в ФНС по названию ──
-        # Perplexity знает рыночные бренды, но мы не доверяем ИНН от него
-        # напрямую. Вместо этого: Perplexity даёт ИНН → мы валидируем через ФНС.
+        # ── Level 2: Firecrawl scrape сайта → ИНН из подвала/политики ──
+        # Точнее чем Perplexity: ИНН с сайта = юридически обязателен (152-ФЗ).
+        # Нужно знать URL сайта — пробуем домен из названия бренда.
+        result = await _resolve_via_website_scrape(brand_name, okved_prefix, client, brand_original)
+        if result:
+            logger.info(
+                "brand_resolved_website: brand=%s → inn=%s okved=%s revenue=%s",
+                brand_name, result.inn, result.okved,
+                f"{result.latest_revenue:,}" if result.latest_revenue else "N/A",
+            )
+            return result
+
+        # ── Level 3: Perplexity fallback (последний шанс) ──
         result = await _resolve_via_perplexity(brand_name, okved_prefix, client, brand_original)
         if result:
             logger.info(
@@ -208,6 +218,177 @@ async def resolve_brand_to_inn(
         return None
     except Exception:
         raise
+
+
+async def _resolve_via_website_scrape(
+    brand_name: str,
+    okved_prefix: str,
+    client: "BfoNalogClient",
+    brand_original: str,
+) -> Optional[ResolvedBrand]:
+    """Firecrawl scrape сайта клиники → извлечение ИНН → ФНС валидация.
+
+    ИНН на сайтах клиник находится:
+    - В подвале (footer) главной страницы
+    - В политике конфиденциальности (152-ФЗ требует)
+    - В странице "Контакты" / "Реквизиты"
+
+    Args:
+        brand_name: Название бренда (для построения URL).
+    Returns:
+        ResolvedBrand или None.
+    """
+    import os
+
+    # Шаг 1: найти URL сайта через Perplexity (быстрый поиск)
+    website_url = await _find_brand_website(brand_name)
+    if not website_url:
+        return None
+
+    # Шаг 2: скрапить сайт → найти ИНН
+    inn = await _scrape_inn_from_website(website_url)
+    if not inn:
+        return None
+
+    # Шаг 3: валидация через ФНС
+    return await _validate_inn_in_fns(inn, okved_prefix, client, brand_original)
+
+
+async def _find_brand_website(brand_name: str) -> Optional[str]:
+    """Находит сайт клиники через Perplexity."""
+    try:
+        from src.aim.services.competitor_matcher_v2 import perplexity_configured, perplexity_chat
+    except ImportError:
+        return None
+    if not perplexity_configured():
+        return None
+    try:
+        raw = await perplexity_chat(
+            [{"role": "user", "content": f"Официальный сайт клиники \"{brand_name}\" Москва. Верни ТОЛЬКО URL."}],
+            temperature=0.0,
+        )
+        # Extract URL
+        url_match = re.search(r"https?://[^\s<>\"]+", raw.strip())
+        if url_match:
+            url = url_match.group(0).rstrip(".,;)")
+            # Базовый домен (без пути)
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            return f"{parsed.scheme}://{parsed.netloc}"
+    except Exception:
+        pass
+    return None
+
+
+async def _scrape_inn_from_website(website_url: str) -> Optional[str]:
+    """Скрапит сайт → находит ИНН в подвале или политике конфиденциальности.
+
+    Алгоритм:
+    1. Скрапить главную → regex ИНН
+    2. Если нет → найти ссылку на политику → скрапить её
+    3. Если нет → попробовать /policy, /privacy, /kontakty, /o-klinike
+    """
+    import httpx
+
+    # Загружаем Firecrawl ключи
+    fc_key = _get_firecrawl_key()
+    if not fc_key:
+        return None
+
+    inn_patterns = [
+        re.compile(r"[Ии][Нн][Нн][^0-9]*?(\d{10})"),  # ИНН 1234567890
+        re.compile(r"INN[^0-9]*?(\d{10})", re.I),       # INN: 1234567890
+    ]
+
+    async with httpx.AsyncClient(timeout=25) as http:
+        # Стратегические URL для проверки
+        candidate_urls = [website_url]  # главная
+
+        # Шаг 1: скрапить главную, найти ссылки на политику/реквизиты
+        try:
+            r = await http.post("https://api.firecrawl.dev/v1/scrape",
+                headers={"Authorization": f"Bearer {fc_key}", "Content-Type": "application/json"},
+                json={"url": website_url, "formats": ["markdown"], "onlyMainContent": False, "waitFor": 3000})
+            if r.status_code == 200:
+                md = r.json().get("data", {}).get("markdown", "")
+                # ИНН на главной?
+                for pat in inn_patterns:
+                    m = pat.search(md)
+                    if m:
+                        return m.group(1)
+
+                # Найти ссылки на политику/реквизиты
+                from urllib.parse import urljoin
+                md_links = re.findall(r'\[([^\]]+)\]\(([^)]+)\)', md)
+                policy_keywords = ["политик", "policy", "privacy", "konfidenc",
+                                   "соглаш", "лиценз", "licens", "rekviz", "контакт",
+                                   "контакты", "about", "о клинике", "о нас"]
+                for text, href in md_links:
+                    if any(k in (text + href).lower() for k in policy_keywords):
+                        full_url = urljoin(website_url, href)
+                        if full_url not in candidate_urls:
+                            candidate_urls.append(full_url)
+        except Exception:
+            pass
+
+        # Стандартные пути если не нашли ссылки
+        for path in ["/policy", "/privacy", "/kontakty", "/o-klinike", "/about", "/requisites"]:
+            candidate_urls.append(website_url.rstrip("/") + path)
+
+        # Шаг 2: скрапить каждую кандидатную страницу (максимум 5)
+        for curl in candidate_urls[1:6]:  # пропускаем главную (уже проверили)
+            try:
+                r = await http.post("https://api.firecrawl.dev/v1/scrape",
+                    headers={"Authorization": f"Bearer {fc_key}", "Content-Type": "application/json"},
+                    json={"url": curl, "formats": ["markdown"], "onlyMainContent": False})
+                if r.status_code == 200:
+                    md = r.json().get("data", {}).get("markdown", "")
+                    for pat in inn_patterns:
+                        m = pat.search(md)
+                        if m:
+                            return m.group(1)
+            except Exception:
+                continue
+
+    return None
+
+
+def _get_firecrawl_key() -> Optional[str]:
+    """Возвращает первый доступный Firecrawl ключ."""
+    import os
+    for prefix in ("FIRECRAWL_API_KEY_", "FIRECRAWL_KEY_"):
+        for i in range(1, 21):
+            k = os.getenv(f"{prefix}{i:02d}", "") or os.getenv(f"{prefix}{i}", "")
+            if k:
+                return k
+    k = os.getenv("FIRECRAWL_API_KEY", "")
+    return k if k else None
+
+
+async def _validate_inn_in_fns(
+    inn: str,
+    okved_prefix: str,
+    client: "BfoNalogClient",
+    brand_original: str,
+) -> Optional[ResolvedBrand]:
+    """Валидирует ИНН через bo.nalog → ResolvedBrand если ОК."""
+    try:
+        search_results = await asyncio.to_thread(client.search, inn)
+        if not search_results:
+            return None
+        org = search_results[0]
+        if okved_prefix and okved_prefix not in (org.okved2 or ""):
+            return None
+        statements = await asyncio.to_thread(client.get_financials, org.id)
+        latest_rev = statements[0].revenue_rub if statements else None
+        return ResolvedBrand(
+            inn=org.inn, org_id=org.id, legal_name=org.short_name,
+            brand_query=brand_original, okved=org.okved2,
+            latest_revenue=latest_rev, status="resolved_website",
+            address=org.address,
+        )
+    except Exception:
+        return None
 
 
 async def _resolve_via_perplexity(
