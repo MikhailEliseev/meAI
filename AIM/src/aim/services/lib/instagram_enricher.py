@@ -170,6 +170,37 @@ async def get_instagram_followers(handle: str) -> Optional[int]:
     return None
 
 
+async def _find_ig_handle_via_perplexity(brand_name: str, city: str) -> Optional[str]:
+    """Find Instagram handle via Perplexity when not on the website."""
+    from src.aim.services.lib.perplexity_client import perplexity_chat, is_configured
+
+    if not is_configured() or not brand_name:
+        return None
+    try:
+        prompt = (
+            f"Найди Instagram-аккаунт клиники \"{brand_name}\""
+            f"{', ' + city if city else ''}. "
+            "Верни ТОЛЬКО username (без @, без URL) или null."
+        )
+        raw = await perplexity_chat(
+            [{"role": "user", "content": prompt}],
+            temperature=0.0,
+        )
+        # Clean response: strip @, URLs, whitespace
+        handle = raw.strip().lstrip("@").strip()
+        # If it's a URL, extract username
+        import re as _re
+        url_match = _re.search(r"instagram\.com/([a-zA-Z0-9_.]+)", handle)
+        if url_match:
+            handle = url_match.group(1)
+        # Validate: reasonable handle length, alphanumeric
+        if handle and 2 <= len(handle) <= 40 and handle.replace("_", "").replace(".", "").isalnum():
+            return handle.lower()
+    except Exception as e:
+        logger.debug("IG handle via Perplexity failed for %s: %s", brand_name, e)
+    return None
+
+
 async def _resolve_website_via_perplexity(brand_name: str, city: str) -> Optional[str]:
     """Find a clinic's website URL via Perplexity when not available from scraping."""
     from src.aim.services.lib.perplexity_client import perplexity_chat, is_configured
@@ -230,8 +261,10 @@ async def enrich_instagram_batch(
                     comp.profile.website = website
                     logger.info("website_resolved: %s → %s", brand, website)
 
-            # Step 2: Find IG handle
+            # Step 2: Find IG handle (website scrape first, Perplexity fallback)
             handle = await find_instagram_handle(website, brand)
+            if not handle:
+                handle = await _find_ig_handle_via_perplexity(brand, city)
             if not handle:
                 logger.debug("instagram: no handle found for %s (website=%s)", brand, website)
                 return
