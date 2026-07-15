@@ -637,45 +637,69 @@ class CompetitorMatcherV2:
     # ── Stage 3: Filtering ───────────────────────────────────────────
 
     def _dedup_by_inn(self, competitors: list[CompetitorMatch]) -> list[CompetitorMatch]:
-        """Remove true duplicates: same ИНН AND same normalized brand.
+        """Confident-resolve dedup: one brand per ИНН.
 
-        We do NOT collapse different brands that happen to share an ИНН —
-        a holding company (ООО with one ИНН) may operate multiple distinct
-        clinic brands (СМ-Клиника, Estetik International, Возрождение).
-        Collapsing them into one result loses real competitors.
+        When multiple brands resolve to the same ИНН, keep only the one whose
+        brand name best matches the legal entity name. Others are likely
+        incorrect resolutions (bo.nalog fallback picked the wrong entity).
 
-        Only collapses: "СМ-Клиника Волгоградский" and "СМ-Клиника Сенежская"
-        (same brand family resolving to same ИНН — near-identical names).
+        Example: СМ-Клиника, ЛАНЦЕТЪ, Возрождение all → ИНН 2367011265 (КЛИНИКА ЛК).
+        "СМ-Клиника" shares "клиник" with "КЛИНИКА ЛК" → confident match.
+        "ЛАНЦЕТЪ" and "Возрождение" have no word overlap → dropped as uncertain.
         """
-        seen_keys: dict[str, CompetitorMatch] = {}
+        # Group by ИНН
+        by_inn: dict[str, list[CompetitorMatch]] = {}
         no_inn: list[CompetitorMatch] = []
-        inn_groups: dict[str, list[str]] = {}  # inn → brands for logging
-
         for c in competitors:
             inn = c.profile.inn.strip()
-            brand = (c.profile.brand_name or c.profile.legal_name or "?").strip().lower()
             if not inn:
                 no_inn.append(c)
+            else:
+                by_inn.setdefault(inn, []).append(c)
+
+        result: list[CompetitorMatch] = []
+        for inn, group in by_inn.items():
+            if len(group) == 1:
+                # Only one brand for this ИНН → confident, keep it
+                result.append(group[0])
                 continue
 
-            inn_groups.setdefault(inn, []).append(c.profile.brand_name or c.profile.legal_name or "?")
+            # Multiple brands → one ИНН: pick the most confident match
+            brands = [c.profile.brand_name or c.profile.legal_name or "?" for c in group]
+            logger.info("dedup_conflict: inn=%s brands=%s", inn, brands)
 
-            # Dedup key = ИНН + first 2 words of brand (brand family)
-            # "СМ-Клиника Волгоградский" and "СМ-Клиника Сенежская" → same key
-            # "СМ-Клиника" and "Estetik International" → different keys
-            brand_words = brand.split()
-            brand_family = " ".join(brand_words[:2]) if len(brand_words) >= 2 else brand
-            dedup_key = f"{inn}:{brand_family}"
+            def _name_overlap(c: CompetitorMatch) -> int:
+                """Count overlapping word roots between brand and legal name."""
+                brand = (c.profile.brand_name or "").lower()
+                legal = (c.profile.legal_name or "").lower()
+                # Remove common generic words
+                generic = {"клиника", "клиник", "клинике", "ооо", "ао", "центр", "медицинский", "и"}
+                brand_words = {w for w in brand.split() if w not in generic and len(w) > 2}
+                legal_words = {w for w in legal.split() if len(w) > 2}
+                return len(brand_words & legal_words)
 
-            if dedup_key not in seen_keys:
-                seen_keys[dedup_key] = c
+            # Sort by name overlap descending (most confident first)
+            group.sort(key=_name_overlap, reverse=True)
+            winner = group[0]
+            overlap = _name_overlap(winner)
+            dropped = [c.profile.brand_name for c in group[1:]]
 
-        # Log brands sharing the same ИНН (potential holding companies)
-        for inn, brands in inn_groups.items():
-            if len(set(b.lower() for b in brands)) > 1:
-                logger.info("dedup_same_inn_different_brands: inn=%s brands=%s", inn, brands)
+            if overlap > 0:
+                # Winner has real name overlap → confident, keep it
+                logger.info(
+                    "dedup_resolved: inn=%s winner='%s' overlap=%d dropped=%s",
+                    inn, winner.profile.brand_name, overlap, dropped,
+                )
+                result.append(winner)
+            else:
+                # No overlap for ANY brand → uncertain, keep first but warn
+                logger.warning(
+                    "dedup_uncertain: inn=%s no name overlap for any brand, keeping first: %s",
+                    inn, winner.profile.brand_name,
+                )
+                result.append(winner)
 
-        return list(seen_keys.values()) + no_inn
+        return result + no_inn
 
         return list(seen_inns.values()) + no_inn
 
