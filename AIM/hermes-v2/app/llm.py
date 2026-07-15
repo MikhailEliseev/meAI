@@ -425,7 +425,12 @@ async def stream_chat(history: list[dict]):
     stream = await client.chat.completions.create(
         model=LLM_MODEL, messages=messages, stream=True,
     )
-    async for chunk in stream:
-        delta = chunk.choices[0].delta.content
-        if delta:
-            yield delta
+    try:
+        async for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta:
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    yield delta
+    finally:
+        if hasattr(stream, "close"):
+            await stream.close()

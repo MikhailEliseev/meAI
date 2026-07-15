@@ -509,7 +509,7 @@ def _safe_int(val) -> int | None:
         return None
     try:
         return int(float(val))
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, OverflowError):
         return None
 
 

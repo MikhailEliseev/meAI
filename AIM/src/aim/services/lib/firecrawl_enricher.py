@@ -98,9 +98,13 @@ async def _firecrawl_request(endpoint: str, payload: dict, max_retries: int = 3)
                     headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
                     json=payload,
                 )
-                if resp.status_code in (402, 429):
+                if resp.status_code == 402:
                     _mark_key_exhausted(key)
-                    logger.warning("Firecrawl key exhausted (attempt %d): %d", attempt + 1, resp.status_code)
+                    logger.warning("Firecrawl key exhausted 402 (attempt %d)", attempt + 1)
+                    continue
+                if resp.status_code == 429:
+                    # Transient rate limit — НЕ убиваем ключ, просто retry
+                    logger.warning("Firecrawl rate limited 429 (attempt %d) — retrying", attempt + 1)
                     continue
                 resp.raise_for_status()
                 return resp.json()
