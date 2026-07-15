@@ -13,6 +13,8 @@ import openai
 from app.config import LLM_MODEL, OMNIROUTE_AUTH, OMNIROUTE_URL
 from app.prompts.dialogue import SYSTEM_PROMPT
 from app.tools.registry import execute, get_openai_tools
+from app.formatters.competitors import format_competitors
+from app.formatters.profile import format_profile
 
 logger = logging.getLogger(__name__)
 
@@ -121,12 +123,50 @@ async def _execute_single_tool(tc, profile_cache: dict):
     if tool_name == "extract_clinic_profile" and isinstance(result, str):
         try:
             profile_cache.update(json.loads(result_str))
+            profile_cache["_raw_result"] = result_str  # for formatted blocks
             logger.info("profile cache updated: inn=%s city=%s",
                          profile_cache.get("inn"), profile_cache.get("city"))
         except (json.JSONDecodeError, TypeError):
             pass
 
     return tc, result_str
+
+
+def _build_formatted_blocks(
+    collected_results: dict[str, str],
+    profile_cache: dict,
+) -> list[str]:
+    """Build formatted Markdown data blocks from tool results.
+
+    Converts raw JSON from find_competitors and extract_clinic_profile
+    into precise Markdown tables/facts. These are shown to the user
+    BEFORE the LLM generates its answer, so the LLM only needs to
+    make conclusions — it cannot hallucinate in the table.
+
+    Returns list of Markdown strings (each is a separate data block).
+    """
+    blocks = []
+
+    # Profile block (from extract_clinic_profile)
+    profile_result = profile_cache.get("_raw_result") or collected_results.get("extract_clinic_profile")
+    if profile_result:
+        profile_md, profile_data = format_profile(profile_result)
+        if profile_md:
+            blocks.append(profile_md)
+
+    # Competitors block (from find_competitors)
+    competitors_result = collected_results.get("find_competitors")
+    if competitors_result:
+        # Get client revenue from profile_cache if available
+        client_rev = None
+        if profile_data and profile_data.get("inn"):
+            # We don't have client revenue here, format_competitors handles None
+            pass
+        comp_md = format_competitors(competitors_result, client_revenue=client_rev)
+        if comp_md:
+            blocks.append(comp_md)
+
+    return blocks
 
 
 async def chat_with_tools(history: list[dict]):
@@ -224,6 +264,7 @@ async def chat_with_tools(history: list[dict]):
                 )
 
                 # Обрабатываем результаты (в порядке тулов)
+                collected_results = {}  # tool_name → result_str (for formatting)
                 for tc, result in zip(other_tcs, results):
                     tool_name = tc.function.name
                     if isinstance(result, Exception):
@@ -235,11 +276,41 @@ async def chat_with_tools(history: list[dict]):
                         })
                     else:
                         _, result_str = result
+                        collected_results[tool_name] = result_str
                         yield ("tool_result", tool_name, result_str, _tool_msg(tool_name, "done"))
                         messages.append({
                             "role": "tool", "tool_call_id": tc.id,
                             "content": result_str,
                         })
+
+            # ── FORMAT DATA BLOCKS: точные таблицы из кода, не из LLM ──
+            # Формируем готовые Markdown блоки из tool results и показываем
+            # пользователю ДО того как LLM начнёт генерировать ответ.
+            # LLM получает instruction делать только выводы по этим данным.
+            formatted_blocks = _build_formatted_blocks(
+                collected_results, profile_cache
+            )
+            if formatted_blocks:
+                # Показываем таблицы пользователю (как text-delta)
+                for block in formatted_blocks:
+                    yield ("text", block + "\n\n")
+
+                # Instruction для LLM: данные выше — факты, делай только выводы
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        "Выше показаны ТОЧНЫЕ данные в виде таблиц (из ФНС, SearXNG). "
+                        "Твоя задача — сделать только выводы (3-5 предложений):\n"
+                        "1. Позиция клиники относительно конкурентов (по выручке)\n"
+                        "2. 1-2 конкретных рекомендации на основе данных\n"
+                        "3. [SUGGESTIONS] кнопки\n\n"
+                        "КРИТИЧНО:\n"
+                        "- НЕ повторяй таблицы — они уже показаны выше\n"
+                        "- НЕ выдумывай цифры — используй только из таблиц\n"
+                        "- НЕ упоминай отзывы, рейтинг, трафик — этих данных нет\n"
+                        "- Если данных нет — не пиши про них"
+                    ),
+                })
 
             continue  # следующий раунд
 
