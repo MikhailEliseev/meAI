@@ -109,9 +109,23 @@ def _resolve_sync(
     medical = [r for r in results if r.okved2 and r.okved2.startswith(okved_prefix)]
     pool = medical if medical else results
 
-    # Rank by latest_revenue descending — the biggest entity is most likely
-    # the operating legal entity behind a known brand
-    pool.sort(key=lambda r: r.latest_revenue or 0, reverse=True)
+    # Score each candidate: name similarity to brand + revenue bonus.
+    # This fixes "ЛАНЦЕТЪ" → wrong "ДЕЛАЙТ-ЛАНЦЕТЪ" (higher revenue but
+    # different brand) and "СМ-Клиника" → correct ООО КЛИНИКА ЛК.
+    brand_lower = brand_name.lower().strip()
+    brand_words = set(brand_lower.split())
+
+    def _score(r):
+        name_lower = r.short_name.lower()
+        # Exact match = highest priority
+        if brand_lower in name_lower:
+            return (3, r.latest_revenue or 0)
+        # Word overlap (brand words in legal name)
+        name_words = set(name_lower.split())
+        overlap = len(brand_words & name_words)
+        return (overlap, r.latest_revenue or 0)
+
+    pool.sort(key=_score, reverse=True)
 
     best = pool[0]
     if not best.inn or len(best.inn) < _MIN_INN_LEN:
@@ -166,8 +180,8 @@ async def resolve_brand_to_inn(
         if brand_name != brand_original:
             logger.info("brand_normalized: \"%s\" → \"%s\"", brand_original, brand_name)
 
-    own_client = nalog is None
-    client = nalog or get_nalog_client()  # singleton for cache persistence
+    # Always use singleton — never close it (cache survives between requests)
+    client = nalog or get_nalog_client()
     try:
         result = await asyncio.to_thread(_resolve_sync, client, brand_name, okved_prefix, brand_original)
         if result:
@@ -179,9 +193,8 @@ async def resolve_brand_to_inn(
         else:
             logger.info("brand_not_found_in_fns: brand=%s", brand_name)
         return result
-    finally:
-        if own_client:
-            client.close()
+    except Exception:
+        raise
 
 
 async def resolve_brands_batch(
