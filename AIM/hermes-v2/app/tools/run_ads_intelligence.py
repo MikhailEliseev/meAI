@@ -9,7 +9,7 @@ import re
 
 import httpx
 
-from app.lib.firecrawl_key_bank import classify_exhaustion, key_bank as fc_key_bank
+from app.lib.firecrawl_key_bank import classify_exhaustion, get_key_bank
 from app.tools.registry import register
 
 logger = logging.getLogger(__name__)
@@ -31,8 +31,9 @@ async def _search_facebook_ads(client: httpx.AsyncClient, company: str) -> dict:
         f"?active_status=active&ad_type=all&country=RU&q={company}"
     )
 
+    fc_pool = get_key_bank()
     for attempt in range(MAX_RETRIES):
-        key = fc_key_bank.get_key()
+        key = fc_pool.get_key()
         if not key:
             return {"platforms": ["facebook", "instagram"], "active_ads_count": 0,
                     "ads": [], "note": "Нет доступных ключей Firecrawl"}
@@ -43,7 +44,7 @@ async def _search_facebook_ads(client: httpx.AsyncClient, company: str) -> dict:
                 json={"url": fb_url, "formats": ["markdown"], "waitFor": 8000, "onlyMainContent": True},
             )
             if response.status_code in (402, 429) and classify_exhaustion(response.status_code, response.text):
-                fc_key_bank.mark_exhausted(key)
+                fc_pool.mark_exhausted(key)
                 logger.warning("firecrawl exhausted on FB ads, rotating (attempt %d)", attempt + 1)
                 continue
             response.raise_for_status()

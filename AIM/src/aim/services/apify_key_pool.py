@@ -1,158 +1,70 @@
-"""Apify API key pool with round-robin rotation and 31-day auto-recovery.
+"""ApifyKeyPool — thin wrapper над UnifiedKeyPool.
 
-Stores keys in JSON, rotates active keys via round-robin, marks exhausted
-keys and auto-recovers them after 31 days (Apify free tier reset).
+Сохраняет публичный API для существующих потребителей AIM
+(get_next_key, mark_exhausted, get_stats, active_count),
+но внутри использует UnifiedKeyPool с единой логикой recovery.
+
+Это обеспечивает единую систему управления ключами во всём проекте.
 """
-
-import asyncio
-import json
 import logging
 import os
-import time
-from datetime import datetime, timedelta, timezone
+
+from .key_pool import UnifiedKeyPool
 
 logger = logging.getLogger(__name__)
 
-_RECOVERY_DAYS = 31
-_TMP_STALE_SECONDS = 60
-
 
 class ApifyKeyPool:
-    """Round-robin key pool with automatic exhaustion tracking and recovery."""
+    """Round-robin key pool для Apify — делегирует в UnifiedKeyPool.
 
-    def __init__(self, keys_file: str):
-        if not os.path.exists(keys_file):
-            raise FileNotFoundError(f"Apify keys file not found: {keys_file}")
+    Backward-compatible с предыдущей версией (asyncio.Lock, atomic save, recovery).
+    """
+
+    def __init__(self, keys_file: str | None = None):
+        """Создаёт пул.
+
+        Args:
+            keys_file: Путь к JSON с ключами. Если None — берёт из env
+                       APIFY_KEYS_FILE или дефолт AIM/data/apify_keys.json.
+        """
+        if keys_file is None:
+            keys_file = os.getenv(
+                "APIFY_KEYS_FILE",
+                os.path.join(
+                    os.path.dirname(__file__), "..", "..", "..", "..", "data", "apify_keys.json"
+                ),
+            )
+        self._pool = UnifiedKeyPool("apify", keys_file)
+        # Алиасы для обратной совместимости
+        self._keys = self._pool._keys
+        self._active_indices = self._pool._active_indices
+        self._cursor = self._pool._cursor
         self._keys_file = keys_file
-        self._lock = asyncio.Lock()
-        self._keys: list[dict] = []
-        self._active_indices: list[int] = []
-        self._cursor = 0
-        self._load()
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+    # ── Делегирование в UnifiedKeyPool ──────────────────────────────────
 
     async def get_next_key(self) -> str:
-        """Return the next active token (round-robin). Raises RuntimeError if pool dry."""
-        async with self._lock:
-            if not self._active_indices:
-                raise RuntimeError("All Apify keys exhausted — no active keys remaining")
-            idx = self._active_indices[self._cursor % len(self._active_indices)]
-            self._cursor = (self._cursor + 1) % len(self._active_indices)
-            return self._keys[idx]["token"]
+        return await self._pool.get_next_key()
 
     async def mark_exhausted(self, token: str):
-        """Record a key as exhausted (called on quota error). Persists to file."""
-        async with self._lock:
-            self._mark_exhausted_locked(token)
+        """Backward-compatible: cause по умолчанию insufficient_credits."""
+        await self._pool.mark_exhausted(token, "insufficient_credits")
+
+    async def mark_exhausted_reason(self, token: str, reason: str):
+        """Явное указание причины для recovery rules."""
+        await self._pool.mark_exhausted(token, reason)
 
     def get_stats(self) -> dict:
-        total = len(self._keys)
-        active = sum(1 for k in self._keys if k["status"] == "active")
-        return {"total": total, "active": active, "exhausted": total - active}
+        return self._pool.get_stats()
 
     @property
     def active_count(self) -> int:
-        return len(self._active_indices)
+        return self._pool.active_count
 
-    # ------------------------------------------------------------------
-    # Internal — load / save
-    # ------------------------------------------------------------------
+    # ── Синхронизация алиасов (для кода, читающего _keys напрямую) ───────
 
-    def _load(self):
-        with open(self._keys_file, "r") as f:
-            data = json.load(f)
-
-        self._cleanup_stale_tmp()
-        self._keys = data["keys"]
-        self._auto_recover()
-        self._rebuild_indices()
-
-        logger.info(
-            "ApifyKeyPool loaded: %d total, %d active, %d exhausted",
-            len(self._keys), len(self._active_indices),
-            len(self._keys) - len(self._active_indices),
-        )
-
-    def _save(self):
-        """Atomic write: tmp → replace. Keeps .bak for safety."""
-        tmp_path = self._keys_file + ".tmp"
-        bak_path = self._keys_file + ".bak"
-
-        with open(tmp_path, "w") as f:
-            json.dump({"keys": self._keys}, f, indent=2, ensure_ascii=False)
-
-        if os.path.exists(self._keys_file):
-            os.replace(self._keys_file, bak_path)
-        os.replace(tmp_path, self._keys_file)
-
-    def _cleanup_stale_tmp(self):
-        tmp_path = self._keys_file + ".tmp"
-        if os.path.exists(tmp_path):
-            try:
-                if time.time() - os.path.getmtime(tmp_path) > _TMP_STALE_SECONDS:
-                    os.remove(tmp_path)
-                    logger.warning("Removed stale tmp file: %s", tmp_path)
-            except OSError:
-                pass
-
-    # ------------------------------------------------------------------
-    # Internal — recovery
-    # ------------------------------------------------------------------
-
-    def _auto_recover(self):
-        """Reactivate keys exhausted >= 31 days ago."""
-        now = datetime.now(timezone.utc)
-        cutoff = now - timedelta(days=_RECOVERY_DAYS)
-        recovered = 0
-
-        for key in self._keys:
-            if key["status"] != "exhausted":
-                continue
-            exhausted_at = key.get("exhausted_at")
-            if exhausted_at:
-                try:
-                    if datetime.fromisoformat(exhausted_at) <= cutoff:
-                        key["status"] = "active"
-                        key["exhausted_at"] = None
-                        recovered += 1
-                except (ValueError, TypeError):
-                    key["status"] = "active"
-                    key["exhausted_at"] = None
-                    recovered += 1
-            else:
-                key["status"] = "active"
-                recovered += 1
-
-        if recovered:
-            logger.info("Auto-recovered %d keys (>= %d days)", recovered, _RECOVERY_DAYS)
-            self._save()
-
-    # ------------------------------------------------------------------
-    # Internal — indices + exhaustion
-    # ------------------------------------------------------------------
-
-    def _rebuild_indices(self):
-        self._active_indices = [
-            i for i, k in enumerate(self._keys) if k["status"] == "active"
-        ]
-        self._cursor = 0
-
-    def _mark_exhausted_locked(self, token: str):
-        """Mark key exhausted and persist. Caller must hold self._lock."""
-        for key in self._keys:
-            if key["token"] == token and key["status"] == "active":
-                key["status"] = "exhausted"
-                key["exhausted_at"] = datetime.now(timezone.utc).isoformat()
-                label = key.get("label", token[:20] + "...")
-                self._save()
-                self._rebuild_indices()
-                logger.warning(
-                    "Apify key exhausted: %s (remaining active: %d)",
-                    label, len(self._active_indices),
-                )
-                return
-
-        logger.debug("Token not found or already exhausted: %s...", token[:20])
+    def _sync_aliases(self):
+        """Обновляет алиасы после мутаций в UnifiedKeyPool."""
+        self._keys = self._pool._keys
+        self._active_indices = self._pool._active_indices
+        self._cursor = self._pool._cursor

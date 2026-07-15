@@ -61,6 +61,8 @@ services:
       - HERMES_URL=http://hermes:8000
       - PYTHONPATH=/app/AIM:/app:/app/src
       - SEARXNG_URL=http://aim-searxng:8080
+      - APIFY_KEYS_FILE=/opt/keys/apify.json
+      - FIRECRAWL_KEYS_FILE=/opt/keys/firecrawl.json
     env_file:
       - .env.production
     volumes:
@@ -68,6 +70,7 @@ services:
       - ./logs:/app/logs
       - ./obsidian:/app/AIM/obsidian
       - ./data:/app/AIM/data
+      - /opt/aim-keys:/opt/keys:rw
     depends_on:
       postgres:
         condition: service_healthy
@@ -156,12 +159,14 @@ services:
       - WP_DB_NAME=wordpress
       - SESSIONS_ROOT=/opt/data/sessions-archive
       - ARCHIVE_BASE_URL=https://iamaim.ru/wp-json/aim/v1/session
+      - APIFY_KEYS_FILE=/opt/keys/apify.json
+      - FIRECRAWL_KEYS_FILE=/opt/keys/firecrawl.json
     env_file:
       - .env.production
       - .env.keys
     volumes:
       - /opt/hermes-v2-data:/opt/data
-      - /opt/aim/AIM/data/apify_keys.json:/opt/data/apify_keys.json:ro
+      - /opt/aim-keys:/opt/keys:rw
     networks:
       - aim-network
     depends_on:

@@ -9,7 +9,7 @@ from collections import Counter
 
 import httpx
 
-from app.lib.apify_client import APIFY_BASE, ACTOR_ID, REQUEST_TIMEOUT, load_apify_keys
+from app.lib.apify_client import APIFY_BASE, ACTOR_ID, REQUEST_TIMEOUT
 from app.tools.registry import register
 
 logger = logging.getLogger(__name__)
@@ -73,22 +73,32 @@ def _analyse_content(profile: dict, handle: str) -> dict:
 
 
 async def handle_run_instagram_content(handle=None, **kwargs) -> str:
-    """Анализ Instagram-аккаунта через Apify."""
+    """Анализ Instagram-аккаунта через Apify с ротацией ключей."""
     handle = _normalize_handle(handle)
     if not handle:
         return json.dumps({"error": "handle is required (Instagram username without @)"})
 
-    keys = load_apify_keys()
-    if not keys:
-        return json.dumps({"error": "No active Apify keys available"})
+    from app.lib.apify_client import get_apify_pool
+    pool = get_apify_pool()
 
     profile = None
     last_error = None
-    for key in keys[:3]:
+    for attempt in range(5):  # до 5 попыток с ротацией
+        try:
+            key = await pool.get_next_key()
+        except RuntimeError:
+            return json.dumps({"error": "All Apify keys exhausted"})
         try:
             profile = await _fetch_instagram_profile(key, handle)
             if profile:
                 break
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code in (402, 429):
+                await pool.mark_exhausted(key, "insufficient_credits" if e.response.status_code == 402 else "rate_limited")
+                logger.warning("apify key exhausted: %s… — %d (attempt %d)", key[:20], e.response.status_code, attempt + 1)
+                continue
+            last_error = str(e)
+            logger.warning("apify key failed: %s… — %s", key[:20], e)
         except Exception as e:
             last_error = str(e)
             logger.warning("apify key failed: %s… — %s", key[:20], e)

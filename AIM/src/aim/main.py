@@ -344,6 +344,7 @@ from src.aim.api.companies import router as companies_router
 from src.aim.api.presale import router as presale_router
 from src.aim.api.company_profiles import router as company_profiles_router
 from src.aim.api.hermes import router as hermes_router
+from src.aim.api.keys import router as keys_router
 
 # Include API routers
 app.include_router(hermes_router)
@@ -364,6 +365,7 @@ app.include_router(pre_sale_router)
 app.include_router(companies_router)
 app.include_router(presale_router)
 app.include_router(company_profiles_router)
+app.include_router(keys_router)
 
 # Performance stats endpoint
 @app.get("/api/performance/stats")
