@@ -194,33 +194,63 @@ def _check_https(url: str) -> bool:
 
 
 def _parse_robots_for_ai(robots_text: str) -> dict:
-    """Анализирует robots.txt на AI crawler доступность."""
+    """Анализирует robots.txt на AI crawler доступность.
+
+    Алгоритм (соответствует robots.txt RFC):
+    1. Парсим robots.txt по блокам (User-agent → директивы)
+    2. Для каждого AI краулера: если есть свой блок → берём его правила
+    3. Если своего блока нет → берём правила из User-agent: * блока
+    4. Если блока * нет → разрешено по умолчанию
+    """
     if not robots_text:
         return {"robots_found": False, "ai_crawlers": {}}
-    result = {"robots_found": True, "ai_crawlers": {}}
-    # Нормализуем — убираем \r
-    robots_clean = robots_text.replace("\r\n", "\n").replace("\r", "\n")
-    robots_lower = robots_clean.lower()
 
-    # Проверяем общий wildcard блок: User-agent: * Disallow: /
-    wildcard_blocks_all = bool(re.search(
-        r"user-agent:\s*\*\s*\n\s*disallow:\s*/\s*(?:\n|$)", robots_lower
-    ))
+    result = {"robots_found": True, "ai_crawlers": {}}
+    lines = robots_text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+
+    # Парсим блоки: {user_agent: [directives]}
+    blocks: dict[str, list[str]] = {}
+    current_agents: list[str] = []
+
+    for line in lines:
+        line_lower = line.strip().lower()
+        if not line_lower or line_lower.startswith("#"):
+            continue
+        if line_lower.startswith("user-agent:"):
+            agent = line_lower.split(":", 1)[1].strip()
+            current_agents = [agent]
+            # Могут быть подряд несколько User-agent
+            blocks.setdefault(agent, [])
+        elif line_lower.startswith(("disallow:", "allow:")) and current_agents:
+            directive = line_lower
+            for agent in current_agents:
+                blocks.setdefault(agent, []).append(directive)
+
+    # Проверяем wildcard блок
+    wildcard_rules = blocks.get("*", [])
+
+    def _is_crawler_blocked(crawler_lower: str) -> bool:
+        """Возвращает True если краулер заблокирован (Disallow: /)."""
+        # Если есть конкретный блок для краулера — он приоритетнее
+        if crawler_lower in blocks:
+            rules = blocks[crawler_lower]
+            for rule in rules:
+                if rule.startswith("disallow:"):
+                    path = rule.split(":", 1)[1].strip()
+                    if path == "/" or path == "":
+                        return path == "/"  # Disallow: / = blocked, Disallow: = allowed
+            return False  # есть блок, но без Disallow: / → разрешён
+
+        # Нет конкретного блока → используем wildcard
+        for rule in wildcard_rules:
+            if rule.startswith("disallow:"):
+                path = rule.split(":", 1)[1].strip()
+                if path == "/":
+                    return True
+        return False
 
     for crawler, description in _AI_CRAWLERS.items():
-        crawler_lower = crawler.lower()
-        # Проверяем: есть ли User-agent: Crawler с Disallow: /
-        # Ищем блок User-agent для этого краулера
-        pattern = rf"user-agent:\s*{re.escape(crawler_lower)}\s*\n((?:(?!user-agent)[^\n]*\n)*?)(?:disallow:\s*/|allow:\s*/$)"
-        block_match = re.search(pattern, robots_lower)
-        blocked = False
-        if block_match:
-            # Проверяем есть ли Disallow: / в блоке
-            block_text = block_match.group(0)
-            blocked = "disallow: /" in block_text and "allow: /" not in block_text.split("disallow: /")[-1]
-        # Если wildcard блокирует всё — краулер тоже заблокирован
-        if not blocked and wildcard_blocks_all:
-            blocked = True
+        blocked = _is_crawler_blocked(crawler.lower())
         result["ai_crawlers"][crawler] = {
             "description": description,
             "blocked": blocked,
@@ -314,6 +344,7 @@ async def audit_website(url: str) -> dict:
         "meta_description": None, "og_tags": {}, "ssr": False,
         "https": False, "page_size_kb": None, "title": None,
         "scripts_count": None, "perf_estimate": None, "media_mentions": 0,
+        "yandex_rating": None, "yandex_reviews": None, "vk_followers": None,
     }
 
     from urllib.parse import urlparse
@@ -368,20 +399,57 @@ async def audit_website(url: str) -> dict:
     if isinstance(llms_text, str) and llms_text and len(llms_text) > 50:
         result["llms_txt"] = True
 
-    # F10: СМИ публикации (Perplexity)
+    # F10: СМИ публикации + F9: Рейтинги Я.Карт (Perplexity)
     try:
         from src.aim.services.lib.perplexity_client import perplexity_chat, is_configured
         if is_configured():
             from urllib.parse import urlparse
             domain = urlparse(url).netloc.replace("www.", "")
             brand = domain.split(".")[0]
-            raw = await perplexity_chat(
+
+            # СМИ
+            raw_media = await perplexity_chat(
                 [{"role": "user", "content": f"Сколько публикаций о клинике {brand} в СМИ (Forbes, RBC, Vademecum, Коммерсантъ)? Только число."}],
                 temperature=0.0,
             )
-            import re as _re
-            nums = _re.findall(r"(\d+)", raw.strip())
+            nums = re.findall(r"(\d+)", raw_media.strip())
             result["media_mentions"] = int(nums[0]) if nums else 0
+
+            # Рейтинг Я.Карт + отзывы
+            raw_rating = await perplexity_chat(
+                [{"role": "user", "content": f"Найди рейтинг клиники {brand} на Яндекс.Картах. Верни в формате: рейтинг, количество оценок. Например: 4.8, 4096"}],
+                temperature=0.0,
+            )
+            # Ищем "4.8, 4096" или "4.8/5 (4096 оценок)"
+            rating_match = re.search(r"(\d+\.\d+)\D+(\d+)", raw_rating.strip())
+            if rating_match:
+                result["yandex_rating"] = float(rating_match.group(1))
+                result["yandex_reviews"] = int(rating_match.group(2))
+    except Exception:
+        pass
+
+    # F11: VK подписчики (Firecrawl scrape vk.com page)
+    try:
+        # Найти VK ссылку из уже скрапленного HTML
+        if isinstance(main_data, dict):
+            html_content = main_data.get("html", "")
+            vk_link = re.search(r'href=["\']([^"\']*vk\.com/[^"\'/?#]+)', html_content, re.I)
+            if vk_link:
+                vk_url = vk_link.group(1)
+                vk_data = await _fc_scrape(vk_url, ["markdown"])
+                if vk_data:
+                    vk_md = vk_data.get("markdown", "")
+                    # VK показывает "1.7K followers" или "1 700 подписчиков"
+                    vk_match = re.search(r"\*?\*(\d+[.,]?\d*K?)\*?\*?\s*(?:follower|подписч|участник|member)", vk_md, re.I)
+                    if not vk_match:
+                        # Альтернативный паттерн: **1.7K** followers
+                        vk_match = re.search(r"(\d+[.,]?\d*K?)\s*(?:follower|подписч|участник|member)", vk_md, re.I)
+                    if vk_match:
+                        vk_str = vk_match.group(1).replace(",", ".").replace(" ", "")
+                        if "K" in vk_str.upper():
+                            result["vk_followers"] = int(float(vk_str.upper().replace("K", "")) * 1000)
+                        else:
+                            result["vk_followers"] = int(float(vk_str))
     except Exception:
         pass
 
@@ -389,10 +457,13 @@ async def audit_website(url: str) -> dict:
     result["geo_score"] = _compute_geo_score(result)
 
     logger.info(
-        "SEO audit %s: GEO=%d CMS=%s H1=%s schema_med=%s llms=%s perf=%s media=%d",
+        "SEO audit %s: GEO=%d CMS=%s H1=%s schema_med=%s llms=%s perf=%s media=%d yandex=%.1f vk=%s",
         url[:30], result["geo_score"], result["cms"],
         result["h1"], bool(result.get("schema", {}).get("medical")),
-        result["llms_txt"], result.get("perf_estimate"), result.get("media_mentions", 0),
+        result["llms_txt"], result.get("perf_estimate"),
+        result.get("media_mentions", 0),
+        result.get("yandex_rating", 0),
+        result.get("vk_followers"),
     )
 
     return result

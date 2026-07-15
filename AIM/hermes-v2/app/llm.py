@@ -348,6 +348,20 @@ def _format_audit_block(audit: dict) -> str:
     else:
         lines.append("📰 **Публикации в СМИ:** не обнаружены")
 
+    # Рейтинг Я.Карт
+    yandex_rating = audit.get("yandex_rating")
+    yandex_reviews = audit.get("yandex_reviews")
+    if yandex_rating:
+        reviews_str = f" ({yandex_reviews} оценок)" if yandex_reviews else ""
+        lines.append(f"⭐ **Яндекс.Карты:** {yandex_rating}{reviews_str}")
+    else:
+        lines.append("⭐ **Яндекс.Карты:** рейтинг не найден")
+
+    # VK подписчики
+    vk_followers = audit.get("vk_followers")
+    if vk_followers:
+        lines.append(f"🔵 **VK:** {vk_followers:,} подписчиков")
+
     lines.append("")
     return "\n".join(lines)
 
