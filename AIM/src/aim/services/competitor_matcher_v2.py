@@ -811,25 +811,83 @@ class CompetitorMatcherV2:
             len(all_orgs), len(sorted_orgs), len(selected),
         )
 
-        # Convert to CompetitorMatch
+        # Convert to CompetitorMatch — enrich each with full ФНС data
         result: list[CompetitorMatch] = []
         for org in selected:
+            org_id = org.get("org_id")
             revenue_rub = org["gain"] * 1000  # тыс.руб → RUB
+            profit = None
+            trend = ""
+            reg_date = None
+            scl_count = None
+            revenue_source = "estimated"  # gainSum is approximate
+
+            # Enrich with get_financials + get_organization (same as _enrich_one)
+            if org_id:
+                try:
+                    statements = await asyncio.to_thread(
+                        self.nalog.get_financials, org_id
+                    )
+                    if statements:
+                        latest_fin = statements[0]
+                        revenue_rub = latest_fin.revenue_rub or revenue_rub
+                        profit = latest_fin.net_profit_rub
+                        trend = latest_fin.revenue_trend
+                        revenue_source = "tax_filed"
+                except Exception as e:
+                    logger.debug("backfill get_financials failed org_id=%s: %s", org_id, e)
+
+                try:
+                    org_raw = await asyncio.to_thread(
+                        self.nalog.get_organization, org_id
+                    )
+                    if org_raw and isinstance(org_raw, dict):
+                        reg_date = (
+                            org_raw.get("registrationDate")
+                            or org_raw.get("dtRegister")
+                        )
+                        scl_count = (
+                            org_raw.get("sclCount")
+                            or org_raw.get("averageEmployees")
+                            or org_raw.get("employeeCount")
+                        )
+                        if scl_count is not None:
+                            try:
+                                scl_count = int(scl_count)
+                            except (ValueError, TypeError):
+                                scl_count = None
+                except Exception as e:
+                    logger.debug("backfill get_organization failed org_id=%s: %s", org_id, e)
+
             profile = CompanyProfile(
                 inn=org["inn"],
                 legal_name=org["name"],
-                brand_name=org["name"],  # legal name as brand
+                brand_name=org["name"],
                 okved_main=org["okved"],
                 revenue_year=revenue_rub,
-                revenue_source="estimated",  # gainSum is approximate
+                profit_year=profit,
+                revenue_trend=trend if trend else None,
+                revenue_source=revenue_source,
                 legal_address=org["address"],
+                employee_count=scl_count,
+                registration_date=reg_date,
                 data_source="okved_registry",
-                confidence=0.7,
+                confidence=0.85 if revenue_source == "tax_filed" else 0.7,
             )
+            reason = f"{org['name']}, выручка {_format_revenue(revenue_rub)} (реестр ФНС)"
+            if profit:
+                reason += f", прибыль {_format_revenue(profit)}"
+            if trend and trend in _TREND_RU:
+                reason += f", тренд: {_TREND_RU[trend]}"
+            if reg_date:
+                reason += f", рег: {reg_date[:4]}"
+            if scl_count:
+                reason += f", СЧЛ: {scl_count}"
+
             result.append(CompetitorMatch(
                 profile=profile,
-                match_reason=f"{org['name']}, выручка {_format_revenue(revenue_rub)} (реестр ФНС)",
-                data_quality=0.6,
+                match_reason=reason,
+                data_quality=0.8 if revenue_source == "tax_filed" else 0.6,
                 total_score=0.5,
             ))
 
