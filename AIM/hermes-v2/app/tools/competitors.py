@@ -68,7 +68,35 @@ async def find_competitors(url: str, count: int = 5,
         }
 
 
-# --- enrich_competitors: ИНН → выручка через Perplexity -------------------------
+# --- enrich_competitors: ИНН → выручка (ФНС через aim-app, fallback Perplexity) ---
+
+async def _enrich_single_via_aim_app(inn: str) -> dict | None:
+    """Получает выручку из ФНС через aim-app endpoint. Быстро и точно."""
+    if not inn or len(inn) < 10:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"{AIM_API_BASE}/api/companies/financials?inn={inn}")
+            if resp.status_code != 200:
+                return None
+            data = resp.json()
+            company = data.get("company", {})
+            if not company:
+                return None
+            return {
+                "revenue": company.get("latest_revenue"),
+                "revenue_year": max(company.get("revenue", {}).keys()) if company.get("revenue") else None,
+                "revenue_history": company.get("revenue", {}),
+                "profit": company.get("latest_profit"),
+                "revenue_trend": company.get("revenue_trend"),
+                "source": "nalog_egryul",
+                "name": company.get("short_name", ""),
+                "status": company.get("status", ""),
+            }
+    except Exception as e:
+        logger.warning("aim-app financials for INN %s failed: %s", inn, e)
+        return None
+
 
 REVENUE_PROMPT_TEMPLATE = """Найди годовую выручку компании по ИНН {inn}.
 Если ИНН неизвестен — по названию "{name}".
@@ -79,31 +107,41 @@ revenue_year — год отчётности. Если не найдено — n
 
 
 async def _enrich_single_competitor(competitor: dict) -> dict:
-    """Получает выручку для одного конкурента через Perplexity."""
-    inn = competitor.get("inn", "")
-    name = competitor.get("name", "")
-    if not USE_PERPLEXITY or (not inn and not name):
-        return competitor
+    """Получает выручку: 1) aim-app ФНС (точно), 2) Perplexity (fallback)."""
+    inn = str(competitor.get("inn", "") or "").strip()
+    name = competitor.get("name", competitor.get("brand_name", competitor.get("legal_name", "")))
 
-    try:
-        prompt = REVENUE_PROMPT_TEMPLATE.format(inn=inn or "неизвестен", name=name)
-        raw = await perplexity_chat([
-            {"role": "system", "content": "Ты — аналитик. Возвращаешь ТОЛЬКО валидный JSON без markdown."},
-            {"role": "user", "content": prompt},
-        ])
-        # Strip markdown fences
-        text = raw.strip()
-        if text.startswith("```"):
-            text = text.split("\n", 1)[-1]
-            if text.endswith("```"):
-                text = text[:-3].strip()
-        data = json.loads(text)
-        competitor["revenue"] = data.get("revenue")
-        competitor["revenue_year"] = data.get("revenue_year")
-        competitor["revenue_source"] = data.get("source", "perplexity")
-        logger.info("enriched competitor %s: revenue=%s", name[:30], competitor.get("revenue"))
-    except Exception as e:
-        logger.warning("enrich competitor %s failed: %s", name[:30], e)
+    # Приоритет 1: ФНС через aim-app (точно, быстро)
+    if inn:
+        fins = await _enrich_single_via_aim_app(inn)
+        if fins and fins.get("revenue"):
+            competitor.update(fins)
+            logger.info("enriched (ФНС) %s ИНН=%s: revenue=%s", (name or "")[:30], inn, competitor.get("revenue"))
+            return competitor
+
+    # Приоритет 2: Perplexity (если нет ИНН или ФНС не нашла)
+    if USE_PERPLEXITY and (inn or name):
+        try:
+            prompt = REVENUE_PROMPT_TEMPLATE.format(inn=inn or "неизвестен", name=name)
+            raw = await perplexity_chat([
+                {"role": "system", "content": "Ты — аналитик. Возвращаешь ТОЛЬКО валидный JSON без markdown."},
+                {"role": "user", "content": prompt},
+            ])
+            text = raw.strip()
+            if text.startswith("```"):
+                text = text.split("\n", 1)[-1]
+                if text.endswith("```"):
+                    text = text[:-3].strip()
+            data = json.loads(text)
+            competitor["revenue"] = data.get("revenue")
+            competitor["revenue_year"] = data.get("revenue_year")
+            competitor["revenue_source"] = data.get("source", "perplexity")
+            logger.info("enriched (Perplexity) %s: revenue=%s", (name or "")[:30], competitor.get("revenue"))
+        except Exception as e:
+            logger.warning("enrich competitor %s failed: %s", (name or "")[:30], e)
+            competitor["revenue"] = None
+            competitor["revenue_source"] = None
+    else:
         competitor["revenue"] = None
         competitor["revenue_source"] = None
     return competitor
