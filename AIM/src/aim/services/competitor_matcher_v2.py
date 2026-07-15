@@ -39,14 +39,13 @@ from src.aim.services.service_extractor import extract_client_profile
 
 logger = logging.getLogger(__name__)
 
-# Revenue corridor: competitors between 0.3× and 3.0× of client revenue
-_REVENUE_CORRIDOR_MIN = 0.3
-_REVENUE_CORRIDOR_MAX = 3.0
+# Revenue corridor: competitors between 0.1× and 10× of client revenue
+# Wide corridor to ensure we get enough competitors even for very large clients
+_REVENUE_CORRIDOR_MIN = 0.1
+_REVENUE_CORRIDOR_MAX = 10.0
 
-# If fewer than this many competitors in the corridor, widen to 0.1× – 10×
+# If fewer than this many competitors in the corridor, return all with revenue
 _CORRIDOR_WIDEN_THRESHOLD = 3
-_CORRIDOR_WIDE_MIN = 0.1
-_CORRIDOR_WIDE_MAX = 10.0
 
 # Revenue trend → human-readable Russian (for match_reason)
 _TREND_RU = {
@@ -68,7 +67,7 @@ COMPETITOR_DISCOVERY_PROMPT = """Ты эксперт по рынку медиц�
 
 Для каждого конкурента:
 - brand: брендовое название как оно известно на рынке
-- surgeons_estimate: примерное число врачей/хирургов (целое число)
+- doctors_estimate: примерное число врачей/специалистов (целое число)
 
 ВАЖНО:
 - НЕ выдумывай ИНН — только брендовые названия
@@ -76,7 +75,7 @@ COMPETITOR_DISCOVERY_PROMPT = """Ты эксперт по рынку медиц�
 - Если не уверен в числе хирургов — поставь примерную оценку
 
 Верни ТОЛЬКО JSON массив, без markdown:
-[{{"brand": "название", "surgeons_estimate": 10}}]"""
+[{{"brand": "название", "doctors_estimate": 10}}]"""
 
 BRAND_EXTRACTION_PROMPT = """Ниже — результаты поиска о клиниках {specialization} в {city}.
 Извлеки из них названия ВСЕХ клиник/центров, которые упоминаются.
@@ -260,7 +259,7 @@ class CompetitorMatcherV2:
         # Only for the final top-N to keep it fast
         if result:
             await asyncio.gather(
-                self._enrich_surgeons_batch(result, city, count),
+                self._enrich_doctors_batch(result, city, count),
                 enrich_instagram_batch(result, count, city),
                 return_exceptions=True,
             )
@@ -384,7 +383,7 @@ class CompetitorMatcherV2:
             brands = [item.get("brand", "").strip() for item in data if isinstance(item, dict)]
             # Store surgeons estimates for later enrichment
             self._perplexity_estimates = {
-                item.get("brand", "").strip().lower(): item.get("surgeons_estimate")
+                item.get("brand", "").strip().lower(): item.get("doctors_estimate")
                 for item in data if isinstance(item, dict)
             }
             return [b for b in brands if b]
@@ -478,10 +477,10 @@ class CompetitorMatcherV2:
         trend = latest.revenue_trend if latest else ""
         profit = latest.net_profit_rub if latest else None
 
-        # Lookup surgeons estimate from Perplexity (if available)
-        surgeons = None
+        # Lookup doctors estimate from Perplexity discovery (if available)
+        doctors = None
         if hasattr(self, "_perplexity_estimates"):
-            surgeons = self._perplexity_estimates.get(resolved.brand_query.lower())
+            doctors = self._perplexity_estimates.get(resolved.brand_query.lower())
 
         # Build match_reason
         reason_parts = []
@@ -492,8 +491,8 @@ class CompetitorMatcherV2:
             reason_parts.append(f"тренд: {_TREND_RU[trend]}")
         if resolved.okved:
             reason_parts.append(f"ОКВЭД: {resolved.okved}")
-        if surgeons:
-            reason_parts.append(f"~{surgeons} врачей")
+        if doctors:
+            reason_parts.append(f"~{doctors} врачей")
 
         profile = CompanyProfile(
             inn=resolved.inn,
@@ -506,7 +505,7 @@ class CompetitorMatcherV2:
             financial_year=int(latest.period) if latest else None,
             revenue_source="tax_filed" if latest else ("estimated" if resolved.latest_revenue else "none"),
             legal_address=resolved.address,
-            employee_count=surgeons,
+            employee_count=doctors,
             data_source="bo_nalog_v2",
             confidence=0.95 if latest else 0.7,
         )
@@ -518,16 +517,17 @@ class CompetitorMatcherV2:
             total_score=1.0 if latest else 0.5,  # placeholder; revenue_proximity used for sorting
         )
 
-    async def _enrich_surgeons_batch(
+    async def _enrich_doctors_batch(
         self,
         competitors: list[CompetitorMatch],
         city: str,
         max_count: int = 5,
     ) -> None:
-        """Fill missing surgeon counts via Perplexity for top-N competitors.
+        """Fill missing doctor counts via Perplexity for top-N competitors.
 
-        Only enriches competitors where employee_count (surgeons) is None.
-        Uses Perplexity to estimate the number of doctors/surgeons.
+        Only enriches competitors where employee_count (doctors) is None.
+        Uses Perplexity to estimate the number of doctors/specialists.
+        Works for any specialization (surgeons, dentists, narcologists, etc).
         Modifies competitors in place.
         """
         if not perplexity_configured():
@@ -542,11 +542,11 @@ class CompetitorMatcherV2:
 
         semaphore = asyncio.Semaphore(3)  # Perplexity rate limit
 
-        async def _ask_surgeons(comp: CompetitorMatch) -> None:
+        async def _ask_doctors(comp: CompetitorMatch) -> None:
             async with semaphore:
                 brand = comp.profile.brand_name or comp.profile.legal_name or ""
                 prompt = (
-                    f"Сколько врачей или хирургов работает в клинике \"{brand}\""
+                    f"Сколько врачей работает в клинике \"{brand}\""
                     f"{', ' + city if city else ''}? "
                     "Верни ТОЛЬКО целое число (примерная оценка) или null."
                 )
@@ -559,15 +559,15 @@ class CompetitorMatcherV2:
                     numbers = re.findall(r"\b(\d+)\b", raw.strip())
                     if numbers:
                         count = int(numbers[0])
-                        if 1 <= count <= 1000:  # sanity check
+                        if 1 <= count <= 300:  # sanity check: 1-300 surgeons
                             comp.profile.employee_count = count
                             comp.match_reason += f", ~{count} врачей"
-                            logger.info("surgeons_estimate: %s → %d", brand, count)
+                            logger.info("doctors_estimate: %s → %d", brand, count)
                 except Exception as e:
-                    logger.debug("surgeons_estimate failed for %s: %s", brand, e)
+                    logger.debug("doctors_estimate failed for %s: %s", brand, e)
 
         await asyncio.gather(
-            *[_ask_surgeons(c) for c in targets],
+            *[_ask_doctors(c) for c in targets],
             return_exceptions=True,
         )
 

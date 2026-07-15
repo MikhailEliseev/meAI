@@ -76,6 +76,10 @@ def _extract_handle_from_url(url: str) -> Optional[str]:
     # Skip non-profile paths
     if handle in ("p", "reel", "reels", "explore", "accounts", "stories"):
         return None
+    # Skip handles that look like domains (iphk.ru, clinic.com) — real IG
+    # handles rarely have domain-like patterns with TLDs
+    if "." in handle and any(handle.endswith(tld) for tld in (".ru", ".com", ".org", ".net")):
+        return None
     return handle
 
 
