@@ -213,11 +213,27 @@ class CompetitorMatcherV2:
             or client_revenue
             or client_profile.get("estimated_revenue")
         )
+
+        # Сохранить для API response
+        self.last_client_revenue = effective_revenue
+        self.last_client_profit = None
+        if client_inn and effective_revenue:
+            try:
+                # Получить прибыль клиента тоже
+                results = await asyncio.to_thread(self.nalog.search, client_inn)
+                if results:
+                    fins = await asyncio.to_thread(self.nalog.get_financials, results[0].id)
+                    if fins:
+                        self.last_client_profit = fins[0].net_profit_rub
+            except Exception:
+                pass
+
         logger.info(
-            "Client revenue: real=%s effective=%s source=%s",
+            "Client revenue: real=%s effective=%s source=%s profit=%s",
             f"{client_revenue_real:,}" if client_revenue_real else "None",
             f"{effective_revenue:,}" if effective_revenue else "None",
             "ФНС" if client_revenue_real else "estimate",
+            f"{self.last_client_profit:,}" if self.last_client_profit else "None",
         )
 
         # ── STAGE 1: Discover brands (2 channels parallel) ───────────
@@ -351,11 +367,36 @@ class CompetitorMatcherV2:
         Returns:
             Tuple of (inn, source) where source ∈ {"bo_nalog", "perplexity", "failed"}.
         """
+        # Level 0: если нет company_name — извлечь из URL (домен)
+        if not company_name and url:
+            try:
+                from urllib.parse import urlparse
+                domain = urlparse(url).netloc.replace("www.", "")
+                # Домен → название (gmt-clinic.ru → "ГМТ Клиник")
+                company_name = domain.split(".")[0].replace("-", " ").replace("_", " ")
+                logger.info("Client name from domain: %s → %s", domain, company_name)
+            except Exception:
+                pass
+
         # Level 1: bo.nalog search by company name
         if company_name:
             resolved = await resolve_brand_to_inn(company_name, nalog=self.nalog)
             if resolved and resolved.inn:
                 return resolved.inn, "bo_nalog"
+            # Level 1b: bo.nalog search по специализации (если точное имя не нашло)
+            if specialization:
+                try:
+                    results = await asyncio.to_thread(self.nalog.search, f"{specialization} {city}")
+                    if results:
+                        # Берём первую с ОКВЭД 86
+                        for org in results[:5]:
+                            if "86" in (org.okved2 or ""):
+                                rev = await self._get_revenue_by_inn(org.inn)
+                                if rev and rev > 0:
+                                    logger.info("Client INN via bo.nalog spec search: %s", org.inn)
+                                    return org.inn, "bo_nalog_spec"
+                except Exception as e:
+                    logger.debug("bo.nalog spec search failed: %s", e)
 
         # Level 2: Perplexity → extract INN → bo.nalog validate
         if perplexity_configured():
@@ -400,13 +441,12 @@ class CompetitorMatcherV2:
         city: str,
         revenue: Optional[int],
     ) -> list[str]:
-        """Discover competitor brands via Perplexity with retry on empty results.
+        """Discover competitor brands via Perplexity — 3 запроса с аккумуляцией.
 
-        Strategy:
-          Attempt 1: rich JSON prompt (COMPETITOR_DISCOVERY_PROMPT)
-          Attempt 2: simple line-by-line prompt (SIMPLE_DISCOVERY_PROMPT)
-          Attempt 3: last chance with bare specialization+city
-        If all attempts return 0 brands → empty list (SearXNG-only fallback).
+        Раньше: 3 retry с early return (первый успешный → return).
+        Сейчас: 3 разных промпта ПАРАЛЛЕЛЬНО → union всех брендов → дедуп.
+        Это компенсирует недетерминированность Perplexity: каждый запрос
+        даёт 5-8 брендов, в сумме 10-15 уникальных.
         """
         if not perplexity_configured():
             logger.warning("Perplexity not configured — skipping discovery channel")
@@ -418,35 +458,47 @@ class CompetitorMatcherV2:
 
         self._perplexity_estimates = {}
 
-        # ── Attempt 1: rich JSON prompt ──────────────────────────────
+        # ── 3 разных промпта для максимизации покрытия ───────────────
         prompt1 = COMPETITOR_DISCOVERY_PROMPT.format(
             clinic_name=company_name or "клиника",
             specialization=spec,
             city=ci,
             revenue_desc=revenue_desc,
         )
-        brands = await self._try_perplexity_json(prompt1)
-        if brands:
-            logger.info("perplexity_attempt: n=1 brands=%d", len(brands))
-            return brands
-
-        # ── Attempt 2: simple line-by-line prompt ────────────────────
-        logger.info("perplexity_retry: attempt=2 reason=empty_result")
         prompt2 = SIMPLE_DISCOVERY_PROMPT.format(specialization=spec, city=ci)
-        brands = await self._try_perplexity_simple(prompt2)
-        if brands:
-            logger.info("perplexity_attempt: n=2 brands=%d", len(brands))
-            return brands
+        prompt3 = f"Перечисли известные клиники {spec} в {ci}. Только названия, без описаний."
 
-        # ── Attempt 3: last chance — bare query ──────────────────────
-        logger.info("perplexity_retry: attempt=3 reason=empty_result")
-        prompt3 = f"Перечисли известные клиники {spec} в {ci}. Только названия."
-        brands = await self._try_perplexity_simple(prompt3)
-        if brands:
-            logger.info("perplexity_attempt: n=3 brands=%d", len(brands))
+        # ── Параллельный запуск всех 3 промптов ─────────────────────
+        results = await asyncio.gather(
+            self._try_perplexity_json(prompt1),
+            self._try_perplexity_simple(prompt2),
+            self._try_perplexity_simple(prompt3),
+            return_exceptions=True,
+        )
+
+        # ── Аккумуляция: union всех брендов с дедуп ──────────────────
+        all_brands: list[str] = []
+        seen: set[str] = set()
+        for result in results:
+            if isinstance(result, list):
+                for brand in result:
+                    brand_lower = brand.lower().strip()
+                    if brand_lower and brand_lower not in seen:
+                        seen.add(brand_lower)
+                        all_brands.append(brand)
+
+        if all_brands:
+            logger.info(
+                "perplexity_accumulated: %d unique brands from 3 prompts (raw: %d/%d/%d)",
+                len(all_brands),
+                len(results[0]) if isinstance(results[0], list) else 0,
+                len(results[1]) if isinstance(results[1], list) else 0,
+                len(results[2]) if isinstance(results[2], list) else 0,
+            )
         else:
             logger.warning("perplexity_all_attempts_empty: falling back to SearXNG-only")
-        return brands
+
+        return all_brands
 
     async def _try_perplexity_json(self, prompt: str) -> list[str]:
         """Try Perplexity with JSON parsing. Returns brands or empty list."""
@@ -972,7 +1024,11 @@ class CompetitorMatcherV2:
         Widen to 0.1× – 10× if too few remain.
         """
         if not client_revenue or client_revenue <= 0:
-            return competitors
+            # Нет выручки клиента → топ по выручке (не возвращать мусор)
+            has_rev = [c for c in competitors if c.profile.revenue_year and c.profile.revenue_year > 0]
+            no_rev = [c for c in competitors if not c.profile.revenue_year]
+            sorted_rev = sorted(has_rev, key=lambda c: c.profile.revenue_year, reverse=True)
+            return sorted_rev + no_rev
 
         has_rev = [c for c in competitors if c.profile.revenue_year and c.profile.revenue_year > 0]
         no_rev = [c for c in competitors if not c.profile.revenue_year]

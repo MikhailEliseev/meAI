@@ -219,12 +219,17 @@ def _build_formatted_blocks(
     # Competitors block (from find_competitors)
     competitors_result = collected_results.get("find_competitors")
     if competitors_result:
-        # Get client revenue from profile_cache if available
+        # Извлечь client_revenue из ответа find_competitors если есть
         client_rev = None
-        if profile_data and profile_data.get("inn"):
-            # We don't have client revenue here, format_competitors handles None
+        client_profit = None
+        try:
+            comp_data = json.loads(competitors_result) if isinstance(competitors_result, str) else competitors_result
+            client_rev = comp_data.get("client_revenue")
+            client_profit = comp_data.get("client_profit")
+        except (json.JSONDecodeError, TypeError):
             pass
-        comp_md = format_competitors(competitors_result, client_revenue=client_rev)
+        comp_md = format_competitors(competitors_result, client_revenue=client_rev,
+                                      client_profit=client_profit)
         if comp_md:
             blocks.append(comp_md)
 
@@ -365,16 +370,18 @@ async def chat_with_tools(history: list[dict]):
                 messages.append({
                     "role": "system",
                     "content": (
-                        "Выше показаны ТОЧНЫЕ данные в виде таблиц (из ФНС, SearXNG). "
-                        "Твоя задача — сделать только выводы (3-5 предложений):\n"
-                        "1. Позиция клиники относительно конкурентов (по выручке)\n"
-                        "2. 1-2 конкретных рекомендации на основе данных\n"
-                        "3. [SUGGESTIONS] кнопки\n\n"
+                        "Выше показаны ТОЧНЫЕ данные (из ФНС, Apify). "
+                        "Твоя задача — нарративный анализ:\n\n"
+                        "1. 💡 Позиция на рынке (1-2 предложения: лидер/середняк/аутсайдер)\n"
+                        "2. ✅ Сильные стороны (2-3: что лучше конкурентов)\n"
+                        "3. ⚠️ Точки роста (2-3: где отстаёшь)\n"
+                        "4. 🎯 Рекомендации (1-2 конкретных действия)\n"
+                        "5. [SUGGESTIONS] кнопки\n\n"
                         "КРИТИЧНО:\n"
-                        "- НЕ повторяй таблицы — они уже показаны выше\n"
-                        "- НЕ выдумывай цифры — используй только из таблиц\n"
-                        "- НЕ упоминай отзывы, рейтинг, трафик — этих данных нет\n"
-                        "- Если данных нет — не пиши про них"
+                        "- НЕ повторяй таблицы — они уже показаны\n"
+                        "- НЕ выдумывай цифры — только из таблиц\n"
+                        "- НЕ упоминай отзывы/рейтинг/трафик — этих данных нет\n"
+                        "- Сравнивай КОНКРЕТНО: «крупнее в X раз», «нет Instagram (у конкурентов по 30K)»"
                     ),
                 })
 

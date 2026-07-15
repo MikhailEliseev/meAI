@@ -70,12 +70,14 @@ def _format_posts(posts: int | None) -> str:
     return str(posts)
 
 
-def format_competitors(result: str, client_revenue: int | None = None) -> str:
+def format_competitors(result: str, client_revenue: int | None = None,
+                       client_profit: int | None = None) -> str:
     """Формирует Markdown таблицу конкурентов из JSON pipeline.
 
     Args:
         result: JSON строка от find_competitors (или dict).
-        client_revenue: Выручка клиента для строки «Вы» (если есть).
+        client_revenue: Выручка клиента для строки «Вы».
+        client_profit: Прибыль клиента.
 
     Returns:
         Markdown строка с таблицей. Пустая строка если нет данных.
@@ -93,13 +95,16 @@ def format_competitors(result: str, client_revenue: int | None = None) -> str:
 
     lines = ["## 📊 Конкуренты (данные ФНС)\n"]
 
-    # Строка клиента (если есть выручка)
-    if client_revenue:
-        rev_str = _format_revenue(client_revenue)
-        lines.append(f"**Ваша клиника:** выручка {rev_str}\n")
-
     lines.append("| Конкурент | Выручка | Прибыль | Тренд | Лет | Врачей | IG подп. | IG посты | Сайт | Стр. |")
     lines.append("|---|---|---|---|---|---|---|---|---|---|")
+
+    # Строка клиента (позиционирование в таблице)
+    if client_revenue:
+        client_profit_str = _format_profit(client_profit) if client_profit else "—"
+        lines.append(
+            f"| **ВЫ (клиент)** | **{_format_revenue(client_revenue)}** "
+            f"| {client_profit_str} | — | — | — | — | — | — | — |"
+        )
 
     for c in comps:
         brand = (c.get("brand_name") or c.get("legal_name") or "?").strip()
