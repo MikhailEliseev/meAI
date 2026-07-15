@@ -360,21 +360,25 @@ class CompetitorMatcherV2:
         """Resolve client INN with multi-level fallback.
 
         Tries in order:
-          1. bo.nalog search by company_name (from site scrape)
-          2. Perplexity: "какой ИНН у клиники X" → bo.nalog validation
-          3. Gives up (returns empty)
+          Level 0: extract company name from URL domain
+          Level 1: bo.nalog exact search by company_name
+          Level 2: Perplexity → extract INN → ФНС validation (precise)
+          Level 3: bo.nalog spec search (LAST RESORT — imprecise, first match)
 
         Returns:
-            Tuple of (inn, source) where source ∈ {"bo_nalog", "perplexity", "failed"}.
+            Tuple of (inn, source) where source ∈ {"bo_nalog", "perplexity", "bo_nalog_spec", "failed"}.
         """
         # Level 0: если нет company_name — извлечь из URL (домен)
         if not company_name and url:
             try:
                 from urllib.parse import urlparse
-                domain = urlparse(url).netloc.replace("www.", "")
-                # Домен → название (gmt-clinic.ru → "ГМТ Клиник")
-                company_name = domain.split(".")[0].replace("-", " ").replace("_", " ")
-                logger.info("Client name from domain: %s → %s", domain, company_name)
+                # urlparse требует схему, иначе netloc пустой
+                url_parsed = url if "://" in url else "https://" + url
+                domain = urlparse(url_parsed).netloc.replace("www.", "")
+                if domain:
+                    # Домен → название (gmt-clinic.ru → "gmt clinic")
+                    company_name = domain.split(".")[0].replace("-", " ").replace("_", " ")
+                    logger.info("Client name from domain: %s → %s", domain, company_name)
             except Exception:
                 pass
 
