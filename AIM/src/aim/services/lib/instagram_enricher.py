@@ -1,230 +1,179 @@
-"""Instagram enrichment for competitor pipeline.
+"""Instagram enrichment for competitor pipeline via SearXNG.
 
-Finds Instagram handles from competitor websites and fetches follower
-counts via Apify instagram-profile-scraper. Used for the "Instagram"
-column in the competitor table.
+Finds Instagram accounts and extracts follower counts from search engine
+snippets. This works because Google/Bing/DuckDuckGo index Instagram profile
+meta-descriptions which contain follower counts (e.g. "175K Followers, 267
+Following, 5,325 Posts").
 
-Pattern adapted from hermes-v2/app/tools/run_instagram_content.py.
+Why SearXNG (not Apify/Firecrawl/website-scraping):
+  - Instagram is legally restricted in Russia → clinics cannot link to it
+    from their websites, so website scraping finds nothing
+  - Apify instagram-profile-scraper works but polling adds 100-200s latency
+  - Firecrawl explicitly blocks instagram.com
+  - SearXNG aggregates Google/Bing/DDG → snippets already contain the data
+
+Pipeline:
+  1. SearXNG search: "instagram <brand> <city>"
+  2. Extract handle from instagram.com/<handle> URLs in results
+  3. Extract followers from snippet text ("31K Followers", "175K followers")
 """
 
 import asyncio
-import json
 import logging
-import os
 import re
 from typing import Optional
 
-import httpx
-from bs4 import BeautifulSoup
-
+from src.aim.services.lib.searxng_client import searxng_search
 from src.aim.services.rusprofile.models import CompetitorMatch
 
 logger = logging.getLogger(__name__)
 
-APIFY_BASE = "https://api.apify.com/v2"
-ACTOR_ID = "apify~instagram-profile-scraper"
-APIFY_KEYS_PATH = os.getenv("APIFY_KEYS_PATH", "/app/AIM/data/apify_keys.json")
-APIFY_TIMEOUT = 120.0
-SITE_SCRAPE_TIMEOUT = 10.0
-
-_IG_URL_PATTERN = re.compile(
-    r"instagram\.com/([a-zA-Z0-9_.]+)/?", re.I
+# Patterns for extracting data from search snippets
+_IG_URL_PATTERN = re.compile(r"instagram\.com/([a-zA-Z0-9_.]+)", re.I)
+_FOLLOWERS_PATTERN = re.compile(
+    r"([\d.,]+)\s*([KMkmМм]?)\s*(?:Followers|followers|подписчиков|подписчика)",
+    re.I,
 )
+# Russian "тыс" / "млн" suffixes
+_RU_NUM_SUFFIX = {"тыс": 1_000, "тыс.": 1_000, "млн": 1_000_000, "млн.": 1_000_000}
 
 
-def _load_apify_keys() -> list[str]:
-    """Load active Apify API tokens from the key bank."""
-    try:
-        with open(APIFY_KEYS_PATH) as f:
-            data = json.load(f)
-        keys = data.get("keys", [])
-        active = [k["token"] for k in keys if k.get("status") == "active"]
-        if not active:
-            logger.warning("apify: no active keys in %s", APIFY_KEYS_PATH)
-        return active
-    except FileNotFoundError:
-        logger.warning("apify: keys file not found: %s", APIFY_KEYS_PATH)
-        return []
-    except Exception as e:
-        logger.warning("apify: cannot load keys: %s", e)
-        return []
+def _parse_followers(text: str) -> Optional[int]:
+    """Extract follower count from a search snippet text.
 
-
-async def find_instagram_handle(website: str, brand_name: str) -> Optional[str]:
-    """Find an Instagram handle from a clinic's website.
-
-    Scrapes the homepage and looks for instagram.com/<handle> links.
-    Returns the handle (without @) or None if not found.
+    Handles formats like:
+      "175K Followers" → 175000
+      "31K followers" → 31000
+      "5,325 Followers" → 5
+      "30K Followers" → 30000
     """
-    if not website:
+    match = _FOLLOWERS_PATTERN.search(text)
+    if not match:
         return None
 
-    # Ensure URL has protocol
-    url = website
-    if not url.startswith("http"):
-        url = f"https://{url}"
+    num_str = match.group(1).replace(",", ".")
+    suffix = match.group(2).upper()
 
     try:
-        async with httpx.AsyncClient(timeout=SITE_SCRAPE_TIMEOUT) as client:
-            resp = await client.get(url, follow_redirects=True)
-            resp.raise_for_status()
-            html = resp.text
+        num = float(num_str)
+    except ValueError:
+        return None
 
-        soup = BeautifulSoup(html, "html.parser")
+    if suffix in ("K", "К"):
+        num *= 1_000
+    elif suffix in ("M", "М"):
+        num *= 1_000_000
 
-        # Search all <a> tags for instagram links
-        for a_tag in soup.find_all("a", href=True):
-            match = _IG_URL_PATTERN.search(a_tag["href"])
-            if match:
-                handle = match.group(1).lower()
-                # Skip generic/explore pages
-                if handle not in ("explore", "p", "reel", "accounts"):
-                    return handle
-
-        # Fallback: search raw HTML for instagram URLs
-        match = _IG_URL_PATTERN.search(html)
-        if match:
-            handle = match.group(1).lower()
-            if handle not in ("explore", "p", "reel", "accounts"):
-                return handle
-
-    except Exception as e:
-        logger.debug("find_instagram_handle: website=%s error=%s", website, e)
-
-    return None
+    return int(num)
 
 
-async def _fetch_followers_via_apify(api_key: str, handle: str) -> Optional[int]:
-    """Fetch follower count from Apify instagram-profile-scraper."""
-    async with httpx.AsyncClient(timeout=APIFY_TIMEOUT) as client:
-        # Start run
-        start_url = f"{APIFY_BASE}/acts/{ACTOR_ID}/runs?token={api_key}"
-        start_resp = await client.post(
-            start_url,
-            json={"usernames": [handle], "maxPosts": 0},
-        )
-        start_resp.raise_for_status()
-        run_id = start_resp.json()["data"]["id"]
-
-        # Poll for completion (20 × 5s = 100s max)
-        poll_data = None
-        for _ in range(20):
-            await asyncio.sleep(5)
-            poll_resp = await client.get(
-                f"{APIFY_BASE}/acts/{ACTOR_ID}/runs/{run_id}?token={api_key}"
-            )
-            poll_resp.raise_for_status()
-            poll_data = poll_resp.json()
-            status = poll_data.get("data", {}).get("status")
-            if status == "SUCCEEDED":
-                break
-            if status in ("FAILED", "ABORTED", "TIMED-OUT"):
-                return None
-        else:
-            return None  # timeout
-
-        # Get dataset
-        dataset_id = poll_data["data"]["defaultDatasetId"]
-        items = (
-            await client.get(f"{APIFY_BASE}/datasets/{dataset_id}/items?token={api_key}")
-        ).json()
-
-        if items and isinstance(items, list) and len(items) > 0:
-            return items[0].get("followersCount")
-
-    return None
+def _extract_handle_from_url(url: str) -> Optional[str]:
+    """Extract Instagram handle from a URL like instagram.com/<handle>."""
+    match = _IG_URL_PATTERN.search(url)
+    if not match:
+        return None
+    handle = match.group(1).lower()
+    # Skip non-profile paths
+    if handle in ("p", "reel", "reels", "explore", "accounts", "stories"):
+        return None
+    return handle
 
 
-async def get_instagram_followers(handle: str) -> Optional[int]:
-    """Get follower count for an Instagram handle via Apify.
+def _score_profile_result(title: str, content: str, url: str, brand: str) -> int:
+    """Score how likely a search result is the brand's main IG profile.
 
-    Tries each active Apify key in order until one works.
-    Returns follower count or None.
+    Higher = more likely. Considers: has followers count, title contains
+    brand name, URL is a profile (not a post/reel).
     """
-    if not handle:
-        return None
+    score = 0
+    text = f"{title} {content}".lower()
+    brand_lower = brand.lower()
 
-    handle = handle.lstrip("@")
+    # Brand name in title or content
+    if brand_lower in title.lower():
+        score += 3
+    if brand_lower in content.lower():
+        score += 1
 
-    keys = _load_apify_keys()
-    if not keys:
-        logger.warning("get_instagram_followers: no Apify keys available")
-        return None
+    # Has followers info
+    if _FOLLOWERS_PATTERN.search(text):
+        score += 2
 
-    for key in keys:
-        try:
-            followers = await _fetch_followers_via_apify(key, handle)
-            if followers is not None:
-                logger.info(
-                    "instagram_followers: @%s → %s", handle, f"{followers:,}",
-                )
-                return followers
-        except Exception as e:
-            logger.warning(
-                "instagram_followers: key %s... failed for @%s: %s",
-                key[:12], handle, e,
-            )
+    # Is a profile page (not /p/, /reel/, /explore/)
+    if "/p/" not in url and "/reel/" not in url and "/explore/" not in url:
+        score += 1
+
+    return score
+
+
+async def get_instagram_via_searxng(
+    brand_name: str,
+    city: str,
+) -> tuple[Optional[str], Optional[int]]:
+    """Find Instagram handle + follower count via SearXNG.
+
+    Args:
+        brand_name: Clinic brand name (e.g. "Фрау Клиник").
+        city: City for disambiguation (e.g. "Москва").
+
+    Returns:
+        Tuple of (handle, followers). Either or both may be None.
+    """
+    query = f"instagram {brand_name}"
+    if city:
+        query += f" {city}"
+
+    results = await searxng_search(query, limit=10)
+    if not results:
+        return None, None
+
+    # Filter to Instagram results only
+    ig_results = []
+    for r in results:
+        url = r.get("url", "")
+        if "instagram.com/" not in url:
+            continue
+        ig_results.append(r)
+
+    if not ig_results:
+        return None, None
+
+    # Score and rank — prefer the brand's main profile with followers info
+    scored = []
+    for r in ig_results:
+        title = r.get("title", "")
+        content = r.get("content", "") or ""
+        url = r.get("url", "")
+        score = _score_profile_result(title, content, url, brand_name)
+        scored.append((score, r))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+
+    # Try top results until we find one with a handle
+    best_handle = None
+    best_followers = None
+
+    for score, r in scored[:3]:
+        url = r.get("url", "")
+        content = r.get("content", "") or ""
+        title = r.get("title", "")
+        combined = f"{title} {content}"
+
+        handle = _extract_handle_from_url(url)
+        if not handle:
             continue
 
-    logger.info("instagram_followers: @%s → not found (all keys failed)", handle)
-    return None
+        if best_handle is None:
+            best_handle = handle
 
+        followers = _parse_followers(combined)
+        if followers and best_followers is None:
+            best_followers = followers
+            # Prefer a result that has BOTH handle and followers
+            if best_handle == handle:
+                break
 
-async def _find_ig_handle_via_perplexity(brand_name: str, city: str) -> Optional[str]:
-    """Find Instagram handle via Perplexity when not on the website."""
-    from src.aim.services.lib.perplexity_client import perplexity_chat, is_configured
-
-    if not is_configured() or not brand_name:
-        return None
-    try:
-        prompt = (
-            f"Найди Instagram-аккаунт клиники \"{brand_name}\""
-            f"{', ' + city if city else ''}. "
-            "Верни ТОЛЬКО username (без @, без URL) или null."
-        )
-        raw = await perplexity_chat(
-            [{"role": "user", "content": prompt}],
-            temperature=0.0,
-        )
-        # Clean response: strip @, URLs, whitespace
-        handle = raw.strip().lstrip("@").strip()
-        # If it's a URL, extract username
-        import re as _re
-        url_match = _re.search(r"instagram\.com/([a-zA-Z0-9_.]+)", handle)
-        if url_match:
-            handle = url_match.group(1)
-        # Validate: reasonable handle length, alphanumeric
-        if handle and 2 <= len(handle) <= 40 and handle.replace("_", "").replace(".", "").isalnum():
-            return handle.lower()
-    except Exception as e:
-        logger.debug("IG handle via Perplexity failed for %s: %s", brand_name, e)
-    return None
-
-
-async def _resolve_website_via_perplexity(brand_name: str, city: str) -> Optional[str]:
-    """Find a clinic's website URL via Perplexity when not available from scraping."""
-    from src.aim.services.lib.perplexity_client import perplexity_chat, is_configured
-
-    if not is_configured() or not brand_name:
-        return None
-    try:
-        prompt = (
-            f"Найди официальный сайт клиники \"{brand_name}\""
-            f"{', ' + city if city else ''}. "
-            "Верни ТОЛЬКО URL (с https://) или null."
-        )
-        raw = await perplexity_chat(
-            [{"role": "user", "content": prompt}],
-            temperature=0.0,
-        )
-        # Extract URL from response
-        import re as _re
-        url_match = _re.search(r"https?://[^\s<>\"')]+", raw.strip())
-        if url_match:
-            return url_match.group(0).rstrip(".")
-    except Exception as e:
-        logger.debug("website resolve failed for %s: %s", brand_name, e)
-    return None
+    return best_handle, best_followers
 
 
 async def enrich_instagram_batch(
@@ -232,13 +181,10 @@ async def enrich_instagram_batch(
     max_count: int = 5,
     city: str = "",
 ) -> None:
-    """Enrich top-N competitors with Instagram follower counts.
+    """Enrich top-N competitors with Instagram data via SearXNG.
 
-    For each competitor (up to max_count):
-      1. Resolve website if missing (Perplexity fallback)
-      2. Find IG handle from their website
-      3. Fetch follower count via Apify
-      4. Store in profile.social_links
+    For each competitor: finds IG handle + extracts follower count from
+    search snippets. Fast (~3-5s total, parallel) — no Apify needed.
 
     Modifies competitors in place. Non-blocking on failure.
     """
@@ -246,36 +192,30 @@ async def enrich_instagram_batch(
         return
 
     targets = competitors[:max_count]
-    semaphore = asyncio.Semaphore(3)  # Don't spam Apify/Perplexity
+    semaphore = asyncio.Semaphore(3)
 
     async def _enrich_one(comp: CompetitorMatch) -> None:
         async with semaphore:
             brand = comp.profile.brand_name or comp.profile.legal_name or ""
-
-            # Step 1: Get website
-            website = comp.website or comp.profile.website or ""
-            if not website:
-                website = await _resolve_website_via_perplexity(brand, city)
-                if website:
-                    comp.website = website
-                    comp.profile.website = website
-                    logger.info("website_resolved: %s → %s", brand, website)
-
-            # Step 2: Find IG handle (website scrape first, Perplexity fallback)
-            handle = await find_instagram_handle(website, brand)
-            if not handle:
-                handle = await _find_ig_handle_via_perplexity(brand, city)
-            if not handle:
-                logger.debug("instagram: no handle found for %s (website=%s)", brand, website)
+            if not brand:
                 return
 
-            # Step 3: Get followers
-            followers = await get_instagram_followers(handle)
-            if followers is not None:
+            handle, followers = await get_instagram_via_searxng(brand, city)
+
+            if handle:
                 comp.profile.social_links["instagram"] = f"@{handle}"
-                comp.profile.social_links["instagram_followers"] = str(followers)
-                comp.match_reason += f", Instagram: {followers:,} подписчиков"
-                logger.info("instagram_enriched: %s @%s %s", brand, handle, f"{followers:,}")
+                if followers is not None:
+                    comp.profile.social_links["instagram_followers"] = str(followers)
+                    comp.match_reason += f", Instagram: {followers:,} подписчиков"
+                    logger.info(
+                        "instagram_enriched: %s @%s %s followers",
+                        brand, handle, f"{followers:,}",
+                    )
+                else:
+                    comp.match_reason += f", Instagram: @{handle}"
+                    logger.info("instagram_handle_only: %s @%s", brand, handle)
+            else:
+                logger.debug("instagram_not_found: %s", brand)
 
     await asyncio.gather(
         *[_enrich_one(c) for c in targets],
