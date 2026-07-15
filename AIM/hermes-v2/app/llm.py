@@ -16,6 +16,68 @@ from app.tools.registry import execute, get_openai_tools
 
 logger = logging.getLogger(__name__)
 
+# Человекочитаемые сообщения прогресса для каждого тула (для UX)
+_TOOL_MESSAGES = {
+    "extract_clinic_profile": {
+        "start": "📋 Определяю клинику: ИНН, юрлицо, адрес…",
+        "done": "✅ Профиль клиники готов",
+    },
+    "quick_overview": {
+        "start": "🔍 Собираю обзор: врачи, услуги, соцсети…",
+        "done": "✅ Обзор готов",
+    },
+    "find_competitors": {
+        "start": "🗺️ Ищу конкурентов рядом через Google Maps (это ~1-2 минуты)…",
+        "done": "✅ Конкуренты найдены",
+    },
+    "enrich_competitors": {
+        "start": "💰 Получаю выручку конкурентов из ФНС…",
+        "done": "✅ Финансовые данные готовы",
+    },
+    "company_financials": {
+        "start": "💰 Запрашиваю финансовые данные из налоговой…",
+        "done": "✅ Финансы получены",
+    },
+    "company_profile": {
+        "start": "📄 Загружаю профиль из базы…",
+        "done": "✅ Профиль готов",
+    },
+    "analyze_website": {
+        "start": "🔬 Глубокий аудит сайта: SEO, UX, репутация (~30 сек)…",
+        "done": "✅ Аудит завершён",
+    },
+    "seo_audit": {
+        "start": "🔎 Анализирую SEO…",
+        "done": "✅ SEO-анализ готов",
+    },
+    "perplexity_search": {
+        "start": "🌐 Ищу актуальные данные…",
+        "done": "✅ Поиск завершён",
+    },
+    "run_smi_mentions": {
+        "start": "📰 Ищу упоминания в СМИ…",
+        "done": "✅ Упоминания собраны",
+    },
+    "run_review_platforms": {
+        "start": "⭐ Собираю отзывы и рейтинги…",
+        "done": "✅ Отзывы готовы",
+    },
+    "run_instagram_content": {
+        "start": "📸 Анализирую Instagram…",
+        "done": "✅ Instagram проанализирован",
+    },
+    "run_ads_intelligence": {
+        "start": "📢 Проверяю рекламную активность…",
+        "done": "✅ Реклама проверена",
+    },
+}
+
+
+def _tool_msg(tool_name: str, phase: str) -> str:
+    """Возвращает человекочитаемое сообщение для тула или fallback."""
+    msgs = _TOOL_MESSAGES.get(tool_name, {})
+    return msgs.get(phase, f"⚙️ {tool_name}…")
+
 # Ленивая инициализация: client создаётся при первом вызове, когда env уже
 # загружен. На import OMNIROUTE_AUTH может быть пустым (тесты) — тогда
 # client всё равно создастся с dummy, реальный вызов вскроет проблему.
@@ -132,10 +194,13 @@ async def chat_with_tools(history: list[dict]):
 
             # Фаза 1: extract_clinic_profile (если есть) — сначала, для auto-inject
             if profile_tc:
-                yield ("tool_start", profile_tc.function.name,
-                       json.loads(profile_tc.function.arguments or "{}"))
+                tool_name = profile_tc.function.name
+                yield ("tool_start", tool_name,
+                       json.loads(profile_tc.function.arguments or "{}"),
+                       _tool_msg(tool_name, "start"))
                 profile_tc, profile_result = await _execute_single_tool(profile_tc, profile_cache)
-                yield ("tool_result", profile_tc.function.name, profile_result)
+                yield ("tool_result", tool_name, profile_result,
+                       _tool_msg(tool_name, "done"))
                 messages.append({
                     "role": "tool", "tool_call_id": profile_tc.id,
                     "content": profile_result,
@@ -145,11 +210,12 @@ async def chat_with_tools(history: list[dict]):
             if other_tcs:
                 # Отправляем tool_start события для всех
                 for tc in other_tcs:
+                    tool_name = tc.function.name
                     try:
                         args = json.loads(tc.function.arguments or "{}")
                     except json.JSONDecodeError:
                         args = {}
-                    yield ("tool_start", tc.function.name, args)
+                    yield ("tool_start", tool_name, args, _tool_msg(tool_name, "start"))
 
                 # Параллельное выполнение
                 results = await asyncio.gather(
@@ -159,16 +225,17 @@ async def chat_with_tools(history: list[dict]):
 
                 # Обрабатываем результаты (в порядке тулов)
                 for tc, result in zip(other_tcs, results):
+                    tool_name = tc.function.name
                     if isinstance(result, Exception):
                         error_str = json.dumps({"error": str(result)}, ensure_ascii=False)
-                        yield ("tool_result", tc.function.name, error_str)
+                        yield ("tool_result", tool_name, error_str, _tool_msg(tool_name, "done"))
                         messages.append({
                             "role": "tool", "tool_call_id": tc.id,
                             "content": error_str,
                         })
                     else:
                         _, result_str = result
-                        yield ("tool_result", tc.function.name, result_str)
+                        yield ("tool_result", tool_name, result_str, _tool_msg(tool_name, "done"))
                         messages.append({
                             "role": "tool", "tool_call_id": tc.id,
                             "content": result_str,

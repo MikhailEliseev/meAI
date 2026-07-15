@@ -144,11 +144,11 @@ async def chat_stream(req: ChatRequest):
                             yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': chunk}, ensure_ascii=False)}\n\n"
                             sent_idx = safe_end
                     elif kind == "tool_start":
-                        tool_name, tool_args = event[1], event[2]
-                        yield f"data: {json.dumps({'type': 'tool-progress', 'tool': tool_name, 'status': 'start', 'args': tool_args}, ensure_ascii=False)}\n\n"
+                        tool_name, tool_args, human_msg = event[1], event[2], event[3] if len(event) > 3 else ""
+                        yield f"data: {json.dumps({'type': 'tool-progress', 'tool': tool_name, 'status': 'start', 'args': tool_args, 'message': human_msg}, ensure_ascii=False)}\n\n"
                     elif kind == "tool_result":
-                        tool_name, result = event[1], event[2]
-                        yield f"data: {json.dumps({'type': 'tool-progress', 'tool': tool_name, 'status': 'done', 'result': result}, ensure_ascii=False)}\n\n"
+                        tool_name, result, human_msg = event[1], event[2], event[3] if len(event) > 3 else ""
+                        yield f"data: {json.dumps({'type': 'tool-progress', 'tool': tool_name, 'status': 'done', 'result': result, 'message': human_msg}, ensure_ascii=False)}\n\n"
                     elif kind == "finish":
                         break
             except Exception as e:
