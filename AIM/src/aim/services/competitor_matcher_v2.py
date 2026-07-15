@@ -33,7 +33,7 @@ from src.aim.services.brand_resolver import ResolvedBrand, resolve_brand_to_inn,
 from src.aim.services.lib.perplexity_client import perplexity_chat, is_configured as perplexity_configured
 from src.aim.services.lib.searxng_client import searxng_search
 from src.aim.services.lib.instagram_enricher import enrich_instagram_batch
-from src.aim.services.nalog import BfoNalogClient
+from src.aim.services.nalog import BfoNalogClient, get_nalog_client
 from src.aim.services.rusprofile.models import CompanyProfile, CompetitorMatch
 from src.aim.services.service_extractor import extract_client_profile
 
@@ -60,7 +60,7 @@ _TREND_RU = {
 COMPETITOR_DISCOVERY_PROMPT = """Ты эксперт по рынку медицинских клиник России.
 Клиника: {clinic_name} — специализация: {specialization}, город: {city}, выручка ~{revenue_desc}.
 
-Назови 10 ПРЯМЫХ КОНКУРЕНТОВ этой клиники по принципам:
+Назови 12 ПРЯМЫХ КОНКУРЕНТОВ этой клиники по принципам:
 1. Схожесть услуг (та же специализация: {specialization})
 2. Сопоставимый масштаб бизнеса (выручка от 30%% до 300%% от клиента)
 3. Тот же город/регион: {city}
@@ -72,10 +72,13 @@ COMPETITOR_DISCOVERY_PROMPT = """Ты эксперт по рынку медиц�
 ВАЖНО:
 - НЕ выдумывай ИНН — только брендовые названия
 - Называй реальные клиники, которые существуют на рынке
-- Если не уверен в числе хирургов — поставь примерную оценку
+- Если не уверен в числе врачей — поставь примерную оценку
 
 Верни ТОЛЬКО JSON массив, без markdown:
 [{{"brand": "название", "doctors_estimate": 10}}]"""
+
+SIMPLE_DISCOVERY_PROMPT = """Назови 12 самых известных клиник {specialization} в {city}.
+Только названия, по одному на строку. Без нумерации, без объяснений."""
 
 BRAND_EXTRACTION_PROMPT = """Ниже — результаты поиска о клиниках {specialization} в {city}.
 Извлеки из них названия ВСЕХ клиник/центров, которые упоминаются.
@@ -130,12 +133,12 @@ class CompetitorMatcherV2:
     """Hybrid competitor matcher: Perplexity + SearXNG → bo.nalog → ФНС."""
 
     def __init__(self):
-        self.nalog = BfoNalogClient()
+        self.nalog = get_nalog_client()  # singleton — cache survives between requests
         self.last_is_megalopolis = False
 
     async def close(self):
-        """Cleanup resources."""
-        self.nalog.close()
+        """Cleanup resources. Note: nalog client is a singleton, NOT closed here."""
+        pass
 
     async def find_competitors(
         self,
@@ -359,36 +362,96 @@ class CompetitorMatcherV2:
         city: str,
         revenue: Optional[int],
     ) -> list[str]:
-        """Discover competitor brands via Perplexity (market knowledge)."""
+        """Discover competitor brands via Perplexity with retry on empty results.
+
+        Strategy:
+          Attempt 1: rich JSON prompt (COMPETITOR_DISCOVERY_PROMPT)
+          Attempt 2: simple line-by-line prompt (SIMPLE_DISCOVERY_PROMPT)
+          Attempt 3: last chance with bare specialization+city
+        If all attempts return 0 brands → empty list (SearXNG-only fallback).
+        """
         if not perplexity_configured():
             logger.warning("Perplexity not configured — skipping discovery channel")
             return []
 
         revenue_desc = _format_revenue(revenue)
-        prompt = COMPETITOR_DISCOVERY_PROMPT.format(
+        spec = specialization or "медицина"
+        ci = city or "Москва"
+
+        self._perplexity_estimates = {}
+
+        # ── Attempt 1: rich JSON prompt ──────────────────────────────
+        prompt1 = COMPETITOR_DISCOVERY_PROMPT.format(
             clinic_name=company_name or "клиника",
-            specialization=specialization or "медицина",
-            city=city or "Москва",
+            specialization=spec,
+            city=ci,
             revenue_desc=revenue_desc,
         )
+        brands = await self._try_perplexity_json(prompt1)
+        if brands:
+            logger.info("perplexity_attempt: n=1 brands=%d", len(brands))
+            return brands
 
-        raw = await perplexity_chat(
-            [{"role": "user", "content": prompt}],
-            temperature=0.1,
-        )
-        cleaned = _strip_markdown(raw)
+        # ── Attempt 2: simple line-by-line prompt ────────────────────
+        logger.info("perplexity_retry: attempt=2 reason=empty_result")
+        prompt2 = SIMPLE_DISCOVERY_PROMPT.format(specialization=spec, city=ci)
+        brands = await self._try_perplexity_simple(prompt2)
+        if brands:
+            logger.info("perplexity_attempt: n=2 brands=%d", len(brands))
+            return brands
 
+        # ── Attempt 3: last chance — bare query ──────────────────────
+        logger.info("perplexity_retry: attempt=3 reason=empty_result")
+        prompt3 = f"Перечисли известные клиники {spec} в {ci}. Только названия."
+        brands = await self._try_perplexity_simple(prompt3)
+        if brands:
+            logger.info("perplexity_attempt: n=3 brands=%d", len(brands))
+        else:
+            logger.warning("perplexity_all_attempts_empty: falling back to SearXNG-only")
+        return brands
+
+    async def _try_perplexity_json(self, prompt: str) -> list[str]:
+        """Try Perplexity with JSON parsing. Returns brands or empty list."""
         try:
+            raw = await perplexity_chat(
+                [{"role": "user", "content": prompt}],
+                temperature=0.1,
+            )
+            cleaned = _strip_markdown(raw)
             data = json.loads(cleaned)
             brands = [item.get("brand", "").strip() for item in data if isinstance(item, dict)]
-            # Store surgeons estimates for later enrichment
+            # Store doctors estimates for later enrichment
             self._perplexity_estimates = {
                 item.get("brand", "").strip().lower(): item.get("doctors_estimate")
                 for item in data if isinstance(item, dict)
             }
             return [b for b in brands if b]
-        except json.JSONDecodeError as e:
-            logger.warning("Perplexity returned non-JSON: %s", e)
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            logger.debug("Perplexity JSON parse failed: %s", e)
+            return []
+        except Exception as e:
+            logger.warning("Perplexity JSON call failed: %s", e)
+            return []
+
+    async def _try_perplexity_simple(self, prompt: str) -> list[str]:
+        """Try Perplexity with plain-text line parsing. Returns brands or empty."""
+        try:
+            raw = await perplexity_chat(
+                [{"role": "user", "content": prompt}],
+                temperature=0.1,
+            )
+            # Parse line-by-line, skip empty and numbered lines
+            brands = []
+            for line in raw.strip().split("\n"):
+                line = line.strip()
+                # Strip leading numbers/bullets: "1. Clinic" → "Clinic"
+                line = re.sub(r"^\d+[\.\)]\s*", "", line)
+                line = line.lstrip("-•* ")
+                if line and len(line) > 2:
+                    brands.append(line)
+            return brands
+        except Exception as e:
+            logger.warning("Perplexity simple call failed: %s", e)
             return []
 
     async def _discover_via_searxng(
@@ -579,15 +642,30 @@ class CompetitorMatcherV2:
         Multiple brand queries (e.g. "СМ-Клиника Волгоградский",
         "СМ-Клиника Сенежская") may resolve to the same legal entity (same ИНН).
         We keep the first occurrence (most specific brand name) per ИНН.
+        Logs which brands were merged for observability.
         """
         seen_inns: dict[str, CompetitorMatch] = {}
         no_inn: list[CompetitorMatch] = []
+        inn_brands: dict[str, list[str]] = {}  # inn → all brand names for logging
+
         for c in competitors:
             inn = c.profile.inn.strip()
+            brand = c.profile.brand_name or c.profile.legal_name or "?"
             if not inn:
                 no_inn.append(c)
-            elif inn not in seen_inns:
-                seen_inns[inn] = c
+            else:
+                inn_brands.setdefault(inn, []).append(brand)
+                if inn not in seen_inns:
+                    seen_inns[inn] = c
+
+        # Log duplicates
+        duplicates = len(competitors) - len(seen_inns) - len(no_inn)
+        if duplicates > 0:
+            logger.info("dedup_by_inn: removed %d duplicates (same INN)", duplicates)
+            for inn, brands in inn_brands.items():
+                if len(brands) > 1:
+                    logger.info("dedup_merged: inn=%s brands=%s", inn, brands)
+
         return list(seen_inns.values()) + no_inn
 
     def _filter_by_revenue_corridor(

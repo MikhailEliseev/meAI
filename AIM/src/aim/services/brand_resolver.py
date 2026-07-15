@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Optional
 
-from src.aim.services.nalog import BfoNalogClient
+from src.aim.services.nalog import BfoNalogClient, get_nalog_client
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +167,7 @@ async def resolve_brand_to_inn(
             logger.info("brand_normalized: \"%s\" → \"%s\"", brand_original, brand_name)
 
     own_client = nalog is None
-    client = nalog or BfoNalogClient()
+    client = nalog or get_nalog_client()  # singleton for cache persistence
     try:
         result = await asyncio.to_thread(_resolve_sync, client, brand_name, okved_prefix, brand_original)
         if result:
@@ -203,20 +203,17 @@ async def resolve_brands_batch(
     Returns:
         List of ResolvedBrand or None, same order as input.
     """
-    nalog = BfoNalogClient()
+    nalog = get_nalog_client()  # singleton — cache survives, do NOT close
     semaphore = asyncio.Semaphore(max_concurrent)
 
     async def _semaphored(brand: str) -> Optional[ResolvedBrand]:
         async with semaphore:
             return await resolve_brand_to_inn(brand, okved_prefix, nalog)
 
-    try:
-        results = await asyncio.gather(
-            *[_semaphored(b) for b in brand_names],
-            return_exceptions=True,
-        )
-    finally:
-        nalog.close()
+    results = await asyncio.gather(
+        *[_semaphored(b) for b in brand_names],
+        return_exceptions=True,
+    )
 
     # Convert exceptions to None
     return [r if isinstance(r, ResolvedBrand) else None for r in results]
