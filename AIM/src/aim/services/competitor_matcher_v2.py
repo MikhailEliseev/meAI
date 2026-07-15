@@ -1010,8 +1010,6 @@ class CompetitorMatcherV2:
 
         return result + no_inn
 
-        return list(seen_inns.values()) + no_inn
-
     def _filter_by_revenue_corridor(
         self,
         competitors: list[CompetitorMatch],

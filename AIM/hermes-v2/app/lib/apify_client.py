@@ -46,17 +46,21 @@ def load_apify_keys() -> list[str]:
         return []
 
 
+_bg_tasks: set = set()
+
+
 def mark_apify_key_exhausted(token: str, reason: str = "insufficient_credits") -> None:
     """Помечает ключ exhausted через UnifiedKeyPool (с persist + lock)."""
     try:
         import asyncio
         pool = get_apify_pool()
-        # Если мы в event loop — вызываем через create_task
         try:
             loop = asyncio.get_running_loop()
-            loop.create_task(pool.mark_exhausted(token, reason))
+            # Сохраняем reference чтобы task не был GC'd
+            task = loop.create_task(pool.mark_exhausted(token, reason))
+            _bg_tasks.add(task)
+            task.add_done_callback(_bg_tasks.discard)
         except RuntimeError:
-            # Не в event loop — вызываем синхронно
             asyncio.run(pool.mark_exhausted(token, reason))
     except Exception:
         logger.exception("apify: failed to mark key exhausted")

@@ -8,10 +8,14 @@
 import asyncio
 import logging
 import os
+import threading as _threading
 
 from app.lib.key_pool import UnifiedKeyPool
 
 logger = logging.getLogger(__name__)
+
+# Хранилище для background tasks (предотвращает GC)
+_bg_tasks: set = set()
 
 FIRECRAWL_KEYS_PATH = os.getenv(
     "FIRECRAWL_KEYS_FILE",
@@ -48,6 +52,8 @@ class FirecrawlKeyBank:
 
     def __init__(self):
         self._pool: UnifiedKeyPool | None = None
+        self._sync_lock = _threading.Lock()
+        self._sync_cursor = 0
         self._init_pool()
 
     def _init_pool(self):
@@ -99,34 +105,45 @@ class FirecrawlKeyBank:
         self._pool = UnifiedKeyPool("firecrawl", FIRECRAWL_KEYS_PATH)
 
     def get_key(self) -> str | None:
-        """Возвращает следующий активный ключ (sync wrapper над async pool)."""
+        """Возвращает следующий активный ключ.
+
+        Потокобезопасно через threading.Lock (не обходит asyncio.Lock пула).
+        Если в event loop — делает snapshot активных ключей и round-robin по ним.
+        """
         if self._pool is None:
             return None
-        try:
-            loop = asyncio.get_running_loop()
-            # В event loop — нельзя вызвать async синхронно.
-            # Возвращаем round-robin по active индексам напрямую.
-            if not self._pool._active_indices:
+        # Потокобезопасный snapshot активных ключей
+        with self._sync_lock:
+            active_tokens = [
+                k["token"] for k in self._pool._keys if k.get("status") == "active"
+            ]
+            if not active_tokens:
                 return None
-            idx = self._pool._active_indices[self._pool._cursor % len(self._pool._active_indices)]
-            self._pool._cursor = (self._pool._cursor + 1) % len(self._pool._active_indices)
-            return self._pool._keys[idx]["token"]
-        except RuntimeError:
-            # Не в event loop — вызываем через asyncio.run
-            try:
-                return asyncio.run(self._pool.get_next_key())
-            except RuntimeError:
-                return None
+            key = active_tokens[self._sync_cursor % len(active_tokens)]
+            self._sync_cursor += 1
+            return key
+
+    async def mark_exhausted_async(self, key: str, reason: str = "insufficient_credits"):
+        """Помечает ключ исчерпанным (async — правильный путь)."""
+        if self._pool is None:
+            return
+        await self._pool.mark_exhausted(key, reason)
 
     def mark_exhausted(self, key: str, reason: str = "insufficient_credits"):
-        """Помечает ключ исчерпанным (sync wrapper)."""
+        """Помечает ключ исчерпанным (sync wrapper — fire-and-forget safe)."""
         if self._pool is None:
             return
         try:
             loop = asyncio.get_running_loop()
-            loop.create_task(self._pool.mark_exhausted(key, reason))
+            # Сохраняем reference чтобы task не был GC'd
+            task = loop.create_task(self._pool.mark_exhausted(key, reason))
+            _bg_tasks.add(task)
+            task.add_done_callback(_bg_tasks.discard)
         except RuntimeError:
-            asyncio.run(self._pool.mark_exhausted(key, reason))
+            try:
+                asyncio.run(self._pool.mark_exhausted(key, reason))
+            except Exception as e:
+                logger.warning("mark_exhausted failed: %s", e)
 
 
 # Singleton (lazy — инициализируется при первом обращении, не при импорте)

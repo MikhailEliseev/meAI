@@ -27,6 +27,8 @@ REQUEST_TIMEOUT = 30.0
 # Ключи Firecrawl — UnifiedKeyPool через env
 _fc_keys: list[str] = []
 _fc_idx = 0
+_fc_exhausted: set[str] = set()  # помеченные исчерпанные ключи
+_fc_lock = __import__("threading").Lock()
 
 
 def _load_firecrawl_keys() -> list[str]:
@@ -36,7 +38,6 @@ def _load_firecrawl_keys() -> list[str]:
         return _fc_keys
 
     keys = set()
-    # Из env (fallback)
     for prefix in ("FIRECRAWL_API_KEY_", "FIRECRAWL_KEY_"):
         for i in range(1, 21):
             k = os.getenv(f"{prefix}{i:02d}", "") or os.getenv(f"{prefix}{i}", "")
@@ -46,12 +47,12 @@ def _load_firecrawl_keys() -> list[str]:
     if single:
         keys.add(single)
 
-    # Из JSON пула (приоритет)
     pool_path = os.getenv("FIRECRAWL_KEYS_FILE", "/opt/keys/firecrawl.json")
     try:
         import json
         if os.path.exists(pool_path):
-            data = json.load(open(pool_path))
+            with open(pool_path) as f:
+                data = json.load(f)
             for entry in data.get("keys", []):
                 if entry.get("status") == "active":
                     keys.add(entry.get("token", ""))
@@ -64,23 +65,32 @@ def _load_firecrawl_keys() -> list[str]:
 
 
 def _get_next_key() -> Optional[str]:
-    """Round-robin по ключам Firecrawl."""
+    """Round-robin по активным ключам (исключая exhausted)."""
     global _fc_idx
-    keys = _load_firecrawl_keys()
-    if not keys:
-        return None
-    key = keys[_fc_idx % len(keys)]
-    _fc_idx += 1
-    return key
+    with _fc_lock:
+        keys = [k for k in _load_firecrawl_keys() if k not in _fc_exhausted]
+        if not keys:
+            return None
+        key = keys[_fc_idx % len(keys)]
+        _fc_idx += 1
+        return key
 
 
-async def _firecrawl_request(endpoint: str, payload: dict, max_retries: int = 2) -> Optional[dict]:
+def _mark_key_exhausted(key: str):
+    """Помечает ключ исчерпанным — больше не возвращается."""
+    with _fc_lock:
+        _fc_exhausted.add(key)
+    logger.warning("Firecrawl key marked exhausted: …%s (total exhausted: %d)",
+                   key[-4:], len(_fc_exhausted))
+
+
+async def _firecrawl_request(endpoint: str, payload: dict, max_retries: int = 3) -> Optional[dict]:
     """Вызывает Firecrawl API с ротацией ключей."""
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
         for attempt in range(max_retries):
             key = _get_next_key()
             if not key:
-                logger.warning("Firecrawl: no keys available")
+                logger.warning("Firecrawl: no active keys available")
                 return None
             try:
                 resp = await client.post(
@@ -89,11 +99,12 @@ async def _firecrawl_request(endpoint: str, payload: dict, max_retries: int = 2)
                     json=payload,
                 )
                 if resp.status_code in (402, 429):
+                    _mark_key_exhausted(key)
                     logger.warning("Firecrawl key exhausted (attempt %d): %d", attempt + 1, resp.status_code)
                     continue
                 resp.raise_for_status()
                 return resp.json()
-            except Exception as e:
+            except httpx.HTTPError as e:
                 logger.warning("Firecrawl request failed (attempt %d): %s", attempt + 1, str(e)[:100])
     return None
 

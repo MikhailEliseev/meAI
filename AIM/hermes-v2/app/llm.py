@@ -315,6 +315,7 @@ async def chat_with_tools(history: list[dict]):
                 })
 
             # Фаза 2: остальные тулы параллельно
+            collected_results = {}  # всегда инициализируем (fix NameError)
             if other_tcs:
                 # Отправляем tool_start события для всех
                 for tc in other_tcs:
@@ -392,11 +393,17 @@ async def chat_with_tools(history: list[dict]):
             model=LLM_MODEL, messages=messages, stream=True,
         )
         llm_text = []  # накапливаем для пост-проверки (анти-галлюцинация)
-        async for chunk in stream:
-            delta = chunk.choices[0].delta.content
-            if delta:
-                llm_text.append(delta)
-                yield ("text", delta)
+        try:
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta:
+                    delta = chunk.choices[0].delta.content
+                    if delta:
+                        llm_text.append(delta)
+                        yield ("text", delta)
+        finally:
+            # Корректно закрываем stream (освобождает HTTP connection)
+            if hasattr(stream, "close"):
+                await stream.close()
 
         # ── Пост-проверка (анти-галлюцинация) ──────────────────────────
         # Текст уже отправлен — не блокируем. Но логируем подозрительные

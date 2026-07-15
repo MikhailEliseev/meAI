@@ -503,6 +503,26 @@ async def analyze_competitors_stream(body: AnalyzeCompetitorsRequest):
 
 # ── Serialization helpers ──────────────────────────────────────────
 
+def _safe_int(val) -> int | None:
+    """Безопасное преобразование в int (от corrupt данных скраперов)."""
+    if not val:
+        return None
+    try:
+        return int(float(val))
+    except (ValueError, TypeError):
+        return None
+
+
+def _safe_float(val) -> float | None:
+    """Безопасное преобразование в float."""
+    if not val:
+        return None
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return None
+
+
 def _competitor_to_json(m: CompetitorMatch) -> CompetitorJson:
     """Convert CompetitorMatch to API response model."""
     p = m.profile
@@ -540,14 +560,14 @@ def _competitor_to_json(m: CompetitorMatch) -> CompetitorJson:
         inns=p.inns,
         licenses=p.licenses,
         is_multi_entity=p.is_multi_entity,
-        surgeons_count=p.employee_count,  # v2 stores surgeon/employee estimates in employee_count
+        surgeons_count=p.employee_count,
         instagram_handle=p.social_links.get("instagram"),
-        instagram_followers=int(p.social_links.get("instagram_followers")) if p.social_links.get("instagram_followers") else None,
-        instagram_posts=int(p.social_links.get("instagram_posts")) if p.social_links.get("instagram_posts") else None,
+        instagram_followers=_safe_int(p.social_links.get("instagram_followers")),
+        instagram_posts=_safe_int(p.social_links.get("instagram_posts")),
         registration_date=p.registration_date,
         website_cms=p.social_links.get("website_cms"),
-        website_pages=int(p.social_links.get("website_pages")) if p.social_links.get("website_pages") else None,
-        website_size_kb=float(p.social_links.get("website_size_kb")) if p.social_links.get("website_size_kb") else None,
+        website_pages=_safe_int(p.social_links.get("website_pages")),
+        website_size_kb=_safe_float(p.social_links.get("website_size_kb")),
     )
 
 
