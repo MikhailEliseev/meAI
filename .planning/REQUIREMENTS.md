@@ -1,152 +1,124 @@
-# Requirements — Hermes v5: Full Coverage Reports
+# REQUIREMENTS.md — Гермес v2
 
-**Source:** PROJECT.md (Core Value: Полнота данных через LLM-оркестратора с 3-проходным циклом)
-**Mode:** YOLO (auto-include table stakes + explicitly mentioned features)
+**Дата:** 2026-07-14
+**Источник:** спека `docs/superpowers/specs/2026-07-14-hermes-interactive-redesign-design.md`
 
 ---
 
 ## v1 Requirements
 
-### Research (RES)
+### Контейнер и инфраструктура (INFRA)
+- [ ] **INFRA-01**: Новый Docker-сервис `hermes-v2` описан в `docker-compose.yml` (образ `aim-hermes-v2:latest`, expose 8000, сети aim-network, depends_on aim-app healthy)
+- [ ] **INFRA-02**: `Dockerfile` для hermes-v2: Python 3.11 + зависимости из requirements.txt (openai, fastapi, httpx, playwright, apify-client, pymysql, ...)
+- [ ] **INFRA-03**: Контейнер успешно проходит healthcheck (`GET /health` → 200)
+- [ ] **INFRA-04**: Контейнер может обращаться к `aim-app:8000` (docker network) — проверка реальным запросом к `/api/competitors/find`
+- [ ] **INFRA-05**: env-переменные (OMNIROUTE_URL, PERPLEXITY_API_KEY, APIFY_API_TOKEN, FIRECRAWL_API_KEY, WP_DB_*) передаются корректно
 
-- [x] **RES-01**: Определить фактическую причину, почему LLM v4 пропускает инструменты и фазы при оркестрации (промпт / модель / pipeline-ограничение / комбинация)
-- [x] **RES-02**: Измерить текущий coverage: сколько из 40+ инструментов LLM вызывает за типичный прогон пресейла
-- [x] **RES-03**: Измерить текущее покрытие секций референса: какие из 10 секций ИПХиК (2).html фактически появляются в отчётах v4
-- [x] **RES-04**: Изучить логи 3-5 последних прогонов Hermes на server (`/opt/data/sessions-archive/`) — что LLM вызывала, что пропустила, где обрезала вывод
-- [x] **RES-05**: Протестировать `run_instagram_content` руками на 1 клинике — работает ли, какие данные возвращает, нужен ли отдельный handler
+### Диалоговый сервер (DIALOG)
+- [ ] **DIALOG-01**: `POST /api/chat/stream` — SSE-эндпоинт, совместимый с Theme-чатом (формат событий `text-delta`, `finish`, `error`, `phase-progress`, `report-ready`)
+- [ ] **DIALOG-02**: Модель `deepseek-chat` через Z.AI-шлюз с нативным tool-calling (OpenAI `tools=` / `tool_calls`)
+- [ ] **DIALOG-03**: Системный промпт задаёт политику «база → кнопки → по запросу» + питч услуг AIM
+- [ ] **DIALOG-04**: История диалога хранится в SQLite (как в старом hermes), keyed by session_id
+- [ ] **DIALOG-05**: Per-session состояние (не глобальная очередь, как баг в старом `main.py:47`)
 
-### Orchestration (ORC)
+### Инструменты (TOOLS)
+- [ ] **TOOLS-01**: `quick_overview` (база) — глубокий поиск Perplexity, перенесён из старого кода
+- [ ] **TOOLS-02**: `find_competitors` (база) — прокси к `aim-app:8000/api/competitors/find`, count=3
+- [ ] **TOOLS-03**: `run_ci_analysis` (кнопка) — прокси к `aim-app:8000/api/competitors/analyze`
+- [ ] **TOOLS-04**: `run_smi_mentions` (кнопка) — перенесён (Perplexity напрямую)
+- [ ] **TOOLS-05**: `run_review_platforms` (кнопка) — перенесён (Perplexity напрямую)
+- [ ] **TOOLS-06**: `run_instagram_content` (кнопка) — перенесён (Apify напрямую)
+- [ ] **TOOLS-07**: `run_seo_audit` (кнопка) — прокси к `aim-app:8000/api/seo/audit`
+- [ ] **TOOLS-08**: `run_pagespeed` (кнопка) — перенесён (Playwright локально)
+- [ ] **TOOLS-09**: `run_ads_intelligence` (кнопка) — перенесён (Firecrawl напрямую)
+- [ ] **TOOLS-10**: `generate_html_report` (финал) — перенесён (WordPress DB)
+- [ ] **TOOLS-11**: Каждый tool имеет OpenAI function-schema с полем «когда вызывать» (when to call)
+- [ ] **TOOLS-12**: Модель не вызывает `find_competitors` более одного раза за сессию (ограничение в промпте + логике)
 
-- [x] **ORC-01**: Реализовать 3-проходный цикл: Сбор → Гэп-анализ → Допосбор + Сборка (автоматически, без ручного вмешательства)
-- [x] **ORC-02**: LLM-оркестратор выбирает инструменты по ситуации, а не по жёсткому pipeline (как v1, не v3/v7)
-- [x] **ORC-03**: Гэп-анализ сравнивает собранные данные с QC-чек-листом покрытия (см. QC-01) и принимает решение о допосборе
-- [x] **ORC-04**: Если после 3-го прохода остаются пробелы — LLM честно отмечает «данные недоступны», не выдумывает
-- [x] **ORC-05**: PipelineEngine остаётся как опция (не удаляется), но оркестратор — основной режим
+### Чат-фронтенд (CHAT)
+- [ ] **CHAT-01**: Новое SSE-событие `suggestions` с массивом кнопок `{label, tool}`
+- [ ] **CHAT-02**: `useStreamChat.js` обрабатывает `suggestions` → `setActiveButtons`
+- [ ] **CHAT-03**: `ChatBubble.jsx` рендерит кнопки (`.chat-btn-ghost` чипы) под сообщением ассистента
+- [ ] **CHAT-04**: Клик по кнопке шлёт `label` текстом в `/api/chat/stream` (не structured payload)
+- [ ] **CHAT-05**: После базы показывается 2-4 релевантные кнопки (адаптивно: плохой сайт → «тех.аудит», плохие отзывы → «анализ отзывов»)
 
-### Instagram (IG)
+### Базовый сценарий (FLOW)
+- [ ] **FLOW-01**: Клиент шлёт URL → Гермес вызывает `quick_overview` + `find_competitors` (по одному разу)
+- [ ] **FLOW-02**: Базовый ответ ≤4 минуты (рынок + top-3 конкурента по имени + rating + match_reason)
+- [ ] **FLOW-03**: После базы — кнопки + свободный ввод текста
+- [ ] **FLOW-04**: В конце базового ответа — короткий питч услуг AIM
+- [ ] **FLOW-05**: По запросу клиента (кнопка/текст) — вызов нужного инструмента, ответ выжимкой
+- [ ] **FLOW-06**: «Собрать отчёт» → `generate_html_report` читает session_archive → HTML-отчёт
 
-- [x] **IG-01**: Добавить `run_instagram_content` в `engine.py:_TOOL_HANDLERS` (сейчас инструмент зарегистрирован для LLM, но pipeline не может его вызвать) — Plan 03-01
-- [x] **IG-02**: Для каждой ниши, где Instagram критичен (косметология, пластическая хирургия), LLM-оркестратор ОБЯЗАТЕЛЬНО вызывает Instagram-анализ
-- [x] **IG-03**: Для каждого найденного врача (топ-5) собирается: подписчики, avg лайки, avg просмотры, стиль контента, темы (в %), пробелы, потенциал — как в секциях 03+04 референса
-- [x] **IG-04**: Если у клиники нет Instagram — честно фиксируется в отчёте, не блокирует остальные фазы
+### Отчёты и архив (REPORT)
+- [ ] **REPORT-01**: Каждый tool-result пишется в `/opt/hermes-v2-data/sessions-archive/{hash}/`
+- [ ] **REPORT-02**: `generate_html_report` публикует в WordPress (как старый) и возвращает URL
+- [ ] **REPORT-03**: Отдельный volume `/opt/hermes-v2-data` (не мешаем со старым)
 
-### Sections (SEC)
+### Деплой и откат (DEPLOY)
+- [ ] **DEPLOY-01**: Код разрабатывается локально в `AIM/hermes-v2/`
+- [ ] **DEPLOY-02**: `rsync` на сервер в `/opt/aim/AIM/hermes-v2/`
+- [ ] **DEPLOY-03**: `docker compose build hermes-v2 && docker compose up -d hermes-v2` работает
+- [ ] **DEPLOY-04**: nginx переключаем `aim-hermes:8000` → `aim-hermes-v2:8000` (одна строка)
+- [ ] **DEPLOY-05**: Старый `aim-hermes` выключен, но доступен для отката
 
-- [x] **SEC-01**: Добавить секцию «Strategy» — 5 конкретных направлений на основе собранных данных (контент, Telegram, GEO, репутация, кросс-промо), как секция 09 референса
-- [x] **SEC-02**: Добавить секцию «Offer» — «Что AIM может сделать для клиники», с конкретными шагами и CTA, как секция 10 референса
-- [x] **SEC-03**: Секция «Whitefields» — матрица: клиент vs 3-5 конкурентов по полям (сейчас только content_gaps, нужна именно матрица)
-- [x] **SEC-04**: Секция «Experts» — ТОП-5 врачей: ФИО, регалии, подписчики, avg лайки/просмотры, стиль контента — *tool layer satisfied by Plan 04-02 (structured_regalia + _merge_doctor_data); Pass 3 prompt pending Plan 04-05; HTML rendering pending Plan 04-06*
-- [x] **SEC-05**: Секция «Content Analysis» — по каждому топ-врачу: стиль, темы, пробелы, потенциал + Топ-5 страхов пациентов с форумов
-
-### Data Depth (DAT)
-
-- [x] **DAT-01**: Динамика выручки за 3 года (сейчас только текущий год из ГИР БО) — сравнить с референсом «+79% за 3 года (2.4 млрд → 3.4 млрд → 4.3 млрд)» — *tool layer Plan 04-01; HTML rendering Plan 04-06 — D-13 strict rule + D-14 table+blockquote*
-- [x] **DAT-02**: Конкретные ссылки на СМИ-публикации (сейчас только счётчики по категориям) — Forbes, RBC, Vademecum с URL и датами
-- [x] **DAT-03**: Карточки конкурентов с годом основания, выручкой, числом хирургов, Instagram, спецификой (сейчас только таблица) — *HTML rendering Plan 04-06 — all D-20 fields rendered per competitor card*
-- [x] **DAT-04**: Метрики клиники: выручка, прибыль, сотрудники, операционные, лицензии, ОКВЭД на человеческом языке — *tool layer Plan 04-01; HTML rendering Plan 04-06 — D-21 okved_humanized LLM translation*
-- [x] **DAT-05**: Рейтинги и отзывы с разбивкой по платформам: ПроДокторов, Яндекс.Карты, 2ГИС, Google Maps, Zoon, Отзовик, IRecommend
-
-### Interpretation (INT)
-
-- [x] **INT-01**: Переписать `interpretation_prompt` для каждой фазы под референс: нарратив с конкретными выводами, не «дамп метрик»
-- [x] **INT-02**: Каждая секция отчёта связана с другими: страхи пациентов (04) → пробелы врачей (04) → стратегия (09). Не изолированные блоки
-- [x] **INT-03**: Бизнес-язык: «каждая секунда задержки теряет пациентов», а не «LCP 7.3s»
-- [x] **INT-04**: Конкретные gap-блоки: ✅ сильная сторона (с цифрой), 📍 точка роста (с ориентиром на конкурента)
-- [x] **INT-05**: Главный вывод (blockquote) в каждой секции — 1-2 предложения, главный стратегический инсайт
-
-### Quality Check (QC)
-
-- [x] **QC-01**: QC-чек-лист покрытия: 10-20 пунктов (Instagram врачей? Стратегия? Offer? Динамика за 3 года? СМИ-ссылки? Карточки конкурентов? Страхи пациентов? Метрики клиники? Рейтинги? Тех. аудит? Whitefields?)
-- [x] **QC-02**: Автоматическая проверка чек-листа перед генерацией HTML — если что-то пусто, вернуться на допосбор
-- [x] **QC-03**: Отчёт о покрытии в конце каждого прогона: % заполненных пунктов чек-листа
-- [x] **QC-04**: Цель покрытия: ≥ 80% пунктов чек-листа заполнены реальными данными (не «нет данных»)
-
-### Sync (SYN)
-
-- [x] **SYN-01**: Устранить рассинхрон фаз: phases.py (13) vs SKILL.md (14) vs серверная v3 SOUL.md (16) — привести к единой истине *(SOUL.md: "16 фаз" устранено в Plan 06-01; SKILL.md и phases.py — Plan 06-02)*
-- [x] **SYN-02**: SOUL.md описывает 3-проходный цикл, LLM-оркестратора, catalogue инструментов — без жёсткой последовательности фаз *(Plan 06-01 — SOUL.md rewritten v4→v5 with 3-pass orchestrator + 18-item QC checklist + 26 _TOOL_HANDLERS + ORCHESTRATOR_MODE opt-in switch)*
-- [x] **SYN-03**: SKILL.md (aim-scout) описывает оркестратор + чек-лист покрытия, не «FULL AUTO pipeline»
-- [x] **SYN-04**: engine.py _TOOL_HANDLERS включает все инструменты, которые LLM может вызывать (не подмножество)
-- [x] **SYN-05**: Удалить из SOUL.md/SKILL.md упоминания фаз, которых нет в коде (0.5, 0.75, 0.8, 3.2 из серверной v3) *(Plan 06-01 — SOUL.md phantom phases = 0 occurrences; SKILL.md audit — Plan 06-02)*
-
-### Test (TST)
-
-- [x] **TST-01**: Тест на 3 разных нишах: пластическая хирургия (iphk.ru — есть референс), стоматология, косметология
-- [x] **TST-02**: Для каждого теста: сравнение с референсом по чек-листу покрытия, субъективная оценка админом
-- [x] **TST-03**: Тест в PRESALE режиме (через Telegram-бота, как реальный клиент)
-- [ ] **TST-04**: Тест в ADMIN режиме (Михаил запускает вручную для конкретной клиники)
-- [x] **TST-05**: Фиксация результатов: proposal.html + feedback.md в `/opt/data/memories/proposals/[client-slug]/`
-
-### Deploy (DPL)
-
-- [ ] **DPL-01**: Деплой через `docker cp` + перезапуск gateway (нельзя пересобирать образ)
-- [ ] **DPL-02**: Без даунтайма: фазы не должны прерываться при деплое изменений SOUL.md/SKILL.md
-- [ ] **DPL-03**: Health check возвращает 200 после деплоя
-- [ ] **DPL-04**: Backup перед деплоем: `hermes-backup-YYYYMMDD/` локально + на сервере
-- [ ] **DPL-05**: Rollback plan: если новый SOUL/SKILL ломает пресейл, вернуть предыдущую версию за < 5 минут
-
----
-
-## v2 Requirements (Deferred)
-
-- Мультиагентный prescan (несколько LLM-агентов параллельно собирают данные по разным аспектам клиники) — backlog
-- Автоматический A/B-тест отчётов (две версии HTML, замер какой лучше конвертирует клиента) — backlog
-- Автоматическое обновление SOUL.md на основе learnings (сейчас ручная консолидация каждые 10 learnings) — backlog
-- Real-time мониторинг coverage % на дашборде — backlog
-
----
+## v2 Requirements (отложено)
+- [ ] Миграция Telegram-бота на v2
+- [ ] Удаление старого `aim-hermes` через неделю стабильности
+- [ ] Перенос скиллов в v2
 
 ## Out of Scope
+- Next.js-чат `/chat-test` — тестовый, не трогаем
+- Telegram-бот миграция — отдельная задача
+- Удаление старого контейнера — только после недели стабильности
 
-- **Смена LLM-модели** — DeepSeek V4 Pro остаётся. Проблема в оркестрации, не в модели.
-- **Миграция на другой фреймворк** — FastAPI + hermes-agent остаются.
-- **Переписывание дизайн-системы HTML-отчётов** — dual theme, glass cards — канон.
-- **Удаление PipelineEngine** — остаётся как опция, не удаляется.
-- **Поддержка государственных клиник** (ГАУЗ/ГБУЗ/МУЗ) — вне бизнеса AIM.
-- **Ручные итерации админом** — 3-проходный цикл автоматический, админ не вмешивается.
+## User Stories
+- Как клиент, я присылаю сайт → быстро (≤4 мин) понимаю своё место на рынке + конкурентов
+- Как клиент, я выбираю, что копать глубже (кнопками или текстом), а не жду 17 минут
+- Как клиент, я получаю питч услуг AIM в конце базы
+- Как клиент, я могу собрать всё в отчёт, когда насытился
 
----
+## Acceptance Criteria (общие)
+- Базовый ответ ≤4 мин (vs 17 мин сейчас)
+- Кнопки работают (запускают инструменты)
+- Свободный текст корректно триггерит тулзы
+- Отчёт генерируется из данных сессии
+- Откат на старый контейнер возможен в любой момент
 
 ## Traceability
-
-(Filled by ROADMAP.md — each requirement mapped to a phase)
-
-| REQ-ID | Phase | Status |
-|--------|-------|--------|
-| RES-01 | Phase 1 | Complete (Plan 01-03) |
-| RES-02 | Phase 1 | Complete (Plan 01-01) |
-| RES-03 | Phase 1 | Complete (Plan 01-01) |
-| RES-04 | Phase 1 | Complete (Plan 01-02) |
-| RES-05 | Phase 1 | Complete (Plan 01-04) |
-| ORC-01 | Phase 2 | Complete (Plan 02-02) |
-| ORC-02 | Phase 2 | Complete (Plan 02-02) |
-| ORC-03 | Phase 2 | Complete (Plan 02-03) |
-| ORC-04 | Phase 2 | Complete (Plan 02-03) |
-| ORC-05 | Phase 2 | Complete (Plan 02-01) |
-| QC-01..04 | Phase 2 | Complete (Plan 02-03) |
-| IG-01 | Phase 3 | Complete (Plan 03-01) |
-| IG-02 | Phase 3 | Complete (Plan 03-03 + 03-06) |
-| IG-03 | Phase 3 | Complete (Plan 03-04 + 03-05) |
-| IG-04 | Phase 3 | Complete (Plan 03-05) |
-| SEC-01..03, 05 | Phase 4 | Complete (Plan 04-05 prompt + Plan 04-07 HTML rendering) |
-| SEC-04 | Phase 4 | Complete (Plan 04-02 tool + Plan 04-05 prompt + Plan 04-07 HTML rendering) |
-| DAT-01 | Phase 4 | Complete (Plan 04-01 tool + Plan 04-06 HTML) |
-| DAT-02 | Phase 4 | Complete (Plan 04-03 tool + Plan 04-06 HTML) |
-| DAT-03 | Phase 4 | Complete (Plan 04-06 HTML rendering) |
-| DAT-04 | Phase 4 | Complete (Plan 04-01 tool + Plan 04-06 HTML) |
-| DAT-05 | Phase 4 | Complete (Plan 04-06 HTML rendering) |
-| INT-01..03 | Phase 5 | Complete (Plan 05-01 prompt layer — items 16/17/18) |
-| INT-04..05 | Phase 5 | Pending Plan 05-02 (Plan 05-01 prompt layer complete — items 19/20; HTML rendering pending) |
-| SYN-01, 02, 05 | Phase 6 | Partial (Plan 06-01 SOUL.md complete; SYN-03/04 + full SYN-01/05 audit pending Plans 06-02, 06-03) |
-| SYN-03, 04 | Phase 6 | Pending Plan 06-02 (SKILL.md sync) + 06-03 (engine.py assertion) |
-| TST-01..05 | Phase 7 | Pending |
-| DPL-01..05 | Phase 8 | Pending |
-
-**Coverage:** 48/48 requirements mapped — no orphans, no duplicates.
-**Phase 1 complete:** 5/5 RES requirements addressed.
-**Phase 2 complete:** 9/9 ORC+QC requirements addressed (ORC-01..05, QC-01..04).
-**Phase 3 complete:** 4/4 IG requirements fully addressed (IG-01 complete; IG-02 complete — prompt + data-model scaffolding from Plan 03-03 + runtime hard-FAIL override + conditional-total logic from Plan 03-06; IG-03 complete — adaptive top-5 cohort selection from Plan 03-04 + HTML rendering helpers from Plan 03-05; IG-04 complete — honest "Instagram: данные недоступны — {reason}" block in sections 03/04 + canonical not_applicable_items rendering in QC section + Pass 3 prompt kwargs from Plan 03-05).
-**Phase 5 in progress:** 3/5 INT requirements fully addressed (INT-01..03 complete via Plan 05-01 prompt-layer items 16-18; INT-04..05 prompt rules added in Plan 05-01 items 19-20, HTML rendering deferred to Plan 05-02).
+(заполняется при создании roadmap)
 
 ---
-*Last updated: 2026-06-24 after Plan 05-01 completion (Pass 3 prompt items 16-21 narrative quality rules; INT-01..03 fully satisfied at prompt layer; INT-04..05 pending Plan 05-02 HTML rendering)*
+
+## Phase 7 Requirements — V2 Competitor Pipeline: точность данных
+
+### COMP-01: Резолв ИНН клиента
+**User Story:** Как клиент, я хочу, чтобы мои конкуренты отбирались по реальному масштабу моего бизнеса, а не по оценке.
+**Acceptance Criteria:**
+- ИНН клиента резолвится через скрапинг сайта (footer/privacy/оферта) → bo.nalog search по названию → Perplexity fallback
+- Клиентская выручка берётся из ФНС (bo.nalog gainSum), не из оценки
+- Коридор отбора конкурентов 0.3×–3× от РЕАЛЬНОЙ выручки работает
+- Тест IPHK: client_revenue из ФНС (миллиарды), не 80М оценка
+
+### COMP-02: Instagram-колонка
+**User Story:** Как клиент, я хочу видеть Instagram-аудиторию конкурентов в таблице.
+**Acceptance Criteria:**
+- Для топ-5 финальных конкурентов: скрапинг сайта → IG ссылка → Apify instagram-profile-scraper → followersCount
+- instagram_followers заполнен для ≥3 из 5 конкурентов
+- Instagram enrichment только для финального топ-5 (скорость)
+
+### COMP-03: Число хирургов (дообогащение)
+**User Story:** Как клиент, я хочу видеть масштаб команды конкурентов.
+**Acceptance Criteria:**
+- surgeons_count заполнен для ≥3 из 5 топ-конкурентов
+- Источники: Perplexity оценка (из запроса конкурентов) → скрапинг раздела «Врачи/Команда» как fallback
+- Если данные недоступны — null с пометкой в match_reason
+
+### COMP-04: Нормализация брендов
+**User Story:** Как клиент, я хочу видеть реальных операторов рынка, а не отделения.
+**Acceptance Criteria:**
+- Перед резолвом бренд → ИНН: удаление гео-привязок («на Ленинском», «на ул. X», «в Орловском переулке»)
+- «Медиал на Ленинском проспекте» → «Медиал» → bo.nalog находит головное юрлицо
+- Регулярные выражения для паттернов: «на <улица>», «в <переулок>», «<адрес>», «№N»
+- Тест: после нормализации Perplexity-бренды резолвятся к тем же юрлицам что и clean-бренды
+
