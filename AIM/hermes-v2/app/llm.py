@@ -229,6 +229,7 @@ def _build_formatted_blocks(
                 "client_cms": comp_data.get("client_cms"),
                 "client_socials": comp_data.get("client_socials"),
                 "client_doctors": comp_data.get("client_doctors"),
+                "client_audit": comp_data.get("client_audit"),
             }
         except (json.JSONDecodeError, TypeError):
             client_rev = None
@@ -259,7 +260,81 @@ def _build_formatted_blocks(
                 except (json.JSONDecodeError, TypeError):
                     pass
 
+    # ── SEO + GEO аудит блок ──
+    audit = client_pipeline_data.get("client_audit")
+    if audit:
+        audit_md = _format_audit_block(audit)
+        if audit_md:
+            # Вставить перед таблицей конкурентов (после профиля)
+            blocks.insert(-1, audit_md)
+
     return blocks
+
+
+def _format_audit_block(audit: dict) -> str:
+    """Форматирует SEO+GEO аудит в Markdown блок."""
+    if not audit:
+        return ""
+
+    geo = audit.get("geo_score", 0)
+    geo_emoji = "🔴" if geo < 30 else ("🟡" if geo < 60 else "🟢")
+
+    lines = [f"## 🔍 Технический аудит + GEO\n"]
+    lines.append(f"**GEO Score: {geo_emoji} {geo}/100** — готовность к AI-поиску (ChatGPT, Perplexity)\n")
+
+    # AI Crawlers
+    ai = audit.get("ai_crawlers", {})
+    blocked = [k for k, v in ai.items() if isinstance(v, dict) and v.get("blocked")]
+    open_ = [k for k, v in ai.items() if isinstance(v, dict) and not v.get("blocked")]
+    if blocked:
+        lines.append(f"❌ **AI-краулеры заблокированы:** {', '.join(blocked[:4])}")
+    if open_:
+        lines.append(f"✅ **AI-краулеры открыты:** {', '.join(open_[:4])}")
+
+    # llms.txt
+    if audit.get("llms_txt"):
+        lines.append("✅ **llms.txt:** найден")
+    else:
+        lines.append("❌ **llms.txt:** отсутствует (рекомендуется создать)")
+
+    # Schema
+    schema = audit.get("schema", {})
+    med = schema.get("medical", [])
+    org = schema.get("organization", [])
+    if med:
+        lines.append(f"✅ **Medical Schema:** {', '.join(med[:3])}")
+    else:
+        lines.append("❌ **MedicalBusiness Schema:** отсутствует (критично для клиник)")
+    if org:
+        lines.append(f"✅ **Organization Schema:** {', '.join(org[:3])}")
+    else:
+        lines.append("⚠️ **Organization Schema:** отсутствует")
+
+    # H1 + meta + OG
+    issues = []
+    if not audit.get("h1"):
+        issues.append("нет H1 на главной")
+    if not audit.get("meta_description"):
+        issues.append("нет meta description")
+    if not audit.get("og_tags"):
+        issues.append("нет Open Graph тегов")
+    if issues:
+        lines.append(f"⚠️ **SEO проблемы:** {', '.join(issues)}")
+
+    # SSR
+    if audit.get("ssr"):
+        lines.append("✅ **SSR:** контент доступен без JavaScript")
+    else:
+        lines.append("❌ **SSR:** контент требует JavaScript (AI-краулеры не увидят)")
+
+    # Размер страницы
+    if audit.get("page_size_kb"):
+        size = audit["page_size_kb"]
+        size_note = "тяжёлая" if size > 500 else ("большая" if size > 200 else "нормальная")
+        lines.append(f"📏 **Размер страницы:** {size:.0f} KB ({size_note})")
+
+    lines.append("")
+    return "\n".join(lines)
 
 
 async def chat_with_tools(history: list[dict]):

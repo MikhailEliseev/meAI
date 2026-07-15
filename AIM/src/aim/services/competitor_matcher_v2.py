@@ -394,31 +394,38 @@ class CompetitorMatcherV2:
                 return_exceptions=True,
             )
 
-        # ── STAGE 3.5c: CLIENT website enrichment (Firecrawl) ──────────
-        # Скрапим сайт клиента для ТОЧНЫХ данных (CMS, соцсети, врачи).
-        # Раньше всё бралось из Perplexity (угадывал). Теперь — реальный HTML.
+        # ── STAGE 3.5c: CLIENT website enrichment (Firecrawl + SEO audit) ──
         self.last_client_cms = None
         self.last_client_socials = None
         self.last_client_doctors = None
+        self.last_client_audit = None
         if url:
             try:
+                from src.aim.services.lib.seo_auditor import audit_website
                 from src.aim.services.lib.firecrawl_enricher import scrape_website, scrape_doctors
+
+                # Полный аудит (GEO + Schema + robots.txt + llms.txt + CMS)
+                audit = await audit_website(url)
+                self.last_client_audit = audit
+                self.last_client_cms = audit.get("cms")
+
+                # Соцсети + врачи из Firecrawl
                 client_site = await scrape_website(url)
-                if client_site.get("cms"):
-                    self.last_client_cms = client_site["cms"]
                 if client_site.get("socials"):
                     self.last_client_socials = client_site["socials"]
                 client_doc_count = await scrape_doctors(url, company_name or "")
                 if client_doc_count:
                     self.last_client_doctors = client_doc_count
+
                 logger.info(
-                    "Client site enriched: cms=%s socials=%s doctors=%s",
-                    self.last_client_cms,
+                    "Client audit: GEO=%d CMS=%s schema_med=%s llms=%s socials=%s",
+                    audit.get("geo_score", 0), audit.get("cms"),
+                    bool(audit.get("schema", {}).get("medical")),
+                    audit.get("llms_txt"),
                     list(self.last_client_socials.keys()) if self.last_client_socials else None,
-                    self.last_client_doctors,
                 )
             except Exception as e:
-                logger.warning("Client site enrichment failed: %s", str(e)[:100])
+                logger.warning("Client audit failed: %s", str(e)[:100])
 
         elapsed = time.monotonic() - t0
         surgeons_filled = sum(1 for r in result if r.profile.employee_count)

@@ -106,6 +106,7 @@ class FindCompetitorsResponse(BaseModel):
     client_cms: Optional[str] = None
     client_socials: Optional[dict] = None
     client_doctors: Optional[int] = None
+    client_audit: Optional[dict] = None
     error: Optional[str] = None
 
 
@@ -188,6 +189,7 @@ async def find_competitors(body: FindCompetitorsRequest) -> FindCompetitorsRespo
             client_cms=getattr(matcher, "last_client_cms", None),
             client_socials=getattr(matcher, "last_client_socials", None),
             client_doctors=getattr(matcher, "last_client_doctors", None),
+            client_audit=getattr(matcher, "last_client_audit", None),
         )
 
     except Exception as e:
