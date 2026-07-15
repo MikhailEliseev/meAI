@@ -198,11 +198,29 @@ def _parse_robots_for_ai(robots_text: str) -> dict:
     if not robots_text:
         return {"robots_found": False, "ai_crawlers": {}}
     result = {"robots_found": True, "ai_crawlers": {}}
-    robots_lower = robots_text.lower()
+    # Нормализуем — убираем \r
+    robots_clean = robots_text.replace("\r\n", "\n").replace("\r", "\n")
+    robots_lower = robots_clean.lower()
+
+    # Проверяем общий wildcard блок: User-agent: * Disallow: /
+    wildcard_blocks_all = bool(re.search(
+        r"user-agent:\s*\*\s*\n\s*disallow:\s*/\s*(?:\n|$)", robots_lower
+    ))
+
     for crawler, description in _AI_CRAWLERS.items():
-        # Проверяем: есть ли User-agent: GPTBot и под ним Disallow: /
-        pattern = rf"user-agent:\s*{re.escape(crawler.lower())}\s*\n\s*disallow:\s*/"
-        blocked = bool(re.search(pattern, robots_lower))
+        crawler_lower = crawler.lower()
+        # Проверяем: есть ли User-agent: Crawler с Disallow: /
+        # Ищем блок User-agent для этого краулера
+        pattern = rf"user-agent:\s*{re.escape(crawler_lower)}\s*\n((?:(?!user-agent)[^\n]*\n)*?)(?:disallow:\s*/|allow:\s*/$)"
+        block_match = re.search(pattern, robots_lower)
+        blocked = False
+        if block_match:
+            # Проверяем есть ли Disallow: / в блоке
+            block_text = block_match.group(0)
+            blocked = "disallow: /" in block_text and "allow: /" not in block_text.split("disallow: /")[-1]
+        # Если wildcard блокирует всё — краулер тоже заблокирован
+        if not blocked and wildcard_blocks_all:
+            blocked = True
         result["ai_crawlers"][crawler] = {
             "description": description,
             "blocked": blocked,

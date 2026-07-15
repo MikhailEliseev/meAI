@@ -307,30 +307,30 @@ async def _count_doctors_on_page(url: str) -> Optional[int]:
     if not markdown or len(markdown) < 200:
         return None
 
-        # Считаем карточки врачей по паттернам
-        # Паттерн 1: списки с именами «Иванов И.И.»
-        doctor_names = re.findall(
-            r"(?:^|\n)[-•*]\s*([А-ЯЁ][а-яё]+\s+[А-ЯЁ]\.\s*[А-ЯЁ]\.)",
-            markdown,
-        )
-        if len(doctor_names) >= 2:
-            return len(doctor_names)
+    # Считаем карточки врачей по паттернам
+    # Паттерн 1: списки с именами «Иванов И.И.»
+    doctor_names = re.findall(
+        r"(?:^|\n)[-•*]\s*([А-ЯЁ][а-яё]+\s+[А-ЯЁ]\.\s*[А-ЯЁ]\.)",
+        markdown,
+    )
+    if len(doctor_names) >= 2:
+        return len(doctor_names)
 
-        # Паттерн 2: заголовки карточек <h3> или <h4>
-        headings = re.findall(r"^#{3,4}\s+([А-ЯЁ][а-яё]+)", markdown, re.MULTILINE)
-        if len(headings) >= 2:
-            return len(headings)
+    # Паттерн 2: заголовки карточек <h3> или <h4>
+    headings = re.findall(r"^#{3,4}\s+([А-ЯЁ][а-яё]+)", markdown, re.MULTILINE)
+    if len(headings) >= 2:
+        return len(headings)
 
-        # Паттерн 3: «Записаться к N врачам» или «У нас N специалистов»
-        count_match = re.search(
-            r"(\d+)\s*(?:врач|специалист|хирург|эксперт)",
-            markdown,
-            re.I,
-        )
-        if count_match:
-            n = int(count_match.group(1))
-            if 1 <= n <= 500:
-                return n
+    # Паттерн 3: «Записаться к N врачам» или «У нас N специалистов»
+    count_match = re.search(
+        r"(\d+)\s*(?:врач|специалист|хирург|эксперт)",
+        markdown,
+        re.I,
+    )
+    if count_match:
+        n = int(count_match.group(1))
+        if 1 <= n <= 500:
+            return n
 
     return None
 
