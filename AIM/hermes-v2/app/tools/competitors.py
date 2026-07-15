@@ -29,8 +29,8 @@ async def find_competitors(url: str, count: int = 5,
                              client_inn: str = "", client_address: str = "") -> dict:
     """Прозрачный прокси к aim-app POST /api/competitors/find.
 
-    Phase 7: по умолчанию возвращает 20 кандидатов (было 3).
-    client_inn и client_address передаются для более точного поиска.
+    V2 strategy (default): Perplexity + SearXNG → bo.nalog → ФНС financials.
+    V1 strategy (legacy): Google Maps (Apify) → DaData → scoring.
 
     Returns:
         JSON-ответ aim-app как есть, либо {"error": ...} при сбое.
@@ -39,7 +39,7 @@ async def find_competitors(url: str, count: int = 5,
 
     logger.info("find_competitors proxy: url=%s count=%d inn=%s addr=%s",
                 url, count, client_inn, client_address[:40] if client_address else "")
-    payload = {"url": url, "count": count}
+    payload = {"url": url, "count": count, "strategy": "v2"}
     if client_inn:
         payload["client_inn"] = client_inn
     if client_address:

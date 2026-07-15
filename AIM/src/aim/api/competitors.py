@@ -5,6 +5,7 @@ POST /api/competitors/save    — save competitor selection to pre-sale folder
 POST /api/competitors/analyze — CI marketing analysis (SWOT, features, pricing, tactics)
 """
 
+import asyncio
 import json
 import logging
 import uuid
@@ -27,15 +28,18 @@ router = APIRouter(prefix="/api/competitors", tags=["competitors"])
 
 class FindCompetitorsRequest(BaseModel):
     url: str = Field(..., description="Client clinic website URL")
-    count: int = Field(default=3, ge=1, le=5, description="Number of competitors to return")
+    count: int = Field(default=5, ge=1, le=10, description="Number of competitors to return")
+    strategy: str = Field(
+        default="v2",
+        description="Discovery strategy: 'v2' (Perplexity+SearXNG+ФНС) or 'v1' (Google Maps)",
+    )
     named_competitors: Optional[list[str]] = Field(
         default=None,
-        description="Optional list of competitor names or URLs to look up directly via DaData",
+        description="Optional list of competitor names or URLs to look up directly",
     )
     client_revenue: Optional[int] = Field(
         default=None,
-        description="Estimated client annual revenue (RUB) for gap-scoring: "
-                    "boosts competitors with +20-50% higher revenue",
+        description="Estimated client annual revenue (RUB) for gap-scoring",
     )
 
 
@@ -77,6 +81,11 @@ class CompetitorJson(BaseModel):
     licenses: list[dict] = []
     is_multi_entity: bool = False
     social_links: dict[str, str] = {}
+
+    # V2 enrichment fields
+    surgeons_count: Optional[int] = None
+    instagram_followers: Optional[int] = None
+    instagram_handle: Optional[str] = None
 
 
 class FindCompetitorsResponse(BaseModel):
@@ -133,10 +142,16 @@ class AnalyzeCompetitorsResponse(BaseModel):
 async def find_competitors(body: FindCompetitorsRequest) -> FindCompetitorsResponse:
     """Find top-N competitors for a clinic website.
 
-    Runs service extractor → DaData search → scoring → top-3.
-    Returns competitor profiles with match scores and reasons.
+    Strategy v2 (default): Perplexity + SearXNG → bo.nalog brand→INN → ФНС financials.
+    Strategy v1 (legacy):  Google Maps (Apify) → DaData → scoring.
     """
-    matcher = CompetitorMatcher()
+    # Select matcher by strategy
+    if body.strategy == "v2":
+        from src.aim.services.competitor_matcher_v2 import CompetitorMatcherV2
+        matcher = CompetitorMatcherV2()
+    else:
+        matcher = CompetitorMatcher()
+
     try:
         matches = await matcher.find_competitors(
             url=body.url, count=body.count, named_competitors=body.named_competitors,
@@ -145,17 +160,20 @@ async def find_competitors(body: FindCompetitorsRequest) -> FindCompetitorsRespo
 
         competitors = [_competitor_to_json(m) for m in matches]
 
-        logger.info("competitors_found: url=%s count=%d megalopolis=%s", body.url, len(competitors), matcher.last_is_megalopolis)
+        logger.info(
+            "competitors_found: url=%s strategy=%s count=%d megalopolis=%s",
+            body.url, body.strategy, len(competitors), getattr(matcher, "last_is_megalopolis", False),
+        )
 
         return FindCompetitorsResponse(
             success=True,
             url=body.url,
             competitors=competitors,
-            is_megalopolis=matcher.last_is_megalopolis,
+            is_megalopolis=getattr(matcher, "last_is_megalopolis", False),
         )
 
     except Exception as e:
-        logger.exception("find_competitors_failed")
+        logger.exception("find_competitors_failed: strategy=%s", body.strategy)
         return FindCompetitorsResponse(
             success=False,
             url=body.url,
@@ -163,7 +181,10 @@ async def find_competitors(body: FindCompetitorsRequest) -> FindCompetitorsRespo
             error=str(e),
         )
     finally:
-        await matcher.close()
+        if hasattr(matcher, "close"):
+            close_result = matcher.close()
+            if asyncio.iscoroutine(close_result):
+                await close_result
 
 
 @router.post("/save", response_model=SaveCompetitorsResponse, status_code=status.HTTP_200_OK)
@@ -507,6 +528,7 @@ def _competitor_to_json(m: CompetitorMatch) -> CompetitorJson:
         inns=p.inns,
         licenses=p.licenses,
         is_multi_entity=p.is_multi_entity,
+        surgeons_count=p.employee_count,  # v2 stores surgeon estimates in employee_count
     )
 
 
