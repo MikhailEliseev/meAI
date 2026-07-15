@@ -270,16 +270,20 @@ async def audit_website(url: str) -> dict:
         {
             "cms": "1C-Bitrix",
             "geo_score": 35,
-            "ai_crawlers": {"GPTBot": {"blocked": true}, ...},
+            "ai_crawlers": {...},
             "llms_txt": false,
-            "schema": {"medical": [], "organization": ["Organization"], ...},
+            "schema": {...},
             "h1": true,
             "meta_description": "...",
-            "og_tags": {"og:title": "..."},
+            "og_tags": {...},
             "ssr": true,
             "https": true,
             "page_size_kb": 45.2,
             "title": "...",
+            "scripts_count": 42,
+            "images_unoptimized": 15,
+            "perf_estimate": "средняя",
+            "media_mentions": 3,
         }
     """
     # Нормализуем URL
@@ -291,6 +295,7 @@ async def audit_website(url: str) -> dict:
         "llms_txt": False, "schema": {}, "h1": False,
         "meta_description": None, "og_tags": {}, "ssr": False,
         "https": False, "page_size_kb": None, "title": None,
+        "scripts_count": None, "perf_estimate": None, "media_mentions": 0,
     }
 
     from urllib.parse import urlparse
@@ -318,6 +323,17 @@ async def audit_website(url: str) -> dict:
         result["ssr"] = _check_ssr(html, md)
         result["https"] = _check_https(url)
         result["page_size_kb"] = round(len(html.encode("utf-8")) / 1024, 1) if html else None
+        # F8: Performance estimate — count scripts, images without lazy loading
+        scripts = re.findall(r"<script\b", html, re.I)
+        result["scripts_count"] = len(scripts)
+        size = result["page_size_kb"] or 0
+        n_scripts = len(scripts)
+        if size > 500 or n_scripts > 80:
+            result["perf_estimate"] = "низкая"
+        elif size > 200 or n_scripts > 40:
+            result["perf_estimate"] = "средняя"
+        else:
+            result["perf_estimate"] = "высокая"
         title_m = re.search(r"<title[^>]*>([^<]+)", html, re.I)
         if title_m:
             result["title"] = title_m.group(1).strip()[:100]
@@ -334,14 +350,31 @@ async def audit_website(url: str) -> dict:
     if isinstance(llms_text, str) and llms_text and len(llms_text) > 50:
         result["llms_txt"] = True
 
+    # F10: СМИ публикации (Perplexity)
+    try:
+        from src.aim.services.lib.perplexity_client import perplexity_chat, is_configured
+        if is_configured():
+            from urllib.parse import urlparse
+            domain = urlparse(url).netloc.replace("www.", "")
+            brand = domain.split(".")[0]
+            raw = await perplexity_chat(
+                [{"role": "user", "content": f"Сколько публикаций о клинике {brand} в СМИ (Forbes, RBC, Vademecum, Коммерсантъ)? Только число."}],
+                temperature=0.0,
+            )
+            import re as _re
+            nums = _re.findall(r"(\d+)", raw.strip())
+            result["media_mentions"] = int(nums[0]) if nums else 0
+    except Exception:
+        pass
+
     # GEO Score
     result["geo_score"] = _compute_geo_score(result)
 
     logger.info(
-        "SEO audit %s: GEO=%d CMS=%s H1=%s schema_med=%s llms=%s",
+        "SEO audit %s: GEO=%d CMS=%s H1=%s schema_med=%s llms=%s perf=%s media=%d",
         url[:30], result["geo_score"], result["cms"],
         result["h1"], bool(result.get("schema", {}).get("medical")),
-        result["llms_txt"],
+        result["llms_txt"], result.get("perf_estimate"), result.get("media_mentions", 0),
     )
 
     return result

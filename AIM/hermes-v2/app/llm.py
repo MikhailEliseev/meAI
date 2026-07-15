@@ -329,11 +329,24 @@ def _format_audit_block(audit: dict) -> str:
     else:
         lines.append("❌ **SSR:** контент требует JavaScript (AI-краулеры не увидят)")
 
-    # Размер страницы
+    # Размер страницы + скрипты + перформанс
     if audit.get("page_size_kb"):
         size = audit["page_size_kb"]
         size_note = "тяжёлая" if size > 500 else ("большая" if size > 200 else "нормальная")
-        lines.append(f"📏 **Размер страницы:** {size:.0f} KB ({size_note})")
+        scripts = audit.get("scripts_count")
+        perf = audit.get("perf_estimate")
+        perf_emoji = {"высокая": "🟢", "средняя": "🟡", "низкая": "🔴"}.get(perf, "")
+        script_str = f", {scripts} скриптов" if scripts else ""
+        lines.append(f"📏 **Размер:** {size:.0f} KB{script_str} ({size_note})")
+        if perf:
+            lines.append(f"{perf_emoji} **Скорость (оценка):** {perf}")
+
+    # СМИ публикации
+    media = audit.get("media_mentions", 0)
+    if media and media > 0:
+        lines.append(f"📰 **Публикации в СМИ:** {media}+ (Forbes, RBC, Vademecum)")
+    else:
+        lines.append("📰 **Публикации в СМИ:** не обнаружены")
 
     lines.append("")
     return "\n".join(lines)

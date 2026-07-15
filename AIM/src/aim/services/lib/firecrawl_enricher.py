@@ -246,26 +246,66 @@ _DOCTOR_URL_PATTERNS = [
 async def scrape_doctors(url: str, brand_name: str = "") -> Optional[int]:
     """Скрапит страницу врачей → считает количество карточек.
 
+    Алгоритм:
+    1. Скрапить главную → найти ссылки на страницу врачей
+    2. Если найдена → скрапить её, посчитать врачей
+    3. Если не найдена → пробовать стандартные паттерны
+
     Returns:
         Количество врачей (int) или None если страница не найдена.
     """
     base_url = url.rstrip("/")
 
-    # Пробуем разные URL паттерны
+    # Шаг 0: Найти URL страницы врачей из главной
+    doctor_page_urls = []
+    try:
+        homepage_data = await _firecrawl_request(FIRECRAWL_SCRAPE, {
+            "url": url, "formats": ["markdown"], "onlyMainContent": False, "waitFor": 3000,
+        })
+        if homepage_data and homepage_data.get("success", True):
+            md = homepage_data.get("data", {}).get("markdown", "")
+            from urllib.parse import urljoin
+            md_links = re.findall(r'\[([^\]]+)\]\(([^)]+)\)', md)
+            for text, href in md_links:
+                if any(k in (text + href).lower() for k in
+                       ["врач", "doctor", "специалист", "specialist", "team", "команда",
+                        "staff", "сотрудник", "personal"]):
+                    full_url = urljoin(url, href)
+                    if full_url not in doctor_page_urls and "mailto:" not in full_url:
+                        doctor_page_urls.append(full_url)
+    except Exception:
+        pass
+
+    # Шаг 1: Скрапить найденные страницы врачей (максимум 2)
+    for doc_url in doctor_page_urls[:2]:
+        count = await _count_doctors_on_page(doc_url)
+        if count:
+            return count
+
+    # Шаг 2: Пробовать стандартные паттерны
     for pattern in _DOCTOR_URL_PATTERNS:
         doc_url = base_url + pattern
-        data = await _firecrawl_request(FIRECRAWL_SCRAPE, {
-            "url": doc_url,
-            "formats": ["markdown"],
-            "onlyMainContent": True,
-            "waitFor": 3000,
-        })
-        if not data or not data.get("success", True):
-            continue
+        count = await _count_doctors_on_page(doc_url)
+        if count:
+            return count
 
-        markdown = data.get("data", {}).get("markdown", "")
-        if not markdown or len(markdown) < 200:
-            continue
+    return None
+
+
+async def _count_doctors_on_page(url: str) -> Optional[int]:
+    """Скрапит страницу → считает врачей. Возвращает None если 0."""
+    data = await _firecrawl_request(FIRECRAWL_SCRAPE, {
+        "url": url,
+        "formats": ["markdown"],
+        "onlyMainContent": True,
+        "waitFor": 3000,
+    })
+    if not data or not data.get("success", True):
+        return None
+
+    markdown = data.get("data", {}).get("markdown", "")
+    if not markdown or len(markdown) < 200:
+        return None
 
         # Считаем карточки врачей по паттернам
         # Паттерн 1: списки с именами «Иванов И.И.»
@@ -361,7 +401,7 @@ async def enrich_websites_batch(competitors: list, max_count: int = 5) -> None:
                 return
 
             try:
-                # Шаг 2: CMS + размер страницы + ссылки
+                # Шаг 2: CMS + размер + ссылки + соцсети + schema
                 site_data = await scrape_website(website)
                 if site_data.get("cms"):
                     comp.profile.social_links["website_cms"] = site_data["cms"]
@@ -369,6 +409,14 @@ async def enrich_websites_batch(competitors: list, max_count: int = 5) -> None:
                     comp.profile.social_links["website_size_kb"] = str(site_data["page_size_kb"])
                 if site_data.get("links"):
                     comp.profile.social_links["website_pages"] = str(site_data["links"])
+                if site_data.get("socials"):
+                    for platform, url in site_data["socials"].items():
+                        if platform == "instagram" and not comp.profile.social_links.get("instagram"):
+                            comp.profile.social_links["instagram"] = f"@{url.split('/')[-1]}"
+                        elif platform == "vk":
+                            comp.profile.social_links["vk"] = url
+                        elif platform == "telegram":
+                            comp.profile.social_links["telegram"] = url
 
                 # Шаг 3: Врачи (если СЧЛ неизвестен)
                 if not comp.profile.employee_count:
