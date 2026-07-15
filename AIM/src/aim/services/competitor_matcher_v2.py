@@ -560,6 +560,12 @@ class CompetitorMatcherV2:
             *[self._enrich_one(r) for r in resolved],
             return_exceptions=True,
         )
+        # Логируем исключения (не блокирующие)
+        for i, e in enumerate(enriched):
+            if isinstance(e, Exception):
+                logger.warning("_enrich_one failed for brand=%s: %s: %s",
+                    resolved[i].brand_query[:25] if i < len(resolved) else "?",
+                    type(e).__name__, str(e)[:100])
         return [e for e in enriched if isinstance(e, CompetitorMatch)]
 
     async def _enrich_one(self, resolved: ResolvedBrand) -> CompetitorMatch:
