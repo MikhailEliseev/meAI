@@ -148,6 +148,47 @@ def _resolve_sync(
     )
 
 
+async def _resolve_bo_nalog_only(
+    brand_name: str,
+    okved_prefix: str = "86.",
+    nalog: Optional[BfoNalogClient] = None,
+) -> Optional[ResolvedBrand]:
+    """Level 1 only: bo.nalog search по названию. Быстро, дёшево."""
+    brand_original = brand_name
+    brand_name = normalize_brand_name(brand_name)
+    client = nalog or get_nalog_client()
+    result = await asyncio.to_thread(_resolve_sync, client, brand_name, okved_prefix, brand_original)
+    if result:
+        logger.info("brand_resolved: brand=%s → inn=%s", brand_name, result.inn)
+    return result
+
+
+async def _resolve_with_fallbacks(
+    brand_name: str,
+    okved_prefix: str = "86.",
+    nalog: Optional[BfoNalogClient] = None,
+) -> Optional[ResolvedBrand]:
+    """Level 2 + 3: website scrape + Perplexity. Медленно, дорого."""
+    brand_original = brand_name
+    brand_name = normalize_brand_name(brand_name)
+    client = nalog or get_nalog_client()
+
+    # Level 2: Firecrawl scrape сайта → ИНН
+    result = await _resolve_via_website_scrape(brand_name, okved_prefix, client, brand_original)
+    if result:
+        logger.info("brand_resolved_website: brand=%s → inn=%s", brand_name, result.inn)
+        return result
+
+    # Level 3: Perplexity → ИНН
+    result = await _resolve_via_perplexity(brand_name, okved_prefix, client, brand_original)
+    if result:
+        logger.info("brand_resolved_perplexity: brand=%s → inn=%s", brand_name, result.inn)
+        return result
+
+    logger.info("brand_not_found_in_fns: brand=%s", brand_name)
+    return None
+
+
 async def resolve_brand_to_inn(
     brand_name: str,
     okved_prefix: str = "86.",
@@ -468,10 +509,22 @@ async def resolve_brands_batch(
     """
     nalog = get_nalog_client()  # singleton — cache survives, do NOT close
     semaphore = asyncio.Semaphore(max_concurrent)
+    website_scrape_budget = 5  # максимум брендов для Level 2 (Firecrawl scrape)
+    website_scrape_used = 0
 
     async def _semaphored(brand: str) -> Optional[ResolvedBrand]:
+        nonlocal website_scrape_used
         async with semaphore:
-            return await resolve_brand_to_inn(brand, okved_prefix, nalog)
+            # Level 1: bo.nalog (быстро, дёшево)
+            result = await _resolve_bo_nalog_only(brand, okved_prefix, nalog)
+            if result:
+                return result
+            # Level 2 + 3 только если бюджет позволяет
+            if website_scrape_used >= website_scrape_budget:
+                logger.debug("brand_resolver: website scrape budget exhausted, skipping %s", brand[:25])
+                return None
+            website_scrape_used += 1
+            return await _resolve_with_fallbacks(brand, okved_prefix, nalog)
 
     results = await asyncio.gather(
         *[_semaphored(b) for b in brand_names],
