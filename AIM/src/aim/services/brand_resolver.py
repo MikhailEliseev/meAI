@@ -182,42 +182,37 @@ async def resolve_brand_to_inn(
 
     # Always use singleton — never close it (cache survives between requests)
     client = nalog or get_nalog_client()
-    try:
-        result = await asyncio.to_thread(_resolve_sync, client, brand_name, okved_prefix, brand_original)
-        if result:
-            logger.info(
-                "brand_resolved: brand=%s → inn=%s okved=%s revenue=%s",
-                brand_name, result.inn, result.okved,
-                f"{result.latest_revenue:,}" if result.latest_revenue else "N/A",
-            )
-            return result
+    result = await asyncio.to_thread(_resolve_sync, client, brand_name, okved_prefix, brand_original)
+    if result:
+        logger.info(
+            "brand_resolved: brand=%s → inn=%s okved=%s revenue=%s",
+            brand_name, result.inn, result.okved,
+            f"{result.latest_revenue:,}" if result.latest_revenue else "N/A",
+        )
+        return result
 
-        # ── Level 2: Firecrawl scrape сайта → ИНН из подвала/политики ──
-        # Точнее чем Perplexity: ИНН с сайта = юридически обязателен (152-ФЗ).
-        # Нужно знать URL сайта — пробуем домен из названия бренда.
-        result = await _resolve_via_website_scrape(brand_name, okved_prefix, client, brand_original)
-        if result:
-            logger.info(
-                "brand_resolved_website: brand=%s → inn=%s okved=%s revenue=%s",
-                brand_name, result.inn, result.okved,
-                f"{result.latest_revenue:,}" if result.latest_revenue else "N/A",
-            )
-            return result
+    # ── Level 2: Firecrawl scrape сайта → ИНН из подвала/политики ──
+    result = await _resolve_via_website_scrape(brand_name, okved_prefix, client, brand_original)
+    if result:
+        logger.info(
+            "brand_resolved_website: brand=%s → inn=%s okved=%s revenue=%s",
+            brand_name, result.inn, result.okved,
+            f"{result.latest_revenue:,}" if result.latest_revenue else "N/A",
+        )
+        return result
 
-        # ── Level 3: Perplexity fallback (последний шанс) ──
-        result = await _resolve_via_perplexity(brand_name, okved_prefix, client, brand_original)
-        if result:
-            logger.info(
-                "brand_resolved_perplexity: brand=%s → inn=%s okved=%s revenue=%s",
-                brand_name, result.inn, result.okved,
-                f"{result.latest_revenue:,}" if result.latest_revenue else "N/A",
-            )
-            return result
+    # ── Level 3: Perplexity fallback (последний шанс) ──
+    result = await _resolve_via_perplexity(brand_name, okved_prefix, client, brand_original)
+    if result:
+        logger.info(
+            "brand_resolved_perplexity: brand=%s → inn=%s okved=%s revenue=%s",
+            brand_name, result.inn, result.okved,
+            f"{result.latest_revenue:,}" if result.latest_revenue else "N/A",
+        )
+        return result
 
-        logger.info("brand_not_found_in_fns: brand=%s", brand_name)
-        return None
-    except Exception:
-        raise
+    logger.info("brand_not_found_in_fns: brand=%s", brand_name)
+    return None
 
 
 async def _resolve_via_website_scrape(
@@ -290,7 +285,7 @@ async def _scrape_inn_from_website(website_url: str) -> Optional[str]:
     2. Если нет → найти ссылку на политику → скрапить её
     3. Если нет → попробовать /policy, /privacy, /kontakty, /o-klinike
     """
-    import httpx  # lazy import — не нужен если функция не вызывается
+    import httpx  # lazy import
 
     # Загружаем Firecrawl ключи
     fc_key = _get_firecrawl_key()
@@ -302,7 +297,7 @@ async def _scrape_inn_from_website(website_url: str) -> Optional[str]:
         re.compile(r"INN[^0-9]*?(\d{10})", re.I),       # INN: 1234567890
     ]
 
-    async with httpx.AsyncClient(timeout=25) as http:
+    async with httpx.AsyncClient(timeout=15) as http:  # 15s per-request, 20s aggregate
         # Стратегические URL для проверки
         candidate_urls = [website_url]  # главная
 
