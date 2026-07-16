@@ -39,6 +39,31 @@ from src.aim.services.service_extractor import extract_client_profile
 
 logger = logging.getLogger(__name__)
 
+
+def _domain_resolves(url: str, timeout: float = 3.0) -> bool:
+    """Quick DNS check — does the domain in url resolve?
+
+    Prevents 300s timeouts when a user mistypes a domain (e.g. 'seeline'
+    instead of 'seline'). Pipeline continues via Perplexity/ФНС even if
+    the site is unreachable.
+    """
+    import socket
+    from urllib.parse import urlparse
+    try:
+        parsed = url if "://" in url else "https://" + url
+        host = urlparse(parsed).hostname or ""
+        if not host:
+            return False
+        socket.setdefaulttimeout(timeout)
+        try:
+            socket.gethostbyname(host)
+            return True
+        finally:
+            socket.setdefaulttimeout(None)
+    except (socket.gaierror, socket.timeout, OSError):
+        logger.warning("DNS check FAILED for %s — site unreachable, skipping scrape", host)
+        return False
+
 # Revenue corridor: competitors between 0.1× and 10× of client revenue
 # Wide corridor to ensure we get enough competitors even for very large clients
 _REVENUE_CORRIDOR_MIN = 0.1
@@ -286,8 +311,18 @@ class CompetitorMatcherV2:
         """
         t0 = time.monotonic()
 
+        # DNS check: if domain doesn't resolve (typo, dead site), skip all
+        # scraping but continue pipeline via Perplexity/ФНС brand resolution.
+        site_reachable = _domain_resolves(url)
+
         # ── STAGE 0: Client profile + INN + revenue ───────────────────
-        client_profile = await extract_client_profile(url)
+        if site_reachable:
+            client_profile = await extract_client_profile(url)
+        else:
+            client_profile = {
+                "services": [], "specialization": "", "city": "",
+                "company_name": None, "inn": "", "site_structure": None,
+            }
         specialization = client_profile.get("specialization", "")
         city = client_profile.get("city", "")
         company_name = client_profile.get("company_name")
@@ -513,7 +548,7 @@ class CompetitorMatcherV2:
         self.last_client_socials = None
         self.last_client_doctors = None
         self.last_client_audit = None
-        if url:
+        if url and site_reachable:
             try:
                 from src.aim.services.lib.seo_auditor import audit_website
                 from src.aim.services.lib.firecrawl_enricher import scrape_website, scrape_doctors

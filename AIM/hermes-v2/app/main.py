@@ -73,8 +73,10 @@ _FALLBACK_SUGGESTIONS = [
     {"label": "Анализ соцсетей", "tool": "run_instagram_content"},
 ]
 
+# Regex tolerant of markdown bold wrappers (LLM sometimes emits **[SUGGESTIONS]**)
 _SUGGESTIONS_RE = re.compile(
-    r"\[SUGGESTIONS\]\s*\n(.*?)\[/SUGGESTIONS\]", re.DOTALL
+    r"\*{0,2}\[SUGGESTIONS\]\*{0,2}\s*\n(.*?)\*{0,2}\[/SUGGESTIONS\]\*{0,2}",
+    re.DOTALL,
 )
 
 
@@ -95,6 +97,8 @@ def extract_suggestions(text: str) -> tuple[str, list[dict]]:
             label, tool = line.rsplit("|", 1)
             buttons.append({"label": label.strip(), "tool": tool.strip()})
     clean = _SUGGESTIONS_RE.sub("", text).rstrip()
+    # Also strip leftover markdown (--- separators, empty lines before marker)
+    clean = re.sub(r"\n---\s*$", "", clean)
     return clean, (buttons if buttons else _FALLBACK_SUGGESTIONS)
 
 
@@ -123,7 +127,9 @@ async def chat_stream(req: ChatRequest):
             formatted_parts = []  # таблицы/факты из кода (анти-галлюцинация)
             # Буфер для перехвата [SUGGESTIONS] маркера (стримится токенами).
             # Держим хвост буфера незакрытым, пока не убедимся что это не маркер.
-            MARKER = "[SUGGESTIONS]"
+            # LLM иногда оборачивает маркер в markdown bold: **[SUGGESTIONS]**
+            MARKER_CORE = "[SUGGESTIONS]"
+            MARKER_PREFIXES = ("**[SUGGESTIONS]", "[SUGGESTIONS]")
             sent_idx = 0  # сколько символов уже отправлено
 
             try:
@@ -138,14 +144,19 @@ async def chat_stream(req: ChatRequest):
                     elif kind == "text":
                         full_response.append(event[1])
                         accumulated = "".join(full_response)
-                        # Найдём позицию начала маркера — не стримим оттуда
-                        marker_pos = accumulated.find(MARKER)
+                        # Найдём позицию начала маркера (с учётом ** префикса)
+                        marker_pos = -1
+                        for prefix in MARKER_PREFIXES:
+                            pos = accumulated.find(prefix)
+                            if pos != -1 and (marker_pos == -1 or pos < marker_pos):
+                                marker_pos = pos
                         if marker_pos != -1:
                             safe_end = marker_pos
                         else:
-                            # Не стримим последние len(MARKER)-1 символов —
-                            # они могут быть началом маркера
-                            safe_end = max(sent_idx, len(accumulated) - len(MARKER) + 1)
+                            # Не стримим последние символы — могут быть началом маркера.
+                            # Учитываем самый длинный префикс (**[SUGGESTIONS])
+                            hold_back = len(MARKER_PREFIXES[0])
+                            safe_end = max(sent_idx, len(accumulated) - hold_back + 1)
                         if safe_end > sent_idx:
                             chunk = accumulated[sent_idx:safe_end]
                             yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': chunk}, ensure_ascii=False)}\n\n"
