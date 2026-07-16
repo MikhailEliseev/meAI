@@ -61,15 +61,6 @@ def _format_age(reg_date: str | None) -> str:
     return "—"
 
 
-def _format_posts(posts: int | None) -> str:
-    """Форматирование количества постов Instagram."""
-    if not posts or posts <= 0:
-        return "—"
-    if posts >= 1000:
-        return f"{posts // 1000}K"
-    return str(posts)
-
-
 def format_competitors(result: str, client_revenue: int | None = None,
                        client_profit: int | None = None,
                        client_reg_date: str | None = None,
@@ -99,8 +90,8 @@ def format_competitors(result: str, client_revenue: int | None = None,
 
     lines = ["## 📊 Конкуренты (данные ФНС)\n"]
 
-    lines.append("| Конкурент | Выручка | Прибыль | Тренд | Лет | Врачей | IG подп. | IG посты | Сайт | Стр. |")
-    lines.append("|---|---|---|---|---|---|---|---|---|---|")
+    lines.append("| Конкурент | Выручка | Прибыль | Тренд | Лет | Врачей | IG подп. | Сайт |")
+    lines.append("|---|---|---|---|---|---|---|---|")
 
     # Строка клиента (позиционирование в таблице)
     if client_revenue:
@@ -109,7 +100,7 @@ def format_competitors(result: str, client_revenue: int | None = None,
         client_scl_str = str(client_scl) if client_scl else "—"
         lines.append(
             f"| **ВЫ (клиент)** | **{_format_revenue(client_revenue)}** "
-            f"| {client_profit_str} | — | {client_age} | {client_scl_str} | — | — | — | — |"
+            f"| {client_profit_str} | — | {client_age} | {client_scl_str} | — | — |"
         )
 
     for c in comps:
@@ -134,16 +125,10 @@ def format_competitors(result: str, client_revenue: int | None = None,
         ig = c.get("instagram_followers")
         ig_str = _format_followers(ig)
 
-        ig_posts = c.get("instagram_posts")
-        ig_posts_str = _format_posts(ig_posts)
-
         cms = c.get("website_cms") or "—"
         if len(cms) > 12:
             cms = cms[:10] + "…"
 
-        pages = c.get("website_pages")
-        pages_str = str(pages) if pages else "—"
-
-        lines.append(f"| {brand} | {rev_str} | {profit_str} | {trend} | {age_str} | {docs_str} | {ig_str} | {ig_posts_str} | {cms} | {pages_str} |")
+        lines.append(f"| {brand} | {rev_str} | {profit_str} | {trend} | {age_str} | {docs_str} | {ig_str} | {cms} |")
 
     return "\n".join(lines)

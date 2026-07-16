@@ -25,7 +25,7 @@ def _normalize_url(url: str) -> str:
 
 # --- find_competitors: proxy to aim-app -----------------------------------------
 
-async def find_competitors(url: str, count: int = 10,
+async def find_competitors(url: str, count: int = 5,
                              client_inn: str = "", client_address: str = "") -> dict:
     """Прозрачный прокси к aim-app POST /api/competitors/find.
 

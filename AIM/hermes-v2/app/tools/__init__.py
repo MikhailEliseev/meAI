@@ -28,7 +28,7 @@ def _register_find_competitors():
                     "type": "object",
                     "properties": {
                         "url": {"type": "string", "description": "URL сайта клиники"},
-                        "count": {"type": "integer", "description": "Сколько конкурентов (default 5)", "default": 5},
+                        "count": {"type": "integer", "description": "Сколько конкурентов (default 5, max 10)", "default": 5},
                     },
                     "required": ["url"],
                 },
@@ -45,6 +45,7 @@ def register_all():
     from app.tools import perplexity_tools  # noqa: F401
     from app.tools import run_instagram_content  # noqa: F401
     from app.tools import run_ads_intelligence  # noqa: F401
+    from app.tools import run_review_platforms  # noqa: F401
     # aim-app proxy tools (financials, content analysis, SEO)
     from app.tools import aim_app_tools  # noqa: F401
     logger.info("register_all: %d tools — %s", len(list_tool_names()), list_tool_names())

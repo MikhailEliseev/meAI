@@ -28,7 +28,7 @@ router = APIRouter(prefix="/api/competitors", tags=["competitors"])
 
 class FindCompetitorsRequest(BaseModel):
     url: str = Field(..., description="Client clinic website URL")
-    count: int = Field(default=10, ge=1, le=20, description="Number of competitors to return")
+    count: int = Field(default=5, ge=1, le=20, description="Number of competitors to return")
     strategy: str = Field(
         default="v2",
         description="Discovery strategy: 'v2' (Perplexity+SearXNG+ФНС) or 'v1' (Google Maps)",

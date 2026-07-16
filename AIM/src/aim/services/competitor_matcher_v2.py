@@ -523,11 +523,13 @@ class CompetitorMatcherV2:
 
         result = enriched[:count]
 
-        # ── STAGE 3.4: Deep ФНС enrichment for final top-N only ──────────
-        # Fetch registration_date + scl_count via get_organization. This is a
-        # second ФНС call per competitor, so we run it only for the final list
-        # (typically 6-10) instead of all resolved brands (up to 25).
-        await self._enrich_deep_batch(result)
+        # ── STAGE 3.4: Deep ФНС enrichment for top-N only ──────────────
+        # Fetch registration_date + scl_count + profit/trend via
+        # get_organization + get_financials. This is 2 ФНС calls per
+        # competitor, so we limit to top-5 by revenue proximity to keep
+        # pipeline fast (428s → ~120s on 10 competitors).
+        _DEEP_BUDGET = 5
+        await self._enrich_deep_batch(result[:_DEEP_BUDGET])
 
         # ── STAGE 3.5b: Post-selection enrichment (doctors + Instagram + website) ─
         # Budget: enrich only top-5 to keep Firecrawl scrape volume low (~26% of

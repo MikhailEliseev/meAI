@@ -171,6 +171,13 @@ async def _execute_single_tool(tc, profile_cache: dict):
             tool_args["client_address"] = profile_cache["address"]
             logger.info("auto-inject: client_address=%s into find_competitors", profile_cache["address"][:60])
 
+    # Auto-inject: run_review_platforms — fill company_name/city from profile_cache
+    if tool_name == "run_review_platforms" and profile_cache:
+        if not tool_args.get("company_name") and profile_cache.get("company_name"):
+            tool_args["company_name"] = profile_cache["company_name"]
+        if not tool_args.get("city") and profile_cache.get("city"):
+            tool_args["city"] = profile_cache["city"]
+
     result = await execute(tool_name, tool_args)
     result_str = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
 
@@ -251,14 +258,7 @@ def _build_formatted_blocks(
         if overview_md:
             blocks.append(overview_md)
 
-    # ── SEO + GEO аудит блок ──
-    audit = client_pipeline_data.get("client_audit")
-    if audit:
-        audit_md = _format_audit_block(audit)
-        if audit_md:
-            blocks.append(audit_md)
-
-    # ── Competitors block ──
+    # ── Competitors block (ПЕРЕД аудитом — клиент хочет видеть рынок первым) ──
     if competitors_result:
         comp_md = format_competitors(
             competitors_result,
@@ -270,7 +270,75 @@ def _build_formatted_blocks(
         if comp_md:
             blocks.append(comp_md)
 
+    # ── Reviews block (отзывы клиента по площадкам) ──
+    reviews_result = collected_results.get("run_review_platforms")
+    if reviews_result:
+        reviews_md = _format_reviews_block(reviews_result)
+        if reviews_md:
+            blocks.append(reviews_md)
+
+    audit = client_pipeline_data.get("client_audit")
+    if audit:
+        audit_md = _format_audit_block(audit)
+        if audit_md:
+            blocks.append(audit_md)
+
     return blocks
+
+
+def _format_reviews_block(reviews_raw: str) -> str:
+    """Форматирует отзывы с площадок в Markdown блок."""
+    try:
+        data = json.loads(reviews_raw) if isinstance(reviews_raw, str) else reviews_raw
+    except (json.JSONDecodeError, TypeError):
+        return ""
+
+    platforms = data.get("platforms", {})
+    lines = ["## ⭐ Отзывы пациентов\n"]
+
+    # Рейтинги по площадкам
+    platform_labels = {
+        "yandex": "Яндекс.Карты",
+        "prodoctorov": "ПроДокторов",
+        "twogis": "2ГИС",
+    }
+    found_any = False
+    for key, label in platform_labels.items():
+        p = platforms.get(key, {})
+        rating = p.get("rating")
+        reviews = p.get("reviews")
+        if rating:
+            found_any = True
+            rev_str = f" ({reviews} отзывов)" if reviews else ""
+            lines.append(f"**{label}:** {rating} ★{rev_str}\n")
+
+    if not found_any:
+        return ""  # нет данных — не показываем блок
+
+    # Темы: хвалят
+    praise = data.get("praise_summary", "")
+    if praise:
+        lines.append("\n**✅ Хвалят:**\n")
+        for topic in praise.split("|")[:4]:
+            topic = topic.strip()
+            if topic:
+                lines.append(f"- {topic[:150]}\n")
+
+    # Темы: критикуют
+    criticism = data.get("criticism_summary", "")
+    if criticism:
+        lines.append("\n**⚠️ Критикуют:**\n")
+        for topic in criticism.split("|")[:4]:
+            topic = topic.strip()
+            if topic:
+                lines.append(f"- {topic[:150]}\n")
+
+    # Общий вывод о репутации
+    summary = data.get("reputation_summary", "")
+    if summary:
+        lines.append(f"\n**📋 Репутация:** {summary[:300]}\n")
+
+    return "".join(lines)
 
 
 def _format_audit_block(audit: dict) -> str:
@@ -512,7 +580,8 @@ async def chat_with_tools(history: list[dict]):
                         "- НЕ повторяй таблицы — они уже показаны\n"
                         "- НЕ выдумывай цифры — только из таблиц\n"
                         "- НЕ упоминай отзывы/рейтинг/трафик — этих данных нет\n"
-                        "- Сравнивай КОНКРЕТНО: «крупнее в X раз», «нет Instagram (у конкурентов по 30K)»"
+                        "- Сравнивай КОНКРЕТНО: «крупнее в X раз», «нет VK (у конкурентов по 30K)»\n"
+                        "- ⚖️ НЕ рекомендуй Instagram, Telegram и другие запрещённые/Meta платформы (148-ФЗ). Можно: VK, RuTube, Яндекс.Дзен, TenChat"
                     ),
                 })
 
