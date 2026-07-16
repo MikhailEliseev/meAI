@@ -246,6 +246,25 @@ def _is_same_city(address: str, city: str) -> bool:
     return any(kw in addr_upper for kw in keywords)
 
 
+def _extract_city_from_address(address: str) -> str:
+    """Извлекает город из ФНС-адреса головного юрлица сети.
+
+    Адрес ФНС: «119021, МОСКВА, БОЛЬШАЯ ПИРОГОВСКАЯ, 7» → «Москва»
+    Используется для авто-уточнения города сетевых клиник (МЕДСИ → Москва).
+    """
+    if not address:
+        return ""
+    parts = [p.strip() for p in address.split(",")]
+    # parts[0] = индекс, parts[1] = регион/город
+    if len(parts) >= 2:
+        region_or_city = parts[1].upper()
+        # Обратный поиск: какой город соответствует этому региону?
+        for city, keywords in _CITY_REGION_KEYWORDS.items():
+            if any(region_or_city.startswith(kw) for kw in keywords):
+                return city.capitalize() if city != "спб" else "Санкт-Петербург"
+    return ""
+
+
 def _is_related_entity(competitor_name: str, client_name: str) -> bool:
     """Проверяет, является ли конкурент связанным юрлицом клиента.
 
@@ -342,6 +361,17 @@ class CompetitorMatcherV2:
                 "Client INN resolution: source=%s inn=%s",
                 inn_source, client_inn or "None",
             )
+
+        # Если клиент — сеть, override город из адреса головного юрлица.
+        # medsi.ru → extract_client_profile дал Пермь (филиал), но головное
+        # юрлицо АО «МЕДСИ 2» находится в Москве → используем Москву.
+        if hasattr(self, "_client_network_city") and self._client_network_city:
+            network_city = self._client_network_city
+            if network_city.lower() != city.lower():
+                logger.info(
+                    "Client city OVERRIDDEN by network HQ: %s → %s", city, network_city,
+                )
+                city = network_city
 
         # Get real client revenue from ФНС
         client_revenue_real = await self._get_revenue_by_inn(client_inn)
@@ -614,6 +644,33 @@ class CompetitorMatcherV2:
             logger.warning("Failed to get client revenue for inn=%s: %s", inn, e)
         return None
 
+    @staticmethod
+    def _domain_to_brand(url: str) -> str:
+        """Извлекает короткий бренд из URL и транслитерирует в кириллицу.
+
+        medsi.ru → 'medsi' → 'медси' (ФНС ищет по кириллице).
+        gmt-clinic.ru → 'gmt clinic' (латиница, ФНС тоже найдёт).
+        """
+        try:
+            from urllib.parse import urlparse
+            url_parsed = url if "://" in url else "https://" + url
+            domain = urlparse(url_parsed).netloc.replace("www.", "")
+            if not domain:
+                return ""
+            brand = domain.split(".")[0].replace("-", " ").replace("_", " ")
+            # Транслитерация латиница → кириллица (для русскоязычных брендов)
+            _TRANSLIT = str.maketrans("abvgdeziyklmnoprstufhc4wq",
+                                       "абвгдезийклмнопрстуфхцчщк")
+            # Проверяем: если бренд латиница — пробуем транслит
+            if brand.isascii() and brand.isalpha():
+                translit = brand.translate(_TRANSLIT)
+                # Простейший fallback для букв без прямого соответствия
+                translit = translit.replace("x", "кс").replace("j", "й")
+                return translit
+            return brand
+        except Exception:
+            return ""
+
     async def _resolve_client_inn(
         self,
         company_name: Optional[str],
@@ -650,15 +707,45 @@ class CompetitorMatcherV2:
         if company_name:
             resolved = await resolve_brand_to_inn(company_name, nalog=self.nalog)
             if resolved and resolved.inn:
+                # Если нашли — но это одиночное юрлицо (не сеть), а домен может
+                # содержать бренд сети → попробовать короткий бренд из домена.
+                # medsi.ru → «Сеть клиник... МЕДСИ» (найдёт филиал Пермь) →
+                # но medsi.ru → «medsi» → найдёт сеть из 6 юрлиц на 9.7 млрд.
+                if not resolved.is_network and url:
+                    domain_brand = self._domain_to_brand(url)
+                    if domain_brand and len(domain_brand) >= 3:
+                        resolved_domain = await resolve_brand_to_inn(domain_brand, nalog=self.nalog)
+                        if resolved_domain and resolved_domain.is_network:
+                            resolved = resolved_domain  # заменяем на сеть!
+
                 # Сохранить network info для клиента (агрегат сети)
                 if resolved.is_network and resolved.network_revenue:
                     self._client_network_revenue = resolved.network_revenue
                     self._client_network_count = resolved.network_count
+                    self._client_network_city = _extract_city_from_address(resolved.address)
                     logger.info(
-                        "Client is NETWORK: %s — %d филиалов, revenue=%s",
+                        "Client is NETWORK: %s — %d филиалов, revenue=%s, city=%s",
                         company_name, resolved.network_count, f"{resolved.network_revenue:,}",
+                        self._client_network_city,
                     )
                 return resolved.inn, "bo_nalog"
+
+            # Level 1b: длинное имя не нашлось → короткий бренд из домена
+            if url:
+                domain_brand = self._domain_to_brand(url)
+                if domain_brand and len(domain_brand) >= 3:
+                    resolved = await resolve_brand_to_inn(domain_brand, nalog=self.nalog)
+                    if resolved and resolved.inn:
+                        if resolved.is_network and resolved.network_revenue:
+                            self._client_network_revenue = resolved.network_revenue
+                            self._client_network_count = resolved.network_count
+                            self._client_network_city = _extract_city_from_address(resolved.address)
+                            logger.info(
+                                "Client is NETWORK (via domain %s): %d филиалов, revenue=%s, city=%s",
+                                domain_brand, resolved.network_count,
+                                f"{resolved.network_revenue:,}", self._client_network_city,
+                            )
+                        return resolved.inn, "bo_nalog_domain"
 
         # Level 2: Perplexity → extract INN → bo.nalog validate (ТОЧНЕЕ чем spec search)
         if perplexity_configured():
