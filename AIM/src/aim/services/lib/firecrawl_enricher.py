@@ -27,8 +27,12 @@ REQUEST_TIMEOUT = 30.0
 # Ключи Firecrawl — UnifiedKeyPool через env
 _fc_keys: list[str] = []
 _fc_idx = 0
-_fc_exhausted: set[str] = set()  # помеченные исчерпанные ключи
+_fc_exhausted: dict[str, float] = {}  # key → expiry timestamp
+_EXHAUSTED_TTL = 3600  # 1 hour
 _fc_lock = __import__("threading").Lock()
+
+
+import time as _time
 
 
 def _load_firecrawl_keys() -> list[str]:
@@ -65,9 +69,14 @@ def _load_firecrawl_keys() -> list[str]:
 
 
 def _get_next_key() -> Optional[str]:
-    """Round-robin по активным ключам (исключая exhausted)."""
+    """Round-robin по активным ключам (исключая exhausted с TTL)."""
     global _fc_idx
     with _fc_lock:
+        now = _time.time()
+        # Clear expired exhaustion entries
+        expired = [k for k, t in _fc_exhausted.items() if t < now]
+        for k in expired:
+            del _fc_exhausted[k]
         keys = [k for k in _load_firecrawl_keys() if k not in _fc_exhausted]
         if not keys:
             return None
@@ -77,11 +86,11 @@ def _get_next_key() -> Optional[str]:
 
 
 def _mark_key_exhausted(key: str):
-    """Помечает ключ исчерпанным — больше не возвращается."""
+    """Помечает ключ исчерпанным на _EXHAUSTED_TTL секунд."""
     with _fc_lock:
-        _fc_exhausted.add(key)
-    logger.warning("Firecrawl key marked exhausted: …%s (total exhausted: %d)",
-                   key[-4:], len(_fc_exhausted))
+        _fc_exhausted[key] = _time.time() + _EXHAUSTED_TTL
+    logger.warning("Firecrawl key exhausted …%s (TTL %ds, total: %d)",
+                   key[-4:], _EXHAUSTED_TTL, len(_fc_exhausted))
 
 
 async def _firecrawl_request(endpoint: str, payload: dict, max_retries: int = 3) -> Optional[dict]:
@@ -316,8 +325,8 @@ async def _count_doctors_on_page(url: str) -> Optional[int]:
     if len(doctor_names) >= 2:
         return len(doctor_names)
 
-    # Паттерн 2: заголовки карточек <h3> или <h4>
-    headings = re.findall(r"^#{3,4}\s+([А-ЯЁ][а-яё]+)", markdown, re.MULTILINE)
+    # Паттерн 2: заголовки карточек <h3>/<h4> — только имя + инициалы
+    headings = re.findall(r"^#{3,4}\s+([А-ЯЁ][а-яё]+ [А-ЯЁ]\.?\s*[А-ЯЁ]\.?[^#\n]{0,50})", markdown, re.MULTILINE)
     if len(headings) >= 2:
         return len(headings)
 

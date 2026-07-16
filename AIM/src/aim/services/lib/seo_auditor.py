@@ -214,12 +214,14 @@ def _parse_robots_for_ai(robots_text: str) -> dict:
 
     for line in lines:
         line_lower = line.strip().lower()
-        if not line_lower or line_lower.startswith("#"):
+        if not line_lower:
+            current_agents = []  # blank line = new record group
+            continue
+        if line_lower.startswith("#"):
             continue
         if line_lower.startswith("user-agent:"):
             agent = line_lower.split(":", 1)[1].strip()
-            current_agents = [agent]
-            # Могут быть подряд несколько User-agent
+            current_agents.append(agent)  # accumulate consecutive UA lines
             blocks.setdefault(agent, [])
         elif line_lower.startswith(("disallow:", "allow:")) and current_agents:
             directive = line_lower
@@ -445,11 +447,13 @@ async def audit_website(url: str) -> dict:
                         # Альтернативный паттерн: **1.7K** followers
                         vk_match = re.search(r"(\d+[.,]?\d*K?)\s*(?:follower|подписч|участник|member)", vk_md, re.I)
                     if vk_match:
-                        vk_str = vk_match.group(1).replace(",", ".").replace(" ", "")
+                        vk_str = vk_match.group(1).replace(" ", "")
                         if "K" in vk_str.upper():
-                            result["vk_followers"] = int(float(vk_str.upper().replace("K", "")) * 1000)
+                            num = vk_str.upper().replace("K", "").replace(",", ".")
+                            result["vk_followers"] = int(float(num) * 1000)
                         else:
-                            result["vk_followers"] = int(float(vk_str))
+                            # comma is thousands separator, not decimal
+                            result["vk_followers"] = int(vk_str.replace(",", ""))
     except Exception:
         pass
 

@@ -243,8 +243,12 @@ async def _resolve_via_website_scrape(
     if not website_url:
         return None
 
-    # Шаг 2: скрапить сайт → найти ИНН
-    inn = await _scrape_inn_from_website(website_url)
+    # Шаг 2: скрапить сайт → найти ИНН (с aggregate timeout 20s)
+    try:
+        inn = await asyncio.wait_for(_scrape_inn_from_website(website_url), timeout=20)
+    except asyncio.TimeoutError:
+        logger.debug("Website INN scrape timed out for %s", website_url[:40])
+        return None
     if not inn:
         return None
 

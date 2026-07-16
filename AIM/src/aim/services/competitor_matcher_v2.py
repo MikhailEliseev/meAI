@@ -191,7 +191,9 @@ def _is_related_entity(competitor_name: str, client_name: str) -> bool:
     if not competitor_name or not client_name:
         return False
     comp_lower = competitor_name.lower()
-    client_words = [w for w in client_name.split() if len(w) > 3]
+    _GENERIC_WORDS = {"клиника", "клиник", "центр", "медицинский", "медицина",
+                      "институт", "группа", "компания", "общество", "лечебный"}
+    client_words = [w for w in client_name.split() if len(w) > 3 and w not in _GENERIC_WORDS]
     if not client_words:
         return False
     matches = sum(1 for w in client_words if w in comp_lower)
@@ -859,8 +861,8 @@ class CompetitorMatcherV2:
             confidence=0.95 if latest else 0.7,
         )
 
-        # Сохраняем dynamics в profile для последующей сериализации
-        profile.scraped_services = dynamics.get("history", [])  # временный hack: храним в scraped_services
+        # Сохраняем dynamics в profile
+        profile.revenue_history = dynamics.get("history", [])
 
         return CompetitorMatch(
             profile=profile,

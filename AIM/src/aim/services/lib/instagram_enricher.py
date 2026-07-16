@@ -233,21 +233,7 @@ async def enrich_instagram_batch(
                                 comp.profile.social_links["instagram_posts"] = str(posts)
                     except Exception as e:
                         logger.debug("Apify IG fallback failed for %s: %s", brand, str(e)[:60])
-            elif use_apify_fallback and not handle:
-                # Нет handle вообще → пробуем Apify по названию бренда
-                try:
-                    from src.aim.services.lib.firecrawl_enricher import search_instagram_handle
-                    handle2 = await search_instagram_handle(brand, city)
-                    if handle2:
-                        handle = handle2
-                        apify_result = await _get_instagram_via_apify(handle)
-                        if apify_result:
-                            followers = apify_result.get("followers")
-                            posts = apify_result.get("posts")
-                            if posts is not None:
-                                comp.profile.social_links["instagram_posts"] = str(posts)
-                except Exception:
-                    pass
+            # elif removed — duplicate Firecrawl search was wasted API call
 
             if handle:
                 comp.profile.social_links["instagram"] = f"@{handle}"
@@ -286,6 +272,11 @@ async def _get_instagram_via_apify(handle: str) -> dict | None:
         items = await client.get_dataset_items(run.default_dataset_id)
         if items and isinstance(items, list) and items[0]:
             p = items[0]
+            if not isinstance(p, dict):
+                return None
+            # Private accounts hide follower data
+            if p.get("privateProfile") or p.get("isPrivate"):
+                return {"followers": None, "posts": None, "private": True}
             return {
                 "followers": p.get("followersCount"),
                 "posts": p.get("postsCount"),

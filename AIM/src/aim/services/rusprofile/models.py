@@ -51,6 +51,9 @@ class CompanyProfile:
     # Services extracted from competitor's website (populated after scraping)
     scraped_services: list[str] = field(default_factory=list)
 
+    # Multi-year revenue history from ФНС (for trend analysis)
+    revenue_history: list[dict] = field(default_factory=list)
+
     # Consumer signals (from Yandex Maps, 2GIS, etc.)
     rating: Optional[float] = None
     reviews_count: Optional[int] = None
