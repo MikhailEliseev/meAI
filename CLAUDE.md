@@ -13,6 +13,7 @@
 5. **Проверять ВСЕ данные, не только свежие** — например, все 72 scout поста, не только последний.
 6. **При любом сомнении — задавать вопрос, не угадывать.**
 7. **Перед любой работой с кодом Hermes — сверить MD5 локала vs сервера.** Сервер = source of truth. Локальные .py файлы могут быть устаревшими или опережающими. Подробности: `refactor-analysis/SERVER-LOCAL-DIVERGENCE.md`.
+8. **НЕ ПЛОДИТЬ БАНКИ КЛЮЧЕЙ.** В проекте есть ОДНА единая система управления API-ключами — `UnifiedKeyPool` (`key_pool.py`). Для Firecrawl — singleton `get_firecrawl_pool()` (`lib/firecrawl_key_pool.py`), для Apify — `ApifyKeyPool` (`apify_key_pool.py`). **Запрещено** создавать собственные `_fc_keys`, `_fc_idx`, `_fc_exhausted`, `_load_keys()`, `_get_next_key()` или любые другие in-memory системы ротации ключей. Любой новый код, которому нужен Firecrawl/Apify ключ — вызывает `get_firecrawl_pool()` или `get_apify_key_pool()` и берёт ключ через `pool.get_next_key()`. Нарушение этого правила = двухмесячный ад с падающими ключами.
 
 ### Принцип
 
