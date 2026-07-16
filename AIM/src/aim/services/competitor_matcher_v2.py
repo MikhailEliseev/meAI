@@ -356,14 +356,22 @@ class CompetitorMatcherV2:
             f"{self.last_client_profit:,}" if self.last_client_profit else "None",
         )
 
-        # ── STAGE 1: Discover brands (2 channels parallel) ───────────
+        # ── STAGE 1: Discover brands (3 channels parallel) ───────────
+        # Perplexity + SearXNG discover brand NAMES; registry gives legal
+        # entities directly. Registry is the stability backstop — even if
+        # Perplexity hallucinates or ФНС rejects everything, registry provides
+        # a solid competitor list sorted by revenue in the client's region.
         perplexity_task = self._discover_via_perplexity(
             company_name, specialization, city, effective_revenue
         )
         searxng_task = self._discover_via_searxng(specialization, city)
+        registry_task = self._discover_via_registry(
+            specialization, city, effective_revenue, count
+        )
 
-        perplexity_brands, searxng_brands = await asyncio.gather(
-            perplexity_task, searxng_task, return_exceptions=True,
+        perplexity_brands, searxng_brands, registry_matches = await asyncio.gather(
+            perplexity_task, searxng_task, registry_task,
+            return_exceptions=True,
         )
 
         # Handle exceptions gracefully
@@ -373,14 +381,17 @@ class CompetitorMatcherV2:
         if isinstance(searxng_brands, Exception):
             logger.warning("SearXNG discovery failed: %s", searxng_brands)
             searxng_brands = []
+        if isinstance(registry_matches, Exception):
+            logger.warning("Registry discovery failed: %s", registry_matches)
+            registry_matches = []
 
-        # Merge + dedup
+        # Merge brand names + dedup
         all_brands = _dedup_brands(
             list(perplexity_brands) + list(searxng_brands) + (named_competitors or [])
         )
         logger.info(
-            "Stage 1: perplexity=%d searxng=%d merged=%d unique brands",
-            len(perplexity_brands), len(searxng_brands), len(all_brands),
+            "Stage 1: perplexity=%d searxng=%d registry=%d brands merged=%d unique brands",
+            len(perplexity_brands), len(searxng_brands), len(registry_matches), len(all_brands),
         )
 
         if not all_brands:
@@ -398,47 +409,46 @@ class CompetitorMatcherV2:
             len(valid), len(all_brands), rejected,
         )
 
-        if not valid:
-            logger.warning("No brands resolved to legal entities for %s", url)
+        if not valid and not registry_matches:
+            logger.warning("No brands resolved AND no registry matches for %s", url)
             return []
 
         # ── STAGE 3: Enrich with ФНС financials + filter + sort ───────
-        enriched = await self._enrich_all(valid, perplexity_brands)
+        enriched_perplexity = await self._enrich_all(valid, perplexity_brands)
 
-        # Dedup by ИНН
-        enriched = self._dedup_by_inn(enriched)
+        # Apply corridor + related-entity filter to Perplexity brands only.
+        # Registry brands bypass corridor (they're sorted by revenue proximity
+        # already and may legitimately fall outside a narrow corridor for
+        # large clients — e.g. IPHK 4.1B where few cosmetic clinics reach 410M+).
+        enriched_ppx = self._dedup_by_inn(enriched_perplexity)
 
-        # Geo filter: keep only competitors in the client's city/region.
-        # brand_resolver may resolve a brand to a company registered elsewhere.
-        before_geo = len(enriched)
-        enriched = [
-            c for c in enriched
+        # Geo filter on Perplexity brands
+        before_geo = len(enriched_ppx)
+        enriched_ppx = [
+            c for c in enriched_ppx
             if _is_same_city(c.profile.legal_address or "", city)
         ]
-        geo_dropped = before_geo - len(enriched)
+        geo_dropped = before_geo - len(enriched_ppx)
         if geo_dropped:
             logger.info(
-                "geo_filter: city=%s dropped=%d competitors from other regions",
+                "geo_filter: city=%s dropped=%d Perplexity competitors from other regions",
                 city, geo_dropped,
             )
 
-        # Filter out competitors related to client (same INN, same address, or name overlap)
+        # Related-entity filter on Perplexity brands
         if client_inn:
-            # Собираем имя клиента из всех источников
             client_name_lower = (
                 company_name
                 or client_profile.get("company_name")
                 or client_profile.get("brand_name")
                 or ""
             ).lower()
-            # Если имени нет — извлекаем из URL домена
             if not client_name_lower and url:
                 from urllib.parse import urlparse
                 url_parsed = url if "://" in url else "https://" + url
                 domain = urlparse(url_parsed).netloc.replace("www.", "").split(".")[0]
                 client_name_lower = domain
-            before_rel = len(enriched)
-            # Также используем legal_name клиента из ФНС (через INN resolution)
+            before_rel = len(enriched_ppx)
             client_legal_name = ""
             try:
                 client_results = await asyncio.to_thread(self.nalog.search, client_inn)
@@ -446,40 +456,37 @@ class CompetitorMatcherV2:
                     client_legal_name = client_results[0].short_name.lower()
             except Exception:
                 pass
-            enriched = [
-                c for c in enriched
+            enriched_ppx = [
+                c for c in enriched_ppx
                 if c.profile.inn != client_inn
                 and not (c.profile.legal_address and client_profile.get("address")
                          and _same_address(c.profile.legal_address, client_profile["address"]))
                 and not _is_related_entity(c.profile.legal_name, client_name_lower)
                 and not (client_legal_name and _is_related_entity(c.profile.legal_name, client_legal_name))
             ]
-            removed = before_rel - len(enriched)
+            removed = before_rel - len(enriched_ppx)
             if removed:
                 logger.info("related_entity_filter: removed %d related competitors (client_name=%s)", removed, client_name_lower[:30])
 
-        # Revenue corridor filter
-        filtered = self._filter_by_revenue_corridor(enriched, effective_revenue)
+        # Revenue corridor filter on Perplexity brands only
+        filtered_ppx = self._filter_by_revenue_corridor(enriched_ppx, effective_revenue)
+
+        # Merge Perplexity (corridor-filtered) + Registry (unfiltered, geo+related applied below)
+        enriched = list(filtered_ppx)
+        if registry_matches:
+            # Dedup registry against Perplexity by INN before merging
+            ppx_inns = {c.profile.inn for c in enriched if c.profile.inn}
+            registry_new = [m for m in registry_matches if m.profile.inn not in ppx_inns]
+            enriched.extend(registry_new)
+            logger.info("merged registry: %d unique registry matches added (ppx=%d)", len(registry_new), len(filtered_ppx))
 
         # Sort: if client revenue known → by proximity; otherwise → by revenue desc
         if effective_revenue and effective_revenue > 0:
-            filtered.sort(key=lambda m: abs((m.profile.revenue_year or 0) - effective_revenue))
+            enriched.sort(key=lambda m: abs((m.profile.revenue_year or 0) - effective_revenue))
         else:
-            filtered.sort(key=lambda m: m.profile.revenue_year or 0, reverse=True)
+            enriched.sort(key=lambda m: m.profile.revenue_year or 0, reverse=True)
 
-        result = filtered[:count]
-
-        # ── STAGE 3.5a: Backfill from ОКВЭД registry if not enough competitors ─
-        # If Perplexity+SearXNG gave fewer than requested, top up from
-        # bo.nalog registry: top medical companies by revenue in the corridor.
-        if len(result) < count:
-            needed = count - len(result)
-            existing_inns = {r.profile.inn for r in result if r.profile.inn}
-            backfill = await self._backfill_from_okved_registry(
-                specialization, city, effective_revenue, needed, existing_inns
-            )
-            result.extend(backfill)
-            logger.info("backfill_from_okved: added %d competitors (total now %d)", len(backfill), len(result))
+        result = enriched[:count]
 
         # ── STAGE 3.4: Deep ФНС enrichment for final top-N only ──────────
         # Fetch registration_date + scl_count via get_organization. This is a
@@ -854,8 +861,10 @@ class CompetitorMatcherV2:
         semaphore = asyncio.Semaphore(10)
 
         async def _deep_one(comp: CompetitorMatch) -> None:
-            # Skip if already enriched or no INN
-            if comp.profile.registration_date or not comp.profile.inn:
+            # Skip if already fully enriched (Perplexity path has org_id + reg_date)
+            if comp.profile.registration_date and comp.profile.profit_year is not None:
+                return
+            if not comp.profile.inn:
                 return
             async with semaphore:
                 try:
@@ -866,6 +875,23 @@ class CompetitorMatcherV2:
                         if not results:
                             return
                         org_id = results[0].id
+
+                    # Registry brands need financials (profit/trend) that we skipped
+                    # in backfill for speed
+                    if comp.profile.data_source == "okved_registry" and comp.profile.profit_year is None:
+                        try:
+                            statements = await asyncio.to_thread(
+                                self.nalog.get_financials, org_id
+                            )
+                            if statements:
+                                latest_fin = statements[0]
+                                comp.profile.profit_year = latest_fin.net_profit_rub
+                                comp.profile.revenue_trend = latest_fin.revenue_trend or None
+                                comp.profile.revenue_source = "tax_filed"
+                                comp.profile.confidence = 0.85
+                        except Exception:
+                            pass
+
                     org_raw = await asyncio.to_thread(
                         self.nalog.get_organization, org_id
                     )
@@ -1037,6 +1063,29 @@ class CompetitorMatcherV2:
             return_exceptions=True,
         )
 
+    # ── Stage 1/3: Registry discovery (stability backstop) ───────────
+
+    async def _discover_via_registry(
+        self,
+        specialization: str,
+        city: str,
+        client_revenue: Optional[int],
+        count: int,
+    ) -> list[CompetitorMatch]:
+        """Discover competitors from ФНС ОКВЭД registry — always runs in parallel.
+
+        This is the deterministic stability backstop: unlike Perplexity (which
+        hallucinates brands), the registry returns real legal entities with real
+        revenue. Results are enriched with financials and returned as
+        CompetitorMatch objects, ready to merge with Perplexity-discovered brands.
+
+        Geo-filtered to the client's region. Sorted by revenue proximity to client.
+        """
+        # Reuse backfill logic with empty exclude set and count as needed
+        return await self._backfill_from_okved_registry(
+            specialization, city, client_revenue, count, set()
+        )
+
     # ── Stage 3: Filtering ───────────────────────────────────────────
 
     async def _backfill_from_okved_registry(
@@ -1145,17 +1194,26 @@ class CompetitorMatcherV2:
             logger.info("backfill_from_okved: no companies found")
             return []
 
-        # Sort by revenue desc, filter to corridor
+        # Sort by revenue desc
         sorted_orgs = sorted(all_orgs.values(), key=lambda o: o["gain"], reverse=True)
 
-        # Corridor: same 0.1×-10× as main pipeline
+        # Adaptive corridor: try progressively wider corridors until we have enough.
+        # For large clients (e.g. IPHK 4.1B) the standard 0.1×–10× corridor may
+        # contain very few companies, so we widen to 0.05×–20× and beyond.
         if client_revenue and client_revenue > 0:
-            min_gain = (client_revenue * _REVENUE_CORRIDOR_MIN) / 1000  # RUB → тыс.руб
-            max_gain = (client_revenue * _REVENUE_CORRIDOR_MAX) / 1000
-            in_corridor = [o for o in sorted_orgs if min_gain <= o["gain"] <= max_gain]
-            if len(in_corridor) >= 2:
-                sorted_orgs = in_corridor
-            # else: keep all sorted (corridor too narrow)
+            corridor_levels = [
+                (_REVENUE_CORRIDOR_MIN, _REVENUE_CORRIDOR_MAX),     # 0.1×–10×
+                (_CORRIDOR_WIDE_MIN, _CORRIDOR_WIDE_MAX),            # 0.05×–20×
+                (0.01, 50.0),                                        # 0.01×–50× last resort
+            ]
+            for min_mult, max_mult in corridor_levels:
+                min_gain = (client_revenue * min_mult) / 1000  # RUB → тыс.руб
+                max_gain = (client_revenue * max_mult) / 1000
+                in_corridor = [o for o in sorted_orgs if min_gain <= o["gain"] <= max_gain]
+                if len(in_corridor) >= needed:
+                    sorted_orgs = in_corridor
+                    break
+            # If none wide enough, keep all (sorted by revenue desc)
 
         # Take top-N needed
         selected = sorted_orgs[:needed]
@@ -1164,33 +1222,13 @@ class CompetitorMatcherV2:
             len(all_orgs), len(sorted_orgs), len(selected),
         )
 
-        # Convert to CompetitorMatch — fetch financials concurrently.
-        # Deep org data (registration_date, scl_count) is handled by
-        # _enrich_deep_batch() which runs after backfill — avoids duplicate
-        # get_organization calls.
-        _bf_sem = asyncio.Semaphore(10)
-
+        # Convert to CompetitorMatch — use gainSum directly as revenue (fast).
+        # gainSum from the registry search IS the latest reported revenue.
+        # We skip get_financials here to avoid 10+ ФНС API calls; profit/trend
+        # are fetched only for the final top-N in _enrich_deep_batch.
         async def _build_match(org: dict) -> CompetitorMatch:
             org_id = org.get("org_id")
             revenue_rub = org["gain"] * 1000  # тыс.руб → RUB
-            profit = None
-            trend = ""
-            revenue_source = "estimated"
-
-            if org_id:
-                async with _bf_sem:
-                    try:
-                        statements = await asyncio.to_thread(
-                            self.nalog.get_financials, org_id
-                        )
-                        if statements:
-                            latest_fin = statements[0]
-                            revenue_rub = latest_fin.revenue_rub or revenue_rub
-                            profit = latest_fin.net_profit_rub
-                            trend = latest_fin.revenue_trend
-                            revenue_source = "tax_filed"
-                    except Exception as e:
-                        logger.debug("backfill get_financials failed org_id=%s: %s", org_id, e)
 
             profile = CompanyProfile(
                 inn=org["inn"],
@@ -1198,25 +1236,21 @@ class CompetitorMatcherV2:
                 brand_name=org["name"],
                 okved_main=org["okved"],
                 revenue_year=revenue_rub,
-                profit_year=profit,
-                revenue_trend=trend if trend else None,
-                revenue_source=revenue_source,
+                profit_year=None,  # filled by deep enrich for top-N
+                revenue_trend=None,
+                revenue_source="estimated",
                 legal_address=org["address"],
                 employee_count=None,  # filled by _enrich_deep_batch
                 registration_date=None,  # filled by _enrich_deep_batch
                 data_source="okved_registry",
-                confidence=0.85 if revenue_source == "tax_filed" else 0.7,
+                confidence=0.7,
             )
             reason = f"{org['name']}, выручка {_format_revenue(revenue_rub)} (реестр ФНС)"
-            if profit:
-                reason += f", прибыль {_format_revenue(profit)}"
-            if trend and trend in _TREND_RU:
-                reason += f", тренд: {_TREND_RU[trend]}"
 
             return CompetitorMatch(
                 profile=profile,
                 match_reason=reason,
-                data_quality=0.8 if revenue_source == "tax_filed" else 0.6,
+                data_quality=0.6,
                 total_score=0.5,
             )
 
