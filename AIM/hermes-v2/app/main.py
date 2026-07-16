@@ -65,12 +65,11 @@ async def startup():
     logger.info("startup: SQLite + tools registered")
 
 
-# Fallback кнопки (если модель не дала [SUGGESTIONS] маркер)
+# Fallback кнопки — наши самые сильные инструменты для следующих фаз.
+# Базовый анализ (конкуренты + отзывы) уже сделан → ведём к соцсетям и SEO.
 _FALLBACK_SUGGESTIONS = [
-    {"label": "Глубокий анализ конкурентов", "tool": "run_ci_analysis"},
-    {"label": "Упоминания в СМИ", "tool": "run_smi_mentions"},
-    {"label": "Анализ отзывов", "tool": "run_review_platforms"},
-    {"label": "Анализ соцсетей", "tool": "run_instagram_content"},
+    {"label": "📸 Анализ соцсетей конкурентов", "tool": "run_instagram_content"},
+    {"label": "🔍 Глубокий SEO-аудит сайта", "tool": "seo_audit"},
 ]
 
 # Regex tolerant of markdown bold wrappers (LLM sometimes emits **[SUGGESTIONS]**)
