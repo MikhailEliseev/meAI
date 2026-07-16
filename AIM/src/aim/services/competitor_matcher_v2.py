@@ -604,6 +604,10 @@ class CompetitorMatcherV2:
                 client_doc_count = await scrape_doctors(url, company_name or "")
                 if client_doc_count:
                     self.last_client_doctors = client_doc_count
+                elif self.last_client_scl:
+                    # Fallback: СЧЛ из ФНС как оценка числа сотрудников
+                    self.last_client_doctors = self.last_client_scl
+                    logger.info("Client doctors from СЧЛ fallback: %d", self.last_client_scl)
 
                 logger.info(
                     "Client audit: GEO=%d CMS=%s schema_med=%s llms=%s socials=%s",

@@ -550,6 +550,36 @@ async def chat_with_tools(history: list[dict]):
                             "content": _filtered_tool_content(tool_name, result_str),
                         })
 
+            # ── AUTO-INJECT: run_review_platforms если LLM не вызовала ──
+            # LLM упрямо игнорирует 4-й тул. Запускаем принудительно —
+            # отзывы ключевая ценность продукта.
+            if "find_competitors" in collected_results and "run_review_platforms" not in collected_results:
+                # Получить URL из profile_cache или из сообщений
+                review_url = profile_cache.get("url", "")
+                if not review_url:
+                    # Поискать URL в последнем сообщении пользователя
+                    for m in reversed(messages):
+                        if m.get("role") == "user" and "http" in (m.get("content") or ""):
+                            import re as _re
+                            url_match = _re.search(r"https?://[^\s]+", m["content"])
+                            if url_match:
+                                review_url = url_match.group(0)
+                                break
+                if review_url:
+                    yield ("tool_start", "run_review_platforms",
+                           {"url": review_url}, "⭐ Собираю отзывы с площадок…")
+                    try:
+                        from app.tools.run_review_platforms import handle_run_review_platforms
+                        review_result = await handle_run_review_platforms(
+                            url=review_url,
+                            company_name=profile_cache.get("company_name", ""),
+                            city=profile_cache.get("city", ""),
+                        )
+                        collected_results["run_review_platforms"] = review_result
+                        yield ("tool_result", "run_review_platforms", review_result, "✅ Отзывы собраны")
+                    except Exception as e:
+                        logger.warning("auto run_review_platforms failed: %s", e)
+
             # ── FORMAT DATA BLOCKS: точные таблицы из кода, не из LLM ──
             # Формируем готовые Markdown блоки из tool results и показываем
             # пользователю ДО того как LLM начнёт генерировать ответ.
