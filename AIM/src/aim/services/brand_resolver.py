@@ -89,6 +89,15 @@ class ResolvedBrand:
     status: str = ""
     address: str = ""
     brand_original: str = ""  # original brand before normalization (for logging)
+    # Network aggregation (для сетевых клиник: МЕДСИ, Инвитро и т.д.)
+    is_network: bool = False
+    network_count: int = 1  # сколько юрлиц в сети
+    network_revenue: Optional[int] = None  # суммарная выручка сети (RUB)
+    network_inns: list[str] = None  # все ИНН сети
+
+    def __post_init__(self):
+        if self.network_inns is None:
+            self.network_inns = []
 
     @property
     def is_medical(self) -> bool:
@@ -101,7 +110,11 @@ def _resolve_sync(
     okved_prefix: str,
     brand_original: str = "",
 ) -> Optional[ResolvedBrand]:
-    """Synchronous resolution — called via asyncio.to_thread."""
+    """Synchronous resolution — called via asyncio.to_thread.
+
+    Network detection: если в ФНС >1 юрлицо с брендом в названии + ОКВЭД 86.хх,
+    это сеть (МЕДСИ, Инвитро). Агрегируем revenue всех юрлиц сети.
+    """
     results = nalog.search(brand_name)
     if not results:
         return None
@@ -111,8 +124,6 @@ def _resolve_sync(
     pool = medical if medical else results
 
     # Score each candidate: name similarity to brand + revenue bonus.
-    # This fixes "ЛАНЦЕТЪ" → wrong "ДЕЛАЙТ-ЛАНЦЕТЪ" (higher revenue but
-    # different brand) and "СМ-Клиника" → correct ООО КЛИНИКА ЛК.
     brand_lower = brand_name.lower().strip()
     brand_words = set(brand_lower.split())
 
@@ -132,7 +143,50 @@ def _resolve_sync(
     if not best.inn or len(best.inn) < _MIN_INN_LEN:
         return None
 
-    # gainSum from bo.nalog is in thousands of rubles
+    # ── Network detection: все юрлица с точным вхождением бренда в названии ──
+    # «МЕДСИ» ∈ «АО МЕДСИ 2», «ООО МЕДСИ» — это сеть. Лимит 10 юрлиц.
+    network_members = [
+        r for r in pool
+        if brand_lower in r.short_name.lower()
+        and r.inn
+        and len(r.inn) >= _MIN_INN_LEN
+    ][:10]
+
+    is_network = len(network_members) >= 2
+
+    if is_network:
+        # Главное юрлицо = топ-1 по revenue (лучший score уже выбран как best)
+        # Суммарная выручка сети
+        total_revenue = sum(
+            (r.latest_revenue * 1000 if r.latest_revenue else 0)
+            for r in network_members
+        )
+        network_inns = [r.inn for r in network_members]
+        # gainSum from bo.nalog is in thousands of rubles
+        best_revenue_rub = best.latest_revenue * 1000 if best.latest_revenue else None
+
+        logger.info(
+            "network_detected: brand=%s members=%d total_revenue=%s main_inn=%s",
+            brand_name, len(network_members), f"{total_revenue:,}", best.inn,
+        )
+
+        return ResolvedBrand(
+            brand_query=brand_name,
+            inn=best.inn,
+            org_id=best.id,
+            legal_name=best.short_name,
+            okved=best.okved2,
+            latest_revenue=best_revenue_rub,
+            status=best.status,
+            address=best.address,
+            brand_original=brand_original or brand_name,
+            is_network=True,
+            network_count=len(network_members),
+            network_revenue=total_revenue if total_revenue > 0 else best_revenue_rub,
+            network_inns=network_inns,
+        )
+
+    # Одиночная клиника (не сеть)
     revenue_rub = best.latest_revenue * 1000 if best.latest_revenue else None
 
     return ResolvedBrand(

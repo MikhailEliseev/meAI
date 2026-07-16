@@ -345,6 +345,13 @@ class CompetitorMatcherV2:
 
         # Get real client revenue from ФНС
         client_revenue_real = await self._get_revenue_by_inn(client_inn)
+        # Если клиент — сеть, network_revenue точнее чем revenue одного юрлица
+        if hasattr(self, "_client_network_revenue") and self._client_network_revenue:
+            client_revenue_real = self._client_network_revenue
+            logger.info(
+                "Client revenue OVERRIDDEN by network aggregate: %s",
+                f"{client_revenue_real:,}",
+            )
         effective_revenue = (
             client_revenue_real
             or client_revenue
@@ -643,6 +650,14 @@ class CompetitorMatcherV2:
         if company_name:
             resolved = await resolve_brand_to_inn(company_name, nalog=self.nalog)
             if resolved and resolved.inn:
+                # Сохранить network info для клиента (агрегат сети)
+                if resolved.is_network and resolved.network_revenue:
+                    self._client_network_revenue = resolved.network_revenue
+                    self._client_network_count = resolved.network_count
+                    logger.info(
+                        "Client is NETWORK: %s — %d филиалов, revenue=%s",
+                        company_name, resolved.network_count, f"{resolved.network_revenue:,}",
+                    )
                 return resolved.inn, "bo_nalog"
 
         # Level 2: Perplexity → extract INN → bo.nalog validate (ТОЧНЕЕ чем spec search)
@@ -984,6 +999,11 @@ class CompetitorMatcherV2:
         trend = latest.revenue_trend if latest else ""
         profit = latest.net_profit_rub if latest else None
 
+        # ── Network aggregation: для сетевых клиников используем суммарную выручку ──
+        is_network = resolved.is_network
+        if is_network and resolved.network_revenue:
+            revenue = resolved.network_revenue  # суммарная выручка всей сети
+
         # Deep org data deferred to _enrich_deep (top-N only)
         registration_date = None
         scl_count = None
@@ -1005,6 +1025,8 @@ class CompetitorMatcherV2:
         reason_parts.append(resolved.legal_name)
         if revenue:
             reason_parts.append(f"выручка {_format_revenue(revenue)}")
+        if is_network and resolved.network_count > 1:
+            reason_parts.append(f"🌐 сеть из {resolved.network_count} филиалов")
         if trend and trend in _TREND_RU:
             reason_parts.append(f"тренд: {_TREND_RU[trend]}")
         if dynamics.get("change_3yr_pct") is not None:
