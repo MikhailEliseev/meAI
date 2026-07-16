@@ -491,7 +491,8 @@ async def _resolve_via_perplexity(
 async def resolve_brands_batch(
     brand_names: list[str],
     okved_prefix: str = "86.",
-    max_concurrent: int = 5,
+    max_concurrent: int = 5,  # deprecated, now hardcoded to 15
+    max_brands: int = 40,  # NEW: only resolve first N brands
 ) -> list[Optional[ResolvedBrand]]:
     """Resolve multiple brands to INNs concurrently.
 
@@ -502,13 +503,17 @@ async def resolve_brands_batch(
     Args:
         brand_names: List of brand names to resolve.
         okved_prefix: OKVED prefix filter.
-        max_concurrent: Max parallel resolutions.
+        max_concurrent: DEPRECATED — ignored, semaphore=15 hardcoded.
+        max_brands: Maximum brands to resolve (truncates list).
 
     Returns:
-        List of ResolvedBrand or None, same order as input.
+        List of ResolvedBrand or None, same order as input (truncated to max_brands).
     """
+    # Truncate to max_brands budget
+    brand_names = brand_names[:max_brands]
+    
     nalog = get_nalog_client()  # singleton — cache survives, do NOT close
-    semaphore = asyncio.Semaphore(max_concurrent)
+    semaphore = asyncio.Semaphore(15)  # Increased from 5 — bo.nalog can handle higher concurrency
     website_scrape_budget = 5  # максимум брендов для Level 2 (Firecrawl scrape)
     website_scrape_used = 0
 

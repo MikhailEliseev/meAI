@@ -348,7 +348,7 @@ class CompetitorMatcherV2:
             return []
 
         # ── STAGE 2: Resolve brands → ИНН (bo.nalog) ──────────────────
-        resolved = await resolve_brands_batch(all_brands)
+        resolved = await resolve_brands_batch(all_brands, max_brands=40)
         valid = [r for r in resolved if r is not None]
         rejected = len(all_brands) - len(valid)
         logger.info(
@@ -629,11 +629,15 @@ class CompetitorMatcherV2:
         )
 
         # ── Аккумуляция: union всех брендов с дедуп ──────────────────
+        # Лимит: максимум 20 брендов от каждого промпта (снижает Stage 2 нагрузку)
+        _MAX_BRANDS_PER_PROMPT = 20
+        
         all_brands: list[str] = []
         seen: set[str] = set()
         for result in results:
             if isinstance(result, list):
-                for brand in result:
+                # Truncate to first 20 before accumulation
+                for brand in result[:_MAX_BRANDS_PER_PROMPT]:
                     brand_lower = brand.lower().strip()
                     if brand_lower and brand_lower not in seen:
                         seen.add(brand_lower)
