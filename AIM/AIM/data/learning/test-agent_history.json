@@ -1,0 +1,50 @@
+{
+  "agent_id": "test-agent",
+  "created_at": "2026-05-30T15:11:33.710602",
+  "total_tasks": 4,
+  "total_failures": 2,
+  "total_successes": 2,
+  "lessons_applied": [],
+  "failures": [
+    {
+      "timestamp": "2026-05-30T15:11:33.710997",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T15:15:00.611137",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    }
+  ],
+  "successes": [
+    {
+      "timestamp": "2026-05-30T15:11:33.710857",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T15:15:00.610963",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    }
+  ]
+}

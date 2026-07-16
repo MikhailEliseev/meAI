@@ -1,0 +1,90 @@
+{
+  "clinic": {
+    "name": "Erasmile",
+    "url": "https://erasmile.ru/",
+    "niche": "стоматология",
+    "expected_city": "Москва",
+    "size": "medium",
+    "tier": "deep"
+  },
+  "status": "done",
+  "total_duration": 6.097126666994882,
+  "task_id": "seo-audit-1780376762",
+  "errors": [],
+  "overall_quality": {
+    "competitors_analyzed": 1,
+    "competitors_expected_min": 3,
+    "phases_executed": 9,
+    "phases_expected": 9,
+    "issues": [
+      "LOW_COMPETITOR_COUNT:1",
+      "GEO_MISMATCH: got 'Зеленоград', expected 'Москва'"
+    ],
+    "data_gaps": []
+  },
+  "phases": [
+    {
+      "phase": 1,
+      "name": "competitor_discovery",
+      "status": "ok",
+      "data_quality_notes": [],
+      "error": null
+    },
+    {
+      "phase": 2,
+      "name": "competitor_analysis",
+      "status": "ok",
+      "data_quality_notes": [],
+      "error": null
+    },
+    {
+      "phase": 3,
+      "name": "tech_seo",
+      "status": "ok",
+      "data_quality_notes": [],
+      "error": null
+    },
+    {
+      "phase": 4,
+      "name": "reputation",
+      "status": "ok",
+      "data_quality_notes": [],
+      "error": null
+    },
+    {
+      "phase": 5,
+      "name": "data_collection",
+      "status": "ok",
+      "data_quality_notes": [],
+      "error": null
+    },
+    {
+      "phase": 6,
+      "name": "fact_check",
+      "status": "ok",
+      "data_quality_notes": [],
+      "error": null
+    },
+    {
+      "phase": 7,
+      "name": "strategy",
+      "status": "ok",
+      "data_quality_notes": [],
+      "error": null
+    },
+    {
+      "phase": 8,
+      "name": "market_opportunity",
+      "status": "ok",
+      "data_quality_notes": [],
+      "error": null
+    },
+    {
+      "phase": 9,
+      "name": "recommendations",
+      "status": "ok",
+      "data_quality_notes": [],
+      "error": null
+    }
+  ]
+}

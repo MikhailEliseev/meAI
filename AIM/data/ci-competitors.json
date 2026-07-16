@@ -1,0 +1,28 @@
+{
+  "niche": "dental clinics",
+  "geo": "Saint Petersburg",
+  "target_audience": "",
+  "price_segment": "mid",
+  "analysis_date": "2026-05-30T22:14:08.304855",
+  "total_found": 0,
+  "top_selected": 0,
+  "competitors": [],
+  "top_for_analysis": [],
+  "clusters": {
+    "direct": [],
+    "indirect": [],
+    "leader": [],
+    "niche": [],
+    "emerging": []
+  },
+  "insights": {
+    "total_players": 0,
+    "fragmentation": "низкая",
+    "dominant_positioning": "direct",
+    "digitalization_level": "высокий",
+    "key_gaps": [
+      "Недостаточно онлайн-записи",
+      "Слабое присутствие в Telegram"
+    ]
+  }
+}

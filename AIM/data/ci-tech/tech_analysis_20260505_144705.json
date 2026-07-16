@@ -1,0 +1,72 @@
+{
+  "analysis_date": "2026-05-05T14:47:05.058807",
+  "total_analyzed": 1,
+  "tech_profiles": [
+    {
+      "name": "Test Competitor",
+      "url": "https://example.com",
+      "cms": "Custom",
+      "technologies": [],
+      "seo_optimization": {
+        "has_title": true,
+        "has_meta_description": false,
+        "has_h1": true,
+        "has_og_tags": false,
+        "has_schema": false,
+        "has_canonical": false,
+        "score": 33.3,
+        "issues": [
+          "Missing meta description",
+          "No Schema.org markup"
+        ]
+      },
+      "geo_optimization": {
+        "has_faq_schema": false,
+        "has_howto_schema": false,
+        "has_article_schema": false,
+        "has_breadcrumbs": false,
+        "has_local_business": false,
+        "ai_ready_score": 0.0,
+        "recommendations": [
+          "Add FAQ Schema for AI snippets",
+          "Add Article Schema for better AI understanding",
+          "Add LocalBusiness Schema for local SEO"
+        ]
+      },
+      "performance": {
+        "html_size_kb": 0.515625,
+        "has_minified_css": false,
+        "has_minified_js": false,
+        "uses_cdn": false,
+        "has_lazy_loading": false,
+        "score": 20,
+        "issues": [
+          "CSS not minified",
+          "JavaScript not minified"
+        ]
+      },
+      "analyzed_at": "2026-05-05T14:47:05.058756"
+    }
+  ],
+  "market_tech": {
+    "most_popular_cms": "Custom",
+    "cms_distribution": {
+      "Custom": 1
+    },
+    "top_technologies": [],
+    "avg_seo_score": 33.3,
+    "avg_geo_score": 0.0
+  },
+  "insights": {
+    "key_findings": [
+      "Самая популярная CMS: Custom",
+      "Низкий уровень SEO оптимизации (средний балл: 33/100)",
+      "Низкая готовность к AI/GEO (средний балл: 0/100) - возможность для конкурентного преимущества!"
+    ],
+    "opportunities": [
+      "Возможность обойти конкурентов по SEO оптимизации",
+      "Большая возможность в AI/GEO оптимизации - конкуренты не готовы",
+      "Многие конкуренты не используют аналитику - возможность для data-driven подхода"
+    ]
+  }
+}

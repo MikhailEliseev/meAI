@@ -1,0 +1,193 @@
+{
+  "analysis_date": "2026-05-06T21:18:03.552751",
+  "total_analyzed": 5,
+  "niche": "dental implants",
+  "geo": "Moscow",
+  "vacancy_profiles": [
+    {
+      "name": "Центр Студия",
+      "size": "medium",
+      "open_vacancies": 5,
+      "team_size_estimate": 40,
+      "vacancies_by_category": {
+        "medical": 0,
+        "admin": 1,
+        "marketing": 1,
+        "sales": 0
+      },
+      "avg_salaries": {
+        "admin": 48793,
+        "marketing": 99335
+      },
+      "growth_rate": "fast",
+      "hiring_active": true,
+      "sources": [
+        "hh",
+        "avito"
+      ]
+    },
+    {
+      "name": "Здоровье Лаб",
+      "size": "medium",
+      "open_vacancies": 8,
+      "team_size_estimate": 18,
+      "vacancies_by_category": {
+        "medical": 1,
+        "admin": 2,
+        "marketing": 2,
+        "sales": 1
+      },
+      "avg_salaries": {
+        "medical": 97151,
+        "admin": 56858,
+        "marketing": 90527,
+        "sales": 60746
+      },
+      "growth_rate": "slow",
+      "hiring_active": true,
+      "sources": [
+        "hh",
+        "avito"
+      ]
+    },
+    {
+      "name": "Лайф Клиника",
+      "size": "medium",
+      "open_vacancies": 3,
+      "team_size_estimate": 16,
+      "vacancies_by_category": {
+        "medical": 0,
+        "admin": 1,
+        "marketing": 1,
+        "sales": 1
+      },
+      "avg_salaries": {
+        "admin": 67385,
+        "marketing": 85714,
+        "sales": 60113
+      },
+      "growth_rate": "moderate",
+      "hiring_active": true,
+      "sources": [
+        "hh",
+        "avito"
+      ]
+    },
+    {
+      "name": "Медицина Клуб",
+      "size": "medium",
+      "open_vacancies": 2,
+      "team_size_estimate": 33,
+      "vacancies_by_category": {
+        "medical": 1,
+        "admin": 0,
+        "marketing": 0,
+        "sales": 0
+      },
+      "avg_salaries": {
+        "medical": 67883
+      },
+      "growth_rate": "moderate",
+      "hiring_active": true,
+      "sources": [
+        "hh",
+        "avito"
+      ]
+    },
+    {
+      "name": "Клиника Центр",
+      "size": "medium",
+      "open_vacancies": 4,
+      "team_size_estimate": 18,
+      "vacancies_by_category": {
+        "medical": 0,
+        "admin": 0,
+        "marketing": 1,
+        "sales": 0
+      },
+      "avg_salaries": {
+        "marketing": 90530
+      },
+      "growth_rate": "slow",
+      "hiring_active": true,
+      "sources": [
+        "hh",
+        "avito"
+      ]
+    }
+  ],
+  "market_analysis": {
+    "total_open_vacancies": 22,
+    "avg_vacancies_per_company": 4.4,
+    "hiring_companies_percent": 100.0,
+    "avg_team_size": 25,
+    "most_demanded_positions": [
+      {
+        "category": "marketing",
+        "count": 5
+      },
+      {
+        "category": "admin",
+        "count": 4
+      },
+      {
+        "category": "medical",
+        "count": 2
+      }
+    ]
+  },
+  "hiring_leaders": [
+    {
+      "name": "Здоровье Лаб",
+      "open_vacancies": 8,
+      "growth_rate": "slow",
+      "team_size": 18
+    },
+    {
+      "name": "Центр Студия",
+      "open_vacancies": 5,
+      "growth_rate": "fast",
+      "team_size": 40
+    },
+    {
+      "name": "Клиника Центр",
+      "open_vacancies": 4,
+      "growth_rate": "slow",
+      "team_size": 18
+    }
+  ],
+  "salary_analysis": {
+    "avg_salaries_by_category": {
+      "admin": {
+        "avg": 57679,
+        "min": 48793,
+        "max": 67385
+      },
+      "marketing": {
+        "avg": 91526,
+        "min": 85714,
+        "max": 99335
+      },
+      "medical": {
+        "avg": 82517,
+        "min": 67883,
+        "max": 97151
+      },
+      "sales": {
+        "avg": 60430,
+        "min": 60113,
+        "max": 60746
+      }
+    },
+    "highest_paying_category": "marketing"
+  },
+  "insights": {
+    "market_activity": "high",
+    "competition_for_talent": "high",
+    "key_findings": [
+      "Высокая HR-активность (>60% компаний нанимают)",
+      "Здоровье Лаб активно растёт (8 вакансий)",
+      "Самые высокие зарплаты в категории: marketing"
+    ]
+  }
+}

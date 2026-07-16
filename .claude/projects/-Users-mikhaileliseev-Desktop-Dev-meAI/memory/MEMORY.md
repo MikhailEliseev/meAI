@@ -1,0 +1,1 @@
+- [Always record API keys and credentials](record_keys.md) — never let user-shared keys go unsaved

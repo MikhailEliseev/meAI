@@ -1,0 +1,78 @@
+{
+  "timestamp": "2026-06-02T08:06:14",
+  "clinic_count": 3,
+  "summary": null,
+  "audits": [
+    {
+      "clinic": "Юцковская",
+      "url": "https://yutskovskaya.ru/",
+      "status": "error",
+      "total_duration": 6.367008291999809,
+      "errors": [
+        "ERROR: ci_reputation.py imports random. Use structured null pattern (confidence=0.0) instead."
+      ],
+      "overall_quality": {},
+      "phase_count": 0,
+      "phase_statuses": {}
+    },
+    {
+      "clinic": "Erasmile",
+      "url": "https://erasmile.ru/",
+      "status": "done",
+      "total_duration": 6.097126666994882,
+      "errors": [],
+      "overall_quality": {
+        "competitors_analyzed": 1,
+        "competitors_expected_min": 3,
+        "phases_executed": 9,
+        "phases_expected": 9,
+        "issues": [
+          "LOW_COMPETITOR_COUNT:1",
+          "GEO_MISMATCH: got 'Зеленоград', expected 'Москва'"
+        ],
+        "data_gaps": []
+      },
+      "phase_count": 9,
+      "phase_statuses": {
+        "competitor_discovery": "ok",
+        "competitor_analysis": "ok",
+        "tech_seo": "ok",
+        "reputation": "ok",
+        "data_collection": "ok",
+        "fact_check": "ok",
+        "strategy": "ok",
+        "market_opportunity": "ok",
+        "recommendations": "ok"
+      }
+    },
+    {
+      "clinic": "Arclinic",
+      "url": "https://arclinic.ru/",
+      "status": "done",
+      "total_duration": 6.277313917002175,
+      "errors": [],
+      "overall_quality": {
+        "competitors_analyzed": 1,
+        "competitors_expected_min": 3,
+        "phases_executed": 9,
+        "phases_expected": 9,
+        "issues": [
+          "LOW_COMPETITOR_COUNT:1"
+        ],
+        "data_gaps": []
+      },
+      "phase_count": 9,
+      "phase_statuses": {
+        "competitor_discovery": "ok",
+        "competitor_analysis": "ok",
+        "tech_seo": "ok",
+        "reputation": "ok",
+        "data_collection": "ok",
+        "fact_check": "ok",
+        "strategy": "ok",
+        "market_opportunity": "ok",
+        "recommendations": "ok"
+      }
+    }
+  ]
+}

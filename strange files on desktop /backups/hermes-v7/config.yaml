@@ -1,0 +1,71 @@
+model:
+  default: openai/gpt-4o-mini
+  provider: openrouter
+
+pipeline:
+  timeouts:
+    preflight: 30
+    perplexity: 120
+    tech_audit: 300
+    social_verifier: 180
+    content_analysis: 120
+    key_persons: 180
+    smi_mentions: 120
+    competitors: 600
+    forum_pains: 120
+    finance: 60
+    content_plan: 120
+    html_build: 120
+    qc_critique: 90
+    presentation: 60
+  total_timeout: 900
+  max_retries_default: 1
+  competitor_max_retries: 3
+
+file_protection:
+  blocked_paths:
+    - /opt/hermes-data/app/
+    - /opt/hermes/app/
+    - /opt/hermes-data/config.yaml
+    - /opt/hermes/config.yaml
+    - /opt/hermes-data/.env
+    - /opt/hermes/.env
+  admin_whitelist:
+    - /opt/hermes-data/skills/
+    - /opt/hermes-data/memory/
+    - /opt/data/memories/
+    - /opt/hermes/skills/
+    - /opt/hermes/memory/
+  config_chmod: '0444'
+
+mode_gate:
+  onboarding_blocked_tools:
+    - orchestrate
+    - search_chats
+    - send_message_as_user
+    - show_all_leads
+    - get_lead_pipeline
+    - file_write
+    - shell_exec
+    - restart_myself
+  toolsets:
+    onboarding:
+      - aim-operations
+    presale:
+      - aim-operations
+    admin:
+      - aim-operations
+      - hermes-debug
+    active:
+      - aim-operations
+      - hermes-debug
+    sales_admin:
+      - aim-operations
+      - hermes-debug
+
+onboarding:
+  seen:
+    busy_input_prompt: true
+
+approvals:
+  destructive_slash_confirm: false

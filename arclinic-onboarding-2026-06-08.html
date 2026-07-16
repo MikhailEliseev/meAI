@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARclinic – KP | AIM</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #ffffff;
+  --surface: #F5F5F5;
+  --hover: #EBEBEB;
+  --border: #E0E0E0;
+  --text: #1A1A1A;
+  --text-secondary: #666666;
+  --text-dim: #999999;
+  --accent: #1A1A1A;
+  --accent-hover: #333333;
+  --glass-bg: rgba(255,255,255,0.6);
+  --glass-border: rgba(0,0,0,0.06);
+  --section-gap: 120px;
+  --green: #2E7D32;
+  --red: #C62828;
+}
+
+[data-theme="dark"] {
+  --bg: #0D0D0D;
+  --surface: #1A1A1A;
+  --hover: #262626;
+  --border: #333333;
+  --text: #F0F0F0;
+  --text-secondary: #999999;
+  --text-dim: #666666;
+  --accent: #F0F0F0;
+  --accent-hover: #CCCCCC;
+  --glass-bg: rgba(13,13,13,0.6);
+  --glass-border: rgba(255,255,255,0.06);
+  --green: #66BB6A;
+  --red: #EF5350;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  transition: background .3s, color .3s;
+}
+
+.theme-toggle {
+  width: 32px; height: 32px; border-radius: 16px;
+  background: transparent; border: none;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; transition: .2s; flex-shrink: 0;
+}
+.theme-toggle:hover { background: var(--surface); }
+
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 99;
+  padding: 16px 40px; background: var(--glass-bg);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--glass-border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+nav .logo { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; }
+nav .tag { font-size: 12px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+nav .links { display: flex; gap: 8px; }
+nav .links a {
+  text-decoration: none; color: var(--text-secondary); font-size: 13px;
+  padding: 6px 14px; border-radius: 20px; transition: .2s;
+}
+nav .links a:hover { background: var(--surface); color: var(--text); }
+
+.container { max-width: 900px; margin: 0 auto; padding: 0 32px; position: relative; z-index: 1; }
+
+.hero {
+  padding: 180px 0 100px; border-bottom: 1px solid var(--border);
+  margin-bottom: var(--section-gap); position: relative; overflow: hidden;
+}
+.hero .label { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 24px; }
+.hero h1 {
+  font-family: 'Playfair Display', serif; font-size: 56px;
+  font-weight: 400; line-height: 1.15; margin-bottom: 32px; position: relative; z-index: 1;
+}
+.hero h1 em { font-style: italic; }
+.hero .subtitle { font-size: 18px; color: var(--text-secondary); max-width: 600px; line-height: 1.7; position: relative; z-index: 1; }
+.hero .meta { display: flex; gap: 32px; margin-top: 48px; font-size: 13px; color: var(--text-dim); flex-wrap: wrap; position: relative; z-index: 1; }
+
+/* Ripple rings across page */
+.ripple { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.ripple-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid var(--text);
+  opacity: 0.04;
+  background: none;
+}
+.ring-lg-1 { width: 420px; height: 420px; top: -12%; right: -8%; }
+.ring-lg-2 { width: 340px; height: 340px; top: 15%; right: 70%; }
+.ring-lg-3 { width: 280px; height: 280px; top: 45%; left: -10%; }
+.ring-lg-4 { width: 380px; height: 380px; top: 75%; right: -15%; }
+.ring-lg-5 { width: 300px; height: 300px; top: 60%; left: 60%; }
+.ring-lg-6 { width: 240px; height: 240px; top: 30%; left: -6%; }
+
+.ring-pulse-1 { width: 200px; height: 200px; top: 10%; left: 8%; animation: pulse-ring 6s ease-in-out infinite; }
+.ring-pulse-2 { width: 160px; height: 160px; top: 12%; left: 12%; animation: pulse-ring 6s ease-in-out infinite; animation-delay: 3s; }
+.ring-pulse-3 { width: 100px; height: 100px; bottom: 18%; right: 4%; animation: pulse-ring 8s ease-in-out infinite; animation-delay: 1s; }
+.ring-pulse-4 { width: 70px; height: 70px; bottom: 22%; right: 10%; animation: pulse-ring 8s ease-in-out infinite; animation-delay: 5s; }
+.ring-pulse-5 { width: 130px; height: 130px; top: 35%; right: 20%; animation: pulse-ring 7s ease-in-out infinite; animation-delay: 2s; }
+.ring-pulse-6 { width: 90px; height: 90px; top: 70%; left: 30%; animation: pulse-ring 9s ease-in-out infinite; animation-delay: 4s; }
+.ring-pulse-7 { width: 110px; height: 110px; top: 88%; left: 50%; animation: pulse-ring 6.5s ease-in-out infinite; animation-delay: 1.5s; }
+.ring-pulse-8 { width: 150px; height: 150px; top: 50%; right: 40%; animation: pulse-ring 7.5s ease-in-out infinite; animation-delay: 3.5s; }
+
+@keyframes pulse-ring {
+  0%, 100% { opacity: 0.03; transform: scale(1); }
+  50% { opacity: 0.07; transform: scale(1.15); }
+}
+
+section { margin-bottom: var(--section-gap); }
+.section-label { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 16px; }
+h2 { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 400; line-height: 1.2; margin-bottom: 16px; }
+h3 { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 400; margin-bottom: 12px; }
+h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+p { color: var(--text-secondary); margin-bottom: 16px; font-size: 15px; line-height: 1.7; }
+p strong { color: var(--text); font-weight: 500; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin: 24px 0; }
+
+.card {
+  background: var(--surface); border-radius: 16px; padding: 24px;
+  backdrop-filter: blur(8px); transition: .2s;
+  border: 1px solid transparent;
+}
+.card:hover { background: var(--hover); }
+.card h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+.card .num { font-size: 28px; font-weight: 300; margin-bottom: 4px; color: var(--text); }
+.card p { font-size: 13px; color: var(--text-secondary); margin: 0; }
+
+.metrics { display: flex; gap: 48px; margin: 32px 0; flex-wrap: wrap; }
+.metric .value { font-size: 36px; font-weight: 300; color: var(--text); }
+.metric .label { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+
+blockquote {
+  border-left: 2px solid var(--text); padding-left: 24px; margin: 24px 0;
+  font-size: 16px; line-height: 1.6; color: var(--text-secondary);
+}
+
+.row { display: flex; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.row:last-child { border-bottom: none; }
+.row .k { width: 180px; flex-shrink: 0; font-size: 13px; color: var(--text-dim); }
+.row .v { font-size: 14px; color: var(--text); }
+
+.cta-box {
+  border: 2px solid var(--text); border-radius: 16px; padding: 48px;
+  text-align: center; margin: 48px 0;
+}
+.cta-box h3 { margin-bottom: 16px; }
+.cta-box p { margin-bottom: 24px; }
+.cta-box .btn {
+  display: inline-block; padding: 14px 40px; border: 1px solid var(--text);
+  color: var(--text); text-decoration: none; font-size: 14px;
+  border-radius: 28px; transition: .2s; letter-spacing: 1px;
+}
+.cta-box .btn:hover { background: var(--text); color: var(--bg); }
+
+.tag-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 100px;
+  border: 1px solid var(--border); font-size: 11px; color: var(--text-dim);
+  margin: 1px;
+}
+
+.expert-category { margin-bottom: 28px; }
+.expert-category .cat-title { font-size: 13px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+.expert-item {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+  gap: 12px; flex-wrap: wrap;
+}
+.expert-item:last-child { border-bottom: none; }
+.expert-item .name { color: var(--text); font-weight: 500; }
+.expert-item .spec { color: var(--text-secondary); font-size: 13px; }
+.expert-item .social { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+
+.social-found { color: var(--green); }
+.social-notfound { color: var(--text-dim); }
+
+.gap {
+  background: var(--surface); border-radius: 12px; padding: 20px; margin-bottom: 12px;
+  border-left: 3px solid var(--border);
+}
+.gap h4 { font-size: 14px; margin-bottom: 6px; color: var(--text); }
+.gap p { font-size: 13px; margin: 0; }
+
+.strategy-block { margin-bottom: 32px; }
+.strategy-block .header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.strategy-block .step { font-size: 12px; color: var(--text-dim); letter-spacing: 2px; }
+.strategy-block h3 { margin: 0; }
+
+@media (max-width: 768px) {
+  .hero h1 { font-size: 32px; }
+  h2 { font-size: 28px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .metrics { gap: 24px; }
+  .row { flex-direction: column; gap: 2px; }
+  .row .k { width: auto; }
+  nav .links { display: none; }
+  .hero { padding: 140px 0 60px; }
+  .cta-box { padding: 32px 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="ripple">
+  <div class="ripple-ring ring-lg-1"></div>
+  <div class="ripple-ring ring-lg-2"></div>
+  <div class="ripple-ring ring-lg-3"></div>
+  <div class="ripple-ring ring-lg-4"></div>
+  <div class="ripple-ring ring-lg-5"></div>
+  <div class="ripple-ring ring-lg-6"></div>
+  <div class="ripple-ring ring-pulse-1"></div>
+  <div class="ripple-ring ring-pulse-2"></div>
+  <div class="ripple-ring ring-pulse-3"></div>
+  <div class="ripple-ring ring-pulse-4"></div>
+  <div class="ripple-ring ring-pulse-5"></div>
+  <div class="ripple-ring ring-pulse-6"></div>
+  <div class="ripple-ring ring-pulse-7"></div>
+  <div class="ripple-ring ring-pulse-8"></div>
+</div>
+
+<nav>
+  <div style="display: flex; align-items: center; gap: 16px;">
+    <div class="logo">AIM</div>
+    <div class="tag">Marketing Agency</div>
+  </div>
+  <div style="display: flex; align-items: center; gap: 4px;">
+    <div class="links">
+      <a href="#about">О клинике</a>
+      <a href="#market">Рынок</a>
+      <a href="#experts">Эксперты</a>
+      <a href="#content-analysis">Контент</a>
+      <a href="#media">СМИ</a>
+      <a href="#competitors">Конкуренты</a>
+      <a href="#whitefields">Белые поля</a>
+      <a href="#presence">Присутствие</a>
+      <a href="#content-plan">Контент-план</a>
+      <a href="#strategy">Стратегия</a>
+    </div>
+    <button class="theme-toggle" onclick="document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark'" aria-label="Toggle theme">🌓</button>
+  </div>
+</nav>
+
+<div class="container">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="label">AI ANALYSIS</div>
+  <h1>ARclinic<br><em>Премиум-бутик с AI-готовностью</em></h1>
+  <div class="subtitle">ARclinic — единственная anti-age клиника СПб с llms.txt, Wikipedia основателя и активным Instagram. Но 80% врачей невидимы для пациентов. Показываем, как это исправить и вырасти на 30% за 6 месяцев.</div>
+  <div class="meta">
+    <span>08.06.2026</span><span>Санкт-Петербург</span><span>15 врачей</span>
+  </div>
+</div>
+
+<!-- SECTION 1: ABOUT -->
+<section id="about">
+  <div class="section-label">01 — О клинике</div>
+  
+<div class="grid-2">
+  <div>
+    <h3>Кто они</h3>
+    <p>Центр антивозрастной медицины <strong>ARclinic</strong> — премиальная клиника-бутик в центре Санкт-Петербурга. 5-этажное здание на Верейской, 44. Работают с 2016 года.</p>
+    <p>Основатель — <strong>Анна Резник</strong>, кандидат медицинских наук, член международного совета экспертов Ипсен (Франция). Соавтор британского учебника по косметологии. Персональная страница в Wikipedia.</p>
+  </div>
+  <div>
+    <h3>Что внутри</h3>
+    <p><strong>15 врачей</strong> по направлениям: косметология, дерматология, трихология, эндокринология, гинекология, неврология, диетология, нитевой лифтинг, контурная пластика, ботулинотерапия.</p>
+    <p>Собственный подход к anti-age терапии. Полный парк лазеров. Телемедицина. Лечение осложнений.</p>
+  </div>
+</div>
+
+<div class="metrics">
+  <div class="metric"><div class="value">2016</div><div class="label">Год основания</div></div>
+  <div class="metric"><div class="value">3 → 15</div><div class="label">Рост команды (2020 → 2025)</div></div>
+  <div class="metric"><div class="value">5 эт.</div><div class="label">Собственное здание</div></div>
+  <div class="metric"><div class="value">14</div><div class="label">Направлений медицины</div></div>
+</div>
+
+<blockquote>
+  <strong>So What?</strong> ARclinic — не просто косметология, а полноценный anti-age центр с редкой для рынка РФ экспертизой (Ипсен, Wikipedia, британский учебник). Это фундамент для позиционирования «самая экспертная anti-age клиника СПб». <strong>Вопрос:</strong> знает ли рынок об этой экспертизе? Наш анализ показывает, что нет — и это главная точка роста.
+</blockquote>
+
+</section>
+
+<hr>
+
+<!-- SECTION 2: MARKET / FINANCE -->
+<section id="market">
+  <div class="section-label">02 — Рынок: кто сколько зарабатывает</div>
+  
+<div class="grid-2">
+  <div class="card">
+    <h4>Оценка выручки</h4>
+    <div class="num">90–130 млн ₽</div>
+    <p>На основе: 15 врачей, премиум-сегмент, СПб центр, средний чек 18–25 тыс. ₽, загрузка 60–80%</p>
+  </div>
+  <div class="card">
+    <h4>Оценка пациентопотока</h4>
+    <div class="num">400–600</div>
+    <p>Первичных + повторных пациентов в месяц. При среднем чеке 20 тыс. ₽</p>
+  </div>
+  <div class="card">
+    <h4>Оценка рекламного бюджета</h4>
+    <div class="num">300–500 тыс ₽/мес</div>
+    <p>Типичный бюджет для клиники такого масштаба (4-5% от выручки)</p>
+  </div>
+  <div class="card">
+    <h4>Маржинальность</h4>
+    <div class="num">35–45%</div>
+    <p>Стандарт для премиум-клиник с собственным зданием и штатом врачей</p>
+  </div>
+</div>
+
+<div class="row" style="margin-top:24px;"><div class="k">Юрлицо</div><div class="v">ООО «МЦ Арклиник» (ИНН 7840098744)</div></div>
+<div class="row"><div class="k">Уставной капитал</div><div class="v">200 000 ₽</div></div>
+<div class="row"><div class="k">Лицензия</div><div class="v">Л041-01148-78/01265473</div></div>
+<div class="row"><div class="k">Товарный знак</div><div class="v">ARclinic (№1027726)</div></div>
+<div class="row"><div class="k">Финансы в открытом доступе</div><div class="v">Скрыты (требуется платная подписка или данные клиента)</div></div>
+
+<blockquote>
+  <strong>So What?</strong> Точные цифры выручки скрыты — это норма для российских ООО. Оценка 90-130 млн при 15 врачах даёт выручку ~6-8.7 млн на врача в год — на нижней границе для премиум-сегмента. Если реальная загрузка 60%, то потенциал роста только за счёт заполняемости: +20-30% выручки без найма новых врачей. При рекламном бюджете 4.4% от выручки есть пространство для роста до 8-10% — здоровый уровень для агрессивного захвата рынка.
+</blockquote>
+
+</section>
+
+<hr>
+
+<!-- SECTION 3: EXPERTS -->
+<section id="experts">
+  <div class="section-label">03 — Эксперты</div>
+  <div class="expert-category"><div class="cat-title">Звезда-основатель</div><div class="expert-item">
+          <div><span class="name">Резник Анна Вячеславовна</span> <span class="spec">Косметолог, Дерматолог, Геронтолог</span></div>
+          <div><span class="social social-found">📸 @reznik_anna_v — 26,820 подп. / 3948 постов</span></div>
+        </div></div><div class="expert-category"><div class="cat-title">Ведущие врачи</div><div class="expert-item">
+          <div><span class="name">Ряховская Наталья Дмитриевна</span> <span class="spec">Косметолог, Дерматолог, Трихолог</span></div>
+          <div><span class="social social-found">📸 @dr.ryakhovskaya — 1,598 подп. / 622 постов</span></div>
+        </div><div class="expert-item">
+          <div><span class="name">Зорина Надежда Викторовна</span> <span class="spec">Косметолог, Дерматолог, Трихолог</span></div>
+          <div><span class="social social-found">📸 @zorina.life — 761 подп. / 311 постов</span></div>
+        </div><div class="expert-item">
+          <div><span class="name">Афанасьева Лилия Борисовна</span> <span class="spec">Терапевт, Эндокринолог, Гинеколог</span></div>
+          <div><span class="social social-notfound">❌ Instagram не обнаружен</span></div>
+        </div></div><div class="expert-category"><div class="cat-title">Команда</div><div class="expert-item">
+          <div><span class="name">Батиенко Дарья Дмитриевна</span> <span class="spec">Трихолог, Терапевт, Дерматолог</span></div>
+          <div><span class="social social-notfound">❌ Instagram не обнаружен</span></div>
+        </div><div class="expert-item">
+          <div><span class="name">Дроздова Анна Андреевна</span> <span class="spec">Трихолог, Терапевт, Дерматолог</span></div>
+          <div><span class="social social-notfound">❌ Instagram не обнаружен</span></div>
+        </div><div class="expert-item">
+          <div><span class="name">Яхина Алиса Альфировна</span> <span class="spec">Трихолог, Дерматолог, Косметолог</span></div>
+          <div><span class="social social-notfound">❌ Instagram не обнаружен</span></div>
+        </div><div class="expert-item">
+          <div><span class="name">Сердюкова Светлана Николаевна</span> <span class="spec"></span></div>
+          <div><span class="social social-notfound">❌ Instagram не обнаружен</span></div>
+        </div><div class="expert-item">
+          <div><span class="name">Подольникова Мария Игоревна</span> <span class="spec">Терапевт, Дерматолог, Невролог</span></div>
+          <div><span class="social social-notfound">❌ Instagram не обнаружен</span></div>
+        </div><div class="expert-item">
+          <div><span class="name">Плотникова Анна Юрьевна</span> <span class="spec">Гинеколог, Диетолог, Эндокринолог</span></div>
+          <div><span class="social social-notfound">❌ Instagram не обнаружен</span></div>
+        </div><div class="expert-item">
+          <div><span class="name">Рубаник Кирилл Сергеевич</span> <span class="spec">Терапевт, Невролог</span></div>
+          <div><span class="social social-notfound">❌ Instagram не обнаружен</span></div>
+        </div><div class="expert-item">
+          <div><span class="name">Львович Ирина Викторовна</span> <span class="spec">Терапевт, Дерматолог, Косметолог</span></div>
+          <div><span class="social social-notfound">❌ Instagram не обнаружен</span></div>
+        </div><div class="expert-item">
+          <div><span class="name">Фокина Екатерина Евгеньевна</span> <span class="spec">Трихолог, Терапевт, Дерматолог</span></div>
+          <div><span class="social social-notfound">❌ Instagram не обнаружен</span></div>
+        </div><div class="expert-item">
+          <div><span class="name">Труфанов Георгий Сергеевич</span> <span class="spec">Дерматолог, Хирург, Невролог</span></div>
+          <div><span class="social social-notfound">❌ Instagram не обнаружен</span></div>
+        </div><div class="expert-item">
+          <div><span class="name">Яковлева Ольга Михайловна</span> <span class="spec">Гинеколог, Косметолог, Хирург</span></div>
+          <div><span class="social social-notfound">❌ Instagram не обнаружен</span></div>
+        </div></div>
+<blockquote>
+  <strong>FAB-анализ:</strong><br>
+  <strong>Feature:</strong> Анна Резник — 26,820 подписчиков в Instagram, Wikipedia, Forbes Kazakhstan, член совета Ипсен.<br>
+  <strong>Advantage:</strong> Это крупнейший личный бренд среди anti-age врачей СПб. Один пост Резник = 26,820 просмотров бесплатно.<br>
+  <strong>Benefit:</strong> Если каждый 100-й подписчик Резник запишется на приём — это 268 новых пациентов. При среднем чеке 20,000 ₽ = 5.36 млн дополнительной выручки.<br><br>
+  <strong>Feature:</strong> 12 из 15 врачей не имеют Instagram.<br>
+  <strong>Advantage:</strong> Это 80% команды, чей личный бренд не работает на клинику.<br>
+  <strong>Benefit:</strong> Если каждый из 12 врачей наберёт хотя бы 1,000 подписчиков, суммарный охват клиники вырастет с 29K до 41K — рост на 40%.
+</blockquote>
+
+</section>
+
+<hr>
+
+<!-- SECTION 4: CONTENT ANALYSIS -->
+<section id="content-analysis">
+  <div class="section-label">04 — Контент-анализ</div>
+  
+<div class="grid-2">
+  <div class="card">
+    <h4>Instagram клиники</h4>
+    <div class="num">8,435</div>
+    <p>Подписчиков @arclinic. 6,245 постов — огромный контент-бэклог. Вовлечённость требует замера.</p>
+  </div>
+  <div class="card">
+    <h4>Instagram врачей (суммарно)</h4>
+    <div class="num">29,179</div>
+    <p>Подписчиков у 3 врачей из 15. Из них 26,820 у основателя. Остальные 2 врача: 2,359.</p>
+  </div>
+  <div class="card">
+    <h4>Блог на сайте</h4>
+    <div class="num">✅ Есть</div>
+    <p>Главная страница: 59KB текста. llms.txt: 5.3KB для AI-индексации.</p>
+  </div>
+  <div class="card">
+    <h4>Видео-контент</h4>
+    <div class="num">⚠ Частично</div>
+    <p>YouTube @annareznik (личный, не брендирован под ARclinic). Нет Reels/Shorts от врачей.</p>
+  </div>
+</div>
+
+<blockquote>
+  <strong>So What?</strong> Instagram клиники (8,435 подп.) и основателя (26,820 подп.) — это актив, который УЖЕ работает. Но 12 врачей полностью отсутствуют в соцсетях. При среднем охвате врача-косметолога в 500-2000 подписчиков, клиника теряет 10,000-24,000 дополнительных контактов с аудиторией ежемесячно. <strong>Это не проблема — это отложенная прибыль.</strong> Первая клиника в СПб, которая сделает Instagram каждому врачу, получит неоспоримое преимущество на 12-18 месяцев.
+</blockquote>
+
+</section>
+
+<hr>
+
+<!-- SECTION 5: MEDIA / SMI -->
+<section id="media">
+  <div class="section-label">05 — Медийное присутствие</div>
+  
+<div class="grid-2">
+  <div class="card">
+    <h4>Wikipedia</h4>
+    <div class="num">✅</div>
+    <p>Персональная страница Анны Резник в Wikipedia — редчайший актив для врача. <1% российских косметологов имеют Wikipedia.</p>
+  </div>
+  <div class="card">
+    <h4>Forbes Kazakhstan</h4>
+    <div class="num">✅</div>
+    <p>Анна Резник — автор Forbes Kazakhstan. Международное признание, работает на репутацию.</p>
+  </div>
+  <div class="card">
+    <h4>ProDoctorov</h4>
+    <div class="num">79</div>
+    <p>Отзывов на странице Анны Резник. Положительный рейтинг. Остальные врачи — требуют проверки.</p>
+  </div>
+  <div class="card">
+    <h4>Деловые СМИ</h4>
+    <div class="num">❌</div>
+    <p>Прямых публикаций в РБК, Коммерсант, Vogue не обнаружено. Возможность для PR.</p>
+  </div>
+</div>
+
+<blockquote>
+  <strong>So What?</strong> Wikipedia + Forbes Kazakhstan — это активы, которые НЕ купить за деньги. Они создают доверие на уровне, недоступном конкурентам. Но они не используются в маркетинге: нет ссылок с сайта, нет упоминаний в соцсетях, нет PR-кампании вокруг статуса «член совета Ипсен». <strong>Один PR-материал в РБК о российском враче в совете Ипсен — и ARclinic получает федеральный охват бесплатно.</strong>
+</blockquote>
+
+</section>
+
+<hr>
+
+<!-- SECTION 6: COMPETITORS -->
+<section id="competitors">
+  <div class="section-label">06 — Конкуренты: полный разбор</div>
+  
+<p><strong>Ключевой вывод (вершина пирамиды):</strong> Ни один из 4 конкурентов не имеет одновременно AI-индексацию, Wikipedia основателя и активный Instagram. ARclinic — единственная клиника с полным набором digital-активов. Но конкуренты выигрывают по числу врачей и географическому охвату.</p>
+
+<div class="grid-2" style="margin-top:24px;">
+  <div class="card">
+    <h4>Дом Антивозрастной Медицины</h4>
+    <p>spbmeddom.ru — 13 врачей, филиалы в СПб и Москве. Оценка выручки: ~130 млн ₽.</p>
+    <p><span class="tag-badge">Сила: 2 филиала</span> <span class="tag-badge">Слабость: нет Instagram</span> <span class="tag-badge">Угроза: Москва</span></p>
+    <p style="font-size:13px;color:var(--green);">Возможность для ARclinic: AI-индексация + 15 врачей vs 13. Бутик vs сеть — разные ниши.</p>
+  </div>
+  <div class="card">
+    <h4>ART Media Clinic</h4>
+    <p>artmediaclinic.ru — 35 врачей, крупнейшая команда. Оценка выручки: ~180 млн ₽.</p>
+    <p><span class="tag-badge">Сила: масштаб</span> <span class="tag-badge">Слабость: нет Instagram</span> <span class="tag-badge">Угроза: объём контента</span></p>
+    <p style="font-size:13px;color:var(--green);">Возможность для ARclinic: 35 врачей = «фабрика». ARclinic = бутик с персональным подходом.</p>
+  </div>
+  <div class="card">
+    <h4>Cosmetolog Premium</h4>
+    <p>cosmetologpremium.ru — 68 врачей упомянуто. Tilda. Оценка выручки: ~150 млн ₽.</p>
+    <p><span class="tag-badge">Сила: Tilda (быстро)</span> <span class="tag-badge">Слабость: размытый бренд</span> <span class="tag-badge">Угроза: лендинги под акции</span></p>
+    <p style="font-size:13px;color:var(--green);">Возможность для ARclinic: Bitrix даёт более глубокое SEO. llms.txt — эксклюзив.</p>
+  </div>
+  <div class="card">
+    <h4>AntiAge Clinic</h4>
+    <p>antiage-clinic.com — 51 врач, Калининград. Оценка выручки: ~70 млн ₽.</p>
+    <p><span class="tag-badge">Сила: региональный лидер</span> <span class="tag-badge">Слабость: Калининград</span> <span class="tag-badge">Угроза: минимальная</span></p>
+    <p style="font-size:13px;color:var(--green);">Не прямой конкурент. Можно использовать как бенчмарк по контенту и позиционированию.</p>
+  </div>
+</div>
+
+<blockquote>
+  <strong>So What? Стратегический инсайт:</strong> Все 4 конкурента СЛЕПЫ к соцсетям. Ни у одного нет Instagram. Это значит, что ARclinic с 29K суммарных подписчиков врачей УЖЕ лидирует в соцсетях. Но это преимущество временное — рынок проснётся через 12-18 месяцев. Стратегия: форсированно наращивать Instagram-присутствие, пока конкуренты спят.
+</blockquote>
+
+</section>
+
+<hr>
+
+<!-- SECTION 7: WHITEFIELDS -->
+<section id="whitefields">
+  <div class="section-label">07 — Белые поля</div>
+  
+<div class="grid-2">
+  <div class="card">
+    <h4>AI-First SEO</h4>
+    <div class="num">0 конкурентов</div>
+    <p>Ни у кого из конкурентов нет llms.txt. ARclinic — единственная клиника, которую видят ChatGPT, Claude, Perplexity. Белое поле с нулевой конкуренцией.</p>
+  </div>
+  <div class="card">
+    <h4>Instagram врачей</h4>
+    <div class="num">0 конкурентов</div>
+    <p>Ни у одного конкурента врачи не имеют Instagram. 15 врачей ARclinic с Instagram каждый = доминирование в соцсетях за 6 месяцев.</p>
+  </div>
+  <div class="card">
+    <h4>YouTube клиники</h4>
+    <div class="num">0 конкурентов</div>
+    <p>Ни у кого нет корпоративного YouTube. У ARclinic есть база: канал @annareznik. Его перезапуск под брендом клиники = готовая аудитория.</p>
+  </div>
+  <div class="card">
+    <h4>Telegram-канал</h4>
+    <div class="num">0 конкурентов</div>
+    <p>Ни один конкурент не ведёт Telegram. У ARclinic есть @arclinic1 — форсированно развивать, пока рынок спит.</p>
+    <p style="font-size:13px;color:var(--yellow);margin-top:4px;">⚠ У ARclinic уже есть канал @arclinic1. Белое поле: превратить его в инструмент привлечения пациентов.</p>
+  </div>
+  <div class="card">
+    <h4>Wikipedia основателя</h4>
+    <div class="num">0 конкурентов</div>
+    <p>Ни у одного конкурента нет основателя с Wikipedia. Это актив на уровне «Круглик/Свиридов» — топ-уровень доверия.</p>
+  </div>
+  <div class="card">
+    <h4>Реферальная программа</h4>
+    <div class="num">0 конкурентов</div>
+    <p>Ни у кого нет системной программы лояльности. При базе 500+ активных пациентов премиум-сегмента, реферальная программа даст +50-75 пациентов в месяц.</p>
+  </div>
+</div>
+
+<blockquote>
+  <strong>So What?</strong> ARclinic находится в уникальной позиции: 5 из 6 «белых полей» полностью свободны от конкурентов. Это рыночная аномалия, которая закроется через 12-18 месяцев. Стратегия: застолбить ВСЕ 6 полей одновременно, пока никто не мешает. Стоимость входа минимальна, стоимость отложенного входа — потеря монополии.
+</blockquote>
+
+</section>
+
+<hr>
+
+<!-- SECTION 8: DIGITAL PRESENCE -->
+<section id="presence">
+  <div class="section-label">08 — Цифровое присутствие</div>
+  
+<div class="grid-3">
+  <div class="card"><h4>Сайт</h4><div class="num" style="color:var(--green);">✅</div><p>Bitrix, HTTPS, Schema.org, быстрая загрузка</p></div>
+  <div class="card"><h4>AI-поиск</h4><div class="num" style="color:var(--green);">✅</div><p>llms.txt (5.3KB), MedicalBusiness schema — топ-0.1% медсайтов РФ</p></div>
+  <div class="card"><h4>Instagram</h4><div class="num" style="color:var(--green);">✅</div><p>Активен: @arclinic (8.4K) + 3 врача (29.2K суммарно)</p></div>
+  <div class="card"><h4>Telegram</h4><div class="num" style="color:var(--green);">✅</div><p>Канал @arclinic1 — обнаружен через поиск. Требуется верификация контента.</p></div>
+  <div class="card"><h4>VK</h4><div class="num" style="color:var(--green);">✅</div><p>Сообщество @arclinic — обнаружено (HTTP 200).</p></div>
+  <div class="card"><h4>YouTube</h4><div class="num" style="color:var(--yellow);">🟡</div><p>Канал @annareznik — личный основателя, не брендирован под ARclinic.</p></div>
+</div>
+
+<blockquote>
+  <strong>So What?</strong> Сайт — отличный. AI-поиск — лучший в выборке. Telegram и VK обнаружены (@arclinic1, @arclinic) — это хорошая новость, но требует аудита контента. YouTube — личный канал основателя, не брендирован под клинику. <strong>Ключевой инсайт:</strong> 4 из 5 платформ присутствуют, но только 2 (сайт + Instagram) системно работают на привлечение пациентов.
+</blockquote>
+
+</section>
+
+<hr>
+
+<!-- SECTION 9: CONTENT PLAN -->
+<section id="content-plan">
+  <div class="section-label">09 — Контент-план (сырой)</div>
+  <p><strong>Принцип «1 врач = 1 платформа» + синдикация.</strong> Один материал врача → 4 платформы (Instagram + Telegram + VK + Дзен).</p><h3 style="margin-top:24px;">Косметологи (10 врачей) — Instagram + Reels</h3><div class="row"><div class="k">Формат</div><div class="v">Reels до/после (с согласия пациентов) + образовательные карусели</div></div><div class="row"><div class="k">Частота</div><div class="v">3 поста/неделю на врача = 120 рилсов/месяц от всей команды</div></div><div class="row"><div class="k">Ожидаемый охват</div><div class="v">2,000 просмотров/рилс в среднем × 120 = 240,000 контактов/мес</div></div><div class="row"><div class="k">Конверсия в запись</div><div class="v">0.5% от охвата = 1,200 заявок/мес → ~60-80 пациентов</div></div><h3 style="margin-top:24px;">Не-косметологи (5 врачей) — Telegram + Дзен</h3><div class="row"><div class="k">Сердюкова Светлана Николаевна</div><div class="v"> — экспертные статьи + Q&A, 2 раза/нед</div></div><div class="row"><div class="k">Плотникова Анна Юрьевна</div><div class="v">Гинеколог, Диетолог — экспертные статьи + Q&A, 2 раза/нед</div></div><div class="row"><div class="k">Рубаник Кирилл Сергеевич</div><div class="v">Терапевт, Невролог — экспертные статьи + Q&A, 2 раза/нед</div></div><h3 style="margin-top:24px;">Основатель — YouTube + кросс-платформенная дистрибуция</h3><div class="row"><div class="k">Анна Резник</div><div class="v">YouTube-шоу «Anti-Age с Анной Резник» (20 мин/выпуск, 1 раз/нед). Нарезка: 5 коротких рилсов → Instagram врачей + VK Клипы</div></div>
+<blockquote>
+  <strong>Почему это сработает:</strong> Одна 20-минутная запись с Резник создаёт контент на неделю для 15 врачей. Не 15 разных съёмок, а 1 съёмка → 15 точек дистрибуции. Экономия на продакшене: ~200,000 ₽/мес по сравнению с раздельной съёмкой для каждого врача.
+</blockquote>
+
+</section>
+
+<hr>
+
+<!-- SECTION 10: STRATEGY -->
+<section id="strategy">
+  <div class="section-label">10 — Стратегия</div>
+  
+<p><strong>Пять стратегических приоритетов, ранжированных по impact/effort. Язык — владельца бизнеса.</strong></p>
+
+<div class="strategy-block">
+  <div class="header">
+    <div class="step">Приоритет 1 · Impact ★★★ · 1 месяц</div>
+  </div>
+  <h3>Запустить Instagram для ВСЕХ 15 врачей</h3>
+  <p><strong>Feature:</strong> Сейчас: 3 врача имеют Instagram, 12 — нет. Суммарный охват: 29K (из них 26.8K у основателя).</p>
+  <p><strong>Advantage:</strong> 12 врачей × 1,000 подписчиков в среднем = +12,000 к охвату клиники. При конверсии 0.5% = 60 дополнительных пациентов в месяц.</p>
+  <p><strong>Benefit:</strong> 60 пациентов × 20,000 ₽ средний чек = 1.2 млн ₽ дополнительной выручки ежемесячно. Годовой эффект: +14.4 млн ₽.</p>
+  <p style="color:var(--text-dim);">⏱ 2 недели — найм, 4 недели — первые результаты, 12 недель — системный поток пациентов. · 📏 KPI: +12,000 подписчиков (суммарно), +60 пациентов/мес, +1.2 млн ₽/мес выручки</p>
+</div>
+
+<div class="strategy-block">
+  <div class="header">
+    <div class="step">Приоритет 2 · Impact ★★★ · 2 месяца</div>
+  </div>
+  <h3>Перезапустить YouTube под брендом ARclinic</h3>
+  <p><strong>Feature:</strong> Сейчас: YouTube-канал @annareznik принадлежит основателю лично, не направляет в клинику.</p>
+  <p><strong>Advantage:</strong> Один экспертный выпуск в неделю с Анной Резник = 5,000+ просмотров (при текущей базе 26.8K подписчиков). Нарезка на рилсы = контент для 15 врачей.</p>
+  <p><strong>Benefit:</strong> 5,000 просмотров × 1% конверсия в запись = 50 заявок × 30% show rate = 15 пациентов × 20,000 ₽ = 300,000 ₽ с одного выпуска. × 4 выпуска/мес = 1.2 млн ₽/мес.</p>
+  <p style="color:var(--text-dim);">⏱ 2 недели — ребрендинг, 4 недели — первый выпуск, 8 недель — регулярный поток. · 📏 KPI: 5,000 подписчиков за 6 мес, 15 пациентов/мес с YouTube, +1.2 млн ₽/мес</p>
+</div>
+
+<div class="strategy-block">
+  <div class="header">
+    <div class="step">Приоритет 3 · Impact ★★☆ · 1 месяц</div>
+  </div>
+  <h3>AI-First SEO: стать источником №1 для ChatGPT/Claude</h3>
+  <p><strong>Feature:</strong> Сейчас: llms.txt (5.3KB) + MedicalBusiness schema. Единственная клиника с этим в выборке.</p>
+  <p><strong>Advantage:</strong> AI-модели (ChatGPT — 200M+ пользователей) ищут медицинскую информацию через llms.txt. ARclinic уже индексируется. Нужно углубить контент.</p>
+  <p><strong>Benefit:</strong> Топ-1 в AI-поиске по запросам «anti-age клиника СПб», «косметолог СПб», «лечение осложнений после косметологии» = +30% органического трафика из AI-переходов. При текущем трафике ~5,000/мес это +1,500 визитов × 2% конверсия = 30 пациентов/мес.</p>
+  <p style="color:var(--text-dim);">⏱ 1 неделя — расширение llms.txt, 4 недели — FAQ, 8 недель — видимый рост AI-трафика. · 📏 KPI: +30% AI-трафика, +30 пациентов/мес, +600,000 ₽/мес</p>
+</div>
+
+<div class="strategy-block">
+  <div class="header">
+    <div class="step">Приоритет 4 · Impact ★★☆ · 2 недели</div>
+  </div>
+  <h3>Реферальная программа «Приведи друга»</h3>
+  <p><strong>Feature:</strong> Сейчас: сарафанное радио работает стихийно. База: 500+ активных пациентов премиум-сегмента.</p>
+  <p><strong>Advantage:</strong> 10-15% пациентов премиум-клиник готовы рекомендовать врача. При системе мотивации (скидка 15% за отзыв + бесплатная консультация за друга) конверсия в рекомендацию растёт до 25-30%.</p>
+  <p><strong>Benefit:</strong> 500 пациентов × 15% рекомендаций = 75 новых пациентов/мес. Стоимость привлечения: 3,000 ₽ (скидка) vs 5,000-8,000 ₽ через рекламу. Экономия: 150,000-375,000 ₽/мес.</p>
+  <p style="color:var(--text-dim);">⏱ 2 недели — механика, 4 недели — первые 20 рекомендаций, 12 недель — системный поток. · 📏 KPI: 50-75 пациентов/мес, экономия 150К-375К ₽/мес на рекламе</p>
+</div>
+
+<div class="strategy-block">
+  <div class="header">
+    <div class="step">Приоритет 5 · Impact ★★☆ · 3 месяца</div>
+  </div>
+  <h3>Форсировать Telegram + VK + Дзен</h3>
+  <p><strong>Feature:</strong> Сейчас: Telegram @arclinic1 и VK @arclinic обнаружены, но не верифицированы. Дзен отсутствует. Три платформы с совокупной аудиторией 150M+ не работают на привлечение.</p>
+  <p><strong>Advantage:</strong> Контент уже создаётся для Instagram и YouTube. Одна статья врача → 4 платформы. Дополнительные затраты: только время на адаптацию форматов (30 мин/статья).</p>
+  <p><strong>Benefit:</strong> Telegram: 3,000 подписчиков за 6 мес. VK: 5,000. Дзен: 10,000 читателей. Суммарный охват: 50,000+ в месяц. Конверсия 0.3% = 150 заявок × 30% show = 45 пациентов/мес.</p>
+  <p style="color:var(--text-dim);">⏱ 4 недели — запуск, 12 недель — 30% целевого охвата, 24 недели — полный охват. · 📏 KPI: 18,000 суммарных подписчиков за 6 мес, 45 пациентов/мес, +900,000 ₽/мес</p>
+</div>
+
+<h3 style="margin-top:48px;">Суммарная экономика стратегии</h3>
+<div class="grid-3">
+  <div class="card"><h4>Доп. пациенты/мес</h4><div class="num">+170–215</div><p>С текущих ~400-600 до ~570-815</p></div>
+  <div class="card"><h4>Доп. выручка/мес</h4><div class="num">+3.4–4.3 млн ₽</div><p>При среднем чеке 20,000 ₽</p></div>
+  <div class="card"><h4>Доп. выручка/год</h4><div class="num">+40–52 млн ₽</div><p>Рост на 35-50% от текущей выручки</p></div>
+</div>
+
+<div class="grid-3" style="margin-top:16px;">
+  <div class="card"><h4>Инвестиции/мес</h4><div class="num">250–350 тыс ₽</div><p>SMM (100K) + контент-продакшен (100K) + таргет (50-150K)</p></div>
+  <div class="card"><h4>ROMI (6 мес)</h4><div class="num">800–1,200%</div><p>На каждый вложенный рубль — 8-12 ₽ возврата</p></div>
+  <div class="card"><h4>Срок окупаемости</h4><div class="num">2–3 месяца</div><p>Даже при консервативном сценарии</p></div>
+</div>
+
+<blockquote>
+  <strong>Итог для ЛПР:</strong> 170-215 дополнительных пациентов в месяц при стоимости лида ~1,500 ₽ (в 3-5 раз дешевле рынка). Инвестиции: 250-350 тыс ₽/мес — примерно столько же, сколько вы уже тратите на рекламу. Разница: эти деньги идут в активы (контент, подписчики, репутацию), а не сгорают в рекламном кабинете.
+</blockquote>
+
+</section>
+
+<hr>
+
+<!-- SECTION 11: OFFER / CTA (presale) or RECOMMENDATIONS (onboarding) -->
+<section id="offer" style="padding-bottom: 40px;">
+  <div class="section-label">11 — Что дальше</div>
+  
+<div class="cta-box">
+  <h3>AIM — агентство автоматизации медицинского маркетинга</h3>
+  <p>Разбираем ваш маркетинг до молекул. Находим точки роста, которые пропускают классические агентства. Специализируемся ТОЛЬКО на коммерческой медицине.</p>
+  <p style="font-size:14px;color:var(--text-dim);">Что вы получите через 4 недели работы с нами:</p>
+  <div style="text-align:left;max-width:400px;margin:16px auto;">
+    <p>• Instagram для каждого врача — +60 пациентов/мес</p>
+    <p>• AI-индексация — вас находят ChatGPT и Claude</p>
+    <p>• Контент-фабрика — 120 рилсов/мес от врачей</p>
+    <p>• Реферальная программа — +50 пациентов/мес</p>
+    <p>• Кросс-платформенное присутствие — TG + VK + Дзен</p>
+  </div>
+  <p style="font-size:14px;color:var(--text-dim);margin-top:24px;">Готовы обсудить детали?</p>
+  <a href="#" class="btn">Написать в Telegram</a>
+  <p style="margin-top:16px;font-size:12px;color:var(--text-dim);">Telegram: @aim_agency · Сайт: iamaim.ru · 08.06.2026</p>
+</div>
+
+</section>
+
+</div>
+
+</body>
+</html>

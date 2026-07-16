@@ -1,0 +1,165 @@
+{
+  "analysis_date": "2026-05-05T16:06:27.699067",
+  "total_analyzed": 5,
+  "deep_profiles": [
+    {
+      "name": "Tori Clinic",
+      "url": "https://toriclinic.ru/",
+      "total_pages_found": 50,
+      "pages_analyzed": 50,
+      "page_types": {
+        "homepage": [],
+        "services": [],
+        "about": [
+          "https://toriclinic.ru/about-us/news/"
+        ],
+        "contacts": [],
+        "prices": [],
+        "blog": [
+          "https://toriclinic.ru/articles/biorevitalizatsiya/"
+        ],
+        "other": [
+          "https://toriclinic.ru/video-tori/pravda-ili-lozh/pravda-ili-lozh/",
+          "https://toriclinic.ru/video-tori/plazmoterapiya/korrekcziya-brovej-plazmoj/",
+          "https://toriclinic.ru/video-tori/plazmoterapiya/ibrakova-olga-prp-terapiya/",
+          "https://toriclinic.ru/video-tori/plazmoterapiya/ibrakova-olga-plazmoterapiya/",
+          "https://toriclinic.ru/video-tori/plazmoterapiya/",
+          "https://toriclinic.ru/video-tori/na-zdorove/dieticheskij-tort-s-klubnikoj-s-mariej-tatarinczevoj/",
+          "https://toriclinic.ru/video-tori/mezoterapiya/anna-novikova-mezoterapiya/",
+          "https://toriclinic.ru/video-tori/kosmeticheskie-sredstva/produkcziya-james-read-dlya-avtozagara/",
+          "https://toriclinic.ru/video-tori/kosmeticheskie-sredstva/kosmetika-dlya-licza-ultraceuticals/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/tatyana-al-sabunchi-plastika-intimnoj-zonyi/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/tatyana-al-sabunchi-konturnaya-plastika-licza/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/majya-samojlova-konturnaya-plastika/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/klinika-tori-korrekcziya-ovala-licza/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/klinika-tori-korrekcziya-nosogubnyix-skladok/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/klinika-tori-korrekcziya-gub/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/ibrakova-olga-korrekcziya-ovala-licza-nityami-aptos/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/ekaterina-medvedeva-korrekcziya-nosogubnyix-skladok/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/ekaterina-medvedeva-korrekcziya-gub/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/bezoperaczionnaya-rinoplastika-ot-annyi-novikovoj/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/anna-novikova-korrekcziya-gub/",
+          "https://toriclinic.ru/video-tori/intervyu/speczialistyi-tori-aleksej-mimov/",
+          "https://toriclinic.ru/video-tori/intervyu/lipolitiki/",
+          "https://toriclinic.ru/video-tori/intervyu/lechenie-psoriaza/",
+          "https://toriclinic.ru/video-tori/intervyu/lazernyij-apparat-vbeam-perfecta-candela/",
+          "https://toriclinic.ru/video-tori/intervyu/korrekcziya-vozrastnyix-izmenenij/",
+          "https://toriclinic.ru/video-tori/intervyu/ibrakova-olga-raznyie-proczeduryi/",
+          "https://toriclinic.ru/video-tori/intervyu/elena-monaxova-ob-apparate-halo/",
+          "https://toriclinic.ru/video-tori/chistka-licza/almaznaya-shlifovka-na-apparate-hydrafacial/",
+          "https://toriclinic.ru/video-tori/biorevitalizacziya/tatyana-al-sabunchi-botulotoksin/",
+          "https://toriclinic.ru/video-tori/biorevitalizacziya/tatyana-al-sabunchi-biorevitalizacziya/",
+          "https://toriclinic.ru/video-tori/biorevitalizacziya/tatyana-al-sabunchi-biorevitalizacziya-i-bioreparacziya/",
+          "https://toriclinic.ru/video-tori/biorevitalizacziya/korrekcziya-morshhin-na-shee/",
+          "https://toriclinic.ru/video-tori/biorevitalizacziya/ibrakova-olga-botulotoksin/",
+          "https://toriclinic.ru/video-tori/biorevitalizacziya/ekaterina-medvedeva-biorevitalizacziya/",
+          "https://toriclinic.ru/video-tori/biorevitalizacziya/biorevitalizacziya-hyalual/",
+          "https://toriclinic.ru/video-tori/biorevitalizacziya/bezinekczionnaya-biorevitalizacziya-vitalaser/",
+          "https://toriclinic.ru/video-tori/apparatnaya-kosmetologiya/ustranenie-pokrasnenij-i-lechenie-vyisyipanij/",
+          "https://toriclinic.ru/video-tori/apparatnaya-kosmetologiya/majya-samojlova-lazernaya-epilyacziya-na-apparate-milesman/",
+          "https://toriclinic.ru/video-tori/apparatnaya-kosmetologiya/klinika-tori-apparat-skin-tyte-ii/",
+          "https://toriclinic.ru/video-tori/apparatnaya-kosmetologiya/kak-byistro-i-legko-uluchshit-sostoyanie-kozhi-i-ubrat-morshhinyi/",
+          "https://toriclinic.ru/video-tori/apparatnaya-kosmetologiya/irina-tkacheva-infrakrasnyij-termolifting-skin-tyte-ii/",
+          "https://toriclinic.ru/video-tori/apparatnaya-kosmetologiya/fotoomolozhenie-na-apparate-joule-sciton/",
+          "https://toriclinic.ru/video-tori/apparatnaya-kosmetologiya/dobivaemsya-krasotyi-bez-vmeshatelstva-xirurga-altera-terapiya/",
+          "https://toriclinic.ru/video-tori/apparatnaya-kosmetologiya/anna-novikova-fotoomolozhenie-bbl/",
+          "https://toriclinic.ru/specialists/cosmetology/",
+          "https://toriclinic.ru/podkast/vosstanovim-krasotu-i-zdorove-pri-pomoshhi-telesnyix-praktik-rasskazyivaet-vrach-aleksandr-goncharov/",
+          "https://toriclinic.ru/podkast/kak-soxranit-krasotu-i-molodost-kozhi-pri-pomoshhi-vodoroslej-slushajte-v-nashem-novom-podkaste/",
+          "https://toriclinic.ru/payment/"
+        ]
+      },
+      "deep_analysis": {
+        "total_pages": 50,
+        "page_types": {
+          "about": 1,
+          "blog": 1,
+          "other": 48
+        },
+        "seo_coverage": {
+          "title": "50/50",
+          "description": "49/50",
+          "h1": "50/50"
+        },
+        "schema_coverage": "50/50",
+        "quality_score": 99.33333333333333
+      },
+      "analyzed_at": "2026-05-05T16:06:16.249384"
+    },
+    {
+      "name": "Professional Clinic",
+      "url": "https://profclinic.ru/",
+      "total_pages_found": 0,
+      "pages_analyzed": 0,
+      "page_types": {
+        "homepage": [],
+        "services": [],
+        "about": [],
+        "contacts": [],
+        "prices": [],
+        "blog": [],
+        "other": []
+      },
+      "deep_analysis": {},
+      "analyzed_at": "2026-05-05T16:06:17.397121"
+    },
+    {
+      "name": "CIDK",
+      "url": "https://cidk.ru/",
+      "total_pages_found": 0,
+      "pages_analyzed": 0,
+      "page_types": {
+        "homepage": [],
+        "services": [],
+        "about": [],
+        "contacts": [],
+        "prices": [],
+        "blog": [],
+        "other": []
+      },
+      "deep_analysis": {},
+      "analyzed_at": "2026-05-05T16:06:18.173640"
+    },
+    {
+      "name": "Frau Clinic",
+      "url": "https://frauklinik.ru/",
+      "total_pages_found": 0,
+      "pages_analyzed": 0,
+      "page_types": {
+        "homepage": [],
+        "services": [],
+        "about": [],
+        "contacts": [],
+        "prices": [],
+        "blog": [],
+        "other": []
+      },
+      "deep_analysis": {},
+      "analyzed_at": "2026-05-05T16:06:27.436558"
+    },
+    {
+      "name": "Клиника Юлии Щербатовой",
+      "url": "https://doctor-shcherbatova.ru/",
+      "total_pages_found": 0,
+      "pages_analyzed": 0,
+      "page_types": {
+        "homepage": [],
+        "services": [],
+        "about": [],
+        "contacts": [],
+        "prices": [],
+        "blog": [],
+        "other": []
+      },
+      "deep_analysis": {},
+      "analyzed_at": "2026-05-05T16:06:27.699037"
+    }
+  ],
+  "market_insights": {
+    "total_competitors": 5,
+    "avg_pages_analyzed": 10.0,
+    "analysis_depth": "deep"
+  },
+  "analysis_quality": "deep",
+  "pages_analyzed_per_competitor": 50
+}

@@ -1,0 +1,337 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3] [cursor=pointer]: +
+    - list [ref=e4]:
+      - listitem [ref=e5]:
+        - link "О клинике" [ref=e6] [cursor=pointer]:
+          - /url: /about/
+        - list [ref=e7]:
+          - listitem [ref=e8]:
+            - link "О нас" [ref=e9] [cursor=pointer]:
+              - /url: /about/
+          - listitem [ref=e10]:
+            - link "Специалисты" [ref=e11] [cursor=pointer]:
+              - /url: /doctors/
+          - listitem [ref=e12]:
+            - link "Онлайн-консультации" [ref=e13] [cursor=pointer]:
+              - /url: /telemeditsina/
+          - listitem [ref=e14]:
+            - link "Подарочный сертификат" [ref=e15] [cursor=pointer]:
+              - /url: /gift-card/
+          - listitem [ref=e16]:
+            - link "Отзывы" [ref=e17] [cursor=pointer]:
+              - /url: /reviews/
+          - listitem [ref=e18]:
+            - link "Новости" [ref=e19] [cursor=pointer]:
+              - /url: /news/
+          - listitem [ref=e20]:
+            - link "Блог" [ref=e21] [cursor=pointer]:
+              - /url: /blog/
+          - listitem [ref=e22]:
+            - link "Вакансии" [ref=e23] [cursor=pointer]:
+              - /url: /vakansii/
+          - listitem [ref=e24]:
+            - link "Правовая информация" [ref=e25] [cursor=pointer]:
+              - /url: /about/legal-information/
+          - listitem [ref=e26]:
+            - link "Карта сайта" [ref=e27] [cursor=pointer]:
+              - /url: /sitemap
+      - listitem [ref=e28]:
+        - link "Центр Косметологии" [ref=e29] [cursor=pointer]:
+          - /url: /services/cosmetology/
+        - list [ref=e30]:
+          - listitem [ref=e31]:
+            - link "Аппаратная косметология" [ref=e32] [cursor=pointer]:
+              - /url: /services/cosmetology/apparat/
+          - listitem [ref=e33]:
+            - link "Инъекционная косметология" [ref=e34] [cursor=pointer]:
+              - /url: /services/cosmetology/injection/
+          - listitem [ref=e35]:
+            - link "Эстетическая косметология" [ref=e36] [cursor=pointer]:
+              - /url: /services/cosmetology/estetic/
+          - listitem [ref=e37]:
+            - link "Лечение осложнений в косметологии" [ref=e38] [cursor=pointer]:
+              - /url: /services/cosmetology/lechenie/
+          - listitem [ref=e39]:
+            - link "Комплексная косметология" [ref=e40] [cursor=pointer]:
+              - /url: /services/cosmetology/komplex/
+          - listitem [ref=e41]:
+            - link "Консультации специалистов" [ref=e42] [cursor=pointer]:
+              - /url: /services/cosmetology/konsult/
+      - listitem [ref=e43]:
+        - link "Центр Здоровья" [ref=e44] [cursor=pointer]:
+          - /url: /services/health-center/
+        - list [ref=e45]:
+          - listitem [ref=e46]:
+            - link "Гинекология" [ref=e47] [cursor=pointer]:
+              - /url: /services/health-center/ginekologiya/
+          - listitem [ref=e48]:
+            - link "Дерматология" [ref=e49] [cursor=pointer]:
+              - /url: /services/health-center/dermatologiya/
+          - listitem [ref=e50]:
+            - link "Неврология" [ref=e51] [cursor=pointer]:
+              - /url: /services/health-center/nevrologiya/
+          - listitem [ref=e52]:
+            - link "Диетология" [ref=e53] [cursor=pointer]:
+              - /url: /services/health-center/dietologiya/
+          - listitem [ref=e54]:
+            - link "Эндокринология" [ref=e55] [cursor=pointer]:
+              - /url: /services/health-center/endokrinologiya/
+          - listitem [ref=e56]:
+            - link "Лабораторная диагностика" [ref=e57] [cursor=pointer]:
+              - /url: /services/health-center/laboratornye-analizy/
+          - listitem [ref=e58]:
+            - link "Ультразвуковая диагностика" [ref=e59] [cursor=pointer]:
+              - /url: /services/health-center/uzi/
+          - listitem [ref=e60]:
+            - link "Функциональная диагностика" [ref=e61] [cursor=pointer]:
+              - /url: /services/health-center/funktsionalnaya-diagnostika/
+          - listitem [ref=e62]:
+            - link "Чекапы" [ref=e63] [cursor=pointer]:
+              - /url: /services/health-center/chek-apy/
+      - listitem [ref=e64]:
+        - link "Для мужчин" [ref=e65] [cursor=pointer]:
+          - /url: /services/men
+        - list [ref=e66]:
+          - listitem [ref=e67]:
+            - link "Уходовые процедуры" [ref=e68] [cursor=pointer]:
+              - /url: /services/men/ukhodovye-protsedury/
+          - listitem [ref=e69]:
+            - link "Аппаратная косметология" [ref=e70] [cursor=pointer]:
+              - /url: /services/men/apparatnaya-kosmetologiya/
+          - listitem [ref=e71]:
+            - link "Инъекционные процедуры" [ref=e72] [cursor=pointer]:
+              - /url: /services/men/inektsionnye-protsedury/
+          - listitem [ref=e73]:
+            - link "Консультации специалистов" [ref=e74] [cursor=pointer]:
+              - /url: /services/men/konsultatsii-spetsialistov/
+          - listitem [ref=e75]:
+            - link "Чекапы" [ref=e76] [cursor=pointer]:
+              - /url: /services/men/chekapy/
+      - listitem [ref=e77]:
+        - link "Цены" [ref=e78] [cursor=pointer]:
+          - /url: /prices/
+      - listitem [ref=e79]:
+        - link "Абонементы" [ref=e80] [cursor=pointer]:
+          - /url: /sales/
+      - listitem [ref=e81]:
+        - link "Контакты" [ref=e82] [cursor=pointer]:
+          - /url: /contacts/
+      - listitem [ref=e83]:
+        - link "Акции" [ref=e84] [cursor=pointer]:
+          - /url: /promotions/
+  - generic [ref=e85]:
+    - main [ref=e86]:
+      - generic [ref=e88]:
+        - link "" [ref=e89] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e92]:
+          - textbox [ref=e93]
+          - button "Submit" [ref=e94] [cursor=pointer]
+        - generic [ref=e96] [cursor=pointer]: меню
+        - generic [ref=e98]:
+          - link "" [ref=e101] [cursor=pointer]:
+            - /url: tel:+78122408382
+            - generic [ref=e102]: 
+          - link [ref=e103] [cursor=pointer]:
+            - /url: https://t.me/ArclinicSPB
+          - link [ref=e104] [cursor=pointer]:
+            - /url: https://max.ru/id7810605688_bot
+      - generic [ref=e105]:
+        - generic [ref=e106]:
+          - heading "Контакты" [level=1] [ref=e107]
+          - generic [ref=e108]:
+            - text: Санкт-Петербург,
+            - text: ул Верейская д.44 к.2
+          - list [ref=e109]:
+            - listitem [ref=e110]: ежедневно
+            - listitem [ref=e111]: 10:00-20:00
+          - link " +7 (931) 244-00-44" [ref=e113] [cursor=pointer]:
+            - /url: tel:+79312440044
+            - generic [ref=e114]: 
+            - text: +7 (931) 244-00-44
+          - paragraph [ref=e115]:
+            - link "mail info@arclinic.ru" [ref=e116] [cursor=pointer]:
+              - /url: mailto:info@arclinic.ru?Subject=Hello!
+              - img "mail" [ref=e117]
+              - text: info@arclinic.ru
+          - paragraph [ref=e118]:
+            - link "MAXМы в MAX" [ref=e119] [cursor=pointer]:
+              - /url: https://max.ru/id7810605688_bot
+              - img "MAX" [ref=e120]
+              - text: Мы в MAX
+          - paragraph [ref=e121]:
+            - link "ВКонтактеГруппа ВКонтакте" [ref=e122] [cursor=pointer]:
+              - /url: https://vk.com/arclinic
+              - img "ВКонтакте" [ref=e123]
+              - text: Группа ВКонтакте
+          - paragraph [ref=e124]:
+            - link "ТелеграмТелеграм клиники" [ref=e125] [cursor=pointer]:
+              - /url: https://t.me/arclinic1
+              - img "Телеграм" [ref=e126]
+              - text: Телеграм клиники
+          - paragraph [ref=e127]:
+            - link "ТелеграмТелеграм Анны Резник о косметологии" [ref=e128] [cursor=pointer]:
+              - /url: https://t.me/av_reznik
+              - img "Телеграм" [ref=e129]
+              - text: Телеграм Анны Резник о косметологии
+          - paragraph [ref=e130]:
+            - link "RUTUBERUTUBE" [ref=e131] [cursor=pointer]:
+              - /url: https://rutube.ru/channel/40993271/
+              - img "RUTUBE" [ref=e132]
+              - text: RUTUBE
+          - paragraph [ref=e133]:
+            - link "ВакансииВакансии" [ref=e134] [cursor=pointer]:
+              - /url: /vakansii/
+              - img "Вакансии" [ref=e135]
+              - text: Вакансии
+        - generic [ref=e136]:
+          - generic [ref=e138]:
+            - generic:
+              - generic:
+                - link [ref=e142] [cursor=pointer]:
+                  - /url: https://yandex.ru/maps/?origin=jsapi&ll=30.324184,59.915026&z=14.85&l=
+                - generic [ref=e144]:
+                  - generic [ref=e146]: © Яндекс
+                  - link "Условия использования" [ref=e148] [cursor=pointer]:
+                    - /url: https://yandex.ru/legal/maps_termsofuse/?lang=ru
+            - iframe [ref=e273]:
+              - generic [ref=f1e9] [cursor=pointer]: Как добраться
+            - generic [ref=e153]:
+              - button [ref=e155] [cursor=pointer]
+              - button [ref=e165] [cursor=pointer]
+          - generic [ref=e170]:
+            - text: "Как пройти:"
+            - link "Смотреть на RUTUBE" [ref=e171] [cursor=pointer]:
+              - /url: https://rutube.ru/video/private/26daf8867f07237f745d4cf593f7c6a9/?p=-QbVGxAMsCiL57p67f3ezw
+            - text: "Припарковать автомобиль можно на тихих улицах рядом с клиникой: на Верейской ул. и Малодетскосельском пр."
+            - text: "Как припарковаться: установите мобильное приложение «Парковки Санкт-Петербурга». Ссылки для скачивания:"
+            - link [ref=e172] [cursor=pointer]:
+              - /url: https://apps.apple.com/ru/app/%D0%BF%D0%B0%D1%80%D0%BA%D0%BE%D0%B2%D0%BA%D0%B8-%D1%81%D0%B0%D0%BD%D0%BA%D1%82-%D0%BF%D0%B5%D1%82%D0%B5%D1%80%D0%B1%D1%83%D1%80%D0%B3%D0%B0/id916632239
+            - link [ref=e173] [cursor=pointer]:
+              - /url: https://play.google.com/store/apps/details?id=ru.spb.parking&hl=ru&pli=1
+            - text: Скачайте
+            - link "пошаговую инструкцию по оплате парковки" [ref=e174] [cursor=pointer]:
+              - /url: https://drive.google.com/file/d/1-2xVyQoz_wF9u0jxcX3zO3k-nNy3C9u2/view
+            - text: .
+    - contentinfo [ref=e175]:
+      - generic [ref=e176]:
+        - generic [ref=e177]: AR Clinic © 2016 - 2026
+        - generic [ref=e178]:
+          - generic [ref=e179]:
+            - navigation [ref=e180]:
+              - link "О нас" [ref=e181] [cursor=pointer]:
+                - /url: /about/
+              - link "Специалисты" [ref=e182] [cursor=pointer]:
+                - /url: /doctors/
+              - link "Онлайн-консультации" [ref=e183] [cursor=pointer]:
+                - /url: /telemeditsina/
+              - link "Подарочный сертификат" [ref=e184] [cursor=pointer]:
+                - /url: /gift-card/
+              - link "Отзывы" [ref=e185] [cursor=pointer]:
+                - /url: /reviews/
+              - link "Новости" [ref=e186] [cursor=pointer]:
+                - /url: /news/
+              - link "Блог" [ref=e187] [cursor=pointer]:
+                - /url: /blog/
+              - link "Вакансии" [ref=e188] [cursor=pointer]:
+                - /url: /vakansii/
+            - navigation [ref=e189]:
+              - link "Центр Косметологии" [ref=e190] [cursor=pointer]:
+                - /url: /services/cosmetology/
+              - link "Центр Здоровья" [ref=e191] [cursor=pointer]:
+                - /url: /services/health-center/
+              - link "Для мужчин" [ref=e192] [cursor=pointer]:
+                - /url: /services/men/
+              - link "Цены" [ref=e193] [cursor=pointer]:
+                - /url: /prices/
+              - link "Абонементы" [ref=e194] [cursor=pointer]:
+                - /url: /sales/
+              - link "Контакты" [ref=e195] [cursor=pointer]:
+                - /url: /contacts/
+              - link "Аппараты" [ref=e196] [cursor=pointer]:
+                - /url: "/devices/ "
+              - link "Акции" [ref=e197] [cursor=pointer]:
+                - /url: "/promotions/ "
+            - navigation [ref=e198]:
+              - link "Политика конфиденциальности" [ref=e199] [cursor=pointer]:
+                - /url: /about/legal-information/privacy-policy-statement.php
+              - link "Пользовательское соглашение" [ref=e200] [cursor=pointer]:
+                - /url: /about/legal-information/terms-of-use.php
+              - link "Правовая информация" [ref=e201] [cursor=pointer]:
+                - /url: /about/legal-information/
+              - link "Порядок выдачи клиникой медицинских документов о состоянии здоровья" [ref=e202] [cursor=pointer]:
+                - /url: /about/legal-information/health-care-document.php
+              - link "Карта сайта" [ref=e203] [cursor=pointer]:
+                - /url: /sitemap/
+          - generic [ref=e204]:
+            - generic [ref=e205]:
+              - link "Логотип 100 отзывов" [ref=e207] [cursor=pointer]:
+                - /url: https://prodoctorov.ru/spb/lpu/47082-arclinic/
+                - img "Логотип" [ref=e209]
+                - generic [ref=e212]: 100 отзывов
+              - paragraph [ref=e213]: "Запись по телефону:"
+              - link "+7 931 244 00 44" [ref=e214] [cursor=pointer]:
+                - /url: tel:+79312440044
+            - generic [ref=e215]:
+              - link "" [ref=e216] [cursor=pointer]:
+                - /url: https://vk.com/club56956529
+              - link [ref=e217] [cursor=pointer]:
+                - /url: https://t.me/arclinic1
+              - link [ref=e218] [cursor=pointer]:
+                - /url: https://max.ru/id7810605688_bot
+              - link [ref=e219] [cursor=pointer]:
+                - /url: https://rutube.ru/channel/40993271/
+            - link "Версия для слабовидящих" [ref=e221] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e222]
+              - text: Версия для слабовидящих
+        - generic [ref=e225]:
+          - generic [ref=e226]:
+            - text: ИМЕЮТСЯ ПРОТИВОПОКАЗАНИЯ, НЕОБХОДИМО ПРОКОНСУЛЬТИРОВАТЬСЯ СО СПЕЦИАЛИСТОМ.
+            - strong [ref=e227]: 16+
+          - generic [ref=e228]: Информация и цены, представленные на сайте, являются справочными и не являются публичной офертой. Информация на странице предоставлена в соответствии с Федеральным законом "Об основах охраны здоровья граждан в Российской Федерации" 323 ФЗ, Законом Российской Федерации "О защите прав потребителей" N 2300-1 и Постановлением Правительства Российской Федерации 4 октября 2012 г. N 1006.
+          - link "Разработано в " [ref=e229] [cursor=pointer]:
+            - /url: https://sotbi-it.ru/
+            - text: Разработано в
+            - generic [ref=e230]: 
+  - generic [ref=e233]:
+    - generic [ref=e234] [cursor=pointer]: 
+    - generic [ref=e235]:
+      - generic [ref=e236]:
+        - text: Имя и фамилия
+        - textbox "Имя и фамилия" [ref=e237]
+      - generic [ref=e238]:
+        - text: Контактный телефон
+        - textbox "Контактный телефон" [ref=e239]
+      - button "Записаться" [ref=e240] [cursor=pointer]
+      - generic [ref=e243] [cursor=pointer]:
+        - text: Я даю согласие на обработку
+        - link "персональных данных" [ref=e244]:
+          - /url: /about/legal-information/privacy-policy-statement.php
+        - checkbox [ref=e245]
+  - generic [ref=e248]:
+    - generic [ref=e249] [cursor=pointer]: 
+    - generic [ref=e250]: Свяжитесь с нами!
+    - link " +7 (812) 943-69-00" [ref=e252] [cursor=pointer]:
+      - /url: tel:+78129436900
+      - generic [ref=e253]: 
+      - text: +7 (812) 943-69-00
+    - generic [ref=e254]:
+      - link " info@arclinic.ru" [ref=e255] [cursor=pointer]:
+        - /url: mailto:info@arclinic.ru?Subject=Hello!
+        - generic [ref=e256]: 
+        - text: info@arclinic.ru
+      - link " arclinic@mail.ru" [ref=e257] [cursor=pointer]:
+        - /url: mailto:info@arclinic.ru?Subject=Hello!
+        - generic [ref=e258]: 
+        - text: arclinic@mail.ru
+  - generic:
+    - generic [ref=e259] [cursor=pointer]: Запись
+    - generic [ref=e261]:
+      - generic [ref=e262]:
+        - text: Запись на приём к врачу
+        - button [ref=e263] [cursor=pointer]:
+          - img [ref=e264]
+      - img [ref=e268]
+      - generic [ref=e270]: Виджет

@@ -1,0 +1,26 @@
+{
+  "research_id": "competitor_content_analysis_seo_20260512",
+  "topic": "Competitor Content Analysis for SEO",
+  "mode": "deep",
+  "date": "2026-05-12",
+  "requirements": {
+    "github_integration": "mandatory",
+    "focus_areas": [
+      "keyword_density_optimization",
+      "keyword_placement",
+      "lsi_keywords",
+      "eeat_scoring_medical",
+      "ai_content_detection",
+      "technical_seo_factors",
+      "content_structure",
+      "russian_market_yandex"
+    ],
+    "integrations": [
+      "playwright_scraping",
+      "semrush_ahrefs_apis",
+      "ai_detection_tools"
+    ]
+  },
+  "budget_usd": 3.00,
+  "status": "in_progress"
+}

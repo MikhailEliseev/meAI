@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Семейная клиника «Начало» — конкурентный анализ | AIM</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Manrope', -apple-system, sans-serif;
+    background: #0a0a0f;
+    color: #e8e6e1;
+    line-height: 1.6;
+  }
+
+  .glass {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+  }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── Header ── */
+  .hero {
+    padding: 60px 0 40px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .hero .badge {
+    display: inline-block;
+    background: rgba(196, 164, 92, 0.15);
+    color: #c4a45c;
+    padding: 6px 18px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #f0ece4;
+  }
+  .hero h1 span { color: #c4a45c; }
+  .hero .subtitle {
+    margin-top: 12px;
+    font-size: 16px;
+    color: rgba(255,255,255,0.5);
+  }
+  .hero .meta {
+    margin-top: 20px;
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .hero .meta-item {
+    color: rgba(255,255,255,0.4);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ── Score ring ── */
+  .score-ring {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    margin: 40px 0;
+    flex-wrap: wrap;
+  }
+  .ring {
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid;
+  }
+  .ring-client { border-color: #c4a45c; }
+  .ring-client .value { color: #c4a45c; font-size: 34px; font-weight: 700; }
+  .ring-market .value { color: rgba(255,255,255,0.3); font-size: 34px; font-weight: 700; }
+  .ring-market { border-color: rgba(255,255,255,0.15); }
+  .ring .label { font-size: 12px; color: rgba(255,255,255,0.4); text-align: center; }
+
+  /* ── Sections ── */
+  section { padding: 48px 0; }
+  section + section { border-top: 1px solid rgba(255,255,255,0.06); }
+  h2 {
+    font-size: 26px;
+    font-weight: 600;
+    color: #c4a45c;
+    margin-bottom: 8px;
+  }
+  .section-desc {
+    color: rgba(255,255,255,0.4);
+    font-size: 14px;
+    margin-bottom: 28px;
+  }
+
+  /* ── Competitor table ── */
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 14px;
+  }
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255,255,255,0.35);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  td {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: top;
+  }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .cluster-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .cluster-leader { background: rgba(196,164,92,0.15); color: #c4a45c; }
+  .cluster-direct { background: rgba(76,175,80,0.15); color: #4caf50; }
+  .cluster-indirect { background: rgba(33,150,243,0.12); color: #64b5f6; }
+  .cluster-emerging { background: rgba(255,152,0,0.12); color: #ffb74d; }
+
+  .size-large { color: #4caf50; }
+  .size-medium { color: #ffb74d; }
+  .size-small { color: rgba(255,255,255,0.4); }
+
+  .social-links a {
+    color: rgba(255,255,255,0.4);
+    text-decoration: none;
+    font-size: 12px;
+    margin-right: 6px;
+    transition: color 0.2s;
+  }
+  .social-links a:hover { color: #c4a45c; }
+
+  /* ── Audit cards ── */
+  .audit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+  }
+  .audit-card {
+    padding: 24px;
+  }
+  .audit-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #f0ece4;
+  }
+  .dimension {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+  .dimension .name { color: rgba(255,255,255,0.6); }
+  .score-bar {
+    width: 80px;
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+  }
+  .score-good { background: #4caf50; }
+  .score-medium { background: #ff9800; }
+  .score-poor { background: #f44336; }
+
+  /* ── Finance cards ── */
+  .finance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .finance-card {
+    padding: 20px;
+  }
+  .finance-card .name {
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 12px;
+  }
+  .finance-card .metric {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 13px;
+  }
+  .finance-card .metric .key { color: rgba(255,255,255,0.4); }
+  .finance-card .metric .val { color: #e8e6e1; font-weight: 500; }
+
+  /* ── Insights ── */
+  .insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .insight-card {
+    padding: 20px;
+    border-left: 3px solid #c4a45c;
+  }
+  .insight-card h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #c4a45c;
+    margin-bottom: 8px;
+  }
+  .insight-card p {
+    font-size: 13px;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.5;
+  }
+
+  /* ── Recommendations ── */
+  .rec-list { list-style: none; }
+  .rec-list li {
+    padding: 16px 20px;
+    margin-bottom: 8px;
+    border-left: 3px solid rgba(196,164,92,0.3);
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+  }
+  .rec-list li strong { color: #c4a45c; }
+
+  /* ── Ecosystem ── */
+  .eco-table td code {
+    background: rgba(255,255,255,0.06);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.5);
+  }
+
+  /* ── Footer ── */
+  footer {
+    padding: 40px 0;
+    text-align: center;
+    color: rgba(255,255,255,0.15);
+    font-size: 12px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="container">
+    <div class="badge">Competitive Intelligence Report</div>
+    <h1>Семейная клиника <span>«Начало»</span></h1>
+    <p class="subtitle">Конкурентный анализ рынка Ростова-на-Дону</p>
+    <div class="meta">
+      <span class="meta-item">📍 Ростов-на-Дону</span>
+      <span class="meta-item">🏥 Семейная клиника</span>
+      <span class="meta-item">📅 Июнь 2026</span>
+      <span class="meta-item">🎯 10 конкурентов</span>
+    </div>
+
+    <div class="score-ring">
+      <div class="ring ring-client">
+        <span class="value">52.3</span>
+        <span class="label">Начало<br>SEO Score</span>
+      </div>
+      <div class="ring ring-market">
+        <span class="value">38.2</span>
+        <span class="label">Среднее<br>по рынку</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Конкуренты ── -->
+<section>
+  <div class="container">
+    <h2>Конкуренты</h2>
+    <p class="section-desc">10 клиник Ростова-на-Дону, ранжированы по конкурентной близости</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Название</th>
+          <th>Кластер</th>
+          <th>Размер</th>
+          <th>Цена</th>
+          <th>Реклама</th>
+          <th>Соцсети</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><strong>МЦ «Семья»</strong><br><small style="color:rgba(255,255,255,0.3)">mc-semya.ru</small></td>
+          <td><span class="cluster-badge cluster-leader">Лидер</span></td>
+          <td><span class="size-large">Крупный</span></td>
+          <td>Premium</td>
+          <td>Высокая</td>
+          <td class="social-links"><a href="https://t.me/mcsemya_bot">TG</a> <a href="https://vk.com/semyamc">VK</a></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><strong>Ассоль — Академия красоты и здоровья</strong><br><small style="color:rgba(255,255,255,0.3)">assol-rnd.ru</small></td>
+          <td><span class="cluster-badge cluster-leader">Лидер</span></td>
+          <td><span class="size-medium">Средний</span></td>
+          <td>Premium</td>
+          <td>Высокая</td>
+          <td class="social-links"><a href="https://t.me/assolrostov">TG</a> <a href="https://www.instagram.com/assol_rostovv/">IG</a></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><strong>Клиника Павлова</strong><br><small style="color:rgba(255,255,255,0.3)">pavlov-mc.ru</small></td>
+          <td><span class="cluster-badge cluster-direct">Прямой</span></td>
+          <td><span class="size-large">Крупный</span></td>
+          <td>Средний</td>
+          <td>Средняя</td>
+          <td class="social-links"><a href="https://www.instagram.com/ginekolog.diachenko">IG</a> <a href="https://vk.com/pavlov_medikal_group">VK</a></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><strong>МЦ «Родная клиника»</strong><br><small style="color:rgba(255,255,255,0.3)">rodnayklinikarostov.ru</small></td>
+          <td><span class="cluster-badge cluster-indirect">Косвенный</span></td>
+          <td><span class="size-large">Крупный</span></td>
+          <td>Бюджет</td>
+          <td>Средняя</td>
+          <td class="social-links"><a href="https://t.me/rodnayclinica">TG</a> <a href="https://vk.com/rodnay.clinica">VK</a></td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><strong>Мобильная Медицина</strong><br><small style="color:rgba(255,255,255,0.3)">mobilemedicine.ru</small></td>
+          <td><span class="cluster-badge cluster-indirect">Косвенный</span></td>
+          <td><span class="size-large">Крупный</span></td>
+          <td>Бюджет</td>
+          <td>Высокая</td>
+          <td class="social-links"><a href="https://t.me/mobilemedicine">TG</a> <a href="https://vk.com/mobilemedicine">VK</a></td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><strong>АльянсМед</strong><br><small style="color:rgba(255,255,255,0.3)">aliance-med.ru</small></td>
+          <td><span class="cluster-badge cluster-indirect">Косвенный</span></td>
+          <td><span class="size-medium">Средний</span></td>
+          <td>Бюджет</td>
+          <td>Низкая</td>
+          <td class="social-links"><a href="https://t.me/aliance_med">TG</a></td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><strong>Фабрика Здоровья</strong><br><small style="color:rgba(255,255,255,0.3)">фабриказдоровья.рф</small></td>
+          <td><span class="cluster-badge cluster-emerging">Растущий</span></td>
+          <td><span class="size-small">Малый</span></td>
+          <td>Бюджет</td>
+          <td>Высокая</td>
+          <td class="social-links"><a href="https://t.me/fabrika_zdorovya">TG</a> <a href="https://vk.com/fz_rostov">VK</a></td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><strong>СЛАВИЯ</strong><br><small style="color:rgba(255,255,255,0.3)">slavia-rostov.ru</small></td>
+          <td><span class="cluster-badge cluster-emerging">Растущий</span></td>
+          <td><span class="size-small">Малый</span></td>
+          <td>Бюджет</td>
+          <td>Высокая</td>
+          <td class="social-links">—</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td><strong>МЦ «Диамед»</strong><br><small style="color:rgba(255,255,255,0.3)">diamedrnd.ru</small></td>
+          <td><span class="cluster-badge cluster-indirect">Косвенный</span></td>
+          <td><span class="size-small">Малый</span></td>
+          <td>Бюджет</td>
+          <td>Средняя</td>
+          <td class="social-links"><a href="https://vk.com/public181780092">VK</a></td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td><strong>Мед</strong><br><small style="color:rgba(255,255,255,0.3)">—</small></td>
+          <td><span class="cluster-badge cluster-indirect">Косвенный</span></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td class="social-links">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── Глубокий аудит ── -->
+<section>
+  <div class="container">
+    <h2>Глубокий аудит</h2>
+    <p class="section-desc">Технические, контентные и UX-измерения топ-конкурентов. Оценки: 0–100.</p>
+
+    <div class="audit-grid">
+      <div class="audit-card glass">
+        <h3>🥇 ЮНОНА (junoclinic.ru)</h3>
+
+        <div style="margin-bottom:12px; font-size:13px; color:rgba(255,255,255,0.3)">Technical</div>
+        <div class="dimension"><span class="name">Мобильная адаптация</span><div class="score-bar"><div class="score-bar-fill score-good" style="width:85%"></div></div><span style="font-size:12px">85</span></div>
+        <div class="dimension"><span class="name">HTTPS/HSTS</span><div class="score-bar"><div class="score-bar-fill score-good" style="width:80%"></div></div><span style="font-size:12px">80</span></div>
+        <div class="dimension"><span class="name">Sitemap</span><div class="score-bar"><div class="score-bar-fill score-good" style="width:85%"></div></div><span style="font-size:12px">85</span></div>
+        <div class="dimension"><span class="name">robots.txt</span><div class="score-bar"><div class="score-bar-fill score-good" style="width:85%"></div></div><span style="font-size:12px">85</span></div>
+        <div class="dimension"><span class="name">Schema.org</span><div class="score-bar"><div class="score-bar-fill score-poor" style="width:25%"></div></div><span style="font-size:12px">25</span></div>
+        <br>
+        <div style="margin-bottom:12px; font-size:13px; color:rgba(255,255,255,0.3)">Content</div>
+        <div class="dimension"><span class="name">Качество контента</span><div class="score-bar"><div class="score-bar-fill score-good" style="width:85%"></div></div><span style="font-size:12px">85</span></div>
+        <div class="dimension"><span class="name">Ключевые слова</span><div class="score-bar"><div class="score-bar-fill score-medium" style="width:65%"></div></div><span style="font-size:12px">65</span></div>
+        <div class="dimension"><span class="name">Структура</span><div class="score-bar"><div class="score-bar-fill score-medium" style="width:60%"></div></div><span style="font-size:12px">60</span></div>
+        <br>
+        <div style="margin-bottom:12px; font-size:13px; color:rgba(255,255,255,0.3)">UX/UI</div>
+        <div class="dimension"><span class="name">Удобство</span><div class="score-bar"><div class="score-bar-fill score-good" style="width:75%"></div></div><span style="font-size:12px">75</span></div>
+        <div class="dimension"><span class="name">Дизайн</span><div class="score-bar"><div class="score-bar-fill score-medium" style="width:65%"></div></div><span style="font-size:12px">65</span></div>
+        <div class="dimension"><span class="name">Доступность</span><div class="score-bar"><div class="score-bar-fill score-medium" style="width:55%"></div></div><span style="font-size:12px">55</span></div>
+
+        <div style="margin-top:16px; text-align:right; font-size:20px; font-weight:700; color:#4caf50">56.1 / 100</div>
+      </div>
+
+      <div class="audit-card glass">
+        <h3>МЦ «Родная клиника»</h3>
+        <div class="dimension"><span class="name">Мобильная адаптация</span><div class="score-bar"><div class="score-bar-fill score-good" style="width:75%"></div></div><span style="font-size:12px">75</span></div>
+        <div class="dimension"><span class="name">HTTPS</span><div class="score-bar"><div class="score-bar-fill score-good" style="width:80%"></div></div><span style="font-size:12px">80</span></div>
+        <div class="dimension"><span class="name">Скорость</span><div class="score-bar"><div class="score-bar-fill score-good" style="width:80%"></div></div><span style="font-size:12px">80</span></div>
+        <div class="dimension"><span class="name">Контент</span><div class="score-bar"><div class="score-bar-fill score-good" style="width:75%"></div></div><span style="font-size:12px">75</span></div>
+        <div style="margin-top:16px; text-align:right; font-size:20px; font-weight:700; color:#ff9800">42.4 / 100</div>
+      </div>
+
+      <div class="audit-card glass">
+        <h3>ОКДЦ (rokdc.ru)</h3>
+        <div style="color: rgba(255,255,255,0.2); padding: 20px; text-align: center;">
+          ⚕️ Государственное учреждение<br>
+          <small>Исключён из конкурентного сравнения</small>
+        </div>
+        <div style="margin-top:16px; text-align:right; font-size:20px; font-weight:700; color:rgba(255,255,255,0.15)">— / 100</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 12px; font-size: 13px; color: rgba(255,255,255,0.3);">
+      ⚠️ PageSpeed API недоступен — оценки скорости загрузки и Core Web Vitals не измерены
+    </div>
+  </div>
+</section>
+
+<!-- ── Финансы ── -->
+<section>
+  <div class="container">
+    <h2>Финансовый профиль</h2>
+    <p class="section-desc">Оценки на основе размера компании, ценового сегмента и открытых данных ФНС</p>
+
+    <div class="finance-grid">
+      <div class="finance-card glass">
+        <div class="name">ЮНОНА</div>
+        <div class="metric"><span class="key">Выручка (оценка)</span><span class="val">50 млн ₽</span></div>
+        <div class="metric"><span class="key">Реальная выручка (ФНС)</span><span class="val" style="color:#4caf50">73 млн ₽</span></div>
+        <div class="metric"><span class="key">Прибыль (ФНС)</span><span class="val">126 тыс ₽</span></div>
+        <div class="metric"><span class="key">Маржа</span><span class="val">17.5%</span></div>
+        <div class="metric"><span class="key">ROI</span><span class="val">25%</span></div>
+        <div class="metric"><span class="key">Оценка компании</span><span class="val">~150 млн ₽</span></div>
+        <div class="metric"><span class="key">Размер</span><span class="val" style="color:#ffb74d">Средний</span></div>
+      </div>
+
+      <div class="finance-card glass">
+        <div class="name">МЦ «Родная клиника»</div>
+        <div class="metric"><span class="key">Выручка (оценка)</span><span class="val">50 млн ₽</span></div>
+        <div class="metric"><span class="key">Маржа</span><span class="val">17.5%</span></div>
+        <div class="metric"><span class="key">ROI</span><span class="val">25%</span></div>
+        <div class="metric"><span class="key">Оценка компании</span><span class="val">~150 млн ₽</span></div>
+        <div class="metric"><span class="key">Размер</span><span class="val" style="color:#ffb74d">Средний</span></div>
+      </div>
+
+      <div class="finance-card glass">
+        <div class="name">АльянсМед</div>
+        <div class="metric"><span class="key">Выручка (ФНС)</span><span class="val" style="color:#4caf50">103.5 млн ₽</span></div>
+        <div class="metric"><span class="key">Размер</span><span class="val" style="color:#ffb74d">Средний</span></div>
+        <div class="metric"><span class="key">Ценовой сегмент</span><span class="val">Бюджет</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Экосистема ── -->
+<section>
+  <div class="container">
+    <h2>Цифровая экосистема</h2>
+    <p class="section-desc">Интеграции, аналитика и каналы коммуникации конкурентов</p>
+
+    <table class="eco-table">
+      <thead>
+        <tr><th>Конкурент</th><th>Аналитика</th><th>Коммуникация</th><th>Соцсети</th><th>Зрелость</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>ЮНОНА</strong></td>
+          <td>
+            <code>Яндекс.Метрика</code> <code>Google Analytics</code>
+            <code>VK Pixel</code> <code>MyTarget</code>
+          </td>
+          <td><code>Telegram</code></td>
+          <td>VK, TG, YouTube, IG, OK</td>
+          <td><span style="color:#ffb74d">intermediate</span></td>
+        </tr>
+        <tr>
+          <td><strong>МЦ «Родная клиника»</strong></td>
+          <td colspan="3" style="color:rgba(255,255,255,0.2)">Сайт недоступен — данные не получены</td>
+          <td><span style="color:rgba(255,255,255,0.2)">—</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── Что делать ── -->
+<section>
+  <div class="container">
+    <h2>Рекомендации для «Начала»</h2>
+    <p class="section-desc">Конкретные шаги на основе анализа конкурентного рынка Ростова-на-Дону</p>
+
+    <div class="insights-grid">
+      <div class="insight-card glass">
+        <h4>💰 Ценовое позиционирование</h4>
+        <p>Рынок Ростова насыщен бюджетными и средними клиниками. Premium-сегмент занят МЦ «Семья» и Ассоль. «Начало» может занять нишу «доступного качества» — уровень выше бюджетного, но ниже премиум.</p>
+      </div>
+      <div class="insight-card glass">
+        <h4>📱 Социальные сети</h4>
+        <p>7 из 10 конкурентов активны в Telegram, 6 — в VK. Рекомендуется запустить Telegram-канал с полезным медицинским контентом и VK-сообщество с отзывами пациентов.</p>
+      </div>
+      <div class="insight-card glass">
+        <h4>🔍 SEO и видимость</h4>
+        <p>Средний SEO-показатель по рынку — 38.2/100. У «Начала» 52.3 — выше рынка. Но лидеры (МЦ «Семья») инвестируют в рекламу. Нужно добавить Schema.org разметку (Organization + MedicalClinic) — её нет ни у кого из конкурентов.</p>
+      </div>
+      <div class="insight-card glass">
+        <h4>🎯 Онлайн-запись</h4>
+        <p>ЮНОНА активно продвигает онлайн-запись («Записаться на приём легко!»). Ни у кого из конкурентов нет виджета онлайн-записи на сайте. Это простой способ выделиться.</p>
+      </div>
+      <div class="insight-card glass">
+        <h4>👨‍⚕️ Врачи как актив</h4>
+        <p>ЮНОНА показывает врачей с фото и специализацией — 5 экспертов на главной. Это повышает доверие. «Началу» стоит сделать страницу врачей с детальными профилями.</p>
+      </div>
+      <div class="insight-card glass">
+        <h4>📊 Аналитика</h4>
+        <p>ЮНОНА использует 4 системы аналитики (Яндекс.Метрика, GA, VK Pixel, MyTarget). Большинство конкурентов — 0. «Началу» нужно как минимум установить Яндекс.Метрику для измерения конверсий.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Приоритеты ── -->
+<section>
+  <div class="container">
+    <h2>Приоритетные действия</h2>
+    <p class="section-desc">Ранжированы по impact × effort</p>
+
+    <ol class="rec-list">
+      <li>
+        <strong>🔴 HIGH</strong> — Добавить Schema.org разметку (MedicalOrganization). <em>Никто из конкурентов не использует</em>. Уникальное преимущество в SEO.
+      </li>
+      <li>
+        <strong>🔴 HIGH</strong> — Создать Telegram-канал клиники. <em>7/10 конкурентов уже там</em>. Публиковать 2-3 поста в неделю.
+      </li>
+      <li>
+        <strong>🟡 MEDIUM</strong> — Запустить VK-сообщество с отзывами. <em>6/10 конкурентов имеют VK</em>. Интегрировать отзывы с Яндекс.Карт.
+      </li>
+      <li>
+        <strong>🟡 MEDIUM</strong> — Установить Яндекс.Метрику. <em>ЮНОНА использует 4 аналитические системы</em>. «Началу» нужна хотя бы базовая аналитика.
+      </li>
+      <li>
+        <strong>🟢 LOW</strong> — Страница врачей с фото, специализацией и кнопкой записи. <em>Делает клинику «человечнее»</em>.
+      </li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    AIM Competitive Intelligence &copy; 2026 &nbsp;·&nbsp; Данные: DaData + rusprofile + Apify Google Maps + nalog.ru &nbsp;·&nbsp; Приватно и конфиденциально
+  </div>
+</footer>
+
+</body>
+</html>

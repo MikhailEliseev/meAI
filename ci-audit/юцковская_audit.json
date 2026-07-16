@@ -1,0 +1,27 @@
+{
+  "clinic": {
+    "name": "Юцковская",
+    "url": "https://yutskovskaya.ru/",
+    "niche": "косметология",
+    "expected_city": "Москва",
+    "size": "large",
+    "tier": "deep"
+  },
+  "status": "done",
+  "total_duration": 212.56120091699995,
+  "task_id": "seo-audit-1780376992",
+  "errors": [],
+  "overall_quality": {
+    "competitors_analyzed": 0,
+    "competitors_expected_min": 3,
+    "phases_executed": 0,
+    "phases_expected": 9,
+    "issues": [
+      "NO_COMPETITORS_ANALYZED"
+    ],
+    "data_gaps": [
+      "MISSING_PHASES:9"
+    ]
+  },
+  "phases": []
+}

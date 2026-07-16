@@ -1,0 +1,1005 @@
+{
+  "analysis_date": "2026-05-06T21:18:02.953672",
+  "total_analyzed": 5,
+  "tech_profiles": [
+    {
+      "name": "Центр Студия",
+      "url": null,
+      "error": "No URL provided",
+      "cms": "Unknown",
+      "technologies": [],
+      "seo_optimization": {},
+      "geo_optimization": {},
+      "performance": {}
+    },
+    {
+      "name": "Здоровье Лаб",
+      "url": null,
+      "error": "No URL provided",
+      "cms": "Unknown",
+      "technologies": [],
+      "seo_optimization": {},
+      "geo_optimization": {},
+      "performance": {}
+    },
+    {
+      "name": "Лайф Клиника",
+      "url": null,
+      "error": "No URL provided",
+      "cms": "Unknown",
+      "technologies": [],
+      "seo_optimization": {},
+      "geo_optimization": {},
+      "performance": {}
+    },
+    {
+      "name": "Медицина Клуб",
+      "url": null,
+      "error": "No URL provided",
+      "cms": "Unknown",
+      "technologies": [],
+      "seo_optimization": {},
+      "geo_optimization": {},
+      "performance": {}
+    },
+    {
+      "name": "Клиника Центр",
+      "url": null,
+      "error": "No URL provided",
+      "cms": "Unknown",
+      "technologies": [],
+      "seo_optimization": {},
+      "geo_optimization": {},
+      "performance": {}
+    }
+  ],
+  "market_tech": {
+    "most_popular_cms": "Unknown",
+    "cms_distribution": {
+      "Unknown": 5
+    },
+    "top_technologies": [],
+    "avg_seo_score": 0.0,
+    "avg_geo_score": 0.0
+  },
+  "insights": {
+    "key_findings": [
+      "Самая популярная CMS: Unknown",
+      "Низкий уровень SEO оптимизации (средний балл: 0/100)",
+      "Низкая готовность к AI/GEO (средний балл: 0/100) - возможность для конкурентного преимущества!"
+    ],
+    "opportunities": [
+      "Возможность обойти конкурентов по SEO оптимизации",
+      "Большая возможность в AI/GEO оптимизации - конкуренты не готовы",
+      "Многие конкуренты не используют аналитику - возможность для data-driven подхода"
+    ],
+    "financial_analysis": [
+      {
+        "competitor": "Центр Студия",
+        "budget": {
+          "estimated_monthly_min": 0,
+          "estimated_monthly_max": 0,
+          "budget_level": "low",
+          "maturity": "Стартап или малый бизнес, минимальный бюджет",
+          "signals": [],
+          "interpretation": "Конкурент тратит $0-$0/мес на технологии"
+        }
+      },
+      {
+        "competitor": "Здоровье Лаб",
+        "budget": {
+          "estimated_monthly_min": 0,
+          "estimated_monthly_max": 0,
+          "budget_level": "low",
+          "maturity": "Стартап или малый бизнес, минимальный бюджет",
+          "signals": [],
+          "interpretation": "Конкурент тратит $0-$0/мес на технологии"
+        }
+      },
+      {
+        "competitor": "Лайф Клиника",
+        "budget": {
+          "estimated_monthly_min": 0,
+          "estimated_monthly_max": 0,
+          "budget_level": "low",
+          "maturity": "Стартап или малый бизнес, минимальный бюджет",
+          "signals": [],
+          "interpretation": "Конкурент тратит $0-$0/мес на технологии"
+        }
+      },
+      {
+        "competitor": "Медицина Клуб",
+        "budget": {
+          "estimated_monthly_min": 0,
+          "estimated_monthly_max": 0,
+          "budget_level": "low",
+          "maturity": "Стартап или малый бизнес, минимальный бюджет",
+          "signals": [],
+          "interpretation": "Конкурент тратит $0-$0/мес на технологии"
+        }
+      },
+      {
+        "competitor": "Клиника Центр",
+        "budget": {
+          "estimated_monthly_min": 0,
+          "estimated_monthly_max": 0,
+          "budget_level": "low",
+          "maturity": "Стартап или малый бизнес, минимальный бюджет",
+          "signals": [],
+          "interpretation": "Конкурент тратит $0-$0/мес на технологии"
+        }
+      }
+    ],
+    "gap_analysis": [
+      {
+        "competitor": "Центр Студия",
+        "gaps": [
+          {
+            "gap": "No FAQ Schema",
+            "opportunity": "Появляться в AI ответах на вопросы пользователей",
+            "action": "Создать FAQ страницу с Schema.org разметкой",
+            "impact": 10,
+            "effort": 1,
+            "priority": "CRITICAL",
+            "time_to_implement": "2 часа",
+            "competitive_advantage_months": 12,
+            "why_critical": "ChatGPT, Perplexity, Google AI берут ответы из FAQ Schema. Это новый канал трафика!",
+            "priority_score": 10.0
+          },
+          {
+            "gap": "No analytics",
+            "opportunity": "Data-driven решения vs слепые решения конкурента",
+            "action": "Установить Google Analytics и Яндекс.Метрику",
+            "impact": 9,
+            "effort": 1,
+            "priority": "CRITICAL",
+            "time_to_implement": "1 час",
+            "competitive_advantage_months": 999,
+            "why_critical": "Конкурент работает вслепую - не знает откуда клиенты, что работает, что нет",
+            "priority_score": 9.0
+          },
+          {
+            "gap": "No meta description",
+            "opportunity": "Лучшие сниппеты в поиске → выше CTR",
+            "action": "Написать уникальные meta descriptions для всех страниц",
+            "impact": 6,
+            "effort": 1,
+            "priority": "HIGH",
+            "time_to_implement": "2 часа",
+            "competitive_advantage_months": 3,
+            "priority_score": 6.0
+          },
+          {
+            "gap": "No Schema.org markup",
+            "opportunity": "Захватить AI трафик (Google AI Overviews, ChatGPT)",
+            "action": "Добавить Schema.org разметку (Organization, LocalBusiness, Service)",
+            "impact": 9,
+            "effort": 2,
+            "priority": "CRITICAL",
+            "time_to_implement": "1 день",
+            "competitive_advantage_months": 12,
+            "why_critical": "Google AI Overviews используют Schema.org для ответов. Кто первый добавит - получит весь AI трафик.",
+            "priority_score": 4.5
+          },
+          {
+            "gap": "No LocalBusiness Schema",
+            "opportunity": "Локальное SEO + карты Google",
+            "action": "Добавить LocalBusiness Schema с адресом, телефоном, часами работы",
+            "impact": 8,
+            "effort": 2,
+            "priority": "HIGH",
+            "time_to_implement": "3 часа",
+            "competitive_advantage_months": 6,
+            "priority_score": 4.0
+          },
+          {
+            "gap": "No minification",
+            "opportunity": "Быстрее загружаться → лучше Core Web Vitals",
+            "action": "Настроить минификацию CSS/JS в build процессе",
+            "impact": 5,
+            "effort": 2,
+            "priority": "MEDIUM",
+            "time_to_implement": "4 часа",
+            "competitive_advantage_months": 3,
+            "priority_score": 2.5
+          },
+          {
+            "gap": "No CDN",
+            "opportunity": "Быстрее загружаться → меньше bounce rate",
+            "action": "Подключить Cloudflare или другой CDN",
+            "impact": 7,
+            "effort": 3,
+            "priority": "MEDIUM",
+            "time_to_implement": "1 день",
+            "competitive_advantage_months": 6,
+            "priority_score": 2.3333333333333335
+          }
+        ]
+      },
+      {
+        "competitor": "Здоровье Лаб",
+        "gaps": [
+          {
+            "gap": "No FAQ Schema",
+            "opportunity": "Появляться в AI ответах на вопросы пользователей",
+            "action": "Создать FAQ страницу с Schema.org разметкой",
+            "impact": 10,
+            "effort": 1,
+            "priority": "CRITICAL",
+            "time_to_implement": "2 часа",
+            "competitive_advantage_months": 12,
+            "why_critical": "ChatGPT, Perplexity, Google AI берут ответы из FAQ Schema. Это новый канал трафика!",
+            "priority_score": 10.0
+          },
+          {
+            "gap": "No analytics",
+            "opportunity": "Data-driven решения vs слепые решения конкурента",
+            "action": "Установить Google Analytics и Яндекс.Метрику",
+            "impact": 9,
+            "effort": 1,
+            "priority": "CRITICAL",
+            "time_to_implement": "1 час",
+            "competitive_advantage_months": 999,
+            "why_critical": "Конкурент работает вслепую - не знает откуда клиенты, что работает, что нет",
+            "priority_score": 9.0
+          },
+          {
+            "gap": "No meta description",
+            "opportunity": "Лучшие сниппеты в поиске → выше CTR",
+            "action": "Написать уникальные meta descriptions для всех страниц",
+            "impact": 6,
+            "effort": 1,
+            "priority": "HIGH",
+            "time_to_implement": "2 часа",
+            "competitive_advantage_months": 3,
+            "priority_score": 6.0
+          },
+          {
+            "gap": "No Schema.org markup",
+            "opportunity": "Захватить AI трафик (Google AI Overviews, ChatGPT)",
+            "action": "Добавить Schema.org разметку (Organization, LocalBusiness, Service)",
+            "impact": 9,
+            "effort": 2,
+            "priority": "CRITICAL",
+            "time_to_implement": "1 день",
+            "competitive_advantage_months": 12,
+            "why_critical": "Google AI Overviews используют Schema.org для ответов. Кто первый добавит - получит весь AI трафик.",
+            "priority_score": 4.5
+          },
+          {
+            "gap": "No LocalBusiness Schema",
+            "opportunity": "Локальное SEO + карты Google",
+            "action": "Добавить LocalBusiness Schema с адресом, телефоном, часами работы",
+            "impact": 8,
+            "effort": 2,
+            "priority": "HIGH",
+            "time_to_implement": "3 часа",
+            "competitive_advantage_months": 6,
+            "priority_score": 4.0
+          },
+          {
+            "gap": "No minification",
+            "opportunity": "Быстрее загружаться → лучше Core Web Vitals",
+            "action": "Настроить минификацию CSS/JS в build процессе",
+            "impact": 5,
+            "effort": 2,
+            "priority": "MEDIUM",
+            "time_to_implement": "4 часа",
+            "competitive_advantage_months": 3,
+            "priority_score": 2.5
+          },
+          {
+            "gap": "No CDN",
+            "opportunity": "Быстрее загружаться → меньше bounce rate",
+            "action": "Подключить Cloudflare или другой CDN",
+            "impact": 7,
+            "effort": 3,
+            "priority": "MEDIUM",
+            "time_to_implement": "1 день",
+            "competitive_advantage_months": 6,
+            "priority_score": 2.3333333333333335
+          }
+        ]
+      },
+      {
+        "competitor": "Лайф Клиника",
+        "gaps": [
+          {
+            "gap": "No FAQ Schema",
+            "opportunity": "Появляться в AI ответах на вопросы пользователей",
+            "action": "Создать FAQ страницу с Schema.org разметкой",
+            "impact": 10,
+            "effort": 1,
+            "priority": "CRITICAL",
+            "time_to_implement": "2 часа",
+            "competitive_advantage_months": 12,
+            "why_critical": "ChatGPT, Perplexity, Google AI берут ответы из FAQ Schema. Это новый канал трафика!",
+            "priority_score": 10.0
+          },
+          {
+            "gap": "No analytics",
+            "opportunity": "Data-driven решения vs слепые решения конкурента",
+            "action": "Установить Google Analytics и Яндекс.Метрику",
+            "impact": 9,
+            "effort": 1,
+            "priority": "CRITICAL",
+            "time_to_implement": "1 час",
+            "competitive_advantage_months": 999,
+            "why_critical": "Конкурент работает вслепую - не знает откуда клиенты, что работает, что нет",
+            "priority_score": 9.0
+          },
+          {
+            "gap": "No meta description",
+            "opportunity": "Лучшие сниппеты в поиске → выше CTR",
+            "action": "Написать уникальные meta descriptions для всех страниц",
+            "impact": 6,
+            "effort": 1,
+            "priority": "HIGH",
+            "time_to_implement": "2 часа",
+            "competitive_advantage_months": 3,
+            "priority_score": 6.0
+          },
+          {
+            "gap": "No Schema.org markup",
+            "opportunity": "Захватить AI трафик (Google AI Overviews, ChatGPT)",
+            "action": "Добавить Schema.org разметку (Organization, LocalBusiness, Service)",
+            "impact": 9,
+            "effort": 2,
+            "priority": "CRITICAL",
+            "time_to_implement": "1 день",
+            "competitive_advantage_months": 12,
+            "why_critical": "Google AI Overviews используют Schema.org для ответов. Кто первый добавит - получит весь AI трафик.",
+            "priority_score": 4.5
+          },
+          {
+            "gap": "No LocalBusiness Schema",
+            "opportunity": "Локальное SEO + карты Google",
+            "action": "Добавить LocalBusiness Schema с адресом, телефоном, часами работы",
+            "impact": 8,
+            "effort": 2,
+            "priority": "HIGH",
+            "time_to_implement": "3 часа",
+            "competitive_advantage_months": 6,
+            "priority_score": 4.0
+          },
+          {
+            "gap": "No minification",
+            "opportunity": "Быстрее загружаться → лучше Core Web Vitals",
+            "action": "Настроить минификацию CSS/JS в build процессе",
+            "impact": 5,
+            "effort": 2,
+            "priority": "MEDIUM",
+            "time_to_implement": "4 часа",
+            "competitive_advantage_months": 3,
+            "priority_score": 2.5
+          },
+          {
+            "gap": "No CDN",
+            "opportunity": "Быстрее загружаться → меньше bounce rate",
+            "action": "Подключить Cloudflare или другой CDN",
+            "impact": 7,
+            "effort": 3,
+            "priority": "MEDIUM",
+            "time_to_implement": "1 день",
+            "competitive_advantage_months": 6,
+            "priority_score": 2.3333333333333335
+          }
+        ]
+      },
+      {
+        "competitor": "Медицина Клуб",
+        "gaps": [
+          {
+            "gap": "No FAQ Schema",
+            "opportunity": "Появляться в AI ответах на вопросы пользователей",
+            "action": "Создать FAQ страницу с Schema.org разметкой",
+            "impact": 10,
+            "effort": 1,
+            "priority": "CRITICAL",
+            "time_to_implement": "2 часа",
+            "competitive_advantage_months": 12,
+            "why_critical": "ChatGPT, Perplexity, Google AI берут ответы из FAQ Schema. Это новый канал трафика!",
+            "priority_score": 10.0
+          },
+          {
+            "gap": "No analytics",
+            "opportunity": "Data-driven решения vs слепые решения конкурента",
+            "action": "Установить Google Analytics и Яндекс.Метрику",
+            "impact": 9,
+            "effort": 1,
+            "priority": "CRITICAL",
+            "time_to_implement": "1 час",
+            "competitive_advantage_months": 999,
+            "why_critical": "Конкурент работает вслепую - не знает откуда клиенты, что работает, что нет",
+            "priority_score": 9.0
+          },
+          {
+            "gap": "No meta description",
+            "opportunity": "Лучшие сниппеты в поиске → выше CTR",
+            "action": "Написать уникальные meta descriptions для всех страниц",
+            "impact": 6,
+            "effort": 1,
+            "priority": "HIGH",
+            "time_to_implement": "2 часа",
+            "competitive_advantage_months": 3,
+            "priority_score": 6.0
+          },
+          {
+            "gap": "No Schema.org markup",
+            "opportunity": "Захватить AI трафик (Google AI Overviews, ChatGPT)",
+            "action": "Добавить Schema.org разметку (Organization, LocalBusiness, Service)",
+            "impact": 9,
+            "effort": 2,
+            "priority": "CRITICAL",
+            "time_to_implement": "1 день",
+            "competitive_advantage_months": 12,
+            "why_critical": "Google AI Overviews используют Schema.org для ответов. Кто первый добавит - получит весь AI трафик.",
+            "priority_score": 4.5
+          },
+          {
+            "gap": "No LocalBusiness Schema",
+            "opportunity": "Локальное SEO + карты Google",
+            "action": "Добавить LocalBusiness Schema с адресом, телефоном, часами работы",
+            "impact": 8,
+            "effort": 2,
+            "priority": "HIGH",
+            "time_to_implement": "3 часа",
+            "competitive_advantage_months": 6,
+            "priority_score": 4.0
+          },
+          {
+            "gap": "No minification",
+            "opportunity": "Быстрее загружаться → лучше Core Web Vitals",
+            "action": "Настроить минификацию CSS/JS в build процессе",
+            "impact": 5,
+            "effort": 2,
+            "priority": "MEDIUM",
+            "time_to_implement": "4 часа",
+            "competitive_advantage_months": 3,
+            "priority_score": 2.5
+          },
+          {
+            "gap": "No CDN",
+            "opportunity": "Быстрее загружаться → меньше bounce rate",
+            "action": "Подключить Cloudflare или другой CDN",
+            "impact": 7,
+            "effort": 3,
+            "priority": "MEDIUM",
+            "time_to_implement": "1 день",
+            "competitive_advantage_months": 6,
+            "priority_score": 2.3333333333333335
+          }
+        ]
+      },
+      {
+        "competitor": "Клиника Центр",
+        "gaps": [
+          {
+            "gap": "No FAQ Schema",
+            "opportunity": "Появляться в AI ответах на вопросы пользователей",
+            "action": "Создать FAQ страницу с Schema.org разметкой",
+            "impact": 10,
+            "effort": 1,
+            "priority": "CRITICAL",
+            "time_to_implement": "2 часа",
+            "competitive_advantage_months": 12,
+            "why_critical": "ChatGPT, Perplexity, Google AI берут ответы из FAQ Schema. Это новый канал трафика!",
+            "priority_score": 10.0
+          },
+          {
+            "gap": "No analytics",
+            "opportunity": "Data-driven решения vs слепые решения конкурента",
+            "action": "Установить Google Analytics и Яндекс.Метрику",
+            "impact": 9,
+            "effort": 1,
+            "priority": "CRITICAL",
+            "time_to_implement": "1 час",
+            "competitive_advantage_months": 999,
+            "why_critical": "Конкурент работает вслепую - не знает откуда клиенты, что работает, что нет",
+            "priority_score": 9.0
+          },
+          {
+            "gap": "No meta description",
+            "opportunity": "Лучшие сниппеты в поиске → выше CTR",
+            "action": "Написать уникальные meta descriptions для всех страниц",
+            "impact": 6,
+            "effort": 1,
+            "priority": "HIGH",
+            "time_to_implement": "2 часа",
+            "competitive_advantage_months": 3,
+            "priority_score": 6.0
+          },
+          {
+            "gap": "No Schema.org markup",
+            "opportunity": "Захватить AI трафик (Google AI Overviews, ChatGPT)",
+            "action": "Добавить Schema.org разметку (Organization, LocalBusiness, Service)",
+            "impact": 9,
+            "effort": 2,
+            "priority": "CRITICAL",
+            "time_to_implement": "1 день",
+            "competitive_advantage_months": 12,
+            "why_critical": "Google AI Overviews используют Schema.org для ответов. Кто первый добавит - получит весь AI трафик.",
+            "priority_score": 4.5
+          },
+          {
+            "gap": "No LocalBusiness Schema",
+            "opportunity": "Локальное SEO + карты Google",
+            "action": "Добавить LocalBusiness Schema с адресом, телефоном, часами работы",
+            "impact": 8,
+            "effort": 2,
+            "priority": "HIGH",
+            "time_to_implement": "3 часа",
+            "competitive_advantage_months": 6,
+            "priority_score": 4.0
+          },
+          {
+            "gap": "No minification",
+            "opportunity": "Быстрее загружаться → лучше Core Web Vitals",
+            "action": "Настроить минификацию CSS/JS в build процессе",
+            "impact": 5,
+            "effort": 2,
+            "priority": "MEDIUM",
+            "time_to_implement": "4 часа",
+            "competitive_advantage_months": 3,
+            "priority_score": 2.5
+          },
+          {
+            "gap": "No CDN",
+            "opportunity": "Быстрее загружаться → меньше bounce rate",
+            "action": "Подключить Cloudflare или другой CDN",
+            "impact": 7,
+            "effort": 3,
+            "priority": "MEDIUM",
+            "time_to_implement": "1 день",
+            "competitive_advantage_months": 6,
+            "priority_score": 2.3333333333333335
+          }
+        ]
+      }
+    ],
+    "industry_comparison": [
+      {
+        "competitor": "Центр Студия",
+        "comparison": {
+          "industry": "medical",
+          "seo": {
+            "competitor_score": 0,
+            "industry_avg": 45,
+            "difference": -45,
+            "position": "Значительно ниже среднего",
+            "verdict": "Легко обойти"
+          },
+          "geo": {
+            "competitor_score": 0,
+            "industry_avg": 15,
+            "difference": -15,
+            "position": "Значительно ниже среднего",
+            "verdict": "Огромная возможность в AI/GEO"
+          },
+          "benchmarks": {
+            "avg_seo_score": 45,
+            "avg_geo_score": 15,
+            "schema_adoption": 10,
+            "online_booking_adoption": 40,
+            "analytics_adoption": 60,
+            "cdn_adoption": 30
+          },
+          "overall_verdict": "Легко обойти по SEO, Огромная возможность в AI/GEO"
+        }
+      },
+      {
+        "competitor": "Здоровье Лаб",
+        "comparison": {
+          "industry": "medical",
+          "seo": {
+            "competitor_score": 0,
+            "industry_avg": 45,
+            "difference": -45,
+            "position": "Значительно ниже среднего",
+            "verdict": "Легко обойти"
+          },
+          "geo": {
+            "competitor_score": 0,
+            "industry_avg": 15,
+            "difference": -15,
+            "position": "Значительно ниже среднего",
+            "verdict": "Огромная возможность в AI/GEO"
+          },
+          "benchmarks": {
+            "avg_seo_score": 45,
+            "avg_geo_score": 15,
+            "schema_adoption": 10,
+            "online_booking_adoption": 40,
+            "analytics_adoption": 60,
+            "cdn_adoption": 30
+          },
+          "overall_verdict": "Легко обойти по SEO, Огромная возможность в AI/GEO"
+        }
+      },
+      {
+        "competitor": "Лайф Клиника",
+        "comparison": {
+          "industry": "medical",
+          "seo": {
+            "competitor_score": 0,
+            "industry_avg": 45,
+            "difference": -45,
+            "position": "Значительно ниже среднего",
+            "verdict": "Легко обойти"
+          },
+          "geo": {
+            "competitor_score": 0,
+            "industry_avg": 15,
+            "difference": -15,
+            "position": "Значительно ниже среднего",
+            "verdict": "Огромная возможность в AI/GEO"
+          },
+          "benchmarks": {
+            "avg_seo_score": 45,
+            "avg_geo_score": 15,
+            "schema_adoption": 10,
+            "online_booking_adoption": 40,
+            "analytics_adoption": 60,
+            "cdn_adoption": 30
+          },
+          "overall_verdict": "Легко обойти по SEO, Огромная возможность в AI/GEO"
+        }
+      },
+      {
+        "competitor": "Медицина Клуб",
+        "comparison": {
+          "industry": "medical",
+          "seo": {
+            "competitor_score": 0,
+            "industry_avg": 45,
+            "difference": -45,
+            "position": "Значительно ниже среднего",
+            "verdict": "Легко обойти"
+          },
+          "geo": {
+            "competitor_score": 0,
+            "industry_avg": 15,
+            "difference": -15,
+            "position": "Значительно ниже среднего",
+            "verdict": "Огромная возможность в AI/GEO"
+          },
+          "benchmarks": {
+            "avg_seo_score": 45,
+            "avg_geo_score": 15,
+            "schema_adoption": 10,
+            "online_booking_adoption": 40,
+            "analytics_adoption": 60,
+            "cdn_adoption": 30
+          },
+          "overall_verdict": "Легко обойти по SEO, Огромная возможность в AI/GEO"
+        }
+      },
+      {
+        "competitor": "Клиника Центр",
+        "comparison": {
+          "industry": "medical",
+          "seo": {
+            "competitor_score": 0,
+            "industry_avg": 45,
+            "difference": -45,
+            "position": "Значительно ниже среднего",
+            "verdict": "Легко обойти"
+          },
+          "geo": {
+            "competitor_score": 0,
+            "industry_avg": 15,
+            "difference": -15,
+            "position": "Значительно ниже среднего",
+            "verdict": "Огромная возможность в AI/GEO"
+          },
+          "benchmarks": {
+            "avg_seo_score": 45,
+            "avg_geo_score": 15,
+            "schema_adoption": 10,
+            "online_booking_adoption": 40,
+            "analytics_adoption": 60,
+            "cdn_adoption": 30
+          },
+          "overall_verdict": "Легко обойти по SEO, Огромная возможность в AI/GEO"
+        }
+      }
+    ],
+    "tech_debt": [
+      {
+        "competitor": "Центр Студия",
+        "tech_debt": {
+          "debt_items": [
+            {
+              "issue": "CSS not minified",
+              "problem": "Нет build процесса",
+              "impact": "Медленная загрузка, плохой DX",
+              "severity": "low"
+            },
+            {
+              "issue": "No CDN",
+              "problem": "Все файлы с одного сервера",
+              "impact": "Медленно в регионах, высокая нагрузка на сервер",
+              "severity": "medium"
+            }
+          ],
+          "total_debt_score": 4,
+          "debt_level": "low",
+          "interpretation": "Низкий технический долг - конкурент в хорошей форме"
+        }
+      },
+      {
+        "competitor": "Здоровье Лаб",
+        "tech_debt": {
+          "debt_items": [
+            {
+              "issue": "CSS not minified",
+              "problem": "Нет build процесса",
+              "impact": "Медленная загрузка, плохой DX",
+              "severity": "low"
+            },
+            {
+              "issue": "No CDN",
+              "problem": "Все файлы с одного сервера",
+              "impact": "Медленно в регионах, высокая нагрузка на сервер",
+              "severity": "medium"
+            }
+          ],
+          "total_debt_score": 4,
+          "debt_level": "low",
+          "interpretation": "Низкий технический долг - конкурент в хорошей форме"
+        }
+      },
+      {
+        "competitor": "Лайф Клиника",
+        "tech_debt": {
+          "debt_items": [
+            {
+              "issue": "CSS not minified",
+              "problem": "Нет build процесса",
+              "impact": "Медленная загрузка, плохой DX",
+              "severity": "low"
+            },
+            {
+              "issue": "No CDN",
+              "problem": "Все файлы с одного сервера",
+              "impact": "Медленно в регионах, высокая нагрузка на сервер",
+              "severity": "medium"
+            }
+          ],
+          "total_debt_score": 4,
+          "debt_level": "low",
+          "interpretation": "Низкий технический долг - конкурент в хорошей форме"
+        }
+      },
+      {
+        "competitor": "Медицина Клуб",
+        "tech_debt": {
+          "debt_items": [
+            {
+              "issue": "CSS not minified",
+              "problem": "Нет build процесса",
+              "impact": "Медленная загрузка, плохой DX",
+              "severity": "low"
+            },
+            {
+              "issue": "No CDN",
+              "problem": "Все файлы с одного сервера",
+              "impact": "Медленно в регионах, высокая нагрузка на сервер",
+              "severity": "medium"
+            }
+          ],
+          "total_debt_score": 4,
+          "debt_level": "low",
+          "interpretation": "Низкий технический долг - конкурент в хорошей форме"
+        }
+      },
+      {
+        "competitor": "Клиника Центр",
+        "tech_debt": {
+          "debt_items": [
+            {
+              "issue": "CSS not minified",
+              "problem": "Нет build процесса",
+              "impact": "Медленная загрузка, плохой DX",
+              "severity": "low"
+            },
+            {
+              "issue": "No CDN",
+              "problem": "Все файлы с одного сервера",
+              "impact": "Медленно в регионах, высокая нагрузка на сервер",
+              "severity": "medium"
+            }
+          ],
+          "total_debt_score": 4,
+          "debt_level": "low",
+          "interpretation": "Низкий технический долг - конкурент в хорошей форме"
+        }
+      }
+    ],
+    "attack_roadmap": {
+      "week_1": {
+        "focus": "Quick Wins (критические возможности)",
+        "actions": [],
+        "expected_impact": "Захват AI трафика, базовая аналитика"
+      },
+      "week_2": {
+        "focus": "Техническая оптимизация",
+        "actions": [],
+        "expected_impact": "Производительность, SEO улучшения"
+      },
+      "month_1": {
+        "focus": "Долгосрочные преимущества",
+        "actions": [
+          "Unknown",
+          "Unknown",
+          "Unknown"
+        ],
+        "expected_impact": "Устойчивое конкурентное преимущество"
+      },
+      "total_opportunities": 5,
+      "critical_count": 0,
+      "high_count": 0
+    }
+  },
+  "financial_analysis": {
+    "estimated_monthly_min": 0,
+    "estimated_monthly_max": 0,
+    "budget_level": "low",
+    "maturity": "Стартап или малый бизнес, минимальный бюджет",
+    "signals": [],
+    "interpretation": "Конкурент тратит $0-$0/мес на технологии"
+  },
+  "competitive_gaps": [
+    {
+      "gap": "No FAQ Schema",
+      "opportunity": "Появляться в AI ответах на вопросы пользователей",
+      "action": "Создать FAQ страницу с Schema.org разметкой",
+      "impact": 10,
+      "effort": 1,
+      "priority": "CRITICAL",
+      "time_to_implement": "2 часа",
+      "competitive_advantage_months": 12,
+      "why_critical": "ChatGPT, Perplexity, Google AI берут ответы из FAQ Schema. Это новый канал трафика!",
+      "priority_score": 10.0
+    },
+    {
+      "gap": "No analytics",
+      "opportunity": "Data-driven решения vs слепые решения конкурента",
+      "action": "Установить Google Analytics и Яндекс.Метрику",
+      "impact": 9,
+      "effort": 1,
+      "priority": "CRITICAL",
+      "time_to_implement": "1 час",
+      "competitive_advantage_months": 999,
+      "why_critical": "Конкурент работает вслепую - не знает откуда клиенты, что работает, что нет",
+      "priority_score": 9.0
+    },
+    {
+      "gap": "No meta description",
+      "opportunity": "Лучшие сниппеты в поиске → выше CTR",
+      "action": "Написать уникальные meta descriptions для всех страниц",
+      "impact": 6,
+      "effort": 1,
+      "priority": "HIGH",
+      "time_to_implement": "2 часа",
+      "competitive_advantage_months": 3,
+      "priority_score": 6.0
+    },
+    {
+      "gap": "No Schema.org markup",
+      "opportunity": "Захватить AI трафик (Google AI Overviews, ChatGPT)",
+      "action": "Добавить Schema.org разметку (Organization, LocalBusiness, Service)",
+      "impact": 9,
+      "effort": 2,
+      "priority": "CRITICAL",
+      "time_to_implement": "1 день",
+      "competitive_advantage_months": 12,
+      "why_critical": "Google AI Overviews используют Schema.org для ответов. Кто первый добавит - получит весь AI трафик.",
+      "priority_score": 4.5
+    },
+    {
+      "gap": "No LocalBusiness Schema",
+      "opportunity": "Локальное SEO + карты Google",
+      "action": "Добавить LocalBusiness Schema с адресом, телефоном, часами работы",
+      "impact": 8,
+      "effort": 2,
+      "priority": "HIGH",
+      "time_to_implement": "3 часа",
+      "competitive_advantage_months": 6,
+      "priority_score": 4.0
+    },
+    {
+      "gap": "No minification",
+      "opportunity": "Быстрее загружаться → лучше Core Web Vitals",
+      "action": "Настроить минификацию CSS/JS в build процессе",
+      "impact": 5,
+      "effort": 2,
+      "priority": "MEDIUM",
+      "time_to_implement": "4 часа",
+      "competitive_advantage_months": 3,
+      "priority_score": 2.5
+    },
+    {
+      "gap": "No CDN",
+      "opportunity": "Быстрее загружаться → меньше bounce rate",
+      "action": "Подключить Cloudflare или другой CDN",
+      "impact": 7,
+      "effort": 3,
+      "priority": "MEDIUM",
+      "time_to_implement": "1 день",
+      "competitive_advantage_months": 6,
+      "priority_score": 2.3333333333333335
+    }
+  ],
+  "industry_benchmarks": {
+    "industry": "medical",
+    "seo": {
+      "competitor_score": 0,
+      "industry_avg": 45,
+      "difference": -45,
+      "position": "Значительно ниже среднего",
+      "verdict": "Легко обойти"
+    },
+    "geo": {
+      "competitor_score": 0,
+      "industry_avg": 15,
+      "difference": -15,
+      "position": "Значительно ниже среднего",
+      "verdict": "Огромная возможность в AI/GEO"
+    },
+    "benchmarks": {
+      "avg_seo_score": 45,
+      "avg_geo_score": 15,
+      "schema_adoption": 10,
+      "online_booking_adoption": 40,
+      "analytics_adoption": 60,
+      "cdn_adoption": 30
+    },
+    "overall_verdict": "Легко обойти по SEO, Огромная возможность в AI/GEO"
+  },
+  "tech_debt": {
+    "debt_items": [
+      {
+        "issue": "CSS not minified",
+        "problem": "Нет build процесса",
+        "impact": "Медленная загрузка, плохой DX",
+        "severity": "low"
+      },
+      {
+        "issue": "No CDN",
+        "problem": "Все файлы с одного сервера",
+        "impact": "Медленно в регионах, высокая нагрузка на сервер",
+        "severity": "medium"
+      }
+    ],
+    "total_debt_score": 4,
+    "debt_level": "low",
+    "interpretation": "Низкий технический долг - конкурент в хорошей форме"
+  },
+  "attack_roadmap": {
+    "week_1": {
+      "focus": "Quick Wins (критические возможности)",
+      "actions": [
+        "Создать FAQ страницу с Schema.org разметкой",
+        "Установить Google Analytics и Яндекс.Метрику",
+        "Написать уникальные meta descriptions для всех страниц"
+      ],
+      "expected_impact": "Захват AI трафика, базовая аналитика"
+    },
+    "week_2": {
+      "focus": "Техническая оптимизация",
+      "actions": [
+        "Подключить Cloudflare или другой CDN"
+      ],
+      "expected_impact": "Производительность, SEO улучшения"
+    },
+    "month_1": {
+      "focus": "Долгосрочные преимущества",
+      "actions": [],
+      "expected_impact": "Устойчивое конкурентное преимущество"
+    },
+    "total_opportunities": 7,
+    "critical_count": 3,
+    "high_count": 2
+  }
+}

@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+dist/
+*.egg-info/
+.worktrees/
+.superflow/
+.superflow/events.jsonl
+.superflow/archive/
+.superflow-state.json
+CLAUDE.local.md
+*.db
+*.db-journal
+.DS_Store

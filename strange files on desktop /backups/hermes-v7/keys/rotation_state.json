@@ -1,0 +1,18 @@
+{
+  "brave": {
+    "index": 0,
+    "last_rotated": "2026-06-18T20:22:10.694162",
+    "active_key_prefix": "BSA9j5MU..."
+  },
+  "apify": {
+    "index": 4,
+    "last_rotated": "2026-06-19T00:16:19.929157",
+    "active_prefix": "apify_api_hB..."
+  },
+  "firecrawl": {
+    "index": 7,
+    "last_rotated": "2026-06-19T21:00:27.070395",
+    "active_prefix": "fc-ef695b7fc3074...",
+    "last_status": "valid"
+  }
+}

@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<!-- saved from url=(0081)file:///Users/mikhaileliseev/Desktop/Dev/ARclinic/research/competitor_report.html -->
+<html lang="ru" data-theme="light"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Конкурентный анализ ARclinic — Санкт-Петербург 2026</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com/">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+    <link href="./Конкурентный анализ ARclinic — Санкт-Петербург 2026_files/css2" rel="stylesheet">
+    <style>
+        /* Dual Theme System */
+        :root {
+            --bg: #ffffff;
+            --surface: #F5F5F5;
+            --hover: #EBEBEB;
+            --border: #E0E0E0;
+            --border-strong: #CFCFCF;
+            --text: #1A1A1A;
+            --text-secondary: #666666;
+            --text-dim: #767676;
+            --accent: #1A1A1A;
+            --accent-hover: #333333;
+            --card-bg: #ffffff;
+            --card-hover: #F5F5F5;
+            --glass-bg: rgba(255,255,255,0.85);
+            --glass-border: rgba(0,0,0,0.10);
+        }
+
+        [data-theme="dark"] {
+            --bg: #0d0d0d;
+            --surface: #1a1a1a;
+            --hover: #262626;
+            --border: rgba(201,169,110,.18);
+            --border-strong: rgba(201,169,110,.35);
+            --text: #f5f0e8;
+            --text-secondary: #9e9489;
+            --text-dim: #7a7268;
+            --accent: #c9a96e;
+            --accent-hover: #e8cfa0;
+            --card-bg: #1a1a1a;
+            --card-hover: rgba(201,169,110,.05);
+            --glass-bg: rgba(13,13,13,0.85);
+            --glass-border: rgba(201,169,110,.10);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Jost', sans-serif;
+            font-weight: 400;
+            font-size: 16px;
+            line-height: 1.7;
+            background: var(--bg);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            transition: background .3s, color .3s;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Playfair Display', serif;
+            font-weight: 500;
+            line-height: 1.15;
+            color: var(--text);
+            letter-spacing: -.01em;
+        }
+
+        .header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            padding: 20px 64px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .theme-toggle {
+            width: 48px;
+            height: 48px;
+            border-radius: 24px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all .2s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--hover);
+            transform: scale(1.05);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 64px;
+        }
+
+        .section {
+            padding: 100px 0 80px;
+        }
+
+        .section:first-of-type {
+            padding-top: 140px;
+        }
+
+        .hero-title {
+            font-size: clamp(48px, 6vw, 72px);
+            font-weight: 400;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            letter-spacing: -.02em;
+        }
+
+        .hero-subtitle {
+            font-size: 20px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            max-width: 700px;
+            margin-bottom: 16px;
+        }
+
+        .sec-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .2em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 20px;
+        }
+
+        .sec-tag::before {
+            content: '';
+            display: block;
+            width: 32px;
+            height: 1px;
+            background: var(--accent);
+        }
+
+        .sec-title {
+            font-size: clamp(32px, 4vw, 48px);
+            margin-bottom: 32px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 32px;
+            margin-bottom: 24px;
+            transition: all .3s;
+        }
+
+        .card:hover {
+            background: var(--card-hover);
+            box-shadow: 0 8px 24px rgba(0,0,0,.08);
+            transform: translateY(-2px);
+        }
+
+        .card-title {
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+
+        .card-meta {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .metric-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-tag-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .metric-tag-green {
+            background: #E8F5E9; color: #2E7D32;
+        }
+        .metric-tag-green .metric-tag-dot { background: #2E7D32; }
+        [data-theme="dark"] .metric-tag-green {
+            background: #1B5E20; color: #81C784;
+        }
+
+        .metric-tag-yellow {
+            background: #FFF9C4; color: #F57F17;
+        }
+        .metric-tag-yellow .metric-tag-dot { background: #F57F17; }
+
+        .metric-tag-red {
+            background: #FFEBEE; color: #C62828;
+        }
+        .metric-tag-red .metric-tag-dot { background: #C62828; }
+
+        .metric-tag-blue {
+            background: #E3F2FD; color: #1565C0;
+        }
+        .metric-tag-blue .metric-tag-dot { background: #1565C0; }
+
+        .metric-tag-gray {
+            background: var(--surface);
+            color: var(--text-secondary);
+        }
+        .metric-tag-gray .metric-tag-dot { background: var(--text-secondary); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 32px 0;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th {
+            background: var(--surface);
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background: var(--hover);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 4px;
+            margin: 2px;
+        }
+
+        .badge-premium {
+            background: #FFF3E0;
+            color: #E65100;
+        }
+
+        [data-theme="dark"] .badge-premium {
+            background: #E65100;
+            color: #FFF3E0;
+        }
+
+        .badge-middle {
+            background: #E8EAF6;
+            color: #3F51B5;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color .2s;
+        }
+
+        a:hover {
+            border-bottom-color: var(--accent);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin: 32px 0;
+        }
+
+        .stat-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 36px;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        @media (max-width: 768px) {
+            .header { padding: 16px 24px; }
+            .container { padding: 0 24px; }
+            .section { padding: 60px 0 40px; }
+            .section:first-of-type { padding-top: 100px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">ARclinic</div>
+        <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙</button>
+    </div>
+
+    <div class="container">
+        <section class="section">
+            <h1 class="hero-title">Конкурентный анализ</h1>
+            <p class="hero-subtitle">Эстетическая и превентивная медицина в Санкт-Петербурге</p>
+            <p class="hero-subtitle" style="font-size: 14px; margin-top: 8px;">
+                Дата составления: 22 июня 2026 | Источники: Hermes Pipeline API, ФНС 2025, исследование рынка СПб
+            </p>
+        </section>
+
+        <section class="section">
+            <div class="sec-tag">Обзор</div>
+            <h2 class="sec-title">Executive Summary</h2>
+            
+            <div class="grid">
+                <div class="stat-box">
+                    <div class="stat-number">25+</div>
+                    <div class="stat-label">Конкурентов</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">2.1 млрд ₽</div>
+                    <div class="stat-label">Лидер рынка</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">636 млн ₽</div>
+                    <div class="stat-label">№1 по маркетингу</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">120-180 млн</div>
+                    <div class="stat-label">Целевой бенчмарк</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Ключевые выводы</h3>
+                <ul style="line-height: 2; color: var(--text-secondary);">
+                    <li>Рынок показывает устойчивый рост с сильной концентрацией в премиум-сегменте</li>
+                    <li>Beautiful People — крупнейший игрок с выручкой 636 млн ₽ и агрессивным SMM</li>
+                    <li>Pirogov Clinic — лидер по масштабу с выручкой 2.1 млрд ₽ и рентабельностью 43%</li>
+                    <li>Средний чек сегмента: 120-180 млн ₽ годовой выручки</li>
+                    <li>Санкт-Петербург — мегаполис с высокой конкуренцией и развитой инфраструктурой</li>
+                </ul>
+            </div>
+        </section>
+        <section class="section">
+            <div class="sec-tag">Топ конкуренты</div>
+            <h2 class="sec-title">Крупнейшие игроки с финансовыми данными</h2>
+
+            <div class="card">
+                <h3 class="card-title">1. Pirogov Clinic</h3>
+                <div class="card-meta">
+                    <span class="metric-tag metric-tag-green">
+                        <span class="metric-tag-dot"></span>
+                        Выручка: 2 117 млн ₽
+                    </span>
+                    <span class="metric-tag metric-tag-green">
+                        <span class="metric-tag-dot"></span>
+                        Прибыль: 917 млн ₽
+                    </span>
+                    <span class="metric-tag metric-tag-green">
+                        <span class="metric-tag-dot"></span>
+                        Рост
+                    </span>
+                    <span class="badge badge-premium">Премиум</span>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                    <strong>ИНН:</strong> 7825107822 | 
+                    <strong>Правовая форма:</strong> ООО "НИЛЦ "ДЕОМА" | 
+                    <strong>Рентабельность:</strong> 43.3%
+                </p>
+                <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                    <strong>Специализация:</strong> Пластическая хирургия, диагностика, дерматология, гинекология, лазерная эпиляция, терапия
+                </p>
+                <p style="color: var(--text-secondary);">
+                    <strong>Сайт:</strong> <a href="https://pirogovclinic.ru/" target="_blank">pirogovclinic.ru</a>
+                </p>
+                <p style="margin-top: 16px;">
+                    <strong>Анализ:</strong> Лидер по масштабу. Многопрофильный медицинский центр с сильным anti-age направлением. 
+                    Высокая рентабельность указывает на эффективную операционную модель.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">2. Beautiful People</h3>
+                <div class="card-meta">
+                    <span class="metric-tag metric-tag-green">
+                        <span class="metric-tag-dot"></span>
+                        Выручка: 636 млн ₽
+                    </span>
+                    <span class="metric-tag metric-tag-green">
+                        <span class="metric-tag-dot"></span>
+                        Прибыль: 245 млн ₽
+                    </span>
+                    <span class="metric-tag metric-tag-green">
+                        <span class="metric-tag-dot"></span>
+                        Рост
+                    </span>
+                    <span class="badge badge-premium">Премиум</span>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                    <strong>ИНН:</strong> 7840070905 | 
+                    <strong>Правовая форма:</strong> ООО "АНАТОМИЯ СПБ" | 
+                    <strong>Рентабельность:</strong> 38.4%
+                </p>
+                <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                    <strong>Специализация:</strong> Эстетическая медицина, косметология, сеть клиник
+                </p>
+                <p style="color: var(--text-secondary);">
+                    <strong>Сайт:</strong> <a href="https://beautiful-people.clinic/" target="_blank">beautiful-people.clinic</a>
+                </p>
+                <p style="margin-top: 16px;">
+                    <strong>Анализ:</strong> Крупнейший игрок в эстетической медицине СПб. Сетевая модель (35+ кабинетов), 
+                    агрессивный SMM-маркетинг, реферальные программы. №1 по процедурам Ultraformer и Soprano.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">3. Лазерный Доктор</h3>
+                <div class="card-meta">
+                    <span class="metric-tag metric-tag-green">
+                        <span class="metric-tag-dot"></span>
+                        Выручка: 184 млн ₽
+                    </span>
+                    <span class="metric-tag metric-tag-yellow">
+                        <span class="metric-tag-dot"></span>
+                        Прибыль: 7 млн ₽
+                    </span>
+                    <span class="metric-tag metric-tag-green">
+                        <span class="metric-tag-dot"></span>
+                        Рост
+                    </span>
+                    <span class="badge badge-middle">Средний+</span>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                    <strong>ИНН:</strong> 7840096269 | 
+                    <strong>Рентабельность:</strong> 4.0%
+                </p>
+                <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                    <strong>Специализация:</strong> Лазерная эпиляция, дерматология, лазерное омоложение
+                </p>
+                <p style="color: var(--text-secondary);">
+                    <strong>Сайт:</strong> <a href="https://laserdoctor.ru/" target="_blank">laserdoctor.ru</a>
+                </p>
+                <p style="margin-top: 16px;">
+                    <strong>Анализ:</strong> Целевой бенчмарк для ARclinic. Специализация на лазерных технологиях, 
+                    сеть филиалов, рейтинг 5.0, активный контент-маркетинг.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">4. Космед (ООО "МЕДКЛИНИК")</h3>
+                <div class="card-meta">
+                    <span class="metric-tag metric-tag-green">
+                        <span class="metric-tag-dot"></span>
+                        Выручка: 169 млн ₽
+                    </span>
+                    <span class="metric-tag metric-tag-green">
+                        <span class="metric-tag-dot"></span>
+                        Прибыль: 63 млн ₽
+                    </span>
+                    <span class="metric-tag metric-tag-green">
+                        <span class="metric-tag-dot"></span>
+                        Рост
+                    </span>
+                    <span class="badge badge-middle">Средний+</span>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                    <strong>ИНН:</strong> 7814243654 | 
+                    <strong>Рентабельность:</strong> 37.3%
+                </p>
+                <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                    <strong>Специализация:</strong> Лазерная эпиляция, терапия
+                </p>
+                <p style="color: var(--text-secondary);">
+                    <strong>Сайт:</strong> <a href="https://medclinic.center/" target="_blank">medclinic.center</a>
+                </p>
+                <p style="margin-top: 16px;">
+                    <strong>Анализ:</strong> Высокая рентабельность (37%), устойчивый рост. 
+                    Эффективная операционная модель в среднем+ сегменте.
+                </p>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="sec-tag">Премиум сегмент</div>
+            <h2 class="sec-title">Конкуренты с агрессивным маркетингом</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Бренд</th>
+                        <th>Специализация</th>
+                        <th>Маркетинг</th>
+                        <th>Ключевые преимущества</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <strong>Vershe</strong><br>
+                            <a href="https://vershe.ru/" target="_blank" style="font-size: 13px;">vershe.ru</a>
+                        </td>
+                        <td>Аппаратная косметология, 20+ премиальных аппаратов</td>
+                        <td><span class="metric-tag metric-tag-blue"><span class="metric-tag-dot"></span>Агрессивный</span></td>
+                        <td>Экспертный SMM, отзывы, кейсы до/после, BBL, RF, SMAS</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>SkySkin Clinic</strong><br>
+                            <a href="https://skyskin.ru/" target="_blank" style="font-size: 13px;">skyskin.ru</a>
+                        </td>
+                        <td>SMAS-лифтинг, лазерная эпиляция</td>
+                        <td><span class="metric-tag metric-tag-blue"><span class="metric-tag-dot"></span>Очень агрессивный</span></td>
+                        <td>Очень активный Instagram, Reels, акции, топ рейтинги</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>Blvck clinic</strong><br>
+                            <a href="https://spb.blvck-clinic.ru/" target="_blank" style="font-size: 13px;">spb.blvck-clinic.ru</a>
+                        </td>
+                        <td>Лазерная эпиляция, инъекции</td>
+                        <td><span class="metric-tag metric-tag-blue"><span class="metric-tag-dot"></span>Очень агрессивный</span></td>
+                        <td>Lifestyle-бренд, минималистичный дизайн, входной продукт</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>SmartMed Clinic</strong><br>
+                            <a href="https://smartmed-spb.ru/" target="_blank" style="font-size: 13px;">smartmed-spb.ru</a>
+                        </td>
+                        <td>Многопрофильный центр, косметология</td>
+                        <td><span class="metric-tag metric-tag-blue"><span class="metric-tag-dot"></span>Агрессивный</span></td>
+                        <td>Топ рейтингов Яндекс.Карты, тысячи отзывов</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>Долголетие</strong><br>
+                            <a href="https://spina.spb.ru/" target="_blank" style="font-size: 13px;">spina.spb.ru</a>
+                        </td>
+                        <td>Пластика + anti-age + превентивка</td>
+                        <td><span class="metric-tag metric-tag-blue"><span class="metric-tag-dot"></span>Агрессивный</span></td>
+                        <td>Сеть филиалов, Instagram, акции на операции</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        <section class="section">
+            <div class="sec-tag">Полный список</div>
+            <h2 class="sec-title">Все конкуренты (22 компании)</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>Компания</th>
+                        <th>Выручка 2025</th>
+                        <th>Тренд</th>
+                        <th>Сегмент</th>
+                        <th>Сайт</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><strong>Pirogov Clinic</strong></td>
+                        <td>2 117 млн ₽</td>
+                        <td><span class="metric-tag metric-tag-green"><span class="metric-tag-dot"></span>Рост</span></td>
+                        <td><span class="badge badge-premium">Премиум</span></td>
+                        <td><a href="https://pirogovclinic.ru/" target="_blank">pirogovclinic.ru</a></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><strong>Beautiful People</strong></td>
+                        <td>636 млн ₽</td>
+                        <td><span class="metric-tag metric-tag-green"><span class="metric-tag-dot"></span>Рост</span></td>
+                        <td><span class="badge badge-premium">Премиум</span></td>
+                        <td><a href="https://beautiful-people.clinic/" target="_blank">beautiful-people.clinic</a></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td><strong>Лазерный Доктор</strong></td>
+                        <td>184 млн ₽</td>
+                        <td><span class="metric-tag metric-tag-green"><span class="metric-tag-dot"></span>Рост</span></td>
+                        <td><span class="badge badge-middle">Средний+</span></td>
+                        <td><a href="https://laserdoctor.ru/" target="_blank">laserdoctor.ru</a></td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td><strong>Космед</strong></td>
+                        <td>169 млн ₽</td>
+                        <td><span class="metric-tag metric-tag-green"><span class="metric-tag-dot"></span>Рост</span></td>
+                        <td><span class="badge badge-middle">Средний+</span></td>
+                        <td><a href="https://medclinic.center/" target="_blank">medclinic.center</a></td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td><strong>Pro Skin</strong></td>
+                        <td>44 млн ₽</td>
+                        <td><span class="metric-tag metric-tag-gray"><span class="metric-tag-dot"></span>Стабильно</span></td>
+                        <td><span class="badge badge-middle">Средний</span></td>
+                        <td><a href="https://pro-skin.ru/" target="_blank">pro-skin.ru</a></td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td><strong>Источник долголетия</strong></td>
+                        <td>33 млн ₽</td>
+                        <td><span class="metric-tag metric-tag-red"><span class="metric-tag-dot"></span>Снижение</span></td>
+                        <td><span class="badge badge-middle">Средний</span></td>
+                        <td><a href="https://istclinic.ru/" target="_blank">istclinic.ru</a></td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td><strong>PF &amp; Beauty</strong></td>
+                        <td>15 млн ₽</td>
+                        <td><span class="metric-tag metric-tag-green"><span class="metric-tag-dot"></span>Рост</span></td>
+                        <td><span class="badge badge-middle">Средний</span></td>
+                        <td><a href="https://pfbeautyclinic.ru/" target="_blank">pfbeautyclinic.ru</a></td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td><strong>Top Body Clinic</strong></td>
+                        <td>7 млн ₽</td>
+                        <td><span class="metric-tag metric-tag-green"><span class="metric-tag-dot"></span>Рост</span></td>
+                        <td><span class="badge badge-middle">Средний</span></td>
+                        <td><a href="https://sb-clinic.ru/" target="_blank">sb-clinic.ru</a></td>
+                    </tr>
+                    <tr>
+                        <td>9</td>
+                        <td><strong>Vershe</strong></td>
+                        <td>—</td>
+                        <td><span class="metric-tag metric-tag-gray"><span class="metric-tag-dot"></span>Нет данных</span></td>
+                        <td><span class="badge badge-premium">Премиум</span></td>
+                        <td><a href="https://vershe.ru/" target="_blank">vershe.ru</a></td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td><strong>SkySkin Clinic</strong></td>
+                        <td>—</td>
+                        <td><span class="metric-tag metric-tag-gray"><span class="metric-tag-dot"></span>Нет данных</span></td>
+                        <td><span class="badge badge-premium">Премиум</span></td>
+                        <td><a href="https://skyskin.ru/" target="_blank">skyskin.ru</a></td>
+                    </tr>
+                    <tr>
+                        <td>11</td>
+                        <td><strong>Blvck clinic</strong></td>
+                        <td>—</td>
+                        <td><span class="metric-tag metric-tag-gray"><span class="metric-tag-dot"></span>Нет данных</span></td>
+                        <td><span class="badge badge-premium">Премиум</span></td>
+                        <td><a href="https://spb.blvck-clinic.ru/" target="_blank">spb.blvck-clinic.ru</a></td>
+                    </tr>
+                    <tr>
+                        <td>12</td>
+                        <td><strong>SmartMed Clinic</strong></td>
+                        <td>—</td>
+                        <td><span class="metric-tag metric-tag-gray"><span class="metric-tag-dot"></span>Нет данных</span></td>
+                        <td><span class="badge badge-middle">Средний+</span></td>
+                        <td><a href="https://smartmed-spb.ru/" target="_blank">smartmed-spb.ru</a></td>
+                    </tr>
+                    <tr>
+                        <td>13</td>
+                        <td><strong>Долголетие</strong></td>
+                        <td>—</td>
+                        <td><span class="metric-tag metric-tag-gray"><span class="metric-tag-dot"></span>Нет данных</span></td>
+                        <td><span class="badge badge-premium">Премиум</span></td>
+                        <td><a href="https://spina.spb.ru/" target="_blank">spina.spb.ru</a></td>
+                    </tr>
+                    <tr>
+                        <td>14</td>
+                        <td><strong>Институт красоты "Галактика"</strong></td>
+                        <td>—</td>
+                        <td><span class="metric-tag metric-tag-gray"><span class="metric-tag-dot"></span>Нет данных</span></td>
+                        <td><span class="badge badge-premium">Премиум</span></td>
+                        <td><a href="https://www.galaxy.clinic/" target="_blank">galaxy.clinic</a></td>
+                    </tr>
+                    <tr>
+                        <td>15</td>
+                        <td><strong>Грандмед</strong></td>
+                        <td>—</td>
+                        <td><span class="metric-tag metric-tag-gray"><span class="metric-tag-dot"></span>Нет данных</span></td>
+                        <td><span class="badge badge-middle">Средний+</span></td>
+                        <td><a href="https://grandmed.ru/" target="_blank">grandmed.ru</a></td>
+                    </tr>
+                    <tr>
+                        <td>16</td>
+                        <td><strong>DocForDerm</strong></td>
+                        <td>—</td>
+                        <td><span class="metric-tag metric-tag-gray"><span class="metric-tag-dot"></span>Нет данных</span></td>
+                        <td><span class="badge badge-middle">Средний+</span></td>
+                        <td>—</td>
+                    </tr>
+                    <tr>
+                        <td>17</td>
+                        <td><strong>Медиэстетик</strong></td>
+                        <td>—</td>
+                        <td><span class="metric-tag metric-tag-gray"><span class="metric-tag-dot"></span>Нет данных</span></td>
+                        <td><span class="badge badge-middle">Средний</span></td>
+                        <td><a href="https://mediest-ru.orgs.biz/" target="_blank">mediest-ru.orgs.biz</a></td>
+                    </tr>
+                    <tr>
+                        <td>18</td>
+                        <td><strong>EL CLINIC</strong></td>
+                        <td>—</td>
+                        <td><span class="metric-tag metric-tag-gray"><span class="metric-tag-dot"></span>Нет данных</span></td>
+                        <td><span class="badge badge-middle">Средний</span></td>
+                        <td><a href="https://catcas.pro/" target="_blank">catcas.pro</a></td>
+                    </tr>
+                    <tr>
+                        <td>19</td>
+                        <td><strong>EMS</strong></td>
+                        <td>—</td>
+                        <td><span class="metric-tag metric-tag-gray"><span class="metric-tag-dot"></span>Нет данных</span></td>
+                        <td><span class="badge badge-premium">Премиум</span></td>
+                        <td><a href="https://www.emsclinic.ru/" target="_blank">emsclinic.ru</a></td>
+                    </tr>
+                    <tr>
+                        <td>20</td>
+                        <td><strong>МедЛайн</strong></td>
+                        <td>—</td>
+                        <td><span class="metric-tag metric-tag-gray"><span class="metric-tag-dot"></span>Нет данных</span></td>
+                        <td><span class="badge badge-middle">Средний+</span></td>
+                        <td><a href="https://medlineclinic.ru/" target="_blank">medlineclinic.ru</a></td>
+                    </tr>
+                    <tr>
+                        <td>21</td>
+                        <td><strong>Union Clinic</strong></td>
+                        <td>—</td>
+                        <td><span class="metric-tag metric-tag-gray"><span class="metric-tag-dot"></span>Нет данных</span></td>
+                        <td><span class="badge badge-premium">Премиум</span></td>
+                        <td><a href="https://unionclinic.ru/" target="_blank">unionclinic.ru</a></td>
+                    </tr>
+                    <tr>
+                        <td>22</td>
+                        <td><strong>Медицинский центр 21 век</strong></td>
+                        <td>—</td>
+                        <td><span class="metric-tag metric-tag-gray"><span class="metric-tag-dot"></span>Нет данных</span></td>
+                        <td><span class="badge badge-middle">Средний+</span></td>
+                        <td><a href="https://mc21.ru/" target="_blank">mc21.ru</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section">
+            <div class="sec-tag">Рекомендации</div>
+            <h2 class="sec-title">Стратегия для ARclinic</h2>
+
+            <div class="card">
+                <h3 class="card-title">Варианты позиционирования</h3>
+                <div style="margin-top: 24px;">
+                    <h4 style="font-size: 18px; margin-bottom: 12px; color: var(--accent);">Вариант 1: Премиум anti-age с научным подходом</h4>
+                    <p style="color: var(--text-secondary); margin-bottom: 8px;">
+                        <strong>Целевая аудитория:</strong> 35-55 лет, высокий доход<br>
+                        <strong>Бенчмарки:</strong> Pirogov Clinic (наука) + Vershe (премиум)<br>
+                        <strong>Дифференциаторы:</strong> Генетические тесты, персонализированные программы, научный подход
+                    </p>
+
+                    <h4 style="font-size: 18px; margin: 24px 0 12px; color: var(--accent);">Вариант 2: Digital-first клиника</h4>
+                    <p style="color: var(--text-secondary); margin-bottom: 8px;">
+                        <strong>Целевая аудитория:</strong> 25-40 лет, digital natives<br>
+                        <strong>Бенчмарки:</strong> SkySkin + Blvck clinic<br>
+                        <strong>Дифференциаторы:</strong> Агрессивный SMM, Reels, TikTok, онлайн-запись, телемед
+                    </p>
+
+                    <h4 style="font-size: 18px; margin: 24px 0 12px; color: var(--accent);">Вариант 3: Мужская эстетическая медицина</h4>
+                    <p style="color: var(--text-secondary);">
+                        <strong>Целевая аудитория:</strong> мужчины 30-50 лет<br>
+                        <strong>Бенчмарки:</strong> нет прямых аналогов в СПб<br>
+                        <strong>Дифференциаторы:</strong> Специализация на мужской аудитории, спортивная медицина + эстетика
+                    </p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Быстрые победы (Quick Wins)</h3>
+                <ol style="line-height: 2; color: var(--text-secondary); padding-left: 24px;">
+                    <li><strong>Активировать Яндекс.Карты</strong> — стимулировать клиентов оставлять отзывы (цель: 50+ отзывов за 3 месяца)</li>
+                    <li><strong>Запустить Reels</strong> — 2-3 коротких видео в неделю с процедурами и результатами</li>
+                    <li><strong>Входной продукт</strong> — промо на лазерную эпиляцию (первая зона со скидкой) → upsell</li>
+                    <li><strong>Реферальная программа</strong> — 3000₽ за приведённого друга</li>
+                    <li><strong>SEO-оптимизация</strong> — попасть в топ-10 по запросам "косметология СПб", "anti-age клиника СПб"</li>
+                </ol>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Целевые метрики</h3>
+                <div class="grid" style="margin-top: 24px;">
+                    <div class="stat-box">
+                        <div class="stat-number">120-180 млн</div>
+                        <div class="stat-label">Целевая выручка (год)</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">30-40%</div>
+                        <div class="stat-label">Рентабельность</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">&gt;4.8</div>
+                        <div class="stat-label">Рейтинг Яндекс.Карты</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">100+</div>
+                        <div class="stat-label">Отзывов</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">5000+</div>
+                        <div class="stat-label">Instagram (6 мес)</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">25-35 тыс</div>
+                        <div class="stat-label">Средний чек</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="sec-tag">Методология</div>
+            <h2 class="sec-title">Источники данных</h2>
+
+            <div class="card">
+                <h3 class="card-title">Использованные инструменты</h3>
+                <p style="color: var(--text-secondary); line-height: 2; margin-top: 16px;">
+                    <strong>Hermes Pipeline (AIM):</strong><br>
+                    • API: <code>/api/competitors/find</code> — поиск конкурентов через Google Maps + DaData + ФНС<br>
+                    • Технологии: Apify (Google Maps scraping), Playwright (INN extraction), rusprofile (финансы)<br>
+                    • Таймаут: 300 секунд на запрос<br>
+                    • Лимит: 5 конкурентов на запрос<br>
+                    <br>
+                    <strong>Ручное исследование:</strong><br>
+                    • Исходный документ: "Эстетическая и превентивная медицина в Санкт-Петербурге (2025-2026)"<br>
+                    • Источники: Rang.ai, Яндекс.Карты, 2ГИС, ProDoctorov, корпоративные сайты
+                </p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Достоверность данных</h3>
+                <p style="color: var(--text-secondary); line-height: 2; margin-top: 16px;">
+                    <strong>Высокая достоверность (ФНС 2025):</strong><br>
+                    Beautiful People, Pirogov Clinic, Лазерный Доктор, Космед, Pro Skin, PF&amp;Beauty, Top Body Clinic, Источник долголетия
+                    <br><br>
+                    <strong>Средняя достоверность (DaData, оценки):</strong><br>
+                    Vershe, SkySkin, Blvck clinic, SmartMed, Долголетие, Галактика, DocForDerm, Медиэстетик, Грандмед, EMS, МедЛайн
+                </p>
+            </div>
+        </section>
+
+        <section class="section" style="padding-bottom: 120px;">
+            <div style="text-align: center; padding: 48px; background: var(--surface); border-radius: 8px;">
+                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">
+                    Prepared by <strong>Hermes AI Pipeline</strong><br>
+                    For <strong>ARclinic</strong><br>
+                    Date: 22.06.2026 | Version: 1.0
+                </p>
+                <p style="font-size: 13px; color: var(--text-dim); margin-top: 24px;">
+                    Для углубленного анализа рекомендуется Mystery Shopping топ-5 конкурентов,<br>
+                    запуск полного CI-анализа через run_ci_analysis и социальный мониторинг
+                </p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const btn = document.getElementById('theme-btn');
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            btn.textContent = newTheme === 'light' ? '🌙' : '☀️';
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('theme-btn').textContent = savedTheme === 'light' ? '🌙' : '☀️';
+    </script>
+
+
+</body></html>

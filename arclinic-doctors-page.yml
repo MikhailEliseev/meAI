@@ -1,0 +1,172 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3] [cursor=pointer]: +
+    - list [ref=e4]:
+      - listitem [ref=e5]:
+        - link "О клинике" [ref=e6] [cursor=pointer]:
+          - /url: /about/
+        - list [ref=e7]:
+          - listitem [ref=e8]:
+            - link "О нас" [ref=e9] [cursor=pointer]:
+              - /url: /about/
+          - listitem [ref=e10]:
+            - link "Специалисты" [ref=e11] [cursor=pointer]:
+              - /url: /doctors/
+          - listitem [ref=e12]:
+            - link "Онлайн-консультации" [ref=e13] [cursor=pointer]:
+              - /url: /telemeditsina/
+          - listitem [ref=e14]:
+            - link "Подарочный сертификат" [ref=e15] [cursor=pointer]:
+              - /url: /gift-card/
+          - listitem [ref=e16]:
+            - link "Отзывы" [ref=e17] [cursor=pointer]:
+              - /url: /reviews/
+          - listitem [ref=e18]:
+            - link "Новости" [ref=e19] [cursor=pointer]:
+              - /url: /news/
+          - listitem [ref=e20]:
+            - link "Блог" [ref=e21] [cursor=pointer]:
+              - /url: /blog/
+          - listitem [ref=e22]:
+            - link "Вакансии" [ref=e23] [cursor=pointer]:
+              - /url: /vakansii/
+          - listitem [ref=e24]:
+            - link "Правовая информация" [ref=e25] [cursor=pointer]:
+              - /url: /about/legal-information/
+          - listitem [ref=e26]:
+            - link "Карта сайта" [ref=e27] [cursor=pointer]:
+              - /url: /sitemap
+      - listitem [ref=e28]:
+        - link "Центр Косметологии" [ref=e29] [cursor=pointer]:
+          - /url: /services/cosmetology/
+        - list [ref=e30]:
+          - listitem [ref=e31]:
+            - link "Аппаратная косметология" [ref=e32] [cursor=pointer]:
+              - /url: /services/cosmetology/apparat/
+          - listitem [ref=e33]:
+            - link "Инъекционная косметология" [ref=e34] [cursor=pointer]:
+              - /url: /services/cosmetology/injection/
+          - listitem [ref=e35]:
+            - link "Эстетическая косметология" [ref=e36] [cursor=pointer]:
+              - /url: /services/cosmetology/estetic/
+          - listitem [ref=e37]:
+            - link "Лечение осложнений в косметологии" [ref=e38] [cursor=pointer]:
+              - /url: /services/cosmetology/lechenie/
+          - listitem [ref=e39]:
+            - link "Комплексная косметология" [ref=e40] [cursor=pointer]:
+              - /url: /services/cosmetology/komplex/
+          - listitem [ref=e41]:
+            - link "Консультации специалистов" [ref=e42] [cursor=pointer]:
+              - /url: /services/cosmetology/konsult/
+      - listitem [ref=e43]:
+        - link "Центр Здоровья" [ref=e44] [cursor=pointer]:
+          - /url: /services/health-center/
+        - list [ref=e45]:
+          - listitem [ref=e46]:
+            - link "Гинекология" [ref=e47] [cursor=pointer]:
+              - /url: /services/health-center/ginekologiya/
+          - listitem [ref=e48]:
+            - link "Дерматология" [ref=e49] [cursor=pointer]:
+              - /url: /services/health-center/dermatologiya/
+          - listitem [ref=e50]:
+            - link "Неврология" [ref=e51] [cursor=pointer]:
+              - /url: /services/health-center/nevrologiya/
+          - listitem [ref=e52]:
+            - link "Диетология" [ref=e53] [cursor=pointer]:
+              - /url: /services/health-center/dietologiya/
+          - listitem [ref=e54]:
+            - link "Эндокринология" [ref=e55] [cursor=pointer]:
+              - /url: /services/health-center/endokrinologiya/
+          - listitem [ref=e56]:
+            - link "Лабораторная диагностика" [ref=e57] [cursor=pointer]:
+              - /url: /services/health-center/laboratornye-analizy/
+          - listitem [ref=e58]:
+            - link "Ультразвуковая диагностика" [ref=e59] [cursor=pointer]:
+              - /url: /services/health-center/uzi/
+          - listitem [ref=e60]:
+            - link "Функциональная диагностика" [ref=e61] [cursor=pointer]:
+              - /url: /services/health-center/funktsionalnaya-diagnostika/
+          - listitem [ref=e62]:
+            - link "Чекапы" [ref=e63] [cursor=pointer]:
+              - /url: /services/health-center/chek-apy/
+      - listitem [ref=e64]:
+        - link "Для мужчин" [ref=e65] [cursor=pointer]:
+          - /url: /services/men
+        - list [ref=e66]:
+          - listitem [ref=e67]:
+            - link "Уходовые процедуры" [ref=e68] [cursor=pointer]:
+              - /url: /services/men/ukhodovye-protsedury/
+          - listitem [ref=e69]:
+            - link "Аппаратная косметология" [ref=e70] [cursor=pointer]:
+              - /url: /services/men/apparatnaya-kosmetologiya/
+          - listitem [ref=e71]:
+            - link "Инъекционные процедуры" [ref=e72] [cursor=pointer]:
+              - /url: /services/men/inektsionnye-protsedury/
+          - listitem [ref=e73]:
+            - link "Консультации специалистов" [ref=e74] [cursor=pointer]:
+              - /url: /services/men/konsultatsii-spetsialistov/
+          - listitem [ref=e75]:
+            - link "Чекапы" [ref=e76] [cursor=pointer]:
+              - /url: /services/men/chekapy/
+      - listitem [ref=e77]:
+        - link "Цены" [ref=e78] [cursor=pointer]:
+          - /url: /prices/
+      - listitem [ref=e79]:
+        - link "Абонементы" [ref=e80] [cursor=pointer]:
+          - /url: /sales/
+      - listitem [ref=e81]:
+        - link "Контакты" [ref=e82] [cursor=pointer]:
+          - /url: /contacts/
+      - listitem [ref=e83]:
+        - link "Акции" [ref=e84] [cursor=pointer]:
+          - /url: /promotions/
+  - generic [ref=e85]:
+    - main [ref=e86]:
+      - text:  
+      - link "" [ref=e87] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e88]:
+        - heading "404" [level=1] [ref=e89]
+        - paragraph [ref=e90]: Ошибка! Такой страницы не существует
+        - link "Перейти на главную" [ref=e91] [cursor=pointer]:
+          - /url: /
+    - text:  
+  - generic [ref=e94]:
+    - generic [ref=e95] [cursor=pointer]: 
+    - generic [ref=e96]:
+      - generic [ref=e97]:
+        - text: "Р\x98РјСЏ Рё С„Р°РјРёР»РёСЏ"
+        - 'textbox "РРјСЏ Рё С„Р°РјРёР»РёСЏ" [ref=e98]'
+      - generic [ref=e99]:
+        - text: РљРѕРЅС‚Р°РєС‚РЅС‹Р№ С‚РµР»РµС„РѕРЅ
+        - textbox "РљРѕРЅС‚Р°РєС‚РЅС‹Р№ С‚РµР»РµС„РѕРЅ" [ref=e100]
+      - button "Р—Р°РїРёСЃР°С‚СЊСЃСЏ" [ref=e101] [cursor=pointer]
+      - generic [ref=e104] [cursor=pointer]:
+        - text: РЇ РґР°СЋ СЃРѕРіР»Р°СЃРёРµ РЅР° РѕР±СЂР°Р±РѕС‚РєСѓ
+        - link "РїРµСЂСЃРѕРЅР°Р»СЊРЅС‹С… РґР°РЅРЅС‹С…" [ref=e105]:
+          - /url: /about/legal-information/privacy-policy-statement.php
+        - checkbox [ref=e106]
+  - generic [ref=e109]:
+    - generic [ref=e110] [cursor=pointer]: 
+    - generic [ref=e111]: РЎРІСЏР¶РёС‚РµСЃСЊ СЃ РЅР°РјРё!
+    - generic [ref=e112]:
+      - link " info@arclinic.ru" [ref=e113] [cursor=pointer]:
+        - /url: mailto:info@arclinic.ru?Subject=Hello!
+        - generic [ref=e114]: 
+        - text: info@arclinic.ru
+      - link " arclinic@mail.ru" [ref=e115] [cursor=pointer]:
+        - /url: mailto:info@arclinic.ru?Subject=Hello!
+        - generic [ref=e116]: 
+        - text: arclinic@mail.ru
+  - generic [ref=e119]:
+    - paragraph [ref=e121]: Данный веб-сайт использует cookie-файлы и сервис «Яндекс Метрика» в целях предоставления вам лучшего пользовательского опыта на нашем сайте. Продолжая использовать данный сайт, вы соглашаетесь с использованием нами cookie-файлов. Файлы cookie можно отключить в настройках вашего браузера. Политика Cookie
+    - button "Я согласен" [ref=e123] [cursor=pointer]
+  - generic:
+    - generic [ref=e124] [cursor=pointer]: Запись
+    - generic [ref=e126]:
+      - generic [ref=e127]:
+        - text: Запись на приём к врачу
+        - button [ref=e128] [cursor=pointer]:
+          - img [ref=e129]
+      - img [ref=e133]
+      - generic [ref=e135]: Виджет

@@ -1,0 +1,77 @@
+{
+  "generated_at": "2026-05-30T13:00:37.053307+00:00",
+  "period": {
+    "start": "2026-05-23T13:00:37.000278+00:00",
+    "end": "2026-05-30T13:00:37.000278+00:00"
+  },
+  "lead_metrics": {
+    "total_leads": 0,
+    "leads_by_tier": {},
+    "leads_by_source": {},
+    "leads_by_specialty": {},
+    "average_score": 0.0,
+    "capture_rate": 0.0,
+    "duplicate_rate": 0.0,
+    "time_series": [],
+    "start_date": "2026-05-23 13:00:37.000278+00:00",
+    "end_date": "2026-05-30 13:00:37.000278+00:00",
+    "generated_at": "2026-05-30 13:00:37.046053+00:00"
+  },
+  "email_metrics": {
+    "total_sent": 0,
+    "total_scheduled": 0,
+    "total_failed": 0,
+    "total_delivered": 0,
+    "total_opened": 0,
+    "total_clicked": 0,
+    "total_bounced": 0,
+    "total_complained": 0,
+    "total_unsubscribed": 0,
+    "delivery_rate": 0.0,
+    "open_rate": 0.0,
+    "click_rate": 0.0,
+    "bounce_rate": 0.0,
+    "complaint_rate": 0.0,
+    "unsubscribe_rate": 0.0,
+    "emails_by_tier": {},
+    "avg_time_to_open": null,
+    "avg_time_to_click": null,
+    "time_series": [],
+    "start_date": "2026-05-23 13:00:37.000278+00:00",
+    "end_date": "2026-05-30 13:00:37.000278+00:00",
+    "generated_at": "2026-05-30 13:00:37.047908+00:00"
+  },
+  "conversion_funnel": {
+    "leads_captured": 0,
+    "leads_scored": 0,
+    "tasks_created": 0,
+    "workflows_triggered": 0,
+    "emails_sent": 0,
+    "emails_delivered": 0,
+    "emails_opened": 0,
+    "emails_clicked": 0,
+    "conversion_rates": {
+      "capture_to_score": 0.0,
+      "score_to_task": 0.0,
+      "task_to_workflow": 0.0,
+      "workflow_to_sent": 0.0,
+      "sent_to_delivered": 0.0,
+      "delivered_to_opened": 0.0,
+      "opened_to_clicked": 0.0
+    },
+    "start_date": "2026-05-23 13:00:37.000278+00:00",
+    "end_date": "2026-05-30 13:00:37.000278+00:00",
+    "generated_at": "2026-05-30 13:00:37.048345+00:00"
+  },
+  "realtime_stats": {
+    "leads_today": 3,
+    "emails_sent_today": 0,
+    "emails_opened_today": 0,
+    "emails_clicked_today": 0,
+    "active_workflows": 3,
+    "pending_emails": 3,
+    "hot_leads_count": 0,
+    "hot_leads_today": 0,
+    "last_updated": "2026-05-30 13:00:37.053264+00:00"
+  }
+}

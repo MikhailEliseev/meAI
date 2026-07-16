@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Яндекс.Директ — стратегия для Липецкой области</title>
+<style>
+  :root {
+    --ink: #1a1a2e;
+    --muted: #6b7280;
+    --accent: #7c3aed;
+    --green: #059669;
+    --red: #dc2626;
+    --amber: #d97706;
+    --surface: #f8f7ff;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --radius: 12px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--ink); background: var(--surface); line-height: 1.6; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  .hero { background: linear-gradient(135deg, #1a1a2e 0%, #2d1b69 100%); color: white; padding: 60px 0 50px; text-align: center; }
+  .hero .back { display: inline-block; color: #a78bfa; font-size: 14px; margin-bottom: 20px; text-decoration: none; }
+  .hero .back:hover { color: #c4b5fd; }
+  .hero h1 { font-size: 36px; font-weight: 800; line-height: 1.2; margin-bottom: 12px; }
+  .hero h1 span { color: #a78bfa; }
+  .hero .subtitle { font-size: 16px; color: #c4b5fd; }
+  .hero .meta { display: flex; justify-content: center; gap: 32px; margin-top: 24px; flex-wrap: wrap; }
+  .hero .meta-item { text-align: center; }
+  .hero .meta-item .num { font-size: 28px; font-weight: 700; color: #a78bfa; }
+  .hero .meta-item .label { font-size: 12px; color: #c4b5fd; }
+
+  section { padding: 56px 0; }
+  section:nth-child(even) { background: white; }
+  h2 { font-size: 26px; font-weight: 700; margin-bottom: 12px; }
+  h3 { font-size: 18px; font-weight: 600; margin: 24px 0 10px; color: var(--accent); }
+  .lead { font-size: 15px; color: var(--muted); margin-bottom: 24px; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 20px 0; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .card h4 { font-size: 15px; margin-bottom: 8px; }
+  .card p { font-size: 13px; color: var(--muted); }
+  .card .num { font-size: 28px; font-weight: 800; color: var(--accent); }
+
+  .data-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 20px 0; }
+  .data-table th { background: var(--ink); color: white; padding: 10px 12px; text-align: left; font-size: 13px; font-weight: 600; }
+  .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .data-table tr:hover td { background: #f5f3ff; }
+  .data-table .group-header td { background: #ede9fe; font-weight: 700; color: var(--accent); font-size: 14px; }
+
+  .budget-box { background: linear-gradient(135deg, #1a1a2e 0%, #2d1b69 100%); color: white; border-radius: var(--radius); padding: 32px; margin: 32px 0; }
+  .budget-box h3 { color: #a78bfa; margin-top: 0; }
+  .budget-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; }
+  .budget-row:last-child { border-bottom: none; font-weight: 700; font-size: 16px; }
+
+  .highlight { background: #f5f3ff; border-left: 4px solid var(--accent); padding: 16px 20px; border-radius: 0 var(--radius) var(--radius) 0; margin: 16px 0; font-size: 14px; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 20px 0; }
+  .kpi-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+  .kpi-card .kpi-num { font-size: 24px; font-weight: 700; color: var(--accent); }
+  .kpi-card .kpi-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  .stage { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin: 16px 0; }
+  .stage .stage-num { display: inline-block; background: var(--accent); color: white; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 10px; margin-bottom: 8px; }
+  .stage h4 { font-size: 16px; margin-bottom: 8px; }
+  .stage p { font-size: 14px; color: var(--muted); }
+
+  .summary { background: linear-gradient(135deg, #1a1a2e 0%, #2d1b69 100%); color: white; padding: 48px 0; text-align: center; margin-top: 48px; }
+  .summary h2 { color: white; }
+  .summary .big-num { font-size: 42px; font-weight: 800; color: #a78bfa; }
+  .summary .big-label { color: #c4b5fd; font-size: 14px; }
+  .summary .roi-cards { display: flex; justify-content: center; gap: 32px; margin-top: 24px; flex-wrap: wrap; }
+  .summary .roi-card { text-align: center; }
+
+  footer { background: var(--ink); color: var(--muted); padding: 24px 0; text-align: center; font-size: 13px; }
+  footer a { color: #a78bfa; text-decoration: none; }
+  footer a:hover { color: #c4b5fd; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="container">
+    <a href="index.html" class="back">← На главную</a>
+    <h1>Яндекс.Директ: <span>Липецк + область</span></h1>
+    <p class="subtitle">Полная стратегия контекстной рекламы с геотаргетингом на Липецкую область</p>
+    <div class="meta">
+      <div class="meta-item"><div class="num">76</div><div class="label">ключевых слов</div></div>
+      <div class="meta-item"><div class="num">5</div><div class="label">рекламных кампаний</div></div>
+      <div class="meta-item"><div class="num">35 000</div><div class="label">бюджет/мес (цель)</div></div>
+      <div class="meta-item"><div class="num">15 000</div><div class="label">бюджет старт</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Ситуация -->
+<section>
+  <div class="container">
+    <h2>Исходная ситуация</h2>
+    <p class="lead">Конкуренты в Липецке практически не используют контекстную рекламу для психологических услуг. Это означает низкую стоимость клика и возможность быстрого захвата поискового трафика.</p>
+    <div class="highlight">
+      <strong>Ключевой инсайт:</strong> podusham48.ru (главный конкурент) не использует Яндекс.Директ. У них нет рекламных кампаний. Клиент может занять весь платный трафик с минимальной конкуренцией.
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="num">~490K</div>
+        <h4>Население Липецка</h4>
+        <p>Плюс ~620K в области. Общая аудитория геотаргетинга — около 1.1 млн человек.</p>
+      </div>
+      <div class="card">
+        <div class="num">~3500</div>
+        <h4>Запросов/мес</h4>
+        <p>Суммарный спрос по психологическим запросам в Липецкой области (Wordstat).</p>
+      </div>
+      <div class="card">
+        <div class="num">8-15 ₽</div>
+        <h4>Прогноз CPC</h4>
+        <p>Низкая конкуренция = низкая цена клика по психологическим запросам.</p>
+      </div>
+      <div class="card">
+        <div class="num">12-18%</div>
+        <h4>Конверсия в заявку</h4>
+        <p>С посадочных страниц, оптимизированных под конкретный запрос.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ключевые слова -->
+<section>
+  <div class="container">
+    <h2>Семантическое ядро: 76 ключевых слов</h2>
+    <p class="lead">Ключевые слова сгруппированы по 5 рекламным кампаниям. Все с гео-привязкой «Липецк».</p>
+
+    <h3>Кампания 1: Семейная психология (Поиск)</h3>
+    <table class="data-table">
+      <thead><tr><th>Ключевое слово</th><th>Прогноз показов/мес</th><th>Прогноз CPC</th><th>Ставка</th></tr></thead>
+      <tbody>
+        <tr class="group-header"><td colspan="4">Высокочастотные (ядро)</td></tr>
+        <tr><td>семейный психолог Липецк</td><td>320</td><td>12-18 ₽</td><td>20 ₽</td></tr>
+        <tr><td>психолог для семьи Липецк</td><td>180</td><td>10-15 ₽</td><td>18 ₽</td></tr>
+        <tr><td>семейная консультация психолога Липецк</td><td>140</td><td>14-20 ₽</td><td>22 ₽</td></tr>
+        <tr><td>психолог при разводе Липецк</td><td>90</td><td>15-22 ₽</td><td>25 ₽</td></tr>
+        <tr class="group-header"><td colspan="4">Среднечастотные</td></tr>
+        <tr><td>семейный психотерапевт Липецк</td><td>85</td><td>12-16 ₽</td><td>18 ₽</td></tr>
+        <tr><td>помощь семейного психолога Липецк цена</td><td>65</td><td>10-14 ₽</td><td>16 ₽</td></tr>
+        <tr><td>консультация семейного психолога Липецк отзывы</td><td>55</td><td>12-18 ₽</td><td>20 ₽</td></tr>
+        <tr><td>психолог по отношениям Липецк</td><td>70</td><td>10-15 ₽</td><td>17 ₽</td></tr>
+        <tr class="group-header"><td colspan="4">Низкочастотные (тёплые)</td></tr>
+        <tr><td>измена муж психолог Липецк</td><td>25</td><td>8-12 ₽</td><td>15 ₽</td></tr>
+        <tr><td>как пережить развод психолог Липецк</td><td>40</td><td>10-14 ₽</td><td>16 ₽</td></tr>
+        <tr><td>сохранить семью психолог Липецк</td><td>30</td><td>10-15 ₽</td><td>17 ₽</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Кампания 2: Детская психология (Поиск)</h3>
+    <table class="data-table">
+      <thead><tr><th>Ключевое слово</th><th>Прогноз показов/мес</th><th>Прогноз CPC</th><th>Ставка</th></tr></thead>
+      <tbody>
+        <tr><td>детский психолог Липецк</td><td>410</td><td>12-18 ₽</td><td>20 ₽</td></tr>
+        <tr><td>психолог для ребёнка Липецк</td><td>220</td><td>10-16 ₽</td><td>18 ₽</td></tr>
+        <tr><td>подростковый психолог Липецк</td><td>160</td><td>10-15 ₽</td><td>17 ₽</td></tr>
+        <tr><td>психолог для подростка Липецк</td><td>140</td><td>10-14 ₽</td><td>16 ₽</td></tr>
+        <tr><td>детский психолог Липецк отзывы</td><td>95</td><td>12-18 ₽</td><td>20 ₽</td></tr>
+        <tr><td>ребёнок не хочет учиться психолог Липецк</td><td>50</td><td>8-12 ₽</td><td>15 ₽</td></tr>
+        <tr><td>детская тревожность психолог Липецк</td><td>35</td><td>8-12 ₽</td><td>15 ₽</td></tr>
+        <tr><td>буллинг в школе психолог Липецк</td><td>30</td><td>10-14 ₽</td><td>16 ₽</td></tr>
+        <tr><td>подросток депрессия психолог Липецк</td><td>25</td><td>12-16 ₽</td><td>18 ₽</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Кампания 3: Тревога, депрессия, ПА (Поиск)</h3>
+    <table class="data-table">
+      <thead><tr><th>Ключевое слово</th><th>Прогноз показов/мес</th><th>Прогноз CPC</th><th>Ставка</th></tr></thead>
+      <tbody>
+        <tr><td>психолог Липецк тревога</td><td>280</td><td>10-16 ₽</td><td>18 ₽</td></tr>
+        <tr><td>лечение депрессии Липецк психолог</td><td>170</td><td>12-18 ₽</td><td>20 ₽</td></tr>
+        <tr><td>панические атаки психолог Липецк</td><td>150</td><td>12-18 ₽</td><td>20 ₽</td></tr>
+        <tr><td>психотерапевт Липецк депрессия</td><td>130</td><td>14-20 ₽</td><td>22 ₽</td></tr>
+        <tr><td>помощь при панических атаках Липецк</td><td>85</td><td>10-15 ₽</td><td>17 ₽</td></tr>
+        <tr><td>клинический психолог Липецк тревога</td><td>65</td><td>12-16 ₽</td><td>18 ₽</td></tr>
+        <tr><td>выгорание на работе психолог Липецк</td><td>55</td><td>8-12 ₽</td><td>15 ₽</td></tr>
+        <tr><td>хронический стресс психолог Липецк</td><td>40</td><td>8-12 ₽</td><td>15 ₽</td></tr>
+        <tr><td>бессонница психолог Липецк</td><td>35</td><td>10-14 ₽</td><td>16 ₽</td></tr>
+        <tr><td>психосоматика Липецк психолог</td><td>45</td><td>10-14 ₽</td><td>16 ₽</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Кампания 4: Общий спрос + бренд (Поиск)</h3>
+    <table class="data-table">
+      <thead><tr><th>Ключевое слово</th><th>Прогноз показов/мес</th><th>Прогноз CPC</th><th>Ставка</th></tr></thead>
+      <tbody>
+        <tr><td>психолог Липецк</td><td>890</td><td>10-18 ₽</td><td>20 ₽</td></tr>
+        <tr><td>психолог Липецк цены</td><td>320</td><td>10-16 ₽</td><td>18 ₽</td></tr>
+        <tr><td>хороший психолог Липецк</td><td>240</td><td>12-18 ₽</td><td>20 ₽</td></tr>
+        <tr><td>психолог Липецк отзывы</td><td>210</td><td>12-18 ₽</td><td>20 ₽</td></tr>
+        <tr><td>консультация психолога Липецк</td><td>180</td><td>10-15 ₽</td><td>17 ₽</td></tr>
+        <tr><td>приём психолога Липецк</td><td>150</td><td>10-15 ₽</td><td>17 ₽</td></tr>
+        <tr><td>психологический центр Липецк</td><td>130</td><td>10-16 ₽</td><td>18 ₽</td></tr>
+        <tr><td>психотерапевт Липецк</td><td>280</td><td>12-18 ₽</td><td>20 ₽</td></tr>
+        <tr><td>психолог Липецк онлайн</td><td>110</td><td>8-14 ₽</td><td>16 ₽</td></tr>
+        <tr><td>Выставкина психолог Липецк</td><td>45</td><td>5-8 ₽</td><td>10 ₽</td></tr>
+        <tr><td>психолог Выставкина</td><td>35</td><td>5-8 ₽</td><td>10 ₽</td></tr>
+        <tr><td>психолог psyholog48</td><td>20</td><td>5-8 ₽</td><td>10 ₽</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Кампания 5: РСЯ — ретаргетинг + look-alike</h3>
+    <table class="data-table">
+      <thead><tr><th>Стратегия</th><th>Аудитория</th><th>Прогноз показов</th><th>CPM</th></tr></thead>
+      <tbody>
+        <tr><td>Ретаргетинг посетителей сайта</td><td>Все, кто был на сайте, но не оставил заявку</td><td>2 000-5 000/мес</td><td>40-60 ₽</td></tr>
+        <tr><td>Look-alike по конверсиям</td><td>Похожие на тех, кто оставил заявку</td><td>5 000-10 000/мес</td><td>35-50 ₽</td></tr>
+        <tr><td>По интересам: «Психология»</td><td>Пользователи, интересующиеся психологией</td><td>10 000-20 000/мес</td><td>30-45 ₽</td></tr>
+        <tr><td>По интересам: «Семья и дети»</td><td>Родители, семейная аудитория</td><td>15 000-25 000/мес</td><td>30-45 ₽</td></tr>
+        <tr><td>По интересам: «Здоровье»</td><td>Аудитория, интересующаяся здоровьем</td><td>10 000-15 000/мес</td><td>35-50 ₽</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Геотаргетинг -->
+<section>
+  <div class="container">
+    <h2>Геотаргетинг: настройка</h2>
+    <div class="cards">
+      <div class="card">
+        <h4>Основной радиус</h4>
+        <p><strong>Липецк + 20 км</strong><br>
+        Охват: ~550 000 человек<br>
+        Включая: Сырский, Ссёлки, Жёлтые Пески, Косырёвка</p>
+      </div>
+      <div class="card">
+        <h4>Расширенный радиус</h4>
+        <p><strong>Липецк + 50 км</strong><br>
+        Охват: ~750 000 человек<br>
+        Включая: Грязи, Усмань, Задонск, Чаплыгин<br>
+        Для кампаний с онлайн-услугами</p>
+      </div>
+      <div class="card">
+        <h4>Повышенные ставки</h4>
+        <p><strong>Районы с высокой концентрацией ЦА:</strong><br>
+        Центр Липецка (+30%)<br>
+        Новые ЖК: Елецкий, Университетский, Октябрьский (+20%)<br>
+        Район НЛМК, Сокол (+15%)</p>
+      </div>
+      <div class="card">
+        <h4>Исключения</h4>
+        <p><strong>Пониженные ставки / исключить:</strong><br>
+        Промышленные зоны (ЛТЗ, Свободный Сокол)<br>
+        Удалённые сёла (>30 км от Липецка)<br>
+        Другие регионы (кроме онлайн-услуг)</p>
+      </div>
+    </div>
+
+    <div class="highlight">
+      <strong>Корректировка по времени:</strong> Пн-Пт 9:00-12:00 (+25% ставка — утренний поиск), Пн-Пт 18:00-22:00 (+30% — вечерний пик), Сб-Вс 10:00-20:00 (+15% — выходные). Ночь 00:00-07:00 (-50%).
+    </div>
+  </div>
+</section>
+
+<!-- Посадочные страницы -->
+<section>
+  <div class="container">
+    <h2>Посадочные страницы под каждую кампанию</h2>
+    <p class="lead">Каждая группа объявлений ведёт на релевантную посадочную страницу, а не на главную.</p>
+    <table class="data-table">
+      <thead><tr><th>Кампания</th><th>Посадочная страница</th><th>Ключевые элементы</th></tr></thead>
+      <tbody>
+        <tr><td>Семейная психология</td><td>/semeynaya-psihologiya/</td><td>Кейсы семейных пар, специалисты по отношениям, цены, CTA «Записаться на консультацию пары»</td></tr>
+        <tr><td>Детская психология</td><td>/detskiy-psiholog/</td><td>Специалисты по детям, частые запросы родителей, чек-лист «Норма или пора к психологу», CTA</td></tr>
+        <tr><td>Тревога/депрессия/ПА</td><td>/trevozhnye-rasstroystva/</td><td>Симптомы, методы лечения, отзывы, CTA «Бесплатная диагностическая консультация»</td></tr>
+        <tr><td>Общий спрос</td><td>/ (главная)</td><td>Каталог из 21 специалиста, рейтинг 5.0, 136 отзывов, CTA «Подобрать психолога»</td></tr>
+        <tr><td>Бренд</td><td>/o-tsentre/</td><td>32 года опыта, команда, фото центра, ценности</td></tr>
+        <tr><td>РСЯ (ретаргетинг)</td><td>/besplatnaya-konsultatsiya/</td><td>Лид-магнит: бесплатная диагностическая консультация. Социальные доказательства, ограничение по времени</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Объявления -->
+<section>
+  <div class="container">
+    <h2>Примеры поисковых объявлений</h2>
+
+    <h3>Семейный психолог</h3>
+    <div class="stage">
+      <p style="font-size:18px; color:#1a0dab; margin-bottom:4px;"><strong>Семейный психолог в Липецке | Рейтинг 5.0 · 136 отзывов</strong></p>
+      <p style="font-size:14px; color:#006621; margin-bottom:8px;">psyholog48.ru/semeynaya-psihologiya</p>
+      <p style="font-size:14px;">21 специалист. 32 года практики. Помогаем парам сохранить отношения и найти выход из кризиса. Первая консультация — бесплатно.</p>
+    </div>
+
+    <h3>Детский психолог</h3>
+    <div class="stage">
+      <p style="font-size:18px; color:#1a0dab; margin-bottom:4px;"><strong>Детский психолог Липецк | Опыт от 5 лет | Центр Выставкиной</strong></p>
+      <p style="font-size:14px; color:#006621; margin-bottom:8px;">psyholog48.ru/detskiy-psiholog</p>
+      <p style="font-size:14px;">Тревожность, буллинг, учёба, поведение. 6 детских и подростковых психологов. Бесплатная диагностика для родителей.</p>
+    </div>
+
+    <h3>Панические атаки</h3>
+    <div class="stage">
+      <p style="font-size:18px; color:#1a0dab; margin-bottom:4px;"><strong>Панические атаки — помощь | Психолог в Липецке</strong></p>
+      <p style="font-size:14px; color:#006621; margin-bottom:8px;">psyholog48.ru/trevozhnye-rasstroystva</p>
+      <p style="font-size:14px;">КПТ, EMDR, клинические психологи. Научим справляться с паникой без таблеток. Диагностическая консультация бесплатно.</p>
+    </div>
+
+    <h3>Общий спрос</h3>
+    <div class="stage">
+      <p style="font-size:18px; color:#1a0dab; margin-bottom:4px;"><strong>Психолог в Липецке | ★5.0 · 136 отзывов · 21 специалист</strong></p>
+      <p style="font-size:14px; color:#006621; margin-bottom:8px;">psyholog48.ru</p>
+      <p style="font-size:14px;">Центр семейной психологии Выставкиной Т.А. 32 года опыта. Подберём психолога под ваш запрос за 5 минут.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Бюджет -->
+<section>
+  <div class="container">
+    <h2>Бюджет и распределение</h2>
+    <div class="budget-box">
+      <h3>Месячный бюджет — 35 000 ₽ (цель) / 15 000 ₽ (старт)</h3>
+      <div class="budget-row"><span>Кампания 1: Семейная психология</span><span>7 000 ₽</span></div>
+      <div class="budget-row"><span>Кампания 2: Детская психология</span><span>7 000 ₽</span></div>
+      <div class="budget-row"><span>Кампания 3: Тревога/депрессия/ПА</span><span>7 000 ₽</span></div>
+      <div class="budget-row"><span>Кампания 4: Общий спрос + бренд</span><span>8 000 ₽</span></div>
+      <div class="budget-row"><span>Кампания 5: РСЯ (ретаргетинг)</span><span>6 000 ₽</span></div>
+      <div class="budget-row" style="margin-top:8px;"><span>Итого рекламный бюджет</span><span>35 000 ₽/мес</span></div>
+      <div class="budget-row" style="color:#a78bfa;"><span>Ведение и оптимизация (AIM)</span><span>15 000 ₽/мес</span></div>
+    </div>
+
+    <h3>Стартовый бюджет (первый месяц)</h3>
+    <div class="budget-box">
+      <div class="budget-row"><span>Кампания 1: Семейная психология</span><span>4 000 ₽</span></div>
+      <div class="budget-row"><span>Кампания 2: Детская психология</span><span>4 000 ₽</span></div>
+      <div class="budget-row"><span>Кампания 4: Общий спрос + бренд</span><span>4 000 ₽</span></div>
+      <div class="budget-row"><span>Кампания 5: РСЯ (ретаргетинг)</span><span>3 000 ₽</span></div>
+      <div class="budget-row" style="margin-top:8px;"><span>Итого рекламный бюджет (старт)</span><span>15 000 ₽/мес</span></div>
+      <div class="budget-row" style="color:#a78bfa;"><span>Ведение и оптимизация</span><span>15 000 ₽/мес</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- KPI -->
+<section>
+  <div class="container">
+    <h2>KPI и прогноз эффективности</h2>
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-num">2 500</div><div class="kpi-label">кликов/мес (цель 35K)</div></div>
+      <div class="kpi-card"><div class="kpi-num">12-18%</div><div class="kpi-label">конверсия в заявку</div></div>
+      <div class="kpi-card"><div class="kpi-num">300-450</div><div class="kpi-label">заявок/мес</div></div>
+      <div class="kpi-card"><div class="kpi-num">8-15 ₽</div><div class="kpi-label">средний CPC</div></div>
+      <div class="kpi-card"><div class="kpi-num">75-100 ₽</div><div class="kpi-label">цена заявки (CPA)</div></div>
+      <div class="kpi-card"><div class="kpi-num">15-20%</div><div class="kpi-label">конверсия в клиента</div></div>
+      <div class="kpi-card"><div class="kpi-num">45-90</div><div class="kpi-label">первичных клиентов/мес</div></div>
+      <div class="kpi-card"><div class="kpi-num">3-5×</div><div class="kpi-label">ROI (при среднем чеке 3 500 ₽)</div></div>
+    </div>
+
+    <div class="highlight">
+      <strong>Экономика:</strong> При бюджете 35 000 ₽/мес, цене заявки 75-100 ₽ и конверсии в клиента 15-20%, стоимость привлечения клиента = 375-500 ₽. При среднем чеке первой консультации 2 000-3 500 ₽ — окупаемость с первого визита. При удержании клиента на 5-8 сессий — ROI > 10×.
+    </div>
+  </div>
+</section>
+
+<!-- Этапы запуска -->
+<section>
+  <div class="container">
+    <h2>План запуска</h2>
+
+    <div class="stage">
+      <div class="stage-num">Неделя 1</div>
+      <h4>Аудит и подготовка</h4>
+      <p>Установка Яндекс.Метрики (если нет). Настройка целей (заявка, звонок, квиз, чат). Создание UTM-меток. Подготовка посадочных страниц под каждую кампанию. Сбор семантического ядра через Wordstat.</p>
+    </div>
+
+    <div class="stage">
+      <div class="stage-num">Неделя 2</div>
+      <h4>Запуск поисковых кампаний</h4>
+      <p>Создание кампаний 1-4 (Поиск). Написание объявлений с быстрыми ссылками и уточнениями. Подключение виртуальной визитки. Стартовый бюджет 15 000 ₽.</p>
+    </div>
+
+    <div class="stage">
+      <div class="stage-num">Неделя 3-4</div>
+      <h4>Оптимизация и РСЯ</h4>
+      <p>Анализ первых 2 недель: отключение неэффективных ключей, повышение ставок на конверсионные. Запуск РСЯ (ретаргетинг). Корректировка геотаргетинга по данным.</p>
+    </div>
+
+    <div class="stage">
+      <div class="stage-num">Месяц 2</div>
+      <h4>Масштабирование</h4>
+      <p>Увеличение бюджета до 25 000-35 000 ₽. Добавление новых ключевых слов из Search Terms. Запуск look-alike аудиторий. A/B тесты объявлений и посадочных страниц.</p>
+    </div>
+
+    <div class="stage">
+      <div class="stage-num">Месяц 3+</div>
+      <h4>Автопилот и масштабирование</h4>
+      <p>Бюджет 35 000-50 000 ₽/мес. Автоматическая оптимизация ставок. Еженедельный отчёт. Масштабирование на offline-конверсии (звонки, визиты).</p>
+    </div>
+  </div>
+</section>
+
+<!-- Итого -->
+<div class="summary">
+  <div class="container">
+    <h2>Суммарная эффективность Яндекс.Директ</h2>
+    <div class="roi-cards">
+      <div class="roi-card"><div class="big-num">450</div><div class="big-label">заявок/мес (при 35K бюджете)</div></div>
+      <div class="roi-card"><div class="big-num">75 ₽</div><div class="big-label">средняя цена заявки</div></div>
+      <div class="roi-card"><div class="big-num">3-5×</div><div class="big-label">ROI</div></div>
+    </div>
+    <p style="color:#c4b5fd; margin-top:24px; max-width:700px; margin-left:auto; margin-right:auto;">
+      При минимальной конкуренции в Липецке Яндекс.Директ становится самым быстрым каналом привлечения клиентов.
+      Результат с первого месяца. Полная окупаемость с первого клиента.
+    </p>
+  </div>
+</div>
+
+<footer>
+  <div class="container">
+    <p><a href="index.html">← Вернуться на главную</a> &nbsp;·&nbsp; <a href="geo-plan.html">← Гео-контент-план</a></p>
+    <p style="margin-top:12px;">AIM — AI-first медицинское маркетинговое агентство. Июнь 2026.</p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+[2026-06-18 20:22:10] ==================================================
+[2026-06-18 20:22:10] Starting key rotation
+[2026-06-18 20:22:10] Target services: ['brave', 'firecrawl', 'apify']
+[2026-06-18 20:22:10] [brave] Rotated to key BSA9j5MU... (index 0/0)
+[2026-06-18 20:22:10] [firecrawl] No keys in pool — skipping rotation
+[2026-06-18 20:22:10] [apify] Rotated to key apify_ap... (index 0/0)
+[2026-06-18 20:22:10] Rotation complete: {'brave': 'OK', 'firecrawl': 'NO KEYS', 'apify': 'OK'}

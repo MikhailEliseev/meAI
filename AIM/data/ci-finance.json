@@ -1,0 +1,151 @@
+{
+  "analysis_date": "2026-05-06T21:18:03.552195",
+  "total_analyzed": 5,
+  "niche": "dental implants",
+  "geo": "Moscow",
+  "financial_profiles": [
+    {
+      "name": "Центр Студия",
+      "size": "medium",
+      "price_segment": "mid",
+      "revenue_estimate": 110821714,
+      "profit_estimate": 13017855,
+      "ebitda_estimate": 14609795,
+      "margin_percent": 11.7,
+      "roi_percent": 34.0,
+      "has_funding": true,
+      "funding_amount": 10656015,
+      "valuation_estimate": 521703065,
+      "estimation_method": "office_size",
+      "confidence": 0.8284683873856062
+    },
+    {
+      "name": "Здоровье Лаб",
+      "size": "medium",
+      "price_segment": "mid",
+      "revenue_estimate": 186191160,
+      "profit_estimate": 21331560,
+      "ebitda_estimate": 22724309,
+      "margin_percent": 11.5,
+      "roi_percent": 16.4,
+      "has_funding": true,
+      "funding_amount": 13284401,
+      "valuation_estimate": 501003189,
+      "estimation_method": "pricing_analysis",
+      "confidence": 0.7729748433476132
+    },
+    {
+      "name": "Лайф Клиника",
+      "size": "medium",
+      "price_segment": "mid",
+      "revenue_estimate": 183845418,
+      "profit_estimate": 21317969,
+      "ebitda_estimate": 23886187,
+      "margin_percent": 11.6,
+      "roi_percent": 19.1,
+      "has_funding": true,
+      "funding_amount": 15484377,
+      "valuation_estimate": 518986821,
+      "estimation_method": "office_size",
+      "confidence": 0.8199760057374064
+    },
+    {
+      "name": "Медицина Клуб",
+      "size": "medium",
+      "price_segment": "mid",
+      "revenue_estimate": 129372583,
+      "profit_estimate": 19833644,
+      "ebitda_estimate": 22795748,
+      "margin_percent": 15.3,
+      "roi_percent": 24.0,
+      "has_funding": true,
+      "funding_amount": 13757373,
+      "valuation_estimate": 371087394,
+      "estimation_method": "employee_count",
+      "confidence": 0.7388334287318352
+    },
+    {
+      "name": "Клиника Центр",
+      "size": "medium",
+      "price_segment": "mid",
+      "revenue_estimate": 132984626,
+      "profit_estimate": 16999481,
+      "ebitda_estimate": 19430107,
+      "margin_percent": 12.8,
+      "roi_percent": 22.8,
+      "has_funding": false,
+      "funding_amount": null,
+      "valuation_estimate": 643582626,
+      "estimation_method": "market_share",
+      "confidence": 0.8064760822126741
+    }
+  ],
+  "market_analysis": {
+    "total_market_revenue": 743215501,
+    "avg_competitor_revenue": 148643100,
+    "avg_margin": 12.6,
+    "avg_roi": 23.3,
+    "funded_companies": 4,
+    "total_funding": 53182166,
+    "market_concentration": "medium"
+  },
+  "leaders_laggards": {
+    "revenue_leaders": [
+      {
+        "name": "Здоровье Лаб",
+        "revenue": 186191160
+      },
+      {
+        "name": "Лайф Клиника",
+        "revenue": 183845418
+      },
+      {
+        "name": "Клиника Центр",
+        "revenue": 132984626
+      }
+    ],
+    "margin_leaders": [
+      {
+        "name": "Медицина Клуб",
+        "margin": 15.3
+      },
+      {
+        "name": "Клиника Центр",
+        "margin": 12.8
+      },
+      {
+        "name": "Центр Студия",
+        "margin": 11.7
+      }
+    ],
+    "roi_leaders": [
+      {
+        "name": "Центр Студия",
+        "roi": 34.0
+      },
+      {
+        "name": "Медицина Клуб",
+        "roi": 24.0
+      },
+      {
+        "name": "Клиника Центр",
+        "roi": 22.8
+      }
+    ],
+    "laggards": [
+      {
+        "name": "Центр Студия",
+        "revenue": 110821714
+      }
+    ]
+  },
+  "insights": {
+    "market_size": "medium",
+    "profitability": "low",
+    "investment_activity": "high",
+    "competition_level": "medium",
+    "key_findings": [
+      "Высокая инвестиционная активность"
+    ]
+  }
+}

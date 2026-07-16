@@ -1,0 +1,33 @@
+{
+  "validation_date": "2026-05-30T22:14:58.320447",
+  "total_facts_checked": 0,
+  "validation_results": {
+    "validated": [],
+    "failed": [],
+    "warnings": []
+  },
+  "contradictions": [],
+  "reliability_scores": {},
+  "confidence_scores": {},
+  "report": {
+    "summary": {
+      "total_facts": 0,
+      "validated": 0,
+      "failed": 0,
+      "warnings": 0,
+      "contradictions": 0
+    },
+    "data_quality": "unknown",
+    "reliability_assessment": {
+      "sources": {},
+      "avg_reliability": 0
+    },
+    "confidence_assessment": {
+      "competitors": {},
+      "avg_confidence": 0
+    },
+    "recommendations": [
+      "Данные прошли проверку, можно использовать для анализа"
+    ]
+  }
+}

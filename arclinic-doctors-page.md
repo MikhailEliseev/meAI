@@ -1,0 +1,351 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3] [cursor=pointer]: +
+    - list [ref=e4]:
+      - listitem [ref=e5]:
+        - link "О клинике" [ref=e6] [cursor=pointer]:
+          - /url: /about/
+        - list [ref=e7]:
+          - listitem [ref=e8]:
+            - link "О нас" [ref=e9] [cursor=pointer]:
+              - /url: /about/
+          - listitem [ref=e10]:
+            - link "Специалисты" [ref=e11] [cursor=pointer]:
+              - /url: /doctors/
+          - listitem [ref=e12]:
+            - link "Онлайн-консультации" [ref=e13] [cursor=pointer]:
+              - /url: /telemeditsina/
+          - listitem [ref=e14]:
+            - link "Подарочный сертификат" [ref=e15] [cursor=pointer]:
+              - /url: /gift-card/
+          - listitem [ref=e16]:
+            - link "Отзывы" [ref=e17] [cursor=pointer]:
+              - /url: /reviews/
+          - listitem [ref=e18]:
+            - link "Новости" [ref=e19] [cursor=pointer]:
+              - /url: /news/
+          - listitem [ref=e20]:
+            - link "Блог" [ref=e21] [cursor=pointer]:
+              - /url: /blog/
+          - listitem [ref=e22]:
+            - link "Вакансии" [ref=e23] [cursor=pointer]:
+              - /url: /vakansii/
+          - listitem [ref=e24]:
+            - link "Правовая информация" [ref=e25] [cursor=pointer]:
+              - /url: /about/legal-information/
+          - listitem [ref=e26]:
+            - link "Карта сайта" [ref=e27] [cursor=pointer]:
+              - /url: /sitemap
+      - listitem [ref=e28]:
+        - link "Центр Косметологии" [ref=e29] [cursor=pointer]:
+          - /url: /services/cosmetology/
+        - list [ref=e30]:
+          - listitem [ref=e31]:
+            - link "Аппаратная косметология" [ref=e32] [cursor=pointer]:
+              - /url: /services/cosmetology/apparat/
+          - listitem [ref=e33]:
+            - link "Инъекционная косметология" [ref=e34] [cursor=pointer]:
+              - /url: /services/cosmetology/injection/
+          - listitem [ref=e35]:
+            - link "Эстетическая косметология" [ref=e36] [cursor=pointer]:
+              - /url: /services/cosmetology/estetic/
+          - listitem [ref=e37]:
+            - link "Лечение осложнений в косметологии" [ref=e38] [cursor=pointer]:
+              - /url: /services/cosmetology/lechenie/
+          - listitem [ref=e39]:
+            - link "Комплексная косметология" [ref=e40] [cursor=pointer]:
+              - /url: /services/cosmetology/komplex/
+          - listitem [ref=e41]:
+            - link "Консультации специалистов" [ref=e42] [cursor=pointer]:
+              - /url: /services/cosmetology/konsult/
+      - listitem [ref=e43]:
+        - link "Центр Здоровья" [ref=e44] [cursor=pointer]:
+          - /url: /services/health-center/
+        - list [ref=e45]:
+          - listitem [ref=e46]:
+            - link "Гинекология" [ref=e47] [cursor=pointer]:
+              - /url: /services/health-center/ginekologiya/
+          - listitem [ref=e48]:
+            - link "Дерматология" [ref=e49] [cursor=pointer]:
+              - /url: /services/health-center/dermatologiya/
+          - listitem [ref=e50]:
+            - link "Неврология" [ref=e51] [cursor=pointer]:
+              - /url: /services/health-center/nevrologiya/
+          - listitem [ref=e52]:
+            - link "Диетология" [ref=e53] [cursor=pointer]:
+              - /url: /services/health-center/dietologiya/
+          - listitem [ref=e54]:
+            - link "Эндокринология" [ref=e55] [cursor=pointer]:
+              - /url: /services/health-center/endokrinologiya/
+          - listitem [ref=e56]:
+            - link "Лабораторная диагностика" [ref=e57] [cursor=pointer]:
+              - /url: /services/health-center/laboratornye-analizy/
+          - listitem [ref=e58]:
+            - link "Ультразвуковая диагностика" [ref=e59] [cursor=pointer]:
+              - /url: /services/health-center/uzi/
+          - listitem [ref=e60]:
+            - link "Функциональная диагностика" [ref=e61] [cursor=pointer]:
+              - /url: /services/health-center/funktsionalnaya-diagnostika/
+          - listitem [ref=e62]:
+            - link "Чекапы" [ref=e63] [cursor=pointer]:
+              - /url: /services/health-center/chek-apy/
+      - listitem [ref=e64]:
+        - link "Для мужчин" [ref=e65] [cursor=pointer]:
+          - /url: /services/men
+        - list [ref=e66]:
+          - listitem [ref=e67]:
+            - link "Уходовые процедуры" [ref=e68] [cursor=pointer]:
+              - /url: /services/men/ukhodovye-protsedury/
+          - listitem [ref=e69]:
+            - link "Аппаратная косметология" [ref=e70] [cursor=pointer]:
+              - /url: /services/men/apparatnaya-kosmetologiya/
+          - listitem [ref=e71]:
+            - link "Инъекционные процедуры" [ref=e72] [cursor=pointer]:
+              - /url: /services/men/inektsionnye-protsedury/
+          - listitem [ref=e73]:
+            - link "Консультации специалистов" [ref=e74] [cursor=pointer]:
+              - /url: /services/men/konsultatsii-spetsialistov/
+          - listitem [ref=e75]:
+            - link "Чекапы" [ref=e76] [cursor=pointer]:
+              - /url: /services/men/chekapy/
+      - listitem [ref=e77]:
+        - link "Цены" [ref=e78] [cursor=pointer]:
+          - /url: /prices/
+      - listitem [ref=e79]:
+        - link "Абонементы" [ref=e80] [cursor=pointer]:
+          - /url: /sales/
+      - listitem [ref=e81]:
+        - link "Контакты" [ref=e82] [cursor=pointer]:
+          - /url: /contacts/
+      - listitem [ref=e83]:
+        - link "Акции" [ref=e84] [cursor=pointer]:
+          - /url: /promotions/
+  - generic [ref=e85]:
+    - main [ref=e86]:
+      - generic [ref=e88]:
+        - link "" [ref=e89] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e91] [cursor=pointer]: РјРµРЅСЋ
+        - generic [ref=e93]:
+          - link "" [ref=e96] [cursor=pointer]:
+            - /url: tel:+79312440044
+            - generic [ref=e97]: 
+          - link [ref=e98] [cursor=pointer]:
+            - /url: https://t.me/ArclinicSPB
+          - link [ref=e99] [cursor=pointer]:
+            - /url: https://max.ru/id7810605688_bot
+      - generic [ref=e100]:
+        - heading "Специалисты" [level=1] [ref=e101]
+        - generic [ref=e103]:
+          - link "Резник Анна Вячеславовна Кандидат медицинских наук, врач-косметолог, дерматолог, геронтолог, генеральный директор" [ref=e105] [cursor=pointer]:
+            - /url: /doctors/reznik-anna-vyacheslavovna/
+            - img [ref=e107]
+            - generic [ref=e108]:
+              - generic [ref=e109]: Резник Анна Вячеславовна
+              - generic [ref=e110]: Кандидат медицинских наук, врач-косметолог, дерматолог, геронтолог, генеральный директор
+          - link "Афанасьева Лилия Борисовна Главный врач, врач акушер-гинеколог I категории, гинеколог-эндокринолог, врач ультразвуковой диагностики" [ref=e112] [cursor=pointer]:
+            - /url: /doctors/afanaseva-liliya-borisovna/
+            - img [ref=e114]
+            - generic [ref=e115]:
+              - generic [ref=e116]: Афанасьева Лилия Борисовна
+              - generic [ref=e117]: Главный врач, врач акушер-гинеколог I категории, гинеколог-эндокринолог, врач ультразвуковой диагностики
+          - link "Дроздова Анна Андреевна Врач-косметолог, дерматолог, трихолог" [ref=e119] [cursor=pointer]:
+            - /url: /doctors/drozdova-anna-andreevna/
+            - img [ref=e121]
+            - generic [ref=e122]:
+              - generic [ref=e123]: Дроздова Анна Андреевна
+              - generic [ref=e124]: Врач-косметолог, дерматолог, трихолог
+          - link "Львович Ирина Викторовна Врач-косметолог, дерматолог" [ref=e126] [cursor=pointer]:
+            - /url: /doctors/lvovich-irina-viktorovna/
+            - img [ref=e128]
+            - generic [ref=e129]:
+              - generic [ref=e130]: Львович Ирина Викторовна
+              - generic [ref=e131]: Врач-косметолог, дерматолог
+          - link "Яхина Алиса Альфировна Врач-косметолог, дерматолог" [ref=e133] [cursor=pointer]:
+            - /url: /doctors/yakhina-alisa-alfirovna/
+            - img [ref=e135]
+            - generic [ref=e136]:
+              - generic [ref=e137]: Яхина Алиса Альфировна
+              - generic [ref=e138]: Врач-косметолог, дерматолог
+          - link "Ряховская Наталья Дмитриевна Врач-косметолог, дерматолог, трихолог" [ref=e140] [cursor=pointer]:
+            - /url: /doctors/ryakhovskaya-natalya-dmitrievna/
+            - img [ref=e142]
+            - generic [ref=e143]:
+              - generic [ref=e144]: Ряховская Наталья Дмитриевна
+              - generic [ref=e145]: Врач-косметолог, дерматолог, трихолог
+          - link "Фокина Екатерина Евгеньевна Врач-косметолог, дерматолог, трихолог" [ref=e147] [cursor=pointer]:
+            - /url: /doctors/fokina-ekaterina-evgenevna/
+            - img [ref=e149]
+            - generic [ref=e150]:
+              - generic [ref=e151]: Фокина Екатерина Евгеньевна
+              - generic [ref=e152]: Врач-косметолог, дерматолог, трихолог
+          - link "Батиенко Дарья Дмитриевна Врач-косметолог, дерматолог, трихолог" [ref=e154] [cursor=pointer]:
+            - /url: /doctors/batienko-darya-dmitrievna/
+            - img [ref=e156]
+            - generic [ref=e157]:
+              - generic [ref=e158]: Батиенко Дарья Дмитриевна
+              - generic [ref=e159]: Врач-косметолог, дерматолог, трихолог
+          - link "Зорина Надежда Викторовна Врач-косметолог, дерматолог, трихолог" [ref=e161] [cursor=pointer]:
+            - /url: /doctors/zorina-nadezhda-viktorovna/
+            - img [ref=e163]
+            - generic [ref=e164]:
+              - generic [ref=e165]: Зорина Надежда Викторовна
+              - generic [ref=e166]: Врач-косметолог, дерматолог, трихолог
+          - link "Подольникова Мария Игоревна Врач-косметолог, дерматолог, трихолог" [ref=e168] [cursor=pointer]:
+            - /url: /doctors/podolnikova-mariya-igorevna/
+            - img [ref=e170]
+            - generic [ref=e171]:
+              - generic [ref=e172]: Подольникова Мария Игоревна
+              - generic [ref=e173]: Врач-косметолог, дерматолог, трихолог
+          - link "Труфанов Георгий Сергеевич Врач-косметолог, дерматолог, врач УЗИ" [ref=e175] [cursor=pointer]:
+            - /url: /doctors/trufanov-georgiy-sergeevich/
+            - img [ref=e177]
+            - generic [ref=e178]:
+              - generic [ref=e179]: Труфанов Георгий Сергеевич
+              - generic [ref=e180]: Врач-косметолог, дерматолог, врач УЗИ
+          - link "Плотникова Анна Юрьевна Врач-эндокринолог, врач-диетолог, врач-нутрициолог" [ref=e182] [cursor=pointer]:
+            - /url: /doctors/plotnikova-anna-yurevna/
+            - img [ref=e184]
+            - generic [ref=e185]:
+              - generic [ref=e186]: Плотникова Анна Юрьевна
+              - generic [ref=e187]: Врач-эндокринолог, врач-диетолог, врач-нутрициолог
+          - link "Яковлева Ольга Михайловна Врач УЗИ высшей категории" [ref=e189] [cursor=pointer]:
+            - /url: /doctors/yakovleva-olga-mikhaylovna/
+            - img [ref=e191]
+            - generic [ref=e192]:
+              - generic [ref=e193]: Яковлева Ольга Михайловна
+              - generic [ref=e194]: Врач УЗИ высшей категории
+          - link "Рубаник Кирилл Сергеевич Врач-невролог, ботулинотерапевт" [ref=e196] [cursor=pointer]:
+            - /url: /doctors/rubanik-kirill-sergeevich/
+            - img [ref=e198]
+            - generic [ref=e199]:
+              - generic [ref=e200]: Рубаник Кирилл Сергеевич
+              - generic [ref=e201]: Врач-невролог, ботулинотерапевт
+          - link "Сердюкова Светлана Николаевна Старшая медицинская сестра" [ref=e203] [cursor=pointer]:
+            - /url: /doctors/serdyukova-svetlana-nikolaevna/
+            - img [ref=e205]
+            - generic [ref=e206]:
+              - generic [ref=e207]: Сердюкова Светлана Николаевна
+              - generic [ref=e208]: Старшая медицинская сестра
+    - contentinfo [ref=e209]:
+      - generic [ref=e210]:
+        - generic [ref=e211]: AR Clinic В© 2016 - 2026
+        - generic [ref=e212]:
+          - generic [ref=e213]:
+            - navigation [ref=e214]:
+              - link "Рћ РЅР°СЃ" [ref=e215] [cursor=pointer]:
+                - /url: /about/
+              - link "РЎРїРµС†РёР°Р»РёСЃС‚С‹" [ref=e216] [cursor=pointer]:
+                - /url: /doctors/
+              - link "РћРЅР»Р°Р№РЅ-РєРѕРЅСЃСѓР»СЊС‚Р°С†РёРё" [ref=e217] [cursor=pointer]:
+                - /url: /telemeditsina/
+              - link "РџРѕРґР°СЂРѕС‡РЅС‹Р№ СЃРµСЂС‚РёС„РёРєР°С‚" [ref=e218] [cursor=pointer]:
+                - /url: /gift-card/
+              - link "РћС‚Р·С‹РІС‹" [ref=e219] [cursor=pointer]:
+                - /url: /reviews/
+              - link "РќРѕРІРѕСЃС‚Рё" [ref=e220] [cursor=pointer]:
+                - /url: /news/
+              - link "Р‘Р»РѕРі" [ref=e221] [cursor=pointer]:
+                - /url: /blog/
+              - link "Р’Р°РєР°РЅСЃРёРё" [ref=e222] [cursor=pointer]:
+                - /url: /vakansii/
+            - navigation [ref=e223]:
+              - link "Р¦РµРЅС‚СЂ РљРѕСЃРјРµС‚РѕР»РѕРіРёРё" [ref=e224] [cursor=pointer]:
+                - /url: /services/cosmetology/
+              - link "Р¦РµРЅС‚СЂ Р—РґРѕСЂРѕРІСЊСЏ" [ref=e225] [cursor=pointer]:
+                - /url: /services/health-center/
+              - link "Р”Р»СЏ РјСѓР¶С‡РёРЅ" [ref=e226] [cursor=pointer]:
+                - /url: /services/men/
+              - link "Р¦РµРЅС‹" [ref=e227] [cursor=pointer]:
+                - /url: /prices/
+              - link "РђР±РѕРЅРµРјРµРЅС‚С‹" [ref=e228] [cursor=pointer]:
+                - /url: /sales/
+              - link "РљРѕРЅС‚Р°РєС‚С‹" [ref=e229] [cursor=pointer]:
+                - /url: /contacts/
+              - link "РђРїРїР°СЂР°С‚С‹" [ref=e230] [cursor=pointer]:
+                - /url: "/devices/ "
+              - link "РђРєС†РёРё" [ref=e231] [cursor=pointer]:
+                - /url: "/promotions/ "
+            - navigation [ref=e232]:
+              - link "РџРѕР»РёС‚РёРєР° РєРѕРЅС„РёРґРµРЅС†РёР°Р»СЊРЅРѕСЃС‚Рё" [ref=e233] [cursor=pointer]:
+                - /url: /about/legal-information/privacy-policy-statement.php
+              - link "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРѕРµ СЃРѕРіР»Р°С€РµРЅРёРµ" [ref=e234] [cursor=pointer]:
+                - /url: /about/legal-information/terms-of-use.php
+              - link "РџСЂР°РІРѕРІР°СЏ РёРЅС„РѕСЂРјР°С†РёСЏ" [ref=e235] [cursor=pointer]:
+                - /url: /about/legal-information/
+              - link "РџРѕСЂСЏРґРѕРє РІС‹РґР°С‡Рё РєР»РёРЅРёРєРѕР№ РјРµРґРёС†РёРЅСЃРєРёС… РґРѕРєСѓРјРµРЅС‚РѕРІ Рѕ СЃРѕСЃС‚РѕСЏРЅРёРё Р·РґРѕСЂРѕРІСЊСЏ" [ref=e236] [cursor=pointer]:
+                - /url: /about/legal-information/health-care-document.php
+              - link "РљР°СЂС‚Р° СЃР°Р№С‚Р°" [ref=e237] [cursor=pointer]:
+                - /url: /sitemap/
+          - generic [ref=e238]:
+            - generic [ref=e239]:
+              - link "Логотип 101 отзыв" [ref=e241] [cursor=pointer]:
+                - /url: https://prodoctorov.ru/spb/lpu/47082-arclinic/
+                - img "Логотип" [ref=e243]
+                - generic [ref=e246]: 101 отзыв
+              - paragraph [ref=e247]: "Р—Р°РїРёСЃСЊ РїРѕ С‚РµР»РµС„РѕРЅСѓ:"
+              - link "+7 931 244 00 44" [ref=e248] [cursor=pointer]:
+                - /url: tel:+79312440044
+            - generic [ref=e249]:
+              - link "" [ref=e250] [cursor=pointer]:
+                - /url: https://vk.com/club56956529
+              - link [ref=e251] [cursor=pointer]:
+                - /url: https://t.me/arclinic1
+              - link [ref=e252] [cursor=pointer]:
+                - /url: https://max.ru/id7810605688_bot
+              - link [ref=e253] [cursor=pointer]:
+                - /url: https://rutube.ru/channel/40993271/
+              - link [ref=e254] [cursor=pointer]:
+                - /url: https://dzen.ru/arclinic
+            - link "Р’РµСЂСЃРёСЏ РґР»СЏ СЃР»Р°Р±РѕРІРёРґСЏС‰РёС…" [ref=e256] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e257]
+              - text: Р’РµСЂСЃРёСЏ РґР»СЏ СЃР»Р°Р±РѕРІРёРґСЏС‰РёС…
+        - generic [ref=e260]:
+          - generic [ref=e261]:
+            - text: "Р\x98РњР•Р®РўРЎРЇ РџР РћРўР\x98Р’РћРџРћРљРђР—РђРќР\x98РЇ, РќР•РћР‘РҐРћР”Р\x98РњРћ РџР РћРљРћРќРЎРЈР›Р¬РўР\x98Р РћР’РђРўР¬РЎРЇ РЎРћ РЎРџР•Р¦Р\x98РђР›Р\x98РЎРўРћРњ."
+            - strong [ref=e262]: 16+
+          - generic [ref=e263]: "Р\x98РЅС„РѕСЂРјР°С†РёСЏ Рё С†РµРЅС‹, РїСЂРµРґСЃС‚Р°РІР»РµРЅРЅС‹Рµ РЅР° СЃР°Р№С‚Рµ, СЏРІР»СЏСЋС‚СЃСЏ СЃРїСЂР°РІРѕС‡РЅС‹РјРё Рё РЅРµ СЏРІР»СЏСЋС‚СЃСЏ РїСѓР±Р»РёС‡РЅРѕР№ РѕС„РµСЂС‚РѕР№. Р\x98РЅС„РѕСЂРјР°С†РёСЏ РЅР° СЃС‚СЂР°РЅРёС†Рµ РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅР° РІ СЃРѕРѕС‚РІРµС‚СЃС‚РІРёРё СЃ Р¤РµРґРµСЂР°Р»СЊРЅС‹Рј Р·Р°РєРѕРЅРѕРј \"РћР± РѕСЃРЅРѕРІР°С… РѕС…СЂР°РЅС‹ Р·РґРѕСЂРѕРІСЊСЏ РіСЂР°Р¶РґР°РЅ РІ Р РѕСЃСЃРёР№СЃРєРѕР№ Р¤РµРґРµСЂР°С†РёРё\" 323 Р¤Р—, Р—Р°РєРѕРЅРѕРј Р РѕСЃСЃРёР№СЃРєРѕР№ Р¤РµРґРµСЂР°С†РёРё \"Рћ Р·Р°С‰РёС‚Рµ РїСЂР°РІ РїРѕС‚СЂРµР±РёС‚РµР»РµР№\" N 2300-1 Рё РџРѕСЃС‚Р°РЅРѕРІР»РµРЅРёРµРј РџСЂР°РІРёС‚РµР»СЊСЃС‚РІР° Р РѕСЃСЃРёР№СЃРєРѕР№ Р¤РµРґРµСЂР°С†РёРё 4 РѕРєС‚СЏР±СЂСЏ 2012 Рі. N 1006."
+          - link "Р Р°Р·СЂР°Р±РѕС‚Р°РЅРѕ РІ " [ref=e264] [cursor=pointer]:
+            - /url: https://sotbi-it.ru/
+            - text: Р Р°Р·СЂР°Р±РѕС‚Р°РЅРѕ РІ
+            - generic [ref=e265]: 
+  - generic [ref=e268]:
+    - generic [ref=e269] [cursor=pointer]: 
+    - generic [ref=e270]:
+      - generic [ref=e271]:
+        - text: "Р\x98РјСЏ Рё С„Р°РјРёР»РёСЏ"
+        - 'textbox "РРјСЏ Рё С„Р°РјРёР»РёСЏ" [ref=e272]'
+      - generic [ref=e273]:
+        - text: РљРѕРЅС‚Р°РєС‚РЅС‹Р№ С‚РµР»РµС„РѕРЅ
+        - textbox "РљРѕРЅС‚Р°РєС‚РЅС‹Р№ С‚РµР»РµС„РѕРЅ" [ref=e274]
+      - button "Р—Р°РїРёСЃР°С‚СЊСЃСЏ" [ref=e275] [cursor=pointer]
+      - generic [ref=e278] [cursor=pointer]:
+        - text: РЇ РґР°СЋ СЃРѕРіР»Р°СЃРёРµ РЅР° РѕР±СЂР°Р±РѕС‚РєСѓ
+        - link "РїРµСЂСЃРѕРЅР°Р»СЊРЅС‹С… РґР°РЅРЅС‹С…" [ref=e279]:
+          - /url: /about/legal-information/privacy-policy-statement.php
+        - checkbox [ref=e280]
+  - generic [ref=e283]:
+    - generic [ref=e284] [cursor=pointer]: 
+    - generic [ref=e285]: РЎРІСЏР¶РёС‚РµСЃСЊ СЃ РЅР°РјРё!
+    - generic [ref=e286]:
+      - link " info@arclinic.ru" [ref=e287] [cursor=pointer]:
+        - /url: mailto:info@arclinic.ru?Subject=Hello!
+        - generic [ref=e288]: 
+        - text: info@arclinic.ru
+      - link " arclinic@mail.ru" [ref=e289] [cursor=pointer]:
+        - /url: mailto:info@arclinic.ru?Subject=Hello!
+        - generic [ref=e290]: 
+        - text: arclinic@mail.ru
+  - generic [ref=e293]:
+    - paragraph [ref=e295]: Данный веб-сайт использует cookie-файлы и сервис «Яндекс Метрика» в целях предоставления вам лучшего пользовательского опыта на нашем сайте. Продолжая использовать данный сайт, вы соглашаетесь с использованием нами cookie-файлов. Файлы cookie можно отключить в настройках вашего браузера. Политика Cookie
+    - button "Я согласен" [ref=e297] [cursor=pointer]
+  - generic:
+    - generic [ref=e299] [cursor=pointer]: Запись
+    - generic [ref=e301]:
+      - generic [ref=e302]:
+        - text: Запись на приём к врачу
+        - button [ref=e303] [cursor=pointer]:
+          - img [ref=e304]
+      - img [ref=e308]
+      - generic [ref=e310]: Виджет

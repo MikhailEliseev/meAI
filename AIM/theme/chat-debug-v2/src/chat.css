@@ -1,0 +1,55 @@
+@import './chat-utilities.css';
+@import './chat-theme.css';
+
+#hermes-chat {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+#hermes-chat *,
+#hermes-chat *::before,
+#hermes-chat *::after {
+  box-sizing: border-box;
+}
+
+/* Only animate non-streaming content */
+#hermes-chat .chat-bubble-content:not([data-streaming="true"]) {
+  transition: all 0.05s ease-out;
+}
+
+/* Hide loading dots once streaming text arrives (stream-target gets textContent from RAF) */
+#hermes-chat .stream-target:not(:empty) ~ .inline-flex {
+  display: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes chatSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#hermes-chat .chat-message-enter {
+  animation: chatSlideUp 0.3s ease-out;
+}
+
+/* Phase 09: Phase Tracker animations */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Phase 09: Report Preview reveal */
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Phase 09: Fallback Form backdrop */
+#hermes-chat .fallback-backdrop {
+  backdrop-filter: blur(4px);
+}

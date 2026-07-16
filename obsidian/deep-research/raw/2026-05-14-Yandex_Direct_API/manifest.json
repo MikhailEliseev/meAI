@@ -1,0 +1,16 @@
+{
+  "topic": "Yandex_Direct_API",
+  "date": "2026-05-14",
+  "mode": "deep",
+  "duration_minutes": 0,
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0
+  },
+  "cost_usd": 0.0,
+  "sources_count": 1,
+  "report_size_kb": 64,
+  "used_for": [],
+  "reused_by": []
+}

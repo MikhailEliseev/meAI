@@ -1,0 +1,65 @@
+{
+  "research_id": "competitor_content_analysis_seo_20260512",
+  "topic": "Competitor Content Analysis for SEO",
+  "mode": "deep",
+  "phases_completed": 8,
+  "date_started": "2026-05-12T20:00:00Z",
+  "date_completed": "2026-05-12T20:58:30Z",
+  "duration_minutes": 58,
+  "requirements": {
+    "github_integration": "mandatory",
+    "focus_areas": [
+      "keyword_density_optimization",
+      "keyword_placement",
+      "lsi_keywords",
+      "eeat_scoring_medical",
+      "ai_content_detection",
+      "technical_seo_factors",
+      "content_structure",
+      "russian_market_yandex"
+    ],
+    "integrations": [
+      "playwright_scraping",
+      "semrush_ahrefs_apis",
+      "ai_detection_tools"
+    ],
+    "output_requirements": [
+      "github_repo_links_with_stars",
+      "code_examples_adapted",
+      "architecture_patterns",
+      "api_pricing",
+      "benchmarks_metrics",
+      "russian_market_specifics"
+    ]
+  },
+  "budget": {
+    "allocated_usd": 3.00,
+    "spent_usd": 0.15,
+    "remaining_usd": 2.85
+  },
+  "quality_metrics": {
+    "sources_total": 15,
+    "sources_credibility_avg": 87,
+    "claims_verified": 13,
+    "claims_total": 13,
+    "verification_rate": 1.0,
+    "word_count": 18500,
+    "code_examples": 25,
+    "github_repos_analyzed": 4,
+    "github_stars_total": 880
+  },
+  "output_files": {
+    "report_markdown": "report.md",
+    "sources_registry": "sources.jsonl",
+    "evidence_store": "evidence.jsonl",
+    "claims_ledger": "claims.jsonl",
+    "manifest": "run_manifest.json"
+  },
+  "status": "completed",
+  "next_steps": [
+    "Archive to obsidian/deep-research/ vault",
+    "Generate HTML report (McKinsey style)",
+    "Generate PDF report",
+    "Update deep-research vault statistics"
+  ]
+}

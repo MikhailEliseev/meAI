@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIM Competitive Intelligence — SEO Audit Report</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #1e293b; line-height:1.5; }
+.container { max-width:1200px; margin:0 auto; padding:24px; }
+
+/* Header */
+.hero { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); color:#fff; padding:48px 24px; text-align:center; }
+.hero h1 { font-size:32px; font-weight:800; margin-bottom:8px; letter-spacing:-0.5px; }
+.hero .subtitle { color:#94a3b8; font-size:16px; margin-bottom:24px; }
+.hero .url { color:#60a5fa; font-size:18px; font-weight:500; }
+
+/* Metric cards */
+.metrics { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin-top:-32px; position:relative; z-index:10; }
+.metric-card { background:#fff; border-radius:16px; padding:20px; text-align:center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); }
+.metric-card .value { font-size:36px; font-weight:800; }
+.metric-card .label { font-size:13px; color:#64748b; margin-top:4px; text-transform:uppercase; letter-spacing:0.5px; }
+
+/* Sections */
+.section { background:#fff; border-radius:16px; padding:32px; margin:32px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.section h2 { font-size:24px; font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:10px; }
+.section .section-meta { color:#64748b; font-size:14px; margin-bottom:24px; }
+
+/* Phase header badge */
+.phase-badge { display:inline-block; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+.phase-badge.success { background:#d1fae5; color:#065f46; }
+.phase-badge.partial { background:#fef3c7; color:#92400e; }
+
+/* Tables */
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th { text-align:left; padding:12px 16px; background:#f8fafc; font-weight:600; color:#475569; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #e2e8f0; }
+td { padding:12px 16px; border-bottom:1px solid #f1f5f9; vertical-align:top; }
+tr:hover td { background:#f8fafc; }
+
+/* Insights box */
+.insight-box { background:#f0f9ff; border-left:4px solid #3b82f6; border-radius:8px; padding:16px; margin:8px 0; font-size:14px; }
+.insight-box.warning { background:#fffbeb; border-left-color:#f59e0b; }
+.insight-box.success { background:#f0fdf4; border-left-color:#10b981; }
+
+/* Gap list */
+.gap-list { list-style:none; }
+.gap-list li { padding:8px 0; border-bottom:1px solid #f1f5f9; font-size:14px; }
+.gap-list li:before { content:"⚠️ "; }
+
+/* Market insights grid */
+.insights-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap:16px; }
+.insight-card { background:#f8fafc; border-radius:12px; padding:20px; border:1px solid #e2e8f0; }
+.insight-card h4 { font-size:15px; font-weight:700; margin-bottom:8px; color:#0f172a; }
+.insight-card p { font-size:13px; color:#475569; }
+
+/* Reputation score bar */
+.score-bar-bg { background:#e2e8f0; border-radius:8px; height:10px; overflow:hidden; margin:4px 0; }
+.score-bar-fill { height:100%; border-radius:8px; transition: width 0.3s; }
+
+/* Footer */
+.footer { text-align:center; padding:32px; color:#94a3b8; font-size:13px; }
+
+/* Tabs for Phase 3 */
+.tab-nav { display:flex; gap:4px; margin-bottom:16px; flex-wrap:wrap; }
+.tab-btn { padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px; font-weight:500; color:#475569; }
+.tab-btn.active { background:#0f172a; color:#fff; border-color:#0f172a; }
+
+@media (max-width: 768px) {
+    .hero h1 { font-size:24px; }
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    .section { padding:20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+    <h1>AIM Competitive Intelligence</h1>
+    <div class="subtitle">Полный SEO-аудит конкурентной среды</div>
+    <div class="url">🔍 med-det.ru</div>
+</div>
+
+<div class="container">
+
+<!-- METRICS -->
+<div class="metrics">
+    <div class="metric-card">
+        <div class="value" style="color:#10b981;">100/100</div>
+        <div class="label">Quality Score</div>
+    </div>
+    <div class="metric-card">
+        <div class="value" style="color:#3b82f6;">4/4</div>
+        <div class="label">Фаз успешно</div>
+    </div>
+    <div class="metric-card">
+        <div class="value" style="color:#8b5cf6;">2</div>
+        <div class="label">Конкурентов</div>
+    </div>
+    <div class="metric-card">
+        <div class="value" style="color:#f59e0b;">27 мин</div>
+        <div class="label">Время выполнения</div>
+    </div>
+    <div class="metric-card">
+        <div class="value" style="color:#ef4444;">quick</div>
+        <div class="label">Tier (фазы 1-4)</div>
+    </div>
+</div>
+
+<!-- PHASE 1: Competitor Discovery -->
+<div class="section">
+    <h2>🔎 <span>Фаза 1: Обнаружение конкурентов</span> <span class="phase-badge success">ci-scout</span></h2>
+    <div class="section-meta">
+        Ниша: <b>косметология</b> &nbsp;|&nbsp;
+        Гео: <b>ru</b> &nbsp;|&nbsp;
+        Ценовой сегмент: <b>mid</b> &nbsp;|&nbsp;
+        Найдено: <b>10</b>
+    </div>
+
+    <table>
+    <thead>
+    <tr>
+        <th style="width:30px;">#</th>
+        <th>Название</th>
+        <th>Сайт</th>
+        <th>Ниша</th>
+        <th>Ценовой</th>
+        <th>Размер</th>
+        <th>Каналы</th>
+    </tr>
+    </thead>
+    <tbody>
+
+    <tr>
+        <td style="color:#94a3b8;">1</td>
+        <td><b>Центр медицинской косметологии Оксаны Волковой</b></td>
+        <td><a href="https://volkovabeauty.ru/" target="_blank" style="color:#3b82f6; text-decoration:none;">https://volkovabeauty.ru/</a></td>
+        <td>косметология</td>
+        <td>premium</td>
+        <td>large</td>
+        <td>🌐 📱 ▶️</td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">2</td>
+        <td><b>Школа косметологии PF&beauty</b></td>
+        <td><a href="https://pfbeautyschool.ru/" target="_blank" style="color:#3b82f6; text-decoration:none;">https://pfbeautyschool.ru/</a></td>
+        <td>косметология</td>
+        <td>budget</td>
+        <td>large</td>
+        <td>🌐 📱</td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">3</td>
+        <td><b>Салон красоты People`s Choice</b></td>
+        <td><a href="https://peopleschoice.studio/" target="_blank" style="color:#3b82f6; text-decoration:none;">https://peopleschoice.studio/</a></td>
+        <td>косметология</td>
+        <td>budget</td>
+        <td>large</td>
+        <td>🌐 📱</td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">4</td>
+        <td><b>Клиника медицины кожи</b></td>
+        <td><a href="https://1skin.ru/" target="_blank" style="color:#3b82f6; text-decoration:none;">https://1skin.ru/</a></td>
+        <td>косметология</td>
+        <td>budget</td>
+        <td>medium</td>
+        <td>🌐 📱</td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">5</td>
+        <td><b>Центр медицинской косметологии КОСМЕД</b></td>
+        <td><a href="https://www.cosmed-spb.ru/" target="_blank" style="color:#3b82f6; text-decoration:none;">https://www.cosmed-spb.ru/</a></td>
+        <td>косметология</td>
+        <td>premium</td>
+        <td>large</td>
+        <td>🌐 📱 ▶️</td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">6</td>
+        <td><b>Клиника косметологии "Фейсконтроль"</b></td>
+        <td><a href="http://face-kontrol.ru/" target="_blank" style="color:#3b82f6; text-decoration:none;">http://face-kontrol.ru/</a></td>
+        <td>косметология</td>
+        <td>budget</td>
+        <td>medium</td>
+        <td>🌐 📱</td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">7</td>
+        <td><b>Клиника медицинской косметологии EstiLine</b></td>
+        <td><a href="https://estiline-spb.ru/" target="_blank" style="color:#3b82f6; text-decoration:none;">https://estiline-spb.ru/</a></td>
+        <td>косметология</td>
+        <td>budget</td>
+        <td>large</td>
+        <td>🌐 📱</td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">8</td>
+        <td><b>Учебный центр DMK</b></td>
+        <td><a href="https://danne.ru/" target="_blank" style="color:#3b82f6; text-decoration:none;">https://danne.ru/</a></td>
+        <td>косметология</td>
+        <td>premium</td>
+        <td>medium</td>
+        <td>🌐 📱</td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">9</td>
+        <td><b>Кристи</b></td>
+        <td><a href="https://spb.kristi.pro/?utm_source=gmaps&utm_medium=google&utm_campaign=maps&utm_content=geo&utm_term=profile" target="_blank" style="color:#3b82f6; text-decoration:none;">https://spb.kristi.pro/?utm_source=gmaps...</a></td>
+        <td>косметология</td>
+        <td>budget</td>
+        <td>small</td>
+        <td>🌐 📱</td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">10</td>
+        <td><b>Клиника Семейной косметологии</b></td>
+        <td><a href="https://ksk-clinic.ru/" target="_blank" style="color:#3b82f6; text-decoration:none;">https://ksk-clinic.ru/</a></td>
+        <td>косметология</td>
+        <td>budget</td>
+        <td>large</td>
+        <td>🌐</td>
+    </tr>
+    </tbody>
+    </table>
+<div style="margin-top:20px;"><b>Кластеры:</b> <span style="background:#f1f5f9; border-radius:6px; padding:4px 10px; margin:2px; display:inline-block; font-size:13px;">direct</span> <span style="background:#f1f5f9; border-radius:6px; padding:4px 10px; margin:2px; display:inline-block; font-size:13px;">indirect</span> <span style="background:#f1f5f9; border-radius:6px; padding:4px 10px; margin:2px; display:inline-block; font-size:13px;">leader</span> <span style="background:#f1f5f9; border-radius:6px; padding:4px 10px; margin:2px; display:inline-block; font-size:13px;">niche</span> <span style="background:#f1f5f9; border-radius:6px; padding:4px 10px; margin:2px; display:inline-block; font-size:13px;">emerging</span> </div>
+</div>
+
+<!-- PHASE 2: Website Audit -->
+<div class="section">
+    <h2>🔬 <span>Фаза 2: Аудит сайтов конкурентов</span> <span class="phase-badge success">ci-auditor</span></h2>
+    <div class="section-meta">
+        Тип аудита: <b>deep</b> &nbsp;|&nbsp;
+        Всего проаудировано: <b>9</b>
+    </div>
+
+    <table>
+    <thead>
+    <tr>
+        <th>#</th>
+        <th>Конкурент</th>
+        <th>Сайт</th>
+        <th>Оценка</th>
+        <th>Грейд</th>
+        <th style="min-width:280px;">Dimensions</th>
+    </tr>
+    </thead>
+    <tbody>
+
+    <tr>
+        <td style="color:#94a3b8;">1</td>
+        <td><b>Центр медицинской косметологии КОСМЕД</b></td>
+        <td><a href="https://www.cosmed-spb.ru/" target="_blank" style="color:#3b82f6; text-decoration:none;">https://www.cosmed-spb.ru/</a></td>
+        <td><span style="color:#f59e0b; font-weight:700; font-size:18px;">72.9</span></td>
+        <td><span style="background:#3b82f6; color:#fff; padding:2px 10px; border-radius:12px; font-weight:700; font-size:13px;">B</span></td>
+        <td><div style="display:flex; gap:8px; flex-wrap:wrap;"><div style="flex:1; min-width:80px; text-align:center; background:#3b82f615; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#3b82f6;">80.0</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">technical</div></div><div style="flex:1; min-width:80px; text-align:center; background:#10b98115; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#10b981;">63.57142857142857</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">content</div></div><div style="flex:1; min-width:80px; text-align:center; background:#f59e0b15; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#f59e0b;">88.57142857142857</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">ux_ui</div></div><div style="flex:1; min-width:80px; text-align:center; background:#ef444415; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#ef4444;">58.333333333333336</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">marketing</div></div></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">2</td>
+        <td><b>Центр медицинской косметологии Оксаны Волковой</b></td>
+        <td><a href="https://volkovabeauty.ru/" target="_blank" style="color:#3b82f6; text-decoration:none;">https://volkovabeauty.ru/</a></td>
+        <td><span style="color:#3b82f6; font-weight:700; font-size:18px;">76.0</span></td>
+        <td><span style="background:#3b82f6; color:#fff; padding:2px 10px; border-radius:12px; font-weight:700; font-size:13px;">B</span></td>
+        <td><div style="display:flex; gap:8px; flex-wrap:wrap;"><div style="flex:1; min-width:80px; text-align:center; background:#3b82f615; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#3b82f6;">88.0</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">technical</div></div><div style="flex:1; min-width:80px; text-align:center; background:#10b98115; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#10b981;">72.85714285714286</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">content</div></div><div style="flex:1; min-width:80px; text-align:center; background:#f59e0b15; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#f59e0b;">70.0</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">ux_ui</div></div><div style="flex:1; min-width:80px; text-align:center; background:#ef444415; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#ef4444;">73.33333333333333</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">marketing</div></div></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">3</td>
+        <td><b>Школа косметологии PF&beauty</b></td>
+        <td><a href="https://pfbeautyschool.ru/" target="_blank" style="color:#3b82f6; text-decoration:none;">https://pfbeautyschool.ru/</a></td>
+        <td><span style="color:#f59e0b; font-weight:700; font-size:18px;">69.1</span></td>
+        <td><span style="background:#f59e0b; color:#fff; padding:2px 10px; border-radius:12px; font-weight:700; font-size:13px;">C</span></td>
+        <td><div style="display:flex; gap:8px; flex-wrap:wrap;"><div style="flex:1; min-width:80px; text-align:center; background:#3b82f615; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#3b82f6;">85.0</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">technical</div></div><div style="flex:1; min-width:80px; text-align:center; background:#10b98115; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#10b981;">47.857142857142854</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">content</div></div><div style="flex:1; min-width:80px; text-align:center; background:#f59e0b15; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#f59e0b;">85.0</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">ux_ui</div></div><div style="flex:1; min-width:80px; text-align:center; background:#ef444415; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#ef4444;">61.0</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">marketing</div></div></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">4</td>
+        <td><b>Салон красоты People`s Choice</b></td>
+        <td><a href="https://peopleschoice.studio/" target="_blank" style="color:#3b82f6; text-decoration:none;">https://peopleschoice.studio/</a></td>
+        <td><span style="color:#f59e0b; font-weight:700; font-size:18px;">64.0</span></td>
+        <td><span style="background:#f59e0b; color:#fff; padding:2px 10px; border-radius:12px; font-weight:700; font-size:13px;">C</span></td>
+        <td><div style="display:flex; gap:8px; flex-wrap:wrap;"><div style="flex:1; min-width:80px; text-align:center; background:#3b82f615; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#3b82f6;">83.0</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">technical</div></div><div style="flex:1; min-width:80px; text-align:center; background:#10b98115; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#10b981;">51.42857142857143</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">content</div></div><div style="flex:1; min-width:80px; text-align:center; background:#f59e0b15; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#f59e0b;">65.71428571428571</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">ux_ui</div></div><div style="flex:1; min-width:80px; text-align:center; background:#ef444415; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#ef4444;">57.142857142857146</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">marketing</div></div></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">5</td>
+        <td><b>Клиника медицины кожи</b></td>
+        <td><a href="https://1skin.ru/" target="_blank" style="color:#3b82f6; text-decoration:none;">https://1skin.ru/</a></td>
+        <td><span style="color:#f59e0b; font-weight:700; font-size:18px;">67.9</span></td>
+        <td><span style="background:#f59e0b; color:#fff; padding:2px 10px; border-radius:12px; font-weight:700; font-size:13px;">C</span></td>
+        <td><div style="display:flex; gap:8px; flex-wrap:wrap;"><div style="flex:1; min-width:80px; text-align:center; background:#3b82f615; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#3b82f6;">67.0</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">technical</div></div><div style="flex:1; min-width:80px; text-align:center; background:#10b98115; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#10b981;">59.285714285714285</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">content</div></div><div style="flex:1; min-width:80px; text-align:center; background:#f59e0b15; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#f59e0b;">79.28571428571429</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">ux_ui</div></div><div style="flex:1; min-width:80px; text-align:center; background:#ef444415; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#ef4444;">67.5</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">marketing</div></div></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">6</td>
+        <td><b>Клиника косметологии "Фейсконтроль"</b></td>
+        <td><a href="http://face-kontrol.ru/" target="_blank" style="color:#3b82f6; text-decoration:none;">http://face-kontrol.ru/</a></td>
+        <td><span style="color:#f59e0b; font-weight:700; font-size:18px;">69.2</span></td>
+        <td><span style="background:#f59e0b; color:#fff; padding:2px 10px; border-radius:12px; font-weight:700; font-size:13px;">C</span></td>
+        <td><div style="display:flex; gap:8px; flex-wrap:wrap;"><div style="flex:1; min-width:80px; text-align:center; background:#3b82f615; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#3b82f6;">80.0</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">technical</div></div><div style="flex:1; min-width:80px; text-align:center; background:#10b98115; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#10b981;">55.0</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">content</div></div><div style="flex:1; min-width:80px; text-align:center; background:#f59e0b15; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#f59e0b;">77.85714285714286</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">ux_ui</div></div><div style="flex:1; min-width:80px; text-align:center; background:#ef444415; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#ef4444;">66.42857142857143</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">marketing</div></div></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">7</td>
+        <td><b>Клиника медицинской косметологии EstiLine</b></td>
+        <td><a href="https://estiline-spb.ru/" target="_blank" style="color:#3b82f6; text-decoration:none;">https://estiline-spb.ru/</a></td>
+        <td><span style="color:#f59e0b; font-weight:700; font-size:18px;">65.5</span></td>
+        <td><span style="background:#f59e0b; color:#fff; padding:2px 10px; border-radius:12px; font-weight:700; font-size:13px;">C</span></td>
+        <td><div style="display:flex; gap:8px; flex-wrap:wrap;"><div style="flex:1; min-width:80px; text-align:center; background:#3b82f615; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#3b82f6;">85.0</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">technical</div></div><div style="flex:1; min-width:80px; text-align:center; background:#10b98115; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#10b981;">43.57142857142857</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">content</div></div><div style="flex:1; min-width:80px; text-align:center; background:#f59e0b15; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#f59e0b;">81.42857142857143</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">ux_ui</div></div><div style="flex:1; min-width:80px; text-align:center; background:#ef444415; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#ef4444;">54.166666666666664</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">marketing</div></div></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">8</td>
+        <td><b>Кристи</b></td>
+        <td><a href="https://spb.kristi.pro/?utm_source=gmaps&utm_medium=google&utm_campaign=maps&utm_content=geo&utm_term=profile" target="_blank" style="color:#3b82f6; text-decoration:none;">https://spb.kristi.pro/?utm_source=...</a></td>
+        <td><span style="color:#f59e0b; font-weight:700; font-size:18px;">60.0</span></td>
+        <td><span style="background:#f59e0b; color:#fff; padding:2px 10px; border-radius:12px; font-weight:700; font-size:13px;">C</span></td>
+        <td><div style="display:flex; gap:8px; flex-wrap:wrap;"><div style="flex:1; min-width:80px; text-align:center; background:#3b82f615; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#3b82f6;">72.0</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">technical</div></div><div style="flex:1; min-width:80px; text-align:center; background:#10b98115; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#10b981;">51.42857142857143</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">content</div></div><div style="flex:1; min-width:80px; text-align:center; background:#f59e0b15; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#f59e0b;">55.714285714285715</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">ux_ui</div></div><div style="flex:1; min-width:80px; text-align:center; background:#ef444415; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#ef4444;">63.333333333333336</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">marketing</div></div></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">9</td>
+        <td><b>Клиника Семейной косметологии</b></td>
+        <td><a href="https://ksk-clinic.ru/" target="_blank" style="color:#3b82f6; text-decoration:none;">https://ksk-clinic.ru/</a></td>
+        <td><span style="color:#f59e0b; font-weight:700; font-size:18px;">62.5</span></td>
+        <td><span style="background:#f59e0b; color:#fff; padding:2px 10px; border-radius:12px; font-weight:700; font-size:13px;">C</span></td>
+        <td><div style="display:flex; gap:8px; flex-wrap:wrap;"><div style="flex:1; min-width:80px; text-align:center; background:#3b82f615; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#3b82f6;">75.0</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">technical</div></div><div style="flex:1; min-width:80px; text-align:center; background:#10b98115; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#10b981;">59.285714285714285</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">content</div></div><div style="flex:1; min-width:80px; text-align:center; background:#f59e0b15; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#f59e0b;">68.57142857142857</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">ux_ui</div></div><div style="flex:1; min-width:80px; text-align:center; background:#ef444415; border-radius:8px; padding:8px;"><div style="font-size:22px; font-weight:700; color:#ef4444;">44.166666666666664</div><div style="font-size:10px; color:#6b7280; text-transform:uppercase;">marketing</div></div></div></td>
+    </tr>
+    </tbody>
+    </table>
+<div style="margin-top:20px;"><b style="font-size:16px;">💡 Ключевые инсайты</b><div class="insight-box"><b>market_average:</b> 67.5</div><div class="insight-box"><b>dimension_averages:</b> {'technical': 79.4, 'content': 56.0, 'ux_ui': 74.7, 'marketing': 60.6}</div><div class="insight-box"><b>best_competitor:</b> {'name': 'Центр медицинской косметологии Оксаны Волковой', 'score': 76.0, 'grade': 'B'}</div><div class="insight-box"><b>worst_competitor:</b> {'name': 'Кристи', 'score': 60.0, 'grade': 'C'}</div><div class="insight-box"><b>strongest_dimension:</b> technical</div><div class="insight-box"><b>weakest_dimension:</b> content</div></div><div style="margin-top:20px;"><b style="font-size:16px;">⚠️ Найденные пробелы</b><ul class="gap-list"><li><b></b>: {'type': 'market_gap', 'dimension': 'content', 'avg_score': 56.0, 'opportunity': 'Рынок слаб в content (средняя оценка 56.0). Возможность выделиться.', 'priority': 'high'}</li><li><b></b>: {'type': 'market_gap', 'dimension': 'marketing', 'avg_score': 60.6, 'opportunity': 'Рынок слаб в marketing (средняя оценка 60.6). Возможность выделиться.', 'priority': 'medium'}</li><li><b></b>: {'type': 'competitor_weakness', 'competitor': 'Центр медицинской косметологии КОСМЕД', 'dimension': 'content', 'score': 63.57142857142857, 'opportunity': 'Центр медицинской косметологии КОСМЕД слаб в content (63.57142857142857). Можно обойти.', 'priority': 'medium'}</li><li><b></b>: {'type': 'competitor_weakness', 'competitor': 'Центр медицинской косметологии КОСМЕД', 'dimension': 'marketing', 'score': 58.333333333333336, 'opportunity': 'Центр медицинской косметологии КОСМЕД слаб в marketing (58.333333333333336). Можно обойти.', 'priority': 'medium'}</li><li><b></b>: {'type': 'competitor_weakness', 'competitor': 'Клиника косметологии "Фейсконтроль"', 'dimension': 'content', 'score': 55.0, 'opportunity': 'Клиника косметологии "Фейсконтроль" слаб в content (55.0). Можно обойти.', 'priority': 'medium'}</li><li><b></b>: {'type': 'competitor_weakness', 'competitor': 'Клиника косметологии "Фейсконтроль"', 'dimension': 'marketing', 'score': 66.42857142857143, 'opportunity': 'Клиника косметологии "Фейсконтроль" слаб в marketing (66.42857142857143). Можно обойти.', 'priority': 'medium'}</li></ul></div>
+</div>
+
+<!-- PHASE 3: Deep Analysis -->
+<div class="section">
+    <h2>🕵️ <span>Фаза 3: Глубинный анализ</span> <span class="phase-badge success">ci-deep-analyzer</span></h2>
+    <div class="section-meta">
+        Всего проанализировано: <b>9</b> &nbsp;|&nbsp;
+        Страниц на конкурента: <b>50</b>
+    </div>
+
+    <div style="background:#f8fafc; border-radius:12px; padding:20px; margin:16px 0; border:1px solid #e2e8f0;">
+        <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:12px;">
+            <div>
+                <b style="font-size:16px;">1. Центр медицинской косметологии КОСМЕД</b>
+                <div style="color:#64748b; font-size:13px;">
+                    <a href="https://www.cosmed-spb.ru/" target="_blank" style="color:#3b82f6;">https://www.cosmed-spb.ru/</a>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <span style="font-size:13px; color:#64748b;">Страниц найдено: <b>1</b></span><br>
+                <span style="font-size:13px; color:#64748b;">Проанализировано: <b>1</b></span>
+            </div>
+        </div><div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;"><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">homepage: <b>['https://www.cosmed-spb.ru/']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">services: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">about: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">contacts: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">prices: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">blog: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">other: <b>[]</b></span></div><div style="margin-top:12px; font-size:13px;"><span style="margin-right:16px;"><b>total_pages:</b> 1</span><span style="margin-right:16px;"><b>schema_coverage:</b> 1/1</span><span style="margin-right:16px;"><b>quality_score:</b> 100.0</span></div><div style="margin-top:12px;"><b style="color:#ef4444; font-size:13px;">⚠️ Issues</b><ul style="font-size:12px; color:#64748b; margin-top:4px;"><li><b>total_issues:</b> 3</li><li><b>by_severity:</b> {'critical': 0, 'high': 0, 'medium': 3, 'low': 0}</li><li><b>by_category:</b> {'seo': 1, 'security': 2}</li><li><b>issues:</b> [{'severity': 'medium', 'category': 'seo', 'page': 'https://www.cosmed-spb.ru/', 'page_type': 'homepage', 'issue': 'Title too long (96 chars)', 'impact': 'Title gets truncated in search results', 'rec</li><li><b>issues_by_severity:</b> {'critical': [], 'high': [], 'medium': [{'severity': 'medium', 'category': 'seo', 'page': 'https://www.cosmed-spb.ru/', 'page_type': 'homepage', 'issue': 'Title too long (96 chars)', 'impact': 'Title </li></ul></div></div>
+    <div style="background:#f8fafc; border-radius:12px; padding:20px; margin:16px 0; border:1px solid #e2e8f0;">
+        <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:12px;">
+            <div>
+                <b style="font-size:16px;">2. Центр медицинской косметологии Оксаны Волковой</b>
+                <div style="color:#64748b; font-size:13px;">
+                    <a href="https://volkovabeauty.ru/" target="_blank" style="color:#3b82f6;">https://volkovabeauty.ru/</a>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <span style="font-size:13px; color:#64748b;">Страниц найдено: <b>50</b></span><br>
+                <span style="font-size:13px; color:#64748b;">Проанализировано: <b>50</b></span>
+            </div>
+        </div><div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;"><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">homepage: <b>['https://volkovabeauty.ru/']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">services: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">about: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">contacts: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">prices: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">blog: <b>['https://volkovabeauty.ru/articles/kakoy-apparat-vybrat-skintonic-lpg-ili-icoone/', 'https://volkovabeauty.ru/articles/effektivnyy-ukhod-po-tipu-kozhi/', 'https://volkovabeauty.ru/articles/']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">other: <b>['https://volkovabeauty.ru/price/', 'https://volkovabeauty.ru/{{src}}', 'https://volkovabeauty.ru/solutions/treatment-wrinkle/', 'https://volkovabeauty.ru/solutions/treatment-rosacea/', 'https://volkovabeauty.ru/solutions/treatment-puffiness-under-eye/', 'https://volkovabeauty.ru/solutions/treatment-pigmentation-skin/', 'https://volkovabeauty.ru/solutions/treatment-overweight-cellulite/', 'https://volkovabeauty.ru/solutions/treatment-hair/', 'https://volkovabeauty.ru/solutions/treatment-excessive-sweating/', 'https://volkovabeauty.ru/solutions/treatment-acne/', 'https://volkovabeauty.ru/solutions/remove-double-chin/', 'https://volkovabeauty.ru/solutions/removal-scar/', 'https://volkovabeauty.ru/solutions/removal-neoplasm/', 'https://volkovabeauty.ru/solutions/removal-hair-face-body/', 'https://volkovabeauty.ru/solutions/rejuvenation-hand-skin/', 'https://volkovabeauty.ru/solutions/postoperative-rehabilitation/', 'https://volkovabeauty.ru/solutions/lip-shape-correction/', 'https://volkovabeauty.ru/solutions/', 'https://volkovabeauty.ru/school-of-medical-cosmetology/', 'https://volkovabeauty.ru/procedures/vosstanovitelnaya-meditsina/', 'https://volkovabeauty.ru/procedures/ultrazvukovye-tekhnologii-hi-fu/', 'https://volkovabeauty.ru/procedures/spetsprogrammy/', 'https://volkovabeauty.ru/procedures/rf-tekhnologii/vakuumnyy-mikroigolchatyy-rf-lifting-apparatom-ellisys-sense/', 'https://volkovabeauty.ru/procedures/rf-tekhnologii/', 'https://volkovabeauty.ru/procedures/prochie-apparatnye-lechebnye-protsedury-/dermadrop-tda/', 'https://volkovabeauty.ru/procedures/prochie-apparatnye-lechebnye-protsedury-/', 'https://volkovabeauty.ru/procedures/massazhi-i-obertovaniya/', 'https://volkovabeauty.ru/procedures/lechebnye-programmy/lechenie-ugrevoy-sypi/', 'https://volkovabeauty.ru/procedures/lechebnye-programmy/', 'https://volkovabeauty.ru/procedures/inektsionnyie-metodiki/nitevoy-lifting/', 'https://volkovabeauty.ru/procedures/inektsionnyie-metodiki/', 'https://volkovabeauty.ru/procedures/foto-i-lazernye-tekhnologii/fotoomolozhenie-/', 'https://volkovabeauty.ru/procedures/foto-i-lazernye-tekhnologii/', 'https://volkovabeauty.ru/procedures/esteticheskaya-kosmetologiya/', 'https://volkovabeauty.ru/procedures/esteticheskaya-ginekologiya/', 'https://volkovabeauty.ru/procedures/care-body/rsl-sculptor-beutilizer/', 'https://volkovabeauty.ru/procedures/care-body/', 'https://volkovabeauty.ru/procedures/apparatnaya-diagnostika-kozhi-litsa/', 'https://volkovabeauty.ru/procedures/', 'https://volkovabeauty.ru/pressa/', 'https://volkovabeauty.ru/policy/', 'https://volkovabeauty.ru/nashe-oborudovanie/spa/', 'https://volkovabeauty.ru/nashe-oborudovanie/rf/', 'https://volkovabeauty.ru/nashe-oborudovanie/lazery-foto/', 'https://volkovabeauty.ru/nashe-oborudovanie/hi-fu/', 'https://volkovabeauty.ru/nashe-oborudovanie/apparaty-dlya-litsa/']</b></span></div><div style="margin-top:12px; font-size:13px;"><span style="margin-right:16px;"><b>total_pages:</b> 50</span><span style="margin-right:16px;"><b>schema_coverage:</b> 49/50</span><span style="margin-right:16px;"><b>quality_score:</b> 98.0</span></div><div style="margin-top:12px;"><b style="color:#ef4444; font-size:13px;">⚠️ Issues</b><ul style="font-size:12px; color:#64748b; margin-top:4px;"><li><b>total_issues:</b> 91</li><li><b>by_severity:</b> {'critical': 1, 'high': 2, 'medium': 88, 'low': 0}</li><li><b>by_category:</b> {'seo': 42, 'security': 49}</li><li><b>issues:</b> [{'severity': 'critical', 'category': 'seo', 'page': 'https://volkovabeauty.ru/{{src}}', 'page_type': 'other', 'issue': 'Missing title tag', 'impact': "Search engines can't understand page topic. Majo</li><li><b>issues_by_severity:</b> {'critical': [{'severity': 'critical', 'category': 'seo', 'page': 'https://volkovabeauty.ru/{{src}}', 'page_type': 'other', 'issue': 'Missing title tag', 'impact': "Search engines can't understand pag</li></ul></div></div>
+    <div style="background:#f8fafc; border-radius:12px; padding:20px; margin:16px 0; border:1px solid #e2e8f0;">
+        <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:12px;">
+            <div>
+                <b style="font-size:16px;">3. Школа косметологии PF&beauty</b>
+                <div style="color:#64748b; font-size:13px;">
+                    <a href="https://pfbeautyschool.ru/" target="_blank" style="color:#3b82f6;">https://pfbeautyschool.ru/</a>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <span style="font-size:13px; color:#64748b;">Страниц найдено: <b>50</b></span><br>
+                <span style="font-size:13px; color:#64748b;">Проанализировано: <b>50</b></span>
+            </div>
+        </div><div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;"><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">homepage: <b>['https://www.pfbeautyschool.ru/']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">services: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">about: <b>['https://www.pfbeautyschool.ru/about']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">contacts: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">prices: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">blog: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">other: <b>['https://www.pfbeautyschool.ru/zapis_trihologiya', 'https://www.pfbeautyschool.ru/zapis_model_inj', 'https://www.pfbeautyschool.ru/zapis_model_estetika', 'https://www.pfbeautyschool.ru/vse-meso-tehniki_zapis', 'https://www.pfbeautyschool.ru/vse-meso-tehniki/', 'https://www.pfbeautyschool.ru/vrach_kosmetolog', 'https://www.pfbeautyschool.ru/uvelicheniye-gub_zapis', 'https://www.pfbeautyschool.ru/uvelicheniye-gub/', 'https://www.pfbeautyschool.ru/trihologiya', 'https://www.pfbeautyschool.ru/stat-modelyu/', 'https://www.pfbeautyschool.ru/skulpturnyy-massazh_zapis', 'https://www.pfbeautyschool.ru/skulpturnyy-massazh/', 'https://www.pfbeautyschool.ru/shkola-massazha/', 'https://www.pfbeautyschool.ru/shkola-brovey-i-resnits/', 'https://www.pfbeautyschool.ru/sestrinskoe_zapis', 'https://www.pfbeautyschool.ru/sestrinskoe_delo_v_kosmetologii', 'https://www.pfbeautyschool.ru/sestr_v_kabinetah', 'https://www.pfbeautyschool.ru/postinyektsionnyye-oslozhneniya_zapis', 'https://www.pfbeautyschool.ru/postinyektsionnyye-oslozhneniya/', 'https://www.pfbeautyschool.ru/polimolochnaya_kislota_zapis', 'https://www.pfbeautyschool.ru/policy', 'https://www.pfbeautyschool.ru/piersing', 'https://www.pfbeautyschool.ru/permanentnyy-makiyazh/', 'https://www.pfbeautyschool.ru/page54293395.html', 'https://www.pfbeautyschool.ru/page50814749.html', 'https://www.pfbeautyschool.ru/page50774987.html', 'https://www.pfbeautyschool.ru/page48665589.html', 'https://www.pfbeautyschool.ru/page47400667.html', 'https://www.pfbeautyschool.ru/online-oplata/', 'https://www.pfbeautyschool.ru/obshchiye-seminary-byuti-masterov/', 'https://www.pfbeautyschool.ru/nitevoy-lifting-prodvinutyy-uroven_zapis', 'https://www.pfbeautyschool.ru/nitevoy-lifting-prodvinutyy-uroven/', 'https://www.pfbeautyschool.ru/nitevoy-lifting-bazovyy-uroven_zapis', 'https://www.pfbeautyschool.ru/nitevoy-lifting-bazovyy-uroven', 'https://www.pfbeautyschool.ru/neotlozhnaya-pomoshch-v-kosmetologii_zapis', 'https://www.pfbeautyschool.ru/neotlozhnaya-pomoshch-v-kosmetologii/', 'https://www.pfbeautyschool.ru/ml_sestr', 'https://www.pfbeautyschool.ru/master_depilyacii_zapis', 'https://www.pfbeautyschool.ru/master_depilyacii', 'https://www.pfbeautyschool.ru/master-lazernoy-epilyatsii_zapis', 'https://www.pfbeautyschool.ru/master-lazernoy-epilyatsii/', 'https://www.pfbeautyschool.ru/master-brovist_zapis', 'https://www.pfbeautyschool.ru/master-brovist/', 'https://www.pfbeautyschool.ru/marketing', 'https://www.pfbeautyschool.ru/laminirovaniye-resnits_zapis', 'https://www.pfbeautyschool.ru/laminirovaniye-resnits', 'https://www.pfbeautyschool.ru/kursy_dlya_nachinayshik', 'https://www.pfbeautyschool.ru/kursy-inyektsionnoy-kosmetologii/']</b></span></div><div style="margin-top:12px; font-size:13px;"><span style="margin-right:16px;"><b>total_pages:</b> 50</span><span style="margin-right:16px;"><b>schema_coverage:</b> 10/50</span><span style="margin-right:16px;"><b>quality_score:</b> 72.0</span></div><div style="margin-top:12px;"><b style="color:#ef4444; font-size:13px;">⚠️ Issues</b><ul style="font-size:12px; color:#64748b; margin-top:4px;"><li><b>total_issues:</b> 145</li><li><b>by_severity:</b> {'critical': 0, 'high': 42, 'medium': 103, 'low': 0}</li><li><b>by_category:</b> {'seo': 45, 'security': 100}</li><li><b>issues:</b> [{'severity': 'high', 'category': 'seo', 'page': 'https://www.pfbeautyschool.ru/zapis_trihologiya', 'page_type': 'other', 'issue': 'Missing meta description', 'impact': 'Lower click-through rate from </li><li><b>issues_by_severity:</b> {'critical': [], 'high': [{'severity': 'high', 'category': 'seo', 'page': 'https://www.pfbeautyschool.ru/zapis_trihologiya', 'page_type': 'other', 'issue': 'Missing meta description', 'impact': 'Lower</li></ul></div></div>
+    <div style="background:#f8fafc; border-radius:12px; padding:20px; margin:16px 0; border:1px solid #e2e8f0;">
+        <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:12px;">
+            <div>
+                <b style="font-size:16px;">4. Салон красоты People`s Choice</b>
+                <div style="color:#64748b; font-size:13px;">
+                    <a href="https://peopleschoice.studio/" target="_blank" style="color:#3b82f6;">https://peopleschoice.studio/</a>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <span style="font-size:13px; color:#64748b;">Страниц найдено: <b>50</b></span><br>
+                <span style="font-size:13px; color:#64748b;">Проанализировано: <b>50</b></span>
+            </div>
+        </div><div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;"><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">homepage: <b>['https://peopleschoice.studio/']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">services: <b>['https://peopleschoice.studio/uslugi/zhenskaya-strizhka/zhenskaya-strizhka-na-srednie-volosy-po-optimainoi-tsene/', 'https://peopleschoice.studio/uslugi/zhenskaya-strizhka/zhenskaya-strizhka-na-korotkie-volosy-v-spb/', 'https://peopleschoice.studio/uslugi/zhenskaya-strizhka/zhenskaya-strizhka-na-dlinnye-volosy-po-vygodnoy-tsene/', 'https://peopleschoice.studio/uslugi/zhenskaya-strizhka/ukladka-volos-v-spb/', 'https://peopleschoice.studio/uslugi/zhenskaya-strizhka/stilnye-pricheski-v-spb/', 'https://peopleschoice.studio/uslugi/zhenskaya-strizhka/', 'https://peopleschoice.studio/uslugi/uhodovaya-protsedura/', 'https://peopleschoice.studio/uslugi/svadebniy-stilist-spb/', 'https://peopleschoice.studio/uslugi/schaste-dlya-volos-lebel/poiski-absolyutnogo-schastya-dlya-volos-v-spb-zaversheny/', 'https://peopleschoice.studio/uslugi/schaste-dlya-volos-lebel/', 'https://peopleschoice.studio/uslugi/piling/zheltyj-piling-v-spb-idealnoe-lico-bez-boli/', 'https://peopleschoice.studio/uslugi/piling/piling-prx-t33/', 'https://peopleschoice.studio/uslugi/piling/piling-fitinovyj-i-letom-i-zimoj/', 'https://peopleschoice.studio/uslugi/piling/piling-dzhessnera-v-spb-gollivudskie-metodiki-v-rossijskoj-studii-krasotym/', 'https://peopleschoice.studio/uslugi/piling/molochnyj-piling-v-spb-krasota-bez-boli/', 'https://peopleschoice.studio/uslugi/piling/mikrodermabraziya-v-spb-dragocennaya-krasota/', 'https://peopleschoice.studio/uslugi/piling/glikolevyj-piling-v-spb-krasota-i-effektivnost/', 'https://peopleschoice.studio/uslugi/piling/', 'https://peopleschoice.studio/uslugi/pedikyur/piling-nog-cena-nevysoka-za-vozmozhnost-dyshat/', 'https://peopleschoice.studio/uslugi/pedikyur/pedikyur-lakom-cena-dostupnaya-kazhdomu/', 'https://peopleschoice.studio/uslugi/pedikyur/pedikyur-gel-lakom-cena-privlekatelna-kachestvo-na-vysote/', 'https://peopleschoice.studio/uslugi/pedikyur/pedikyur-bez-pokrytiya-v-spb-podarite-sebe-letyashchuyu-pohodku/', 'https://peopleschoice.studio/uslugi/pedikyur/parafinoterapiya-nog-v-spb-legkost-i-nezhnost-vashih-nog/', 'https://peopleschoice.studio/uslugi/pedikyur/muzhskoj-pedikyur-v-spb-sterilno-i-konfidencialno/', 'https://peopleschoice.studio/uslugi/pedikyur/', 'https://peopleschoice.studio/uslugi/parikmaherskie-uslugi/', 'https://peopleschoice.studio/uslugi/okrashivanie-volos/slozhnoe-okrashivanie-v-spb-desyatki-kreativnyh-variantov/', 'https://peopleschoice.studio/uslugi/okrashivanie-volos/shatush-v-spb-stilnoe-melirovanie-rukami-professionalov/', 'https://peopleschoice.studio/uslugi/okrashivanie-volos/originalnoe-melirovanie-v-spb/', 'https://peopleschoice.studio/uslugi/okrashivanie-volos/ombre-v-spb-gramotnyj-podhod-k-slozhnomu-okrashivaniyu/', 'https://peopleschoice.studio/uslugi/okrashivanie-volos/okrashivanie-v-odin-tsvet-v-spb-s-garantirovannym-rezultatom/', 'https://peopleschoice.studio/uslugi/okrashivanie-volos/kolorirovanie-v-spb-estestvennost-i-kreativ/', 'https://peopleschoice.studio/uslugi/okrashivanie-volos/gramotnoe-tonirovanie-volos-v-spb/', 'https://peopleschoice.studio/uslugi/okrashivanie-volos/balayazh-v-spb-garantiya-stilnogo-okrashivaniya/', 'https://peopleschoice.studio/uslugi/okrashivanie-volos/airtouch-v-spb-vozdushnaya-krasota-vashih-volos/', 'https://peopleschoice.studio/uslugi/okrashivanie-volos/', 'https://peopleschoice.studio/uslugi/nogtevoj-servis/', 'https://peopleschoice.studio/uslugi/mugskaya-strizhka/', 'https://peopleschoice.studio/uslugi/massazh-i-obertyvanie/massazh-vidy-procedur/medoviy-massazh-v-spb/', 'https://peopleschoice.studio/uslugi/massazh-i-obertyvanie/massazh-vidy-procedur/massazh-dlya-pohudeniya-v-spb/', 'https://peopleschoice.studio/uslugi/massazh-i-obertyvanie/massazh-vidy-procedur/massazh-bankami-v-spb/', 'https://peopleschoice.studio/uslugi/massazh-i-obertyvanie/massazh-vidy-procedur/limfodrenazhniy-massazh-v-spb/', 'https://peopleschoice.studio/uslugi/massazh-i-obertyvanie/massazh-vidy-procedur/antitsellyulitniy-massazh-v-spb/', 'https://peopleschoice.studio/uslugi/massazh-i-obertyvanie/massazh-vidy-procedur/', 'https://peopleschoice.studio/uslugi/massazh-i-obertyvanie/', 'https://peopleschoice.studio/uslugi/manikyur/tsena-na-manikyur-s-pokrytiem/', 'https://peopleschoice.studio/uslugi/manikyur/spa-manikyur/', 'https://peopleschoice.studio/uslugi/manikyur/narashhivanie-nogtej-v-spb/', 'https://peopleschoice.studio/uslugi/manikyur/muzhskoj-manikyur/']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">about: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">contacts: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">prices: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">blog: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">other: <b>[]</b></span></div><div style="margin-top:12px; font-size:13px;"><span style="margin-right:16px;"><b>total_pages:</b> 50</span><span style="margin-right:16px;"><b>schema_coverage:</b> 50/50</span><span style="margin-right:16px;"><b>quality_score:</b> 75.33333333333333</span></div><div style="margin-top:12px;"><b style="color:#ef4444; font-size:13px;">⚠️ Issues</b><ul style="font-size:12px; color:#64748b; margin-top:4px;"><li><b>total_issues:</b> 98</li><li><b>by_severity:</b> {'critical': 0, 'high': 41, 'medium': 57, 'low': 0}</li><li><b>by_category:</b> {'seo': 44, 'security': 54}</li><li><b>issues:</b> [{'severity': 'high', 'category': 'seo', 'page': 'https://peopleschoice.studio/uslugi/zhenskaya-strizhka/zhenskaya-strizhka-na-srednie-volosy-po-optimainoi-tsene/', 'page_type': 'services', 'issue': '</li><li><b>issues_by_severity:</b> {'critical': [], 'high': [{'severity': 'high', 'category': 'seo', 'page': 'https://peopleschoice.studio/uslugi/zhenskaya-strizhka/zhenskaya-strizhka-na-srednie-volosy-po-optimainoi-tsene/', 'page_type</li></ul></div></div>
+    <div style="background:#f8fafc; border-radius:12px; padding:20px; margin:16px 0; border:1px solid #e2e8f0;">
+        <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:12px;">
+            <div>
+                <b style="font-size:16px;">5. Клиника медицины кожи</b>
+                <div style="color:#64748b; font-size:13px;">
+                    <a href="https://1skin.ru/" target="_blank" style="color:#3b82f6;">https://1skin.ru/</a>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <span style="font-size:13px; color:#64748b;">Страниц найдено: <b>50</b></span><br>
+                <span style="font-size:13px; color:#64748b;">Проанализировано: <b>50</b></span>
+            </div>
+        </div><div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;"><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">homepage: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">services: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">about: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">contacts: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">prices: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">blog: <b>['https://1skin.ru/news/vyhodnye-dni/', 'https://1skin.ru/news/rezcova-polina-aleksandrovna-vyigrala-grant-hornsh/', 'https://1skin.ru/news/rezcova-polina-aleksandrovna-vsyo-o-zhenskoj-kozhe/', 'https://1skin.ru/news/rezcova-polina-aleksandrovna-na-obuchenii-ultherap/', 'https://1skin.ru/news/rezcova-p-stala-chlenom-eadv/', 'https://1skin.ru/news/publikacii-nashih-doktorov/', 'https://1skin.ru/news/pervyj-v-peterburge-emsella/', 'https://1skin.ru/news/parshina-natalya-mihajlovna-na-konferencii-v-spb/', 'https://1skin.ru/news/odna-polovina-lica-molozhe-drugoj/', 'https://1skin.ru/news/novyj-sertifikat-novye-vozmozhnosti/', 'https://1skin.ru/news/novyj-produkt-na-osnove-chistogo-i-bezopasnogo-kol/', 'https://1skin.ru/news/novyj-apparat-po-omolozheniyu-kozhi-hydrafacial-md/', 'https://1skin.ru/news/novosti-trihologii/', 'https://1skin.ru/news/nomerovskaya-m-specialist-po-kineziotejpirovaniyu/', 'https://1skin.ru/news/nomerovskaya-anna-mihajlovna-proshla-obuchenie/', 'https://1skin.ru/news/nomerovskaya-anna-mihajlovna-proshla-obuchenie-po/', 'https://1skin.ru/news/nesmyvaemoe-obyortyvanie-arosha-arosha-s-pressoter/', 'https://1skin.ru/news/nashi-vrachi-na-ifdc-2019/', 'https://1skin.ru/news/nashi-doktora-prinyali-uchastie-v-konferencii-venu/', 'https://1skin.ru/news/nashi-doktora-na-kongresse-advanced-aesthetic-rhin/', 'https://1skin.ru/news/nashi-doktora-na-28m-eadv-v-ispanii/', 'https://1skin.ru/news/master-klass-vedushego-trenera-kompanii-merz-aesth/', 'https://1skin.ru/news/lpg-massazh-tela-tonkosti-provedeniya-procedury/', 'https://1skin.ru/news/lelyavskaya-m-g-na-seminare-shkoly-professora-yuck/', 'https://1skin.ru/news/kurs-kriomodelirovanie/', 'https://1skin.ru/news/kosmecevtika-universkin-vpervye-v-rossii/', 'https://1skin.ru/news/konturnaya-i-obyomnaya-plastika-gub-i-skul/', 'https://1skin.ru/news/issledovanie-mezhdu-dermatologami-i-nejronnoj-sety/', 'https://1skin.ru/news/gusarov-s-dokladom-pro-vetvyashiesya-sosudy-pri-de/', 'https://1skin.ru/news/gusarov-na-vi-evrazijskom-kongresse-v-kazahstane/', 'https://1skin.ru/news/gusarov-mv-spiker-na-dermatoskopicheskom-kongresse/', 'https://1skin.ru/news/gusarov-mihail-vyacheslavovich-stal-chlenom-mezhdu/', 'https://1skin.ru/news/gusarov-eadv/', 'https://1skin.ru/news/bezboleznennoe-lechenie-kozhnyh-zabolevanij/', 'https://1skin.ru/news/belyaeva-e-proshla-prodvinutyj-kurs-po-nitevym-teh/']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">other: <b>['https://1skin.ru/specialists/semenihina-yuliya-mihajlovna/', 'https://1skin.ru/rsl-skulpturirovanie-na-apparate-beautylizer/', 'https://1skin.ru/offer/skidka-na-kurs-lecheniya-kozhi/', 'https://1skin.ru/offer/ruchnoy-massazh/', 'https://1skin.ru/offer/priem-ginekologa/', 'https://1skin.ru/offer/imeninnikam-skidka-na-apparatnye-procedury/', 'https://1skin.ru/fotofinder-cifrovaya-dermatoskopiya-i-kartirovanie/', 'https://1skin.ru/article/stilazh-m/', 'https://1skin.ru/article/smas-lifting-skolko-procedur-nuzhno-sdelat/', 'https://1skin.ru/article/smas-lifting-skolko-linij-nado-na-lico/', 'https://1skin.ru/article/smas-lifting-s-kakogo-vozrasta-mozhno-delat/', 'https://1skin.ru/article/smas-lifting-posledstviya/', 'https://1skin.ru/article/smas-lifting-bolno-ili-net/', 'https://1skin.ru/article/sferogel/', 'https://1skin.ru/article/prichiny-otekov-u-zhenshin/']</b></span></div><div style="margin-top:12px; font-size:13px;"><span style="margin-right:16px;"><b>total_pages:</b> 50</span><span style="margin-right:16px;"><b>schema_coverage:</b> 50/50</span><span style="margin-right:16px;"><b>quality_score:</b> 99.33333333333333</span></div><div style="margin-top:12px;"><b style="color:#ef4444; font-size:13px;">⚠️ Issues</b><ul style="font-size:12px; color:#64748b; margin-top:4px;"><li><b>total_issues:</b> 70</li><li><b>by_severity:</b> {'critical': 0, 'high': 1, 'medium': 69, 'low': 0}</li><li><b>by_category:</b> {'seo': 20, 'security': 50}</li><li><b>issues:</b> [{'severity': 'high', 'category': 'seo', 'page': 'https://1skin.ru/news/novyj-produkt-na-osnove-chistogo-i-bezopasnogo-kol/', 'page_type': 'blog', 'issue': 'Missing meta description', 'impact': 'Lower</li><li><b>issues_by_severity:</b> {'critical': [], 'high': [{'severity': 'high', 'category': 'seo', 'page': 'https://1skin.ru/news/novyj-produkt-na-osnove-chistogo-i-bezopasnogo-kol/', 'page_type': 'blog', 'issue': 'Missing meta descr</li></ul></div></div>
+    <div style="background:#f8fafc; border-radius:12px; padding:20px; margin:16px 0; border:1px solid #e2e8f0;">
+        <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:12px;">
+            <div>
+                <b style="font-size:16px;">6. Клиника косметологии "Фейсконтроль"</b>
+                <div style="color:#64748b; font-size:13px;">
+                    <a href="http://face-kontrol.ru/" target="_blank" style="color:#3b82f6;">http://face-kontrol.ru/</a>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <span style="font-size:13px; color:#64748b;">Страниц найдено: <b>50</b></span><br>
+                <span style="font-size:13px; color:#64748b;">Проанализировано: <b>50</b></span>
+            </div>
+        </div><div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;"><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">homepage: <b>['http://face-kontrol.ru/', 'https://face-kontrol.ru/']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">services: <b>['https://face-kontrol.ru/services_group/therapeutic-cosmetology/', 'https://face-kontrol.ru/services_group/procedures-on-the-machine-m22-lumenis/', 'https://face-kontrol.ru/services_group/injection-cosmetology/', 'https://face-kontrol.ru/services_group/face-cleaning/', 'https://face-kontrol.ru/services_group/care-procedures/', 'https://face-kontrol.ru/services_group/apparat-cosmetology/']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">about: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">contacts: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">prices: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">blog: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">other: <b>['https://face-kontrol.ru/price/', 'https://face-kontrol.ru/vacancies/', 'https://face-kontrol.ru/team/pochueva-ani-tomikovna/', 'https://face-kontrol.ru/team/dr-stepanenko-elina/', 'https://face-kontrol.ru/team/dr-shavel-alevtina/', 'https://face-kontrol.ru/team/dr-manankova/', 'https://face-kontrol.ru/team/dr-arbekova-olga/', 'https://face-kontrol.ru/team/dr-anna-kirillova/', 'https://face-kontrol.ru/spravkafns/', 'https://face-kontrol.ru/spherogel/', 'https://face-kontrol.ru/reviews/', 'https://face-kontrol.ru/prp-%d1%82%d0%b5%d1%80%d0%b0%d0%bf%d0%b8%d1%8f-%d0%b4%d0%bb%d1%8f-%d0%b2%d0%be%d0%bb%d0%be%d1%81-%d0%b2-%d1%87%d0%b5%d0%bc-%d0%bf%d0%be%d0%bb%d1%8c%d0%b7%d0%b0/', 'https://face-kontrol.ru/privacy-policy/', 'https://face-kontrol.ru/partner-programmes/', 'https://face-kontrol.ru/our-staff/', 'https://face-kontrol.ru/our-services/', 'https://face-kontrol.ru/our-blog/', 'https://face-kontrol.ru/must-do-mans/', 'https://face-kontrol.ru/mass-media/', 'https://face-kontrol.ru/map/', 'https://face-kontrol.ru/how-to-contact-us/requisites/', 'https://face-kontrol.ru/how-to-contact-us/', 'https://face-kontrol.ru/consult/', 'https://face-kontrol.ru/certificates/', 'https://face-kontrol.ru/category/slimness/', 'https://face-kontrol.ru/category/skinceuticals/', 'https://face-kontrol.ru/category/hydropeptide/', 'https://face-kontrol.ru/category/geneo/', 'https://face-kontrol.ru/category/care/', 'https://face-kontrol.ru/category/%d1%82%d0%b5%d1%80%d0%b0%d0%bf%d0%b5%d0%b2%d1%82%d0%b8%d1%87%d0%b5%d1%81%d0%ba%d0%b0%d1%8f-%d0%ba%d0%be%d1%81%d0%bc%d0%b5%d1%82%d0%be%d0%bb%d0%be%d0%b3%d0%b8%d1%8f/', 'https://face-kontrol.ru/category/%d0%bc%d0%b0%d1%81%d1%81%d0%b0%d0%b6/', 'https://face-kontrol.ru/category/%d0%bb%d0%b8%d0%bf%d0%be%d0%bb%d0%b8%d1%82%d0%b8%d1%87%d0%b5%d1%81%d0%ba%d0%b0%d1%8f-%d0%bc%d0%b5%d0%b7%d0%be%d1%82%d0%b5%d1%80%d0%b0%d0%bf%d0%b8%d1%8f/', 'https://face-kontrol.ru/category/%d0%ba%d0%be%d0%bd%d1%82%d1%83%d1%80%d0%bd%d0%b0%d1%8f-%d0%bf%d0%bb%d0%b0%d1%81%d1%82%d0%b8%d0%ba%d0%b0/', 'https://face-kontrol.ru/category/%d0%b4%d0%b8%d0%b0%d0%b3%d0%bd%d0%be%d1%81%d1%82%d0%b8%d0%ba%d0%b0/', 'https://face-kontrol.ru/category/%d0%b1%d0%be%d1%82%d1%83%d0%bb%d0%b8%d0%bd%d0%be%d1%82%d0%b5%d1%80%d0%b0%d0%bf%d0%b8%d1%8f/', 'https://face-kontrol.ru/smas-%d0%bb%d0%b8%d1%84%d1%82%d0%b8%d0%bd%d0%b3-ultraformer-%d1%80%d0%b5%d0%b7%d1%83%d0%bb%d1%8c%d1%82%d0%b0%d1%82%d1%8b-%d1%80%d0%b0%d0%b1%d0%be%d1%82-%d0%bd%d0%b0%d1%88%d0%b8%d1%85-%d0%b2%d1%80/', 'https://face-kontrol.ru/recover-youth-skin/', 'https://face-kontrol.ru/category/%d0%b0%d0%bf%d0%bf%d0%b0%d1%80%d0%b0%d1%82%d0%bd%d0%b0%d1%8f-%d1%82%d0%b5%d1%80%d0%b0%d0%bf%d0%b8%d1%8f/', 'https://face-kontrol.ru/category/%D0%B1%D0%BE%D1%82%D1%83%D0%BB%D0%B8%D0%BD%D0%BE%D1%82%D0%B5%D1%80%D0%B0%D0%BF%D0%B8%D1%8F/page/2/', 'https://face-kontrol.ru/brends/', 'https://face-kontrol.ru/author/admin/', 'https://face-kontrol.ru/akcii/']</b></span></div><div style="margin-top:12px; font-size:13px;"><span style="margin-right:16px;"><b>total_pages:</b> 50</span><span style="margin-right:16px;"><b>schema_coverage:</b> 50/50</span><span style="margin-right:16px;"><b>quality_score:</b> 65.33333333333333</span></div><div style="margin-top:12px;"><b style="color:#ef4444; font-size:13px;">⚠️ Issues</b><ul style="font-size:12px; color:#64748b; margin-top:4px;"><li><b>total_issues:</b> 233</li><li><b>by_severity:</b> {'critical': 1, 'high': 101, 'medium': 131, 'low': 0}</li><li><b>by_category:</b> {'security': 150, 'seo': 83}</li><li><b>issues:</b> [{'severity': 'critical', 'category': 'security', 'page': 'http://face-kontrol.ru/', 'page_type': 'homepage', 'issue': 'No HTTPS', 'impact': 'Data not encrypted. Browser warnings. SEO penalty.', 'reco</li><li><b>issues_by_severity:</b> {'critical': [{'severity': 'critical', 'category': 'security', 'page': 'http://face-kontrol.ru/', 'page_type': 'homepage', 'issue': 'No HTTPS', 'impact': 'Data not encrypted. Browser warnings. SEO pen</li></ul></div></div>
+    <div style="background:#f8fafc; border-radius:12px; padding:20px; margin:16px 0; border:1px solid #e2e8f0;">
+        <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:12px;">
+            <div>
+                <b style="font-size:16px;">7. Клиника медицинской косметологии EstiLine</b>
+                <div style="color:#64748b; font-size:13px;">
+                    <a href="https://estiline-spb.ru/" target="_blank" style="color:#3b82f6;">https://estiline-spb.ru/</a>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <span style="font-size:13px; color:#64748b;">Страниц найдено: <b>50</b></span><br>
+                <span style="font-size:13px; color:#64748b;">Проанализировано: <b>50</b></span>
+            </div>
+        </div><div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;"><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">homepage: <b>['https://estiline-spb.ru/']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">services: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">about: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">contacts: <b>['https://estiline-spb.ru/contacts']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">prices: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">blog: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">other: <b>['https://estiline-spb.ru/price/udalenie-novoobrazovanij', 'https://estiline-spb.ru/price/piercing0', 'https://estiline-spb.ru/price/piercing', 'https://estiline-spb.ru/price/nogtevoy-servis/podologiya', 'https://estiline-spb.ru/price/nogtevoy-servis/pedikyur', 'https://estiline-spb.ru/price/nogtevoy-servis/manikyur', 'https://estiline-spb.ru/price/nogtevoy-servis', 'https://estiline-spb.ru/price/nevrologiya', 'https://estiline-spb.ru/price/massazh-i-spa/osteokorrekcia', 'https://estiline-spb.ru/price/massazh-i-spa/obertyvaniya-i-spa-ukhody', 'https://estiline-spb.ru/price/massazh-i-spa/massazh-tela', 'https://estiline-spb.ru/price/massazh-i-spa/massazh-lica', 'https://estiline-spb.ru/price/massazh-i-spa', 'https://estiline-spb.ru/price/lazernoe-udalenie-shramov', 'https://estiline-spb.ru/price/konsultacii', 'https://estiline-spb.ru/price/intimnaya-plastika', 'https://estiline-spb.ru/price/injection-cosmetology/plasma-therapy', 'https://estiline-spb.ru/price/injection-cosmetology/mikrotokovaya-terapiya', 'https://estiline-spb.ru/price/injection-cosmetology/mezoniti', 'https://estiline-spb.ru/price/injection-cosmetology/mesotherapy', 'https://estiline-spb.ru/price/injection-cosmetology/gipergidroz', 'https://estiline-spb.ru/price/injection-cosmetology/fullface', 'https://estiline-spb.ru/price/injection-cosmetology/contour-plastic', 'https://estiline-spb.ru/price/injection-cosmetology/collagen-rejuvenation', 'https://estiline-spb.ru/price/injection-cosmetology/botulinum-therapy', 'https://estiline-spb.ru/price/injection-cosmetology/biorevitalization', 'https://estiline-spb.ru/price/injection-cosmetology/anesthesia', 'https://estiline-spb.ru/price/injection-cosmetology', 'https://estiline-spb.ru/price/apparatnaja-kosmetologija/udalenie-sosudov', 'https://estiline-spb.ru/price/apparatnaja-kosmetologija/smas-lifting', 'https://estiline-spb.ru/price/apparatnaja-kosmetologija/rf-thermolysis', 'https://estiline-spb.ru/price/apparatnaja-kosmetologija/rf-lifting', 'https://estiline-spb.ru/price/apparatnaja-kosmetologija/pressoterapiya', 'https://estiline-spb.ru/price/apparatnaja-kosmetologija/photorejuvenation', 'https://estiline-spb.ru/price/apparatnaja-kosmetologija/lazernaya-shlifovka-intimnoj-zony', 'https://estiline-spb.ru/price/apparatnaja-kosmetologija/lazernaya-shlifovka', 'https://estiline-spb.ru/price/apparatnaja-kosmetologija/epilyaciya', 'https://estiline-spb.ru/price/apparatnaja-kosmetologija/beautylizer', 'https://estiline-spb.ru/price/apparatnaja-kosmetologija', 'https://estiline-spb.ru/price/aesthetic-cosmetology/ukhodovye-protsedury', 'https://estiline-spb.ru/price/aesthetic-cosmetology/oformlenie-resnits-i-brovej', 'https://estiline-spb.ru/price/aesthetic-cosmetology/khimicheskie-pilingi', 'https://estiline-spb.ru/price/aesthetic-cosmetology/depilyatsiya-voskom', 'https://estiline-spb.ru/price/aesthetic-cosmetology/chistki', 'https://estiline-spb.ru/price/aesthetic-cosmetology', 'https://estiline-spb.ru/price', 'https://estiline-spb.ru/test-test2', 'https://estiline-spb.ru/test-test']</b></span></div><div style="margin-top:12px; font-size:13px;"><span style="margin-right:16px;"><b>total_pages:</b> 50</span><span style="margin-right:16px;"><b>schema_coverage:</b> 46/50</span><span style="margin-right:16px;"><b>quality_score:</b> 97.33333333333334</span></div><div style="margin-top:12px;"><b style="color:#ef4444; font-size:13px;">⚠️ Issues</b><ul style="font-size:12px; color:#64748b; margin-top:4px;"><li><b>total_issues:</b> 131</li><li><b>by_severity:</b> {'critical': 0, 'high': 4, 'medium': 127, 'low': 0}</li><li><b>by_category:</b> {'seo': 31, 'security': 100}</li><li><b>issues:</b> [{'severity': 'high', 'category': 'seo', 'page': 'https://estiline-spb.ru/', 'page_type': 'homepage', 'issue': 'Missing H1 heading', 'impact': 'Unclear page hierarchy for search engines and users', 'r</li><li><b>issues_by_severity:</b> {'critical': [], 'high': [{'severity': 'high', 'category': 'seo', 'page': 'https://estiline-spb.ru/', 'page_type': 'homepage', 'issue': 'Missing H1 heading', 'impact': 'Unclear page hierarchy for sear</li></ul></div></div>
+    <div style="background:#f8fafc; border-radius:12px; padding:20px; margin:16px 0; border:1px solid #e2e8f0;">
+        <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:12px;">
+            <div>
+                <b style="font-size:16px;">8. Кристи</b>
+                <div style="color:#64748b; font-size:13px;">
+                    <a href="https://spb.kristi.pro/?utm_source=gmaps&utm_medium=google&utm_campaign=maps&utm_content=geo&utm_term=profile" target="_blank" style="color:#3b82f6;">https://spb.kristi.pro/?utm_source=gmaps&utm_mediu...</a>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <span style="font-size:13px; color:#64748b;">Страниц найдено: <b>50</b></span><br>
+                <span style="font-size:13px; color:#64748b;">Проанализировано: <b>50</b></span>
+            </div>
+        </div><div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;"><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">homepage: <b>['https://uln.kristi.pro/', 'https://ufa.kristi.pro/', 'https://tyumen.kristi.pro/', 'https://spb.kristi.pro/', 'https://samara.kristi.pro/', 'https://omsk.kristi.pro/', 'https://nsk.kristi.pro/', 'https://nn.kristi.pro/', 'https://msk.kristi.pro/', 'https://kristi.pro/', 'https://kirov.kristi.pro/', 'https://kazan.kristi.pro/', 'https://izhevsk.kristi.pro/', 'https://ekb.kristi.pro/', 'https://chel.kristi.pro/', 'https://cheb.kristi.pro/']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">services: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">about: <b>['https://tyumen.kristi.pro/about/contacts/', 'https://samara.kristi.pro/about/contacts/', 'https://nsk.kristi.pro/about/contacts/', 'https://nn.kristi.pro/about/contacts/', 'https://kristi.pro/about/noname_3/', 'https://kristi.pro/about/noname_2/', 'https://kristi.pro/about/contacts/', 'https://kazan.kristi.pro/about/contacts/', 'https://ekb.kristi.pro/about/contacts/']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">contacts: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">prices: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">blog: <b>['https://uln.kristi.pro/news/0_1697/', 'https://ufa.kristi.pro/news/0_884/', 'https://spb.kristi.pro/news/0_1685/', 'https://nsk.kristi.pro/news/0_1642/', 'https://kristi.pro/news/page9/', 'https://kristi.pro/news/page8/', 'https://kristi.pro/news/page7/', 'https://kristi.pro/news/page6/', 'https://kristi.pro/news/page3/', 'https://kristi.pro/news/0_1688/', 'https://kristi.pro/news/0_1512/', 'https://kristi.pro/news/0_1510/', 'https://kristi.pro/news/0_1445/', 'https://kristi.pro/news/0_1268/', 'https://kristi.pro/news/0_101/', 'https://kristi.pro/news/0_1009/', 'https://kristi.pro/news/', 'https://kazan.kristi.pro/news/0_840/']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">other: <b>['https://uln.kristi.pro/offers/0_1130/', 'https://ufa.kristi.pro/remote-education/', 'https://ufa.kristi.pro/offers/0_468/', 'https://ufa.kristi.pro/education/face-make-up/', 'https://ufa.kristi.pro/education/cosmetology/', 'https://tyumen.kristi.pro/education/injection-cosmetology/', 'https://spb.kristi.pro/subjects-schedule/']</b></span></div><div style="margin-top:12px; font-size:13px;"><span style="margin-right:16px;"><b>total_pages:</b> 50</span><span style="margin-right:16px;"><b>schema_coverage:</b> 7/50</span><span style="margin-right:16px;"><b>quality_score:</b> 77.33333333333333</span></div><div style="margin-top:12px;"><b style="color:#ef4444; font-size:13px;">⚠️ Issues</b><ul style="font-size:12px; color:#64748b; margin-top:4px;"><li><b>total_issues:</b> 182</li><li><b>by_severity:</b> {'critical': 2, 'high': 80, 'medium': 100, 'low': 0}</li><li><b>by_category:</b> {'seo': 38, 'security': 144}</li><li><b>issues:</b> [{'severity': 'critical', 'category': 'seo', 'page': 'https://ufa.kristi.pro/offers/0_468/', 'page_type': 'other', 'issue': 'Missing title tag', 'impact': "Search engines can't understand page topic. </li><li><b>issues_by_severity:</b> {'critical': [{'severity': 'critical', 'category': 'seo', 'page': 'https://ufa.kristi.pro/offers/0_468/', 'page_type': 'other', 'issue': 'Missing title tag', 'impact': "Search engines can't understand</li></ul></div></div>
+    <div style="background:#f8fafc; border-radius:12px; padding:20px; margin:16px 0; border:1px solid #e2e8f0;">
+        <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:12px;">
+            <div>
+                <b style="font-size:16px;">9. Клиника Семейной косметологии</b>
+                <div style="color:#64748b; font-size:13px;">
+                    <a href="https://ksk-clinic.ru/" target="_blank" style="color:#3b82f6;">https://ksk-clinic.ru/</a>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <span style="font-size:13px; color:#64748b;">Страниц найдено: <b>50</b></span><br>
+                <span style="font-size:13px; color:#64748b;">Проанализировано: <b>50</b></span>
+            </div>
+        </div><div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;"><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">homepage: <b>['https://ksk-clinic.ru/']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">services: <b>['https://ksk-clinic.ru/services/trikhologiya/plazmoterapiya-dlya-volos/', 'https://ksk-clinic.ru/services/trikhologiya/mezoterapiya-dlya-volos/', 'https://ksk-clinic.ru/services/trikhologiya/', 'https://ksk-clinic.ru/services/smas-lifting/', 'https://ksk-clinic.ru/services/lazernaya-kosmetologiya/udalenie-novoobrazovaniy/', 'https://ksk-clinic.ru/services/lazernaya-kosmetologiya/lazernyy-piling/', 'https://ksk-clinic.ru/services/lazernaya-kosmetologiya/lazernaya-shlifovka/', 'https://ksk-clinic.ru/services/lazernaya-kosmetologiya/', 'https://ksk-clinic.ru/services/konsultatsii/konsultatsiya-trikhologa/', 'https://ksk-clinic.ru/services/konsultatsii/konsultatsiya-kosmetologa/', 'https://ksk-clinic.ru/services/konsultatsii/konsultatsiya-dermatoonkologa/', 'https://ksk-clinic.ru/services/konsultatsii/konsultatsiya-dermatologa/', 'https://ksk-clinic.ru/services/konsultatsii/bazovoe-geneticheskoe-testirovanie/', 'https://ksk-clinic.ru/services/konsultatsii/3d-diagnostika-litsa/', 'https://ksk-clinic.ru/services/konsultatsii/', 'https://ksk-clinic.ru/services/kompleksnye-programmy-ksk/kompleksnye-programmy-omolozheniya/', 'https://ksk-clinic.ru/services/kompleksnye-programmy-ksk/kompleksnye-programmy-omolozheniya-full-face/', 'https://ksk-clinic.ru/services/kompleksnye-programmy-ksk/kompleksnaya-protsedura-omolozheniya-smoothglo/', 'https://ksk-clinic.ru/services/kompleksnye-programmy-ksk/fullface-omolozhenie-za-1-seans/', 'https://ksk-clinic.ru/services/kompleksnye-programmy-ksk/', 'https://ksk-clinic.ru/services/intimnaya-kosmetologiya/intimnaya-konturnaya-plastika/', 'https://ksk-clinic.ru/services/intimnaya-kosmetologiya/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/vektornyy-lifting-preparatom-radiesse/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/udalenie-rubtsov-i-shramov/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/protsedura-stimulyatsii-kollagena/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/plazmoterapiya/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/nitevoy-lifting/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/mezoterapiya/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/lechenie-gipergidroza-stop/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/lechenie-gipergidroza-povyshennoy-potlivosti/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/lechenie-gipergidroza-ladoney/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/konturnaya-plastika-skul/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/konturnaya-plastika-podborodka/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/konturnaya-plastika-nosogubnykh-skladok/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/konturnaya-plastika-gub/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/konturnaya-plastika-belotero-profillers-radiesse/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/kollagenozamestitelnaya-terapiya/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/inektsionnyy-lipoliz-ustranenie-lokalnykh-zhirovykh-otlozheniy/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/inektsii-polimolochnoy-kisloty/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/botulinoterapiya/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/biorevitalizatsiya/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/biorevitalizatsiya-shei-i-zony-dekolte/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/biorevitalizatsiya-kistey-ruk/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/biorevitalizatsiya-gub/', 'https://ksk-clinic.ru/services/inektsionnye-protsedury/', 'https://ksk-clinic.ru/services/esteticheskaya-kosmetologiya/vakuumnyy-gidropiling-hydrafacial/', 'https://ksk-clinic.ru/services/esteticheskaya-kosmetologiya/spa-ukhod-casmara/', 'https://ksk-clinic.ru/services/esteticheskaya-kosmetologiya/prx-t33-piling/', 'https://ksk-clinic.ru/services/esteticheskaya-kosmetologiya/piling-ferulovyy/']</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">about: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">contacts: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">prices: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">blog: <b>[]</b></span><span style="background:#e0e7ff; color:#3730a3; border-radius:6px; padding:4px 10px; font-size:12px;">other: <b>[]</b></span></div><div style="margin-top:12px; font-size:13px;"><span style="margin-right:16px;"><b>total_pages:</b> 50</span><span style="margin-right:16px;"><b>schema_coverage:</b> 50/50</span><span style="margin-right:16px;"><b>quality_score:</b> 100.0</span></div><div style="margin-top:12px;"><b style="color:#ef4444; font-size:13px;">⚠️ Issues</b><ul style="font-size:12px; color:#64748b; margin-top:4px;"><li><b>total_issues:</b> 150</li><li><b>by_severity:</b> {'critical': 0, 'high': 0, 'medium': 150, 'low': 0}</li><li><b>by_category:</b> {'seo': 50, 'security': 100}</li><li><b>issues:</b> [{'severity': 'medium', 'category': 'seo', 'page': 'https://ksk-clinic.ru/', 'page_type': 'homepage', 'issue': 'Title too long (84 chars)', 'impact': 'Title gets truncated in search results', 'recomme</li><li><b>issues_by_severity:</b> {'critical': [], 'high': [], 'medium': [{'severity': 'medium', 'category': 'seo', 'page': 'https://ksk-clinic.ru/', 'page_type': 'homepage', 'issue': 'Title too long (84 chars)', 'impact': 'Title gets</li></ul></div></div><div style="margin-top:24px;"><b style="font-size:16px;">📊 Рыночные инсайты</b><div class="insight-box"><b>total_competitors:</b> 9</div><div class="insight-box"><b>avg_pages_analyzed:</b> 44.55555555555556</div><div class="insight-box"><b>analysis_depth:</b> deep</div></div>
+</div>
+
+<!-- PHASE 4: Reputation Analysis -->
+<div class="section">
+    <h2>⭐ <span>Фаза 4: Анализ репутации</span> <span class="phase-badge success">ci-reputation</span></h2>
+    <div class="section-meta">
+        Всего проанализировано: <b>9</b> &nbsp;|&nbsp;
+        Источники: yandex_maps, 2gis, prodoctorov, zoon, napopravku
+    </div>
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:24px;">
+        <div style="background:#f8fafc; border-radius:8px; padding:12px; text-align:center;">
+            <div style="font-size:13px; color:#475569; margin-bottom:4px;">Центр медицинской косметологии КОСМЕД</div>
+            <div style="font-size:24px; font-weight:700; color:#ef4444;">25.0</div>
+            <div class="score-bar-bg"><div class="score-bar-fill" style="width:25.0%; background:#ef4444;"></div></div>
+        </div>
+        <div style="background:#f8fafc; border-radius:8px; padding:12px; text-align:center;">
+            <div style="font-size:13px; color:#475569; margin-bottom:4px;">Центр медицинской косметологии Оксаны Волковой</div>
+            <div style="font-size:24px; font-weight:700; color:#ef4444;">25.0</div>
+            <div class="score-bar-bg"><div class="score-bar-fill" style="width:25.0%; background:#ef4444;"></div></div>
+        </div>
+        <div style="background:#f8fafc; border-radius:8px; padding:12px; text-align:center;">
+            <div style="font-size:13px; color:#475569; margin-bottom:4px;">Школа косметологии PF&beauty</div>
+            <div style="font-size:24px; font-weight:700; color:#ef4444;">25.0</div>
+            <div class="score-bar-bg"><div class="score-bar-fill" style="width:25.0%; background:#ef4444;"></div></div>
+        </div>
+        <div style="background:#f8fafc; border-radius:8px; padding:12px; text-align:center;">
+            <div style="font-size:13px; color:#475569; margin-bottom:4px;">Салон красоты People`s Choice</div>
+            <div style="font-size:24px; font-weight:700; color:#ef4444;">25.0</div>
+            <div class="score-bar-bg"><div class="score-bar-fill" style="width:25.0%; background:#ef4444;"></div></div>
+        </div>
+        <div style="background:#f8fafc; border-radius:8px; padding:12px; text-align:center;">
+            <div style="font-size:13px; color:#475569; margin-bottom:4px;">Клиника медицины кожи</div>
+            <div style="font-size:24px; font-weight:700; color:#ef4444;">25.0</div>
+            <div class="score-bar-bg"><div class="score-bar-fill" style="width:25.0%; background:#ef4444;"></div></div>
+        </div>
+        <div style="background:#f8fafc; border-radius:8px; padding:12px; text-align:center;">
+            <div style="font-size:13px; color:#475569; margin-bottom:4px;">Клиника косметологии "Фейсконтроль"</div>
+            <div style="font-size:24px; font-weight:700; color:#ef4444;">25.0</div>
+            <div class="score-bar-bg"><div class="score-bar-fill" style="width:25.0%; background:#ef4444;"></div></div>
+        </div>
+        <div style="background:#f8fafc; border-radius:8px; padding:12px; text-align:center;">
+            <div style="font-size:13px; color:#475569; margin-bottom:4px;">Клиника медицинской косметологии EstiLine</div>
+            <div style="font-size:24px; font-weight:700; color:#ef4444;">25.0</div>
+            <div class="score-bar-bg"><div class="score-bar-fill" style="width:25.0%; background:#ef4444;"></div></div>
+        </div>
+        <div style="background:#f8fafc; border-radius:8px; padding:12px; text-align:center;">
+            <div style="font-size:13px; color:#475569; margin-bottom:4px;">Кристи</div>
+            <div style="font-size:24px; font-weight:700; color:#ef4444;">25.0</div>
+            <div class="score-bar-bg"><div class="score-bar-fill" style="width:25.0%; background:#ef4444;"></div></div>
+        </div>
+        <div style="background:#f8fafc; border-radius:8px; padding:12px; text-align:center;">
+            <div style="font-size:13px; color:#475569; margin-bottom:4px;">Клиника Семейной косметологии</div>
+            <div style="font-size:24px; font-weight:700; color:#ef4444;">25.0</div>
+            <div class="score-bar-bg"><div class="score-bar-fill" style="width:25.0%; background:#ef4444;"></div></div>
+        </div></div>
+    <table>
+    <thead>
+    <tr>
+        <th>#</th>
+        <th>Конкурент</th>
+        <th>Всего отзывов</th>
+        <th>Ср. рейтинг</th>
+        <th>Источники</th>
+    </tr>
+    </thead>
+    <tbody>
+
+    <tr>
+        <td style="color:#94a3b8;">1</td>
+        <td><b>Центр медицинской косметологии КОСМЕД</b></td>
+        <td>0</td>
+        <td>—</td>
+        <td><div style="display:flex; gap:6px; flex-wrap:wrap;"><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Яндекс</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>2GIS</b>: ⭐4.5 (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>ПроДокторов</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Zoon</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>НаПоправку</b>: ⭐? (?)</span></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">2</td>
+        <td><b>Центр медицинской косметологии Оксаны Волковой</b></td>
+        <td>0</td>
+        <td>—</td>
+        <td><div style="display:flex; gap:6px; flex-wrap:wrap;"><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Яндекс</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>2GIS</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>ПроДокторов</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Zoon</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>НаПоправку</b>: ⭐? (?)</span></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">3</td>
+        <td><b>Школа косметологии PF&beauty</b></td>
+        <td>0</td>
+        <td>—</td>
+        <td><div style="display:flex; gap:6px; flex-wrap:wrap;"><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Яндекс</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>2GIS</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>ПроДокторов</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Zoon</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>НаПоправку</b>: ⭐? (?)</span></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">4</td>
+        <td><b>Салон красоты People`s Choice</b></td>
+        <td>0</td>
+        <td>—</td>
+        <td><div style="display:flex; gap:6px; flex-wrap:wrap;"><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Яндекс</b>: ⭐4.8 (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>2GIS</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>ПроДокторов</b>: ⭐4.8 (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Zoon</b>: ⭐4.8 (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>НаПоправку</b>: ⭐4.8 (?)</span></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">5</td>
+        <td><b>Клиника медицины кожи</b></td>
+        <td>0</td>
+        <td>—</td>
+        <td><div style="display:flex; gap:6px; flex-wrap:wrap;"><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Яндекс</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>2GIS</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>ПроДокторов</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Zoon</b>: ⭐4.8 (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>НаПоправку</b>: ⭐? (?)</span></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">6</td>
+        <td><b>Клиника косметологии "Фейсконтроль"</b></td>
+        <td>0</td>
+        <td>—</td>
+        <td><div style="display:flex; gap:6px; flex-wrap:wrap;"><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Яндекс</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>2GIS</b>: ⭐4.8 (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>ПроДокторов</b>: ⭐4.8 (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Zoon</b>: ⭐4.8 (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>НаПоправку</b>: ⭐4.8 (?)</span></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">7</td>
+        <td><b>Клиника медицинской косметологии EstiLine</b></td>
+        <td>0</td>
+        <td>—</td>
+        <td><div style="display:flex; gap:6px; flex-wrap:wrap;"><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Яндекс</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>2GIS</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>ПроДокторов</b>: ⭐4.6 (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Zoon</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>НаПоправку</b>: ⭐? (?)</span></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">8</td>
+        <td><b>Кристи</b></td>
+        <td>0</td>
+        <td>—</td>
+        <td><div style="display:flex; gap:6px; flex-wrap:wrap;"><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Яндекс</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>2GIS</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>ПроДокторов</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Zoon</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>НаПоправку</b>: ⭐? (?)</span></div></td>
+    </tr>
+    <tr>
+        <td style="color:#94a3b8;">9</td>
+        <td><b>Клиника Семейной косметологии</b></td>
+        <td>0</td>
+        <td>—</td>
+        <td><div style="display:flex; gap:6px; flex-wrap:wrap;"><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Яндекс</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>2GIS</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>ПроДокторов</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>Zoon</b>: ⭐? (?)</span><span style="background:#f3f4f6; border-radius:6px; padding:4px 8px; font-size:11px;"><b>НаПоправку</b>: ⭐? (?)</span></div></td>
+    </tr>
+    </tbody>
+    </table>
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:24px;"><div><b style="font-size:15px;">📈 Сентимент-анализ</b></div><div><b style="font-size:15px;">🎯 Риски и возможности</b><div class="insight-box warning"><b>risks:</b> []</div><div class="insight-box warning"><b>opportunities:</b> []</div></div></div><div style="margin-top:20px;"><b style="font-size:15px;">💡 Инсайты по репутации</b><div class="insight-box success"><b>market_avg_reputation:</b> 25.0</div><div class="insight-box success"><b>market_avg_sentiment:</b> {'positive': 0.0, 'negative': 0.0}</div><div class="insight-box success"><b>best_reputation:</b> {'name': 'Центр медицинской косметологии КОСМЕД', 'score': 25.0, 'grade': 'D'}</div><div class="insight-box success"><b>worst_reputation:</b> {'name': 'Центр медицинской косметологии КОСМЕД', 'score': 25.0, 'grade': 'D'}</div><div class="insight-box success"><b>reputation_spread:</b> 0.0</div></div>
+</div>
+
+<!-- SUMMARY -->
+<div class="section" style="background:linear-gradient(135deg, #0f172a, #1e293b); color:#fff;">
+    <h2 style="color:#fff;">📋 Сводка по пайплайну</h2>
+    <table style="color:#e2e8f0;">
+    <thead>
+    <tr>
+        <th style="background:rgba(255,255,255,0.05); color:#94a3b8;">Фаза</th>
+        <th style="background:rgba(255,255,255,0.05); color:#94a3b8;">Агент</th>
+        <th style="background:rgba(255,255,255,0.05); color:#94a3b8;">Статус</th>
+        <th style="background:rgba(255,255,255,0.05); color:#94a3b8;">Результат</th>
+    </tr>
+    </thead>
+    <tbody>
+
+    <tr>
+        <td>✅ Обнаружение конкурентов</td>
+        <td style="color:#94a3b8;">ci-scout</td>
+        <td><span class="phase-badge success">success</span></td>
+        <td style="color:#94a3b8;">OK</td>
+    </tr>
+    <tr>
+        <td>✅ Аудит сайтов</td>
+        <td style="color:#94a3b8;">ci-auditor</td>
+        <td><span class="phase-badge success">success</span></td>
+        <td style="color:#94a3b8;">OK</td>
+    </tr>
+    <tr>
+        <td>✅ Глубинный анализ</td>
+        <td style="color:#94a3b8;">ci-deep-analyzer</td>
+        <td><span class="phase-badge success">success</span></td>
+        <td style="color:#94a3b8;">OK</td>
+    </tr>
+    <tr>
+        <td>✅ Анализ репутации</td>
+        <td style="color:#94a3b8;">ci-reputation</td>
+        <td><span class="phase-badge success">success</span></td>
+        <td style="color:#94a3b8;">OK</td>
+    </tr>
+    </tbody>
+    </table>
+
+    <div style="display:flex; gap:24px; margin-top:24px; flex-wrap:wrap; justify-content:center;">
+        <div style="text-align:center;">
+            <div style="font-size:40px; font-weight:800; color:#10b981;">100/100</div>
+            <div style="font-size:12px; color:#94a3b8;">Quality Score</div>
+        </div>
+        <div style="text-align:center;">
+            <div style="font-size:40px; font-weight:800; color:#60a5fa;">100%</div>
+            <div style="font-size:12px; color:#94a3b8;">Completeness</div>
+        </div>
+        <div style="text-align:center;">
+            <div style="font-size:40px; font-weight:800; color:#f59e0b;">1668s</div>
+            <div style="font-size:12px; color:#94a3b8;">Total Time</div>
+        </div>
+        <div style="text-align:center;">
+            <div style="font-size:40px; font-weight:800; color:#a78bfa;">2</div>
+            <div style="font-size:12px; color:#94a3b8;">Competitors</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+    <p>AIM Competitive Intelligence Pipeline &middot; med-det.ru &middot; 2026-05-29 00:28</p>
+    <p style="margin-top:4px;">ci-scout → ci-auditor → ci-deep-analyzer → ci-reputation</p>
+    <p style="margin-top:4px; color:#cbd5e1;">Phase 1: Apify Google Maps + DaData &middot; Phase 2: PageSpeed + SEO audit &middot; Phase 3: 50-page crawl &middot; Phase 4: SerpAPI reviews</p>
+</div>
+
+</div>
+</body>
+</html>

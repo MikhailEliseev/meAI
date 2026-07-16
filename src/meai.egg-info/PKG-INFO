@@ -1,0 +1,24 @@
+Metadata-Version: 2.4
+Name: meai
+Version: 0.1.0
+Summary: meAI - CEO-Architect for AIM Agency
+Author: Mikhail Eliseev
+Author-email: me@mikhaileliseev.com
+Requires-Python: >=3.11
+Requires-Dist: fastapi>=0.104.0
+Requires-Dist: uvicorn>=0.24.0
+Requires-Dist: sqlalchemy>=2.0.0
+Requires-Dist: aiosqlite>=0.19.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: anthropic>=0.7.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.7.0; extra == "dev"
+Dynamic: author
+Dynamic: author-email
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

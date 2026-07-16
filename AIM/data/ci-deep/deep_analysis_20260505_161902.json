@@ -1,0 +1,394 @@
+{
+  "analysis_date": "2026-05-05T16:19:02.275185",
+  "total_analyzed": 5,
+  "deep_profiles": [
+    {
+      "name": "Tori Clinic",
+      "url": "https://toriclinic.ru/",
+      "total_pages_found": 50,
+      "pages_analyzed": 50,
+      "page_types": {
+        "homepage": [],
+        "services": [
+          "https://toriclinic.ru/services/mikroigolchatiy-rf-lifting-morpheus-8/"
+        ],
+        "about": [
+          "https://toriclinic.ru/about-us/news/"
+        ],
+        "contacts": [],
+        "prices": [],
+        "blog": [
+          "https://toriclinic.ru/articles/himicheskiy-piling/",
+          "https://toriclinic.ru/articles/fotoomolozhenie/",
+          "https://toriclinic.ru/articles/biorevitalizatsiya/"
+        ],
+        "other": [
+          "https://toriclinic.ru/video-tori/pravda-ili-lozh/pravda-ili-lozh/",
+          "https://toriclinic.ru/video-tori/plazmoterapiya/korrekcziya-brovej-plazmoj/",
+          "https://toriclinic.ru/video-tori/plazmoterapiya/klinika-tori-plazmoterapiya/",
+          "https://toriclinic.ru/video-tori/plazmoterapiya/ibrakova-olga-prp-terapiya/",
+          "https://toriclinic.ru/video-tori/plazmoterapiya/ibrakova-olga-plazmoterapiya/",
+          "https://toriclinic.ru/video-tori/plazmoterapiya/elena-poskotinova-plazmoterapiya/",
+          "https://toriclinic.ru/video-tori/plazmoterapiya/anna-novikova-plazmoterapiya/",
+          "https://toriclinic.ru/video-tori/plazmoterapiya/anna-novikova-plazmoterapiya-1/",
+          "https://toriclinic.ru/video-tori/plazmoterapiya/",
+          "https://toriclinic.ru/video-tori/na-zdorove/kurinyij-rulet-i-karamelizirovannyie-fruktyi-s-ekaterinoj-medvedevoj/",
+          "https://toriclinic.ru/video-tori/na-zdorove/dieticheskij-tort-s-klubnikoj-s-mariej-tatarinczevoj/",
+          "https://toriclinic.ru/video-tori/mezoterapiya/mezoterapiya/",
+          "https://toriclinic.ru/video-tori/mezoterapiya/anna-novikova-mezoterapiya/",
+          "https://toriclinic.ru/video-tori/kosmeticheskie-sredstva/produkcziya-james-read-dlya-avtozagara/",
+          "https://toriclinic.ru/video-tori/kosmeticheskie-sredstva/kosmetika-dlya-licza-ultraceuticals/",
+          "https://toriclinic.ru/video-tori/kosmeticheskie-sredstva/kosmetika-dlya-licza-rilastil/",
+          "https://toriclinic.ru/video-tori/kosmeticheskie-sredstva/kosmetika-atb-lab/",
+          "https://toriclinic.ru/video-tori/kosmeticheskie-sredstva/kosmetika-atb-lab-2/",
+          "https://toriclinic.ru/video-tori/kosmeticheskie-sredstva/klinika-tori-preparatyi-daigo/",
+          "https://toriclinic.ru/video-tori/kosmeticheskie-sredstva/klinika-tori-kosmetika-is-slinical-1/",
+          "https://toriclinic.ru/video-tori/kosmeticheskie-sredstva/klinika-tori-kosmetika-dlya-licza-ultraceuticals/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/tatyana-al-sabunchi-plastika-intimnoj-zonyi/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/tatyana-al-sabunchi-konturnaya-plastika-licza/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/mariya-tatarinczeva-korrekcziya-nososleznoj-borozdyi/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/majya-samojlova-konturnaya-plastika/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/korrekcziya-ovala-licza-putem-lipoliza/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/korrekcziya-nososleznoj-borozdyi/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/klinika-tori-proczedura-korrekczii-skul/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/klinika-tori-korrekcziya-ovala-licza/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/klinika-tori-korrekcziya-nosogubnyix-skladok/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/klinika-tori-korrekcziya-gub/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/irina-vaxitova-korrekcziya-skul/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/irina-vaxitova-korrekcziya-nosogubnyix-skladok/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/irina-vaxitova-korrekcziya-gub/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/ibrakova-olga-korrekcziya-ovala-licza-nityami-aptos/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/elena-poskotinova-korrekcziya-mimicheskix-morshhin-botulotaksinom/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/ekaterina-medvedeva-korrekcziya-nosogubnyix-skladok/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/ekaterina-medvedeva-korrekcziya-gub/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/bezoperaczionnaya-rinoplastika-ot-annyi-novikovoj/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/anna-novikova-plastika-intimnoj-zonyi/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/anna-novikova-korrekcziya-gub/",
+          "https://toriclinic.ru/video-tori/konturnaya-plastika/anna-novikova-konturnaya-rinoplastika/",
+          "https://toriclinic.ru/video-tori/intervyu/speczialistyi-tori-aleksej-mimov/",
+          "https://toriclinic.ru/video-tori/intervyu/lipolitiki/",
+          "https://toriclinic.ru/video-tori/intervyu/lechenie-psoriaza/"
+        ]
+      },
+      "deep_analysis": {
+        "total_pages": 50,
+        "page_types": {
+          "services": 1,
+          "about": 1,
+          "blog": 3,
+          "other": 45
+        },
+        "seo_coverage": {
+          "title": "50/50",
+          "description": "50/50",
+          "h1": "50/50"
+        },
+        "schema_coverage": "50/50",
+        "quality_score": 100.0
+      },
+      "analyzed_at": "2026-05-05T16:10:15.366424"
+    },
+    {
+      "name": "Professional Clinic",
+      "url": "https://profclinic.ru/",
+      "total_pages_found": 50,
+      "pages_analyzed": 50,
+      "page_types": {
+        "homepage": [
+          "https://profclinic.ru/"
+        ],
+        "services": [
+          "https://profclinic.ru/services/whitening/",
+          "https://profclinic.ru/services/terapia/",
+          "https://profclinic.ru/services/parodont/",
+          "https://profclinic.ru/services/ortoped/",
+          "https://profclinic.ru/services/ortodont/",
+          "https://profclinic.ru/services/hirurg/",
+          "https://profclinic.ru/services/gigiena-i-profilaktika/",
+          "https://profclinic.ru/services/diagnostika/",
+          "https://profclinic.ru/services/detskaya-stomatologiya/",
+          "https://profclinic.ru/services/artist/",
+          "https://profclinic.ru/services/"
+        ],
+        "about": [
+          "https://profclinic.ru/about/patients/",
+          "https://profclinic.ru/about/"
+        ],
+        "contacts": [
+          "https://profclinic.ru/contacts/"
+        ],
+        "prices": [
+          "https://profclinic.ru/prices/"
+        ],
+        "blog": [
+          "https://profclinic.ru/news/"
+        ],
+        "other": [
+          "https://profclinic.ru/wp-content/uploads/2025/04/ea.mp4",
+          "https://profclinic.ru/welcome-set-kompleks-znakomstva-s-klinikoj-22000-rublej/",
+          "https://profclinic.ru/vacancy/",
+          "https://profclinic.ru/tehnologii/",
+          "https://profclinic.ru/tag/action/",
+          "https://profclinic.ru/spravka/",
+          "https://profclinic.ru/specialists/doktora/yulova-natalya-alekseevna/",
+          "https://profclinic.ru/specialists/doktora/tarasova-kristina-vladimirovna/",
+          "https://profclinic.ru/specialists/doktora/surmaev-eduard-vyacheslavovich/",
+          "https://profclinic.ru/specialists/doktora/sorkin-mihail-eduardovich/",
+          "https://profclinic.ru/specialists/doktora/shamil-magomed-gadzhievich-kaplanov/",
+          "https://profclinic.ru/specialists/doktora/rodionova-elena-aleksandrovna/",
+          "https://profclinic.ru/specialists/doktora/pavel-leonidovich-popovich/",
+          "https://profclinic.ru/specialists/doktora/natalya-alekseevna-trubina/",
+          "https://profclinic.ru/specialists/doktora/kristina-nikolaevna-stryapina/",
+          "https://profclinic.ru/specialists/doktora/ivanov-andrej-sergeevich/",
+          "https://profclinic.ru/specialists/doktora/grachyov-vasilij-igorevich/",
+          "https://profclinic.ru/specialists/doktora/gleb-vladilenovich-boromenskij/",
+          "https://profclinic.ru/specialists/doktora/gateeva-laura-vladimirovna/",
+          "https://profclinic.ru/specialists/doktora/bolshakova-kristina-sergeevna/",
+          "https://profclinic.ru/specialists/doktora/azim-amonovich-vakhidov/",
+          "https://profclinic.ru/specialists/doktora/",
+          "https://profclinic.ru/skidka-15-na-professionalnuyu-gigienu-polosti-rta-2/",
+          "https://profclinic.ru/schastlivaya-mama-speczialnaya-programma-dlya-beremennyh-v-pervoj-professorskoj/",
+          "https://profclinic.ru/wp-content/uploads/2022/07/2022-07-08-at-15.51.02.jpeg",
+          "https://profclinic.ru/so-svetloj-pashoj-2/",
+          "https://profclinic.ru/s-prazdnikom-vesny-ocharovaniya-i-krasoty/",
+          "https://profclinic.ru/s-prazdnikom-vesny-i-truda-5/",
+          "https://profclinic.ru/s-novym-godom-i-rozhdestvom-5/",
+          "https://profclinic.ru/s-dnyom-pobedy-2/",
+          "https://profclinic.ru/s-dnem-rossijskogo-flaga-3/",
+          "https://profclinic.ru/s-dnem-narodnogo-edinstva-2/",
+          "https://profclinic.ru/rekomendujte-pervuyu-professorskuyu-i-lechites-vygodno/"
+        ]
+      },
+      "deep_analysis": {
+        "total_pages": 50,
+        "page_types": {
+          "homepage": 1,
+          "services": 11,
+          "about": 2,
+          "contacts": 1,
+          "prices": 1,
+          "blog": 1,
+          "other": 33
+        },
+        "seo_coverage": {
+          "title": "48/50",
+          "description": "47/50",
+          "h1": "48/50"
+        },
+        "schema_coverage": "48/50",
+        "quality_score": 95.33333333333334
+      },
+      "analyzed_at": "2026-05-05T16:12:54.398251"
+    },
+    {
+      "name": "CIDK",
+      "url": "https://cidk.ru/",
+      "total_pages_found": 50,
+      "pages_analyzed": 50,
+      "page_types": {
+        "homepage": [
+          "https://cidk.ru/"
+        ],
+        "services": [
+          "https://cidk.ru/uslugi/uzi-malogo-taza-2/",
+          "https://cidk.ru/uslugi/ustranenie-desnevoj-ulybki/",
+          "https://cidk.ru/uslugi/ustanovka-i-udalenie-vnutrimatochnoj-spirali/",
+          "https://cidk.ru/uslugi/regen-lab-prp-terapiya-usovershenstvovannaya-plazmoterapiya/",
+          "https://cidk.ru/uslugi/razgovory-pro-akne-s-professorom-soczialnyj-proekt-dlya-paczientov/razgovory-pro-akne-s-professorom-soczialnyj-proekt-dlya-paczientov/",
+          "https://cidk.ru/uslugi/placzentarnaya-terapiya-melsmon/",
+          "https://cidk.ru/uslugi/piling-sistema-dlya-mgnovennogo-liftinga-i-glubokogo-restrukturirovaniya-kozhi-pqage-italiya-2/",
+          "https://cidk.ru/uslugi/pap-test-2/",
+          "https://cidk.ru/uslugi/lechenie-stressovogo-nederzhaniya-mochi-u-zhenshhin/",
+          "https://cidk.ru/uslugi/konturnaya-plastika-tylnyh-poverhnostej-kistej/",
+          "https://cidk.ru/uslugi/konturnaya-plastika-skulovoj-zony-formirovanie-krasivyh-skul/",
+          "https://cidk.ru/uslugi/konturnaya-plastika-shei-2/",
+          "https://cidk.ru/uslugi/konturnaya-plastika-preparatom-radiesse-2/",
+          "https://cidk.ru/uslugi/konturnaya-plastika-podborodka-2/",
+          "https://cidk.ru/uslugi/konturnaya-plastika-nososleznyh-borozd-korrekcziya-temnyh-krugov-i-meshkov-pod-glazami/",
+          "https://cidk.ru/uslugi/konturnaya-plastika-nosa-3/",
+          "https://cidk.ru/uslugi/konturnaya-plastika-gub-2/",
+          "https://cidk.ru/uslugi/konsultacziya-ginekologa/",
+          "https://cidk.ru/uslugi/konizacziya-shejki-matki/",
+          "https://cidk.ru/uslugi/khimicheksie-pilingi-i-ukhody-zo-skin-health-by-zein-obagi/",
+          "https://cidk.ru/uslugi/kapelniczy-laennek/",
+          "https://cidk.ru/uslugi/enerpeel-sa-2/",
+          "https://cidk.ru/uslugi/endokrinologiya/ozempik-i-analogi/velgiya/",
+          "https://cidk.ru/uslugi/endokrinologiya/ozempik-i-analogi/tirzetta/",
+          "https://cidk.ru/uslugi/endokrinologiya/ozempik-i-analogi/ozempik-i-analogi/",
+          "https://cidk.ru/uslugi/diagnostika/uzi/ultrazvukovaya-diagnostika-v-czidk/",
+          "https://cidk.ru/uslugi/diagnostika/test-immunohels/test-immunohels/",
+          "https://cidk.ru/uslugi/diagnostika/kolposkopiya/kolposkopiya-2/",
+          "https://cidk.ru/uslugi/diagnostika/gen-test/geneticheskoe-testirovanie-mesopharm-gen-test-2/",
+          "https://cidk.ru/uslugi/diagnostika/diagnostika-sostoyaniya-kozhi-i-volos/trihoskopiya-i-fototrihogramma/",
+          "https://cidk.ru/uslugi/diagnostika/diagnostika-sostoyaniya-kozhi-i-volos/diagnostika-v-dermatologii-i-trihologii/",
+          "https://cidk.ru/uslugi/diagnostika/diagnostika-sostoyaniya-kozhi-i-volos/diagnostika-kozhi-antera-3d-2/",
+          "https://cidk.ru/uslugi/diagnostika/diagnostika-sostoyaniya-kozhi-i-volos/dermatoskopiya-2/",
+          "https://cidk.ru/uslugi/diagnostika/diagnostika-sostoyaniya-kozhi-i-volos/biopsiya-i-gistologicheskie-issledovaniya-kozhi-2/",
+          "https://cidk.ru/uslugi/diagnostika/bioimpedansometriya/bioimpedansometriya-v-czidk/",
+          "https://cidk.ru/uslugi/diagnostika/analizy-i-issledovaniya/spisok-neobhodimyh-analizov-pri-vypadenii-volos-v-czidk/",
+          "https://cidk.ru/uslugi/diagnostika/analizy-i-issledovaniya/spisok-neobhodimyh-analizov-pri-rozaczea-v-czidk/",
+          "https://cidk.ru/uslugi/diagnostika/analizy-i-issledovaniya/spisok-neobhodimyh-analizov-pri-giperpigmentaczii-v-czidk/",
+          "https://cidk.ru/uslugi/diagnostika/analizy-i-issledovaniya/spisok-neobhodimyh-analizov-pri-ekzeme-v-czidk/",
+          "https://cidk.ru/uslugi/diagnostika/analizy-i-issledovaniya/spisok-neobhodimyh-analizov-pri-akne-v-czidk/",
+          "https://cidk.ru/uslugi/diagnostika/analizy-i-issledovaniya/spisok-neobhodimyh-analizov-pered-altera-terapiej-v-czidk/",
+          "https://cidk.ru/uslugi/diagnostika/analizy-i-issledovaniya/analizy-2/",
+          "https://cidk.ru/uslugi/cidk4face-kompleksnoe-ispolzovanie-fillerov/",
+          "https://cidk.ru/uslugi/biorevitalizacziya-v-czidk/",
+          "https://cidk.ru/uslugi/bioreparacziya-preparatom-profhilo/",
+          "https://cidk.ru/uslugi/anesteziologiya/medikamentoznyj-son/",
+          "https://cidk.ru/uslugi/9-terapiya/zabolevaniya-terapevticheskogo-profilya/orz/",
+          "https://cidk.ru/uslugi/9-terapiya/zabolevaniya-terapevticheskogo-profilya/orvi/",
+          "https://cidk.ru/uslugi/9-terapiya/zabolevaniya-terapevticheskogo-profilya/lechenie-zabolevanij-terapevticheskogo-profilya/"
+        ],
+        "about": [],
+        "contacts": [],
+        "prices": [],
+        "blog": [],
+        "other": []
+      },
+      "deep_analysis": {
+        "total_pages": 50,
+        "page_types": {
+          "homepage": 1,
+          "services": 49
+        },
+        "seo_coverage": {
+          "title": "50/50",
+          "description": "50/50",
+          "h1": "49/50"
+        },
+        "schema_coverage": "50/50",
+        "quality_score": 99.33333333333333
+      },
+      "analyzed_at": "2026-05-05T16:15:05.563848"
+    },
+    {
+      "name": "Frau Clinic",
+      "url": "https://frauklinik.ru/",
+      "total_pages_found": 50,
+      "pages_analyzed": 50,
+      "page_types": {
+        "homepage": [
+          "https://frauklinik.ru/"
+        ],
+        "services": [
+          "https://frauklinik.ru/services/"
+        ],
+        "about": [
+          "https://frauklinik.ru/about/video-protsedur-i-operatsiy.php",
+          "https://frauklinik.ru/about/sposoby-oplaty/",
+          "https://frauklinik.ru/about/reviews/",
+          "https://frauklinik.ru/about/requisites/",
+          "https://frauklinik.ru/about/polozhenie-o-klube-frau-vip/",
+          "https://frauklinik.ru/about/podgotovka-k-operatsii/",
+          "https://frauklinik.ru/about/licenses/",
+          "https://frauklinik.ru/about/licenses",
+          "https://frauklinik.ru/about/inogorodnim-patsientam/",
+          "https://frauklinik.ru/about/"
+        ],
+        "contacts": [
+          "https://frauklinik.ru/contacts/1290/",
+          "https://frauklinik.ru/contacts/1289/",
+          "https://frauklinik.ru/contacts/115/",
+          "https://frauklinik.ru/contacts/"
+        ],
+        "prices": [],
+        "blog": [
+          "https://frauklinik.ru/news/",
+          "https://frauklinik.ru/blog/peptidnaya-terapiya-posle-operatsii/",
+          "https://frauklinik.ru/blog/liposaktsiya-i-lipomodelirovanie/",
+          "https://frauklinik.ru/blog/krugovaya-podtyazhka-litsa/",
+          "https://frauklinik.ru/blog/frau_refresh/",
+          "https://frauklinik.ru/blog/"
+        ],
+        "other": [
+          "https://frauklinik.ru/price/",
+          "https://frauklinik.ru/star_patients/story_rita_dakota_vo_frau_klinik/",
+          "https://frauklinik.ru/star_patients/story_olga_belikova_vo_frau_klinik/",
+          "https://frauklinik.ru/star_patients/story_masya_shpak_vo_frau_klinik/",
+          "https://frauklinik.ru/star_patients/story_inna_litvinenko_vo_frau_klinik/",
+          "https://frauklinik.ru/star_patients/",
+          "https://frauklinik.ru/sitemap/",
+          "https://frauklinik.ru/product/kapelnitsy/kapelnitsy-krasoty/",
+          "https://frauklinik.ru/product/kapelnitsy/detox/",
+          "https://frauklinik.ru/product/kapelnitsy/",
+          "https://frauklinik.ru/product/",
+          "https://frauklinik.ru/plasticheskaya-hirurgia/rinoplastika/",
+          "https://frauklinik.ru/plasticheskaya-hirurgia/plastika_tela/",
+          "https://frauklinik.ru/plasticheskaya-hirurgia/plastika_litsa/",
+          "https://frauklinik.ru/plasticheskaya-hirurgia/plastika_gryzh/",
+          "https://frauklinik.ru/plasticheskaya-hirurgia/plastika_grudi/",
+          "https://frauklinik.ru/plasticheskaya-hirurgia/intimnaya_plastika/",
+          "https://frauklinik.ru/plasticheskaya-hirurgia/blefaroplastika/",
+          "https://frauklinik.ru/plasticheskaya-hirurgia/",
+          "https://frauklinik.ru/peresadka_volos/peresadka_volos_dlya_zhenshchin/",
+          "https://frauklinik.ru/peresadka_volos/peresadka_volos_dlya_muzhchin/",
+          "https://frauklinik.ru/peresadka_volos/peresadka_brovey/",
+          "https://frauklinik.ru/peresadka_volos/peresadka_borody/",
+          "https://frauklinik.ru/peresadka_volos/ekzosomi_dlya_vosstanovleniya_volos/",
+          "https://frauklinik.ru/peresadka_volos/",
+          "https://frauklinik.ru/media/",
+          "https://frauklinik.ru/massazh/obshchy_massazh/",
+          "https://frauklinik.ru/massazh/massazh_face/"
+        ]
+      },
+      "deep_analysis": {
+        "total_pages": 50,
+        "page_types": {
+          "homepage": 1,
+          "services": 1,
+          "about": 10,
+          "contacts": 4,
+          "blog": 6,
+          "other": 28
+        },
+        "seo_coverage": {
+          "title": "50/50",
+          "description": "50/50",
+          "h1": "50/50"
+        },
+        "schema_coverage": "49/50",
+        "quality_score": 100.0
+      },
+      "analyzed_at": "2026-05-05T16:18:58.213335"
+    },
+    {
+      "name": "Клиника Юлии Щербатовой",
+      "url": "https://doctor-shcherbatova.ru/",
+      "total_pages_found": 1,
+      "pages_analyzed": 1,
+      "page_types": {
+        "homepage": [
+          "https://doctor-shcherbatova.ru/"
+        ],
+        "services": [],
+        "about": [],
+        "contacts": [],
+        "prices": [],
+        "blog": [],
+        "other": []
+      },
+      "deep_analysis": {
+        "total_pages": 1,
+        "page_types": {
+          "homepage": 1
+        },
+        "seo_coverage": {
+          "title": "0/1",
+          "description": "0/1",
+          "h1": "0/1"
+        },
+        "schema_coverage": "0/1",
+        "quality_score": 0.0
+      },
+      "analyzed_at": "2026-05-05T16:19:02.275140"
+    }
+  ],
+  "market_insights": {
+    "total_competitors": 5,
+    "avg_pages_analyzed": 40.2,
+    "analysis_depth": "deep"
+  },
+  "analysis_quality": "deep",
+  "pages_analyzed_per_competitor": 50
+}

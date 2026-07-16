@@ -1,0 +1,351 @@
+{
+  "analysis_date": "2026-05-06T21:18:02.959631",
+  "budget": 500000,
+  "timeline": "3 месяца",
+  "market_context": {
+    "competitors_count": 0,
+    "market_size": "medium",
+    "competitive_intensity": "moderate",
+    "market_maturity": "growing",
+    "barriers_to_entry": "medium"
+  },
+  "target_audience": {
+    "segments": [
+      {
+        "name": "Молодые профессионалы",
+        "age": "25-35",
+        "income": "средний+",
+        "pain_points": [
+          "нехватка времени",
+          "качество услуг",
+          "удобство записи"
+        ],
+        "channels": [
+          "social",
+          "seo",
+          "context"
+        ],
+        "priority": "high"
+      },
+      {
+        "name": "Семьи с детьми",
+        "age": "30-45",
+        "income": "средний",
+        "pain_points": [
+          "безопасность",
+          "детские специалисты",
+          "цена"
+        ],
+        "channels": [
+          "seo",
+          "referral",
+          "content"
+        ],
+        "priority": "medium"
+      },
+      {
+        "name": "Возрастная аудитория",
+        "age": "45+",
+        "income": "средний",
+        "pain_points": [
+          "опыт врачей",
+          "близость к дому",
+          "доверие"
+        ],
+        "channels": [
+          "seo",
+          "offline",
+          "referral"
+        ],
+        "priority": "medium"
+      }
+    ],
+    "primary_segment": {
+      "name": "Молодые профессионалы",
+      "age": "25-35",
+      "income": "средний+",
+      "pain_points": [
+        "нехватка времени",
+        "качество услуг",
+        "удобство записи"
+      ],
+      "channels": [
+        "social",
+        "seo",
+        "context"
+      ],
+      "priority": "high"
+    },
+    "total_segments": 3
+  },
+  "positioning": {
+    "positioning_statement": "Современная клиника с цифровым подходом",
+    "usps": [
+      {
+        "title": "Онлайн-запись 24/7",
+        "description": "Запишитесь на приём в любое время через сайт или приложение",
+        "proof_point": "Только 40% конкурентов предлагают онлайн-запись"
+      },
+      {
+        "title": "Прозрачные цены",
+        "description": "Все цены на сайте, без скрытых платежей",
+        "proof_point": "Только 60% конкурентов публикуют цены"
+      },
+      {
+        "title": "Опытные специалисты",
+        "description": "Врачи с опытом работы от 10 лет",
+        "proof_point": "Средний опыт врачей выше рынка на 30%"
+      }
+    ],
+    "brand_promise": "Качественная медицина без лишних сложностей",
+    "differentiation": "Цифровизация + прозрачность + качество"
+  },
+  "channel_strategy": [
+    {
+      "channel": "seo",
+      "priority": "high",
+      "budget_share": 0.3,
+      "rationale": "Долгосрочный канал с низкой стоимостью лида",
+      "tactics": [
+        "оптимизация сайта",
+        "контент-маркетинг",
+        "локальное SEO"
+      ],
+      "timeline": "3-6 месяцев до результата"
+    },
+    {
+      "channel": "context",
+      "priority": "high",
+      "budget_share": 0.35,
+      "rationale": "Быстрый старт, высокая конверсия",
+      "tactics": [
+        "Яндекс.Директ",
+        "Google Ads",
+        "ретаргетинг"
+      ],
+      "timeline": "1-2 недели до результата"
+    },
+    {
+      "channel": "social",
+      "priority": "medium",
+      "budget_share": 0.15,
+      "rationale": "Работа с репутацией и узнаваемостью",
+      "tactics": [
+        "ВКонтакте",
+        "Telegram",
+        "отзывы"
+      ],
+      "timeline": "1 месяц до результата"
+    },
+    {
+      "channel": "content",
+      "priority": "medium",
+      "budget_share": 0.1,
+      "rationale": "Экспертность и доверие",
+      "tactics": [
+        "блог",
+        "видео",
+        "кейсы"
+      ],
+      "timeline": "2-3 месяца до результата"
+    },
+    {
+      "channel": "referral",
+      "priority": "low",
+      "budget_share": 0.1,
+      "rationale": "Низкая стоимость привлечения",
+      "tactics": [
+        "реферальная программа",
+        "партнёрства"
+      ],
+      "timeline": "1-2 месяца до результата"
+    }
+  ],
+  "customer_journey": {
+    "awareness": [
+      "SEO",
+      "Контекстная реклама",
+      "Социальные сети"
+    ],
+    "consideration": [
+      "Контент на сайте",
+      "Отзывы",
+      "Сравнение цен"
+    ],
+    "decision": [
+      "Онлайн-запись",
+      "Звонок",
+      "Консультация"
+    ],
+    "retention": [
+      "Email-рассылка",
+      "Напоминания",
+      "Программа лояльности"
+    ],
+    "advocacy": [
+      "Реферальная программа",
+      "Отзывы",
+      "Кейсы"
+    ]
+  },
+  "budget_allocation": {
+    "total_budget": 500000,
+    "by_channel": {
+      "seo": {
+        "amount": 150000,
+        "share": 30.0,
+        "priority": "high"
+      },
+      "context": {
+        "amount": 175000,
+        "share": 35.0,
+        "priority": "high"
+      },
+      "social": {
+        "amount": 75000,
+        "share": 15.0,
+        "priority": "medium"
+      },
+      "content": {
+        "amount": 50000,
+        "share": 10.0,
+        "priority": "medium"
+      },
+      "referral": {
+        "amount": 50000,
+        "share": 10.0,
+        "priority": "low"
+      }
+    },
+    "reserve": 50000
+  },
+  "metrics": {
+    "primary_kpis": [
+      {
+        "metric": "CAC",
+        "target": "< 3000 руб",
+        "description": "Стоимость привлечения клиента"
+      },
+      {
+        "metric": "LTV",
+        "target": "> 15000 руб",
+        "description": "Lifetime Value клиента"
+      },
+      {
+        "metric": "ROI",
+        "target": "> 300%",
+        "description": "Возврат инвестиций"
+      },
+      {
+        "metric": "Conversion",
+        "target": "> 3%",
+        "description": "Конверсия сайта"
+      }
+    ],
+    "channel_metrics": {
+      "seo": [
+        "органический трафик",
+        "позиции",
+        "CTR"
+      ],
+      "context": [
+        "CPC",
+        "CTR",
+        "конверсия",
+        "ROAS"
+      ],
+      "social": [
+        "охват",
+        "вовлечённость",
+        "подписчики"
+      ],
+      "content": [
+        "просмотры",
+        "время на сайте",
+        "возвраты"
+      ]
+    },
+    "business_metrics": [
+      {
+        "metric": "Новых клиентов",
+        "target": "> 50/месяц"
+      },
+      {
+        "metric": "Средний чек",
+        "target": "> 5000 руб"
+      },
+      {
+        "metric": "Повторные визиты",
+        "target": "> 30%"
+      }
+    ]
+  },
+  "gtm_plan": {
+    "month_1": [
+      {
+        "week": 1,
+        "action": "Настройка аналитики (Google Analytics, Яндекс.Метрика)",
+        "owner": "Marketing"
+      },
+      {
+        "week": 2,
+        "action": "Запуск контекстной рекламы (Яндекс.Директ)",
+        "owner": "Ads"
+      },
+      {
+        "week": 3,
+        "action": "SEO-аудит и оптимизация сайта",
+        "owner": "SEO"
+      },
+      {
+        "week": 4,
+        "action": "Создание контента для блога (5 статей)",
+        "owner": "Content"
+      }
+    ],
+    "month_2": [
+      {
+        "week": 5,
+        "action": "Запуск Google Ads",
+        "owner": "Ads"
+      },
+      {
+        "week": 6,
+        "action": "Настройка ретаргетинга",
+        "owner": "Ads"
+      },
+      {
+        "week": 7,
+        "action": "Запуск социальных сетей (ВК, Telegram)",
+        "owner": "SMM"
+      },
+      {
+        "week": 8,
+        "action": "Первая оптимизация кампаний",
+        "owner": "Marketing"
+      }
+    ],
+    "month_3": [
+      {
+        "week": 9,
+        "action": "Запуск реферальной программы",
+        "owner": "Marketing"
+      },
+      {
+        "week": 10,
+        "action": "Email-маркетинг для клиентской базы",
+        "owner": "Marketing"
+      },
+      {
+        "week": 11,
+        "action": "Анализ результатов и корректировка",
+        "owner": "Marketing"
+      },
+      {
+        "week": 12,
+        "action": "Масштабирование успешных каналов",
+        "owner": "Marketing"
+      }
+    ]
+  }
+}

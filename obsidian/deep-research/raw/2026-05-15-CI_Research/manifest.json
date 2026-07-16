@@ -1,0 +1,16 @@
+{
+  "topic": "CI_Research",
+  "date": "2026-05-15",
+  "mode": "unknown",
+  "duration_minutes": 0,
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0
+  },
+  "cost_usd": 0.0,
+  "sources_count": 0,
+  "report_size_kb": 0,
+  "used_for": [],
+  "reused_by": []
+}

@@ -1,0 +1,181 @@
+{
+  "analysis_date": "2026-05-06T21:18:03.555110",
+  "total_crawled": 5,
+  "max_depth": 3,
+  "crawl_results": [
+    {
+      "name": "Центр Студия",
+      "website": "",
+      "total_pages": 40,
+      "pages_by_type": {
+        "homepage": 1,
+        "services": 8,
+        "about": 5,
+        "contacts": 1,
+        "blog": 2,
+        "prices": 6
+      },
+      "site_depth": 3,
+      "internal_links": 280,
+      "external_links": 21,
+      "images_count": 240,
+      "avg_content_length": 818,
+      "meta_title_coverage": 91.9,
+      "meta_description_coverage": 89.6,
+      "has_schema": true,
+      "mobile_friendly": true,
+      "site_health": "excellent"
+    },
+    {
+      "name": "Здоровье Лаб",
+      "website": "",
+      "total_pages": 88,
+      "pages_by_type": {
+        "homepage": 1,
+        "services": 8,
+        "about": 4,
+        "contacts": 6,
+        "blog": 23,
+        "prices": 3
+      },
+      "site_depth": 3,
+      "internal_links": 792,
+      "external_links": 18,
+      "images_count": 440,
+      "avg_content_length": 361,
+      "meta_title_coverage": 64.9,
+      "meta_description_coverage": 47.5,
+      "has_schema": true,
+      "mobile_friendly": false,
+      "site_health": "poor"
+    },
+    {
+      "name": "Лайф Клиника",
+      "website": "",
+      "total_pages": 32,
+      "pages_by_type": {
+        "homepage": 1,
+        "services": 10,
+        "about": 5,
+        "contacts": 1,
+        "blog": 2,
+        "prices": 8
+      },
+      "site_depth": 3,
+      "internal_links": 224,
+      "external_links": 32,
+      "images_count": 256,
+      "avg_content_length": 434,
+      "meta_title_coverage": 96.7,
+      "meta_description_coverage": 78.5,
+      "has_schema": false,
+      "mobile_friendly": true,
+      "site_health": "good"
+    },
+    {
+      "name": "Медицина Клуб",
+      "website": "",
+      "total_pages": 79,
+      "pages_by_type": {
+        "homepage": 1,
+        "services": 2,
+        "about": 1,
+        "contacts": 8,
+        "blog": 19,
+        "prices": 8
+      },
+      "site_depth": 2,
+      "internal_links": 790,
+      "external_links": 38,
+      "images_count": 158,
+      "avg_content_length": 1415,
+      "meta_title_coverage": 75.5,
+      "meta_description_coverage": 70.9,
+      "has_schema": false,
+      "mobile_friendly": false,
+      "site_health": "poor"
+    },
+    {
+      "name": "Клиника Центр",
+      "website": "",
+      "total_pages": 95,
+      "pages_by_type": {
+        "homepage": 1,
+        "services": 2,
+        "about": 8,
+        "contacts": 1,
+        "blog": 13,
+        "prices": 8
+      },
+      "site_depth": 2,
+      "internal_links": 950,
+      "external_links": 41,
+      "images_count": 570,
+      "avg_content_length": 744,
+      "meta_title_coverage": 84.1,
+      "meta_description_coverage": 58.3,
+      "has_schema": false,
+      "mobile_friendly": false,
+      "site_health": "poor"
+    }
+  ],
+  "structure_analysis": {
+    "avg_pages": 66.8,
+    "avg_depth": 2.6,
+    "avg_content_length": 754,
+    "page_type_coverage": {
+      "homepage": 100.0,
+      "services": 100.0,
+      "about": 100.0,
+      "contacts": 100.0,
+      "blog": 100.0,
+      "portfolio": 0.0,
+      "prices": 100.0,
+      "reviews": 0.0,
+      "faq": 0.0,
+      "booking": 0.0
+    },
+    "mobile_adoption_percent": 40.0,
+    "schema_adoption_percent": 40.0
+  },
+  "best_practices": [
+    {
+      "category": "site_health",
+      "title": "Отличное техническое состояние",
+      "examples": [
+        "Центр Студия"
+      ],
+      "description": "Полное покрытие meta tags, Schema.org, мобильная адаптация"
+    },
+    {
+      "category": "content_volume",
+      "title": "Большой объём контента",
+      "examples": [
+        "Клиника Центр",
+        "Здоровье Лаб",
+        "Медицина Клуб"
+      ],
+      "description": "Более 95 страниц контента"
+    },
+    {
+      "category": "content_quality",
+      "title": "Глубокий контент",
+      "examples": [
+        "Медицина Клуб",
+        "Центр Студия",
+        "Клиника Центр"
+      ],
+      "description": "Средняя длина страницы: 1415 слов"
+    }
+  ],
+  "insights": {
+    "technical_maturity": "medium",
+    "mobile_readiness": "low",
+    "content_depth": "medium",
+    "key_findings": [
+      "60% сайтов не адаптированы под мобильные",
+      "Менее 50% конкурентов используют Schema.org",
+      "Обнаружено 3 лучших практик для внедрения"
+    ]
+  }
+}

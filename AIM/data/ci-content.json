@@ -1,0 +1,170 @@
+{
+  "analysis_date": "2026-05-06T21:18:03.556174",
+  "total_analyzed": 5,
+  "niche": "dental implants",
+  "content_profiles": [
+    {
+      "name": "Центр Студия",
+      "content_by_type": {
+        "blog": 19,
+        "video": 36,
+        "faq": 40,
+        "guides": 50
+      },
+      "total_content_pieces": 145,
+      "publishing_frequency": "medium",
+      "quality_score": 50,
+      "seo_score": 31,
+      "has_content_strategy": true,
+      "content_maturity": "advanced"
+    },
+    {
+      "name": "Здоровье Лаб",
+      "content_by_type": {
+        "blog": 12,
+        "video": 21,
+        "faq": 21,
+        "guides": 20
+      },
+      "total_content_pieces": 74,
+      "publishing_frequency": "medium",
+      "quality_score": 53,
+      "seo_score": 87,
+      "has_content_strategy": true,
+      "content_maturity": "advanced"
+    },
+    {
+      "name": "Лайф Клиника",
+      "content_by_type": {
+        "cases": 15,
+        "faq": 36
+      },
+      "total_content_pieces": 51,
+      "publishing_frequency": "none",
+      "quality_score": 89,
+      "seo_score": 52,
+      "has_content_strategy": false,
+      "content_maturity": "advanced"
+    },
+    {
+      "name": "Медицина Клуб",
+      "content_by_type": {
+        "blog": 3,
+        "video": 43,
+        "cases": 24,
+        "faq": 9,
+        "guides": 17
+      },
+      "total_content_pieces": 96,
+      "publishing_frequency": "low",
+      "quality_score": 42,
+      "seo_score": 49,
+      "has_content_strategy": true,
+      "content_maturity": "advanced"
+    },
+    {
+      "name": "Клиника Центр",
+      "content_by_type": {
+        "blog": 11,
+        "video": 30,
+        "faq": 33,
+        "guides": 37
+      },
+      "total_content_pieces": 111,
+      "publishing_frequency": "medium",
+      "quality_score": 76,
+      "seo_score": 74,
+      "has_content_strategy": true,
+      "content_maturity": "advanced"
+    }
+  ],
+  "market_analysis": {
+    "avg_content_pieces": 95.4,
+    "avg_quality_score": 62.0,
+    "avg_seo_score": 58.6,
+    "strategy_adoption_percent": 80.0,
+    "most_popular_content_types": [
+      {
+        "type": "faq",
+        "usage_count": 5
+      },
+      {
+        "type": "blog",
+        "usage_count": 4
+      },
+      {
+        "type": "video",
+        "usage_count": 4
+      }
+    ]
+  },
+  "content_leaders": {
+    "volume_leaders": [
+      {
+        "name": "Центр Студия",
+        "content_pieces": 145,
+        "maturity": "advanced"
+      },
+      {
+        "name": "Клиника Центр",
+        "content_pieces": 111,
+        "maturity": "advanced"
+      },
+      {
+        "name": "Медицина Клуб",
+        "content_pieces": 96,
+        "maturity": "advanced"
+      }
+    ],
+    "quality_leaders": [
+      {
+        "name": "Лайф Клиника",
+        "quality_score": 89,
+        "seo_score": 52
+      },
+      {
+        "name": "Клиника Центр",
+        "quality_score": 76,
+        "seo_score": 74
+      },
+      {
+        "name": "Здоровье Лаб",
+        "quality_score": 53,
+        "seo_score": 87
+      }
+    ]
+  },
+  "content_gaps": [
+    {
+      "type": "missing_content_type",
+      "content_type": "reviews",
+      "description": "Никто не использует Отзывы",
+      "opportunity": "high"
+    },
+    {
+      "type": "missing_content_type",
+      "content_type": "news",
+      "description": "Никто не использует Новости",
+      "opportunity": "high"
+    },
+    {
+      "type": "quality_gap",
+      "description": "Большинство конкурентов имеют низкое качество контента",
+      "opportunity": "high"
+    },
+    {
+      "type": "seo_gap",
+      "description": "Большинство конкурентов плохо оптимизируют контент для SEO",
+      "opportunity": "medium"
+    }
+  ],
+  "insights": {
+    "content_maturity_level": "advanced",
+    "content_competition": "high",
+    "opportunities_count": 3,
+    "key_findings": [
+      "Средний уровень качества контента: 62/100",
+      "Обнаружено 4 возможностей для дифференциации"
+    ]
+  }
+}

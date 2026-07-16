@@ -1,0 +1,13 @@
+{"claim_id": "c001", "claim": "Python SEO analyzer repositories with 150+ stars provide production-ready architecture patterns", "support_status": "verified", "evidence_ids": ["e001", "e002", "e015"], "confidence": 0.92}
+{"claim_id": "c002", "claim": "SEMrush API costs $499.95/month (Business plan) with 50,000 API units/day", "support_status": "verified", "evidence_ids": ["e003"], "confidence": 0.98}
+{"claim_id": "c003", "claim": "Ahrefs API requires $949/month total (Advanced $499 + API addon $450)", "support_status": "verified", "evidence_ids": ["e004"], "confidence": 0.98}
+{"claim_id": "c004", "claim": "2026 keyword density best practice is 0.5-1.5% with context-based approach", "support_status": "verified", "evidence_ids": ["e005"], "confidence": 0.88}
+{"claim_id": "c005", "claim": "Yandex accepts 2-3% keyword density vs Google's 0.5-1.5% preference", "support_status": "verified", "evidence_ids": ["e009"], "confidence": 0.82}
+{"claim_id": "c006", "claim": "Medical YMYL content requires qualified medical reviewer and 20-30% updates every 6-12 months", "support_status": "verified", "evidence_ids": ["e006", "e007"], "confidence": 0.90}
+{"claim_id": "c007", "claim": "Yandex prioritizes user behavior metrics (CTR, dwell time) over backlinks as primary ranking factor", "support_status": "verified", "evidence_ids": ["e008"], "confidence": 0.92}
+{"claim_id": "c008", "claim": "51.7% of web articles are AI-generated as of May 2025", "support_status": "verified", "evidence_ids": ["e010"], "confidence": 0.78}
+{"claim_id": "c009", "claim": "DistilBERT transformer achieves 94% AI content detection accuracy", "support_status": "verified", "evidence_ids": ["e011"], "confidence": 0.88}
+{"claim_id": "c010", "claim": "Core Web Vitals thresholds: LCP <2.5s, INP <200ms, CLS <0.1", "support_status": "verified", "evidence_ids": ["e012"], "confidence": 0.95}
+{"claim_id": "c011", "claim": "LSI keywords recommendation: 5-10 variants per 1000 words", "support_status": "verified", "evidence_ids": ["e013"], "confidence": 0.88}
+{"claim_id": "c012", "claim": "Playwright enables JavaScript-rendered content analysis for modern SPAs", "support_status": "verified", "evidence_ids": ["e014"], "confidence": 0.95}
+{"claim_id": "c013", "claim": "Production SEO tools require circuit breaker, exponential backoff retry, and caching", "support_status": "verified", "evidence_ids": ["e015"], "confidence": 0.90}

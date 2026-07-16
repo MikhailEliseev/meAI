@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARclinic — Self-Audit | AIM</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #ffffff;
+  --surface: #F5F5F5;
+  --hover: #EBEBEB;
+  --border: #E0E0E0;
+  --text: #1A1A1A;
+  --text-secondary: #666666;
+  --text-dim: #999999;
+  --accent: #1A1A1A;
+  --accent-hover: #333333;
+  --glass-bg: rgba(255,255,255,0.6);
+  --glass-border: rgba(0,0,0,0.06);
+  --section-gap: 120px;
+  --green: #2E7D32;
+  --red: #C62828;
+  --amber: #E65100;
+}
+
+[data-theme="dark"] {
+  --bg: #0D0D0D;
+  --surface: #1A1A1A;
+  --hover: #262626;
+  --border: #333333;
+  --text: #F0F0F0;
+  --text-secondary: #999999;
+  --text-dim: #666666;
+  --accent: #F0F0F0;
+  --accent-hover: #CCCCCC;
+  --glass-bg: rgba(13,13,13,0.6);
+  --glass-border: rgba(255,255,255,0.06);
+  --green: #66BB6A;
+  --red: #EF5350;
+  --amber: #FF9800;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  transition: background .3s, color .3s;
+}
+
+.theme-toggle {
+  width: 32px; height: 32px; border-radius: 16px;
+  background: transparent; border: none;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; transition: .2s; flex-shrink: 0;
+}
+.theme-toggle:hover { background: var(--surface); }
+
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 99;
+  padding: 16px 40px; background: var(--glass-bg);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--glass-border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+nav .logo { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; }
+nav .tag { font-size: 12px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+nav .links { display: flex; gap: 8px; }
+nav .links a {
+  text-decoration: none; color: var(--text-secondary); font-size: 13px;
+  padding: 6px 14px; border-radius: 20px; transition: .2s;
+}
+nav .links a:hover { background: var(--surface); color: var(--text); }
+
+.container { max-width: 900px; margin: 0 auto; padding: 0 32px; position: relative; z-index: 1; }
+
+.hero {
+  padding: 180px 0 100px; border-bottom: 1px solid var(--border);
+  margin-bottom: var(--section-gap); position: relative; overflow: hidden;
+}
+.hero .label { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 24px; }
+.hero h1 {
+  font-family: 'Playfair Display', serif; font-size: 56px;
+  font-weight: 400; line-height: 1.15; margin-bottom: 32px; position: relative; z-index: 1;
+}
+.hero h1 em { font-style: italic; }
+.hero .subtitle { font-size: 18px; color: var(--text-secondary); max-width: 600px; line-height: 1.7; position: relative; z-index: 1; }
+.hero .meta { display: flex; gap: 32px; margin-top: 48px; font-size: 13px; color: var(--text-dim); flex-wrap: wrap; position: relative; z-index: 1; }
+
+/* Ripple rings */
+.ripple { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.ripple-ring { position: absolute; border-radius: 50%; border: 1px solid var(--text); opacity: 0.04; background: none; }
+.ring-lg-1 { width: 420px; height: 420px; top: -12%; right: -8%; }
+.ring-lg-2 { width: 340px; height: 340px; top: 15%; right: 70%; }
+.ring-lg-3 { width: 280px; height: 280px; top: 45%; left: -10%; }
+.ring-lg-4 { width: 380px; height: 380px; top: 75%; right: -15%; }
+.ring-lg-5 { width: 300px; height: 300px; top: 60%; left: 60%; }
+.ring-lg-6 { width: 240px; height: 240px; top: 30%; left: -6%; }
+.ring-pulse-1 { width: 200px; height: 200px; top: 10%; left: 8%; animation: pulse-ring 6s ease-in-out infinite; }
+.ring-pulse-2 { width: 160px; height: 160px; top: 12%; left: 12%; animation: pulse-ring 6s ease-in-out infinite; animation-delay: 3s; }
+.ring-pulse-3 { width: 100px; height: 100px; bottom: 18%; right: 4%; animation: pulse-ring 8s ease-in-out infinite; animation-delay: 1s; }
+.ring-pulse-4 { width: 70px; height: 70px; bottom: 22%; right: 10%; animation: pulse-ring 8s ease-in-out infinite; animation-delay: 5s; }
+.ring-pulse-5 { width: 130px; height: 130px; top: 35%; right: 20%; animation: pulse-ring 7s ease-in-out infinite; animation-delay: 2s; }
+.ring-pulse-6 { width: 90px; height: 90px; top: 70%; left: 30%; animation: pulse-ring 9s ease-in-out infinite; animation-delay: 4s; }
+.ring-pulse-7 { width: 110px; height: 110px; top: 88%; left: 50%; animation: pulse-ring 6.5s ease-in-out infinite; animation-delay: 1.5s; }
+.ring-pulse-8 { width: 150px; height: 150px; top: 50%; right: 40%; animation: pulse-ring 7.5s ease-in-out infinite; animation-delay: 3.5s; }
+
+@keyframes pulse-ring {
+  0%, 100% { opacity: 0.03; transform: scale(1); }
+  50% { opacity: 0.07; transform: scale(1.15); }
+}
+
+section { margin-bottom: var(--section-gap); }
+.section-label { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 16px; }
+h2 { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 400; line-height: 1.2; margin-bottom: 16px; }
+h3 { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 400; margin-bottom: 12px; }
+h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+p { color: var(--text-secondary); margin-bottom: 16px; font-size: 15px; line-height: 1.7; }
+p strong { color: var(--text); font-weight: 500; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin: 24px 0; }
+
+.card {
+  background: var(--surface); border-radius: 16px; padding: 24px;
+  backdrop-filter: blur(8px); transition: .2s;
+  border: 1px solid transparent;
+}
+.card:hover { background: var(--hover); }
+.card h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+.card .num { font-size: 28px; font-weight: 300; margin-bottom: 4px; color: var(--text); }
+.card p { font-size: 13px; color: var(--text-secondary); margin: 0; }
+
+.metrics { display: flex; gap: 48px; margin: 32px 0; flex-wrap: wrap; }
+.metric .value { font-size: 36px; font-weight: 300; color: var(--text); }
+.metric .label { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+
+blockquote {
+  border-left: 2px solid var(--text); padding-left: 24px; margin: 24px 0;
+  font-size: 16px; line-height: 1.6; color: var(--text-secondary);
+}
+
+.row { display: flex; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.row:last-child { border-bottom: none; }
+.row .k { width: 200px; flex-shrink: 0; font-size: 13px; color: var(--text-dim); }
+.row .v { font-size: 14px; color: var(--text); }
+
+.tag-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 100px;
+  border: 1px solid var(--border); font-size: 11px; color: var(--text-dim);
+  margin: 1px;
+}
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 24px 0; }
+thead tr { background: var(--surface); }
+th { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+td { padding: 12px; border-bottom: 1px solid var(--border); }
+tbody tr:nth-child(even) { background: var(--surface); }
+tbody tr:hover { background: var(--hover); }
+td:first-child { font-weight: 500; }
+
+/* Expert tiers */
+.expert-category { margin-bottom: 28px; }
+.expert-category .cat-title { font-size: 13px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+.expert-item {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+  gap: 12px; flex-wrap: wrap;
+}
+.expert-item:last-child { border-bottom: none; }
+.expert-item .name { color: var(--text); font-weight: 500; }
+.expert-item .spec { color: var(--text-secondary); font-size: 13px; }
+.expert-item .social { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+.social-found { color: var(--green); }
+.social-notfound { color: var(--text-dim); }
+.tier-star { border-left: 3px solid #F5A623; padding-left: 12px; }
+.tier-core { border-left: 3px solid var(--text-dim); padding-left: 12px; }
+
+/* Gap & advantage cards */
+.gap {
+  background: var(--surface); border-radius: 12px; padding: 20px; margin-bottom: 12px;
+  border-left: 3px solid var(--red);
+}
+.gap h4 { font-size: 14px; margin-bottom: 6px; color: var(--text); }
+.gap p { font-size: 13px; margin: 0; }
+
+.advantage {
+  background: var(--surface); border-radius: 12px; padding: 20px; margin-bottom: 12px;
+  border-left: 3px solid var(--green);
+}
+.advantage h4 { font-size: 14px; margin-bottom: 6px; color: var(--text); }
+.advantage p { font-size: 13px; margin: 0; }
+
+.wow {
+  background: var(--surface); border-radius: 12px; padding: 20px; margin-bottom: 12px;
+  border-left: 3px solid var(--amber);
+}
+.wow h4 { font-size: 14px; margin-bottom: 6px; color: var(--text); }
+.wow p { font-size: 13px; margin: 0; line-height: 1.6; }
+
+/* Red flag */
+.red-flag {
+  background: rgba(198,40,40,0.06); border-radius: 8px; padding: 12px 16px;
+  margin-bottom: 8px; font-size: 13px; color: var(--red); border: 1px solid rgba(198,40,40,0.12);
+}
+
+/* Review themes */
+.theme-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 13px; }
+.theme-bar .name { width: 140px; flex-shrink: 0; color: var(--text); }
+.theme-bar .bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.theme-bar .fill-positive { height: 100%; background: var(--green); border-radius: 3px; }
+.theme-bar .fill-negative { height: 100%; background: var(--red); border-radius: 3px; }
+.theme-bar .count { width: 60px; flex-shrink: 0; text-align: right; color: var(--text-dim); }
+
+.text-green { color: var(--green); }
+.text-red { color: var(--red); }
+.text-amber { color: var(--amber); }
+.text-dim { color: var(--text-dim); }
+
+@media (max-width: 768px) {
+  .hero h1 { font-size: 32px; }
+  h2 { font-size: 28px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .metrics { gap: 24px; }
+  .row { flex-direction: column; gap: 2px; }
+  .row .k { width: auto; }
+  nav .links { display: none; }
+  .hero { padding: 140px 0 60px; }
+}
+</style>
+</head>
+<body>
+
+<div class="ripple">
+  <div class="ripple-ring ring-lg-1"></div>
+  <div class="ripple-ring ring-lg-2"></div>
+  <div class="ripple-ring ring-lg-3"></div>
+  <div class="ripple-ring ring-lg-4"></div>
+  <div class="ripple-ring ring-lg-5"></div>
+  <div class="ripple-ring ring-lg-6"></div>
+  <div class="ripple-ring ring-pulse-1"></div>
+  <div class="ripple-ring ring-pulse-2"></div>
+  <div class="ripple-ring ring-pulse-3"></div>
+  <div class="ripple-ring ring-pulse-4"></div>
+  <div class="ripple-ring ring-pulse-5"></div>
+  <div class="ripple-ring ring-pulse-6"></div>
+  <div class="ripple-ring ring-pulse-7"></div>
+  <div class="ripple-ring ring-pulse-8"></div>
+</div>
+
+<nav>
+  <div style="display: flex; align-items: center; gap: 16px;">
+    <div class="logo">AIM</div>
+    <div class="tag">Self-Audit Intelligence</div>
+  </div>
+  <div style="display: flex; align-items: center; gap: 4px;">
+    <div class="links">
+      <a href="#about">Клиника</a>
+      <a href="#dega-vs-ar">DEGA vs AR</a>
+      <a href="#doctors">Врачи</a>
+      <a href="#ratings">Рейтинги</a>
+      <a href="#content">Контент</a>
+      <a href="#tech">Технологии</a>
+      <a href="#smi">СМИ</a>
+      <a href="#finance">Финансы</a>
+      <a href="#gaps">Gaps</a>
+      <a href="#advantages">Advantages</a>
+      <a href="#wow">Wow</a>
+    </div>
+    <button class="theme-toggle" onclick="document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark'" aria-label="Toggle theme">🌓</button>
+  </div>
+</nav>
+
+<div class="container">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="label">Self-Audit · 09.06.2026</div>
+  <h1>ARclinic<br><em>Спящий гигант digital</em></h1>
+  <div class="subtitle">Центр эстетической медицины с рейтингом 5.0 на Яндексе (300 отзывов), 15 врачами и выручкой 120.6 млн ₽. Но mobile-сайт катастрофически медленный (Perf 29), Instagram клиники практически мёртв (ER 0.07%), а вся digital-узнаваемость держится на одном человеке — Анне Резник.</div>
+  <div class="meta">
+    <span>📍 Санкт-Петербург, ул. Верейская, 44к2</span>
+    <span>🏥 15 врачей</span>
+    <span>📅 С 2016 года</span>
+    <span>⭐ 5.0 (300 отзывов Яндекс)</span>
+    <span>💰 120.6 млн ₽ выручка</span>
+  </div>
+</div>
+
+<!-- SECTION 1: ABOUT -->
+<section id="about">
+  <div class="section-label">01 — О клинике</div>
+
+<div class="grid-2">
+  <div>
+    <h3>Кто они</h3>
+    <p><strong>ARclinic (АРклиник)</strong> — центр эстетической медицины, работает с 2016 года. Расположен в Адмиралтейском районе СПб, ул. Верейская, д. 44, корп. 2. Основатель, CEO и главный врач — <strong>Резник Анна Вячеславовна</strong>, к.м.н.</p>
+    <p>Анна Резник — международный эксперт IPSEN (Франция) по ботулотоксину, соавтор британского учебника по косметологии, лектор. Клиника построена вокруг её личного бренда.</p>
+  </div>
+  <div>
+    <h3>Специализация</h3>
+    <p>12 направлений: косметология, антивозрастная медицина, трихология, гинекология, эндокринология, неврология, УЗИ-диагностика, нитевой лифтинг, ботулинотерапия, контурная пластика, SMAS-лифтинг, лечение осложнений.</p>
+    <p>Уникальная компетенция: <strong>УЗИ-контроль филлеров</strong> (Батиенко + Яковлева). Собственная клиника в особняке на Верейской — не аренда.</p>
+  </div>
+</div>
+
+<div class="metrics">
+  <div class="metric"><div class="value">2016</div><div class="label">Год основания</div></div>
+  <div class="metric"><div class="value">15</div><div class="label">Врачей</div></div>
+  <div class="metric"><div class="value">5</div><div class="label">Рейтинг-платформ</div></div>
+  <div class="metric"><div class="value">120.6M</div><div class="label">Выручка 2025 (₽)</div></div>
+</div>
+
+<div class="row"><div class="k">Юрлицо</div><div class="v">ООО «Медицинский центр Арклиник», ИНН 7810605688, ОГРН 1167847319760</div></div>
+<div class="row"><div class="k">Адрес</div><div class="v">ул. Верейская, д. 44, корп. 2, Адмиралтейский район, Санкт-Петербург</div></div>
+<div class="row"><div class="k">Директор</div><div class="v">Резник Анна Вячеславовна</div></div>
+<div class="row"><div class="k">Сайт</div><div class="v">arclinic.ru — 1C-Битрикс, 231 страница в sitemap</div></div>
+<div class="row"><div class="k">CEO Instagram</div><div class="v">@reznik_anna_v — 26,820 подписчиков, ER ~1.13%</div></div>
+
+<blockquote>
+  <strong>So What?</strong> ARclinic — клиника с выдающейся офлайн-репутацией (5.0 на Яндексе, 300 отзывов) и сильным личным брендом CEO. Но digital-присутствие critically below potential: Instagram клиники мёртв (ER 0.07%), врачи не имеют публичных аккаунтов, сайт на устаревшей CMS. Потенциал роста: 6× по подписчикам, 15-40× по вовлечению — только за счёт приведения digital к уровню офлайн-репутации.
+</blockquote>
+</section>
+
+<hr>
+
+<!-- SECTION 2: DEGA vs AR -->
+<section id="dega-vs-ar">
+  <div class="section-label">02 — DEGA vs ARclinic: бенчмарк-сравнение</div>
+
+<h2>ARclinic на фоне крупнейшего конкурента</h2>
+<p>DEGA Clinic — крупнейшая частная клиника пластической хирургии СПб (35 врачей, 897 млн ₽ выручки). Сравнение показывает разрывы и зоны, где ARclinic уже сильнее.</p>
+
+<div style="overflow-x: auto; margin: 24px 0;">
+  <table>
+    <thead>
+      <tr>
+        <th>Метрика</th>
+        <th style="text-align:center">DEGA</th>
+        <th style="text-align:center">ARclinic</th>
+        <th style="text-align:center">Дельта</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-weight:700;">Врачей</td>
+        <td style="text-align:center;">35</td>
+        <td style="text-align:center;">15</td>
+        <td style="text-align:center;color:var(--red)">−20</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700;">Отзывов ProDoctorov</td>
+        <td style="text-align:center;">877</td>
+        <td style="text-align:center;">101</td>
+        <td style="text-align:center;color:var(--red)">−776</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700;">ProDoctorov рейтинг</td>
+        <td style="text-align:center;">5.0</td>
+        <td style="text-align:center;">4.7</td>
+        <td style="text-align:center;color:var(--amber)">−0.3</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700;">Яндекс.Карты рейтинг</td>
+        <td style="text-align:center;">4.9</td>
+        <td style="text-align:center;color:var(--green)">5.0</td>
+        <td style="text-align:center;color:var(--green)">+0.1</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700;">Instagram подписчиков</td>
+        <td style="text-align:center;">40,178</td>
+        <td style="text-align:center;">8,435 (+26,820 CEO)</td>
+        <td style="text-align:center;color:var(--amber)">−31,743</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700;">Instagram ER</td>
+        <td style="text-align:center;">0.20%</td>
+        <td style="text-align:center;">0.07%</td>
+        <td style="text-align:center;color:var(--red)">−0.13pp</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700;">CWV (Mobile)</td>
+        <td style="text-align:center;color:var(--green)">PASSED (Perf 86)</td>
+        <td style="text-align:center;color:var(--red)">FAILED (Perf 29)</td>
+        <td style="text-align:center;color:var(--red)">Катастрофа</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700;">CWV (Desktop)</td>
+        <td style="text-align:center;color:var(--green)">PASSED</td>
+        <td style="text-align:center;color:var(--amber)">OK (Perf 70)</td>
+        <td style="text-align:center;color:var(--amber)">—</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700;">СМИ (крупные)</td>
+        <td style="text-align:center;color:var(--red)">0</td>
+        <td style="text-align:center;">РБК Стиль (2024)</td>
+        <td style="text-align:center;color:var(--green)">+1</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700;">VK</td>
+        <td style="text-align:center;">22,534</td>
+        <td style="text-align:center;">3,188</td>
+        <td style="text-align:center;color:var(--red)">−19,346</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700;">Выручка</td>
+        <td style="text-align:center;">897.5 млн ₽ (−7.3%)</td>
+        <td style="text-align:center;">120.6 млн ₽</td>
+        <td style="text-align:center;color:var(--red)">−776.9M</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700;">Маржинальность</td>
+        <td style="text-align:center;color:var(--red)">17.0%</td>
+        <td style="text-align:center;">6.3%</td>
+        <td style="text-align:center;color:var(--amber)">−10.7pp</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700;">Instagram врачей</td>
+        <td style="text-align:center;">4 из 35</td>
+        <td style="text-align:center;">1 из 15 (только CEO)</td>
+        <td style="text-align:center;color:var(--amber)">−3</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<blockquote>
+  <strong>Главный вывод:</strong> ARclinic в 7.4× меньше DEGA по выручке, но выигрывает по Яндексу (5.0 vs 4.9) и имеет реальное СМИ-упоминание (РБК Стиль) против zero earned media у DEGA. Ключевой рычаг: личный бренд Анны Резник (26.8K в Instagram, международный эксперт IPSEN) — актив, которого у DEGA нет на таком уровне. При этом DEGA теряет прибыль (−45.2%), а ARclinic стабилен (6.3% margin).
+</blockquote>
+</section>
+
+<hr>
+
+<!-- SECTION 3: DOCTORS -->
+<section id="doctors">
+  <div class="section-label">03 — Врачи: 15 специалистов</div>
+
+<div class="grid-3">
+  <div class="card"><div class="num">1</div><h4>⭐ Star</h4><p>Резник А.В. — CEO, к.м.н., международный эксперт IPSEN</p></div>
+  <div class="card"><div class="num">6</div><h4>Core</h4><p>Ведущие врачи: Ряховская, Зорина, Батиенко, Афанасьева, Труфанов, Яковлева</p></div>
+  <div class="card"><div class="num">8</div><h4>Team</h4><p>Врачи-косметологи, эндокринологи, невролог, медсестра</p></div>
+</div>
+
+<div class="metrics">
+  <div class="metric"><div class="value">1/15</div><div class="label">Имеют Instagram</div></div>
+  <div class="metric"><div class="value">1</div><div class="label">Кандидат наук</div></div>
+  <div class="metric"><div class="value">12</div><div class="label">Специализаций</div></div>
+  <div class="metric"><div class="value">26.8K</div><div class="label">Подписчиков у CEO</div></div>
+</div>
+
+<div class="expert-category">
+  <div class="cat-title">⭐ Star-врач (1)</div>
+  <div class="expert-item tier-star"><span class="name">Резник Анна Вячеславовна</span><span class="spec">Косметолог, Дерматолог, Геронтолог, к.м.н. — CEO, основатель, главный врач</span><span class="social social-found">@reznik_anna_v · 26.8K</span></div>
+</div>
+
+<div class="expert-category">
+  <div class="cat-title">Core-врачи (6)</div>
+  <div class="expert-item tier-core"><span class="name">Ряховская Наталья Дмитриевна</span><span class="spec">Косметолог, Дерматолог, Трихолог</span><span class="social social-notfound">—</span></div>
+  <div class="expert-item tier-core"><span class="name">Зорина Екатерина Николаевна</span><span class="spec">Косметолог, Дерматолог, Трихолог</span><span class="social social-notfound">—</span></div>
+  <div class="expert-item tier-core"><span class="name">Батиенко Дарья Дмитриевна</span><span class="spec">Косметолог, Дерматолог, Трихолог — удаление филлеров под УЗИ</span><span class="social social-notfound">—</span></div>
+  <div class="expert-item tier-core"><span class="name">Афанасьева Мария Юрьевна</span><span class="spec">Эндокринолог, Гинеколог, Акушер, УЗИ</span><span class="social social-notfound">—</span></div>
+  <div class="expert-item tier-core"><span class="name">Труфанов Алексей Игоревич</span><span class="spec">Косметолог, Дерматолог, УЗИ</span><span class="social social-notfound">—</span></div>
+  <div class="expert-item tier-core"><span class="name">Яковлева Ольга Михайловна</span><span class="spec">Врач УЗИ-диагностики — УЗИ-контроль филлеров</span><span class="social social-notfound">—</span></div>
+</div>
+
+<div class="expert-category">
+  <div class="cat-title">Team-врачи (8)</div>
+  <div class="expert-item"><span class="name">Дроздова Анна Юрьевна</span><span class="spec">Косметолог, Дерматолог, Трихолог</span></div>
+  <div class="expert-item"><span class="name">Подольникова Мария Игоревна</span><span class="spec">Косметолог, Дерматолог, Трихолог</span></div>
+  <div class="expert-item"><span class="name">Фокина Анастасия Дмитриевна</span><span class="spec">Косметолог, Дерматолог, Трихолог</span></div>
+  <div class="expert-item"><span class="name">Яхина Алия Рафаэльевна</span><span class="spec">Косметолог, Дерматолог</span></div>
+  <div class="expert-item"><span class="name">Львович Ксения Вячеславовна</span><span class="spec">Косметолог, Дерматолог</span></div>
+  <div class="expert-item"><span class="name">Плотникова Екатерина Юрьевна</span><span class="spec">Эндокринолог, Нутрициолог, Диетолог</span></div>
+  <div class="expert-item"><span class="name">Рубаник Виктория Леонидовна</span><span class="spec">Ботулинотерапевт, Невролог</span></div>
+  <div class="expert-item"><span class="name">Сердюкова Елена Владимировна</span><span class="spec">Медицинская сестра</span></div>
+</div>
+
+<blockquote>
+  <strong>Ключевое:</strong> 14 врачей из 15 не имеют публичного Instagram. Единственный Instagram — у CEO Анны Резник (26.8K). Это крупнейший single-point-of-failure: если Резник уйдёт, digital-присутствие клиники обнулится. Для сравнения: у DEGA 4 врача из 35 имеют Instagram (и тот не интегрирован).
+</blockquote>
+</section>
+
+<hr>
+
+<!-- SECTION 4: RATINGS -->
+<section id="ratings">
+  <div class="section-label">04 — Рейтинги и отзывы: 737 на 5 платформах</div>
+
+<div style="overflow-x: auto; margin: 24px 0;">
+  <table>
+    <thead>
+      <tr>
+        <th>Платформа</th>
+        <th style="text-align:center">Рейтинг</th>
+        <th style="text-align:center">Отзывов</th>
+        <th>Особенности</th>
+        <th>Статус</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Яндекс.Карты</td>
+        <td style="text-align:center;font-weight:700;color:var(--green)">5.0</td>
+        <td style="text-align:center">300</td>
+        <td>89% положительных. Персонал 97%, атмосфера 100%, чистота 100%</td>
+        <td style="text-align:center;color:var(--green);font-weight:600">Лидер</td>
+      </tr>
+      <tr>
+        <td>2ГИС</td>
+        <td style="text-align:center;font-weight:700">4.9</td>
+        <td style="text-align:center">88</td>
+        <td>Premium-статус на картах</td>
+        <td style="text-align:center;color:var(--green)">Сильный</td>
+      </tr>
+      <tr>
+        <td>ProDoctorov</td>
+        <td style="text-align:center;font-weight:700">4.7</td>
+        <td style="text-align:center">101</td>
+        <td>92.07% рекомендаций, награда «Лучшая клиника 2023»</td>
+        <td style="text-align:center;color:var(--green)">Сильный</td>
+      </tr>
+      <tr>
+        <td>DocDoc</td>
+        <td style="text-align:center;font-weight:700;color:var(--amber)">4.39</td>
+        <td style="text-align:center">91</td>
+        <td>Всего 20% рекомендаций — значительно ниже других платформ</td>
+        <td style="text-align:center;color:var(--amber);font-weight:600">Проблемный</td>
+      </tr>
+      <tr>
+        <td>Napopravku</td>
+        <td style="text-align:center;font-weight:700;color:var(--red)">4.1</td>
+        <td style="text-align:center">177</td>
+        <td>Самый низкий рейтинг среди всех платформ. 91 рекомендация.</td>
+        <td style="text-align:center;color:var(--red);font-weight:600">Проблемный</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h3>ProDoctorov: deep-dive (101 отзыв)</h3>
+
+<div class="metrics">
+  <div class="metric"><div class="value text-green">80</div><div class="label">Оценок «5»</div></div>
+  <div class="metric"><div class="value">15</div><div class="label">Оценок «4»</div></div>
+  <div class="metric"><div class="value">4</div><div class="label">Оценок «3»</div></div>
+  <div class="metric"><div class="value text-red">2</div><div class="label">Оценок «1-2»</div></div>
+  <div class="metric"><div class="value text-green">92.07%</div><div class="label">Рекомендаций</div></div>
+</div>
+
+<div class="row"><div class="k">Распределение</div><div class="v">80✭✭✭✭✭ / 15✭✭✭✭ / 4✭✭✭ / 1✭✭ / 1✭</div></div>
+<div class="row"><div class="k">Пик отзывов</div><div class="v">2020-2021 (Резник лично отвечала на отзывы)</div></div>
+<div class="row"><div class="k">После 2022</div><div class="v">Спад потока отзывов. 2026: 1 отзыв, 2024: 1 отзыв</div></div>
+<div class="row"><div class="k">Награды</div><div class="v">«Лучшая клиника 2023 года»</div></div>
+
+<h3 style="margin-top:24px;">Темы отзывов</h3>
+
+<div class="grid-2">
+  <div>
+    <h4 style="color:var(--green)">Положительные</h4>
+    <div class="theme-bar"><span class="name">Профессионализм</span><div class="bar"><div class="fill-positive" style="width:96%"></div></div></div>
+    <div class="theme-bar"><span class="name">Внимательное отношение</span><div class="bar"><div class="fill-positive" style="width:94%"></div></div></div>
+    <div class="theme-bar"><span class="name">Качество процедур</span><div class="bar"><div class="fill-positive" style="width:95%"></div></div></div>
+    <div class="theme-bar"><span class="name">Ответственность</span><div class="bar"><div class="fill-positive" style="width:92%"></div></div></div>
+    <div class="theme-bar"><span class="name">Решение осложнений</span><div class="bar"><div class="fill-positive" style="width:90%"></div></div></div>
+    <div class="theme-bar"><span class="name">Атмосфера и чистота</span><div class="bar"><div class="fill-positive" style="width:100%"></div></div></div>
+  </div>
+  <div>
+    <h4 style="color:var(--red)">Негативные</h4>
+    <div class="theme-bar"><span class="name">Результат контурной пластики</span><div class="bar"><div class="fill-negative" style="width:40%"></div></div></div>
+    <div class="theme-bar"><span class="name">Работа администраторов</span><div class="bar"><div class="fill-negative" style="width:35%"></div></div></div>
+    <div class="theme-bar"><span class="name">Длительное ожидание</span><div class="bar"><div class="fill-negative" style="width:30%"></div></div></div>
+    <div class="theme-bar"><span class="name">Ценовая политика</span><div class="bar"><div class="fill-negative" style="width:25%"></div></div></div>
+  </div>
+</div>
+
+<blockquote>«Если что-то пойдёт не так, врачи этой клиники будут решать проблему до конца, ответственность за результат и свою работу для меня много значит. Я нашла свою клинику и врача!» <br><span class="text-dim">— ProDoctorov, 23.08.2022</span></blockquote>
+
+<blockquote>
+  <strong>Внимание:</strong> 5% негативных отзывов на ProDoctorov касаются лично Резник и работы администраторов. Разрыв между Яндексом (5.0) и Napopravku (4.1) — 0.9 пункта. Самая низкая оценка на Яндексе: «Время ожидания» (78% положительных).
+</blockquote>
+</section>
+
+<hr>
+
+<!-- SECTION 5: CONTENT ANALYSIS -->
+<section id="content">
+  <div class="section-label">05 — Контент-анализ</div>
+
+<h2>Instagram клиники: @arclinic</h2>
+
+<div class="grid-3">
+  <div class="card"><div class="num">8,435</div><h4>Подписчиков</h4><p>В 3.2× меньше, чем у CEO</p></div>
+  <div class="card"><div class="num">6,246</div><h4>Постов всего</h4><p>Аномальное соотношение: 0.74 поста на подписчика</p></div>
+  <div class="card"><div class="num" style="color:var(--red)">0.07%</div><h4>Engagement Rate</h4><p>В 10× ниже среднего по нише (0.6-0.8%)</p></div>
+</div>
+
+<div class="row"><div class="k">Формат</div><div class="v">58% Image, 42% Video. Reels отсутствуют.</div></div>
+<div class="row"><div class="k">Темы контента</div><div class="v">Работы врачей (до/после), процедуры и методики, обучение и разбор случаев</div></div>
+<div class="row"><div class="k">Топ-пост</div><div class="v">❤️ 14 лайков — работа Ряховской Н.Д.: контурная пластика губ + ботулинотерапия + SMAS-лифтинг</div></div>
+<div class="row"><div class="k">Проблема</div><div class="v"><span class="text-red">Формат «до/после» без личности врача. Контент не вовлекает аудиторию.</span></div></div>
+
+<hr style="margin:32px 0;">
+
+<h2>Instagram CEO: @reznik_anna_v — deep-dive</h2>
+
+<div class="grid-3">
+  <div class="card"><div class="num">26,820</div><h4>Подписчиков</h4><p>В 3.2× больше клиники. Бизнес-аккаунт, не верифицирован.</p></div>
+  <div class="card"><div class="num">3,949</div><h4>Постов всего</h4><p>46 highlights. Активный аккаунт.</p></div>
+  <div class="card"><div class="num" style="color:var(--green)">1.21%</div><h4>ER (12 постов)</h4><p>(лайки+комменты)/подписчики. В 17× выше клиники.</p></div>
+</div>
+
+<div class="grid-3" style="margin-top:16px;">
+  <div class="card"><div class="num">305</div><h4>Ср. лайков</h4><p>На 12 проанализированных постах</p></div>
+  <div class="card"><div class="num">20</div><h4>Ср. комментариев</h4><p>Высокая вовлечённость аудитории</p></div>
+  <div class="card"><div class="num">5,346</div><h4>Ср. просмотров (видео)</h4><p>8 из 12 постов — видео (clips)</p></div>
+</div>
+
+<div class="row"><div class="k">Bio</div><div class="v">«Врач-косметолог, кмн. Соавтор британского учебника о косметологии. Сделаю вас моложе. Основатель клиники @arclinic»</div></div>
+<div class="row"><div class="k">Форматы (12 постов)</div><div class="v"><strong>67% Video (clips)</strong>, 17% Image, 17% Sidecar. Reels отсутствуют как формат — все видео идут как clips.</div></div>
+<div class="row"><div class="k">Частота</div><div class="v">Нерегулярная. 2023-07: 1 пост, 2024-01: 1, 2024-03: 1, затем пауза до <strong>июня 2026: 9 постов</strong> (активизация)</div></div>
+<div class="row"><div class="k">Топ-пост</div><div class="v">❤️ 1,126 лайков, 💬 71 комм., 👀 20,751 просмотр — демонстрация лифтинговых техник ботулотоксина <strong>на себе</strong> (20.01.2024)</div></div>
+<div class="row"><div class="k">Темы контента</div><div class="v">Ботулотоксин и лифтинг, контурная пластика филлерами, осложнения филлеров, гормоны и гипотиреоз, асимметрия лица, личный бренд и экспертиза</div></div>
+<div class="row"><div class="k">Хештеги</div><div class="v">#хитраякосметология, #филлеросложнения, #асимметриялица, #гипотиреоз, #климакс, #гормоны — образовательный контент для коллег и пациентов</div></div>
+<div class="row"><div class="k">Воронка</div><div class="v">Все посты ведут на <strong>taplink.cc</strong> (5 ссылок: taplink, arclinic.ru, Telegram av_reznik, max.ru, travel IG) и в Telegram-канал. Единая ссылка в шапке профиля.</div></div>
+<div class="row"><div class="k">Gap</div><div class="v"><span class="text-red">Не используется для системного трафика в клинику. 26.8K → 8.4K: аудитория CEO в 3.2× больше клиники. Нет кросс-промо в постах.</span></div></div>
+
+<hr style="margin:32px 0;">
+
+<h2>Другие платформы</h2>
+
+<div class="grid-2">
+  <div>
+    <div class="card" style="height:100%">
+      <h4>VK</h4>
+      <div class="num">3,188</div>
+      <p>Участников в club56956529</p>
+      <p>Небольшое, но живое комьюнити. Меньше DEGA в 7× (22.5K), но engagement, вероятно, выше за счёт真人ности.</p>
+    </div>
+  </div>
+  <div>
+    <div class="card" style="height:100%">
+      <h4>Telegram</h4>
+      <div class="num">2 канала, 7 741 подписчиков</div>
+      <p><strong>@arclinic1</strong> — 1 368 подписчиков (основной канал клиники, «Мода и красота»)</p>
+      <p><strong>@av_reznik</strong> — 6 373 подписчиков (личный блог CEO «АННА РЕЗНИК о косметологии»)</p>
+      <p><strong>@ArclinicSPB</strong> — бот службы заботы (не канал)</p>
+      <p>Просмотры постов @arclinic1: 74–791. CEO-канал в 4.7× больше клиники — паттерн single-point-of-failure.</p>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-top:16px;">
+  <div class="card"><h4>Дзен</h4><p class="text-red">НЕ существует (404).</p><p>Проверено 09.06.2026: dzen.ru/arclinic → 404. Иконка в футере сайта ведёт в никуда.</p></div>
+  <div class="card"><h4>Rutube</h4><p>rutube.ru/channel/42593558/</p><p>Канал существует. Редкий для ниши актив.</p></div>
+</div>
+
+<div class="grid-2" style="margin-top:16px;">
+  <div class="card"><h4>YouTube</h4><p class="text-red">Отсутствует.</p><p>Ни через поиск, ни через ссылки на сайте, ни через соцсети.</p></div>
+  <div class="card"><h4>TikTok</h4><p>@reznik_anna_v — 17.3K подписчиков</p><p>Дополнительный канал личного бренда CEO.</p></div>
+</div>
+
+<blockquote>
+  <strong>Парадокс ARclinic:</strong> Клиника имеет 2 Telegram-канала (7 741 подписчиков), Rutube, TikTok CEO (17.3K) и VK (3.2K) — мультиканальное присутствие, которого нет у DEGA. Но флагманский канал (Instagram) мёртв, а Дзен-иконка в футере ведёт на 404. Digital-стратегия фрагментирована и не управляется системно.
+</blockquote>
+</section>
+
+<hr>
+
+<!-- SECTION 5B: HEADHUNTER -->
+<section id="headhunter">
+  <div class="section-label">5B — HeadHunter: вакансии и найм</div>
+
+<div class="grid-2" style="margin-top:16px;">
+  <div class="card" style="border: 1px solid var(--yellow);">
+    <h4 style="color: var(--yellow);">ARclinic — 0 вакансий</h4>
+    <p>Поиск по spb.hh.ru 09.06.2026: ни одной активной вакансии. Нет страницы работодателя на hh.ru.</p>
+    <p><strong>Интерпретация:</strong> команда укомплектована, найм через личные связи CEO или через Profi.ru/ProDoctorov. Не расширяется активно.</p>
+  </div>
+  <div class="card" style="border: 1px solid var(--green);">
+    <h4 style="color: var(--green);">DEGA — 3 вакансии</h4>
+    <p>Активный найм на spb.hh.ru (09.06.2026):</p>
+    <p>• Специалист контакт-центра — <strong>80 000–95 000 ₽</strong></p>
+    <p>• PR-менеджер / SMM-специалист — <strong>до 160 000 ₽</strong></p>
+    <p>• Бухгалтер по расчёту зарплаты — <strong>98 000–115 000 ₽</strong></p>
+    <p><strong>Интерпретация:</strong> DEGA инвестирует в сервис (call-центр), PR и финансы. Признак зрелой организации с потребностью в масштабировании.</p>
+  </div>
+</div>
+
+<blockquote>
+  <strong>HeadHunter — упущенный источник разведки:</strong> Вакансии конкурента раскрывают планы расширения, зарплатные вилки, оргструктуру и приоритеты. ARclinic (0 вакансий) vs DEGA (3 вакансии, включая PR за 160K) — классический контраст между камерной экспертной клиникой и корпоративной машиной. DEGA строит PR-отдел за 160K — ARclinic полагается на личный бренд CEO.
+</blockquote>
+</section>
+
+<hr>
+
+<!-- SECTION 6: TECH AUDIT -->
+<section id="tech">
+  <div class="section-label">06 — Технический аудит</div>
+
+<div class="grid-2">
+  <div>
+    <h3>Core Web Vitals (Lighthouse)</h3>
+    <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
+      <div class="card" style="flex:1; min-width:200px; border: 1px solid var(--red);">
+        <h4 style="color:var(--red)">Mobile — Perf 29</h4>
+        <div class="row"><div class="k">FCP</div><div class="v" style="color:var(--red)">4.5s</div></div>
+        <div class="row"><div class="k">LCP</div><div class="v" style="color:var(--red)">24.9s</div></div>
+        <div class="row"><div class="k">TBT</div><div class="v" style="color:var(--red)">3,090ms</div></div>
+        <div class="row"><div class="k">CLS</div><div class="v" style="color:var(--green)">0.000</div></div>
+        <div class="row"><div class="k">SI</div><div class="v" style="color:var(--red)">7.9s</div></div>
+        <p style="margin-top:8px;font-size:12px;color:var(--red)"><strong>Катастрофа.</strong> LCP 24.9s при норме 2.5s. 1C-Битрикс не оптимизирован для mobile.</p>
+      </div>
+      <div class="card" style="flex:1; min-width:200px; border: 1px solid var(--amber);">
+        <h4 style="color:var(--amber)">Desktop — Perf 70</h4>
+        <div class="row"><div class="k">FCP</div><div class="v" style="color:var(--green)">0.8s</div></div>
+        <div class="row"><div class="k">LCP</div><div class="v" style="color:var(--amber)">5.1s</div></div>
+        <div class="row"><div class="k">TBT</div><div class="v" style="color:var(--green)">10ms</div></div>
+        <div class="row"><div class="k">CLS</div><div class="v" style="color:var(--green)">0.001</div></div>
+        <div class="row"><div class="k">SI</div><div class="v" style="color:var(--amber)">2.7s</div></div>
+        <p style="margin-top:8px;font-size:12px;color:var(--amber)"><strong>Приемлемо.</strong> LCP 5.1s выше нормы (2.5s), но значительно лучше mobile. CLS идеален на обеих платформах.</p>
+      </div>
+    </div>
+  </div>
+  <div>
+    <h3>Технический стек</h3>
+    <div class="row"><div class="k">CMS</div><div class="v">1C-Битрикс <span class="text-amber">(устаревшая для мед. маркетинга)</span></div></div>
+    <div class="row"><div class="k">Аналитика</div><div class="v">Яндекс.Метрика (подтверждено cookie-баннером)</div></div>
+    <div class="row"><div class="k">SSL</div><div class="v" style="color:var(--green)">✅</div></div>
+    <div class="row"><div class="k">AI-краулеры</div><div class="v" style="color:var(--green)">✅ GPTBot, ClaudeBot, PerplexityBot разрешены</div></div>
+  </div>
+</div>
+
+<h3 style="margin-top:32px;">Schema.org</h3>
+<div style="display:flex; flex-wrap:wrap; gap:8px; margin:16px 0;">
+  <span class="tag-badge">MedicalBusiness</span>
+</div>
+<p>Установлен тип MedicalBusiness — правильная техническая база для SEO в медицинской нише.</p>
+
+<h3 style="margin-top:24px;">Индексация</h3>
+<div class="row"><div class="k">Sitemap</div><div class="v">231 страница — хороший объём для клиники из 15 врачей</div></div>
+<div class="row"><div class="k">robots.txt</div><div class="v" style="color:var(--green)">GPTBot: ✅, ClaudeBot: ✅, OAI-SearchBot: ✅, PerplexityBot: ✅</div></div>
+<div class="row"><div class="k">llms.txt</div><div class="v" style="color:var(--red)">❌ Отсутствует — упущенная возможность для AI-поиска</div></div>
+<div class="row"><div class="k">Instagram на сайте</div><div class="v" style="color:var(--red)">❌ Instagram не связан с официального сайта. Ссылки только на VK, Telegram, Rutube.</div></div>
+
+<blockquote>
+  <strong>Вердикт:</strong> Технический фундамент слабее, чем у DEGA (1C-Битрикс vs Next.js). Mobile CWV — катастрофа (Perf 29, LCP 24.9s). Desktop приемлем (Perf 70). CLS идеален. 1C-Битрикс — основной bottleneck. Robots.txt правильно настроен для AI-краулеров, Schema.org MedicalBusiness — грамотный выбор. Критические проблемы: (1) Mobile LCP 24.9s при норме 2.5s — требуется срочная оптимизация, (2) Instagram не связан с сайта — потеря трафика, (3) иконка Дзена в футере ведёт на 404.
+</blockquote>
+</section>
+
+<hr>
+
+<!-- SECTION 7: SMI -->
+<section id="smi">
+  <div class="section-label">07 — Медийное присутствие</div>
+
+<h2>6 упоминаний — все через личный бренд Резник</h2>
+
+<p>Проверены все крупные издания. <strong>Ни одного упоминания ARclinic как бренда</strong> — все упоминания идут через Анну Резник как эксперта.</p>
+
+<div style="margin: 24px 0;">
+  <div class="article-link">
+    <div class="title">РБК Стиль — «Спикеры конференции PRO NAS о технологиях сохранения молодости и здоровья кожи»</div>
+    <div class="detail">Июль 2024 · Анна Резник как спикер, к.м.н., владелец и главный врач ARclinic. Первое подтверждённое упоминание в РБК.</div>
+  </div>
+  <div class="article-link">
+    <div class="title">RBG Media — «НЕ РАЗДЕЛЯЯ, А СОЕДИНЯЯ»</div>
+    <div class="detail">ARclinic в контексте иммунных вопросов в косметологии.</div>
+  </div>
+  <div class="article-link">
+    <div class="title">Spotify / YouTube Music — подкаст «Красота требует кэш»</div>
+    <div class="detail">Анна Резник как эксперт.</div>
+  </div>
+  <div class="article-link">
+    <div class="title">Mave Digital — «Бьюти завтрак»</div>
+    <div class="detail">Анна Резник — спикер.</div>
+  </div>
+  <div class="article-link">
+    <div class="title">Aesthetic Academy Surgery — лекторы</div>
+    <div class="detail">Резник А.В. в списке лекторов.</div>
+  </div>
+  <div class="article-link">
+    <div class="title">Instagram / FB Journal — «Весна 2026 – Топ-100»</div>
+    <div class="detail">2026 · Анна Резник в числе героев номера.</div>
+  </div>
+</div>
+
+<div class="grid-3" style="margin: 24px 0;">
+  <div class="card" style="text-align:center"><h4>Forbes</h4><p class="text-red">0</p></div>
+  <div class="card" style="text-align:center"><h4>Vogue</h4><p class="text-red">0</p></div>
+  <div class="card" style="text-align:center"><h4>Коммерсантъ</h4><p class="text-red">0</p></div>
+  <div class="card" style="text-align:center"><h4>Vademecum</h4><p class="text-red">0</p></div>
+  <div class="card" style="text-align:center"><h4>Фонтанка</h4><p class="text-red">0</p></div>
+  <div class="card" style="text-align:center"><h4>ДП</h4><p class="text-red">0</p></div>
+</div>
+
+<blockquote>
+  <strong>Важно:</strong> В ходе фактчекинга исключено упоминание «Анна Резник» в Forbes Kazakhstan — это тёзка, другой человек. Все 6 подтверждённых упоминаний — через личный бренд CEO, не через бренд клиники. Это и преимущество (Резник — медийный актив), и риск (клиника невидима без неё).
+</blockquote>
+</section>
+
+<hr>
+
+<!-- SECTION 8: FINANCE -->
+<section id="finance">
+  <div class="section-label">08 — Финансы (БФО через bo.nalog.gov.ru, 2023–2025)</div>
+
+<h2>Бухгалтерский баланс (тыс. ₽)</h2>
+
+<div style="overflow-x: auto; margin: 24px 0;">
+  <table>
+    <thead>
+      <tr>
+        <th>Показатель</th>
+        <th style="text-align:center">2024</th>
+        <th style="text-align:center">2025</th>
+        <th style="text-align:center">Δ 24→25</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="font-weight:700;">Активы (всего)</td><td style="text-align:center;">19,657</td><td style="text-align:center;">23,816</td><td style="text-align:center;color:var(--green)">+21.1%</td></tr>
+      <tr><td style="font-weight:700;">Денежные средства</td><td style="text-align:center;">4,783</td><td style="text-align:center;">7,866</td><td style="text-align:center;color:var(--green)">+64.4%</td></tr>
+      <tr><td style="font-weight:700;">Капитал и резервы</td><td style="text-align:center;">17,660</td><td style="text-align:center;">21,281</td><td style="text-align:center;color:var(--green)">+20.5%</td></tr>
+      <tr><td style="font-weight:700;">Долгосрочные обязательства</td><td style="text-align:center;color:var(--green)">0</td><td style="text-align:center;color:var(--green)">0</td><td style="text-align:center;color:var(--green)">—</td></tr>
+      <tr><td style="font-weight:700;">Краткосрочные обязательства</td><td style="text-align:center;">2,006</td><td style="text-align:center;">2,535</td><td style="text-align:center;color:var(--amber)">+26.4%</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>Отчёт о прибылях и убытках (тыс. ₽)</h2>
+
+<div style="overflow-x: auto; margin: 24px 0;">
+  <table>
+    <thead>
+      <tr>
+        <th>Показатель</th>
+        <th style="text-align:center">2024</th>
+        <th style="text-align:center">2025</th>
+        <th style="text-align:center">Δ</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="font-weight:700;">Выручка</td><td style="text-align:center;">107,040</td><td style="text-align:center;">120,583</td><td style="text-align:center;color:var(--green)">+12.7%</td></tr>
+      <tr><td style="font-weight:700;">Расходы</td><td style="text-align:center;">93,435</td><td style="text-align:center;">109,397</td><td style="text-align:center;color:var(--red)">+17.1%</td></tr>
+      <tr><td style="font-weight:700;">Прочие доходы</td><td style="text-align:center;">1,413</td><td style="text-align:center;">6</td><td style="text-align:center;color:var(--red)">−99.6%</td></tr>
+      <tr><td style="font-weight:700;">Прочие расходы</td><td style="text-align:center;">2,108</td><td style="text-align:center;">2,366</td><td style="text-align:center;color:var(--amber)">+12.2%</td></tr>
+      <tr><td style="font-weight:700;">Налог на прибыль</td><td style="text-align:center;">1,272</td><td style="text-align:center;">1,206</td><td style="text-align:center;color:var(--green)">−5.2%</td></tr>
+      <tr style="background:var(--surface);font-weight:700;"><td>Чистая прибыль</td><td style="text-align:center;">11,971</td><td style="text-align:center;">7,620</td><td style="text-align:center;color:var(--red)">−36.3%</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="grid-3" style="margin: 24px 0;">
+  <div class="card"><div class="num" style="color:var(--green)">+12.7%</div><h4>Рост выручки</h4><p>С 107M до 120.6M за год. Органический рост.</p></div>
+  <div class="card"><div class="num" style="color:var(--red)">−36.3%</div><h4>Падение прибыли</h4><p>С 12M до 7.6M. Маржинальность: 11.2% → 6.3%.</p></div>
+  <div class="card"><div class="num" style="color:var(--green)">0</div><h4>Долгосрочных долгов</h4><p>Ноль кредитов. Финансирование из собственных средств.</p></div>
+</div>
+
+<h3>Ключевые финансовые метрики</h3>
+
+<div class="row"><div class="k">Юрлицо</div><div class="v">ООО «Медицинский центр Арклиник», ИНН 7810605688, ОГРН 1167847319760</div></div>
+<div class="row"><div class="k">Выручка 2025</div><div class="v">120,583,000 ₽ (+12.7% к 2024)</div></div>
+<div class="row"><div class="k">Чистая прибыль 2025</div><div class="v">7,620,000 ₽ (6.3% margin, −36.3% к 2024)</div></div>
+<div class="row"><div class="k">Денежные средства</div><div class="v">7,866,000 ₽ (+64.4%) — сильная cash-позиция</div></div>
+<div class="row"><div class="k">Активы</div><div class="v">23,816,000 ₽ (+21.1%)</div></div>
+<div class="row"><div class="k">Капитал</div><div class="v">21,281,000 ₽ (+20.5%) — собственный, не заёмный</div></div>
+<div class="row"><div class="k">Долг</div><div class="v" style="color:var(--green)">0 долгосрочных, 2.5M краткосрочных — финансовая устойчивость</div></div>
+<div class="row"><div class="k">Выручка на врача</div><div class="v">8.0 млн ₽ (при 15 врачах)</div></div>
+<div class="row"><div class="k">Рентабельность активов</div><div class="v">32% (7.6M / 23.8M) — эффективное использование</div></div>
+<div class="row"><div class="k">Источник</div><div class="v">БФО через bo.nalog.gov.ru (09.06.2026) — баланс + ОПиУ 2024-2025</div></div>
+
+<div class="red-flag" style="margin-top:16px;"><strong>⚠️ Красный флаг:</strong> Расходы растут быстрее выручки (+17.1% vs +12.7%). Маржинальность упала с 11.2% до 6.3% за год. Если тренд сохранится, через 2 года прибыль может стать околонулевой.</div>
+<div class="red-flag"><strong>⚠️ Странность:</strong> Прочие доходы упали на 99.6% (с 1.4M до 6K). В 2024 были существенные прочие поступления, в 2025 — почти ноль. Требует пояснения.</div>
+
+<h3 style="margin-top:32px;">ARclinic vs DEGA: финансовый health-check</h3>
+
+<div style="overflow-x: auto; margin: 24px 0;">
+  <table>
+    <thead>
+      <tr>
+        <th>Показатель</th>
+        <th style="text-align:center">DEGA</th>
+        <th style="text-align:center">ARclinic</th>
+        <th style="text-align:center">Вердикт</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Выручка</td>
+        <td style="text-align:center;">897.5 млн ₽ (−7.3%)</td>
+        <td style="text-align:center;color:var(--green)">120.6 млн ₽ (+12.7%)</td>
+        <td style="text-align:center;">AR растёт, DEGA падает</td>
+      </tr>
+      <tr>
+        <td>Чистая прибыль</td>
+        <td style="text-align:center;color:var(--red)">152.3 млн (−45.2%)</td>
+        <td style="text-align:center;">7.6 млн (−36.3%)</td>
+        <td style="text-align:center;">Оба теряют прибыль</td>
+      </tr>
+      <tr>
+        <td>Маржинальность</td>
+        <td style="text-align:center;color:var(--red)">17.0% (было 28.7%)</td>
+        <td style="text-align:center;color:var(--amber)">6.3% (было 11.2%)</td>
+        <td style="text-align:center;">Оба сжимаются</td>
+      </tr>
+      <tr>
+        <td>Долгосрочный долг</td>
+        <td style="text-align:center;color:var(--text-dim)">~87 млн ₽</td>
+        <td style="text-align:center;color:var(--green)">0</td>
+        <td style="text-align:center;color:var(--green)">AR — без долгов</td>
+      </tr>
+      <tr>
+        <td>Денежные средства</td>
+        <td style="text-align:center;color:var(--red)">1.9 млн (−92.2%)</td>
+        <td style="text-align:center;color:var(--green)">7.9 млн (+64.4%)</td>
+        <td style="text-align:center;color:var(--green)">AR — крепкий cash</td>
+      </tr>
+      <tr>
+        <td>Финансовое здоровье</td>
+        <td style="text-align:center;color:var(--red)">Кризис ликвидности</td>
+        <td style="text-align:center;color:var(--green)">Устойчивый, нулевой долг</td>
+        <td style="text-align:center;color:var(--green)">AR здоровее</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<blockquote>
+  <strong>Диагноз:</strong> ARclinic — финансово устойчивая клиника без долгов с растущей выручкой (+12.7%), но сжимающейся маржинальностью (11.2% → 6.3%). DEGA — гигант с падающей выручкой (−7.3%), обвалом прибыли (−45.2%) и кризисом ликвидности (cash −92.2%). <strong>Парадокс:</strong> несмотря на 7.4× разницу в выручке, ARclinic финансово здоровее DEGA. Нет долгов, крепкий cash, собственный капитал. Главный риск ARclinic — не масштаб, а тренд сжатия маржи: если расходы продолжат расти быстрее выручки, прибыль исчезнет через 2–3 года.
+</blockquote>
+</section>
+
+<hr>
+
+<!-- SECTION 9: GAPS -->
+<section id="gaps">
+  <div class="section-label">09 — 14 Gaps: где ARclinic теряет</div>
+
+<div class="gap"><h4>Instagram клиники практически мёртв</h4><p>ER 0.07% при 8,435 подписчиках — нет вовлечения. В 10× ниже среднего по нише.</p></div>
+<div class="gap"><h4>Аномальное соотношение постов к подписчикам</h4><p>6,246 постов при 8,435 подписчиках (0.74 поста на подписчика) — признак прекратившегося органического роста.</p></div>
+<div class="gap"><h4>Instagram не связан с сайта</h4><p>0 упоминаний Instagram на официальном сайте — потеря трафика.</p></div>
+<div class="gap"><h4>DocDoc: всего 20% рекомендаций</h4><p>При 91 отзыве — значительно ниже других платформ.</p></div>
+<div class="gap"><h4>Napopravku: 4.1/5</h4><p>Самый низкий рейтинг среди всех платформ. 177 отзывов, но низкая удовлетворённость.</p></div>
+<div class="gap"><h4>Нет YouTube-канала</h4><p>При 42% Video-контента в Instagram — видео не размещается на внешних площадках.</p></div>
+<div class="gap"><h4>Нет Reels в Instagram</h4><p>Только Image и Video — упущенный формат с максимальным органическим охватом.</p></div>
+<div class="gap"><h4>Личный бренд Резник не конвертируется в подписчиков клиники</h4><p>26.8K → 8.4K: CEO в 3.2× больше клиники. Нет системной воронки.</p></div>
+<div class="gap"><h4>5% негативных отзывов на ProDoctorov касаются лично Резник и администраторов</h4><p>Критическая точка: жалобы на отказ в приёме при проблемах.</p></div>
+<div class="gap"><h4>Сайт на 1C-Битрикс</h4><p>Морально устаревшая CMS для медицинского маркетинга. DEGA на Next.js.</p></div>
+<div class="gap"><h4>Нет llms.txt</h4><p>Не оптимизирован для AI-агентов (ChatGPT, Claude, Perplexity).</p></div>
+<div class="gap"><h4>Отсутствие крупных СМИ-упоминаний</h4><p>Forbes, Vogue, Коммерсантъ — 0. Единственное исключение: РБК Стиль (2024) через Резник.</p></div>
+<div class="gap"><h4>Дзен-канал не существует (404)</h4><p>Иконка в футере сайта ведёт на 404. Мёртвая ссылка.</p></div>
+<div class="gap"><h4>14 врачей без Instagram</h4><p>Ни один врач (кроме Резник) не имеет публичного Instagram. Вся digital-узнаваемость на одном человеке.</p></div>
+</section>
+
+<hr>
+
+<!-- SECTION 10: ADVANTAGES -->
+<section id="advantages">
+  <div class="section-label">10 — 18 Advantages: в чём ARclinic сильна</div>
+
+<div class="advantage"><h4>Яндекс.Карты: 5.0/5 на 300 отзывах</h4><p>Выдающийся результат. Выше, чем у DEGA (4.9).</p></div>
+<div class="advantage"><h4>2ГИС: 4.9/5</h4><p>Premium-статус на картах.</p></div>
+<div class="advantage"><h4>ProDoctorov: 92.07% рекомендаций</h4><p>Высокий уровень доверия. Награда «Лучшая клиника 2023 года».</p></div>
+<div class="advantage"><h4>Анна Резник — международный эксперт IPSEN (Франция)</h4><p>Соавтор британского учебника по косметологии. Уровень экспертизы, недоступный конкурентам.</p></div>
+<div class="advantage"><h4>26,820 подписчиков у CEO — сильный личный бренд</h4><p>ER ~1.13%. В 16× выше, чем у клиники. Недоиспользованный актив.</p></div>
+<div class="advantage"><h4>15 врачей, 12 специализаций</h4><p>Широкий спектр услуг: от косметологии до эндокринологии и неврологии.</p></div>
+<div class="advantage"><h4>УЗИ-контроль филлеров — уникальная компетенция</h4><p>Батиенко + Яковлева. Недоступно большинству конкурентов.</p></div>
+<div class="advantage"><h4>Собственная клиника в особняке на Верейской</h4><p>Не аренда. Актив на балансе.</p></div>
+<div class="advantage"><h4>Выручка 120.6 млн ₽ — стабильный бизнес</h4><p>В отличие от DEGA (−7.3%), нет признаков падения.</p></div>
+<div class="advantage"><h4>Прибыль 7.6 млн ₽ (6.3% margin)</h4><p>Устойчивая модель. Не теряет маржу, в отличие от DEGA.</p></div>
+<div class="advantage"><h4>robots.txt разрешает AI-краулеры</h4><p>GPTBot, ClaudeBot, PerplexityBot — все разрешены. Лучше, чем у DEGA (Bitrix-остатки).</p></div>
+<div class="advantage"><h4>Schema.org MedicalBusiness</h4><p>Правильная техническая база для SEO в медицинской нише.</p></div>
+<div class="advantage"><h4>231 страница в sitemap</h4><p>Хороший объём индексации для клиники из 15 врачей.</p></div>
+<div class="advantage"><h4>Присутствие на 5 рейтинговых платформах</h4><p>Суммарно 737 отзывов — сильная социальная доказательность.</p></div>
+<div class="advantage"><h4>VK: 3,188 участников</h4><p>Небольшое, но живое комьюнити.</p></div>
+<div class="advantage"><h4>Telegram: 2 канала (7 741 подписчиков)</h4><p>Мультиканальная стратегия: клиника (1 368) + CEO (6 373). У DEGA только 1 канал.</p></div>
+<div class="advantage"><h4>Rutube + TikTok (17.3K)</h4><p>Присутствие на площадках, которые конкуренты игнорируют.</p></div>
+<div class="advantage"><h4>Подтверждённое упоминание в РБК Стиль (2024)</h4><p>Анна Резник как эксперт. У DEGA — zero earned media.</p></div>
+</section>
+
+<hr>
+
+<!-- SECTION 11: WOW INSIGHTS -->
+<section id="wow">
+  <div class="section-label">11 — 3 Wow-инсайта</div>
+
+<div class="wow"><h4>1. Парадокс ARclinic: офлайн-репутация vs digital-присутствие</h4><p>Клиника с рейтингом 5.0 на Яндексе (300 отзывов) имеет практически мёртвый Instagram (ER 0.07%). Это textbook-пример клиники, которая выигрывает на офлайн-репутации, но проигрывает в digital-вовлечении. Разрыв между качеством медицинских услуг и качеством digital-контента — крупнейший неиспользованный актив.</p></div>
+
+<div class="wow"><h4>2. Анна Резник = 76% digital-присутствия ARclinic</h4><p>Её Instagram (26.8K) в 3.2× больше клиники (8.4K). Если она уйдёт — digital-присутствие клиники обнулится. Это крупнейший single-point-of-failure. Но это же и крупнейший рычаг: если системно направить аудиторию Резник в каналы клиники, рост подписчиков может быть 2-3× без дополнительных вложений.</p></div>
+
+<div class="wow"><h4>3. ARclinic — «спящий гигант» digital</h4><p>При выручке 120 млн ₽ и 15 врачах ожидаешь 50K+ подписчиков и ER 1-3%. Реальность: 8.4K и ER 0.07%. Потенциал роста: 6× по подписчикам, 15-40× по вовлечению — только за счёт приведения digital к уровню офлайн-репутации. Для сравнения: DEGA при 897 млн выручки имеет 40K подписчиков и ER 0.20% — тоже плохо, но масштабирование digital не требует масштабирования выручки.</p></div>
+</section>
+
+<hr>
+
+<!-- SECTION 12: COLLECTION METHODS -->
+<section id="methods" style="padding-bottom: 40px;">
+  <div class="section-label">12 — Методы сбора</div>
+
+<div class="grid-2">
+  <div>
+    <div class="row"><div class="k">Врачи (15)</div><div class="v">Playwright browser → arclinic.ru/doctors/ (08.06.2026)</div></div>
+    <div class="row"><div class="k">Instagram @arclinic</div><div class="v">Apify actor apify~instagram-profile-scraper: профиль + 12 постов (08.06.2026)</div></div>
+    <div class="row"><div class="k">Instagram @reznik_anna_v</div><div class="v">Apify actor apify~instagram-profile-scraper: профиль + 12 постов (09.06.2026). Форматы, ER, частота, темы.</div></div>
+    <div class="row"><div class="k">Instagram врачей (14)</div><div class="v">curl-проверка всех хендлов (09.06.2026). 0 публичных аккаунтов.</div></div>
+    <div class="row"><div class="k">ProDoctorov</div><div class="v">Firecrawl scrape prodoctorov.ru/spb/lpu/47082-arclinic/ (09.06.2026)</div></div>
+    <div class="row"><div class="k">Яндекс.Карты</div><div class="v">Firecrawl search snippet (09.06.2026)</div></div>
+    <div class="row"><div class="k">2ГИС</div><div class="v">Firecrawl search snippet (09.06.2026)</div></div>
+  </div>
+  <div>
+    <div class="row"><div class="k">DocDoc</div><div class="v">Firecrawl scrape spb.docdoc.ru (09.06.2026)</div></div>
+    <div class="row"><div class="k">Napopravku</div><div class="v">Firecrawl scrape spb.napopravku.ru (09.06.2026)</div></div>
+    <div class="row"><div class="k">Финансы (БФО)</div><div class="v">bo.nalog.gov.ru — полный баланс + ОПиУ 2024-2025 (09.06.2026)</div></div>
+    <div class="row"><div class="k">СМИ</div><div class="v">Firecrawl search + WebSearch по 10 запросам (09.06.2026)</div></div>
+    <div class="row"><div class="k">Технический аудит</div><div class="v">arclinic.ru robots.txt + sitemap.xml + schema.org (08-09.06.2026)</div></div>
+    <div class="row"><div class="k">VK</div><div class="v">Playwright browser: ~9,196 постов, ER <0.2%, контент-темы (09.06.2026)</div></div>
+    <div class="row"><div class="k">Дзен</div><div class="v">curl dzen.ru/arclinic → 404 (09.06.2026)</div></div>
+    <div class="row"><div class="k">СМИ фактчекинг</div><div class="v">Forbes Kazakhstan — исключено (тёзка). РБК Стиль — подтверждено.</div></div>
+    <div class="row"><div class="k">CWV / PageSpeed</div><div class="v">Lighthouse CLI (npx lighthouse arclinic.ru) — 09.06.2026. Mobile Perf 29, Desktop Perf 70.</div></div>
+    <div class="row"><div class="k">HeadHunter</div><div class="v">Playwright browser → spb.hh.ru (09.06.2026). ARclinic: 0 вакансий. DEGA: 3 вакансии.</div></div>
+    <div class="row"><div class="k">Telegram (tgstat)</div><div class="v">Playwright browser → tgstat.ru (09.06.2026). @arclinic1: 1368, @av_reznik: 6373, @ArclinicSPB: бот.</div></div>
+  </div>
+</div>
+
+<blockquote>
+  <strong>Данные собраны:</strong> 08-09.06.2026. 15-фазный self-audit v2.0 (AIM). Методы: Apify, Playwright, Lighthouse CLI, БФО (bo.nalog.gov.ru), Firecrawl, curl. Ограничения: Instagram Reels vs Video — классификация Apify не всегда точна. CEO-интервью не найдены (русскоязычный поиск недоступен). Telegram — данные tgstat.ru (09.06.2026).
+</blockquote>
+
+</section>
+
+</div>
+
+</body>
+</html>

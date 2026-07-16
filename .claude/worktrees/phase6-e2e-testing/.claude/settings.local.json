@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit -m 'docs: add Plan 2 completion report:*)",
+      "Bash(git commit:*)",
+      "Bash(chmod +x:*)",
+      "Bash(./setup_alias.sh:*)",
+      "Bash(grep -E \"\\\\.py$\")",
+      "Bash(git ls-tree *)",
+      "Bash(python -m pytest tests/unit/test_event_bus.py::TestEventBusBasics::test_initialize_and_close -v)",
+      "Bash(python3 -m pip install -q -r requirements-test.txt)",
+      "Bash(git init *)",
+      "Bash(pytest *)"
+    ]
+  }
+}

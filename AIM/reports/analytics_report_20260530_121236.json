@@ -1,0 +1,111 @@
+{
+  "generated_at": "2026-05-30T12:12:36.165747+00:00",
+  "period": {
+    "start": "2026-05-23T12:12:36.152056",
+    "end": "2026-05-30T12:12:36.152061"
+  },
+  "lead_metrics": {
+    "total_leads": 3,
+    "leads_by_tier": {
+      "cold": 1,
+      "warm": 1,
+      "hot": 1
+    },
+    "leads_by_source": {
+      "landing_page": 3
+    },
+    "leads_by_specialty": {
+      "dentist": 3
+    },
+    "average_score": 80.0,
+    "capture_rate": 0.375,
+    "duplicate_rate": 0.0,
+    "time_series": [
+      {
+        "timestamp": "2026-05-28 00:00:00",
+        "value": 1.0,
+        "label": "2026-05-28"
+      },
+      {
+        "timestamp": "2026-05-29 00:00:00",
+        "value": 1.0,
+        "label": "2026-05-29"
+      },
+      {
+        "timestamp": "2026-05-30 00:00:00",
+        "value": 1.0,
+        "label": "2026-05-30"
+      }
+    ],
+    "start_date": "2026-05-23 12:12:36.152056",
+    "end_date": "2026-05-30 12:12:36.152061",
+    "generated_at": "2026-05-30 12:12:36.154667+00:00"
+  },
+  "email_metrics": {
+    "total_sent": 3,
+    "total_scheduled": 0,
+    "total_failed": 0,
+    "total_delivered": 3,
+    "total_opened": 0,
+    "total_clicked": 0,
+    "total_bounced": 0,
+    "total_complained": 0,
+    "total_unsubscribed": 0,
+    "delivery_rate": 100.0,
+    "open_rate": 0.0,
+    "click_rate": 0.0,
+    "bounce_rate": 0.0,
+    "complaint_rate": 0.0,
+    "unsubscribe_rate": 0.0,
+    "emails_by_tier": {
+      "hot": 1,
+      "warm": 1,
+      "cold": 1
+    },
+    "avg_time_to_open": null,
+    "avg_time_to_click": null,
+    "time_series": [
+      {
+        "timestamp": "2026-05-30 00:00:00",
+        "value": 3.0,
+        "label": "2026-05-30"
+      }
+    ],
+    "start_date": "2026-05-23 12:12:36.152056",
+    "end_date": "2026-05-30 12:12:36.152061",
+    "generated_at": "2026-05-30 12:12:36.158020+00:00"
+  },
+  "conversion_funnel": {
+    "leads_captured": 3,
+    "leads_scored": 3,
+    "tasks_created": 1,
+    "workflows_triggered": 3,
+    "emails_sent": 3,
+    "emails_delivered": 3,
+    "emails_opened": 0,
+    "emails_clicked": 0,
+    "conversion_rates": {
+      "capture_to_score": 100.0,
+      "score_to_task": 33.33333333333333,
+      "task_to_workflow": 300.0,
+      "workflow_to_sent": 100.0,
+      "sent_to_delivered": 100.0,
+      "delivered_to_opened": 0.0,
+      "opened_to_clicked": 0.0
+    },
+    "start_date": "2026-05-23 12:12:36.152056",
+    "end_date": "2026-05-30 12:12:36.152061",
+    "generated_at": "2026-05-30 12:12:36.161772+00:00"
+  },
+  "realtime_stats": {
+    "leads_today": 1,
+    "emails_sent_today": 3,
+    "emails_opened_today": 0,
+    "emails_clicked_today": 0,
+    "active_workflows": 3,
+    "pending_emails": 0,
+    "hot_leads_count": 1,
+    "hot_leads_today": 1,
+    "last_updated": "2026-05-30 12:12:36.165714+00:00"
+  }
+}

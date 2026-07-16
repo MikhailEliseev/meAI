@@ -1,0 +1,39 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "AI AIM" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e5]: AI
+        - text: AIM
+      - navigation [ref=e6]:
+        - link "Блог" [ref=e7] [cursor=pointer]:
+          - /url: /blog/
+        - link "Контакты" [ref=e8] [cursor=pointer]:
+          - /url: /contact/
+  - main [ref=e9]:
+    - generic [ref=e11]:
+      - generic [ref=e12]: AIAIAIManagement
+      - paragraph [ref=e13]: Если вас привёл AI — он приведёт вам пациентов
+    - generic [ref=e15]:
+      - img "Михаил Елисеев" [ref=e17]
+      - generic [ref=e18]:
+        - heading "Михаил Елисеев" [level=2] [ref=e19]
+        - paragraph [ref=e20]: Основатель AIM. Специализируюсь на медицинском маркетинге и AI-автоматизации. Помогаю частным клиникам находить пациентов через data-driven маркетинг и AI-инструменты.
+    - generic [ref=e22]:
+      - heading "Нам доверяют" [level=2] [ref=e23]
+      - generic [ref=e25]: Логотипы будут добавлены
+  - contentinfo [ref=e26]:
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - generic [ref=e29]: AIM
+        - generic [ref=e30]: AI-first медицинский маркетинг
+        - generic [ref=e31]: © 2026
+      - generic [ref=e32]:
+        - link "Блог" [ref=e33] [cursor=pointer]:
+          - /url: /blog/
+        - link "Контакты" [ref=e34] [cursor=pointer]:
+          - /url: /contact/
+      - generic [ref=e35]:
+        - link "Telegram" [ref=e36] [cursor=pointer]:
+          - /url: https://t.me/mikhaileliseev
+        - text: "+79684757766"

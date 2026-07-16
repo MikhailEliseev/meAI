@@ -1,0 +1,369 @@
+{
+  "main": {
+    "id": "7cdcc37a0f0723b7",
+    "type": "split",
+    "children": [
+      {
+        "id": "67fd611ab9690dd7",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "5fd6f7b26bc927c9",
+            "type": "leaf",
+            "state": {
+              "type": "bases",
+              "state": {
+                "file": "Да, хочу ещё одну проверку. А ещё 10 проверок? Я тебе не верю. Мы два месяца бьёмся об один единственный чат. Проверяй всё, что можешь. Без названия.base",
+                "viewName": "Таблица"
+              },
+              "icon": "lucide-table",
+              "title": "Да, хочу ещё одну проверку. А ещё 10 проверок? Я тебе не верю. Мы два месяца бьёмся об один единственный чат. Проверяй всё, что можешь. Без названия"
+            }
+          }
+        ],
+        "stacked": true
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "a95f8994de5546ae",
+    "type": "split",
+    "children": [
+      {
+        "id": "b925531418bcc26c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "6cacd4b374502a68",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Файловый менеджер"
+            }
+          },
+          {
+            "id": "ae900174ccd508bf",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Поиск"
+            }
+          },
+          {
+            "id": "d1128fcc593316cf",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Закладки"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "right": {
+    "id": "d71d3a05503dbf01",
+    "type": "split",
+    "children": [
+      {
+        "id": "6230653252904fa7",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "cf8f0dbf27ee083e",
+            "type": "leaf",
+            "pinned": true,
+            "state": {
+              "type": "terminal:terminal",
+              "state": {
+                "terminal:terminal": {
+                  "cwd": "/Users/mikhaileliseev/Desktop/Dev/meAI1",
+                  "focus": false,
+                  "profile": {
+                    "args": [
+                      "--login"
+                    ],
+                    "environment": [],
+                    "executable": "/bin/zsh",
+                    "followTheme": true,
+                    "name": "",
+                    "platforms": {
+                      "darwin": true
+                    },
+                    "pythonExecutable": "python3",
+                    "restoreHistory": false,
+                    "rightClickAction": "copyPaste",
+                    "successExitCodes": [
+                      "0",
+                      "SIGINT",
+                      "SIGTERM"
+                    ],
+                    "terminalOptions": {
+                      "documentOverride": null
+                    },
+                    "type": "integrated",
+                    "useWin32Conhost": true
+                  },
+                  "profileSourceId": "darwinIntegratedDefault",
+                  "serial": null,
+                  "userTitle": ""
+                }
+              },
+              "pinned": true,
+              "icon": "lucide-ghost",
+              "title": "terminal:terminal"
+            }
+          },
+          {
+            "id": "b68fd0675ccabd8b",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Обратные ссылки"
+            }
+          },
+          {
+            "id": "3d9adf7da596c377",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Исходящие ссылки"
+            }
+          },
+          {
+            "id": "ed22febf5290b8cf",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Теги"
+            }
+          },
+          {
+            "id": "2dd972481608a118",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Все свойства"
+            }
+          },
+          {
+            "id": "8663ed2f99d1ee78",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Структура"
+            }
+          },
+          {
+            "id": "508954a070fd51e8",
+            "type": "leaf",
+            "pinned": true,
+            "state": {
+              "type": "terminal:terminal",
+              "state": {
+                "terminal:terminal": {
+                  "cwd": "/Users/mikhaileliseev/Desktop/Dev/meAI",
+                  "focus": false,
+                  "profile": {
+                    "args": [
+                      "--login"
+                    ],
+                    "environment": [],
+                    "executable": "/bin/zsh",
+                    "followTheme": true,
+                    "name": "",
+                    "platforms": {
+                      "darwin": true
+                    },
+                    "pythonExecutable": "python3",
+                    "restoreHistory": false,
+                    "rightClickAction": "copyPaste",
+                    "successExitCodes": [
+                      "0",
+                      "SIGINT",
+                      "SIGTERM"
+                    ],
+                    "terminalOptions": {
+                      "documentOverride": null
+                    },
+                    "type": "integrated",
+                    "useWin32Conhost": true
+                  },
+                  "profileSourceId": "darwinIntegratedDefault",
+                  "serial": null,
+                  "userTitle": ""
+                }
+              },
+              "pinned": true,
+              "icon": "terminal",
+              "title": "Terminal: zsh"
+            }
+          },
+          {
+            "id": "095cedd4c7b1c176",
+            "type": "leaf",
+            "pinned": true,
+            "state": {
+              "type": "terminal:terminal",
+              "state": {
+                "terminal:terminal": {
+                  "cwd": "/Users/mikhaileliseev/Desktop/Dev/meAI_1",
+                  "focus": false,
+                  "profile": {
+                    "args": [
+                      "--login"
+                    ],
+                    "environment": [],
+                    "executable": "/bin/zsh",
+                    "followTheme": true,
+                    "name": "",
+                    "platforms": {
+                      "darwin": true
+                    },
+                    "pythonExecutable": "python3",
+                    "restoreHistory": false,
+                    "rightClickAction": "copyPaste",
+                    "successExitCodes": [
+                      "0",
+                      "SIGINT",
+                      "SIGTERM"
+                    ],
+                    "terminalOptions": {
+                      "documentOverride": null
+                    },
+                    "type": "integrated",
+                    "useWin32Conhost": true
+                  },
+                  "profileSourceId": "darwinIntegratedDefault",
+                  "serial": null,
+                  "userTitle": ""
+                }
+              },
+              "pinned": true,
+              "icon": "terminal",
+              "title": "Terminal: zsh"
+            }
+          }
+        ],
+        "currentTab": 7
+      }
+    ],
+    "direction": "horizontal",
+    "width": 581.6
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Меню быстрого перехода": false,
+      "graph:Граф": false,
+      "canvas:Создать новый холст": false,
+      "daily-notes:Сегодняшняя заметка": false,
+      "templates:Вставить шаблон": false,
+      "command-palette:Открыть палитру команд": false,
+      "bases:Создать новую базу": false,
+      "terminal:Open terminal": false
+    }
+  },
+  "active": "095cedd4c7b1c176",
+  "lastOpenFiles": [
+    "AIM/hermes/app/tools/_url_utils.py",
+    "hermes-backup-20260703-012354/publish_scout_report.py",
+    "hermes-backup-20260703-012354/run_full_scout.py",
+    "hermes-backup-20260703-012354/main.py",
+    "hermes-backup-20260703-012354",
+    "E",
+    "seline-report-viewport.png",
+    "mira-preview-zoomed.png",
+    "mira-preview-local.png",
+    "AIM/hermes/preview-mira-med-1783003747.html",
+    "AIM/hermes/app/tools/__pycache__/session_archive.cpython-314.pyc",
+    "AIM/hermes/scripts/render_report_preview.py",
+    "AIM/hermes/_reference/mira-med-1783003747_v2/data/TECH AUDIT_perplexity_used.json",
+    "AIM/hermes/_reference/mira-med-1783003747_v2/data/TECH AUDIT_interpretation.json",
+    "mira-report-final.png",
+    "mira-report-top.png",
+    "mira-report-full.png",
+    "refactor-analysis/REPORT-FORMAT-CONTRACT.md",
+    "refactor-analysis/SERVER-LOCAL-DIVERGENCE.md",
+    "rewrite-v2/09-SURGERY-SUMMARY.md",
+    "rewrite-v2/08-CODE-AUDIT-FINDINGS.md",
+    "rewrite-v2/07-SUCCESS-CRITERIA.md",
+    "rewrite-v2/06-IMPLEMENTATION-PLAN.md",
+    "rewrite-v2/05-USER-JOURNEY.md",
+    "rewrite-v2/04-DESIGN-SYSTEM-CANON.md",
+    "rewrite-v2/03-TARGET-ARCHITECTURE.md",
+    "rewrite-v2/02-CURRENT-STATE.md",
+    "rewrite-v2/01-PROJECT-ESSENCE.md",
+    "rewrite-v2/00-MASTER.md",
+    "scout-after-migration.png",
+    "scout-page-check.png",
+    "refactor-analysis/23-TECH-DEBT-PRIVACY-LEAKS.md",
+    "refactor-analysis/22-THIRD-INDEPENDENT-CHECK.md",
+    "refactor-analysis/21-SECOND-INDEPENDENT-CHECK.md",
+    "CONTEXT.md",
+    "refactor-analysis/20-MAXIMUM-CHECK-COMPLETE.md",
+    "refactor-analysis/19-DOUBLE-CHECK-FINAL.md",
+    "refactor-analysis/18-RISK-ANALYSIS-FINAL.md",
+    "refactor-analysis/17-VISION-LOCKED.md",
+    "refactor-analysis/16-PRODUCT-VISION-FINAL.md",
+    "refactor-analysis/15-STRATEGIC-ARCHITECTURE.md",
+    "refactor-analysis/14-HISTORY-AND-FINAL-RECOMMENDATION.md",
+    "refactor-analysis/13-DIAGNOSTICS-REPORT.md",
+    "refactor-analysis/12-DECISIONS-RESOLVED.md",
+    "iamaim-chat-current.png",
+    "aim-chat-restored.png"
+  ]
+}

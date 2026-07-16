@@ -1,0 +1,953 @@
+- generic [active] [ref=e1]:
+  - img
+  - generic [ref=e2]:
+    - img
+    - generic [ref=e3]:
+      - banner [ref=e6]:
+        - generic [ref=e7]:
+          - button "Открыть меню навигации" [ref=e8] [cursor=pointer]:
+            - img [ref=e9]
+          - link [ref=e11] [cursor=pointer]:
+            - /url: /
+        - generic [ref=e15]:
+          - textbox "Поиск" [ref=e16]
+          - button "Отправить форму поиска" [ref=e17] [cursor=pointer]:
+            - img [ref=e18]
+        - generic [ref=e20]:
+          - button "Добавить" [ref=e22] [cursor=pointer]:
+            - img [ref=e23]
+          - button "Уведомления" [ref=e26] [cursor=pointer]:
+            - img [ref=e27]
+          - button "перейти в безопасный режим" [ref=e31] [cursor=pointer]:
+            - img [ref=e32]
+          - button "Отключить рекламу" [ref=e36] [cursor=pointer]
+          - button "Вход" [ref=e38] [cursor=pointer]:
+            - generic [ref=e39]: Вход
+      - generic [ref=e42]:
+        - navigation "Облегченная панель навигации" [ref=e43]:
+          - generic [ref=e47]:
+            - list [ref=e48]:
+              - listitem [ref=e49]:
+                - link "Главная" [ref=e50] [cursor=pointer]:
+                  - /url: /
+                  - paragraph [ref=e54]: Главная
+              - listitem [ref=e55]:
+                - link "ЧМ-2026" [ref=e56] [cursor=pointer]:
+                  - /url: https://rutube.sport/chempionat-mira-2026/
+                  - paragraph [ref=e60]: ЧМ-2026
+              - listitem [ref=e61]:
+                - link "Кино и сериалы" [ref=e62] [cursor=pointer]:
+                  - /url: /feeds/movies-serials/
+                  - paragraph [ref=e66]: Кино и сериалы
+              - listitem [ref=e67]:
+                - link "Красота и стиль" [ref=e68] [cursor=pointer]:
+                  - /url: /feeds/stylefashion/
+                  - paragraph [ref=e72]: Красота и стиль
+              - listitem [ref=e73]:
+                - link "RUTUBE x PREMIER" [ref=e74] [cursor=pointer]:
+                  - /url: /feeds/premier/
+                  - paragraph [ref=e78]: RUTUBE x PREMIER
+              - listitem [ref=e79]:
+                - link "RUTUBE x START" [ref=e80] [cursor=pointer]:
+                  - /url: /feeds/start/
+                  - paragraph [ref=e84]: RUTUBE x START
+              - listitem [ref=e85]:
+                - link "RUTUBE для блогеров" [ref=e86] [cursor=pointer]:
+                  - /url: /for_creators
+                  - paragraph [ref=e90]: RUTUBE для блогеров
+              - listitem [ref=e91]:
+                - link "Каталог" [ref=e92] [cursor=pointer]:
+                  - /url: /categories/
+                  - paragraph [ref=e96]: Каталог
+              - listitem [ref=e97]:
+                - link "В топе" [ref=e98] [cursor=pointer]:
+                  - /url: /feeds/top/
+                  - paragraph [ref=e102]: В топе
+              - listitem [ref=e103]:
+                - link "Shorts" [ref=e104] [cursor=pointer]:
+                  - /url: /shorts/?entry_point=3
+                  - paragraph [ref=e108]: Shorts
+              - listitem [ref=e109]:
+                - link "ТВ онлайн" [ref=e110] [cursor=pointer]:
+                  - /url: /feeds/live/
+                  - paragraph [ref=e114]: ТВ онлайн
+              - listitem [ref=e115]:
+                - link "Трансляции" [ref=e116] [cursor=pointer]:
+                  - /url: /feeds/stream/
+                  - paragraph [ref=e120]: Трансляции
+              - listitem [ref=e121]:
+                - link "Моё" [ref=e122] [cursor=pointer]:
+                  - /url: /my/
+                  - paragraph [ref=e126]: Моё
+              - listitem [ref=e127]:
+                - link "Спорт" [ref=e128] [cursor=pointer]:
+                  - /url: /feeds/sport/
+                  - paragraph [ref=e132]: Спорт
+            - separator [ref=e133]
+            - list [ref=e134]:
+              - listitem [ref=e135]:
+                - link "Подписки" [ref=e136] [cursor=pointer]:
+                  - /url: /my/subscriptions/
+                  - paragraph [ref=e140]: Подписки
+              - listitem [ref=e141]:
+                - link "История просмотра" [ref=e142] [cursor=pointer]:
+                  - /url: /my/history/
+                  - paragraph [ref=e146]: История просмотра
+              - listitem [ref=e147]:
+                - link "Плейлисты" [ref=e148] [cursor=pointer]:
+                  - /url: /my/playlists/
+                  - paragraph [ref=e152]: Плейлисты
+              - listitem [ref=e153]:
+                - link "Смотреть позже" [ref=e154] [cursor=pointer]:
+                  - /url: /my/future/
+                  - paragraph [ref=e158]: Смотреть позже
+              - listitem [ref=e159]:
+                - link "Комментарии" [ref=e160] [cursor=pointer]:
+                  - /url: /my/comments/
+                  - paragraph [ref=e164]: Комментарии
+              - listitem [ref=e165]:
+                - link "Понравилось" [ref=e166] [cursor=pointer]:
+                  - /url: /my/liked/
+                  - paragraph [ref=e170]: Понравилось
+            - separator [ref=e171]
+        - main [ref=e172]:
+          - generic [ref=e173]:
+            - generic [ref=e175]:
+              - generic [ref=e176]:
+                - region "Секция баннер" [ref=e177]:
+                  - img "Медицинский центр АРклиник" [ref=e179]
+                - generic [ref=e180]:
+                  - generic [ref=e182]:
+                    - img "Иконка автора на баннере" [ref=e184]
+                    - generic [ref=e185]:
+                      - generic [ref=e186]:
+                        - heading "Медицинский центр АРклиник" [level=1] [ref=e188]
+                        - img "Автор поддерживает благотворительные фонды" [ref=e192]
+                      - paragraph [ref=e194]: 17 подписчиков
+                  - generic [ref=e196]:
+                    - button "Подписаться" [ref=e198] [cursor=pointer]:
+                      - img [ref=e199]
+                      - generic [ref=e201]: Подписаться
+                    - button "Меню действий с каналом" [ref=e203] [cursor=pointer]:
+                      - img [ref=e204]
+              - region "секция навигации" [ref=e206]:
+                - generic [ref=e208]:
+                  - tablist [ref=e212]:
+                    - tab "Главная" [selected] [ref=e213] [cursor=pointer]:
+                      - generic [ref=e214]: Главная
+                    - tab "Видео" [ref=e215] [cursor=pointer]:
+                      - generic [ref=e216]: Видео
+                    - tab "Shorts" [ref=e217] [cursor=pointer]:
+                      - generic [ref=e218]: Shorts
+                    - tab "Плейлисты" [ref=e219] [cursor=pointer]:
+                      - generic [ref=e220]: Плейлисты
+                  - generic "Форма поиска по каналу" [ref=e221]:
+                    - generic [ref=e224]:
+                      - textbox "Поиск по каналу" [ref=e225]
+                      - button "Виртуальная клавиатура" [ref=e226] [cursor=pointer]:
+                        - img [ref=e227]
+                      - img [ref=e230]
+              - region "секция описание канала" [ref=e232]:
+                - paragraph [ref=e233]:
+                  - text: "Arclinic- клиника эстетической медицины в самом центре Санкт-Петербурга. Наш адрес: ул. Верейская, 44/2 Телефон: +7 812 240-83-75 ⠀ Этот канал создан, чтобы рассказывать о косметологии и дерматологии, показывать, как проходят процедуры. Мы хотим делиться с вами своими знаниями и опытом ❤️ ⠀ В наших видео участвуют врачи- косметологи Арклиник. Подробнее о нас на сайте:"
+                  - link "https://clck.ru/3ChTTj" [ref=e234] [cursor=pointer]:
+                    - /url: https://rutube.ru/api/routing/v1/away?target=https%3A%2F%2Fclck.ru%2F3ChTTj&event=channel-description&id=40993271
+                - button "Показать целиком" [ref=e235] [cursor=pointer]:
+                  - generic [ref=e236]: Показать целиком
+                  - img [ref=e237]
+            - generic [ref=e239]:
+              - 'region "закрепленное видео Удаление филлеров под контролем УЗИ. Запись в ватсап + 7 931 244 00 44. #доктор #губы #удалениегуб" [ref=e240]':
+                - generic [ref=e242]:
+                  - img
+                  - generic [ref=e243]:
+                    - button "Показать панель управления плеером"
+                    - generic [ref=e1151]:
+                      - img
+                      - generic:
+                        - generic:
+                          - generic: 00:10
+                          - slider "Ползунок временной шкалы" [ref=e1156] [cursor=pointer]
+                          - generic: 00:56
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - button "Перемотать на 10 секунд назад (горячая клавиша J английская)":
+                                  - img
+                              - generic:
+                                - button "Приостановить видео (горячая клавиша K английская)":
+                                  - img
+                              - generic:
+                                - button "Перемотать на 10 секунд вперёд (горячая клавиша L английская)":
+                                  - img
+                            - generic:
+                              - generic:
+                                - button "Выключить звук (горячая клавиша M английская)":
+                                  - img
+                              - slider "Ползунок громкости"
+                          - generic:
+                            - generic:
+                              - generic:
+                                - button "Открыть настройки видеоплеера":
+                                  - generic:
+                                    - img
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic: HD
+                            - generic:
+                              - button "Перейти в полноэкранный режим (горячая клавиша F английская)":
+                                - img
+                - region "описание видео" [ref=e244]:
+                  - generic [ref=e245]:
+                    - img [ref=e246]
+                    - generic [ref=e248]: Закреплено
+                  - 'link "Удаление филлеров под контролем УЗИ. Запись в ватсап + 7 931 244 00 44. #доктор #губы #удалениегуб" [ref=e249] [cursor=pointer]':
+                    - /url: /video/9285555118f5d33d52d4218ce65a9431
+                  - generic [ref=e250]:
+                    - generic [ref=e251]: Медицинский центр АРклиник
+                    - img "Автор поддерживает благотворительные фонды" [ref=e253]
+                  - generic "дата публикации" [ref=e255]:
+                    - text: 136 просмотров
+                    - text: 2 года назад
+              - generic [ref=e257]:
+                - link "Видео" [ref=e258] [cursor=pointer]:
+                  - /url: /channel/40993271/videos/
+                  - heading "Видео" [level=2] [ref=e259]
+                  - img [ref=e260]
+                - region "Галерея Видео" [ref=e263]:
+                  - list [ref=e266]:
+                    - listitem [ref=e267]:
+                      - article [ref=e268]:
+                        - link "Лазерное омоложение с RED TOUCH в АРклиник Лазерное омоложение с RED TOUCH в АРклиник 12+ 00:36" [ref=e269] [cursor=pointer]:
+                          - /url: /video/8c7b8f5ada716d94369a153e93927474/
+                          - generic [ref=e270]:
+                            - img "Лазерное омоложение с RED TOUCH в АРклиник" [ref=e271]
+                            - img "Лазерное омоложение с RED TOUCH в АРклиник" [ref=e272]
+                          - generic [ref=e273]: 12+
+                          - generic [ref=e274]: 00:36
+                        - generic [ref=e275]:
+                          - generic [ref=e276]:
+                            - link "Лазерное омоложение с RED TOUCH в АРклиник" [ref=e277] [cursor=pointer]:
+                              - /url: /video/8c7b8f5ada716d94369a153e93927474/
+                            - button "Меню действий" [ref=e278] [cursor=pointer]:
+                              - img [ref=e279]
+                          - generic [ref=e283]:
+                            - generic [ref=e285]:
+                              - generic [ref=e286]: "4"
+                              - generic [ref=e287]: просмотра
+                            - paragraph [ref=e289]: 5 месяцев назад
+                    - listitem [ref=e290]:
+                      - article [ref=e291]:
+                        - link "\"Грудь болит-это рак?\" \"Грудь болит-это рак?\" 12+ 27:16" [ref=e292] [cursor=pointer]:
+                          - /url: /video/cc09b6d391dbe2e89ad9a2e37279d02f/
+                          - generic [ref=e293]:
+                            - img "\"Грудь болит-это рак?\"" [ref=e294]
+                            - img "\"Грудь болит-это рак?\"" [ref=e295]
+                          - generic [ref=e296]: 12+
+                          - generic [ref=e297]: 27:16
+                        - generic [ref=e298]:
+                          - generic [ref=e299]:
+                            - link "\"Грудь болит-это рак?\"" [ref=e300] [cursor=pointer]:
+                              - /url: /video/cc09b6d391dbe2e89ad9a2e37279d02f/
+                            - button "Меню действий" [ref=e301] [cursor=pointer]:
+                              - img [ref=e302]
+                          - generic [ref=e306]:
+                            - generic [ref=e308]:
+                              - generic [ref=e309]: "11"
+                              - generic [ref=e310]: просмотров
+                            - paragraph [ref=e312]: 10 месяцев назад
+                    - listitem [ref=e313]:
+                      - article [ref=e314]:
+                        - link "Базовый уход за кожей Базовый уход за кожей 12+ 44:47" [ref=e315] [cursor=pointer]:
+                          - /url: /video/7c99e6f85fa17c0f6d96a87a09f80cbf/
+                          - generic [ref=e316]:
+                            - img "Базовый уход за кожей" [ref=e317]
+                            - img "Базовый уход за кожей" [ref=e318]
+                          - generic [ref=e319]: 12+
+                          - generic [ref=e320]: 44:47
+                        - generic [ref=e321]:
+                          - generic [ref=e322]:
+                            - link "Базовый уход за кожей" [ref=e323] [cursor=pointer]:
+                              - /url: /video/7c99e6f85fa17c0f6d96a87a09f80cbf/
+                            - button "Меню действий" [ref=e324] [cursor=pointer]:
+                              - img [ref=e325]
+                          - generic [ref=e329]:
+                            - generic [ref=e331]:
+                              - generic [ref=e332]: "29"
+                              - generic [ref=e333]: просмотров
+                            - paragraph [ref=e335]: 10 месяцев назад
+                    - listitem [ref=e336]:
+                      - article [ref=e337]:
+                        - 'link "Запись эфира: «Все о гиалуроновой кислоте». Если у вас остались вопросы, задавайте их в комментария Запись эфира: «Все о гиалуроновой кислоте». Если у вас остались вопросы, задавайте их в комментария 12+ 43:13" [ref=e338] [cursor=pointer]':
+                          - /url: /video/e532bcdb783a6f382c3666000da0fe22/
+                          - generic [ref=e339]:
+                            - 'img "Запись эфира: «Все о гиалуроновой кислоте». Если у вас остались вопросы, задавайте их в комментария" [ref=e340]'
+                            - 'img "Запись эфира: «Все о гиалуроновой кислоте». Если у вас остались вопросы, задавайте их в комментария" [ref=e341]'
+                          - generic [ref=e342]: 12+
+                          - generic [ref=e343]: 43:13
+                        - generic [ref=e344]:
+                          - generic [ref=e345]:
+                            - 'link "Запись эфира: «Все о гиалуроновой кислоте». Если у вас остались вопросы, задавайте их в комментария" [ref=e346] [cursor=pointer]':
+                              - /url: /video/e532bcdb783a6f382c3666000da0fe22/
+                            - button "Меню действий" [ref=e347] [cursor=pointer]:
+                              - img [ref=e348]
+                          - generic [ref=e352]:
+                            - generic [ref=e354]:
+                              - generic [ref=e355]: "35"
+                              - generic [ref=e356]: просмотров
+                            - paragraph [ref=e358]: год назад
+                    - listitem [ref=e359]:
+                      - article [ref=e360]:
+                        - link "❗️Сегодня хотим поделиться демонстрацией ❗️Сегодня хотим поделиться демонстрацией 12+ 04:41" [ref=e361] [cursor=pointer]:
+                          - /url: /video/7e11de459e3dd7f36b93753cd1cb99e7/
+                          - generic [ref=e362]:
+                            - img "❗️Сегодня хотим поделиться демонстрацией" [ref=e363]
+                            - img "❗️Сегодня хотим поделиться демонстрацией" [ref=e364]
+                          - generic [ref=e365]: 12+
+                          - generic [ref=e366]: 04:41
+                        - generic [ref=e367]:
+                          - generic [ref=e368]:
+                            - link "❗️Сегодня хотим поделиться демонстрацией" [ref=e369] [cursor=pointer]:
+                              - /url: /video/7e11de459e3dd7f36b93753cd1cb99e7/
+                            - button "Меню действий" [ref=e370] [cursor=pointer]:
+                              - img [ref=e371]
+                          - generic [ref=e375]:
+                            - generic [ref=e377]:
+                              - generic [ref=e378]: "7"
+                              - generic [ref=e379]: просмотров
+                            - paragraph [ref=e381]: год назад
+                    - listitem [ref=e382]:
+                      - article [ref=e383]:
+                        - link "Плазматерапия Плазматерапия 18+ 01:05" [ref=e384] [cursor=pointer]:
+                          - /url: /video/06187ba6c08f224afaff4f53b0e52806/
+                          - generic [ref=e385]:
+                            - img "Плазматерапия" [ref=e386]
+                            - img "Плазматерапия" [ref=e387]
+                          - generic [ref=e388]: 18+
+                          - generic [ref=e389]: 01:05
+                        - generic [ref=e390]:
+                          - generic [ref=e391]:
+                            - link "Плазматерапия" [ref=e392] [cursor=pointer]:
+                              - /url: /video/06187ba6c08f224afaff4f53b0e52806/
+                            - button "Меню действий" [ref=e393] [cursor=pointer]:
+                              - img [ref=e394]
+                          - generic [ref=e398]:
+                            - generic [ref=e400]:
+                              - generic [ref=e401]: "22"
+                              - generic [ref=e402]: просмотра
+                            - paragraph [ref=e404]: год назад
+                    - listitem [ref=e405]:
+                      - article [ref=e406]:
+                        - link "Процедура _сухие подмышки_ Процедура _сухие подмышки_ 12+ 00:51" [ref=e407] [cursor=pointer]:
+                          - /url: /video/e8c34c74ddb20b84292c3b39d5156e30/
+                          - generic [ref=e408]:
+                            - img "Процедура _сухие подмышки_" [ref=e409]
+                            - img "Процедура _сухие подмышки_" [ref=e410]
+                          - generic [ref=e411]: 12+
+                          - generic [ref=e412]: 00:51
+                        - generic [ref=e413]:
+                          - generic [ref=e414]:
+                            - link "Процедура _сухие подмышки_" [ref=e415] [cursor=pointer]:
+                              - /url: /video/e8c34c74ddb20b84292c3b39d5156e30/
+                            - button "Меню действий" [ref=e416] [cursor=pointer]:
+                              - img [ref=e417]
+                          - generic [ref=e421]:
+                            - generic [ref=e423]:
+                              - generic [ref=e424]: "16"
+                              - generic [ref=e425]: просмотров
+                            - paragraph [ref=e427]: год назад
+                    - listitem [ref=e428]:
+                      - article [ref=e429]:
+                        - link "Плазмотерапия Плазмотерапия 18+ 01:06" [ref=e430] [cursor=pointer]:
+                          - /url: /video/398fda0c1a3b1b9232af61735e26fe90/
+                          - generic [ref=e431]:
+                            - img "Плазмотерапия" [ref=e432]
+                            - img "Плазмотерапия" [ref=e433]
+                          - generic [ref=e434]: 18+
+                          - generic [ref=e435]: 01:06
+                        - generic [ref=e436]:
+                          - generic [ref=e437]:
+                            - link "Плазмотерапия" [ref=e438] [cursor=pointer]:
+                              - /url: /video/398fda0c1a3b1b9232af61735e26fe90/
+                            - button "Меню действий" [ref=e439] [cursor=pointer]:
+                              - img [ref=e440]
+                          - generic [ref=e444]:
+                            - generic [ref=e446]:
+                              - generic [ref=e447]: "13"
+                              - generic [ref=e448]: просмотров
+                            - paragraph [ref=e450]: год назад
+                    - listitem [ref=e451]:
+                      - article [ref=e452]:
+                        - link "Контурная пластика филлерами в АРклиник Контурная пластика филлерами в АРклиник 12+ 05:13" [ref=e453] [cursor=pointer]:
+                          - /url: /video/55793099c6b1ceda4317844d531c9bf9/
+                          - generic [ref=e454]:
+                            - img "Контурная пластика филлерами в АРклиник" [ref=e455]
+                            - img "Контурная пластика филлерами в АРклиник" [ref=e456]
+                          - generic [ref=e457]: 12+
+                          - generic [ref=e458]: 05:13
+                        - generic [ref=e459]:
+                          - generic [ref=e460]:
+                            - link "Контурная пластика филлерами в АРклиник" [ref=e461] [cursor=pointer]:
+                              - /url: /video/55793099c6b1ceda4317844d531c9bf9/
+                            - button "Меню действий" [ref=e462] [cursor=pointer]:
+                              - img [ref=e463]
+                          - generic [ref=e467]:
+                            - generic [ref=e469]:
+                              - generic [ref=e470]: "29"
+                              - generic [ref=e471]: просмотров
+                            - paragraph [ref=e473]: год назад
+                    - listitem [ref=e474]:
+                      - article [ref=e475]:
+                        - link "Как_работает_фотодинамическая_терапия_REVIXAN Как_работает_фотодинамическая_терапия_REVIXAN 12+ 01:04" [ref=e476] [cursor=pointer]:
+                          - /url: /video/84b595eded281c765ef7ec4bc1e11f82/
+                          - generic [ref=e477]:
+                            - img "Как_работает_фотодинамическая_терапия_REVIXAN" [ref=e478]
+                            - img "Как_работает_фотодинамическая_терапия_REVIXAN" [ref=e479]
+                          - generic [ref=e480]: 12+
+                          - generic [ref=e481]: 01:04
+                        - generic [ref=e482]:
+                          - generic [ref=e483]:
+                            - link "Как_работает_фотодинамическая_терапия_REVIXAN" [ref=e484] [cursor=pointer]:
+                              - /url: /video/84b595eded281c765ef7ec4bc1e11f82/
+                            - button "Меню действий" [ref=e485] [cursor=pointer]:
+                              - img [ref=e486]
+                          - generic [ref=e490]:
+                            - generic [ref=e492]:
+                              - generic [ref=e493]: "54"
+                              - generic [ref=e494]: просмотра
+                            - paragraph [ref=e496]: год назад
+                    - listitem [ref=e497]:
+                      - article [ref=e498]:
+                        - link "айкун айкун 12+ 02:56" [ref=e499] [cursor=pointer]:
+                          - /url: /video/af353888b11363ffc6752c1a0634851f/
+                          - generic [ref=e500]:
+                            - img "айкун" [ref=e501]
+                            - img "айкун" [ref=e502]
+                          - generic [ref=e503]: 12+
+                          - generic [ref=e504]: 02:56
+                        - generic [ref=e505]:
+                          - generic [ref=e506]:
+                            - link "айкун" [ref=e507] [cursor=pointer]:
+                              - /url: /video/af353888b11363ffc6752c1a0634851f/
+                            - button "Меню действий" [ref=e508] [cursor=pointer]:
+                              - img [ref=e509]
+                          - generic [ref=e513]:
+                            - generic [ref=e515]:
+                              - generic [ref=e516]: "117"
+                              - generic [ref=e517]: просмотров
+                            - paragraph [ref=e519]: год назад
+                    - listitem [ref=e520]:
+                      - article [ref=e521]:
+                        - link "Лазерное омоложение лица CO2+RF Лазерное омоложение лица CO2+RF 12+ 06:53" [ref=e522] [cursor=pointer]:
+                          - /url: /video/04db237155881a35208be05caa7e3333/
+                          - generic [ref=e523]:
+                            - img "Лазерное омоложение лица CO2+RF" [ref=e524]
+                            - img "Лазерное омоложение лица CO2+RF" [ref=e525]
+                          - generic [ref=e526]: 12+
+                          - generic [ref=e527]: 06:53
+                        - generic [ref=e528]:
+                          - generic [ref=e529]:
+                            - link "Лазерное омоложение лица CO2+RF" [ref=e530] [cursor=pointer]:
+                              - /url: /video/04db237155881a35208be05caa7e3333/
+                            - button "Меню действий" [ref=e531] [cursor=pointer]:
+                              - img [ref=e532]
+                          - generic [ref=e536]:
+                            - generic [ref=e538]:
+                              - generic [ref=e539]: "124"
+                              - generic [ref=e540]: просмотра
+                            - paragraph [ref=e542]: год назад
+                    - listitem [ref=e543]:
+                      - article [ref=e544]:
+                        - link "Биоревитализация после лазерной шлифовки Биоревитализация после лазерной шлифовки 12+ 02:00" [ref=e545] [cursor=pointer]:
+                          - /url: /video/5c9d6e58d4d683f778da6f7cb6d0d4f9/
+                          - generic [ref=e546]:
+                            - img "Биоревитализация после лазерной шлифовки" [ref=e547]
+                            - img "Биоревитализация после лазерной шлифовки" [ref=e548]
+                          - generic [ref=e549]: 12+
+                          - generic [ref=e550]: 02:00
+                        - generic [ref=e551]:
+                          - generic [ref=e552]:
+                            - link "Биоревитализация после лазерной шлифовки" [ref=e553] [cursor=pointer]:
+                              - /url: /video/5c9d6e58d4d683f778da6f7cb6d0d4f9/
+                            - button "Меню действий" [ref=e554] [cursor=pointer]:
+                              - img [ref=e555]
+                          - generic [ref=e559]:
+                            - generic [ref=e561]:
+                              - generic [ref=e562]: "64"
+                              - generic [ref=e563]: просмотра
+                            - paragraph [ref=e565]: год назад
+                    - listitem [ref=e566]:
+                      - article [ref=e567]:
+                        - link "Контрольный осмотр у врача после лазерной шлифовки Контрольный осмотр у врача после лазерной шлифовки 12+ 00:40" [ref=e568] [cursor=pointer]:
+                          - /url: /video/b223964d1529adf66008936dfb7f7842/
+                          - generic [ref=e569]:
+                            - img "Контрольный осмотр у врача после лазерной шлифовки" [ref=e570]
+                            - img "Контрольный осмотр у врача после лазерной шлифовки" [ref=e571]
+                          - generic [ref=e572]: 12+
+                          - generic [ref=e573]: 00:40
+                        - generic [ref=e574]:
+                          - generic [ref=e575]:
+                            - link "Контрольный осмотр у врача после лазерной шлифовки" [ref=e576] [cursor=pointer]:
+                              - /url: /video/b223964d1529adf66008936dfb7f7842/
+                            - button "Меню действий" [ref=e577] [cursor=pointer]:
+                              - img [ref=e578]
+                          - generic [ref=e582]:
+                            - generic [ref=e584]:
+                              - generic [ref=e585]: "5"
+                              - generic [ref=e586]: просмотров
+                            - paragraph [ref=e588]: год назад
+                    - listitem [ref=e589]:
+                      - article [ref=e590]:
+                        - link "Менопауза. Как облегчить симптомы и сохранить хорошее качество жизни? Менопауза. Как облегчить симптомы и сохранить хорошее качество жизни? 12+ 50:01" [ref=e591] [cursor=pointer]:
+                          - /url: /video/a4afbf154967849307c24979714790d4/
+                          - generic [ref=e592]:
+                            - img "Менопауза. Как облегчить симптомы и сохранить хорошее качество жизни?" [ref=e593]
+                            - img "Менопауза. Как облегчить симптомы и сохранить хорошее качество жизни?" [ref=e594]
+                          - generic [ref=e595]: 12+
+                          - generic [ref=e596]: 50:01
+                        - generic [ref=e597]:
+                          - generic [ref=e598]:
+                            - link "Менопауза. Как облегчить симптомы и сохранить хорошее качество жизни?" [ref=e599] [cursor=pointer]:
+                              - /url: /video/a4afbf154967849307c24979714790d4/
+                            - button "Меню действий" [ref=e600] [cursor=pointer]:
+                              - img [ref=e601]
+                          - generic [ref=e605]:
+                            - generic [ref=e607]:
+                              - generic [ref=e608]: "17"
+                              - generic [ref=e609]: просмотров
+                            - paragraph [ref=e611]: год назад
+                    - listitem [ref=e612]:
+                      - article [ref=e613]:
+                        - link "Выпадение волос у мужчин и женщин во всем ли виновата андрогенная алопеция? Выпадение волос у мужчин и женщин во всем ли виновата андрогенная алопеция? 12+ 35:47" [ref=e614] [cursor=pointer]:
+                          - /url: /video/5020c64811e6ca9a5c1423afbd6d560d/
+                          - generic [ref=e615]:
+                            - img "Выпадение волос у мужчин и женщин во всем ли виновата андрогенная алопеция?" [ref=e616]
+                            - img "Выпадение волос у мужчин и женщин во всем ли виновата андрогенная алопеция?" [ref=e617]
+                          - generic [ref=e618]: 12+
+                          - generic [ref=e619]: 35:47
+                        - generic [ref=e620]:
+                          - generic [ref=e621]:
+                            - link "Выпадение волос у мужчин и женщин во всем ли виновата андрогенная алопеция?" [ref=e622] [cursor=pointer]:
+                              - /url: /video/5020c64811e6ca9a5c1423afbd6d560d/
+                            - button "Меню действий" [ref=e623] [cursor=pointer]:
+                              - img [ref=e624]
+                          - generic [ref=e628]:
+                            - generic [ref=e630]:
+                              - generic [ref=e631]: "85"
+                              - generic [ref=e632]: просмотров
+                            - paragraph [ref=e634]: год назад
+                    - listitem [ref=e635]:
+                      - article [ref=e636]:
+                        - 'link "Интимная косметология: как это может помочь в личной жизни? Интимная косметология: как это может помочь в личной жизни? 12+ 40:17" [ref=e637] [cursor=pointer]':
+                          - /url: /video/b130417088b8f3bcabe50dd86e1349a5/
+                          - generic [ref=e638]:
+                            - 'img "Интимная косметология: как это может помочь в личной жизни?" [ref=e639]'
+                            - 'img "Интимная косметология: как это может помочь в личной жизни?" [ref=e640]'
+                          - generic [ref=e641]: 12+
+                          - generic [ref=e642]: 40:17
+                        - generic [ref=e643]:
+                          - generic [ref=e644]:
+                            - 'link "Интимная косметология: как это может помочь в личной жизни?" [ref=e645] [cursor=pointer]':
+                              - /url: /video/b130417088b8f3bcabe50dd86e1349a5/
+                            - button "Меню действий" [ref=e646] [cursor=pointer]:
+                              - img [ref=e647]
+                          - generic [ref=e651]:
+                            - generic [ref=e653]:
+                              - generic [ref=e654]: "8"
+                              - generic [ref=e655]: просмотров
+                            - paragraph [ref=e657]: год назад
+                    - listitem [ref=e658]:
+                      - article [ref=e659]:
+                        - 'link "Новогодняя магия: как выглядеть на все 100% в праздничные дни! Новогодняя магия: как выглядеть на все 100% в праздничные дни! 12+ 18:27" [ref=e660] [cursor=pointer]':
+                          - /url: /video/ce657400be410d700f88460bbb115e31/
+                          - generic [ref=e661]:
+                            - 'img "Новогодняя магия: как выглядеть на все 100% в праздничные дни!" [ref=e662]'
+                            - 'img "Новогодняя магия: как выглядеть на все 100% в праздничные дни!" [ref=e663]'
+                          - generic [ref=e664]: 12+
+                          - generic [ref=e665]: 18:27
+                        - generic [ref=e666]:
+                          - generic [ref=e667]:
+                            - 'link "Новогодняя магия: как выглядеть на все 100% в праздничные дни!" [ref=e668] [cursor=pointer]':
+                              - /url: /video/ce657400be410d700f88460bbb115e31/
+                            - button "Меню действий" [ref=e669] [cursor=pointer]:
+                              - img [ref=e670]
+                          - generic [ref=e674]:
+                            - generic [ref=e676]:
+                              - generic [ref=e677]: "42"
+                              - generic [ref=e678]: просмотра
+                            - paragraph [ref=e680]: год назад
+                    - listitem [ref=e681]:
+                      - article [ref=e682]:
+                        - 'link "\"Акне в любом возрасте: причины, лечение и эффективные методы борьбы\" \"Акне в любом возрасте: причины, лечение и эффективные методы борьбы\" 12+ 28:25" [ref=e683] [cursor=pointer]':
+                          - /url: /video/62d09f893ba92b631a67bf510d6f04c2/
+                          - generic [ref=e684]:
+                            - 'img "\"Акне в любом возрасте: причины, лечение и эффективные методы борьбы\"" [ref=e685]'
+                            - 'img "\"Акне в любом возрасте: причины, лечение и эффективные методы борьбы\"" [ref=e686]'
+                          - generic [ref=e687]: 12+
+                          - generic [ref=e688]: 28:25
+                        - generic [ref=e689]:
+                          - generic [ref=e690]:
+                            - 'link "\"Акне в любом возрасте: причины, лечение и эффективные методы борьбы\"" [ref=e691] [cursor=pointer]':
+                              - /url: /video/62d09f893ba92b631a67bf510d6f04c2/
+                            - button "Меню действий" [ref=e692] [cursor=pointer]:
+                              - img [ref=e693]
+                          - generic [ref=e697]:
+                            - generic [ref=e699]:
+                              - generic [ref=e700]: "33"
+                              - generic [ref=e701]: просмотра
+                            - paragraph [ref=e703]: 2 года назад
+                    - listitem [ref=e704]:
+                      - article [ref=e705]:
+                        - link "\"Польза и Риски менопаузальной гормональной терапии.\" \"Польза и Риски менопаузальной гормональной терапии.\" 12+ 49:35" [ref=e706] [cursor=pointer]:
+                          - /url: /video/d3cb455f1770a5d49bf8f20738f264fa/
+                          - generic [ref=e707]:
+                            - img "\"Польза и Риски менопаузальной гормональной терапии.\"" [ref=e708]
+                            - img "\"Польза и Риски менопаузальной гормональной терапии.\"" [ref=e709]
+                          - generic [ref=e710]: 12+
+                          - generic [ref=e711]: 49:35
+                        - generic [ref=e712]:
+                          - generic [ref=e713]:
+                            - link "\"Польза и Риски менопаузальной гормональной терапии.\"" [ref=e714] [cursor=pointer]:
+                              - /url: /video/d3cb455f1770a5d49bf8f20738f264fa/
+                            - button "Меню действий" [ref=e715] [cursor=pointer]:
+                              - img [ref=e716]
+                          - generic [ref=e720]:
+                            - generic [ref=e722]:
+                              - generic [ref=e723]: "11"
+                              - generic [ref=e724]: просмотров
+                            - paragraph [ref=e726]: 2 года назад
+                  - button "следующий слайд" [ref=e728] [cursor=pointer]:
+                    - img [ref=e731]
+              - generic [ref=e734]:
+                - link "Shorts" [ref=e735] [cursor=pointer]:
+                  - /url: /channel/40993271/shorts/
+                  - heading "Shorts" [level=2] [ref=e736]
+                  - img [ref=e737]
+                - region "Галерея Shorts" [ref=e740]:
+                  - list [ref=e743]:
+                    - listitem [ref=e744]:
+                      - article [ref=e745]:
+                        - link "Лазерное удаление новообразований = чистая кожа 12+" [ref=e746] [cursor=pointer]:
+                          - /url: /shorts/bf2e6b4fdd99a258022236bfccbadbc5/
+                          - img "Лазерное удаление новообразований = чистая кожа" [ref=e748]
+                          - generic [ref=e749]: 12+
+                        - generic [ref=e750]:
+                          - generic [ref=e751]:
+                            - link "Лазерное удаление новообразований = чистая кожа" [ref=e752] [cursor=pointer]:
+                              - /url: /shorts/bf2e6b4fdd99a258022236bfccbadbc5/
+                            - button "Меню действий" [ref=e753] [cursor=pointer]:
+                              - img [ref=e754]
+                          - generic [ref=e760]:
+                            - generic [ref=e761]: "3"
+                            - generic [ref=e762]: просмотра
+                    - listitem [ref=e763]:
+                      - article [ref=e764]:
+                        - link "Боитесь ли вы гормонов? 12+" [ref=e765] [cursor=pointer]:
+                          - /url: /shorts/29b1b2f70069ebb7386cd73b2ea9457b/
+                          - img "Боитесь ли вы гормонов?" [ref=e767]
+                          - generic [ref=e768]: 12+
+                        - generic [ref=e769]:
+                          - generic [ref=e770]:
+                            - link "Боитесь ли вы гормонов?" [ref=e771] [cursor=pointer]:
+                              - /url: /shorts/29b1b2f70069ebb7386cd73b2ea9457b/
+                            - button "Меню действий" [ref=e772] [cursor=pointer]:
+                              - img [ref=e773]
+                          - generic [ref=e779]:
+                            - generic [ref=e780]: "1"
+                            - generic [ref=e781]: просмотр
+                    - listitem [ref=e782]:
+                      - article [ref=e783]:
+                        - link "Часть 3. Продолжаем знакомить вас с командой профессионалов Arclinic. 12+" [ref=e784] [cursor=pointer]:
+                          - /url: /shorts/a94ae5e31a2e8eb3fd58b484048aa8ef/
+                          - img "Часть 3. Продолжаем знакомить вас с командой профессионалов Arclinic." [ref=e786]
+                          - generic [ref=e787]: 12+
+                        - generic [ref=e788]:
+                          - generic [ref=e789]:
+                            - link "Часть 3. Продолжаем знакомить вас с командой профессионалов Arclinic." [ref=e790] [cursor=pointer]:
+                              - /url: /shorts/a94ae5e31a2e8eb3fd58b484048aa8ef/
+                            - button "Меню действий" [ref=e791] [cursor=pointer]:
+                              - img [ref=e792]
+                          - generic [ref=e798]:
+                            - generic [ref=e799]: "3"
+                            - generic [ref=e800]: просмотра
+                    - listitem [ref=e801]:
+                      - article [ref=e802]:
+                        - 'link "SWT-технология: очередной маркетинг или реальный прорыв в косметологии? 12+" [ref=e803] [cursor=pointer]':
+                          - /url: /shorts/aeb6ae9ecb85e2fde4abb8dd8ba88bbf/
+                          - 'img "SWT-технология: очередной маркетинг или реальный прорыв в косметологии?" [ref=e805]'
+                          - generic [ref=e806]: 12+
+                        - generic [ref=e807]:
+                          - generic [ref=e808]:
+                            - 'link "SWT-технология: очередной маркетинг или реальный прорыв в косметологии?" [ref=e809] [cursor=pointer]':
+                              - /url: /shorts/aeb6ae9ecb85e2fde4abb8dd8ba88bbf/
+                            - button "Меню действий" [ref=e810] [cursor=pointer]:
+                              - img [ref=e811]
+                          - generic [ref=e817]:
+                            - generic [ref=e818]: "6"
+                            - generic [ref=e819]: просмотров
+                    - listitem [ref=e820]:
+                      - article [ref=e821]:
+                        - 'link "Лазерное удаление новообразований: одна процедура и кожа идеальна. 12+" [ref=e822] [cursor=pointer]':
+                          - /url: /shorts/1c0c3a2ae1f50fccc3db9792af4f2d26/
+                          - 'img "Лазерное удаление новообразований: одна процедура и кожа идеальна." [ref=e824]'
+                          - generic [ref=e825]: 12+
+                        - generic [ref=e826]:
+                          - generic [ref=e827]:
+                            - 'link "Лазерное удаление новообразований: одна процедура и кожа идеальна." [ref=e828] [cursor=pointer]':
+                              - /url: /shorts/1c0c3a2ae1f50fccc3db9792af4f2d26/
+                            - button "Меню действий" [ref=e829] [cursor=pointer]:
+                              - img [ref=e830]
+                          - generic [ref=e836]:
+                            - generic [ref=e837]: "2"
+                            - generic [ref=e838]: просмотра
+                    - listitem [ref=e839]:
+                      - article [ref=e840]:
+                        - 'link "Не имплант, а свой коллаген: как Ellagen 1000 возвращает объём и упругость 12+" [ref=e841] [cursor=pointer]':
+                          - /url: /shorts/320ed992acd5522fc98498d428d4491b/
+                          - 'img "Не имплант, а свой коллаген: как Ellagen 1000 возвращает объём и упругость" [ref=e843]'
+                          - generic [ref=e844]: 12+
+                        - generic [ref=e845]:
+                          - generic [ref=e846]:
+                            - 'link "Не имплант, а свой коллаген: как Ellagen 1000 возвращает объём и упругость" [ref=e847] [cursor=pointer]':
+                              - /url: /shorts/320ed992acd5522fc98498d428d4491b/
+                            - button "Меню действий" [ref=e848] [cursor=pointer]:
+                              - img [ref=e849]
+                          - generic [ref=e855]:
+                            - generic [ref=e856]: "3"
+                            - generic [ref=e857]: просмотра
+                    - listitem [ref=e858]:
+                      - article [ref=e859]:
+                        - link "Продолжаем знакомить вас с командой профессионалов Arclinic. 12+" [ref=e860] [cursor=pointer]:
+                          - /url: /shorts/1a7d311f99991eeb8222262db18bf4dc/
+                          - img "Продолжаем знакомить вас с командой профессионалов Arclinic." [ref=e862]
+                          - generic [ref=e863]: 12+
+                        - generic [ref=e864]:
+                          - generic [ref=e865]:
+                            - link "Продолжаем знакомить вас с командой профессионалов Arclinic." [ref=e866] [cursor=pointer]:
+                              - /url: /shorts/1a7d311f99991eeb8222262db18bf4dc/
+                            - button "Меню действий" [ref=e867] [cursor=pointer]:
+                              - img [ref=e868]
+                          - generic [ref=e874]:
+                            - generic [ref=e875]: "2"
+                            - generic [ref=e876]: просмотра
+                    - listitem [ref=e877]:
+                      - article [ref=e878]:
+                        - link "Вы просыпаетесь утром и чувствуете, что уже устали. 12+" [ref=e879] [cursor=pointer]:
+                          - /url: /shorts/c807680dbf0283a51d301366b64f31d9/
+                          - img "Вы просыпаетесь утром и чувствуете, что уже устали." [ref=e881]
+                          - generic [ref=e882]: 12+
+                        - generic [ref=e883]:
+                          - generic [ref=e884]:
+                            - link "Вы просыпаетесь утром и чувствуете, что уже устали." [ref=e885] [cursor=pointer]:
+                              - /url: /shorts/c807680dbf0283a51d301366b64f31d9/
+                            - button "Меню действий" [ref=e886] [cursor=pointer]:
+                              - img [ref=e887]
+                          - generic [ref=e893]:
+                            - generic [ref=e894]: "3"
+                            - generic [ref=e895]: просмотра
+                    - listitem [ref=e896]:
+                      - article [ref=e897]:
+                        - link "Продолжаем знакомить вас с командой профессионалов Arclinic. 12+" [ref=e898] [cursor=pointer]:
+                          - /url: /shorts/741b9e2f36829a650e2075d9fc0349c9/
+                          - img "Продолжаем знакомить вас с командой профессионалов Arclinic." [ref=e900]
+                          - generic [ref=e901]: 12+
+                        - generic [ref=e902]:
+                          - generic [ref=e903]:
+                            - link "Продолжаем знакомить вас с командой профессионалов Arclinic." [ref=e904] [cursor=pointer]:
+                              - /url: /shorts/741b9e2f36829a650e2075d9fc0349c9/
+                            - button "Меню действий" [ref=e905] [cursor=pointer]:
+                              - img [ref=e906]
+                          - generic [ref=e912]:
+                            - generic [ref=e913]: "1"
+                            - generic [ref=e914]: просмотр
+                    - listitem [ref=e915]:
+                      - article [ref=e916]:
+                        - link "Работа врача-косметолога 12+" [ref=e917] [cursor=pointer]:
+                          - /url: /shorts/354fb92035ea97138f2bc4868c34e291/
+                          - img "Работа врача-косметолога" [ref=e919]
+                          - generic [ref=e920]: 12+
+                        - generic [ref=e921]:
+                          - generic [ref=e922]:
+                            - link "Работа врача-косметолога" [ref=e923] [cursor=pointer]:
+                              - /url: /shorts/354fb92035ea97138f2bc4868c34e291/
+                            - button "Меню действий" [ref=e924] [cursor=pointer]:
+                              - img [ref=e925]
+                          - generic [ref=e931]:
+                            - generic [ref=e932]: "5"
+                            - generic [ref=e933]: просмотров
+                    - listitem [ref=e934]:
+                      - article [ref=e935]:
+                        - link "Андрогенная алопеция - есть решение! 12+" [ref=e936] [cursor=pointer]:
+                          - /url: /shorts/27fa3a42527219034102ce3a9277d791/
+                          - img "Андрогенная алопеция - есть решение!" [ref=e938]
+                          - generic [ref=e939]: 12+
+                        - generic [ref=e940]:
+                          - generic [ref=e941]:
+                            - link "Андрогенная алопеция - есть решение!" [ref=e942] [cursor=pointer]:
+                              - /url: /shorts/27fa3a42527219034102ce3a9277d791/
+                            - button "Меню действий" [ref=e943] [cursor=pointer]:
+                              - img [ref=e944]
+                          - generic [ref=e950]:
+                            - generic [ref=e951]: "4"
+                            - generic [ref=e952]: просмотра
+                    - listitem [ref=e953]:
+                      - article [ref=e954]:
+                        - 'link "ICOONE: когда технологии делают массаж в 3 раза эффективнее. 12+" [ref=e955] [cursor=pointer]':
+                          - /url: /shorts/5575ffe526fc5adac1b6676152f5abe4/
+                          - 'img "ICOONE: когда технологии делают массаж в 3 раза эффективнее." [ref=e957]'
+                          - generic [ref=e958]: 12+
+                        - generic [ref=e959]:
+                          - generic [ref=e960]:
+                            - 'link "ICOONE: когда технологии делают массаж в 3 раза эффективнее." [ref=e961] [cursor=pointer]':
+                              - /url: /shorts/5575ffe526fc5adac1b6676152f5abe4/
+                            - button "Меню действий" [ref=e962] [cursor=pointer]:
+                              - img [ref=e963]
+                          - generic [ref=e969]:
+                            - generic [ref=e970]: "1"
+                            - generic [ref=e971]: просмотр
+                    - listitem [ref=e972]:
+                      - article [ref=e973]:
+                        - link "Что будет с губами, если в разные коррекции использовать разные препараты? 12+" [ref=e974] [cursor=pointer]:
+                          - /url: /shorts/75e22bdcd2b00e949d333e3570caf01d/
+                          - img "Что будет с губами, если в разные коррекции использовать разные препараты?" [ref=e976]
+                          - generic [ref=e977]: 12+
+                        - generic [ref=e978]:
+                          - generic [ref=e979]:
+                            - link "Что будет с губами, если в разные коррекции использовать разные препараты?" [ref=e980] [cursor=pointer]:
+                              - /url: /shorts/75e22bdcd2b00e949d333e3570caf01d/
+                            - button "Меню действий" [ref=e981] [cursor=pointer]:
+                              - img [ref=e982]
+                          - generic [ref=e988]:
+                            - generic [ref=e989]: "5"
+                            - generic [ref=e990]: просмотров
+                    - listitem [ref=e991]:
+                      - article [ref=e992]:
+                        - 'link "Фотоомоложение на Candela Nordlys в Arclinic: когда хочется просто сиять, а не маскировать. 12+" [ref=e993] [cursor=pointer]':
+                          - /url: /shorts/a2e26b57af305038837f5f1ebad6b47c/
+                          - 'img "Фотоомоложение на Candela Nordlys в Arclinic: когда хочется просто сиять, а не маскировать." [ref=e995]'
+                          - generic [ref=e996]: 12+
+                        - generic [ref=e997]:
+                          - generic [ref=e998]:
+                            - 'link "Фотоомоложение на Candela Nordlys в Arclinic: когда хочется просто сиять, а не маскировать." [ref=e999] [cursor=pointer]':
+                              - /url: /shorts/a2e26b57af305038837f5f1ebad6b47c/
+                            - button "Меню действий" [ref=e1000] [cursor=pointer]:
+                              - img [ref=e1001]
+                          - generic [ref=e1007]:
+                            - generic [ref=e1008]: "3"
+                            - generic [ref=e1009]: просмотра
+                    - listitem [ref=e1010]:
+                      - article [ref=e1011]:
+                        - link "Когда нужно делать УЗИ мягких тканей и лимфоузлов? 12+" [ref=e1012] [cursor=pointer]:
+                          - /url: /shorts/aa29271ff7f47c1451acf95548cb6ca7/
+                          - img "Когда нужно делать УЗИ мягких тканей и лимфоузлов?" [ref=e1014]
+                          - generic [ref=e1015]: 12+
+                        - generic [ref=e1016]:
+                          - generic [ref=e1017]:
+                            - link "Когда нужно делать УЗИ мягких тканей и лимфоузлов?" [ref=e1018] [cursor=pointer]:
+                              - /url: /shorts/aa29271ff7f47c1451acf95548cb6ca7/
+                            - button "Меню действий" [ref=e1019] [cursor=pointer]:
+                              - img [ref=e1020]
+                          - generic [ref=e1026]:
+                            - generic [ref=e1027]: "2"
+                            - generic [ref=e1028]: просмотра
+                    - listitem [ref=e1029]:
+                      - article [ref=e1030]:
+                        - link "Знакомство с врачами 12+" [ref=e1031] [cursor=pointer]:
+                          - /url: /shorts/acc4a33d1bb00692b0a93aad22594c57/
+                          - img "Знакомство с врачами" [ref=e1033]
+                          - generic [ref=e1034]: 12+
+                        - generic [ref=e1035]:
+                          - generic [ref=e1036]:
+                            - link "Знакомство с врачами" [ref=e1037] [cursor=pointer]:
+                              - /url: /shorts/acc4a33d1bb00692b0a93aad22594c57/
+                            - button "Меню действий" [ref=e1038] [cursor=pointer]:
+                              - img [ref=e1039]
+                          - generic [ref=e1045]:
+                            - generic [ref=e1046]: "3"
+                            - generic [ref=e1047]: просмотра
+                    - listitem [ref=e1048]:
+                      - article [ref=e1049]:
+                        - 'link "Контурная пластика: не \"больше\", а гармоничнее. 12+" [ref=e1050] [cursor=pointer]':
+                          - /url: /shorts/1163e5826a38895370b96d67cb7e14db/
+                          - 'img "Контурная пластика: не \"больше\", а гармоничнее." [ref=e1052]'
+                          - generic [ref=e1053]: 12+
+                        - generic [ref=e1054]:
+                          - generic [ref=e1055]:
+                            - 'link "Контурная пластика: не \"больше\", а гармоничнее." [ref=e1056] [cursor=pointer]':
+                              - /url: /shorts/1163e5826a38895370b96d67cb7e14db/
+                            - button "Меню действий" [ref=e1057] [cursor=pointer]:
+                              - img [ref=e1058]
+                          - generic [ref=e1064]:
+                            - generic [ref=e1065]: "1"
+                            - generic [ref=e1066]: просмотр
+                    - listitem [ref=e1067]:
+                      - article [ref=e1068]:
+                        - link "Почему вес стоит, а тело меняется? Смотрите в новом видео. 12+" [ref=e1069] [cursor=pointer]:
+                          - /url: /shorts/7252aca5c1050abe21a8dd4bd88e3752/
+                          - img "Почему вес стоит, а тело меняется? Смотрите в новом видео." [ref=e1071]
+                          - generic [ref=e1072]: 12+
+                        - generic [ref=e1073]:
+                          - generic [ref=e1074]:
+                            - link "Почему вес стоит, а тело меняется? Смотрите в новом видео." [ref=e1075] [cursor=pointer]:
+                              - /url: /shorts/7252aca5c1050abe21a8dd4bd88e3752/
+                            - button "Меню действий" [ref=e1076] [cursor=pointer]:
+                              - img [ref=e1077]
+                          - generic [ref=e1083]:
+                            - generic [ref=e1084]: "3"
+                            - generic [ref=e1085]: просмотра
+                    - listitem [ref=e1086]:
+                      - article [ref=e1087]:
+                        - link "Какие инъекционные процедуры хорошо работают с пигментацией? 12+" [ref=e1088] [cursor=pointer]:
+                          - /url: /shorts/2406ab81dde5344607ca22dad8d7be04/
+                          - img "Какие инъекционные процедуры хорошо работают с пигментацией?" [ref=e1090]
+                          - generic [ref=e1091]: 12+
+                        - generic [ref=e1092]:
+                          - generic [ref=e1093]:
+                            - link "Какие инъекционные процедуры хорошо работают с пигментацией?" [ref=e1094] [cursor=pointer]:
+                              - /url: /shorts/2406ab81dde5344607ca22dad8d7be04/
+                            - button "Меню действий" [ref=e1095] [cursor=pointer]:
+                              - img [ref=e1096]
+                          - generic [ref=e1102]:
+                            - generic [ref=e1103]: "2"
+                            - generic [ref=e1104]: просмотра
+                    - listitem [ref=e1105]:
+                      - article [ref=e1106]:
+                        - link "Сегодня у нашей пациентки Ксении - день красивых перемен. 12+" [ref=e1107] [cursor=pointer]:
+                          - /url: /shorts/5886e96e754918044922d973d0f20d16/
+                          - img "Сегодня у нашей пациентки Ксении - день красивых перемен." [ref=e1109]
+                          - generic [ref=e1110]: 12+
+                        - generic [ref=e1111]:
+                          - generic [ref=e1112]:
+                            - link "Сегодня у нашей пациентки Ксении - день красивых перемен." [ref=e1113] [cursor=pointer]:
+                              - /url: /shorts/5886e96e754918044922d973d0f20d16/
+                            - button "Меню действий" [ref=e1114] [cursor=pointer]:
+                              - img [ref=e1115]
+                          - generic [ref=e1121]:
+                            - generic [ref=e1122]: "3"
+                            - generic [ref=e1123]: просмотра
+        - complementary [ref=e1126]:
+          - generic [ref=e1128]:
+            - generic [ref=e1129]:
+              - generic [ref=e1130]:
+                - text: Обрабатываем cookie, чтобы сделать RUTUBE удобнее. Продолжая использовать RUTUBE, вы
+                - link "соглашаетесь на их обработку." [ref=e1131] [cursor=pointer]:
+                  - /url: https://rutube.ru/info/cookies/
+                - text: Отключить можно в настройках браузера.
+              - link "Подробнее" [ref=e1132] [cursor=pointer]:
+                - /url: https://rutube.ru/info/cookies/
+            - button "Ок" [ref=e1134] [cursor=pointer]:
+              - paragraph [ref=e1135]:
+                - generic [ref=e1136]: Ок
+  - generic [ref=e1138]:
+    - button "Закрыть попап" [ref=e1140] [cursor=pointer]:
+      - img [ref=e1141]
+    - generic [ref=e1144]:
+      - heading "Войди, чтобы смотреть в любое время" [level=2] [ref=e1145]
+      - generic [ref=e1146]:
+        - text: Войди в профиль и продолжи смотреть видео,
+        - text: когда удобно. История просмотра, комментарии,
+        - text: рекомендации по интересам и детский профиль — используй все возможности на полную
+      - button "Войти или зарегистрироваться" [ref=e1148] [cursor=pointer]:
+        - generic [ref=e1149]: Войти или зарегистрироваться

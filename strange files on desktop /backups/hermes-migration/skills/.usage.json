@@ -1,0 +1,93 @@
+{
+  "aim-operations": {
+    "archived_at": null,
+    "created_at": "2026-06-19T10:25:25.467113+00:00",
+    "created_by": "agent",
+    "last_patched_at": "2026-06-19T11:32:09.185005+00:00",
+    "last_used_at": "2026-06-19T21:13:09.512090+00:00",
+    "last_viewed_at": "2026-06-19T21:13:09.504842+00:00",
+    "patch_count": 5,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
+  "client-onboarding-pipeline": {
+    "archived_at": null,
+    "created_at": "2026-06-18T21:01:11.703113+00:00",
+    "created_by": null,
+    "last_patched_at": "2026-06-19T00:38:59.363370+00:00",
+    "last_used_at": "2026-06-19T21:23:46.830803+00:00",
+    "last_viewed_at": "2026-06-19T21:23:46.824869+00:00",
+    "patch_count": 122,
+    "pinned": false,
+    "state": "active",
+    "use_count": 40,
+    "view_count": 40
+  },
+  "hermes-diagnostics": {
+    "archived_at": null,
+    "created_at": "2026-06-18T23:48:02.051893+00:00",
+    "created_by": "agent",
+    "last_patched_at": "2026-06-19T07:35:30.611316+00:00",
+    "last_used_at": null,
+    "last_viewed_at": null,
+    "patch_count": 4,
+    "pinned": false,
+    "state": "active",
+    "use_count": 0,
+    "view_count": 0
+  },
+  "hermes-provider-debug": {
+    "archived_at": null,
+    "created_at": "2026-06-19T00:18:10.800993+00:00",
+    "created_by": "agent",
+    "last_patched_at": "2026-06-19T00:20:09.433971+00:00",
+    "last_used_at": null,
+    "last_viewed_at": null,
+    "patch_count": 7,
+    "pinned": false,
+    "state": "active",
+    "use_count": 0,
+    "view_count": 0
+  },
+  "hermes-provider-debugging": {
+    "archived_at": null,
+    "created_at": "2026-06-19T00:34:40.720172+00:00",
+    "created_by": "agent",
+    "last_patched_at": "2026-06-19T07:34:49.090123+00:00",
+    "last_used_at": null,
+    "last_viewed_at": null,
+    "patch_count": 8,
+    "pinned": false,
+    "state": "active",
+    "use_count": 0,
+    "view_count": 0
+  },
+  "hermes-provider-troubleshooting": {
+    "archived_at": null,
+    "created_at": "2026-06-19T00:16:34.262654+00:00",
+    "created_by": "agent",
+    "last_patched_at": "2026-06-19T21:25:43.065155+00:00",
+    "last_used_at": "2026-06-19T21:25:08.454039+00:00",
+    "last_viewed_at": "2026-06-19T21:25:08.446067+00:00",
+    "patch_count": 6,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
+  "ui-ux-pro-max": {
+    "archived_at": null,
+    "created_at": "2026-06-18T21:21:10.937551+00:00",
+    "created_by": null,
+    "last_patched_at": "2026-06-18T21:21:10.937568+00:00",
+    "last_used_at": null,
+    "last_viewed_at": null,
+    "patch_count": 1,
+    "pinned": false,
+    "state": "active",
+    "use_count": 0,
+    "view_count": 0
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "keys": [
+    {
+      "token": "fc-da8f2bcd6a994cc4be48d8ee9079752d",
+      "status": "exhausted",
+      "label": "key-01",
+      "exhausted_at": 1781899971.3888245,
+      "exhaust_reason": "insufficient_credits",
+      "exhausted_year": 2026,
+      "exhausted_month": 6
+    },
+    {
+      "token": "fc-07b5b22cf570442baa4887a9e5734d56",
+      "status": "exhausted",
+      "label": "key-02",
+      "exhausted_at": 1781900032.6038308,
+      "exhaust_reason": "insufficient_credits",
+      "exhausted_year": 2026,
+      "exhausted_month": 6
+    },
+    {
+      "token": "fc-94c58df8345745c88c6058e39e7b7c21",
+      "status": "exhausted",
+      "label": "key-03",
+      "exhausted_at": 1781899972.6263745,
+      "exhaust_reason": "insufficient_credits",
+      "exhausted_year": 2026,
+      "exhausted_month": 6
+    },
+    {
+      "token": "fc-cb21310378d54bb9879ce3a8dc47a309",
+      "status": "exhausted",
+      "label": "key-04",
+      "exhausted_at": 1781900142.9675815,
+      "exhaust_reason": "insufficient_credits",
+      "exhausted_year": 2026,
+      "exhausted_month": 6
+    },
+    {
+      "token": "fc-4a2a3a14319b4543823c751453bdf6d0",
+      "status": "exhausted",
+      "label": "key-05",
+      "exhausted_at": 1781899973.6754916,
+      "exhaust_reason": "insufficient_credits",
+      "exhausted_year": 2026,
+      "exhausted_month": 6
+    },
+    {
+      "token": "fc-412a890e2ecf485d8f84b6430a10a498",
+      "status": "exhausted",
+      "label": "key-06",
+      "exhausted_at": 1781900653.6048315,
+      "exhaust_reason": "insufficient_credits",
+      "exhausted_year": 2026,
+      "exhausted_month": 6
+    },
+    {
+      "token": "fc-ef695b7fc30748b29f180192f32c8ab6",
+      "status": "active",
+      "label": "key-07"
+    },
+    {
+      "token": "fc-df0aedc718074c5983edc412e92ec7fe",
+      "status": "active",
+      "label": "key-08"
+    },
+    {
+      "token": "fc-37ea115d75954839bf8b91c165fa5a5b",
+      "status": "active",
+      "label": "key-09"
+    },
+    {
+      "token": "fc-430bf8a78d954dc9b64a9f97e3dd7c83",
+      "status": "active",
+      "label": "key-10"
+    },
+    {
+      "token": "fc-dac1494db07d4aa79ec7da10372ca049",
+      "status": "active",
+      "label": "key-11"
+    },
+    {
+      "token": "fc-b893ee1377304b1aa40c4ddbfc2c06f2",
+      "status": "active",
+      "label": "key-12"
+    },
+    {
+      "token": "fc-95560b08ec394b45bfa7419eb0bd4a5a",
+      "status": "active",
+      "label": "key-13"
+    },
+    {
+      "token": "fc-1b93675bfaa546a0bf48113d1a9ef9f3",
+      "status": "active",
+      "label": "key-14"
+    }
+  ]
+}

@@ -1,0 +1,179 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "AIM" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - generic: AI-first маркетинг в медицине
+      - navigation [ref=e5]:
+        - link "Цены" [ref=e6] [cursor=pointer]:
+          - /url: /prices/
+        - link "Исследования" [ref=e7] [cursor=pointer]:
+          - /url: /research/
+        - link "Блог" [ref=e8] [cursor=pointer]:
+          - /url: /blog/
+        - link "Смысл" [ref=e9] [cursor=pointer]:
+          - /url: /philosophy/
+        - link "Контакты" [ref=e10] [cursor=pointer]:
+          - /url: /contact/
+        - button "Переключить тему" [ref=e11] [cursor=pointer]:
+          - img [ref=e12]
+          - generic: Перейти в тайную комнату
+    - navigation [ref=e14]:
+      - generic [ref=e15]:
+        - link "Цены" [ref=e16] [cursor=pointer]:
+          - /url: /prices/
+        - link "Исследования" [ref=e17] [cursor=pointer]:
+          - /url: /research/
+        - link "Блог" [ref=e18] [cursor=pointer]:
+          - /url: /blog/
+        - link "Смысл" [ref=e19] [cursor=pointer]:
+          - /url: /philosophy/
+        - link "Контакты" [ref=e20] [cursor=pointer]:
+          - /url: /contact/
+  - main [ref=e21]:
+    - generic [ref=e25]:
+      - generic [ref=e26]: AI-first маркетинг в медицине
+      - heading "I am AIM oney ethodology argin onitoring etrics anagement edicine arketing odeling" [level=1] [ref=e27]:
+        - generic [ref=e28]: I am AIM
+        - generic [ref=e31]:
+          - generic [ref=e32]: oney
+          - generic [ref=e33]: ethodology
+          - generic [ref=e34]: argin
+          - generic [ref=e35]: onitoring
+          - generic [ref=e36]: etrics
+          - generic [ref=e37]: anagement
+          - generic [ref=e38]: edicine
+          - generic [ref=e39]: arketing
+          - generic [ref=e40]: odeling
+      - paragraph [ref=e41]: Вас привел сюда AI. Если он привел Вас, то приведет пациентов в Вашу клинику
+      - generic [ref=e42]:
+        - textbox "Введите адрес сайта вашей клиники" [ref=e43]
+        - button "Начать диалог" [ref=e44] [cursor=pointer]:
+          - text: Начать диалог
+          - img [ref=e45]
+    - generic [ref=e47]:
+      - generic [ref=e49]:
+        - generic [ref=e50]:
+          - generic [ref=e51]: Почему нам доверяют
+          - heading "Три правила, которым мы следуем" [level=2] [ref=e52]
+          - paragraph [ref=e53]: Мы не делаем маркетинг как все. Мы строим системы, которые работают на данных, AI и вашей реальности.
+        - generic [ref=e54]:
+          - generic [ref=e55]:
+            - generic [ref=e56]: "01"
+            - heading "Что делает система" [level=3] [ref=e57]
+            - paragraph [ref=e58]: "Система мониторит ваших конкурентов и ваши маркетинговые показатели 24/7. Регулярно собирает: позиции в поиске, цены на услуги, новые доктора, изменения на сайтах, отзывы. Всё попадает в дашборд с трендами и аномалиями. Вы видите, что работает у конкурентов и где они проседают: до того, как это заметят они."
+          - generic [ref=e59]:
+            - generic [ref=e60]: "02"
+            - heading "AI снижает человеческий фактор" [level=3] [ref=e61]
+            - paragraph [ref=e62]: Люди устают. AI — нет. Он мониторит конкурентов 24/7, отслеживает позиции каждый час, замечает изменения на лендингах. Пока ваши конкуренты спят, AI работает. Люди делают стратегию, AI — рутину.
+          - generic [ref=e63]:
+            - generic [ref=e64]: "03"
+            - heading "Гибкость под ваш бизнес" [level=3] [ref=e65]
+            - paragraph [ref=e66]: "Каждая клиника уникальна. Мы строим систему под вас: анализируем ваши данные, ставим измеримые задачи, тестируем гипотезы быстрее конкурентов, реагируем на изменения рынка первыми. Нет универсальных решений. Есть то, что работает у вас."
+      - generic [ref=e67]:
+        - generic [ref=e68]:
+          - generic [ref=e69]:
+            - paragraph
+            - heading "Основатель AIM" [level=4] [ref=e70]
+            - paragraph [ref=e71]: Специализируюсь на медицинском маркетинге и AI автоматизации. Помогаю частным клиникам находить пациентов через data-driven подход и AI инструменты.
+            - paragraph
+            - link "Подробнее" [ref=e72] [cursor=pointer]:
+              - /url: "#"
+          - img "Михаил Елисеев" [ref=e75]
+          - heading "Михаил Елисеев" [level=2] [ref=e77]:
+            - text: Михаил
+            - text: Елисеев
+        - generic [ref=e79]:
+          - link "@mikhaileliseev" [ref=e80] [cursor=pointer]:
+            - /url: https://t.me/mikhaileliseev
+            - img [ref=e81]
+            - generic [ref=e83]: "@mikhaileliseev"
+          - link "+7 968 475-77-66" [ref=e84] [cursor=pointer]:
+            - /url: tel:+79684757766
+            - img [ref=e85]
+            - generic [ref=e87]: +7 968 475-77-66
+      - generic [ref=e90]:
+        - heading "Ассистент AIM" [level=2] [ref=e91]
+        - paragraph [ref=e92]: Запустите ассистента — он проанализирует ваш сайт, изучит конкурентов и покажет, где вы теряете пациентов. Глубокий анализ может занять до часа, но оно того стоит.
+        - button "Начать диалог" [ref=e93] [cursor=pointer]:
+          - text: Начать диалог
+          - img [ref=e94]
+  - generic:
+    - button "Закрыть чат": ✕
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic: AIM
+            - generic:
+              - generic: Готов к работе
+          - generic:
+            - button "🕐 История сессий":
+              - text: 🕐
+              - generic: История сессий
+            - button "🗑️ Очистить":
+              - text: 🗑️
+              - generic: Очистить
+        - generic:
+          - generic:
+            - generic:
+              - paragraph: Добрый день. Я AI-аналитик AIM — нахожу слабые места клиник и точки роста. Дайте URL вашего сайта, и через пару минут вы увидите то, что скрыто от обычного взгляда.
+          - generic:
+            - generic: привет зайка
+          - generic:
+            - generic:
+              - paragraph: "Добрый день! Я анализирую медицинские клиники: финансы, SEO, отзывы, конкуренты — полная картина за пару минут. Пришлите адрес сайта вашей клиники — покажу, где вы теряете пациентов и сколько это стоит."
+          - generic:
+            - generic:
+              - paragraph: Вы уже использовали одну сессию сегодня. Для более глубокой работы оставьте свой контакт — Михаил свяжется с вами лично.
+              - paragraph: Напишите ваш телефон или Telegram, и Михаил вернётся к вам в ближайшее время.
+              - paragraph: Вы можете продолжить диалог здесь, но для детального анализа лучше связаться напрямую.
+          - generic:
+            - generic: cliniclancette.ru
+          - generic:
+            - generic: "🚀 Запускаю разведку: анализирую сайт, ищу финансовые данные, проверяю лицензии и SEO…"
+        - generic:
+          - generic:
+            - textbox "Напишите сообщение..."
+            - button "Отправить"
+  - contentinfo [ref=e96]:
+    - generic [ref=e97]:
+      - generic [ref=e98]:
+        - link "AIM" [ref=e99] [cursor=pointer]:
+          - /url: /
+        - paragraph [ref=e100]: AI-first маркетинг в медицине
+        - paragraph [ref=e101]: © 2026 AIM
+        - paragraph [ref=e102]:
+          - strong [ref=e103]: ИП Елисеев М.С.
+          - text: "ИНН: 501109473258"
+          - text: "ОГРНИП: 314501125900011"
+      - generic [ref=e104]:
+        - heading "Навигация" [level=4] [ref=e105]
+        - link "Цены" [ref=e106] [cursor=pointer]:
+          - /url: /prices/
+        - link "Исследования" [ref=e107] [cursor=pointer]:
+          - /url: /research/
+        - link "Блог" [ref=e108] [cursor=pointer]:
+          - /url: /blog/
+        - link "Смысл" [ref=e109] [cursor=pointer]:
+          - /url: /philosophy/
+        - link "Контакты" [ref=e110] [cursor=pointer]:
+          - /url: /contact/
+      - generic [ref=e111]:
+        - heading "Документы" [level=4] [ref=e112]
+        - link "Политика обработки ПД" [ref=e113] [cursor=pointer]:
+          - /url: /privacy-policy/
+        - link "Пользовательское соглашение" [ref=e114] [cursor=pointer]:
+          - /url: /terms-of-service/
+        - link "Конфиденциальность" [ref=e115] [cursor=pointer]:
+          - /url: /confidentiality/
+        - link "Реквизиты" [ref=e116] [cursor=pointer]:
+          - /url: /requisites/
+      - generic [ref=e117]:
+        - heading "Связь" [level=4] [ref=e118]
+        - link "hello@iamaim.ru" [ref=e119] [cursor=pointer]:
+          - /url: mailto:hello@iamaim.ru
+        - 'link "Telegram: @mikhaileliseev" [ref=e120] [cursor=pointer]':
+          - /url: https://t.me/mikhaileliseev
+        - link "+7 968 475-77-66" [ref=e121] [cursor=pointer]:
+          - /url: tel:+79684757766

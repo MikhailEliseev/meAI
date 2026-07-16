@@ -1,0 +1,229 @@
+{
+  "analysis_date": "2026-05-06T21:18:03.557195",
+  "total_analyzed": 5,
+  "niche": "dental implants",
+  "pricing_profiles": [
+    {
+      "name": "Центр Студия",
+      "price_segment": "premium",
+      "prices": {
+        "услуга_1": 2700.0,
+        "услуга_2": 7300.0,
+        "услуга_3": 15900.0
+      },
+      "avg_check": 8633,
+      "price_transparency": false,
+      "has_promotions": true,
+      "promotions": [
+        {
+          "type": "first_visit",
+          "discount": 24
+        },
+        {
+          "type": "package",
+          "discount": 22
+        }
+      ],
+      "pricing_strategy": "value_based",
+      "price_competitiveness": "low"
+    },
+    {
+      "name": "Здоровье Лаб",
+      "price_segment": "mid",
+      "prices": {
+        "услуга_1": 2100.0,
+        "услуга_2": 5100.0,
+        "услуга_3": 9100.0
+      },
+      "avg_check": 5433,
+      "price_transparency": false,
+      "has_promotions": false,
+      "promotions": [],
+      "pricing_strategy": "penetration",
+      "price_competitiveness": "medium"
+    },
+    {
+      "name": "Лайф Клиника",
+      "price_segment": "premium",
+      "prices": {
+        "услуга_1": 2800.0,
+        "услуга_2": 8000.0,
+        "услуга_3": 14100.0
+      },
+      "avg_check": 8300,
+      "price_transparency": false,
+      "has_promotions": true,
+      "promotions": [
+        {
+          "type": "first_visit",
+          "discount": 29
+        },
+        {
+          "type": "package",
+          "discount": 16
+        }
+      ],
+      "pricing_strategy": "value_based",
+      "price_competitiveness": "low"
+    },
+    {
+      "name": "Медицина Клуб",
+      "price_segment": "budget",
+      "prices": {
+        "услуга_1": 1300.0,
+        "услуга_2": 3400.0,
+        "услуга_3": 7000.0
+      },
+      "avg_check": 3900,
+      "price_transparency": true,
+      "has_promotions": false,
+      "promotions": [],
+      "pricing_strategy": "competitive",
+      "price_competitiveness": "high"
+    },
+    {
+      "name": "Клиника Центр",
+      "price_segment": "budget",
+      "prices": {
+        "услуга_1": 1400.0,
+        "услуга_2": 3400.0,
+        "услуга_3": 6600.0
+      },
+      "avg_check": 3800,
+      "price_transparency": true,
+      "has_promotions": true,
+      "promotions": [
+        {
+          "type": "first_visit",
+          "discount": 14
+        },
+        {
+          "type": "package",
+          "discount": 26
+        }
+      ],
+      "pricing_strategy": "competitive",
+      "price_competitiveness": "high"
+    }
+  ],
+  "market_analysis": {
+    "segment_distribution": {
+      "premium": 2,
+      "mid": 1,
+      "budget": 2
+    },
+    "avg_check_by_segment": {
+      "budget": 3850,
+      "mid": 5433,
+      "premium": 8466
+    },
+    "market_avg_check": 6013,
+    "price_transparency_percent": 40.0,
+    "promotions_usage_percent": 60.0,
+    "dominant_segment": "premium"
+  },
+  "pricing_leaders": {
+    "cheapest": [
+      {
+        "name": "Клиника Центр",
+        "avg_check": 3800,
+        "segment": "budget"
+      },
+      {
+        "name": "Медицина Клуб",
+        "avg_check": 3900,
+        "segment": "budget"
+      },
+      {
+        "name": "Здоровье Лаб",
+        "avg_check": 5433,
+        "segment": "mid"
+      }
+    ],
+    "most_expensive": [
+      {
+        "name": "Центр Студия",
+        "avg_check": 8633,
+        "segment": "premium"
+      },
+      {
+        "name": "Лайф Клиника",
+        "avg_check": 8300,
+        "segment": "premium"
+      },
+      {
+        "name": "Здоровье Лаб",
+        "avg_check": 5433,
+        "segment": "mid"
+      }
+    ],
+    "best_transparency": [
+      {
+        "name": "Медицина Клуб",
+        "services_count": 3
+      },
+      {
+        "name": "Клиника Центр",
+        "services_count": 3
+      }
+    ]
+  },
+  "positioning_map": {
+    "positioning": {
+      "budget": [
+        {
+          "name": "Медицина Клуб",
+          "avg_check": 3900,
+          "transparency": true
+        },
+        {
+          "name": "Клиника Центр",
+          "avg_check": 3800,
+          "transparency": true
+        }
+      ],
+      "mid": [
+        {
+          "name": "Здоровье Лаб",
+          "avg_check": 5433,
+          "transparency": false
+        }
+      ],
+      "premium": [
+        {
+          "name": "Центр Студия",
+          "avg_check": 8633,
+          "transparency": false
+        },
+        {
+          "name": "Лайф Клиника",
+          "avg_check": 8300,
+          "transparency": false
+        }
+      ],
+      "luxury": []
+    },
+    "price_gaps": [
+      {
+        "lower": 3900,
+        "upper": 5433,
+        "gap_percent": 39.3
+      },
+      {
+        "lower": 5433,
+        "upper": 8300,
+        "gap_percent": 52.8
+      }
+    ]
+  },
+  "insights": {
+    "market_positioning": "premium",
+    "price_transparency_level": "low",
+    "competition_intensity": "low",
+    "opportunities_count": 2,
+    "key_findings": [
+      "Менее 50% конкурентов публикуют цены на сайте",
+      "Обнаружено 2 ценовых разрывов для позиционирования"
+    ]
+  }
+}

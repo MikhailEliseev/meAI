@@ -1,0 +1,48 @@
+Analytics Report
+Generated: 2026-05-30 12:09:09 UTC
+Period: 2026-05-23 to 2026-05-30
+
+LEAD METRICS
+Metric,Value
+Total Leads,0
+Average Score,0.00
+Capture Rate,0.00
+Duplicate Rate,0.00%
+
+Leads by Tier
+Tier,Count
+
+Leads by Source
+Source,Count
+
+EMAIL METRICS
+Metric,Value
+Total Sent,0
+Total Delivered,0
+Total Opened,0
+Total Clicked,0
+Delivery Rate,0.00%
+Open Rate,0.00%
+Click Rate,0.00%
+Bounce Rate,0.00%
+
+CONVERSION FUNNEL
+Stage,Count
+Leads Captured,0
+Leads Scored,0
+Tasks Created,0
+Workflows Triggered,0
+Emails Sent,0
+Emails Delivered,0
+Emails Opened,0
+Emails Clicked,0
+
+Conversion Rates
+Stage,Rate
+Capture To Score,0.00%
+Score To Task,0.00%
+Task To Workflow,0.00%
+Workflow To Sent,0.00%
+Sent To Delivered,0.00%
+Delivered To Opened,0.00%
+Opened To Clicked,0.00%

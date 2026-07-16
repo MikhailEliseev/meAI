@@ -1,0 +1,191 @@
+{
+  "main": {
+    "id": "9c51994575be51bf",
+    "type": "split",
+    "children": [
+      {
+        "id": "8b9e1d23b3044e35",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "1567d9adef8be006",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "Новая вкладка"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "15867ff57eeb63ff",
+    "type": "split",
+    "children": [
+      {
+        "id": "53d3866616349fb0",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "2e6d996445907915",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Файловый менеджер"
+            }
+          },
+          {
+            "id": "ec9c6c76f9c2df1c",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Поиск"
+            }
+          },
+          {
+            "id": "c07244cee6870077",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Закладки"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "0b1eed106425142d",
+    "type": "split",
+    "children": [
+      {
+        "id": "e6b870d301e0b5c8",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "536b6f7abf162d9a",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Обратные ссылки"
+            }
+          },
+          {
+            "id": "c2ed54bf01fe24bf",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Исходящие ссылки"
+            }
+          },
+          {
+            "id": "61a1a6cd346a598a",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Теги"
+            }
+          },
+          {
+            "id": "321d28736a66dde9",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Все свойства"
+            }
+          },
+          {
+            "id": "1f29ebf5e8e3fa9e",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Структура"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Меню быстрого перехода": false,
+      "graph:Граф": false,
+      "canvas:Создать новый холст": false,
+      "daily-notes:Сегодняшняя заметка": false,
+      "templates:Вставить шаблон": false,
+      "command-palette:Открыть палитру команд": false,
+      "bases:Создать новую базу": false
+    }
+  },
+  "active": "1567d9adef8be006",
+  "lastOpenFiles": [
+    "Clippings/Курс по фандрейзингу для стартапов ранней стадии (pre-seed).md",
+    "Раньше платил 100 000₽ за сайт. Теперь 0₽ с Claude Design за 18 минут! Claude 100% КОРОЛЬ нейросетей.md",
+    "Clippings",
+    "20260502-2255-exponential-backoff.md",
+    "20260502-2338-quick.md",
+    "20260502-2327-quick-note-setup.md",
+    "Как BlackHat-агентство выводит iGaming сайты в топ накруткой ПФ в Гугле.md",
+    "Clippings/Как BlackHat-агентство выводит iGaming сайты в топ накруткой ПФ в Гугле.md",
+    "Без названия.canvas"
+  ]
+}

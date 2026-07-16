@@ -1,0 +1,74 @@
+{
+  "keys": [
+    {
+      "id": "key-01",
+      "key": "apify_api_NlffqvpbQ8CaLHjNeAW15cEI5NEf1o1zSOrw",
+      "active": true,
+      "exhausted": false,
+      "note": "User-provided 09.06.2026"
+    },
+    {
+      "id": "key-02",
+      "key": "apify_api_3UqdGVpR6RCb5WbC8P0n9vPB1LUKyj3XooA5",
+      "active": true,
+      "exhausted": false,
+      "note": "User-provided 09.06.2026"
+    },
+    {
+      "id": "key-03",
+      "key": "apify_api_gO5iJkxRSxInTnc3JN3H2etmcDS1sq3y1ZBH",
+      "active": true,
+      "exhausted": false,
+      "note": "User-provided 09.06.2026"
+    },
+    {
+      "id": "key-04",
+      "key": "apify_api_hBbZfsyhrkCU4pcQCz9eYJgcdJ8uai1UCpdf",
+      "active": true,
+      "exhausted": false,
+      "note": "User-provided 09.06.2026"
+    },
+    {
+      "id": "key-05",
+      "key": "apify_api_i7XXD61E7MERMQBjQ7DUsGc4k0kiKB44fHEZ",
+      "active": true,
+      "exhausted": false,
+      "note": "User-provided 09.06.2026"
+    },
+    {
+      "id": "key-06",
+      "key": "apify_api_Wvbb1bHcua8OjhK1FuXSHERuoygz1Z0vU1pm",
+      "active": true,
+      "exhausted": false,
+      "note": "User-provided 09.06.2026"
+    },
+    {
+      "id": "key-07",
+      "key": "apify_api_X96j5fCL2A6Caz62Yl4a3BYPWOGYGx0urymM",
+      "active": true,
+      "exhausted": false,
+      "note": "User-provided 09.06.2026"
+    },
+    {
+      "id": "key-08",
+      "key": "apify_api_aiaIaVJG8aFHnyIZj5FBsVf0UTpvAH3U8ECM",
+      "active": true,
+      "exhausted": false,
+      "note": "User-provided 09.06.2026"
+    },
+    {
+      "id": "key-09",
+      "key": "apify_api_Z1AZhdj4lOEDwhGCj5nPIfzhcHcCS00MmEYK",
+      "active": true,
+      "exhausted": false,
+      "note": "User-provided 09.06.2026"
+    },
+    {
+      "id": "key-10",
+      "key": "apify_api_muS07FnqrrhQugX7zb2QVVyvuqWQTM1NdIFg",
+      "active": true,
+      "exhausted": false,
+      "note": "User-provided 09.06.2026"
+    }
+  ]
+}

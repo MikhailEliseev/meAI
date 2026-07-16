@@ -1,0 +1,1626 @@
+{
+  "analysis_date": "2026-05-06T21:18:03.567506",
+  "total_analyzed": 5,
+  "sources_used": [
+    "yandex_maps",
+    "2gis",
+    "prodoctorov",
+    "zoon",
+    "napopravku"
+  ],
+  "reviews_data": [
+    {
+      "name": "Центр Студия",
+      "sources": {
+        "yandex_maps": {
+          "source": "yandex_maps",
+          "source_name": "Яндекс.Карты",
+          "count": 64,
+          "avg_rating": 4.7,
+          "sentiment_distribution": {
+            "positive": 60,
+            "negative": 5,
+            "neutral": 35
+          },
+          "recent_reviews": [
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.9,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.2,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "2gis": {
+          "source": "2gis",
+          "source_name": "2GIS",
+          "count": 63,
+          "avg_rating": 3.9,
+          "sentiment_distribution": {
+            "positive": 76,
+            "negative": 8,
+            "neutral": 16
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.0,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.1,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.5,
+              "sentiment": "neutral",
+              "text": "Обычная клиника, ничего особенного",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.7,
+              "sentiment": "neutral",
+              "text": "Нормально, но есть куда расти",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.6,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "prodoctorov": {
+          "source": "prodoctorov",
+          "source_name": "ПроДокторов",
+          "count": 39,
+          "avg_rating": 4.7,
+          "sentiment_distribution": {
+            "positive": 81,
+            "negative": 15,
+            "neutral": 4
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.5,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.6,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.9,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.8,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "zoon": {
+          "source": "zoon",
+          "source_name": "Zoon",
+          "count": 91,
+          "avg_rating": 4.2,
+          "sentiment_distribution": {
+            "positive": 67,
+            "negative": 7,
+            "neutral": 26
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.1,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.4,
+              "sentiment": "neutral",
+              "text": "Нормально, но есть куда расти",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.3,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.3,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.3,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "napopravku": {
+          "source": "napopravku",
+          "source_name": "НаПоправку",
+          "count": 128,
+          "avg_rating": 4.0,
+          "sentiment_distribution": {
+            "positive": 81,
+            "negative": 11,
+            "neutral": 8
+          },
+          "recent_reviews": [
+            {
+              "rating": 3.6,
+              "sentiment": "neutral",
+              "text": "Нормально, но есть куда расти",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.0,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.1,
+              "sentiment": "neutral",
+              "text": "Нормально, но есть куда расти",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.5,
+              "sentiment": "neutral",
+              "text": "Приемлемо, но не более",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.4,
+              "sentiment": "neutral",
+              "text": "Приемлемо, но не более",
+              "date": "2026-04-15"
+            }
+          ]
+        }
+      },
+      "total_reviews": 385,
+      "avg_rating": 4.22
+    },
+    {
+      "name": "Здоровье Лаб",
+      "sources": {
+        "yandex_maps": {
+          "source": "yandex_maps",
+          "source_name": "Яндекс.Карты",
+          "count": 151,
+          "avg_rating": 3.9,
+          "sentiment_distribution": {
+            "positive": 69,
+            "negative": 5,
+            "neutral": 26
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.1,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.2,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.5,
+              "sentiment": "neutral",
+              "text": "Приемлемо, но не более",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.6,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.8,
+              "sentiment": "neutral",
+              "text": "Средний уровень обслуживания",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "2gis": {
+          "source": "2gis",
+          "source_name": "2GIS",
+          "count": 40,
+          "avg_rating": 4.1,
+          "sentiment_distribution": {
+            "positive": 81,
+            "negative": 13,
+            "neutral": 6
+          },
+          "recent_reviews": [
+            {
+              "rating": 3.8,
+              "sentiment": "neutral",
+              "text": "Средний уровень обслуживания",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.2,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.8,
+              "sentiment": "neutral",
+              "text": "Приемлемо, но не более",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.4,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.6,
+              "sentiment": "neutral",
+              "text": "Приемлемо, но не более",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "prodoctorov": {
+          "source": "prodoctorov",
+          "source_name": "ПроДокторов",
+          "count": 122,
+          "avg_rating": 4.1,
+          "sentiment_distribution": {
+            "positive": 83,
+            "negative": 15,
+            "neutral": 2
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.6,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.9,
+              "sentiment": "neutral",
+              "text": "Нормально, но есть куда расти",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.5,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.4,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.6,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "zoon": {
+          "source": "zoon",
+          "source_name": "Zoon",
+          "count": 120,
+          "avg_rating": 4.9,
+          "sentiment_distribution": {
+            "positive": 80,
+            "negative": 9,
+            "neutral": 11
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.9,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.5,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "napopravku": {
+          "source": "napopravku",
+          "source_name": "НаПоправку",
+          "count": 90,
+          "avg_rating": 3.9,
+          "sentiment_distribution": {
+            "positive": 82,
+            "negative": 6,
+            "neutral": 12
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.0,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.3,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.7,
+              "sentiment": "neutral",
+              "text": "Приемлемо, но не более",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.8,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.7,
+              "sentiment": "neutral",
+              "text": "Нормально, но есть куда расти",
+              "date": "2026-04-15"
+            }
+          ]
+        }
+      },
+      "total_reviews": 523,
+      "avg_rating": 4.19
+    },
+    {
+      "name": "Лайф Клиника",
+      "sources": {
+        "yandex_maps": {
+          "source": "yandex_maps",
+          "source_name": "Яндекс.Карты",
+          "count": 70,
+          "avg_rating": 4.7,
+          "sentiment_distribution": {
+            "positive": 80,
+            "negative": 9,
+            "neutral": 11
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.2,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.7,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.4,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "2gis": {
+          "source": "2gis",
+          "source_name": "2GIS",
+          "count": 141,
+          "avg_rating": 4.1,
+          "sentiment_distribution": {
+            "positive": 70,
+            "negative": 10,
+            "neutral": 20
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.5,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.1,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.6,
+              "sentiment": "neutral",
+              "text": "Обычная клиника, ничего особенного",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.8,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "prodoctorov": {
+          "source": "prodoctorov",
+          "source_name": "ПроДокторов",
+          "count": 39,
+          "avg_rating": 4.6,
+          "sentiment_distribution": {
+            "positive": 62,
+            "negative": 12,
+            "neutral": 26
+          },
+          "recent_reviews": [
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.2,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.3,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "zoon": {
+          "source": "zoon",
+          "source_name": "Zoon",
+          "count": 198,
+          "avg_rating": 4.6,
+          "sentiment_distribution": {
+            "positive": 67,
+            "negative": 10,
+            "neutral": 23
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.2,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.7,
+              "sentiment": "neutral",
+              "text": "Средний уровень обслуживания",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.4,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.9,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "napopravku": {
+          "source": "napopravku",
+          "source_name": "НаПоправку",
+          "count": 53,
+          "avg_rating": 4.0,
+          "sentiment_distribution": {
+            "positive": 69,
+            "negative": 8,
+            "neutral": 23
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.5,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 2.9,
+              "sentiment": "negative",
+              "text": "Обещали одно, сделали другое",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.3,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.1,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.1,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            }
+          ]
+        }
+      },
+      "total_reviews": 501,
+      "avg_rating": 4.41
+    },
+    {
+      "name": "Медицина Клуб",
+      "sources": {
+        "yandex_maps": {
+          "source": "yandex_maps",
+          "source_name": "Яндекс.Карты",
+          "count": 173,
+          "avg_rating": 4.3,
+          "sentiment_distribution": {
+            "positive": 83,
+            "negative": 5,
+            "neutral": 12
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.2,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.9,
+              "sentiment": "neutral",
+              "text": "Обычная клиника, ничего особенного",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.8,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.5,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "2gis": {
+          "source": "2gis",
+          "source_name": "2GIS",
+          "count": 129,
+          "avg_rating": 4.5,
+          "sentiment_distribution": {
+            "positive": 67,
+            "negative": 11,
+            "neutral": 22
+          },
+          "recent_reviews": [
+            {
+              "rating": 3.6,
+              "sentiment": "neutral",
+              "text": "Нормально, но есть куда расти",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.6,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.4,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.9,
+              "sentiment": "neutral",
+              "text": "Обычная клиника, ничего особенного",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.3,
+              "sentiment": "neutral",
+              "text": "Нормально, но есть куда расти",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "prodoctorov": {
+          "source": "prodoctorov",
+          "source_name": "ПроДокторов",
+          "count": 85,
+          "avg_rating": 4.8,
+          "sentiment_distribution": {
+            "positive": 67,
+            "negative": 6,
+            "neutral": 27
+          },
+          "recent_reviews": [
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.8,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.9,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "zoon": {
+          "source": "zoon",
+          "source_name": "Zoon",
+          "count": 156,
+          "avg_rating": 4.4,
+          "sentiment_distribution": {
+            "positive": 68,
+            "negative": 20,
+            "neutral": 12
+          },
+          "recent_reviews": [
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.7,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.5,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.5,
+              "sentiment": "neutral",
+              "text": "Средний уровень обслуживания",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "napopravku": {
+          "source": "napopravku",
+          "source_name": "НаПоправку",
+          "count": 180,
+          "avg_rating": 4.7,
+          "sentiment_distribution": {
+            "positive": 84,
+            "negative": 6,
+            "neutral": 10
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.4,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.7,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.6,
+              "sentiment": "neutral",
+              "text": "Приемлемо, но не более",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            }
+          ]
+        }
+      },
+      "total_reviews": 723,
+      "avg_rating": 4.52
+    },
+    {
+      "name": "Клиника Центр",
+      "sources": {
+        "yandex_maps": {
+          "source": "yandex_maps",
+          "source_name": "Яндекс.Карты",
+          "count": 118,
+          "avg_rating": 4.7,
+          "sentiment_distribution": {
+            "positive": 71,
+            "negative": 10,
+            "neutral": 19
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.0,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.6,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.6,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "2gis": {
+          "source": "2gis",
+          "source_name": "2GIS",
+          "count": 100,
+          "avg_rating": 4.0,
+          "sentiment_distribution": {
+            "positive": 68,
+            "negative": 5,
+            "neutral": 27
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.4,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.4,
+              "sentiment": "neutral",
+              "text": "Обычная клиника, ничего особенного",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.3,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.2,
+              "sentiment": "neutral",
+              "text": "Средний уровень обслуживания",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.3,
+              "sentiment": "neutral",
+              "text": "Нормально, но есть куда расти",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "prodoctorov": {
+          "source": "prodoctorov",
+          "source_name": "ПроДокторов",
+          "count": 127,
+          "avg_rating": 4.6,
+          "sentiment_distribution": {
+            "positive": 71,
+            "negative": 7,
+            "neutral": 22
+          },
+          "recent_reviews": [
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.8,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.6,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.1,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.8,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "zoon": {
+          "source": "zoon",
+          "source_name": "Zoon",
+          "count": 188,
+          "avg_rating": 4.7,
+          "sentiment_distribution": {
+            "positive": 84,
+            "negative": 11,
+            "neutral": 5
+          },
+          "recent_reviews": [
+            {
+              "rating": 4.7,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.7,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.9,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 5.0,
+              "sentiment": "positive",
+              "text": "Очень довольна результатом, рекомендую",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.8,
+              "sentiment": "positive",
+              "text": "Быстро записали, качественно обслужили",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        "napopravku": {
+          "source": "napopravku",
+          "source_name": "НаПоправку",
+          "count": 135,
+          "avg_rating": 4.2,
+          "sentiment_distribution": {
+            "positive": 67,
+            "negative": 8,
+            "neutral": 25
+          },
+          "recent_reviews": [
+            {
+              "rating": 3.7,
+              "sentiment": "neutral",
+              "text": "Обычная клиника, ничего особенного",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.3,
+              "sentiment": "neutral",
+              "text": "Приемлемо, но не более",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.3,
+              "sentiment": "positive",
+              "text": "Современное оборудование, вежливый персонал",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 4.7,
+              "sentiment": "positive",
+              "text": "Отличная клиника, профессиональные врачи",
+              "date": "2026-04-15"
+            },
+            {
+              "rating": 3.3,
+              "sentiment": "neutral",
+              "text": "Приемлемо, но не более",
+              "date": "2026-04-15"
+            }
+          ]
+        }
+      },
+      "total_reviews": 668,
+      "avg_rating": 4.48
+    }
+  ],
+  "sentiment_data": [
+    {
+      "name": "Центр Студия",
+      "total_reviews": 385,
+      "sentiment": {
+        "positive": 73.4,
+        "negative": 9.0,
+        "neutral": 17.6
+      },
+      "sentiment_score": 0.64
+    },
+    {
+      "name": "Здоровье Лаб",
+      "total_reviews": 523,
+      "sentiment": {
+        "positive": 77.9,
+        "negative": 9.0,
+        "neutral": 13.0
+      },
+      "sentiment_score": 0.69
+    },
+    {
+      "name": "Лайф Клиника",
+      "total_reviews": 501,
+      "sentiment": {
+        "positive": 69.5,
+        "negative": 9.8,
+        "neutral": 20.7
+      },
+      "sentiment_score": 0.6
+    },
+    {
+      "name": "Медицина Клуб",
+      "total_reviews": 723,
+      "sentiment": {
+        "positive": 75.3,
+        "negative": 9.7,
+        "neutral": 15.0
+      },
+      "sentiment_score": 0.66
+    },
+    {
+      "name": "Клиника Центр",
+      "total_reviews": 668,
+      "sentiment": {
+        "positive": 73.4,
+        "negative": 8.6,
+        "neutral": 18.0
+      },
+      "sentiment_score": 0.65
+    }
+  ],
+  "topic_data": [
+    {
+      "name": "Центр Студия",
+      "topics": {
+        "service": {
+          "name": "Качество обслуживания",
+          "mentions": 94,
+          "sentiment": {
+            "positive": 75,
+            "negative": 6,
+            "neutral": 19
+          }
+        },
+        "doctors": {
+          "name": "Врачи и персонал",
+          "mentions": 27,
+          "sentiment": {
+            "positive": 63,
+            "negative": 21,
+            "neutral": 16
+          }
+        },
+        "price": {
+          "name": "Цены",
+          "mentions": 34,
+          "sentiment": {
+            "positive": 71,
+            "negative": 18,
+            "neutral": 11
+          }
+        },
+        "equipment": {
+          "name": "Оборудование",
+          "mentions": 82,
+          "sentiment": {
+            "positive": 90,
+            "negative": 10,
+            "neutral": 0
+          }
+        },
+        "cleanliness": {
+          "name": "Чистота",
+          "mentions": 93,
+          "sentiment": {
+            "positive": 81,
+            "negative": 14,
+            "neutral": 5
+          }
+        },
+        "waiting_time": {
+          "name": "Время ожидания",
+          "mentions": 12,
+          "sentiment": {
+            "positive": 88,
+            "negative": 6,
+            "neutral": 6
+          }
+        },
+        "results": {
+          "name": "Результаты лечения",
+          "mentions": 44,
+          "sentiment": {
+            "positive": 78,
+            "negative": 27,
+            "neutral": -5
+          }
+        },
+        "communication": {
+          "name": "Коммуникация",
+          "mentions": 79,
+          "sentiment": {
+            "positive": 55,
+            "negative": 20,
+            "neutral": 25
+          }
+        }
+      }
+    },
+    {
+      "name": "Здоровье Лаб",
+      "topics": {
+        "service": {
+          "name": "Качество обслуживания",
+          "mentions": 99,
+          "sentiment": {
+            "positive": 71,
+            "negative": 12,
+            "neutral": 17
+          }
+        },
+        "doctors": {
+          "name": "Врачи и персонал",
+          "mentions": 40,
+          "sentiment": {
+            "positive": 63,
+            "negative": 6,
+            "neutral": 31
+          }
+        },
+        "price": {
+          "name": "Цены",
+          "mentions": 54,
+          "sentiment": {
+            "positive": 52,
+            "negative": 26,
+            "neutral": 22
+          }
+        },
+        "equipment": {
+          "name": "Оборудование",
+          "mentions": 11,
+          "sentiment": {
+            "positive": 54,
+            "negative": 12,
+            "neutral": 34
+          }
+        },
+        "cleanliness": {
+          "name": "Чистота",
+          "mentions": 86,
+          "sentiment": {
+            "positive": 89,
+            "negative": 15,
+            "neutral": -4
+          }
+        },
+        "waiting_time": {
+          "name": "Время ожидания",
+          "mentions": 98,
+          "sentiment": {
+            "positive": 73,
+            "negative": 6,
+            "neutral": 21
+          }
+        },
+        "results": {
+          "name": "Результаты лечения",
+          "mentions": 16,
+          "sentiment": {
+            "positive": 50,
+            "negative": 21,
+            "neutral": 29
+          }
+        },
+        "communication": {
+          "name": "Коммуникация",
+          "mentions": 99,
+          "sentiment": {
+            "positive": 88,
+            "negative": 24,
+            "neutral": -12
+          }
+        }
+      }
+    },
+    {
+      "name": "Лайф Клиника",
+      "topics": {
+        "service": {
+          "name": "Качество обслуживания",
+          "mentions": 28,
+          "sentiment": {
+            "positive": 59,
+            "negative": 8,
+            "neutral": 33
+          }
+        },
+        "doctors": {
+          "name": "Врачи и персонал",
+          "mentions": 16,
+          "sentiment": {
+            "positive": 88,
+            "negative": 11,
+            "neutral": 1
+          }
+        },
+        "price": {
+          "name": "Цены",
+          "mentions": 76,
+          "sentiment": {
+            "positive": 55,
+            "negative": 28,
+            "neutral": 17
+          }
+        },
+        "equipment": {
+          "name": "Оборудование",
+          "mentions": 71,
+          "sentiment": {
+            "positive": 71,
+            "negative": 21,
+            "neutral": 8
+          }
+        },
+        "cleanliness": {
+          "name": "Чистота",
+          "mentions": 75,
+          "sentiment": {
+            "positive": 50,
+            "negative": 26,
+            "neutral": 24
+          }
+        },
+        "waiting_time": {
+          "name": "Время ожидания",
+          "mentions": 72,
+          "sentiment": {
+            "positive": 87,
+            "negative": 28,
+            "neutral": -15
+          }
+        },
+        "results": {
+          "name": "Результаты лечения",
+          "mentions": 91,
+          "sentiment": {
+            "positive": 76,
+            "negative": 5,
+            "neutral": 19
+          }
+        },
+        "communication": {
+          "name": "Коммуникация",
+          "mentions": 89,
+          "sentiment": {
+            "positive": 58,
+            "negative": 29,
+            "neutral": 13
+          }
+        }
+      }
+    },
+    {
+      "name": "Медицина Клуб",
+      "topics": {
+        "service": {
+          "name": "Качество обслуживания",
+          "mentions": 44,
+          "sentiment": {
+            "positive": 63,
+            "negative": 22,
+            "neutral": 15
+          }
+        },
+        "doctors": {
+          "name": "Врачи и персонал",
+          "mentions": 74,
+          "sentiment": {
+            "positive": 75,
+            "negative": 23,
+            "neutral": 2
+          }
+        },
+        "price": {
+          "name": "Цены",
+          "mentions": 29,
+          "sentiment": {
+            "positive": 63,
+            "negative": 14,
+            "neutral": 23
+          }
+        },
+        "equipment": {
+          "name": "Оборудование",
+          "mentions": 38,
+          "sentiment": {
+            "positive": 55,
+            "negative": 6,
+            "neutral": 39
+          }
+        },
+        "cleanliness": {
+          "name": "Чистота",
+          "mentions": 32,
+          "sentiment": {
+            "positive": 55,
+            "negative": 18,
+            "neutral": 27
+          }
+        },
+        "waiting_time": {
+          "name": "Время ожидания",
+          "mentions": 17,
+          "sentiment": {
+            "positive": 68,
+            "negative": 18,
+            "neutral": 14
+          }
+        },
+        "results": {
+          "name": "Результаты лечения",
+          "mentions": 57,
+          "sentiment": {
+            "positive": 73,
+            "negative": 16,
+            "neutral": 11
+          }
+        },
+        "communication": {
+          "name": "Коммуникация",
+          "mentions": 38,
+          "sentiment": {
+            "positive": 90,
+            "negative": 29,
+            "neutral": -19
+          }
+        }
+      }
+    },
+    {
+      "name": "Клиника Центр",
+      "topics": {
+        "service": {
+          "name": "Качество обслуживания",
+          "mentions": 95,
+          "sentiment": {
+            "positive": 88,
+            "negative": 11,
+            "neutral": 1
+          }
+        },
+        "doctors": {
+          "name": "Врачи и персонал",
+          "mentions": 98,
+          "sentiment": {
+            "positive": 78,
+            "negative": 25,
+            "neutral": -3
+          }
+        },
+        "price": {
+          "name": "Цены",
+          "mentions": 99,
+          "sentiment": {
+            "positive": 85,
+            "negative": 11,
+            "neutral": 4
+          }
+        },
+        "equipment": {
+          "name": "Оборудование",
+          "mentions": 60,
+          "sentiment": {
+            "positive": 74,
+            "negative": 25,
+            "neutral": 1
+          }
+        },
+        "cleanliness": {
+          "name": "Чистота",
+          "mentions": 62,
+          "sentiment": {
+            "positive": 67,
+            "negative": 9,
+            "neutral": 24
+          }
+        },
+        "waiting_time": {
+          "name": "Время ожидания",
+          "mentions": 38,
+          "sentiment": {
+            "positive": 63,
+            "negative": 28,
+            "neutral": 9
+          }
+        },
+        "results": {
+          "name": "Результаты лечения",
+          "mentions": 72,
+          "sentiment": {
+            "positive": 81,
+            "negative": 18,
+            "neutral": 1
+          }
+        },
+        "communication": {
+          "name": "Коммуникация",
+          "mentions": 57,
+          "sentiment": {
+            "positive": 54,
+            "negative": 11,
+            "neutral": 35
+          }
+        }
+      }
+    }
+  ],
+  "reputation_scores": [
+    {
+      "name": "Центр Студия",
+      "reputation_score": 83.2,
+      "grade": "B",
+      "avg_rating": 4.22,
+      "total_reviews": 385,
+      "sentiment_score": 0.64
+    },
+    {
+      "name": "Здоровье Лаб",
+      "reputation_score": 84.2,
+      "grade": "B",
+      "avg_rating": 4.19,
+      "total_reviews": 523,
+      "sentiment_score": 0.69
+    },
+    {
+      "name": "Лайф Клиника",
+      "reputation_score": 84.1,
+      "grade": "B",
+      "avg_rating": 4.41,
+      "total_reviews": 501,
+      "sentiment_score": 0.6
+    },
+    {
+      "name": "Медицина Клуб",
+      "reputation_score": 86.7,
+      "grade": "A",
+      "avg_rating": 4.52,
+      "total_reviews": 723,
+      "sentiment_score": 0.66
+    },
+    {
+      "name": "Клиника Центр",
+      "reputation_score": 86.1,
+      "grade": "A",
+      "avg_rating": 4.48,
+      "total_reviews": 668,
+      "sentiment_score": 0.65
+    }
+  ],
+  "risks_opportunities": {
+    "risks": [],
+    "opportunities": []
+  },
+  "insights": {
+    "market_avg_reputation": 84.9,
+    "market_avg_sentiment": {
+      "positive": 73.9,
+      "negative": 9.2
+    },
+    "best_reputation": {
+      "name": "Медицина Клуб",
+      "score": 86.7,
+      "grade": "A"
+    },
+    "worst_reputation": {
+      "name": "Центр Студия",
+      "score": 83.2,
+      "grade": "B"
+    },
+    "reputation_spread": 3.5
+  }
+}

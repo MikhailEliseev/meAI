@@ -1,0 +1,52 @@
+{
+  "analysis_date": "2026-05-05T14:46:36.801222",
+  "total_analyzed": 1,
+  "tech_profiles": [
+    {
+      "name": "Test Competitor",
+      "url": "https://example.com",
+      "cms": "Unknown",
+      "technologies": [],
+      "seo_optimization": {
+        "score": 0,
+        "issues": [
+          "No HTML to analyze"
+        ]
+      },
+      "geo_optimization": {
+        "ai_ready_score": 0,
+        "recommendations": [
+          "No HTML to analyze"
+        ]
+      },
+      "performance": {
+        "score": 0,
+        "issues": [
+          "No HTML to analyze"
+        ]
+      },
+      "analyzed_at": "2026-05-05T14:46:36.801195"
+    }
+  ],
+  "market_tech": {
+    "most_popular_cms": "Unknown",
+    "cms_distribution": {
+      "Unknown": 1
+    },
+    "top_technologies": [],
+    "avg_seo_score": 0.0,
+    "avg_geo_score": 0.0
+  },
+  "insights": {
+    "key_findings": [
+      "Самая популярная CMS: Unknown",
+      "Низкий уровень SEO оптимизации (средний балл: 0/100)",
+      "Низкая готовность к AI/GEO (средний балл: 0/100) - возможность для конкурентного преимущества!"
+    ],
+    "opportunities": [
+      "Возможность обойти конкурентов по SEO оптимизации",
+      "Большая возможность в AI/GEO оптимизации - конкуренты не готовы",
+      "Многие конкуренты не используют аналитику - возможность для data-driven подхода"
+    ]
+  }
+}

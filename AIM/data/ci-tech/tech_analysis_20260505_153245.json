@@ -1,0 +1,386 @@
+{
+  "analysis_date": "2026-05-05T15:32:45.761363",
+  "total_analyzed": 1,
+  "tech_profiles": [
+    {
+      "name": "Test Competitor",
+      "url": "https://toriclinic.ru/",
+      "cms": "Custom",
+      "technologies": [
+        "Angular",
+        "jQuery",
+        "Google Analytics",
+        "Яндекс.Метрика",
+        "Facebook Pixel",
+        "Cloudflare"
+      ],
+      "seo_optimization": {
+        "has_title": true,
+        "has_meta_description": true,
+        "has_h1": true,
+        "has_og_tags": true,
+        "has_schema": true,
+        "has_canonical": true,
+        "score": 100.0,
+        "issues": []
+      },
+      "geo_optimization": {
+        "has_faq_schema": false,
+        "has_howto_schema": false,
+        "has_article_schema": false,
+        "has_breadcrumbs": false,
+        "has_local_business": false,
+        "ai_ready_score": 0.0,
+        "recommendations": [
+          "Add FAQ Schema for AI snippets",
+          "Add Article Schema for better AI understanding",
+          "Add LocalBusiness Schema for local SEO"
+        ]
+      },
+      "performance": {
+        "html_size_kb": 158.3720703125,
+        "has_minified_css": true,
+        "has_minified_js": true,
+        "uses_cdn": false,
+        "has_lazy_loading": false,
+        "score": 40,
+        "issues": []
+      },
+      "analyzed_at": "2026-05-05T15:32:45.761251"
+    }
+  ],
+  "market_tech": {
+    "most_popular_cms": "Custom",
+    "cms_distribution": {
+      "Custom": 1
+    },
+    "top_technologies": [
+      [
+        "Angular",
+        1
+      ],
+      [
+        "jQuery",
+        1
+      ],
+      [
+        "Google Analytics",
+        1
+      ],
+      [
+        "Яндекс.Метрика",
+        1
+      ],
+      [
+        "Facebook Pixel",
+        1
+      ],
+      [
+        "Cloudflare",
+        1
+      ]
+    ],
+    "avg_seo_score": 100.0,
+    "avg_geo_score": 0.0
+  },
+  "insights": {
+    "key_findings": [
+      "Самая популярная CMS: Custom",
+      "Высокий уровень SEO оптимизации (средний балл: 100/100)",
+      "Низкая готовность к AI/GEO (средний балл: 0/100) - возможность для конкурентного преимущества!",
+      "Популярные технологии: Angular, jQuery, Google Analytics"
+    ],
+    "opportunities": [
+      "Большая возможность в AI/GEO оптимизации - конкуренты не готовы"
+    ],
+    "financial_analysis": [
+      {
+        "competitor": "Test Competitor",
+        "budget": {
+          "estimated_monthly_min": 8000,
+          "estimated_monthly_max": 30500,
+          "budget_level": "high",
+          "maturity": "Зрелая компания с хорошим финансированием",
+          "signals": [
+            {
+              "category": "CMS",
+              "item": "Custom",
+              "min": 5000,
+              "max": 20000,
+              "signal": "Высокий бюджет - custom разработка"
+            },
+            {
+              "category": "Frontend Development",
+              "item": "Modern framework",
+              "min": 3000,
+              "max": 10000,
+              "signal": "Есть frontend разработчик"
+            },
+            {
+              "category": "Marketing",
+              "item": "Analytics",
+              "min": 0,
+              "max": 500,
+              "signal": "Есть маркетолог или аналитик"
+            }
+          ],
+          "interpretation": "Конкурент тратит $8,000-$30,500/мес на технологии"
+        }
+      }
+    ],
+    "gap_analysis": [
+      {
+        "competitor": "Test Competitor",
+        "gaps": [
+          {
+            "gap": "No FAQ Schema",
+            "opportunity": "Появляться в AI ответах на вопросы пользователей",
+            "action": "Создать FAQ страницу с Schema.org разметкой",
+            "impact": 10,
+            "effort": 1,
+            "priority": "CRITICAL",
+            "time_to_implement": "2 часа",
+            "competitive_advantage_months": 12,
+            "why_critical": "ChatGPT, Perplexity, Google AI берут ответы из FAQ Schema. Это новый канал трафика!",
+            "priority_score": 10.0
+          },
+          {
+            "gap": "No LocalBusiness Schema",
+            "opportunity": "Локальное SEO + карты Google",
+            "action": "Добавить LocalBusiness Schema с адресом, телефоном, часами работы",
+            "impact": 8,
+            "effort": 2,
+            "priority": "HIGH",
+            "time_to_implement": "3 часа",
+            "competitive_advantage_months": 6,
+            "priority_score": 4.0
+          },
+          {
+            "gap": "No CDN",
+            "opportunity": "Быстрее загружаться → меньше bounce rate",
+            "action": "Подключить Cloudflare или другой CDN",
+            "impact": 7,
+            "effort": 3,
+            "priority": "MEDIUM",
+            "time_to_implement": "1 день",
+            "competitive_advantage_months": 6,
+            "priority_score": 2.3333333333333335
+          }
+        ]
+      }
+    ],
+    "industry_comparison": [
+      {
+        "competitor": "Test Competitor",
+        "comparison": {
+          "industry": "medical",
+          "seo": {
+            "competitor_score": 100.0,
+            "industry_avg": 45,
+            "difference": 55.0,
+            "position": "Значительно выше среднего",
+            "verdict": "Сильный конкурент"
+          },
+          "geo": {
+            "competitor_score": 0.0,
+            "industry_avg": 15,
+            "difference": -15.0,
+            "position": "Значительно ниже среднего",
+            "verdict": "Огромная возможность в AI/GEO"
+          },
+          "benchmarks": {
+            "avg_seo_score": 45,
+            "avg_geo_score": 15,
+            "schema_adoption": 10,
+            "online_booking_adoption": 40,
+            "analytics_adoption": 60,
+            "cdn_adoption": 30
+          },
+          "overall_verdict": "Сильный конкурент по SEO, Огромная возможность в AI/GEO"
+        }
+      }
+    ],
+    "tech_debt": [
+      {
+        "competitor": "Test Competitor",
+        "tech_debt": {
+          "debt_items": [
+            {
+              "issue": "jQuery detected",
+              "problem": "Устаревшая библиотека (2006)",
+              "impact": "Сложно нанять разработчиков, медленная разработка",
+              "severity": "medium"
+            },
+            {
+              "issue": "No CDN",
+              "problem": "Все файлы с одного сервера",
+              "impact": "Медленно в регионах, высокая нагрузка на сервер",
+              "severity": "medium"
+            }
+          ],
+          "total_debt_score": 6,
+          "debt_level": "medium",
+          "interpretation": "Средний технический долг - есть проблемы"
+        }
+      }
+    ],
+    "attack_roadmap": {
+      "week_1": {
+        "focus": "Quick Wins (критические возможности)",
+        "actions": [],
+        "expected_impact": "Захват AI трафика, базовая аналитика"
+      },
+      "week_2": {
+        "focus": "Техническая оптимизация",
+        "actions": [],
+        "expected_impact": "Производительность, SEO улучшения"
+      },
+      "month_1": {
+        "focus": "Долгосрочные преимущества",
+        "actions": [
+          "Unknown"
+        ],
+        "expected_impact": "Устойчивое конкурентное преимущество"
+      },
+      "total_opportunities": 1,
+      "critical_count": 0,
+      "high_count": 0
+    }
+  },
+  "financial_analysis": {
+    "estimated_monthly_min": 8000,
+    "estimated_monthly_max": 30500,
+    "budget_level": "high",
+    "maturity": "Зрелая компания с хорошим финансированием",
+    "signals": [
+      {
+        "category": "CMS",
+        "item": "Custom",
+        "min": 5000,
+        "max": 20000,
+        "signal": "Высокий бюджет - custom разработка"
+      },
+      {
+        "category": "Frontend Development",
+        "item": "Modern framework",
+        "min": 3000,
+        "max": 10000,
+        "signal": "Есть frontend разработчик"
+      },
+      {
+        "category": "Marketing",
+        "item": "Analytics",
+        "min": 0,
+        "max": 500,
+        "signal": "Есть маркетолог или аналитик"
+      }
+    ],
+    "interpretation": "Конкурент тратит $8,000-$30,500/мес на технологии"
+  },
+  "competitive_gaps": [
+    {
+      "gap": "No FAQ Schema",
+      "opportunity": "Появляться в AI ответах на вопросы пользователей",
+      "action": "Создать FAQ страницу с Schema.org разметкой",
+      "impact": 10,
+      "effort": 1,
+      "priority": "CRITICAL",
+      "time_to_implement": "2 часа",
+      "competitive_advantage_months": 12,
+      "why_critical": "ChatGPT, Perplexity, Google AI берут ответы из FAQ Schema. Это новый канал трафика!",
+      "priority_score": 10.0
+    },
+    {
+      "gap": "No LocalBusiness Schema",
+      "opportunity": "Локальное SEO + карты Google",
+      "action": "Добавить LocalBusiness Schema с адресом, телефоном, часами работы",
+      "impact": 8,
+      "effort": 2,
+      "priority": "HIGH",
+      "time_to_implement": "3 часа",
+      "competitive_advantage_months": 6,
+      "priority_score": 4.0
+    },
+    {
+      "gap": "No CDN",
+      "opportunity": "Быстрее загружаться → меньше bounce rate",
+      "action": "Подключить Cloudflare или другой CDN",
+      "impact": 7,
+      "effort": 3,
+      "priority": "MEDIUM",
+      "time_to_implement": "1 день",
+      "competitive_advantage_months": 6,
+      "priority_score": 2.3333333333333335
+    }
+  ],
+  "industry_benchmarks": {
+    "industry": "medical",
+    "seo": {
+      "competitor_score": 100.0,
+      "industry_avg": 45,
+      "difference": 55.0,
+      "position": "Значительно выше среднего",
+      "verdict": "Сильный конкурент"
+    },
+    "geo": {
+      "competitor_score": 0.0,
+      "industry_avg": 15,
+      "difference": -15.0,
+      "position": "Значительно ниже среднего",
+      "verdict": "Огромная возможность в AI/GEO"
+    },
+    "benchmarks": {
+      "avg_seo_score": 45,
+      "avg_geo_score": 15,
+      "schema_adoption": 10,
+      "online_booking_adoption": 40,
+      "analytics_adoption": 60,
+      "cdn_adoption": 30
+    },
+    "overall_verdict": "Сильный конкурент по SEO, Огромная возможность в AI/GEO"
+  },
+  "tech_debt": {
+    "debt_items": [
+      {
+        "issue": "jQuery detected",
+        "problem": "Устаревшая библиотека (2006)",
+        "impact": "Сложно нанять разработчиков, медленная разработка",
+        "severity": "medium"
+      },
+      {
+        "issue": "No CDN",
+        "problem": "Все файлы с одного сервера",
+        "impact": "Медленно в регионах, высокая нагрузка на сервер",
+        "severity": "medium"
+      }
+    ],
+    "total_debt_score": 6,
+    "debt_level": "medium",
+    "interpretation": "Средний технический долг - есть проблемы"
+  },
+  "attack_roadmap": {
+    "week_1": {
+      "focus": "Quick Wins (критические возможности)",
+      "actions": [
+        "Создать FAQ страницу с Schema.org разметкой",
+        "Добавить LocalBusiness Schema с адресом, телефоном, часами работы"
+      ],
+      "expected_impact": "Захват AI трафика, базовая аналитика"
+    },
+    "week_2": {
+      "focus": "Техническая оптимизация",
+      "actions": [
+        "Подключить Cloudflare или другой CDN"
+      ],
+      "expected_impact": "Производительность, SEO улучшения"
+    },
+    "month_1": {
+      "focus": "Долгосрочные преимущества",
+      "actions": [],
+      "expected_impact": "Устойчивое конкурентное преимущество"
+    },
+    "total_opportunities": 3,
+    "critical_count": 1,
+    "high_count": 1
+  }
+}

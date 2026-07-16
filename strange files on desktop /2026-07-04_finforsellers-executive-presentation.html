@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinForSellers — Executive Presentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#ffffff; --surface:#F5F5F5; --hover-bg:#EBEBEB;
+    --border:#E0E0E0; --border-strong:#CFCFCF;
+    --text:#1A1A1A; --text-secondary:#666666; --text-dim:#767676;
+    --accent:#1A1A1A; --accent-hover:#333333;
+    --card-bg:#ffffff; --card-hover:#F5F5F5;
+    --glass-bg:rgba(255,255,255,0.85); --glass-border:rgba(0,0,0,0.10);
+    --glow-outer:rgba(0,0,0,0.05); --glow-inner:rgba(0,0,0,0.015);
+    --good:#2E7D32; --good-bg:#E8F5E9; --warn:#F57F17; --warn-bg:#FFF9C4; --bad:#C62828; --bad-bg:#FFEBEE;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;font-size:16px}
+  body{
+    font-family:'Jost',sans-serif;font-weight:400;font-size:16px;line-height:1.7;
+    background:var(--bg);color:var(--text);
+    -webkit-font-smoothing:antialiased;overflow-x:hidden
+  }
+  h1,h2,h3,h4{font-family:'Playfair Display',serif;font-weight:500;line-height:1.15;color:var(--text);letter-spacing:-.01em}
+  a{color:var(--accent);text-decoration:none} a:hover{color:var(--accent-hover)}
+
+  .slide{min-height:100vh;padding:100px 64px;display:flex;flex-direction:column;justify-content:center;
+         border-bottom:1px solid var(--border);position:relative;z-index:1}
+  .slide-center{align-items:center;text-align:center}
+  .container{max-width:1100px;margin:0 auto;width:100%}
+
+  .sec-tag{display:inline-flex;align-items:center;gap:12px;font-family:'Jost',sans-serif;font-size:11px;
+           font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:20px}
+  .sec-tag::before{content:'';display:block;width:32px;height:1px;background:var(--accent)}
+
+  .hero-title{font-family:'Playfair Display',serif;font-size:clamp(48px,6vw,80px);font-weight:400;
+              line-height:1.1;margin-bottom:32px;letter-spacing:-.02em}
+  .hero-subtitle{font-size:20px;color:var(--text-secondary);line-height:1.7;max-width:700px}
+  .slide-center .hero-subtitle{margin:0 auto}
+
+  .sec-title{font-family:'Playfair Display',serif;font-size:clamp(32px,4vw,52px);font-weight:400;
+            line-height:1.1;margin-bottom:24px}
+  .sec-lead{font-size:18px;line-height:1.8;color:var(--text-secondary);max-width:640px;margin-bottom:40px}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:24px}
+
+  .card{background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:32px;transition:all .3s}
+  .card:hover{background:var(--card-hover);border-color:var(--border-strong);transform:translateY(-2px)}
+  .card h3,.card h4{font-family:'Playfair Display',serif;font-weight:500;margin-bottom:8px}
+  .card p{font-size:15px;color:var(--text-secondary);line-height:1.7}
+
+  .card-glass{background:var(--glass-bg);backdrop-filter:blur(20px) saturate(1.4);border:1px solid var(--glass-border);
+              border-radius:8px;padding:32px}
+  .card-glass h3{font-family:'Playfair Display',serif;font-size:20px;font-weight:500;margin-bottom:8px}
+  .card-glass p{font-size:15px;color:var(--text-secondary);line-height:1.7}
+
+  .surface-block{background:var(--surface);border-left:3px solid var(--accent);padding:20px 24px;margin:16px 0}
+  .surface-block p{font-size:14px;color:var(--text);font-weight:500}
+
+  .stat-row{display:flex;flex-wrap:wrap;gap:56px;padding:32px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:24px 0}
+  .stat-value{font-family:'Playfair Display',serif;font-size:36px;font-weight:500;color:var(--accent);line-height:1.1;margin-bottom:4px}
+  .stat-label{font-family:'Jost',sans-serif;font-size:13px;color:var(--text-secondary)}
+
+  .metric-tag{display:inline-flex;align-items:center;gap:6px;font-family:'Jost',sans-serif;font-size:11px;
+              font-weight:600;padding:5px 12px;border-radius:12px;letter-spacing:.5px;margin:4px 6px 4px 0}
+  .metric-dot{width:6px;height:6px;border-radius:50%}
+  .metric-green{background:var(--good-bg);color:var(--good)} .metric-green .metric-dot{background:var(--good)}
+  .metric-yellow{background:var(--warn-bg);color:var(--warn)} .metric-yellow .metric-dot{background:var(--warn)}
+  .metric-red{background:var(--bad-bg);color:var(--bad)} .metric-red .metric-dot{background:var(--bad)}
+
+  .btn-primary{display:inline-flex;align-items:center;justify-content:center;padding:15px 40px;
+               background:var(--accent);color:var(--bg);border:none;font-family:'Jost',sans-serif;
+               font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+               border-radius:1px;cursor:pointer;transition:all .3s;text-decoration:none}
+  .btn-primary:hover{background:var(--accent-hover);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+
+  table{width:100%;border-collapse:collapse;font-size:.95em}
+  th{font-family:'Jost',sans-serif;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+     color:var(--text-dim);padding:12px;text-align:left;border-bottom:1px solid var(--border-strong)}
+  td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:15px;color:var(--text-secondary)}
+  tr:last-child td{border-bottom:none}
+  td.good{color:var(--good)} td.warn{color:var(--warn)} td.bad{color:var(--bad)}
+
+  .query-box{background:var(--surface);border:1px solid var(--border-strong);border-radius:8px;
+             padding:32px 40px;text-align:center;margin:24px 0}
+  .query-box .q{font-family:'Playfair Display',serif;font-size:1.4em;font-weight:500;color:var(--accent);margin-bottom:8px}
+  .query-box .subq{font-size:15px;color:var(--text-secondary)}
+
+  .timeline{display:flex;gap:0;margin:24px 0}
+  .timeline .t{flex:1;text-align:center;position:relative;padding:24px 12px}
+  .timeline .t:not(:last-child):after{content:'';position:absolute;right:0;top:50%;width:40px;height:1px;background:var(--accent)}
+  .timeline .t .month{font-family:'Jost',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;
+                      text-transform:uppercase;color:var(--text-dim)}
+  .timeline .t .label{font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin:.4em 0;color:var(--text)}
+  .timeline .t .detail{font-size:13px;color:var(--text-secondary);margin-top:4px}
+
+  .phase{background:var(--surface);border-left:3px solid var(--accent);padding:20px 24px;margin:8px 0}
+  .phase h4{font-family:'Playfair Display',serif;font-weight:500;margin-bottom:6px;color:var(--text)}
+  .phase p{font-size:14px;color:var(--text-secondary);line-height:1.6}
+  .phase .goal{color:var(--good);font-size:13px;margin-top:6px}
+
+  .highlight-row{background:var(--card-hover)}
+  .highlight-row td{color:var(--text)!important;font-weight:500}
+
+  .note{background:var(--surface);border:1px solid var(--border-strong);border-radius:8px;padding:16px 24px;
+        color:var(--text-secondary);font-size:14px;margin:20px 0}
+  .note strong{color:var(--text)}
+
+  .quote{background:var(--surface);border-left:3px solid var(--accent);padding:20px 28px;
+         border-radius:0 8px 8px 0;margin:16px 0;font-style:italic;font-size:15px;color:var(--text)}
+
+  .divider{border:none;height:1px;background:var(--border);margin:0}
+
+  .big-num{font-family:'Playfair Display',serif;font-size:2.8em;font-weight:500;line-height:1;color:var(--accent)}
+  .big-num.green{color:var(--good)}
+
+  .foot{text-align:center;color:var(--text-dim);font-size:13px;padding:60px 64px}
+
+  @media(max-width:768px){
+    .slide{padding:60px 24px}
+    .grid2,.grid3,.grid4{grid-template-columns:1fr}
+    .stat-row{gap:32px}
+    .timeline{flex-direction:column}
+    .timeline .t:not(:last-child):after{display:none}
+    .hero-title{font-size:clamp(32px,8vw,48px)}
+  }
+
+  /* Water ripples — subtle, from design system */
+  .water-ripples{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden}
+  .ripple-origin{position:absolute;width:4px;height:4px;border-radius:50%;background:var(--text);opacity:.06;transform:translate(-50%,-50%)}
+  .ripple-origin-1{top:50%;left:50%} .ripple-origin-2{top:18%;left:14%} .ripple-origin-3{top:72%;right:12%}
+  .ripple-ring{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:50%;
+              border-style:solid;border-color:var(--text);background:none;opacity:0;width:0;height:0;
+              animation:ripple cubic-bezier(.22,.61,.36,1) infinite}
+  @keyframes ripple{0%{width:0;height:0;opacity:.55;border-width:1.2px}
+    5%{opacity:.42;border-width:1px}15%{opacity:.30;border-width:.8px}
+    35%{opacity:.16;border-width:.5px}60%{opacity:.06;border-width:.3px}
+    85%{opacity:.02;border-width:.15px}100%{width:850px;height:850px;opacity:0;border-width:.08px}}
+  .ripple-origin-1 .ripple-ring{animation-duration:10s}.ripple-origin-1 .ripple-ring:nth-child(1){animation-delay:0s}
+  .ripple-origin-1 .ripple-ring:nth-child(2){animation-delay:.18s}.ripple-origin-1 .ripple-ring:nth-child(3){animation-delay:.36s}
+  .ripple-origin-1 .ripple-ring:nth-child(4){animation-delay:.54s}.ripple-origin-1 .ripple-ring:nth-child(5){animation-delay:.72s}
+  .ripple-origin-2 .ripple-ring{animation-duration:11s}.ripple-origin-2 .ripple-ring:nth-child(1){animation-delay:1.5s}
+  .ripple-origin-2 .ripple-ring:nth-child(2){animation-delay:1.68s}.ripple-origin-2 .ripple-ring:nth-child(3){animation-delay:1.86s}
+  .ripple-origin-2 .ripple-ring:nth-child(4){animation-delay:2.04s}.ripple-origin-2 .ripple-ring:nth-child(5){animation-delay:2.22s}
+  .ripple-origin-3 .ripple-ring{animation-duration:9s}.ripple-origin-3 .ripple-ring:nth-child(1){animation-delay:3s}
+  .ripple-origin-3 .ripple-ring:nth-child(2){animation-delay:3.2s}.ripple-origin-3 .ripple-ring:nth-child(3){animation-delay:3.4s}
+  .ripple-origin-3 .ripple-ring:nth-child(4){animation-delay:3.6s}.ripple-origin-3 .ripple-ring:nth-child(5){animation-delay:3.8s}
+  @media(prefers-reduced-motion:reduce){.ripple-ring{animation:none;display:none}}
+  @media(max-width:768px){.water-ripples{opacity:.5}}
+</style>
+</head>
+<body>
+
+<div class="water-ripples">
+  <div class="ripple-origin ripple-origin-1"><span class="ripple-ring"></span><span class="ripple-ring"></span><span class="ripple-ring"></span><span class="ripple-ring"></span><span class="ripple-ring"></span></div>
+  <div class="ripple-origin ripple-origin-2"><span class="ripple-ring"></span><span class="ripple-ring"></span><span class="ripple-ring"></span><span class="ripple-ring"></span><span class="ripple-ring"></span></div>
+  <div class="ripple-origin ripple-origin-3"><span class="ripple-ring"></span><span class="ripple-ring"></span><span class="ripple-ring"></span><span class="ripple-ring"></span><span class="ripple-ring"></span></div>
+</div>
+
+<!-- SLIDE 1: Title -->
+<section class="slide slide-center">
+  <div class="container">
+    <div class="sec-tag">ПРЕЗЕНТАЦИЯ ДЛЯ СОБСТВЕННИКА</div>
+    <h1 class="hero-title">FinForSellers</h1>
+    <p class="hero-subtitle">Инструмент, который показывает селлеру реальную прибыль по каждому артикулу на Wildberries и Ozon — с учётом всех издержек, в реальном времени, с автопересчётом при смене тарифов. Без Excel.</p>
+    <p style="color:var(--text-dim);margin-top:32px;font-size:13px">Июль 2026 &nbsp;·&nbsp; Рынок РФ &nbsp;·&nbsp; Стадия: готовность к запуску</p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SLIDE 2: Главный запрос -->
+<section class="slide">
+  <div class="container">
+    <div class="sec-tag">САМОЕ ВАЖНОЕ</div>
+    <h2 class="sec-title">Главный запрос аудитории</h2>
+
+    <div class="query-box">
+      <div class="q">«Как узнать реальную прибыль по каждому товару на Wildberries?»</div>
+      <div class="subq">И его варианты, которые селлеры вбивают в поиск:</div>
+    </div>
+
+    <div class="grid2" style="margin-top:32px">
+      <div class="card">
+        <h3>Прямые запросы (поиск)</h3>
+        <p>«Как посчитать чистую прибыль на Ozon»<br>
+        «Прибыль на Wildberries с учётом всех расходов»<br>
+        «Юнит-экономика для WB — калькулятор»<br>
+        «Сколько реально зарабатываю на маркетплейсах»<br>
+        «Финансовый учёт для селлеров»</p>
+      </div>
+      <div class="card">
+        <h3>Запросы-боли (сообщества, чаты)</h3>
+        <p>«Выручка растёт, а денег нет — почему?»<br>
+        «Ozon поднял комиссию — как теперь считать?»<br>
+        «Как понять, какой товар приносит прибыль?»<br>
+        «Куда делись 80 тысяч в этом месяце?»<br>
+        «Посоветуйте сервис для учёта на WB»</p>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:24px">
+      Это не «хотелось бы» — это реальные запросы, которые селлеры вбивают в Яндекс и обсуждают в Telegram-каналах. По ним мы их и находим.
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SLIDE 3: Боли и Jobs -->
+<section class="slide">
+  <div class="container">
+    <div class="sec-tag">ЧТО РЕАЛЬНО БОЛИТ</div>
+    <h2 class="sec-title">Боли и Jobs — что селлеры пытаются сделать и где ломается</h2>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="big-num" style="font-size:2em">#1</div>
+        <h3>«Я не знаю, на каких товарах зарабатываю, а на каких теряю»</h3>
+        <p>Селлер считает маржу как «цена минус себестоимость». Но после комиссий, логистики, рекламы, возвратов и штрафов реальная прибыль в 4 раза меньше.</p>
+        <p style="color:var(--accent);font-size:14px">Job: «Я хочу видеть точную прибыль по каждому артикулу со всеми издержками — чтобы перестать спонсировать убыточные позиции»</p>
+      </div>
+      <div class="card">
+        <div class="big-num" style="font-size:2em">#2</div>
+        <h3>«Маркетплейс меняет тарифы, а я узнаю об убытке через 3 месяца»</h3>
+        <p>Ozon поднимал комиссии 6 раз за 2025 год. Каждый раз селлеры пересчитывают экономику вручную — и обнаруживают убыток слишком поздно.</p>
+        <p style="color:var(--accent);font-size:14px">Job: «Я хочу автоматически видеть, как смена тарифов повлияла на прибыль — в день изменения, а не через квартал»</p>
+      </div>
+      <div class="card">
+        <div class="big-num" style="font-size:2em">#3</div>
+        <h3>«Данные разбросаны по 5 системам, я трачу вечер на свод в Excel»</h3>
+        <p>Выгрузки из кабинетов WB и Ozon, рекламный кабинет, банк, возвраты — всё в разных местах. ~35% селлеров вообще используют только Excel.</p>
+        <p style="color:var(--accent);font-size:14px">Job: «Я хочу в одном окне видеть, как данные о продажах превращаются в чистую прибыль — без ручного склеивания таблиц»</p>
+      </div>
+      <div class="card">
+        <div class="big-num" style="font-size:2em">#4</div>
+        <h3>«Возвраты, брак и штрафы теряются между отчётами — и съедают маржу»</h3>
+        <p>У селлера с 300 продаж в месяц ~40–50 возвратов. Это 24–40 тыс ₽ прямых потерь на одном SKU — и они нигде явно не видны.</p>
+        <p style="color:var(--accent);font-size:14px">Job: «Я хочу видеть возвраты, брак и штрафы по каждому артикулу — чтобы знать, где теряю»</p>
+      </div>
+    </div>
+
+    <div class="quote">«Я продаю на 4 миллиона в месяц, а чистыми выходит 300–400 тысяч. И я не уверена, что это правильная цифра. Может, на самом деле 200. А может, 500. Я не знаю.» — реальная цитата селлера (синтетическое интервью)</div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SLIDE 4: Рынок и окно -->
+<section class="slide">
+  <div class="container">
+    <div class="sec-tag">ПОЧЕМУ СЕЙЧАС</div>
+    <h2 class="sec-title">Рынок и окно возможностей</h2>
+
+    <div class="stat-row">
+      <div><div class="stat-value">~700 000</div><div class="stat-label">Активных селлеров в РФ<br>(WB + Ozon + Яндекс.Маркет)</div></div>
+      <div><div class="stat-value" style="color:var(--good)">~35%</div><div class="stat-label">Сидят только на Excel<br>— это наш потенциал</div></div>
+      <div><div class="stat-value">~90 000</div><div class="stat-label">Средний сегмент (1–10 млн ₽/мес)<br>— наш целевой рынок</div></div>
+      <div><div class="stat-value" style="color:var(--good)">~2 млрд ₽</div><div class="stat-label">SAM — годовой бюджет<br>нашего сегмента на софт</div></div>
+    </div>
+
+    <div class="grid2" style="margin-top:40px">
+      <div class="card-glass">
+        <h3> Конкуренты НЕ закрывают этот стык</h3>
+        <p><strong>MPstats, MarketGuru</strong> — отличная аналитика продаж, но не ведут реальный финучёт (нет ОПиУ/ДДС, автопересчёта тарифов).</p>
+        <p><strong>Adesk, ПланФакт</strong> — хороший финучёт, но не забирают данные из WB/Ozon автоматически.</p>
+        <p><strong>Excel</strong> — 35% селлеров сидят на нём не от хорошей жизни, а потому что ничего лучше для их задачи нет.</p>
+      </div>
+      <div class="card-glass">
+        <h3> Усиление спроса с 2026 года</h3>
+        <p>С 2026 года налоговая учитывает <strong>всю сумму продаж</strong>, а не то, что маркетплейс перечислил за вычетом комиссии. Расхождение между аналитикой и бухгалтерией растёт → спрос на единый продукт усиливается.</p>
+        <p>Медианная выручка селлера растёт (574 500 ₽/мес — максимум за 4 года). Рынок чистится: слабые уходят, сильные остаются и ищут лучшие инструменты.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SLIDE 5: Продукт -->
+<section class="slide">
+  <div class="container">
+    <div class="sec-tag">ЧТО СТРОИМ</div>
+    <h2 class="sec-title">Продукт — что он делает</h2>
+
+    <div class="card-glass" style="text-align:center;margin-bottom:32px">
+      <p style="font-size:1.2em;color:var(--accent);margin:0">Селлер подключает API Wildberries или Ozon → через 5 минут видит дашборд со ВСЕМИ своими артикулами, реальной чистой прибылью по каждому и подсвеченными красным убыточными позициями. При смене тарифов — уведомление в день изменения.</p>
+    </div>
+
+    <div class="grid4">
+      <div class="card" style="text-align:center">
+        <h4>Автосбор данных</h4>
+        <p>Из WB, Ozon, рекламных кабинетов и банка — без единого копирования в Excel</p>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="big-num" style="font-size:2em"></div>
+        <h4>Точный расчёт</h4>
+        <p>Чистая прибыль по артикулу с учётом ВСЕХ издержек — комиссий, логистики, рекламы, возвратов, штрафов</p>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="big-num" style="font-size:2em"></div>
+        <h4>Автопересчёт тарифов</h4>
+        <p>При смене комиссий WB/Ozon — новые цифры сами, уведомление в день изменения</p>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="big-num" style="font-size:2em"></div>
+        <h4>Подсветка убытков</h4>
+        <p>Убыточные артикулы — красным. Сразу видно, что снимать с продажи</p>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:24px">
+      <strong>Ключевое отличие от конкурентов:</strong> никто из топ-10 сервисов не делает одновременно автоматический сбор данных из маркетплейса И полноценный финучёт И автопересчёт тарифов. Все закрывают что-то одно. Мы — все три сразу.
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SLIDE 6: Roadmap -->
+<section class="slide">
+  <div class="container">
+    <div class="sec-tag">ПЛАН ДЕЙСТВИЙ</div>
+    <h2 class="sec-title">Как двигаться — Roadmap на 6 месяцев</h2>
+
+    <div class="timeline">
+      <div class="t"><div class="month">Месяц 1</div><div class="label">Фаза 1 — Валидация</div><div class="detail">Интервью +<br>fake-door лендинг</div></div>
+      <div class="t"><div class="month">Месяцы 2–3</div><div class="label">Фаза 2 — MVP</div><div class="detail">API WB/Ozon +<br>движок прибыли +<br>автопересчёт</div></div>
+      <div class="t"><div class="month">Месяцы 4–6</div><div class="label">Фаза 3 — Рост</div><div class="detail">~50 платящих,<br>retention, сарафан</div></div>
+    </div>
+
+    <div class="grid3" style="margin-top:24px">
+      <div class="phase">
+        <h4>Фаза 1 — Проверить, не строя</h4>
+        <p><strong>2–3 недели, ~20–30 тыс ₽</strong></p>
+        <p>6–8 живых интервью с селлерами + fake-door лендинг с ценой.</p>
+        <p class="goal">Цель: убедиться, что боль реальна и за неё готовы платить.</p>
+      </div>
+      <div class="phase">
+        <h4>Фаза 2 — Построить MVP</h4>
+        <p><strong>2 месяца, основной бюджет</strong></p>
+        <p>API-коннекторы WB/Ozon + движок расчёта + дашборд + уведомления при смене тарифов.</p>
+        <p class="goal">Цель: 10–20 платящих клиентов.</p>
+      </div>
+      <div class="phase">
+        <h4>Фаза 3 — Расти</h4>
+        <p><strong>3 месяца, итерация</strong></p>
+        <p>Еженедельный дайджест, рефералы, биллинг. При необходимости — второй маркетплейс.</p>
+        <p class="goal">Цель: ~50 платящих, выручка ~150–350 тыс ₽/мес.</p>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:24px">
+      <strong>Почему не строим сразу:</strong> синтетические интервью показали, что спрос есть. Но перед тем как вкладывать деньги в разработку, проверяем на живых людях — 2–3 недели и 20–30 тысяч сейчас экономят 2 месяца разработки потом.
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SLIDE 7: Креативы -->
+<section class="slide">
+  <div class="container">
+    <div class="sec-tag">КАК ПРОДАВАТЬ</div>
+    <h2 class="sec-title">Креативы — что говорить и показывать в рекламе</h2>
+
+    <h3 style="font-size:18px;color:var(--text-dim);margin-bottom:24px">Три главных рекламных угла</h3>
+
+    <div class="grid3">
+      <div class="card-glass">
+        <h3 style="font-size:1.2em"> Угол #1 — Узнай правду</h3>
+        <p style="font-size:1.05em;font-weight:600;margin:.3em 0;color:var(--text)">«Ты не знаешь, на каких артикулах зарабатываешь, а на каких теряешь.»</p>
+        <p style="color:var(--text-secondary)"><em>Ловит самое больное: селлер думает, что у него всё хорошо, пока не видит реальные цифры.</em></p>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:8px">Канал: Яндекс.Директ (поиск), VK (таргет по интересам)</p>
+      </div>
+      <div class="card-glass">
+        <h3 style="font-size:1.2em"> Угол #2 — Лови момент</h3>
+        <p style="font-size:1.05em;font-weight:600;margin:.3em 0;color:var(--text)">«Ozon опять поднял комиссию? Узнай, какие артикулы стали убыточными — пока не потерял месяц.»</p>
+        <p style="color:var(--text-secondary)"><em>Бьёт в момент, когда боль острая: смена тарифов. Селлер и так зол — тут мы с решением.</em></p>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:8px">Канал: Telegram-каналы селлеров (когда WB/Ozon анонсируют изменения)</p>
+      </div>
+      <div class="card-glass">
+        <h3 style="font-size:1.2em"> Угол #3 — Цифры с потолка</h3>
+        <p style="font-size:1.05em;font-weight:600;margin:.3em 0;color:var(--text)">«Думаешь, зарабатываешь — а по факту теряешь на каждом втором артикуле. Узнай реальную прибыль за 5 минут.»</p>
+        <p style="color:var(--text-secondary)"><em>Конкретная цифра-кейс. Селлер видит себя в этом сценарии.</em></p>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:8px">Канал: VK, Telegram (пост-кейс с цифрами)</p>
+      </div>
+    </div>
+
+    <h3 style="font-size:18px;color:var(--text-dim);margin:40px 0 16px">Что показывать визуально</h3>
+    <div class="grid2">
+      <div class="card">
+        <h4> Показываем результат</h4>
+        <p>• Таблица артикулов с зелёными (прибыль) и красными (убыток) цифрами — как это будет выглядеть у клиента<br>
+        • Уведомление на телефоне в день смены тарифов: «Ozon поднял комиссию — 5 твоих артикулов стали убыточными»<br>
+        • Селлер утром с ноутбуком и кофе — вечер свободен, цифры перед глазами</p>
+      </div>
+      <div class="card">
+        <h4> НЕ показываем</h4>
+        <p>• Интерфейс продукта сам по себе — это скучно<br>
+        • Графики и дашборды в вакууме — не цепляет<br>
+        • Скриншоты «как это работает» — оставьте для лендинга, не для рекламы<br>
+        • Абстрактные «мы — единая платформа» — не дифференцирует</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SLIDE 8: Каналы -->
+<section class="slide">
+  <div class="container">
+    <div class="sec-tag">ГДЕ НАХОДИТЬ КЛИЕНТОВ</div>
+    <h2 class="sec-title">Каналы — где и как ловить селлеров</h2>
+
+    <div class="grid2">
+      <div class="card-glass">
+        <div class="big-num green" style="font-size:1.8em">#1</div>
+        <h3>Telegram-каналы селлеров</h3>
+        <p><strong>Главный канал.</strong> Селлеры плотно сидят в Telegram — это их операционная система. Нишевые каналы («Селлеры WB/Ozon», «Маркетплейс-селлер»), чаты, новостные.</p>
+        <p><strong>Формат:</strong> пост-кейс с конкретными цифрами потерь → лендинг → бесплатный аудит → подписка.</p>
+        <p class="goal">Момент для входа: когда селлеры обсуждают рост комиссий или жалуются на «не вижу прибыль».</p>
+      </div>
+      <div class="card">
+        <div class="big-num" style="font-size:1.8em">#2</div>
+        <h3>Яндекс.Директ — поиск</h3>
+        <p>Селлеры ищут: «как посчитать прибыль на WB», «финучёт для селлеров», «юнит-экономика Ozon». Прямой ответ на прямой запрос — самая горячая аудитория.</p>
+      </div>
+      <div class="card">
+        <div class="big-num" style="font-size:1.8em">#3</div>
+        <h3>vc.ru — контент</h3>
+        <p>Статьи про реальные кейсы: «Как я нашёл 15 убыточных артикулов и сэкономил 80 тыс ₽ в месяц». Органический поиск, долгоиграющий контент.</p>
+      </div>
+      <div class="card">
+        <div class="big-num" style="font-size:1.8em">#4</div>
+        <h3>Лид-магнит: бесплатный аудит</h3>
+        <p>Селлер присылает выгрузки → получает расчёт реальной прибыли бесплатно. Убивает двух зайцев: валидация ценности + сбор заявок. Никаких обязательств.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SLIDE 9: Цифры -->
+<section class="slide">
+  <div class="container">
+    <div class="sec-tag">ЭКОНОМИКА</div>
+    <h2 class="sec-title">Цифры — на что рассчитывать</h2>
+
+    <div class="stat-row">
+      <div><div class="stat-value" style="color:var(--good)">~4 500 ₽</div><div class="stat-label">Медианная цена<br>готовности платить / мес</div></div>
+      <div><div class="stat-value">~15–25 тыс</div><div class="stat-label">Уже тратят на связку<br>сервисов / мес</div></div>
+      <div><div class="stat-value" style="color:var(--good)">~50</div><div class="stat-label">Платящих клиентов<br>к концу 6-го месяца</div></div>
+      <div><div class="stat-value">~150–350 тыс</div><div class="stat-label">Выручка / мес<br>к концу 6-го месяца</div></div>
+    </div>
+
+    <div class="grid2" style="margin-top:40px">
+      <div class="card">
+        <h3>Рынок</h3>
+        <table>
+          <tr><td>TAM (весь рынок софта для селлеров РФ)</td><td style="text-align:right;font-weight:600;color:var(--text)">~10 млрд ₽</td></tr>
+          <tr><td>SAM (средний сегмент 1–10 млн/мес)</td><td style="text-align:right;font-weight:600;color:var(--text)">~1,3–2,0 млрд ₽</td></tr>
+          <tr><td>SOM (1–2 года, реалистичный захват)</td><td style="text-align:right;font-weight:600;color:var(--text)">~30–80 млн ₽</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Юнит-экономика (прогноз)</h3>
+        <table>
+          <tr><td>Средний чек</td><td style="text-align:right;font-weight:600;color:var(--text)">3 000–5 000 ₽/мес</td></tr>
+          <tr><td>LTV (при retention 70%)</td><td style="text-align:right;font-weight:600;color:var(--text)">~50–80 тыс ₽</td></tr>
+          <tr><td>CAC (Telegram + контент)</td><td style="text-align:right;font-weight:600;color:var(--text)">~5–15 тыс ₽</td></tr>
+          <tr><td>LTV / CAC</td><td style="text-align:right;font-weight:600;color:var(--good)">≥ 3×</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SLIDE 10: Конкуренты -->
+<section class="slide">
+  <div class="container">
+    <div class="sec-tag">КОНКУРЕНТНОЕ ПОЛЕ</div>
+    <h2 class="sec-title">Конкуренты — кто что делает, и где наш кусок</h2>
+
+    <table>
+      <tr><th>Конкурент</th><th style="text-align:center">Данные из WB/Ozon</th><th style="text-align:center">Финучёт (ОПиУ/ДДС)</th><th style="text-align:center">Автопересчёт тарифов</th><th style="text-align:center">Возвраты/штрафы видны</th><th>Цена от</th></tr>
+      <tr><td>MPstats</td><td class="good" style="text-align:center">Да</td><td class="bad" style="text-align:center">Нет</td><td class="bad" style="text-align:center">Нет</td><td class="warn" style="text-align:center">Частично</td><td>6 495 ₽</td></tr>
+      <tr><td>Adesk</td><td class="bad" style="text-align:center">Нет</td><td class="good" style="text-align:center">Да</td><td class="bad" style="text-align:center">Нет</td><td class="bad" style="text-align:center">Нет</td><td>1 990 ₽</td></tr>
+      <tr><td>MarketGuru</td><td class="good" style="text-align:center">Да</td><td class="bad" style="text-align:center">Нет</td><td class="bad" style="text-align:center">Нет</td><td class="bad" style="text-align:center">Нет</td><td>9 990 ₽</td></tr>
+      <tr><td>МойСклад</td><td class="good" style="text-align:center">Да</td><td class="good" style="text-align:center">Да</td><td class="bad" style="text-align:center">Нет</td><td class="warn" style="text-align:center">Частично</td><td>495 ₽<br><span style="font-size:12px;color:var(--text-dim)">+1 400 Финансы</span></td></tr>
+      <tr><td>Excel</td><td class="bad" style="text-align:center">Нет</td><td class="bad" style="text-align:center">Нет</td><td class="bad" style="text-align:center">Нет</td><td class="bad" style="text-align:center">Нет</td><td>0 ₽<br><span style="font-size:12px;color:var(--text-dim)">+ вечер времени</span></td></tr>
+      <tr class="highlight-row" style="background:var(--card-hover)"><td style="font-weight:600;color:var(--accent)">FinForSellers →</td><td class="good" style="text-align:center;font-weight:700">Да</td><td class="good" style="text-align:center;font-weight:700">Да</td><td class="good" style="text-align:center;font-weight:700">Да</td><td class="good" style="text-align:center;font-weight:700">Да</td><td style="font-weight:600;color:var(--accent)">~3–5 тыс ₽</td></tr>
+    </table>
+
+    <div class="card-glass" style="margin-top:24px">
+      <h3>Где наш кусок</h3>
+      <p>Ни один из топ-10 конкурентов не закрывает одновременно все четыре колонки. Каждый силён в чём-то одном. <strong>Наш wedge — пересечение «данные из маркетплейса + полноценный финучёт + автопересчёт тарифов»</strong>. Это именно то, что никто не делает, и именно то, что нужно среднему селлеру.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SLIDE 11: Следующий шаг -->
+<section class="slide slide-center">
+  <div class="container">
+    <div class="sec-tag">ПРЯМО СЕЙЧАС</div>
+    <h2 class="sec-title" style="font-size:clamp(36px,5vw,60px)">Следующий шаг — завтра</h2>
+
+    <div class="card-glass" style="text-align:left;max-width:660px;margin:32px auto">
+      <h3>Одно действие, которое запускает всё</h3>
+      <p style="font-size:1.05em;margin-top:12px"><strong>Найти и опросить 6–8 живых селлеров</strong> с оборотом 3–10 млн ₽/мес, которые уже платят за MPstats или MarketGuru.</p>
+      <p style="margin-top:16px">Спросить у них три вещи:</p>
+      <ol style="font-size:15px;line-height:2.2;padding-left:20px;color:var(--text-secondary)">
+        <li>«Расскажите, как вы в последний раз пытались понять реальную прибыль по артикулам?»</li>
+        <li>«Где это сломалось? Что пошло не так?»</li>
+        <li>«Если бы был инструмент, который решает это за вас — сколько бы вы за него платили в месяц?»</li>
+      </ol>
+      <p style="color:var(--good);margin-top:16px"><strong>Стоимость:</strong> 2–3 недели, ~20–30 тыс ₽ (incentives респондентам + промо-посты для рекрутинга).</p>
+      <p style="color:var(--good)"><strong>Результат:</strong> точный ответ — есть бизнес или нет. До стройки продукта.</p>
+    </div>
+
+    <p style="color:var(--text-dim);font-size:14px;max-width:660px;margin:24px auto">
+      Все остальные шаги — MVP, каналы, креативы, цены — уже готовы. Они лежат в папке <code style="color:var(--accent)">Skills-Results/finforsellers/</code>
+      <br>Нужно только одно: подтвердить на живых людях то, что синтетические интервью уже показали.
+    </p>
+
+    <a class="btn-primary" href="#" style="margin-top:24px">Найти первых 6 селлеров →</a>
+  </div>
+</section>
+
+<div class="foot">
+  FinForSellers &nbsp;·&nbsp; Июль 2026 &nbsp;·&nbsp; Рынок РФ &nbsp;·&nbsp; Стадия: к запуску<br>
+  Исследования: AI CustDev + Next Move Theory (Иван Замин)
+</div>
+
+</body>
+</html>

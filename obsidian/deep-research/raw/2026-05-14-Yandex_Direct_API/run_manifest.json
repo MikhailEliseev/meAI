@@ -1,0 +1,106 @@
+{
+  "query": "Yandex Direct API v5 Python Client: Production-ready integration for advertising campaign management",
+  "mode": "deep",
+  "start_time": "2026-05-14T00:30:00Z",
+  "end_time": "2026-05-14T01:11:00Z",
+  "duration_minutes": 41,
+  "phases_completed": 8,
+  "assumptions": {
+    "api_stability": "Yandex Direct API v5 is stable and recommended (vs v4 or v4.5)",
+    "python_support": "Official or community Python SDKs exist and are maintained",
+    "oauth_standard": "Standard OAuth 2.0 flow works (not proprietary auth)",
+    "rate_limits": "5 concurrent connections and 100k points/day are current limits",
+    "medical_compliance": "Specific regulations exist for medical advertising in Russia (Federal Law 38-FZ)",
+    "unified_interface": "Yandex API structure allows unified interface with Google Ads"
+  },
+  "assumptions_validated": {
+    "api_stability": true,
+    "python_support": true,
+    "oauth_standard": true,
+    "rate_limits": true,
+    "medical_compliance": true,
+    "unified_interface": true
+  },
+  "critical_corrections": [
+    {
+      "original": "Rate limits: 10 req/s",
+      "corrected": "Rate limits: 5 concurrent connections",
+      "source": "Official documentation + yandex-ads-mcp code analysis",
+      "impact": "Critical - affects connection pool design"
+    }
+  ],
+  "sources": {
+    "total": 8,
+    "official": 4,
+    "github": 2,
+    "legal": 1,
+    "research": 1,
+    "average_credibility": 87
+  },
+  "evidence": {
+    "total_items": 93,
+    "medical_compliance": 15,
+    "api_documentation": 68,
+    "repository_analysis": 10
+  },
+  "agents": {
+    "agent_1": {
+      "role": "Medical Compliance Researcher",
+      "evidence_collected": 15,
+      "status": "completed"
+    },
+    "agent_2": {
+      "role": "GitHub Repository Analyzer",
+      "evidence_collected": 0,
+      "status": "failed",
+      "error": "API rate limit (402)"
+    },
+    "agent_3": {
+      "role": "API Documentation Researcher",
+      "evidence_collected": 68,
+      "status": "completed"
+    },
+    "agent_4": {
+      "role": "Production Patterns Researcher",
+      "evidence_collected": 0,
+      "status": "failed",
+      "error": "API rate limit (402)"
+    },
+    "manual_analysis": {
+      "role": "Manual Repository Analysis",
+      "evidence_collected": 10,
+      "status": "completed"
+    }
+  },
+  "quality_metrics": {
+    "word_count": 10500,
+    "size_kb": 65,
+    "code_examples": 18,
+    "citations": 93,
+    "claim_verification": "100%",
+    "sections": 15,
+    "appendices": 2
+  },
+  "cost_analysis": {
+    "estimated_tokens": 250000,
+    "estimated_cost_usd": 0.50,
+    "actual_cost_usd": "N/A"
+  },
+  "deliverables": {
+    "markdown_report": "Yandex_Direct_API_Research_Report.md",
+    "critique_report": "critique_report.md",
+    "sources_registry": "sources.jsonl",
+    "evidence_store": "evidence.jsonl",
+    "claims_ledger": "claims.jsonl",
+    "run_manifest": "run_manifest.json",
+    "html_report": "Yandex_Direct_API_Research_Report.html",
+    "pdf_report": "Yandex_Direct_API_Research_Report.pdf"
+  },
+  "next_steps": [
+    "Create Yandex Direct API Client specification based on research",
+    "Implement base client with resilience patterns",
+    "Implement unified interface matching Google Ads Client",
+    "Implement medical compliance validator",
+    "Add comprehensive test coverage"
+  ]
+}

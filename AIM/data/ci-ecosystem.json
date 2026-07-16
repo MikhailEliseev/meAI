@@ -1,0 +1,259 @@
+{
+  "analysis_date": "2026-05-06T21:18:03.557768",
+  "total_analyzed": 5,
+  "niche": "dental implants",
+  "ecosystem_profiles": [
+    {
+      "name": "Центр Студия",
+      "partners_by_type": {
+        "technology": 3,
+        "marketing": 1,
+        "suppliers": 3,
+        "strategic": 2
+      },
+      "total_partners": 9,
+      "integrations": {
+        "payment": "Яндекс.Касса",
+        "analytics": "Яндекс.Метрика"
+      },
+      "integration_count": 2,
+      "distribution_channels": [
+        "direct",
+        "marketplaces",
+        "partners"
+      ],
+      "strategic_alliances": [],
+      "has_strategic_alliances": false,
+      "ecosystem_maturity": "intermediate"
+    },
+    {
+      "name": "Здоровье Лаб",
+      "partners_by_type": {
+        "suppliers": 2,
+        "strategic": 1
+      },
+      "total_partners": 3,
+      "integrations": {
+        "crm": "Salesforce",
+        "booking": "Yclients"
+      },
+      "integration_count": 2,
+      "distribution_channels": [
+        "marketplaces"
+      ],
+      "strategic_alliances": [
+        {
+          "type": "co-marketing",
+          "partner": "Партнёр А"
+        },
+        {
+          "type": "referral",
+          "partner": "Партнёр Б"
+        }
+      ],
+      "has_strategic_alliances": true,
+      "ecosystem_maturity": "intermediate"
+    },
+    {
+      "name": "Лайф Клиника",
+      "partners_by_type": {
+        "technology": 1,
+        "suppliers": 2,
+        "strategic": 1
+      },
+      "total_partners": 4,
+      "integrations": {
+        "crm": "Salesforce",
+        "payment": "Сбербанк",
+        "analytics": "Яндекс.Метрика"
+      },
+      "integration_count": 3,
+      "distribution_channels": [
+        "direct",
+        "marketplaces",
+        "partners"
+      ],
+      "strategic_alliances": [
+        {
+          "type": "co-marketing",
+          "partner": "Партнёр А"
+        },
+        {
+          "type": "referral",
+          "partner": "Партнёр Б"
+        }
+      ],
+      "has_strategic_alliances": true,
+      "ecosystem_maturity": "advanced"
+    },
+    {
+      "name": "Медицина Клуб",
+      "partners_by_type": {
+        "marketing": 2,
+        "strategic": 1
+      },
+      "total_partners": 3,
+      "integrations": {
+        "crm": "Битрикс24",
+        "payment": "CloudPayments",
+        "analytics": "Яндекс.Метрика",
+        "booking": "Yclients"
+      },
+      "integration_count": 4,
+      "distribution_channels": [
+        "direct",
+        "aggregators",
+        "marketplaces"
+      ],
+      "strategic_alliances": [],
+      "has_strategic_alliances": false,
+      "ecosystem_maturity": "intermediate"
+    },
+    {
+      "name": "Клиника Центр",
+      "partners_by_type": {
+        "technology": 1,
+        "marketing": 3,
+        "strategic": 2
+      },
+      "total_partners": 6,
+      "integrations": {
+        "crm": "Битрикс24",
+        "payment": "CloudPayments",
+        "analytics": "Google Analytics"
+      },
+      "integration_count": 3,
+      "distribution_channels": [
+        "aggregators"
+      ],
+      "strategic_alliances": [],
+      "has_strategic_alliances": false,
+      "ecosystem_maturity": "intermediate"
+    }
+  ],
+  "market_analysis": {
+    "avg_partners": 5.0,
+    "avg_integrations": 2.8,
+    "most_popular_integrations": [
+      {
+        "integration": "analytics:Яндекс.Метрика",
+        "usage_count": 3
+      },
+      {
+        "integration": "crm:Salesforce",
+        "usage_count": 2
+      },
+      {
+        "integration": "booking:Yclients",
+        "usage_count": 2
+      },
+      {
+        "integration": "crm:Битрикс24",
+        "usage_count": 2
+      },
+      {
+        "integration": "payment:CloudPayments",
+        "usage_count": 2
+      }
+    ],
+    "channel_usage": {
+      "direct": 3,
+      "marketplaces": 4,
+      "partners": 2,
+      "aggregators": 2
+    },
+    "strategic_alliances_percent": 40.0
+  },
+  "ecosystem_leaders": {
+    "partner_leaders": [
+      {
+        "name": "Центр Студия",
+        "partners_count": 9,
+        "maturity": "intermediate"
+      },
+      {
+        "name": "Клиника Центр",
+        "partners_count": 6,
+        "maturity": "intermediate"
+      },
+      {
+        "name": "Лайф Клиника",
+        "partners_count": 4,
+        "maturity": "advanced"
+      }
+    ],
+    "integration_leaders": [
+      {
+        "name": "Медицина Клуб",
+        "integrations_count": 4,
+        "integrations": [
+          "crm",
+          "payment",
+          "analytics",
+          "booking"
+        ]
+      },
+      {
+        "name": "Лайф Клиника",
+        "integrations_count": 3,
+        "integrations": [
+          "crm",
+          "payment",
+          "analytics"
+        ]
+      },
+      {
+        "name": "Клиника Центр",
+        "integrations_count": 3,
+        "integrations": [
+          "crm",
+          "payment",
+          "analytics"
+        ]
+      }
+    ],
+    "maturity_leaders": [
+      {
+        "name": "Лайф Клиника",
+        "maturity": "advanced"
+      },
+      {
+        "name": "Центр Студия",
+        "maturity": "intermediate"
+      },
+      {
+        "name": "Здоровье Лаб",
+        "maturity": "intermediate"
+      }
+    ]
+  },
+  "integration_opportunities": [
+    {
+      "type": "missing_integration",
+      "category": "communication",
+      "description": "Никто не интегрирован с Коммуникации",
+      "priority": "high"
+    },
+    {
+      "type": "missing_integration",
+      "category": "marketing",
+      "description": "Никто не интегрирован с Маркетинг автоматизация",
+      "priority": "high"
+    },
+    {
+      "type": "alliance_gap",
+      "description": "Большинство конкурентов не имеют стратегических альянсов",
+      "priority": "high"
+    }
+  ],
+  "insights": {
+    "ecosystem_maturity": "advanced",
+    "integration_level": "medium",
+    "partnership_activity": "high",
+    "opportunities_count": 3,
+    "key_findings": [
+      "Обнаружено 3 возможностей для построения экосистемы",
+      "Самая популярная интеграция: analytics:Яндекс.Метрика"
+    ]
+  }
+}

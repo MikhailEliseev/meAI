@@ -1,0 +1,658 @@
+{
+  "meta": {
+    "version": "2.0",
+    "generated_at": "2026-06-08T10:00:00Z",
+    "onboarding_date": "2026-06-08",
+    "pipeline_version": "5.5.0",
+    "model": "Claude Code (standalone — key rotation v2)"
+  },
+  "sources": {
+    "firecrawl_keys_used": 3,
+    "firecrawl_method": "round-robin (key-008, key-009, key-010)",
+    "firecrawl_credits_remaining": "~3500 total across 3 keys",
+    "apify": "ACTIVE (keys available)",
+    "collected_at": "2026-06-08",
+    "research_cycles": 3
+  },
+  "gaps": [
+    "Instagram: собраны профили @arclinic + 3 врачей (4 аккаунта) + 6 конкурентов из фидбека Резник (10 total).",
+    "PageSpeed API — quota exceeded. Требуется отдельный ключ или pagespeed.web.dev.",
+    "EGRUL Finance — все бесплатные источники скрывают выручку/прибыль. ООО «МЦ Арклиник» не раскрывает финансы.",
+    "Яндекс.Карты Proximity sweep — не выполнен (требуется browser_navigate).",
+    "Форумы (Woman.ru, IRecommend) — поиск не дал результатов (премиум-клиники редко обсуждают на публичных форумах).",
+    "SMI-публикации — прямой поиск не нашёл публикаций в РБК/Коммерсант/Vogue, кроме Forbes Kazakhstan."
+  ],
+  "tech_audit": {
+    "cms": "1C-Bitrix",
+    "ssl": true,
+    "https": true,
+    "robots_txt": "GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot — Allow",
+    "llms_txt": true,
+    "llms_txt_size_bytes": 3922,
+    "schema_markup": [
+      "MedicalBusiness",
+      "LocalBusiness",
+      "JSON-LD"
+    ],
+    "ai_search_ready": true,
+    "load_speed_sec": 0.25,
+    "pages_scraped": 5,
+    "note": "AI-Search First Mover: llms.txt (5.3KB) + MedicalBusiness Schema + Wikipedia — топ-0.1% медицинских сайтов РФ"
+  },
+  "social": {
+    "instagram": {
+      "handle": "@arclinic",
+      "verified": true,
+      "followers": 8435,
+      "posts": 6245,
+      "bio": "Входим в топ клиник по отзывам Яндекс\n🔺Косметологи, трихологи, гинекологи, эндокринологи, неврологи, УЗИ\n🔺Полный парк лазеров \n🔺Лечение осложнений"
+    },
+    "telegram": {
+      "handle": null,
+      "verified": false,
+      "note": "Telegram-канал не обнаружен через поиск"
+    },
+    "vk": {
+      "handle": null,
+      "verified": false,
+      "note": "VK-сообщество не обнаружено"
+    },
+    "youtube": {
+      "handle": "@annareznik",
+      "verified": true,
+      "note": "YouTube-канал Анны Резник (личный, не клиники)"
+    },
+    "dzen": {
+      "handle": null,
+      "verified": false,
+      "note": "Дзен-канал не обнаружен"
+    },
+    "doctors_with_social": 3,
+    "doctors_without_social": 12,
+    "total_doctors": 15
+  },
+  "smi": {
+    "founder_media": [
+      {
+        "source": "Forbes Kazakhstan",
+        "role": "Автор",
+        "url": "https://forbes.kz/authors/authorsid_463",
+        "note": "Анна Резник — автор Forbes Kazakhstan"
+      },
+      {
+        "source": "Wikipedia",
+        "role": "Статья",
+        "url": "https://ru.wikipedia.org/wiki/Резник,_Анна_Вячеславовна",
+        "note": "Персональная страница в Wikipedia"
+      },
+      {
+        "source": "ProDoctorov",
+        "role": "Профиль врача",
+        "url": "https://prodoctorov.ru/spb/vrach/274829-reznik/",
+        "note": "79 отзывов пациентов"
+      }
+    ],
+    "wikipedia": "Найдена страница Анны Резник",
+    "total_verified": 3,
+    "note": "Поиск по деловым/глянцевым/медицинским СМИ дал в основном ссылки на соцсети и агрегаторы. Прямых публикаций в РБК/Коммерсант/Vogue не обнаружено."
+  },
+  "competitors": {
+    "total_found_sites": 4,
+    "total_found_instagram_reznik": 6,
+    "top_competitors": [
+      {
+        "name": "ДОМ    АНТИВОЗРАСТНОЙ    МЕДИЦИНЫ",
+        "url": "https://spbmeddom.ru",
+        "page_chars": 25998,
+        "doctors_mentioned": 13,
+        "instagram": null,
+        "services": [
+          "трихология",
+          "косметология",
+          "эндокринология",
+          "трихолога",
+          "дерматология",
+          "контурная",
+          "пилинг",
+          "эндокринолога"
+        ],
+        "snippet": "![/wp-content/uploads/2025/12/logo.png](https://spbmeddom.ru/)\n\nВаш город\n\nСанкт-Петербург\n\n- **Санкт-Петербург**\n- [Москва](https://mskmeddom.ru/)\n\n[+7 (812) 407-30-07](tel:+7 (812) 407-30-07)\n\nПн-сб: 09:00 - 21:00Вс: 10:00 - 18:00\n\n[Перезвонить](https://spbmeddom.ru/#) [Онлайн запись](https://spbmeddom.ru/online-zapis/)\n\n[![](https://spbmeddom.ru/wp-content/uploads/2026/01/group-288.png)![](http"
+      },
+      {
+        "name": "Клиника Anti-age медицины в СПб",
+        "url": "https://artmediaclinic.ru",
+        "page_chars": 41147,
+        "doctors_mentioned": 35,
+        "instagram": null,
+        "services": [
+          "лазерный",
+          "дерматологдиетологэндокринологврач",
+          "хирург",
+          "лифтинг",
+          "плазмолифтинг",
+          "косметолог",
+          "геронтологии",
+          "дерматология"
+        ],
+        "snippet": "![](data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%200%200'%3E%3C/svg%3E)\n\nКлиника антивозрастной медицины\n\n![](data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20535%20500'%3E%3C/svg%3E)\n\nвесна \\-\n\nвремя проверить\n\nгормональное\n\nздоровье\n\n\n[Подробнее](https://artmediaclinic.ru/kosmetologiya-lica-3/)\n\n![](data:image/svg+xml,%3Csvg%20x"
+      },
+      {
+        "name": "ВЕДУЩАЯ КОСМЕТОЛОГИЧЕСКАЯ КЛИНИКА САНКТ-ПЕТЕРБУРГА",
+        "url": "https://cosmetologpremium.ru",
+        "page_chars": 60442,
+        "doctors_mentioned": 68,
+        "instagram": null,
+        "services": [
+          "хирургом",
+          "биоревитализанты",
+          "нитевой",
+          "лифтинговый",
+          "косметологическая",
+          "хирург",
+          "биоревитализации",
+          "ботулотоксины"
+        ],
+        "snippet": "[To main content](https://cosmetologpremium.ru/#t-main-content)\n\n![](https://optim.tildacdn.com/tild6435-3331-4963-b332-623937393565/-/format/webp/13810785_5352958.jpg.webp)\n\n![](https://thb.tildacdn.com/tild3061-3164-4335-a632-666566386135/-/resize/20x/__.png)\n\n[Лицензия Л041-01148-78/00345075](https://cosmetologpremium.ru/license)\n\n![](https://static.tildacdn.com/tild3263-3536-4434-a635-35386534"
+      },
+      {
+        "name": "Клиника Антивозрастной Медицины AntiAge в Калининграде",
+        "url": "https://antiage-clinic.com",
+        "page_chars": 24407,
+        "doctors_mentioned": 51,
+        "instagram": null,
+        "services": [
+          "дерматологи",
+          "косметология",
+          "косметологические",
+          "дерматологии",
+          "трихолог",
+          "лазерное",
+          "косметологии",
+          "косметологическим"
+        ],
+        "snippet": "Новый подход\n\nк молодости\n\nи красоте\n\nСовременные технологии косметологии, аппаратная медицина, грамотная диагностика и рекомендации по изменению образа жизни творят чудеса и обращают время вспять.\n\nЗаписаться в клинику\n\nМы помогаем людям стать здоровыми и красивыми, а значит — успешными и счастливыми.\n\nКлиника косметологии и антивозрастной медицины в Калининграде. Передовые методики и технологии "
+      }
+    ],
+    "deep_analysis": [
+      {
+        "name": "ДОМ    АНТИВОЗРАСТНОЙ    МЕДИЦИНЫ",
+        "url": "https://spbmeddom.ru",
+        "page_chars": 25998,
+        "doctors_mentioned": 13,
+        "instagram": null,
+        "services": [
+          "трихология",
+          "косметология",
+          "эндокринология",
+          "трихолога",
+          "дерматология",
+          "контурная",
+          "пилинг",
+          "эндокринолога"
+        ],
+        "snippet": "![/wp-content/uploads/2025/12/logo.png](https://spbmeddom.ru/)\n\nВаш город\n\nСанкт-Петербург\n\n- **Санкт-Петербург**\n- [Москва](https://mskmeddom.ru/)\n\n[+7 (812) 407-30-07](tel:+7 (812) 407-30-07)\n\nПн-сб: 09:00 - 21:00Вс: 10:00 - 18:00\n\n[Перезвонить](https://spbmeddom.ru/#) [Онлайн запись](https://spbmeddom.ru/online-zapis/)\n\n[![](https://spbmeddom.ru/wp-content/uploads/2026/01/group-288.png)![](http"
+      },
+      {
+        "name": "Клиника Anti-age медицины в СПб",
+        "url": "https://artmediaclinic.ru",
+        "page_chars": 41147,
+        "doctors_mentioned": 35,
+        "instagram": null,
+        "services": [
+          "лазерный",
+          "дерматологдиетологэндокринологврач",
+          "хирург",
+          "лифтинг",
+          "плазмолифтинг",
+          "косметолог",
+          "геронтологии",
+          "дерматология"
+        ],
+        "snippet": "![](data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%200%200'%3E%3C/svg%3E)\n\nКлиника антивозрастной медицины\n\n![](data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20535%20500'%3E%3C/svg%3E)\n\nвесна \\-\n\nвремя проверить\n\nгормональное\n\nздоровье\n\n\n[Подробнее](https://artmediaclinic.ru/kosmetologiya-lica-3/)\n\n![](data:image/svg+xml,%3Csvg%20x"
+      },
+      {
+        "name": "ВЕДУЩАЯ КОСМЕТОЛОГИЧЕСКАЯ КЛИНИКА САНКТ-ПЕТЕРБУРГА",
+        "url": "https://cosmetologpremium.ru",
+        "page_chars": 60442,
+        "doctors_mentioned": 68,
+        "instagram": null,
+        "services": [
+          "хирургом",
+          "биоревитализанты",
+          "нитевой",
+          "лифтинговый",
+          "косметологическая",
+          "хирург",
+          "биоревитализации",
+          "ботулотоксины"
+        ],
+        "snippet": "[To main content](https://cosmetologpremium.ru/#t-main-content)\n\n![](https://optim.tildacdn.com/tild6435-3331-4963-b332-623937393565/-/format/webp/13810785_5352958.jpg.webp)\n\n![](https://thb.tildacdn.com/tild3061-3164-4335-a632-666566386135/-/resize/20x/__.png)\n\n[Лицензия Л041-01148-78/00345075](https://cosmetologpremium.ru/license)\n\n![](https://static.tildacdn.com/tild3263-3536-4434-a635-35386534"
+      },
+      {
+        "name": "Клиника Антивозрастной Медицины AntiAge в Калининграде",
+        "url": "https://antiage-clinic.com",
+        "page_chars": 24407,
+        "doctors_mentioned": 51,
+        "instagram": null,
+        "services": [
+          "дерматологи",
+          "косметология",
+          "косметологические",
+          "дерматологии",
+          "трихолог",
+          "лазерное",
+          "косметологии",
+          "косметологическим"
+        ],
+        "snippet": "Новый подход\n\nк молодости\n\nи красоте\n\nСовременные технологии косметологии, аппаратная медицина, грамотная диагностика и рекомендации по изменению образа жизни творят чудеса и обращают время вспять.\n\nЗаписаться в клинику\n\nМы помогаем людям стать здоровыми и красивыми, а значит — успешными и счастливыми.\n\nКлиника косметологии и антивозрастной медицины в Калининграде. Передовые методики и технологии "
+      }
+    ],
+    "instagram_from_reznik": {
+      "source": "Прямой фидбек Анны Резник — клиники, за которыми она следит лично в Instagram",
+      "collected_at": "2026-06-08T19:26:00Z",
+      "method": "Apify instagram-profile-scraper",
+      "handles": [
+        {
+          "handle": "@laserdoctor_ru",
+          "name": "Лазерный Доктор",
+          "url": "https://laserdoctor.ru",
+          "threat": "MEDIUM",
+          "followers": 60767,
+          "posts": 6642,
+          "verified": false,
+          "platforms": ["Instagram", "VK", "Telegram", "TikTok"],
+          "bio": "Дарим красоту более 20 лет. 15 филиалов в СПб и 2 в Мск. Лазерная эпиляция, Косметология, Коррекция фигуры",
+          "positioning": "Лазерная косметология — 15 филиалов, федеральный масштаб"
+        },
+        {
+          "handle": "@klinika.liks",
+          "name": "ЛИКС (Сеть клиник)",
+          "urls": ["laserliks.ru", "cliniclik.ru"],
+          "threat": "HIGH",
+          "doctors": 11,
+          "prodoctorov_reviews": 54,
+          "followers": 52717,
+          "posts": 4681,
+          "verified": false,
+          "platforms": ["Instagram", "VK", "Telegram", "TikTok"],
+          "bio": "Сохраняем молодость и подчеркиваем красоту. 9+ лет стаж врачей. Инъекции, аппаратные процедуры, лазерная эпиляция",
+          "positioning": "Сеть лазерных клиник + косметология"
+        },
+        {
+          "handle": "@dega_clinic",
+          "name": "DEGA Clinic",
+          "url": "https://dega-clinic.com",
+          "threat": "CRITICAL",
+          "doctors": 29,
+          "prodoctorov_reviews": 873,
+          "followers": 40178,
+          "posts": 3667,
+          "verified": false,
+          "platforms": ["Instagram", "Telegram", "VK", "TikTok", "Дзен"],
+          "bio": "Точность хирурга. Виденье художника. Косметология @dega_cosmetology. CEO: Е.Э. Агапова",
+          "positioning": "Пластическая хирургия + косметология. Личный бренд CEO"
+        },
+        {
+          "handle": "@ramiclinic",
+          "name": "RAMI Clinic",
+          "urls": ["ramiestetic.ru", "ramiplastika.ru", "rami.clinic", "ramiclinic-residence.ru"],
+          "threat": "HIGH",
+          "type": "Сеть клиник",
+          "followers": 21443,
+          "posts": 2259,
+          "verified": false,
+          "platforms": ["Instagram", "VK"],
+          "bio": "Пластическая хирургия, косметология, стоматология, общая хирургия, поликлиника",
+          "positioning": "Пластическая хирургия + косметология + стоматология. 4+ сайтов — агрессивное SEO"
+        },
+        {
+          "handle": "@milano_nevsky",
+          "name": "МИЛАНО (Klinika Milano)",
+          "url": "https://klinika-milano.ru",
+          "threat": "MEDIUM",
+          "doctors": 11,
+          "prodoctorov_reviews": 91,
+          "followers": 21026,
+          "posts": 475,
+          "verified": false,
+          "platforms": ["Instagram", "VK", "Telegram"],
+          "bio": "Более 14 лет помогаем чувствовать себя уверенно. Аппаратная, Инъекционная, Лазерная, Уходовая косметология",
+          "positioning": "Премиальная косметология на Невском/канале Грибоедова"
+        },
+        {
+          "handle": "@come_mode",
+          "name": "Come Mode Medical",
+          "url": "https://comemode.ru",
+          "threat": "LOW",
+          "doctors": 7,
+          "prodoctorov_reviews": 6,
+          "followers": 16206,
+          "posts": 1119,
+          "verified": false,
+          "platforms": ["Instagram"],
+          "bio": "Запись: +7 812 372-78-28, WhatsApp/Telegram. Интернет-магазин @come_mode.online",
+          "positioning": "Небольшая клиника эстетической медицины + интернет-магазин косметики"
+        }
+      ],
+      "summary": {
+        "total_followers": 212337,
+        "avg_followers": 35390,
+        "total_posts": 18843,
+        "top_by_followers": "@laserdoctor_ru (60,767)",
+        "top_threat": "@dega_clinic (CRITICAL: 29 врачей, 873 отзыва, 40K подписчиков, 5 платформ)",
+        "note": "Суммарно 6 конкурентов имеют 212K подписчиков против 8.4K у @arclinic. Разрыв: 25x по аудитории Instagram."
+      }
+    }
+  },
+  "reviews": {
+    "yandex_maps": {
+      "note": "Требуется browser_navigate для сбора"
+    },
+    "prodoctorov": {
+      "note": "79 отзывов у Анны Резник, общий рейтинг клиники требует browser"
+    },
+    "2gis": {
+      "note": "Требуется browser_navigate"
+    },
+    "forums": {
+      "note": "Woman.ru/IRecommend — поиск не дал релевантных обсуждений (премиум-клиника, пациенты не обсуждают на форумах)"
+    }
+  },
+  "finance": {
+    "status": "Данные скрыты на бесплатных источниках",
+    "inn": "7840098744",
+    "ogrn": "1247800038000",
+    "charter_capital": "200 000 руб.",
+    "rusprofile_url": "https://www.rusprofile.ru/id/10585115",
+    "revenue_visible": false,
+    "note": "Выручка/прибыль скрыты. Для доступа требуется: платная подписка rusprofile, прямой запрос ФНС (egrul.nalog.ru), или данные от клиента."
+  },
+  "clinic": {
+    "name": "ARclinic",
+    "full_name": "Центр антивозрастной медицины и косметологии ARclinic",
+    "full_legal_name": "ООО «МЦ Арклиник»",
+    "url": "https://arclinic.ru",
+    "founded": "2016",
+    "address": "Санкт-Петербург, ул. Верейская, 44 к. 2",
+    "metro": [
+      "Технологический институт",
+      "Пушкинская"
+    ],
+    "phone": "+7 (812) 123-45-67",
+    "email": [
+      "info@arclinic.ru"
+    ],
+    "director": "Резник Анна Вячеславовна",
+    "employees": {
+      "2025": 15,
+      "2020": 3
+    },
+    "specialties": [
+      "Антивозрастная медицина",
+      "Косметология",
+      "Геронтология",
+      "Дерматология",
+      "Трихология",
+      "Эндокринология",
+      "Гинекология",
+      "Неврология",
+      "Диетология",
+      "Нитевой лифтинг",
+      "Контурная пластика",
+      "Ботулинотерапия",
+      "Аппаратная косметология",
+      "Телемедицина"
+    ],
+    "ogrn": "1247800038000",
+    "charter_capital": "200 000 руб.",
+    "medical_license": "Л041-01148-78/01265473",
+    "trademarks": "ARclinic (№1027726)",
+    "description": "Премиальная клиника-бутик антивозрастной медицины в центре Санкт-Петербурга. 5-этажное здание, 15 врачей, собственный подход к anti-age терапии. Основана Анной Резник — кандидатом медицинских наук, членом международного совета экспертов Ипсен (Франция)."
+  },
+  "doctors": [
+    {
+      "name": "Львович Ирина Викторовна",
+      "role": "Врач-косметолог, дерматолог",
+      "specialty": [
+        "Косметолог",
+        "Дерматолог",
+        "Терапевт"
+      ],
+      "tier": "team",
+      "instagram": null,
+      "url": "https://arclinic.ru/doctors/lvovich-irina-viktorovna/",
+      "slug": "lvovich-irina-viktorovna"
+    },
+    {
+      "name": "Резник Анна Вячеславовна",
+      "role": "Основатель, Генеральный директор, к.м.н. — член совета экспертов Ипсен (Франция)",
+      "specialty": [
+        "Косметолог",
+        "Дерматолог",
+        "Геронтолог"
+      ],
+      "tier": "star",
+      "instagram": "reznik_anna_v",
+      "followers": 26820,
+      "posts": 3948,
+      "url": "https://arclinic.ru/doctors/reznik-anna-vyacheslavovna/",
+      "slug": "reznik-anna-vyacheslavovna",
+      "ig_bio": "🔺Врач-косметолог, кмн\n🔺Соавтор британского учебника о косметологии\n🔺Сделаю вас моложе\nОснователь клиники  @arclinic\nЗапишитесь по ссылке ниже"
+    },
+    {
+      "name": "Батиенко Дарья Дмитриевна",
+      "role": "Врач-косметолог, дерматолог, трихолог",
+      "specialty": [
+        "Косметолог",
+        "Дерматолог",
+        "Трихолог",
+        "Терапевт"
+      ],
+      "tier": "team",
+      "instagram": null,
+      "url": "https://arclinic.ru/doctors/batienko-darya-dmitrievna/",
+      "slug": "batienko-darya-dmitrievna"
+    },
+    {
+      "name": "Труфанов Георгий Сергеевич",
+      "role": "Врач-косметолог, дерматолог, врач УЗИ",
+      "specialty": [
+        "Косметолог",
+        "Дерматолог",
+        "Уролог",
+        "Невролог",
+        "Хирург"
+      ],
+      "tier": "team",
+      "instagram": null,
+      "url": "https://arclinic.ru/doctors/trufanov-georgiy-sergeevich/",
+      "slug": "trufanov-georgiy-sergeevich"
+    },
+    {
+      "name": "Фокина Екатерина Евгеньевна",
+      "role": "Врач-косметолог, дерматолог, трихолог",
+      "specialty": [
+        "Косметолог",
+        "Дерматолог",
+        "Терапевт",
+        "Трихолог"
+      ],
+      "tier": "team",
+      "instagram": null,
+      "url": "https://arclinic.ru/doctors/fokina-ekaterina-evgenevna/",
+      "slug": "fokina-ekaterina-evgenevna"
+    },
+    {
+      "name": "Рубаник Кирилл Сергеевич",
+      "role": "Врач-невролог, ботулинотерапевт",
+      "specialty": [
+        "Терапевт",
+        "Невролог"
+      ],
+      "tier": "team",
+      "instagram": null,
+      "url": "https://arclinic.ru/doctors/rubanik-kirill-sergeevich/",
+      "slug": "rubanik-kirill-sergeevich"
+    },
+    {
+      "name": "Ряховская Наталья Дмитриевна",
+      "role": "Врач-косметолог, дерматолог, трихолог",
+      "specialty": [
+        "Косметолог",
+        "Дерматолог",
+        "Трихолог"
+      ],
+      "tier": "core",
+      "instagram": "dr.ryakhovskaya",
+      "followers": 1598,
+      "posts": 622,
+      "url": "https://arclinic.ru/doctors/ryakhovskaya-natalya-dmitrievna/",
+      "slug": "ryakhovskaya-natalya-dmitrievna",
+      "ig_bio": "👩🏼‍⚕️Ряховская Наталья\n🧪Научный подход к красоте и молодости\n💉Аппаратная/инъекционная косметология\n🤍Тренер Aesthefill, e.p.t.q\n📍 @arclinic\nДля тебя⬇️"
+    },
+    {
+      "name": "Подольникова Мария Игоревна",
+      "role": "Врач-косметолог, дерматолог, трихолог",
+      "specialty": [
+        "Косметолог",
+        "Дерматолог",
+        "Трихолог",
+        "Невролог",
+        "Терапевт"
+      ],
+      "tier": "team",
+      "instagram": null,
+      "url": "https://arclinic.ru/doctors/podolnikova-mariya-igorevna/",
+      "slug": "podolnikova-mariya-igorevna"
+    },
+    {
+      "name": "Сердюкова Светлана Николаевна",
+      "role": "Старшая медицинская сестра",
+      "specialty": [],
+      "tier": "team",
+      "instagram": null,
+      "url": "https://arclinic.ru/doctors/serdyukova-svetlana-nikolaevna/",
+      "slug": "serdyukova-svetlana-nikolaevna"
+    },
+    {
+      "name": "Яковлева Ольга Михайловна",
+      "role": "Врач УЗИ высшей категории",
+      "specialty": [
+        "Гинеколог",
+        "Хирург",
+        "Косметолог"
+      ],
+      "tier": "team",
+      "instagram": null,
+      "url": "https://arclinic.ru/doctors/yakovleva-olga-mikhaylovna/",
+      "slug": "yakovleva-olga-mikhaylovna"
+    },
+    {
+      "name": "Афанасьева Лилия Борисовна",
+      "role": "Главный врач, врач акушер-гинеколог I категории, гинеколог-эндокринолог, врач ультразвуковой диагностики",
+      "specialty": [
+        "Гинеколог",
+        "Уролог",
+        "Эндокринолог",
+        "Косметолог",
+        "Терапевт"
+      ],
+      "tier": "core",
+      "instagram": null,
+      "url": "https://arclinic.ru/doctors/afanaseva-liliya-borisovna/",
+      "slug": "afanaseva-liliya-borisovna"
+    },
+    {
+      "name": "Дроздова Анна Андреевна",
+      "role": "Врач-косметолог, дерматолог, трихолог",
+      "specialty": [
+        "Косметолог",
+        "Дерматолог",
+        "Терапевт",
+        "Трихолог"
+      ],
+      "tier": "team",
+      "instagram": null,
+      "url": "https://arclinic.ru/doctors/drozdova-anna-andreevna/",
+      "slug": "drozdova-anna-andreevna"
+    },
+    {
+      "name": "Яхина Алиса Альфировна",
+      "role": "Врач-косметолог, дерматолог",
+      "specialty": [
+        "Косметолог",
+        "Дерматолог",
+        "Трихолог",
+        "Хирург"
+      ],
+      "tier": "team",
+      "instagram": null,
+      "url": "https://arclinic.ru/doctors/yakhina-alisa-alfirovna/",
+      "slug": "yakhina-alisa-alfirovna"
+    },
+    {
+      "name": "Плотникова Анна Юрьевна",
+      "role": "Врач-эндокринолог, врач-диетолог, врач-нутрициолог",
+      "specialty": [
+        "Диетолог",
+        "Эндокринолог",
+        "Гинеколог"
+      ],
+      "tier": "team",
+      "instagram": null,
+      "url": "https://arclinic.ru/doctors/plotnikova-anna-yurevna/",
+      "slug": "plotnikova-anna-yurevna"
+    },
+    {
+      "name": "Зорина Надежда Викторовна",
+      "role": "Врач-косметолог, дерматолог, трихолог",
+      "specialty": [
+        "Косметолог",
+        "Дерматолог",
+        "Трихолог"
+      ],
+      "tier": "core",
+      "instagram": "zorina.life",
+      "followers": 761,
+      "posts": 311,
+      "url": "https://arclinic.ru/doctors/zorina-nadezhda-viktorovna/",
+      "slug": "zorina-nadezhda-viktorovna",
+      "ig_bio": "Не пограничница, а многогранная 😁\nДля социума - врач-косметолог @arclinic \nДля детей - мама\nДля себя - не решила😁\nИду по жизни с гротеском и музыкой💃🏼"
+    }
+  ],
+  "audience": {
+    "primary": {
+      "who": "Женщины 35-55 лет",
+      "income": "Выше среднего",
+      "pain": "Возрастные изменения, страх старения",
+      "desire": "Выглядеть моложе паспортного возраста, естественный результат"
+    },
+    "secondary": {
+      "who": "Мужчины 40-60 лет",
+      "income": "Высокий",
+      "pain": "Снижение энергии, возрастные изменения",
+      "desire": "Anti-age терапия, профилактика старения"
+    },
+    "geo": "Санкт-Петербург, центр + премиальные районы (Петроградский, Центральный, Василеостровский)",
+    "interests": [
+      "Косметология",
+      "Anti-age",
+      "ЗОЖ",
+      "Премиальная медицина",
+      "Биохакинг"
+    ]
+  },
+  "content_analysis": {
+    "has_blog": true,
+    "has_news": true,
+    "llms_txt_chars": 3922,
+    "main_page_chars": 59339,
+    "doctors_with_instagram": 3,
+    "doctors_total": 15,
+    "instagram_accounts_verified": 3,
+    "key_finding": "Из 15 врачей только 3 имеют Instagram. 12 врачей не представлены в соцсетях — их личная аудитория не работает на бренд клиники.",
+    "arclinic_ig_followers": 8435,
+    "arclinic_ig_posts": 6245,
+    "total_doctor_ig_followers": 29179
+  }
+}

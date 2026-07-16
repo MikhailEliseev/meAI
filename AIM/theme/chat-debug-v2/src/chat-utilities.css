@@ -1,0 +1,212 @@
+/* ═══════════════════════════════════════════════════════
+   Scoped Utility CSS for React Chat Components
+   Все классы заскоплены внутри #hermes-chat
+   Мапятся на CSS-переменные темы (theme.css)
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Layout / Display ── */
+#hermes-chat .flex { display: flex; }
+#hermes-chat .inline-flex { display: inline-flex; }
+#hermes-chat .flex-col { flex-direction: column; }
+#hermes-chat .flex-row-reverse { flex-direction: row-reverse; }
+#hermes-chat .flex-wrap { flex-wrap: wrap; }
+#hermes-chat .grid { display: grid; }
+#hermes-chat .block { display: block; }
+#hermes-chat .inline-block { display: inline-block; }
+
+/* ── Flex Alignment ── */
+#hermes-chat .items-center { align-items: center; }
+#hermes-chat .items-end { align-items: flex-end; }
+#hermes-chat .items-start { align-items: flex-start; }
+#hermes-chat .justify-center { justify-content: center; }
+#hermes-chat .justify-between { justify-content: space-between; }
+
+/* ── Grid ── */
+#hermes-chat .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+#hermes-chat .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+@media (min-width: 768px) {
+  #hermes-chat .md\:grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ── Gap ── */
+#hermes-chat .gap-px { gap: 1px; }
+#hermes-chat .gap-1 { gap: 0.25rem; }
+#hermes-chat .gap-2 { gap: 0.5rem; }
+#hermes-chat .gap-3 { gap: 0.75rem; }
+#hermes-chat .gap-4 { gap: 1rem; }
+
+/* ── Padding ── */
+#hermes-chat .p-4 { padding: 1rem; }
+#hermes-chat .p-px { padding: 1px; }
+#hermes-chat .p-6 { padding: 1.5rem; }
+#hermes-chat .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+#hermes-chat .px-4 { padding-left: 1rem; padding-right: 1rem; }
+#hermes-chat .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+#hermes-chat .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+#hermes-chat .py-1\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+#hermes-chat .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+#hermes-chat .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+#hermes-chat .py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+#hermes-chat .py-8 { padding-top: 2rem; padding-bottom: 2rem; }
+#hermes-chat .py-16 { padding-top: 4rem; padding-bottom: 4rem; }
+
+/* ── Margin ── */
+#hermes-chat .m-0 { margin: 0; }
+#hermes-chat .mb-2 { margin-bottom: 0.5rem; }
+#hermes-chat .mb-4 { margin-bottom: 1rem; }
+#hermes-chat .mb-6 { margin-bottom: 1.5rem; }
+#hermes-chat .mb-10 { margin-bottom: 2.5rem; }
+#hermes-chat .mt-1 { margin-top: 0.25rem; }
+#hermes-chat .mt-4 { margin-top: 1rem; }
+#hermes-chat .mt-6 { margin-top: 1.5rem; }
+#hermes-chat .ml-auto { margin-left: auto; }
+#hermes-chat .mx-auto { margin-left: auto; margin-right: auto; }
+
+/* ── Width ── */
+#hermes-chat .w-1\.5 { width: 0.375rem; }
+#hermes-chat .w-2 { width: 0.5rem; }
+#hermes-chat .w-4 { width: 1rem; }
+#hermes-chat .w-8 { width: 2rem; }
+#hermes-chat .w-10 { width: 2.5rem; }
+#hermes-chat .w-16 { width: 4rem; }
+#hermes-chat .w-full { width: 100%; }
+#hermes-chat .max-w-\[85\%\] { max-width: 85%; }
+#hermes-chat .max-w-lg { max-width: 32rem; }
+#hermes-chat .max-w-md { max-width: 28rem; }
+#hermes-chat .max-w-3xl { max-width: 48rem; }
+#hermes-chat .min-w-0 { min-width: 0; }
+
+/* ── Height ── */
+#hermes-chat .h-1\.5 { height: 0.375rem; }
+#hermes-chat .h-2 { height: 0.5rem; }
+#hermes-chat .h-4 { height: 1rem; }
+#hermes-chat .h-8 { height: 2rem; }
+#hermes-chat .h-10 { height: 2.5rem; }
+#hermes-chat .h-16 { height: 4rem; }
+#hermes-chat .h-full { height: 100%; }
+
+/* ── Flex extras ── */
+#hermes-chat .shrink-0 { flex-shrink: 0; }
+#hermes-chat .flex-1 { flex: 1 1 0%; }
+#hermes-chat .flex-shrink-0 { flex-shrink: 0; }
+#hermes-chat .self-start { align-self: flex-start; }
+#hermes-chat .self-end { align-self: flex-end; }
+
+/* ── Typography ── */
+#hermes-chat .text-xs { font-size: 0.75rem; line-height: 1rem; }
+#hermes-chat .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+#hermes-chat .text-base { font-size: 1rem; line-height: 1.5rem; }
+#hermes-chat .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+#hermes-chat .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+#hermes-chat .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+#hermes-chat .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+#hermes-chat .font-bold { font-weight: 700; }
+#hermes-chat .font-medium { font-weight: 500; }
+#hermes-chat .font-semibold { font-weight: 600; }
+#hermes-chat .text-center { text-align: center; }
+#hermes-chat .leading-relaxed { line-height: 1.625; }
+#hermes-chat .leading-tight { line-height: 1.25; }
+#hermes-chat .whitespace-pre-wrap { white-space: pre-wrap; }
+
+@media (min-width: 768px) {
+  #hermes-chat .md\:text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
+  #hermes-chat .md\:text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+}
+
+/* ── Semantic Colors (map to theme CSS variables) ── */
+#hermes-chat .text-ink { color: var(--text); }
+#hermes-chat .text-white { color: #ffffff; }
+#hermes-chat .text-accent { color: var(--accent); }
+#hermes-chat .text-text-muted { color: var(--text-secondary); }
+#hermes-chat .text-text-subtle { color: var(--text-dim); }
+#hermes-chat .text-green-500 { color: #22c55e; }
+#hermes-chat .text-green-600 { color: #16a34a; }
+#hermes-chat .text-red-500 { color: #ef4444; }
+
+#hermes-chat .bg-canvas { background-color: var(--bg); }
+#hermes-chat .bg-surface-2 { background-color: var(--surface-2); }
+#hermes-chat .bg-surface-3 { background-color: var(--surface-3); }
+#hermes-chat .bg-bg { background-color: var(--bg); }
+#hermes-chat .bg-accent { background-color: var(--accent); }
+#hermes-chat .bg-black\/50 { background-color: rgba(0, 0, 0, 0.5); }
+#hermes-chat .bg-green-500 { background-color: #22c55e; }
+#hermes-chat .bg-green-500\/10 { background-color: rgba(34, 197, 94, 0.1); }
+#hermes-chat .bg-red-500 { background-color: #ef4444; }
+#hermes-chat .bg-accent\/70 { background-color: color-mix(in srgb, var(--accent) 70%, transparent); }
+
+/* ── Borders ── */
+#hermes-chat .border { border: 1px solid; }
+#hermes-chat .border-t { border-top: 1px solid; }
+#hermes-chat .border-b { border-bottom: 1px solid; }
+#hermes-chat .border-border-hairline { border-color: var(--border); }
+#hermes-chat .border-accent { border-color: var(--accent); }
+
+/* ── Border Radius ── */
+#hermes-chat .rounded { border-radius: 0.25rem; }
+#hermes-chat .rounded-full { border-radius: 9999px; }
+#hermes-chat .rounded-lg { border-radius: 0.5rem; }
+#hermes-chat .rounded-md { border-radius: 0.375rem; }
+
+/* ── Opacity ── */
+#hermes-chat .opacity-25 { opacity: 0.25; }
+#hermes-chat .opacity-40 { opacity: 0.4; }
+#hermes-chat .opacity-50 { opacity: 0.5; }
+#hermes-chat .opacity-75 { opacity: 0.75; }
+#hermes-chat .opacity-100 { opacity: 1; }
+
+/* ── Overflow ── */
+#hermes-chat .overflow-hidden { overflow: hidden; }
+#hermes-chat .overflow-y-auto { overflow-y: auto; }
+
+/* ── Positioning ── */
+#hermes-chat .relative { position: relative; }
+#hermes-chat .absolute { position: absolute; }
+#hermes-chat .fixed { position: fixed; }
+#hermes-chat .sticky { position: sticky; }
+#hermes-chat .inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+#hermes-chat .bottom-0 { bottom: 0; }
+#hermes-chat .z-50 { z-index: 50; }
+
+/* ── Placeholder ── */
+#hermes-chat .placeholder\:\:text-text-subtle::placeholder { color: var(--text-dim); }
+
+/* ── Transitions ── */
+#hermes-chat .transition-all { transition: all 0.15s ease; }
+#hermes-chat .transition-colors { transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease; }
+#hermes-chat .transition-opacity { transition: opacity 0.15s ease; }
+
+/* ── Hover States ── */
+#hermes-chat .hover\:bg-hover:hover { background-color: var(--surface-3); }
+#hermes-chat .hover\:bg-surface-3:hover { background-color: var(--surface-3); }
+#hermes-chat .hover\:brightness-110:hover { filter: brightness(1.1); }
+
+/* ── Focus States ── */
+#hermes-chat .focus\:outline-none:focus { outline: none; }
+#hermes-chat .focus\:border-accent:focus { border-color: var(--accent); }
+
+/* ── Active States ── */
+#hermes-chat .active\:scale-95:active { transform: scale(0.95); }
+
+/* ── Disabled States ── */
+#hermes-chat .disabled\:opacity-40:disabled { opacity: 0.4; }
+#hermes-chat .disabled\:opacity-50:disabled { opacity: 0.5; }
+#hermes-chat .disabled\:cursor-not-allowed:disabled { cursor: not-allowed; }
+
+/* ── Animations ── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); }
+  50% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+}
+
+#hermes-chat .animate-spin { animation: spin 1s linear infinite; }
+#hermes-chat .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+#hermes-chat .animate-bounce { animation: bounce 1s infinite; }
+
+/* ── Resize ── */
+#hermes-chat .resize-none { resize: none; }
+
+/* ── Inline gap (for bouncing dots) ── */
+#hermes-chat .inline-flex.gap-1 > * + * { margin-left: 0.25rem; }

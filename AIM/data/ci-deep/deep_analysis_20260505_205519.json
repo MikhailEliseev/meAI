@@ -1,0 +1,627 @@
+{
+  "analysis_date": "2026-05-05T20:55:19.579289",
+  "total_analyzed": 1,
+  "deep_profiles": [
+    {
+      "name": "Quantum Clinic",
+      "url": "https://quantum-clinic.ru/",
+      "total_pages_found": 10,
+      "pages_analyzed": 10,
+      "page_types": {
+        "homepage": [
+          "https://quantum-clinic.ru/"
+        ],
+        "services": [
+          "https://quantum-clinic.ru/uslugi/uzi/zhenskie-polovye-organy/",
+          "https://quantum-clinic.ru/uslugi/uzi/zhelezy-vnutrenney-sekretsii/",
+          "https://quantum-clinic.ru/uslugi/uzi/serdtse-i-perikard/",
+          "https://quantum-clinic.ru/uslugi/uzi/polost-rta-i-zuby/",
+          "https://quantum-clinic.ru/uslugi/uzi/podzheludochnaya-zheleza/",
+          "https://quantum-clinic.ru/uslugi/uzi/pochki-i-mochevydelitelnaya-sistema/",
+          "https://quantum-clinic.ru/uslugi/uzi/pechen-i-zhelchevyvodyashchie-puti/",
+          "https://quantum-clinic.ru/uslugi/uzi/krupnye-krovenosnye-sosudy/",
+          "https://quantum-clinic.ru/uslugi/uzi/kozha-podkozhno-zhirovaya-kletchatka-pridatki-kozhi/"
+        ],
+        "about": [],
+        "contacts": [],
+        "prices": [],
+        "blog": [],
+        "other": []
+      },
+      "deep_analysis": {
+        "total_pages": 10,
+        "page_types": {
+          "homepage": 1,
+          "services": 9
+        },
+        "seo_coverage": {
+          "title": "10/10",
+          "description": "10/10",
+          "h1": "10/10"
+        },
+        "schema_coverage": "0/10",
+        "quality_score": 100.0,
+        "security": {
+          "pages_analyzed": 10,
+          "score": 55.0,
+          "https_rate": 100.0,
+          "hsts_rate": 0.0,
+          "csp_rate": 0.0
+        }
+      },
+      "issues": {
+        "total_issues": 20,
+        "by_severity": {
+          "critical": 0,
+          "high": 0,
+          "medium": 20,
+          "low": 0
+        },
+        "by_category": {
+          "security": 20
+        },
+        "issues": [
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/",
+            "page_type": "homepage",
+            "issue": "Missing HSTS header",
+            "impact": "Vulnerable to SSL stripping attacks",
+            "recommendation": "Add Strict-Transport-Security header"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/",
+            "page_type": "homepage",
+            "issue": "Missing Content-Security-Policy",
+            "impact": "Vulnerable to XSS attacks",
+            "recommendation": "Implement CSP header to prevent XSS"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/zhenskie-polovye-organy/",
+            "page_type": "services",
+            "issue": "Missing HSTS header",
+            "impact": "Vulnerable to SSL stripping attacks",
+            "recommendation": "Add Strict-Transport-Security header"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/zhenskie-polovye-organy/",
+            "page_type": "services",
+            "issue": "Missing Content-Security-Policy",
+            "impact": "Vulnerable to XSS attacks",
+            "recommendation": "Implement CSP header to prevent XSS"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/zhelezy-vnutrenney-sekretsii/",
+            "page_type": "services",
+            "issue": "Missing HSTS header",
+            "impact": "Vulnerable to SSL stripping attacks",
+            "recommendation": "Add Strict-Transport-Security header"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/zhelezy-vnutrenney-sekretsii/",
+            "page_type": "services",
+            "issue": "Missing Content-Security-Policy",
+            "impact": "Vulnerable to XSS attacks",
+            "recommendation": "Implement CSP header to prevent XSS"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/serdtse-i-perikard/",
+            "page_type": "services",
+            "issue": "Missing HSTS header",
+            "impact": "Vulnerable to SSL stripping attacks",
+            "recommendation": "Add Strict-Transport-Security header"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/serdtse-i-perikard/",
+            "page_type": "services",
+            "issue": "Missing Content-Security-Policy",
+            "impact": "Vulnerable to XSS attacks",
+            "recommendation": "Implement CSP header to prevent XSS"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/polost-rta-i-zuby/",
+            "page_type": "services",
+            "issue": "Missing HSTS header",
+            "impact": "Vulnerable to SSL stripping attacks",
+            "recommendation": "Add Strict-Transport-Security header"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/polost-rta-i-zuby/",
+            "page_type": "services",
+            "issue": "Missing Content-Security-Policy",
+            "impact": "Vulnerable to XSS attacks",
+            "recommendation": "Implement CSP header to prevent XSS"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/podzheludochnaya-zheleza/",
+            "page_type": "services",
+            "issue": "Missing HSTS header",
+            "impact": "Vulnerable to SSL stripping attacks",
+            "recommendation": "Add Strict-Transport-Security header"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/podzheludochnaya-zheleza/",
+            "page_type": "services",
+            "issue": "Missing Content-Security-Policy",
+            "impact": "Vulnerable to XSS attacks",
+            "recommendation": "Implement CSP header to prevent XSS"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/pochki-i-mochevydelitelnaya-sistema/",
+            "page_type": "services",
+            "issue": "Missing HSTS header",
+            "impact": "Vulnerable to SSL stripping attacks",
+            "recommendation": "Add Strict-Transport-Security header"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/pochki-i-mochevydelitelnaya-sistema/",
+            "page_type": "services",
+            "issue": "Missing Content-Security-Policy",
+            "impact": "Vulnerable to XSS attacks",
+            "recommendation": "Implement CSP header to prevent XSS"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/pechen-i-zhelchevyvodyashchie-puti/",
+            "page_type": "services",
+            "issue": "Missing HSTS header",
+            "impact": "Vulnerable to SSL stripping attacks",
+            "recommendation": "Add Strict-Transport-Security header"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/pechen-i-zhelchevyvodyashchie-puti/",
+            "page_type": "services",
+            "issue": "Missing Content-Security-Policy",
+            "impact": "Vulnerable to XSS attacks",
+            "recommendation": "Implement CSP header to prevent XSS"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/krupnye-krovenosnye-sosudy/",
+            "page_type": "services",
+            "issue": "Missing HSTS header",
+            "impact": "Vulnerable to SSL stripping attacks",
+            "recommendation": "Add Strict-Transport-Security header"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/krupnye-krovenosnye-sosudy/",
+            "page_type": "services",
+            "issue": "Missing Content-Security-Policy",
+            "impact": "Vulnerable to XSS attacks",
+            "recommendation": "Implement CSP header to prevent XSS"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/kozha-podkozhno-zhirovaya-kletchatka-pridatki-kozhi/",
+            "page_type": "services",
+            "issue": "Missing HSTS header",
+            "impact": "Vulnerable to SSL stripping attacks",
+            "recommendation": "Add Strict-Transport-Security header"
+          },
+          {
+            "severity": "medium",
+            "category": "security",
+            "page": "https://quantum-clinic.ru/uslugi/uzi/kozha-podkozhno-zhirovaya-kletchatka-pridatki-kozhi/",
+            "page_type": "services",
+            "issue": "Missing Content-Security-Policy",
+            "impact": "Vulnerable to XSS attacks",
+            "recommendation": "Implement CSP header to prevent XSS"
+          }
+        ],
+        "issues_by_severity": {
+          "critical": [],
+          "high": [],
+          "medium": [
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/",
+              "page_type": "homepage",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/",
+              "page_type": "homepage",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/zhenskie-polovye-organy/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/zhenskie-polovye-organy/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/zhelezy-vnutrenney-sekretsii/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/zhelezy-vnutrenney-sekretsii/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/serdtse-i-perikard/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/serdtse-i-perikard/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/polost-rta-i-zuby/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/polost-rta-i-zuby/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/podzheludochnaya-zheleza/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/podzheludochnaya-zheleza/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/pochki-i-mochevydelitelnaya-sistema/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/pochki-i-mochevydelitelnaya-sistema/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/pechen-i-zhelchevyvodyashchie-puti/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/pechen-i-zhelchevyvodyashchie-puti/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/krupnye-krovenosnye-sosudy/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/krupnye-krovenosnye-sosudy/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/kozha-podkozhno-zhirovaya-kletchatka-pridatki-kozhi/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/kozha-podkozhno-zhirovaya-kletchatka-pridatki-kozhi/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            }
+          ],
+          "low": []
+        },
+        "issues_by_category": {
+          "security": [
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/",
+              "page_type": "homepage",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/",
+              "page_type": "homepage",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/zhenskie-polovye-organy/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/zhenskie-polovye-organy/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/zhelezy-vnutrenney-sekretsii/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/zhelezy-vnutrenney-sekretsii/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/serdtse-i-perikard/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/serdtse-i-perikard/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/polost-rta-i-zuby/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/polost-rta-i-zuby/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/podzheludochnaya-zheleza/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/podzheludochnaya-zheleza/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/pochki-i-mochevydelitelnaya-sistema/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/pochki-i-mochevydelitelnaya-sistema/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/pechen-i-zhelchevyvodyashchie-puti/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/pechen-i-zhelchevyvodyashchie-puti/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/krupnye-krovenosnye-sosudy/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/krupnye-krovenosnye-sosudy/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/kozha-podkozhno-zhirovaya-kletchatka-pridatki-kozhi/",
+              "page_type": "services",
+              "issue": "Missing HSTS header",
+              "impact": "Vulnerable to SSL stripping attacks",
+              "recommendation": "Add Strict-Transport-Security header"
+            },
+            {
+              "severity": "medium",
+              "category": "security",
+              "page": "https://quantum-clinic.ru/uslugi/uzi/kozha-podkozhno-zhirovaya-kletchatka-pridatki-kozhi/",
+              "page_type": "services",
+              "issue": "Missing Content-Security-Policy",
+              "impact": "Vulnerable to XSS attacks",
+              "recommendation": "Implement CSP header to prevent XSS"
+            }
+          ]
+        }
+      },
+      "analyzed_at": "2026-05-05T20:55:19.579234"
+    }
+  ],
+  "market_insights": {
+    "total_competitors": 1,
+    "avg_pages_analyzed": 10.0,
+    "analysis_depth": "deep"
+  },
+  "analysis_quality": "deep",
+  "pages_analyzed_per_competitor": 10
+}

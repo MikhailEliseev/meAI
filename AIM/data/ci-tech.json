@@ -1,0 +1,75 @@
+{
+  "analysis_date": "2026-05-04T20:38:03.911724",
+  "total_analyzed": 5,
+  "tech_profiles": [
+    {
+      "name": "Клиника А",
+      "cms": "Wix",
+      "frontend": "React",
+      "analytics": [
+        "Google Tag Manager",
+        "Яндекс.Метрика"
+      ],
+      "has_online_booking": false,
+      "has_chat": false,
+      "tech_maturity": "medium"
+    },
+    {
+      "name": "Клиника Б",
+      "cms": "Tilda",
+      "frontend": "Vue",
+      "analytics": [
+        "Google Analytics"
+      ],
+      "has_online_booking": true,
+      "has_chat": false,
+      "tech_maturity": "high"
+    },
+    {
+      "name": "Клиника В",
+      "cms": "Wix",
+      "frontend": "React",
+      "analytics": [
+        "Google Analytics"
+      ],
+      "has_online_booking": true,
+      "has_chat": true,
+      "tech_maturity": "low"
+    },
+    {
+      "name": "Клиника Г",
+      "cms": "WordPress",
+      "frontend": "Vue",
+      "analytics": [
+        "Яндекс.Метрика",
+        "Google Tag Manager"
+      ],
+      "has_online_booking": false,
+      "has_chat": false,
+      "tech_maturity": "medium"
+    },
+    {
+      "name": "Клиника Д",
+      "cms": "Tilda",
+      "frontend": "jQuery",
+      "analytics": [
+        "Google Tag Manager"
+      ],
+      "has_online_booking": false,
+      "has_chat": true,
+      "tech_maturity": "medium"
+    }
+  ],
+  "market_tech": {
+    "most_popular_cms": "Wix",
+    "online_booking_adoption": 40.0,
+    "chat_adoption": 40.0
+  },
+  "insights": {
+    "digitalization_level": "medium",
+    "key_findings": [
+      "Самая популярная CMS: Wix",
+      "Онлайн-запись: 40% компаний"
+    ]
+  }
+}

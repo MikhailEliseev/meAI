@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{CLINIC_NAME}} – KP | AIM</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #ffffff;
+  --surface: #F5F5F5;
+  --hover: #EBEBEB;
+  --border: #E0E0E0;
+  --border-strong: #CFCFCF;
+  --text: #1A1A1A;
+  --text-secondary: #666666;
+  --text-dim: #999999;
+  --accent: #1A1A1A;
+  --accent-hover: #333333;
+  --card-bg: #F5F5F5;
+  --card-hover: #EBEBEB;
+  --glass-bg: rgba(255,255,255,0.85);
+  --glass-border: rgba(0,0,0,0.06);
+  --section-gap: 120px;
+  --green: #2E7D32;
+  --yellow: #F57C00;
+  --red: #C62828;
+}
+
+[data-theme="dark"] {
+  --bg: #0d0d0d;
+  --surface: #1a1a1a;
+  --hover: #262626;
+  --border: rgba(201,169,110,.18);
+  --border-strong: rgba(201,169,110,.35);
+  --text: #f5f0e8;
+  --text-secondary: #9e9489;
+  --text-dim: #7a7268;
+  --accent: #c9a96e;
+  --accent-hover: #e8cfa0;
+  --card-bg: #1a1a1a;
+  --card-hover: rgba(201,169,110,.05);
+  --glass-bg: rgba(13,13,13,0.85);
+  --glass-border: rgba(201,169,110,.10);
+  --green: #66BB6A;
+  --red: #EF5350;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  transition: background .3s, color .3s;
+}
+
+.theme-toggle {
+  width: 32px; height: 32px; border-radius: 16px;
+  background: transparent; border: none;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; transition: .2s; flex-shrink: 0;
+}
+.theme-toggle:hover { background: var(--surface); }
+
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 99;
+  padding: 16px 40px; background: var(--glass-bg);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--glass-border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+nav .logo { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; }
+nav .tag { font-size: 12px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+nav .links { display: flex; gap: 8px; }
+nav .links a {
+  text-decoration: none; color: var(--text-secondary); font-size: 13px;
+  padding: 6px 14px; border-radius: 20px; transition: .2s;
+}
+nav .links a:hover { background: var(--surface); color: var(--text); }
+
+.container { max-width: 900px; margin: 0 auto; padding: 0 32px; position: relative; z-index: 1; }
+
+.hero {
+  padding: 180px 0 100px; border-bottom: 1px solid var(--border);
+  margin-bottom: var(--section-gap); position: relative; overflow: hidden;
+}
+.hero .label { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 24px; }
+.hero h1 {
+  font-family: 'Playfair Display', serif; font-size: 56px;
+  font-weight: 400; line-height: 1.15; margin-bottom: 32px; position: relative; z-index: 1;
+}
+.hero h1 em { font-style: italic; }
+.hero .subtitle { font-size: 18px; color: var(--text-secondary); max-width: 600px; line-height: 1.7; position: relative; z-index: 1; }
+.hero .meta { display: flex; gap: 32px; margin-top: 48px; font-size: 13px; color: var(--text-dim); flex-wrap: wrap; position: relative; z-index: 1; }
+
+/* Ripple rings across page */
+.ripple { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.ripple-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid var(--text);
+  opacity: 0.04;
+  background: none;
+}
+.ring-lg-1 { width: 420px; height: 420px; top: -12%; right: -8%; }
+.ring-lg-2 { width: 340px; height: 340px; top: 15%; right: 70%; }
+.ring-lg-3 { width: 280px; height: 280px; top: 45%; left: -10%; }
+.ring-lg-4 { width: 380px; height: 380px; top: 75%; right: -15%; }
+.ring-lg-5 { width: 300px; height: 300px; top: 60%; left: 60%; }
+.ring-lg-6 { width: 240px; height: 240px; top: 30%; left: -6%; }
+
+.ring-pulse-1 { width: 200px; height: 200px; top: 10%; left: 8%; animation: pulse-ring 6s ease-in-out infinite; }
+.ring-pulse-2 { width: 160px; height: 160px; top: 12%; left: 12%; animation: pulse-ring 6s ease-in-out infinite; animation-delay: 3s; }
+.ring-pulse-3 { width: 100px; height: 100px; bottom: 18%; right: 4%; animation: pulse-ring 8s ease-in-out infinite; animation-delay: 1s; }
+.ring-pulse-4 { width: 70px; height: 70px; bottom: 22%; right: 10%; animation: pulse-ring 8s ease-in-out infinite; animation-delay: 5s; }
+.ring-pulse-5 { width: 130px; height: 130px; top: 35%; right: 20%; animation: pulse-ring 7s ease-in-out infinite; animation-delay: 2s; }
+.ring-pulse-6 { width: 90px; height: 90px; top: 70%; left: 30%; animation: pulse-ring 9s ease-in-out infinite; animation-delay: 4s; }
+.ring-pulse-7 { width: 110px; height: 110px; top: 88%; left: 50%; animation: pulse-ring 6.5s ease-in-out infinite; animation-delay: 1.5s; }
+.ring-pulse-8 { width: 150px; height: 150px; top: 50%; right: 40%; animation: pulse-ring 7.5s ease-in-out infinite; animation-delay: 3.5s; }
+
+@keyframes pulse-ring {
+  0%, 100% { opacity: 0.03; transform: scale(1); }
+  50% { opacity: 0.07; transform: scale(1.15); }
+}
+
+section { margin-bottom: var(--section-gap); }
+.section-label { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 16px; }
+h2 { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 400; line-height: 1.2; margin-bottom: 16px; }
+h3 { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 400; margin-bottom: 12px; }
+h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+p { color: var(--text-secondary); margin-bottom: 16px; font-size: 15px; line-height: 1.7; }
+p strong { color: var(--text); font-weight: 500; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin: 24px 0; }
+
+.card {
+  background: var(--surface); border-radius: 16px; padding: 24px;
+  backdrop-filter: blur(8px); transition: .2s;
+  border: 1px solid transparent;
+}
+.card:hover { background: var(--hover); }
+.card h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+.card .num { font-size: 28px; font-weight: 300; margin-bottom: 4px; color: var(--text); }
+.card p { font-size: 13px; color: var(--text-secondary); margin: 0; }
+
+.metrics { display: flex; gap: 48px; margin: 32px 0; flex-wrap: wrap; }
+.metric .value { font-size: 36px; font-weight: 300; color: var(--text); }
+.metric .label { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+
+blockquote {
+  border-left: 2px solid var(--text); padding-left: 24px; margin: 24px 0;
+  font-size: 16px; line-height: 1.6; color: var(--text-secondary);
+}
+
+.row { display: flex; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.row:last-child { border-bottom: none; }
+.row .k { width: 180px; flex-shrink: 0; font-size: 13px; color: var(--text-dim); }
+.row .v { font-size: 14px; color: var(--text); }
+
+.cta-box {
+  border: 2px solid var(--text); border-radius: 16px; padding: 48px;
+  text-align: center; margin: 48px 0;
+}
+.cta-box h3 { margin-bottom: 16px; }
+.cta-box p { margin-bottom: 24px; }
+.cta-box .btn {
+  display: inline-block; padding: 14px 40px; border: 1px solid var(--text);
+  color: var(--text); text-decoration: none; font-size: 14px;
+  border-radius: 28px; transition: .2s; letter-spacing: 1px;
+}
+.cta-box .btn:hover { background: var(--text); color: var(--bg); }
+
+.tag-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 100px;
+  border: 1px solid var(--border); font-size: 11px; color: var(--text-dim);
+  margin: 1px;
+}
+
+.expert-category { margin-bottom: 28px; }
+.expert-category .cat-title { font-size: 13px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+.expert-item {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+  gap: 12px; flex-wrap: wrap;
+}
+.expert-item:last-child { border-bottom: none; }
+.expert-item .name { color: var(--text); font-weight: 500; }
+.expert-item .spec { color: var(--text-secondary); font-size: 13px; }
+.expert-item .social { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+
+.social-found { color: var(--green); }
+.social-notfound { color: var(--text-dim); }
+
+.gap {
+  background: var(--surface); border-radius: 12px; padding: 20px; margin-bottom: 12px;
+  border-left: 3px solid var(--border);
+}
+.gap h4 { font-size: 14px; margin-bottom: 6px; color: var(--text); }
+.gap p { font-size: 13px; margin: 0; }
+
+.strategy-block { margin-bottom: 32px; }
+.strategy-block .header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.strategy-block .step { font-size: 12px; color: var(--text-dim); letter-spacing: 2px; }
+.strategy-block h3 { margin: 0; }
+
+@media (max-width: 768px) {
+  .hero h1 { font-size: 32px; }
+  h2 { font-size: 28px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .metrics { gap: 24px; }
+  .row { flex-direction: column; gap: 2px; }
+  .row .k { width: auto; }
+  nav .links { display: none; }
+  .hero { padding: 140px 0 60px; }
+  .cta-box { padding: 32px 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="ripple">
+  <div class="ripple-ring ring-lg-1"></div>
+  <div class="ripple-ring ring-lg-2"></div>
+  <div class="ripple-ring ring-lg-3"></div>
+  <div class="ripple-ring ring-lg-4"></div>
+  <div class="ripple-ring ring-lg-5"></div>
+  <div class="ripple-ring ring-lg-6"></div>
+  <div class="ripple-ring ring-pulse-1"></div>
+  <div class="ripple-ring ring-pulse-2"></div>
+  <div class="ripple-ring ring-pulse-3"></div>
+  <div class="ripple-ring ring-pulse-4"></div>
+  <div class="ripple-ring ring-pulse-5"></div>
+  <div class="ripple-ring ring-pulse-6"></div>
+  <div class="ripple-ring ring-pulse-7"></div>
+  <div class="ripple-ring ring-pulse-8"></div>
+</div>
+
+<nav>
+  <div style="display: flex; align-items: center; gap: 16px;">
+    <div class="logo">AIM</div>
+    <div class="tag">Marketing Agency</div>
+  </div>
+  <div style="display: flex; align-items: center; gap: 4px;">
+    <div class="links">
+      <a href="#about">О клинике</a>
+      <a href="#market">Рынок</a>
+      <a href="#experts">Эксперты</a>
+      <a href="#content-analysis">Контент</a>
+      <a href="#media">СМИ</a>
+      <a href="#competitors">Конкуренты</a>
+      <a href="#whitefields">Белые поля</a>
+      <a href="#presence">Присутствие</a>
+      <a href="#content-plan">Контент-план</a>
+      <a href="#strategy">Стратегия</a>
+    </div>
+    <button class="theme-toggle" onclick="document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark'" aria-label="Toggle theme">🌓</button>
+  </div>
+</nav>
+
+<div class="container">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="label">AI ANALYSIS</div>
+  <h1>{{CLINIC_NAME}}<br><em>{{HERO_TAGLINE}}</em></h1>
+  <div class="subtitle">{{HERO_SUBTITLE}}</div>
+  <div class="meta">
+    {{HERO_META}}
+  </div>
+</div>
+
+<!-- SECTION 1: ABOUT -->
+<section id="about">
+  <div class="section-label">01 — О клинике</div>
+  {{ABOUT_CONTENT}}
+</section>
+
+<hr>
+
+<!-- SECTION 2: MARKET / FINANCE -->
+<section id="market">
+  <div class="section-label">02 — Рынок: кто сколько зарабатывает</div>
+  {{MARKET_CONTENT}}
+</section>
+
+<hr>
+
+<!-- SECTION 3: EXPERTS -->
+<section id="experts">
+  <div class="section-label">03 — Эксперты</div>
+  {{EXPERTS_CONTENT}}
+</section>
+
+<hr>
+
+<!-- SECTION 4: CONTENT ANALYSIS -->
+<section id="content-analysis">
+  <div class="section-label">04 — Контент-анализ</div>
+  {{CONTENT_ANALYSIS_CONTENT}}
+</section>
+
+<hr>
+
+<!-- SECTION 5: MEDIA / SMI -->
+<section id="media">
+  <div class="section-label">05 — Медийное присутствие</div>
+  {{MEDIA_CONTENT}}
+</section>
+
+<hr>
+
+<!-- SECTION 6: COMPETITORS -->
+<section id="competitors">
+  <div class="section-label">06 — Конкуренты: полный разбор</div>
+  {{COMPETITORS_CONTENT}}
+</section>
+
+<hr>
+
+<!-- SECTION 7: WHITEFIELDS -->
+<section id="whitefields">
+  <div class="section-label">07 — Белые поля</div>
+  {{WHITEFIELDS_CONTENT}}
+</section>
+
+<hr>
+
+<!-- SECTION 8: DIGITAL PRESENCE -->
+<section id="presence">
+  <div class="section-label">08 — Цифровое присутствие</div>
+  {{PRESENCE_CONTENT}}
+</section>
+
+<hr>
+
+<!-- SECTION 9: CONTENT PLAN -->
+<section id="content-plan">
+  <div class="section-label">09 — Контент-план (сырой)</div>
+  {{CONTENT_PLAN_CONTENT}}
+</section>
+
+<hr>
+
+<!-- SECTION 10: STRATEGY -->
+<section id="strategy">
+  <div class="section-label">10 — Стратегия</div>
+  {{STRATEGY_CONTENT}}
+</section>
+
+<hr>
+
+<!-- SECTION 11: OFFER / CTA (presale) or RECOMMENDATIONS (onboarding) -->
+<section id="offer" style="padding-bottom: 40px;">
+  <div class="section-label">11 — {{OFFER_SECTION_LABEL}}</div>
+  {{OFFER_CONTENT}}
+</section>
+
+</div>
+
+</body>
+</html>

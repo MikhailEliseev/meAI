@@ -1,0 +1,718 @@
+{
+  "agent_id": "test-agent",
+  "created_at": "2026-05-05T19:07:19.258330",
+  "total_tasks": 74,
+  "total_failures": 37,
+  "total_successes": 37,
+  "lessons_applied": [
+    "CI URL Validation & Silent Failure Prevention",
+    "Lesson: CI URL Validation Silent Failure"
+  ],
+  "failures": [
+    {
+      "timestamp": "2026-05-05T19:07:19.439154",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T10:18:10.935495",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T10:24:23.982799",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T10:30:35.165873",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T10:37:30.613014",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T10:47:53.072692",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T10:53:53.261221",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T11:13:45.849498",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T11:19:52.663278",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T11:27:16.152604",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T11:36:39.118392",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T11:41:00.402784",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T12:58:46.968437",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:10:54.839274",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:17:31.183694",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:26:59.942612",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:30:51.002121",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:37:34.841808",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:41:03.154349",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:45:45.296471",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:53:25.194476",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T14:00:16.155644",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T14:46:20.162498",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T14:57:22.267544",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T15:06:32.281761",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T15:31:57.965628",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T15:48:22.122397",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T15:49:07.096954",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T15:51:16.965693",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T16:03:06.645975",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T16:11:50.273751",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T16:15:06.685975",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T16:17:57.568963",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-05-30T16:22:16.555909",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-06-04T10:16:32.891035",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-06-04T10:20:23.648778",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    },
+    {
+      "timestamp": "2026-06-04T10:26:25.029466",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "error_type": "ValueError",
+      "error_message": "Test error",
+      "context": {
+        "test": true
+      }
+    }
+  ],
+  "successes": [
+    {
+      "timestamp": "2026-05-05T19:07:19.438989",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T10:18:10.935216",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T10:24:23.982596",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T10:30:35.165644",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T10:37:30.612777",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T10:47:53.072328",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T10:53:53.260959",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T11:13:45.849046",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T11:19:52.662904",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T11:27:16.152214",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T11:36:39.117678",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T11:41:00.402130",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T12:58:46.967951",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:10:54.838853",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:17:31.183233",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:26:59.942169",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:30:51.001612",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:37:34.841251",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:41:03.153883",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:45:45.295936",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T13:53:25.193916",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T14:00:16.155284",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T14:46:20.162122",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T14:57:22.267155",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T15:06:32.281232",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T15:31:57.964987",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T15:48:22.121334",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T15:49:07.096327",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T15:51:16.965043",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T16:03:06.645582",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T16:11:50.273363",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T16:15:06.685465",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T16:17:57.568289",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-05-30T16:22:16.555334",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-06-04T10:16:32.890594",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-06-04T10:20:23.648302",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    },
+    {
+      "timestamp": "2026-06-04T10:26:25.028755",
+      "task_id": "test-task",
+      "task_action": "validate_urls",
+      "metrics": {
+        "quality_score": 85.0,
+        "duration": 10.5
+      }
+    }
+  ]
+}

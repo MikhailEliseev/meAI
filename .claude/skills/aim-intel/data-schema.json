@@ -1,0 +1,105 @@
+{
+  "slug": "string — id конкурента (dega, rami, ...)",
+  "client_slug": "string — id клиента (arclinic, ...)",
+  "mode": "competitor-intel",
+
+  "clinic": {
+    "name": "string",
+    "full_name": "string | null",
+    "city": "string — Санкт-Петербург",
+    "address": "string | null",
+    "website": "string | null",
+    "founded_year": "number | null",
+    "specialization": ["string"],
+    "rating": {
+      "yandex_maps": {"rating": "number | null", "reviews": "number | null"},
+      "prodoctorov": {"rating": "number | null", "reviews": "number | null"},
+      "2gis": {"rating": "number | null", "reviews": "number | null"},
+      "docdoc": {"rating": "number | null", "reviews": "number | null"}
+    },
+    "legal": {
+      "name": "string | null",
+      "inn": "string | null",
+      "ogrn": "string | null",
+      "revenue_2025": "number | null",
+      "revenue_growth": "number | null"
+    },
+    "social_media": {
+      "instagram": {"handle": "string", "followers": "number", "posts": "number", "er": "number | null"},
+      "telegram": ["string"],
+      "vk": "string | null",
+      "youtube": "string | null",
+      "dzen": "string | null"
+    }
+  },
+
+  "doctors": [
+    {
+      "name": "string — ФИО",
+      "tier": "star | core | team",
+      "specialization": "string",
+      "degree": "string | null — к.м.н., д.м.н., профессор",
+      "experience": "number | null — лет стажа",
+      "position": "string | null — главврач, зав.отделением",
+      "instagram": "string | null — handle без @",
+      "ig_followers": "number | null",
+      "telegram": "string | null"
+    }
+  ],
+
+  "content_analysis": {
+    "clinic_ig": {
+      "handle": "string",
+      "followers": "number",
+      "posts": "number",
+      "er": "number | null — engagement rate в %",
+      "themes": ["string — 3-5 тем контента"],
+      "format": "string — шоу | интрига | авторская | школа | до/после",
+      "top_post_likes": "number | null",
+      "top_post_views": "number | null",
+      "top_post_caption": "string | null",
+      "gap": "string — чего не хватает в контенте"
+    }
+  },
+
+  "tech_audit": {
+    "speed": {
+      "performance": "number | null — 0-100",
+      "accessibility": "number | null",
+      "best_practices": "number | null",
+      "seo": "number | null",
+      "core_web_vitals": "string | null — Passed | Failed",
+      "lcp_field": "string | null — пример: 2.0s",
+      "fcp_field": "string | null",
+      "tbt": "string | null",
+      "cls": "string | null"
+    },
+    "schema": "string | null — MedicalBusiness, LocalBusiness, ...",
+    "llms_txt": "boolean",
+    "analytics": "string | null — Яндекс.Метрика, GA4, Calltouch",
+    "cms": "string | null — Bitrix, WordPress, самописный",
+    "instagram_on_site": "boolean"
+  },
+
+  "smi": [
+    {
+      "source": "string — РБК, Forbes, Vogue, ...",
+      "title": "string — заголовок статьи",
+      "url": "string — полный URL",
+      "date": "string | null"
+    }
+  ],
+
+  "reviews_analysis": {
+    "prodoctorov_rating": "number | null",
+    "prodoctorov_count": "number | null",
+    "yandex_rating": "number | null",
+    "yandex_count": "number | null",
+    "positive_themes": ["string"],
+    "negative_themes": ["string"],
+    "key_quote": "string | null"
+  },
+
+  "gaps": ["string — что конкурент делает хуже клиента"],
+  "wow_insights": ["string — 2-3 ключевых инсайта для сравнения"]
+}

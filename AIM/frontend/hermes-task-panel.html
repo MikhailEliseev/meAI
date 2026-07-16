@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hermes Task Panel — AIM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* === DUAL THEME SYSTEM === */
+        :root {
+            --bg: #ffffff;
+            --surface: #F5F5F5;
+            --hover: #EBEBEB;
+            --border: #E0E0E0;
+            --border-strong: #CFCFCF;
+            --text: #1A1A1A;
+            --text-secondary: #666666;
+            --text-dim: #999999;
+            --accent: #1A1A1A;
+            --accent-hover: #333333;
+            --card-bg: #F5F5F5;
+            --glass-bg: rgba(255,255,255,0.85);
+            --glass-border: rgba(0,0,0,0.06);
+            --green-bg: #E8F5E9; --green-text: #2E7D32;
+            --blue-bg: #E3F2FD; --blue-text: #1565C0;
+            --yellow-bg: #FFF9C4; --yellow-text: #F57F17;
+            --red-bg: #FFEBEE; --red-text: #C62828;
+            --muted-bg: #F5F5F5; --muted-text: #999999;
+            --glow-outer: rgba(0,0,0,0.05);
+            --glow-inner: rgba(0,0,0,0.02);
+            --unlock-glow: rgba(46,125,50,0.12);
+        }
+
+        [data-theme="dark"] {
+            --bg: #0d0d0d;
+            --surface: #1a1a1a;
+            --hover: #262626;
+            --border: rgba(201,169,110,.18);
+            --border-strong: rgba(201,169,110,.35);
+            --text: #f5f0e8;
+            --text-secondary: #9e9489;
+            --text-dim: #7a7268;
+            --accent: #c9a96e;
+            --accent-hover: #e8cfa0;
+            --card-bg: #1a1a1a;
+            --glass-bg: rgba(13,13,13,0.85);
+            --glass-border: rgba(201,169,110,.10);
+            --green-bg: #1B5E20; --green-text: #81C784;
+            --blue-bg: #1A237E; --blue-text: #90CAF9;
+            --yellow-bg: #F57F17; --yellow-text: #FFF9C4;
+            --red-bg: #C62828; --red-text: #FFCDD2;
+            --muted-bg: #1a1a1a; --muted-text: #7a7268;
+            --glow-outer: rgba(201,169,110,0.08);
+            --glow-inner: rgba(201,169,110,0.03);
+            --unlock-glow: rgba(129,199,132,0.15);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Jost', sans-serif;
+            font-size: 15px;
+            line-height: 1.6;
+            background: var(--bg);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            transition: background .3s, color .3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        /* === HEADER === */
+        .header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            padding: 16px 48px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px) saturate(1.4);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .theme-toggle {
+            width: 44px; height: 44px;
+            border-radius: 22px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform .2s, background .2s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--hover);
+            transform: scale(1.05);
+        }
+
+        /* === PANEL === */
+        .panel {
+            width: 100%;
+            max-width: 640px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px) saturate(1.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            overflow: hidden;
+            animation: panel-glow 5s ease-in-out infinite;
+        }
+
+        @keyframes panel-glow {
+            0%, 100% { box-shadow: 0 0 14px var(--glow-outer), inset 0 0 20px var(--glow-inner); }
+            50% { box-shadow: 0 0 22px var(--glow-outer), inset 0 0 30px var(--glow-inner); }
+        }
+
+        .panel-header {
+            padding: 16px 20px 12px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #2E7D32;
+            transition: background .3s, box-shadow .3s;
+        }
+
+        .panel-dot.working {
+            animation: dot-pulse 0.8s ease-in-out infinite;
+            box-shadow: 0 0 8px var(--green-text);
+        }
+
+        [data-theme="dark"] .panel-dot { background: #81C784; }
+        [data-theme="dark"] .panel-dot.working { box-shadow: 0 0 10px #81C784; }
+
+        @keyframes dot-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.35; transform: scale(1.5); }
+        }
+
+        .panel-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+            flex: 1;
+        }
+
+        .panel-subtitle {
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        /* Demo button */
+        .demo-btn {
+            font-family: 'Jost', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .04em;
+            padding: 4px 12px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all .2s;
+            white-space: nowrap;
+        }
+
+        .demo-btn.running:hover { opacity: 0.85; }
+
+        /* === TAB BAR === */
+        .tab-bar {
+            display: inline-flex;
+            align-items: center;
+            gap: 0;
+            padding: 2px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            margin: 12px 20px 0;
+        }
+
+        .tab-btn {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            padding: 5px 8px;
+            border-radius: 11px;
+            border: none;
+            background: transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-family: 'Jost', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all .3s cubic-bezier(0.2, 0.65, 0.3, 0.9);
+            white-space: nowrap;
+        }
+
+        .tab-btn svg { flex-shrink: 0; transition: transform .3s; }
+
+        .tab-btn:hover { color: var(--text); background: var(--hover); }
+
+        .tab-btn.active {
+            gap: 7px;
+            padding-left: 12px;
+            padding-right: 12px;
+            background: var(--bg);
+            color: var(--text);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        [data-theme="dark"] .tab-btn.active {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .tab-label {
+            overflow: hidden;
+            width: 0;
+            opacity: 0;
+            transition: width .3s cubic-bezier(0.2, 0.65, 0.3, 0.9),
+                        opacity .25s ease;
+        }
+
+        .tab-btn.active .tab-label {
+            width: auto;
+            opacity: 1;
+        }
+
+        .tab-sep {
+            width: 1px;
+            height: 18px;
+            background: var(--border);
+            margin: 0 2px;
+            flex-shrink: 0;
+        }
+
+        /* === TAB VIEWS === */
+        .tab-view {
+            display: none;
+        }
+
+        .tab-view.active { display: block; }
+
+        /* === CHAT VIEW === */
+        .chat-messages {
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 200px;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .chat-msg {
+            display: flex;
+            gap: 10px;
+            animation: msg-in .3s ease-out both;
+        }
+
+        @keyframes msg-in {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .chat-msg.user { flex-direction: row-reverse; }
+
+        .chat-avatar {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+            font-weight: 700;
+            font-family: 'Playfair Display', serif;
+        }
+
+        .chat-avatar.hermes {
+            background: var(--surface);
+            color: var(--accent);
+            border: 1px solid var(--glass-border);
+        }
+
+        .chat-avatar.user-av {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        .chat-bubble {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-size: 13px;
+            max-width: 75%;
+            line-height: 1.55;
+            color: var(--text);
+        }
+
+        .chat-msg.user .chat-bubble {
+            background: var(--accent);
+            color: var(--bg);
+            border-color: transparent;
+        }
+
+        [data-theme="dark"] .chat-msg.user .chat-bubble { color: #0d0d0d; }
+
+        .chat-input-wrap {
+            display: flex;
+            gap: 8px;
+            padding: 12px 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            font-family: 'Jost', sans-serif;
+            font-size: 13px;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        .chat-input:focus { border-color: var(--accent); }
+
+        .chat-send {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent);
+            color: var(--bg);
+            font-family: 'Jost', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity .2s;
+        }
+
+        .chat-send:hover { opacity: 0.85; }
+
+        /* === ACTIVITY VIEW === */
+        .activity-list {
+            padding: 12px 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .activity-item {
+            display: flex;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            animation: msg-in .3s ease-out both;
+        }
+
+        .activity-item:last-child { border-bottom: none; }
+
+        .activity-dot {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .activity-dot.success { background: var(--green-bg); color: var(--green-text); }
+        .activity-dot.info { background: var(--blue-bg); color: var(--blue-text); }
+        .activity-dot.warn { background: var(--yellow-bg); color: var(--yellow-text); }
+
+        .activity-body { flex: 1; min-width: 0; }
+
+        .activity-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+        .activity-time {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
+        /* === TASK LIST === */
+        .task-list { list-style: none; padding: 12px 16px; }
+
+        .task-item { border-bottom: 1px solid var(--border); }
+        .task-item:last-child { border-bottom: none; }
+        .task-item + .task-item { margin-top: 4px; padding-top: 8px; }
+
+        /* Task Row */
+        .task-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background .2s, box-shadow .3s;
+            gap: 10px;
+            position: relative;
+        }
+
+        .task-row:hover { background: var(--hover); }
+
+        .task-row.tp-active {
+            background: linear-gradient(90deg, transparent 0%, var(--hover) 50%, transparent 100%);
+            background-size: 200% 100%;
+            animation: tp-shimmer 2s ease-in-out infinite;
+        }
+
+        .task-row.tp-unlocked {
+            animation: tp-unlock-glow 0.6s ease-out;
+        }
+
+        @keyframes tp-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        @keyframes tp-unlock-glow {
+            0% { box-shadow: inset 0 0 0 var(--unlock-glow); }
+            50% { box-shadow: inset 0 0 20px var(--unlock-glow); }
+            100% { box-shadow: inset 0 0 0 transparent; }
+        }
+
+        .task-row.completed .task-title {
+            text-decoration: line-through;
+            color: var(--text-dim);
+        }
+
+        /* Status Icon */
+        .status-icon {
+            flex-shrink: 0;
+            width: 18px; height: 18px;
+            cursor: pointer;
+            transition: transform .2s;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .status-icon:hover { transform: scale(1.15); }
+        .status-icon:active { transform: scale(0.9); }
+        .status-icon svg { width: 18px; height: 18px; }
+
+        .status-icon.processing svg {
+            animation: icon-pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes icon-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Task Content */
+        .task-content {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .task-title {
+            font-weight: 500;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: color .2s;
+        }
+
+        .task-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .dep-tag {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 3px;
+            background: var(--surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            letter-spacing: .03em;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 10px;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            transition: background .25s, color .25s;
+        }
+
+        .status-badge.completed { background: var(--green-bg); color: var(--green-text); }
+        .status-badge.in-progress { background: var(--blue-bg); color: var(--blue-text); }
+        .status-badge.need-help { background: var(--yellow-bg); color: var(--yellow-text); }
+        .status-badge.failed { background: var(--red-bg); color: var(--red-text); }
+        .status-badge.pending { background: var(--muted-bg); color: var(--muted-text); }
+
+        /* Expand Arrow */
+        .expand-arrow {
+            flex-shrink: 0;
+            width: 16px; height: 16px;
+            transition: transform .25s cubic-bezier(0.2, 0.65, 0.3, 0.9);
+            color: var(--text-dim);
+        }
+
+        .expand-arrow.open { transform: rotate(90deg); }
+
+        /* === SUBTASKS === */
+        .subtask-container {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height .35s cubic-bezier(0.2, 0.65, 0.3, 0.9);
+        }
+
+        .subtask-container.open { max-height: 800px; }
+
+        .subtask-inner {
+            position: relative;
+            padding: 4px 0 12px 36px;
+        }
+
+        .subtask-line {
+            position: absolute;
+            top: 0; bottom: 0;
+            left: 18px;
+            border-left: 2px dashed var(--border-strong);
+        }
+
+        .subtask-list { list-style: none; }
+
+        .subtask-row {
+            display: flex;
+            align-items: center;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background .2s;
+            gap: 8px;
+        }
+
+        .subtask-row:hover { background: var(--hover); }
+
+        .subtask-row.tp-active {
+            background: linear-gradient(90deg, transparent 0%, var(--hover) 50%, transparent 100%);
+            background-size: 200% 100%;
+            animation: tp-shimmer 2s ease-in-out infinite;
+        }
+
+        .subtask-row.completed .subtask-title {
+            text-decoration: line-through;
+            color: var(--text-dim);
+        }
+
+        .subtask-icon {
+            flex-shrink: 0;
+            width: 14px; height: 14px;
+            cursor: pointer;
+            transition: transform .2s;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .subtask-icon:hover { transform: scale(1.15); }
+        .subtask-icon:active { transform: scale(0.9); }
+        .subtask-icon svg { width: 14px; height: 14px; }
+
+        .subtask-icon.processing svg {
+            animation: icon-pulse 1s ease-in-out infinite;
+        }
+
+        .subtask-title {
+            font-size: 13px;
+            font-weight: 450;
+            transition: color .2s;
+        }
+
+        .subtask-details {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height .3s cubic-bezier(0.2, 0.65, 0.3, 0.9);
+        }
+
+        .subtask-details.open { max-height: 200px; }
+
+        .subtask-details-inner {
+            margin: 4px 0 8px 24px;
+            padding: 10px 14px;
+            border-left: 1px dashed var(--border);
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+
+        .subtask-desc { margin-bottom: 8px; }
+
+        .tools-label {
+            font-weight: 600;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+
+        .tools-list { display: flex; flex-wrap: wrap; gap: 4px; }
+
+        .tool-tag {
+            font-size: 10px;
+            font-weight: 500;
+            padding: 2px 8px;
+            border-radius: 3px;
+            background: var(--surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        /* === STATUS CHANGE ANIMATION === */
+        @keyframes icon-swap-in {
+            0% { opacity: 0; transform: scale(0.7) rotate(-15deg); }
+            100% { opacity: 1; transform: scale(1) rotate(0); }
+        }
+
+        .icon-swap { animation: icon-swap-in .25s cubic-bezier(0.2, 0.65, 0.3, 0.9); }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 600px) {
+            .header { padding: 12px 20px; }
+            .panel { border-radius: 0; }
+            .task-meta { gap: 4px; }
+            .dep-tag { display: none; }
+            .status-badge { font-size: 9px; padding: 2px 7px; }
+            .demo-btn { font-size: 10px; padding: 3px 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">Hermes</div>
+        <div class="header-actions">
+            <button class="demo-btn" id="demo-btn" onclick="toggleDemo()">▶ Demo</button>
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">🌓</button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-dot" id="panel-dot"></div>
+            <span class="panel-title">Hermes</span>
+            <span class="panel-subtitle" id="task-summary">0 · 5 pending</span>
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="tab-bar" id="tab-bar">
+            <button class="tab-btn active" data-tab="tasks" onclick="switchTab('tasks')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <polyline points="9 12 11 14 15 10"/>
+                </svg>
+                <span class="tab-label">Tasks</span>
+            </button>
+            <div class="tab-sep"></div>
+            <button class="tab-btn" data-tab="chat" onclick="switchTab('chat')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                </svg>
+                <span class="tab-label">Chat</span>
+            </button>
+            <div class="tab-sep"></div>
+            <button class="tab-btn" data-tab="activity" onclick="switchTab('activity')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+                <span class="tab-label">Activity</span>
+            </button>
+        </div>
+
+        <!-- Tasks View -->
+        <div class="tab-view active" id="tab-tasks">
+            <ul class="task-list" id="task-list"></ul>
+        </div>
+
+        <!-- Chat View -->
+        <div class="tab-view" id="tab-chat">
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-input-wrap">
+                <input type="text" class="chat-input" id="chat-input" placeholder="Ask Hermes..." onkeydown="if(event.key==='Enter')sendChat()">
+                <button class="chat-send" onclick="sendChat()">Send</button>
+            </div>
+        </div>
+
+        <!-- Activity View -->
+        <div class="tab-view" id="tab-activity">
+            <div class="activity-list" id="activity-list"></div>
+        </div>
+    </div>
+
+    <script>
+        // === DATA ===
+        const tasks = [
+            { id: "1", title: "Research Project Requirements", description: "Gather all necessary information about project scope and requirements", status: "pending", dependencies: [], subtasks: [
+                { id: "1.1", title: "Interview stakeholders", description: "Conduct interviews with key stakeholders to understand needs", status: "pending", tools: ["communication-agent", "meeting-scheduler"] },
+                { id: "1.2", title: "Review existing documentation", description: "Go through all available documentation and extract requirements", status: "pending", tools: ["file-system", "browser"] },
+                { id: "1.3", title: "Compile findings report", description: "Create a comprehensive report of all gathered information", status: "pending", tools: ["file-system", "markdown-processor"] }
+            ]},
+            { id: "2", title: "Design System Architecture", description: "Create the overall system architecture based on requirements", status: "pending", dependencies: [], subtasks: [
+                { id: "2.1", title: "Define component structure", description: "Map out all required components and their interactions", status: "pending", tools: ["architecture-planner", "diagramming-tool"] },
+                { id: "2.2", title: "Create data flow diagrams", description: "Design diagrams showing how data will flow through the system", status: "pending", tools: ["diagramming-tool", "file-system"] },
+                { id: "2.3", title: "Document API specifications", description: "Write detailed specifications for all APIs in the system", status: "pending", tools: ["api-designer", "openapi-generator"] }
+            ]},
+            { id: "3", title: "Implementation Planning", description: "Create a detailed plan for implementing the system", status: "pending", dependencies: ["1", "2"], subtasks: [
+                { id: "3.1", title: "Resource allocation", description: "Determine required resources and allocate them to tasks", status: "pending", tools: ["project-manager", "resource-calculator"] },
+                { id: "3.2", title: "Timeline development", description: "Create a timeline with milestones and deadlines", status: "pending", tools: ["timeline-generator", "gantt-chart-creator"] },
+                { id: "3.3", title: "Risk assessment", description: "Identify potential risks and develop mitigation strategies", status: "pending", tools: ["risk-analyzer"] }
+            ]},
+            { id: "4", title: "Development Environment Setup", description: "Set up all necessary tools and environments for development", status: "pending", dependencies: [], subtasks: [
+                { id: "4.1", title: "Install development tools", description: "Set up IDEs, version control, and other necessary development tools", status: "pending", tools: ["shell", "package-manager"] },
+                { id: "4.2", title: "Configure CI/CD pipeline", description: "Set up continuous integration and deployment pipelines", status: "pending", tools: ["github-actions", "gitlab-ci", "jenkins-connector"] },
+                { id: "4.3", title: "Set up testing framework", description: "Configure automated testing frameworks for the project", status: "pending", tools: ["test-runner", "shell"] }
+            ]},
+            { id: "5", title: "Initial Development Sprint", description: "Execute the first development sprint based on the plan", status: "pending", dependencies: ["4"], subtasks: [
+                { id: "5.1", title: "Implement core features", description: "Develop the essential features identified in the requirements", status: "pending", tools: ["code-assistant", "github", "file-system", "shell"] },
+                { id: "5.2", title: "Perform unit testing", description: "Create and execute unit tests for implemented features", status: "pending", tools: ["test-runner", "code-coverage-analyzer"] },
+                { id: "5.3", title: "Document code", description: "Create documentation for the implemented code", status: "pending", tools: ["documentation-generator", "markdown-processor"] }
+            ]}
+        ];
+
+        // Deep copy for reset
+        const initialTasks = JSON.parse(JSON.stringify(tasks));
+
+        // === SVG ICONS ===
+        const icons = {
+            completed: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+            'in-progress': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6h4.5"/></svg>',
+            'need-help': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+            failed: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+            pending: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>'
+        };
+
+        const iconColors = {
+            completed: 'var(--green-text)',
+            'in-progress': 'var(--blue-text)',
+            'need-help': 'var(--yellow-text)',
+            failed: 'var(--red-text)',
+            pending: 'var(--text-dim)'
+        };
+
+        function statusIcon(status, size, extraClass) {
+            const s = size === 'sm' ? '14px' : '18px';
+            const cls = extraClass ? ' ' + extraClass : '';
+            return '<span class="status-icon' + cls + '" style="color:' + iconColors[status] + ';width:' + s + ';height:' + s + '">' + icons[status] + '</span>';
+        }
+
+        function subIcon(status, extraClass) {
+            const cls = extraClass ? ' ' + extraClass : '';
+            return '<span class="subtask-icon' + cls + '" style="color:' + iconColors[status] + ';width:14px;height:14px">' + icons[status] + '</span>';
+        }
+
+        // === STATE ===
+        let expandedTasks = new Set();
+        let expandedSubtasks = new Set();
+        let demoRunning = false;
+        let demoTimers = [];
+        let currentActiveSubtask = null; // {taskId, subtaskId}
+
+        // === INITIAL RENDER (full, called once) ===
+        function render() {
+            const list = document.getElementById('task-list');
+            list.innerHTML = tasks.map(function(task) {
+                const isExpanded = expandedTasks.has(task.id);
+                const isCompleted = task.status === 'completed';
+                const deps = task.dependencies.length > 0
+                    ? task.dependencies.map(function(d) { return '<span class="dep-tag">' + d + '</span>'; }).join('')
+                    : '';
+
+                return '<li class="task-item">' +
+                    '<div class="task-row' + (isCompleted ? ' completed' : '') + '" data-task-id="' + task.id + '" onclick="toggleTask(\'' + task.id + '\')">' +
+                        '<div onclick="event.stopPropagation();cycleTaskStatus(\'' + task.id + '\')">' +
+                            statusIcon(task.status, 'md') +
+                        '</div>' +
+                        '<div class="task-content">' +
+                            '<span class="task-title">' + task.title + '</span>' +
+                            '<div class="task-meta">' +
+                                deps +
+                                '<span class="status-badge ' + task.status + '">' + task.status + '</span>' +
+                            '</div>' +
+                        '</div>' +
+                        '<svg class="expand-arrow' + (isExpanded ? ' open' : '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                            '<polyline points="9 18 15 12 9 6"/>' +
+                        '</svg>' +
+                    '</div>' +
+                    '<div class="subtask-container' + (isExpanded ? ' open' : '') + '" data-task-subs="' + task.id + '">' +
+                        '<div class="subtask-inner">' +
+                            '<div class="subtask-line"></div>' +
+                            '<ul class="subtask-list">' +
+                                task.subtasks.map(function(sub) {
+                                    const subKey = task.id + '-' + sub.id;
+                                    const isSubExpanded = expandedSubtasks.has(subKey);
+                                    const isSubCompleted = sub.status === 'completed';
+                                    const tools = sub.tools && sub.tools.length > 0
+                                        ? '<div class="tools-label">MCP Servers</div>' +
+                                          '<div class="tools-list">' + sub.tools.map(function(t) { return '<span class="tool-tag">' + t + '</span>'; }).join('') + '</div>'
+                                        : '';
+
+                                    return '<li>' +
+                                        '<div class="subtask-row' + (isSubCompleted ? ' completed' : '') + '" data-subtask-id="' + subKey + '" onclick="toggleSubtaskDetails(\'' + task.id + '\',\'' + sub.id + '\')">' +
+                                            '<div onclick="event.stopPropagation();cycleSubtaskStatus(\'' + task.id + '\',\'' + sub.id + '\')">' +
+                                                subIcon(sub.status) +
+                                            '</div>' +
+                                            '<span class="subtask-title">' + sub.title + '</span>' +
+                                        '</div>' +
+                                        '<div class="subtask-details' + (isSubExpanded ? ' open' : '') + '" data-sub-details="' + subKey + '">' +
+                                            '<div class="subtask-details-inner">' +
+                                                '<p class="subtask-desc">' + sub.description + '</p>' + tools +
+                                            '</div>' +
+                                        '</div>' +
+                                    '</li>';
+                                }).join('') +
+                            '</ul>' +
+                        '</div>' +
+                    '</div>' +
+                '</li>';
+            }).join('');
+            updateSummary();
+        }
+
+        // === TARGETED DOM UPDATE: change task status without re-render ===
+        function updateTaskStatus(taskId, newStatus) {
+            const task = tasks.find(function(t) { return t.id === taskId; });
+            if (!task) return;
+            const oldStatus = task.status;
+            task.status = newStatus;
+
+            // Update icon
+            const row = document.querySelector('.task-row[data-task-id="' + taskId + '"]');
+            if (!row) return;
+            const iconWrap = row.querySelector('.status-icon');
+            if (iconWrap) {
+                iconWrap.style.color = iconColors[newStatus];
+                iconWrap.innerHTML = icons[newStatus];
+                iconWrap.classList.add('icon-swap');
+                setTimeout(function() { iconWrap.classList.remove('icon-swap'); }, 250);
+            }
+
+            // Update badge
+            const badge = row.querySelector('.status-badge');
+            if (badge) {
+                badge.className = 'status-badge ' + newStatus;
+                badge.textContent = newStatus;
+            }
+
+            // Update completed class
+            if (newStatus === 'completed') {
+                row.classList.add('completed');
+            } else {
+                row.classList.remove('completed');
+            }
+
+            // If task completed, auto-complete all subtasks
+            if (newStatus === 'completed') {
+                task.subtasks.forEach(function(sub) {
+                    sub.status = 'completed';
+                    updateSubtaskStatusDOM(taskId, sub.id, 'completed');
+                });
+            }
+
+            updateSummary();
+        }
+
+        function updateSubtaskStatusDOM(taskId, subtaskId, newStatus) {
+            const subKey = taskId + '-' + subtaskId;
+            const row = document.querySelector('.subtask-row[data-subtask-id="' + subKey + '"]');
+            if (!row) return;
+
+            // Update icon
+            const iconWrap = row.querySelector('.subtask-icon');
+            if (iconWrap) {
+                iconWrap.style.color = iconColors[newStatus];
+                iconWrap.innerHTML = icons[newStatus];
+                iconWrap.classList.add('icon-swap');
+                setTimeout(function() { iconWrap.classList.remove('icon-swap'); }, 250);
+            }
+
+            // Update completed class
+            if (newStatus === 'completed') {
+                row.classList.add('completed');
+            } else {
+                row.classList.remove('completed');
+            }
+        }
+
+        function setActive(taskId, subtaskId) {
+            clearActive();
+            currentActiveSubtask = { taskId: taskId, subtaskId: subtaskId };
+
+            // Highlight task row
+            const taskRow = document.querySelector('.task-row[data-task-id="' + taskId + '"]');
+            if (taskRow) taskRow.classList.add('tp-active');
+
+            // Highlight subtask row
+            const subKey = taskId + '-' + subtaskId;
+            const subRow = document.querySelector('.subtask-row[data-subtask-id="' + subKey + '"]');
+            if (subRow) subRow.classList.add('tp-active');
+
+            // Pulsing dot
+            var dot = document.getElementById('panel-dot');
+            if (dot) dot.classList.add('working');
+        }
+
+        function clearActive() {
+            document.querySelectorAll('.tp-active').forEach(function(el) { el.classList.remove('tp-active'); });
+            document.querySelectorAll('.status-icon.processing, .subtask-icon.processing').forEach(function(el) { el.classList.remove('processing'); });
+            var dot = document.getElementById('panel-dot');
+            if (dot) dot.classList.remove('working');
+            currentActiveSubtask = null;
+        }
+
+        // Unlock animation on task row
+        function triggerUnlock(taskId) {
+            var row = document.querySelector('.task-row[data-task-id="' + taskId + '"]');
+            if (!row) return;
+            row.classList.add('tp-unlocked');
+            setTimeout(function() { row.classList.remove('tp-unlocked'); }, 600);
+        }
+
+        function autoExpandTask(taskId) {
+            expandedTasks.add(taskId);
+            var container = document.querySelector('.subtask-container[data-task-subs="' + taskId + '"]');
+            if (container) container.classList.add('open');
+            var arrow = document.querySelector('.task-row[data-task-id="' + taskId + '"] .expand-arrow');
+            if (arrow) arrow.classList.add('open');
+        }
+
+        function updateSummary() {
+            var inProgress = tasks.filter(function(t) { return t.status === 'in-progress'; }).length;
+            var pending = tasks.filter(function(t) { return t.status === 'pending'; }).length;
+            var completed = tasks.filter(function(t) { return t.status === 'completed'; }).length;
+            var failed = tasks.filter(function(t) { return t.status === 'failed'; }).length;
+            var needHelp = tasks.filter(function(t) { return t.status === 'need-help'; }).length;
+            var parts = [];
+            if (completed) parts.push(completed + ' done');
+            if (inProgress) parts.push(inProgress + ' active');
+            if (pending) parts.push(pending + ' pending');
+            if (needHelp) parts.push(needHelp + ' needs help');
+            if (failed) parts.push(failed + ' failed');
+            document.getElementById('task-summary').textContent = parts.join(' · ') || 'idle';
+        }
+
+        // === MANUAL ACTIONS ===
+        function toggleTask(id) {
+            if (demoRunning) return;
+            if (expandedTasks.has(id)) {
+                expandedTasks.delete(id);
+            } else {
+                expandedTasks.add(id);
+            }
+            render();
+        }
+
+        function toggleSubtaskDetails(taskId, subtaskId) {
+            if (demoRunning) return;
+            var key = taskId + '-' + subtaskId;
+            if (expandedSubtasks.has(key)) {
+                expandedSubtasks.delete(key);
+            } else {
+                expandedSubtasks.add(key);
+            }
+            render();
+        }
+
+        function cycleTaskStatus(id) {
+            if (demoRunning) return;
+            var statuses = ['completed', 'in-progress', 'pending', 'need-help', 'failed'];
+            var task = tasks.find(function(t) { return t.id === id; });
+            var idx = statuses.indexOf(task.status);
+            updateTaskStatus(id, statuses[(idx + 1) % statuses.length]);
+        }
+
+        function cycleSubtaskStatus(taskId, subtaskId) {
+            if (demoRunning) return;
+            var task = tasks.find(function(t) { return t.id === taskId; });
+            var sub = task.subtasks.find(function(s) { return s.id === subtaskId; });
+            var newStatus = sub.status === 'completed' ? 'pending' : 'completed';
+            sub.status = newStatus;
+            updateSubtaskStatusDOM(taskId, subtaskId, newStatus);
+
+            // Auto-status task
+            if (task.subtasks.every(function(s) { return s.status === 'completed'; })) {
+                updateTaskStatus(taskId, 'completed');
+            } else if (task.status === 'completed' || task.status === 'pending') {
+                updateTaskStatus(taskId, 'in-progress');
+            }
+        }
+
+        // === DEMO MODE ===
+        function toggleDemo() {
+            if (demoRunning) { stopDemo(); return; }
+            // Auto-switch to tasks tab on demo start
+            switchTab('tasks');
+            startDemo();
+        }
+        window.toggleDemo = toggleDemo;
+
+        // === TAB SWITCHING ===
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(function(btn) {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+            document.querySelectorAll('.tab-view').forEach(function(view) {
+                view.classList.remove('active');
+            });
+            var target = document.getElementById('tab-' + tab);
+            if (target) target.classList.add('active');
+        }
+        window.switchTab = switchTab;
+
+        // === CHAT ===
+        var chatHistory = [
+            { from: 'hermes', text: 'Hello! I am Hermes, your AI assistant. I can help with project planning, analyze competitors, and run prescans. What do you need?' }
+        ];
+
+        function renderChat() {
+            var el = document.getElementById('chat-messages');
+            el.innerHTML = chatHistory.map(function(m) {
+                return '<div class="chat-msg ' + (m.from === 'user' ? 'user' : '') + '">' +
+                    '<div class="chat-avatar ' + (m.from === 'user' ? 'user-av' : 'hermes') + '">' +
+                        (m.from === 'user' ? 'U' : 'H') +
+                    '</div>' +
+                    '<div class="chat-bubble">' + m.text + '</div>' +
+                '</div>';
+            }).join('');
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function sendChat() {
+            var input = document.getElementById('chat-input');
+            var text = input.value.trim();
+            if (!text) return;
+            chatHistory.push({ from: 'user', text: text });
+            input.value = '';
+            renderChat();
+
+            // Auto-reply
+            setTimeout(function() {
+                var replies = [
+                    'Let me check on that for you...',
+                    'I can help with that. Give me a moment to analyze.',
+                    'Running the analysis now. I will update the task panel.',
+                    'Good question! Let me look into it.'
+                ];
+                chatHistory.push({ from: 'hermes', text: replies[Math.floor(Math.random() * replies.length)] });
+                renderChat();
+            }, 800 + Math.random() * 1200);
+        }
+        window.sendChat = sendChat;
+
+        // === ACTIVITY ===
+        var activityLog = [
+            { type: 'success', text: 'Prescan completed for dentalclinic.ru — 4 competitors found', time: '2 min ago' },
+            { type: 'info', text: 'SEO audit started for psyholog48.ru', time: '5 min ago' },
+            { type: 'warn', text: 'Subtask "Compile findings report" needs attention', time: '12 min ago' },
+            { type: 'success', text: 'Competitor analysis finished: 12 competitors matched', time: '18 min ago' },
+            { type: 'info', text: 'New lead: Анна В., "Эстетика", Казань — qualified', time: '25 min ago' },
+            { type: 'success', text: 'Development Environment Setup — all subtasks completed', time: '32 min ago' },
+            { type: 'info', text: 'Hermes agent restarted — version 2.4.1', time: '1 hour ago' }
+        ];
+
+        function renderActivity() {
+            var icons = { success: '✓', info: 'i', warn: '!' };
+            var el = document.getElementById('activity-list');
+            el.innerHTML = activityLog.map(function(a, i) {
+                return '<div class="activity-item" style="animation-delay:' + (i * 0.05) + 's">' +
+                    '<div class="activity-dot ' + a.type + '">' + icons[a.type] + '</div>' +
+                    '<div class="activity-body">' +
+                        '<div class="activity-text">' + a.text + '</div>' +
+                        '<div class="activity-time">' + a.time + '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        renderChat();
+        renderActivity();
+
+        function startDemo() {
+            demoRunning = true;
+            resetToInitial();
+            render();
+
+            var btn = document.getElementById('demo-btn');
+            btn.textContent = '⏸ Stop';
+            btn.classList.add('running');
+
+            var dot = document.getElementById('panel-dot');
+            if (dot) dot.classList.add('working');
+
+            // Schedule demo events
+            var t = 0;
+
+            // --- Task 1: Research Project Requirements ---
+            schedule(t += 800, function() {
+                updateTaskStatus('1', 'in-progress');
+                autoExpandTask('1');
+            });
+            schedule(t += 600, function() {
+                setActiveSubInDemo('1', '1.1', 'in-progress');
+            });
+            schedule(t += 2000, function() {
+                setActiveSubInDemo('1', '1.1', 'completed');
+            });
+            schedule(t += 600, function() {
+                setActiveSubInDemo('1', '1.2', 'in-progress');
+            });
+            schedule(t += 2000, function() {
+                setActiveSubInDemo('1', '1.2', 'completed');
+            });
+            schedule(t += 600, function() {
+                setActiveSubInDemo('1', '1.3', 'in-progress');
+            });
+            schedule(t += 1800, function() {
+                setActiveSubInDemo('1', '1.3', 'need-help');
+                updateSummary();
+            });
+
+            // --- Task 4: Dev Environment (parallel) ---
+            schedule(t += 900, function() {
+                updateTaskStatus('4', 'in-progress');
+                autoExpandTask('4');
+            });
+            schedule(t += 600, function() {
+                setActiveSubInDemo('4', '4.1', 'in-progress');
+            });
+            schedule(t += 2000, function() {
+                setActiveSubInDemo('4', '4.1', 'completed');
+            });
+            schedule(t += 600, function() {
+                setActiveSubInDemo('4', '4.2', 'in-progress');
+            });
+            schedule(t += 2000, function() {
+                setActiveSubInDemo('4', '4.2', 'completed');
+            });
+            schedule(t += 600, function() {
+                setActiveSubInDemo('4', '4.3', 'in-progress');
+            });
+            schedule(t += 2000, function() {
+                setActiveSubInDemo('4', '4.3', 'completed');
+            });
+            schedule(t += 500, function() {
+                updateTaskStatus('4', 'completed');
+            });
+
+            // --- Task 2: Design System Architecture ---
+            schedule(t += 800, function() {
+                updateTaskStatus('2', 'in-progress');
+                autoExpandTask('2');
+            });
+            schedule(t += 600, function() {
+                setActiveSubInDemo('2', '2.1', 'in-progress');
+            });
+            schedule(t += 2000, function() {
+                setActiveSubInDemo('2', '2.1', 'completed');
+            });
+            schedule(t += 600, function() {
+                setActiveSubInDemo('2', '2.2', 'in-progress');
+            });
+            schedule(t += 2000, function() {
+                setActiveSubInDemo('2', '2.2', 'completed');
+            });
+            schedule(t += 600, function() {
+                setActiveSubInDemo('2', '2.3', 'in-progress');
+            });
+            schedule(t += 2000, function() {
+                setActiveSubInDemo('2', '2.3', 'completed');
+            });
+            schedule(t += 500, function() {
+                updateTaskStatus('2', 'completed');
+            });
+
+            // --- Task 1: resolve need-help → completed ---
+            schedule(t += 700, function() {
+                var task = tasks.find(function(t2) { return t2.id === '1'; });
+                var sub = task.subtasks.find(function(s) { return s.id === '1.3'; });
+                sub.status = 'completed';
+                updateSubtaskStatusDOM('1', '1.3', 'completed');
+                updateTaskStatus('1', 'completed');
+            });
+
+            // --- Task 3: Unlocked! (deps: 1+2 both done) ---
+            schedule(t += 1000, function() {
+                updateTaskStatus('3', 'in-progress');
+                autoExpandTask('3');
+                triggerUnlock('3');
+            });
+            schedule(t += 700, function() {
+                setActiveSubInDemo('3', '3.1', 'in-progress');
+            });
+            schedule(t += 2000, function() {
+                setActiveSubInDemo('3', '3.1', 'completed');
+            });
+            schedule(t += 600, function() {
+                setActiveSubInDemo('3', '3.2', 'in-progress');
+            });
+            schedule(t += 2000, function() {
+                setActiveSubInDemo('3', '3.2', 'completed');
+            });
+            schedule(t += 600, function() {
+                setActiveSubInDemo('3', '3.3', 'failed');
+            });
+            schedule(t += 1400, function() {
+                updateTaskStatus('3', 'failed');
+            });
+
+            // --- Task 5: Unlocked (dep: 4 done) ---
+            schedule(t += 1000, function() {
+                updateTaskStatus('5', 'in-progress');
+                autoExpandTask('5');
+                triggerUnlock('5');
+            });
+
+            // --- End ---
+            schedule(t += 1000, function() {
+                stopDemo();
+            });
+        }
+
+        function setActiveSubInDemo(taskId, subId, newStatus) {
+            var task = tasks.find(function(t) { return t.id === taskId; });
+            var sub = task.subtasks.find(function(s) { return s.id === subId; });
+            sub.status = newStatus;
+            updateSubtaskStatusDOM(taskId, subId, newStatus);
+
+            if (newStatus === 'in-progress') {
+                setActive(taskId, subId);
+            } else {
+                clearActive();
+            }
+
+            // Auto-update task status
+            var allDone = task.subtasks.every(function(s) { return s.status === 'completed'; });
+            var anyFailed = task.subtasks.some(function(s) { return s.status === 'failed'; });
+            var anyProgress = task.subtasks.some(function(s) { return s.status === 'in-progress'; });
+            var anyHelp = task.subtasks.some(function(s) { return s.status === 'need-help'; });
+
+            if (allDone && task.status !== 'completed') {
+                updateTaskStatus(taskId, 'completed');
+            } else if (anyFailed && task.status !== 'failed') {
+                // Don't auto-set to failed, let explicit event handle it
+                updateTaskStatus(taskId, 'in-progress');
+            } else if (anyHelp && task.status !== 'need-help') {
+                updateTaskStatus(taskId, 'need-help');
+            } else if ((anyProgress || anyHelp) && task.status === 'pending') {
+                updateTaskStatus(taskId, 'in-progress');
+            }
+
+            updateSummary();
+        }
+
+        function schedule(ms, fn) {
+            var timer = setTimeout(function() {
+                if (demoRunning) fn();
+            }, ms);
+            demoTimers.push(timer);
+        }
+
+        function stopDemo() {
+            demoRunning = false;
+            demoTimers.forEach(function(t) { clearTimeout(t); });
+            demoTimers = [];
+            clearActive();
+            var dot = document.getElementById('panel-dot');
+            if (dot) dot.classList.remove('working');
+            var btn = document.getElementById('demo-btn');
+            btn.textContent = '▶ Demo';
+            btn.classList.remove('running');
+            updateSummary();
+        }
+
+        function resetToInitial() {
+            // Deep copy initial state back
+            var fresh = JSON.parse(JSON.stringify(initialTasks));
+            for (var i = 0; i < tasks.length; i++) {
+                tasks[i].status = fresh[i].status;
+                for (var j = 0; j < tasks[i].subtasks.length; j++) {
+                    tasks[i].subtasks[j].status = fresh[i].subtasks[j].status;
+                }
+            }
+            expandedTasks.clear();
+            expandedSubtasks.clear();
+            clearActive();
+            var dot = document.getElementById('panel-dot');
+            if (dot) dot.classList.remove('working');
+        }
+
+        function resetPanel() {
+            if (demoRunning) {
+                demoTimers.forEach(function(t) { clearTimeout(t); });
+                demoTimers = [];
+                demoRunning = false;
+                var btn = document.getElementById('demo-btn');
+                btn.textContent = '▶ Demo';
+                btn.classList.remove('running');
+            }
+            resetToInitial();
+            render();
+        }
+
+        // === THEME ===
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.dataset.theme;
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.dataset.theme = next;
+            localStorage.setItem('hermes-theme', next);
+        }
+
+        var savedTheme = localStorage.getItem('hermes-theme') || 'light';
+        document.documentElement.dataset.theme = savedTheme;
+
+        // === INIT ===
+        render();
+    </script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+hypotheses:
+  50da1958:
+    hypothesis: Регулярная публикация качественного образовательного контента увеличит
+      органический трафик на 200% за 6 месяцев и конверсию в запись на 50%.
+    metadata:
+      author: meAI
+      created: 2026-05-03 14:18:00+00:00
+      source: internal
+      status: raw
+      tags:
+      - content
+      - medical-marketing
+      - strategy
+      - blogging
+      title: Content Marketing Strategy for Medical Clinics
+    registered_at: '2026-05-03T17:18:20.006596'
+    source_file: 20260503-1418-content-marketing-test.md
+    status: pending
+    validations: []
+  514faf5a:
+    hypothesis: '**'
+    metadata:
+      author: Test Author
+      created: 2026-05-03 08:14:00+00:00
+      source: https://github.com/test/example
+      tags:
+      - test
+      - integration
+      title: Integration Test - Monitor + Gatekeeper
+    registered_at: '2026-05-03T12:20:07.598148'
+    source_file: 20260503-0814-integration-test.md
+    status: pending
+    validations: []
+  c9ecf7d2:
+    hypothesis: Использование AI-агентов может сократить время на создание контента
+      на 80% при сохранении качества.
+    metadata:
+      author: meAI
+      created: 2026-05-03 10:02:00+00:00
+      source: internal
+      status: raw
+      tags:
+      - ai
+      - automation
+      - medical-marketing
+      - llm
+      title: AI Automation for Medical Marketing
+    registered_at: '2026-05-03T13:02:38.545838'
+    source_file: 20260503-1002-ai-automation-test.md
+    status: pending
+    validations: []

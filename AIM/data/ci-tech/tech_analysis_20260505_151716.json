@@ -1,0 +1,434 @@
+{
+  "analysis_date": "2026-05-05T15:17:16.408325",
+  "total_analyzed": 1,
+  "tech_profiles": [
+    {
+      "name": "Test Competitor",
+      "url": "https://example.com",
+      "cms": "Custom",
+      "technologies": [],
+      "seo_optimization": {
+        "has_title": true,
+        "has_meta_description": false,
+        "has_h1": true,
+        "has_og_tags": false,
+        "has_schema": false,
+        "has_canonical": false,
+        "score": 33.3,
+        "issues": [
+          "Missing meta description",
+          "No Schema.org markup"
+        ]
+      },
+      "geo_optimization": {
+        "has_faq_schema": false,
+        "has_howto_schema": false,
+        "has_article_schema": false,
+        "has_breadcrumbs": false,
+        "has_local_business": false,
+        "ai_ready_score": 0.0,
+        "recommendations": [
+          "Add FAQ Schema for AI snippets",
+          "Add Article Schema for better AI understanding",
+          "Add LocalBusiness Schema for local SEO"
+        ]
+      },
+      "performance": {
+        "html_size_kb": 0.515625,
+        "has_minified_css": false,
+        "has_minified_js": false,
+        "uses_cdn": false,
+        "has_lazy_loading": false,
+        "score": 20,
+        "issues": [
+          "CSS not minified",
+          "JavaScript not minified"
+        ]
+      },
+      "analyzed_at": "2026-05-05T15:17:16.408184"
+    }
+  ],
+  "market_tech": {
+    "most_popular_cms": "Custom",
+    "cms_distribution": {
+      "Custom": 1
+    },
+    "top_technologies": [],
+    "avg_seo_score": 33.3,
+    "avg_geo_score": 0.0
+  },
+  "insights": {
+    "key_findings": [
+      "Самая популярная CMS: Custom",
+      "Низкий уровень SEO оптимизации (средний балл: 33/100)",
+      "Низкая готовность к AI/GEO (средний балл: 0/100) - возможность для конкурентного преимущества!"
+    ],
+    "opportunities": [
+      "Возможность обойти конкурентов по SEO оптимизации",
+      "Большая возможность в AI/GEO оптимизации - конкуренты не готовы",
+      "Многие конкуренты не используют аналитику - возможность для data-driven подхода"
+    ],
+    "financial_analysis": [
+      {
+        "competitor": "Test Competitor",
+        "budget": {
+          "estimated_monthly_min": 5000,
+          "estimated_monthly_max": 20000,
+          "budget_level": "medium",
+          "maturity": "Средняя компания, стандартный бюджет",
+          "signals": [
+            {
+              "category": "CMS",
+              "item": "Custom",
+              "min": 5000,
+              "max": 20000,
+              "signal": "Высокий бюджет - custom разработка"
+            }
+          ],
+          "interpretation": "Конкурент тратит $5,000-$20,000/мес на технологии"
+        }
+      }
+    ],
+    "gap_analysis": [
+      {
+        "competitor": "Test Competitor",
+        "gaps": [
+          {
+            "gap": "No FAQ Schema",
+            "opportunity": "Появляться в AI ответах на вопросы пользователей",
+            "impact": 10,
+            "effort": 1,
+            "priority": "CRITICAL",
+            "time_to_implement": "2 часа",
+            "competitive_advantage_months": 12,
+            "why_critical": "ChatGPT, Perplexity, Google AI берут ответы из FAQ Schema. Это новый канал трафика!",
+            "priority_score": 10.0
+          },
+          {
+            "gap": "No analytics",
+            "opportunity": "Data-driven решения vs слепые решения конкурента",
+            "impact": 9,
+            "effort": 1,
+            "priority": "CRITICAL",
+            "time_to_implement": "1 час",
+            "competitive_advantage_months": 999,
+            "why_critical": "Конкурент работает вслепую - не знает откуда клиенты, что работает, что нет",
+            "priority_score": 9.0
+          },
+          {
+            "gap": "No meta description",
+            "opportunity": "Лучшие сниппеты в поиске → выше CTR",
+            "impact": 6,
+            "effort": 1,
+            "priority": "HIGH",
+            "time_to_implement": "2 часа",
+            "competitive_advantage_months": 3,
+            "priority_score": 6.0
+          },
+          {
+            "gap": "No Schema.org markup",
+            "opportunity": "Захватить AI трафик (Google AI Overviews, ChatGPT)",
+            "impact": 9,
+            "effort": 2,
+            "priority": "CRITICAL",
+            "time_to_implement": "1 день",
+            "competitive_advantage_months": 12,
+            "why_critical": "Google AI Overviews используют Schema.org для ответов. Кто первый добавит - получит весь AI трафик.",
+            "priority_score": 4.5
+          },
+          {
+            "gap": "No LocalBusiness Schema",
+            "opportunity": "Локальное SEO + карты Google",
+            "impact": 8,
+            "effort": 2,
+            "priority": "HIGH",
+            "time_to_implement": "3 часа",
+            "competitive_advantage_months": 6,
+            "priority_score": 4.0
+          },
+          {
+            "gap": "No minification",
+            "opportunity": "Быстрее загружаться → лучше Core Web Vitals",
+            "impact": 5,
+            "effort": 2,
+            "priority": "MEDIUM",
+            "time_to_implement": "4 часа",
+            "competitive_advantage_months": 3,
+            "priority_score": 2.5
+          },
+          {
+            "gap": "No CDN",
+            "opportunity": "Быстрее загружаться → меньше bounce rate",
+            "impact": 7,
+            "effort": 3,
+            "priority": "MEDIUM",
+            "time_to_implement": "1 день",
+            "competitive_advantage_months": 6,
+            "priority_score": 2.3333333333333335
+          }
+        ]
+      }
+    ],
+    "industry_comparison": [
+      {
+        "competitor": "Test Competitor",
+        "comparison": {
+          "industry": "medical",
+          "seo": {
+            "competitor_score": 33.3,
+            "industry_avg": 45,
+            "difference": -11.700000000000003,
+            "position": "Ниже среднего",
+            "verdict": "Можно обойти"
+          },
+          "geo": {
+            "competitor_score": 0.0,
+            "industry_avg": 15,
+            "difference": -15.0,
+            "position": "Значительно ниже среднего",
+            "verdict": "Огромная возможность в AI/GEO"
+          },
+          "benchmarks": {
+            "avg_seo_score": 45,
+            "avg_geo_score": 15,
+            "schema_adoption": 10,
+            "online_booking_adoption": 40,
+            "analytics_adoption": 60,
+            "cdn_adoption": 30
+          },
+          "overall_verdict": "Можно обойти по SEO, Огромная возможность в AI/GEO"
+        }
+      }
+    ],
+    "tech_debt": [
+      {
+        "competitor": "Test Competitor",
+        "tech_debt": {
+          "debt_items": [
+            {
+              "issue": "CSS not minified",
+              "problem": "Нет build процесса",
+              "impact": "Медленная загрузка, плохой DX",
+              "severity": "low"
+            },
+            {
+              "issue": "No CDN",
+              "problem": "Все файлы с одного сервера",
+              "impact": "Медленно в регионах, высокая нагрузка на сервер",
+              "severity": "medium"
+            }
+          ],
+          "total_debt_score": 4,
+          "debt_level": "low",
+          "interpretation": "Низкий технический долг - конкурент в хорошей форме"
+        }
+      }
+    ],
+    "attack_roadmap": {
+      "week_1": {
+        "title": "Неделя 1: Quick Wins (критические возможности)",
+        "actions": [
+          {
+            "action": "Появляться в AI ответах на вопросы пользователей",
+            "gap": "No FAQ Schema",
+            "impact": 10,
+            "effort": 1,
+            "time": "2 часа",
+            "priority": "CRITICAL"
+          },
+          {
+            "action": "Data-driven решения vs слепые решения конкурента",
+            "gap": "No analytics",
+            "impact": 9,
+            "effort": 1,
+            "time": "1 час",
+            "priority": "CRITICAL"
+          },
+          {
+            "action": "Лучшие сниппеты в поиске → выше CTR",
+            "gap": "No meta description",
+            "impact": 6,
+            "effort": 1,
+            "time": "2 часа",
+            "priority": "HIGH"
+          }
+        ],
+        "expected_impact": "Захват AI трафика, базовая аналитика"
+      },
+      "week_2": {
+        "title": "Неделя 2: Техническая оптимизация",
+        "actions": [
+          {
+            "action": "Быстрее загружаться → меньше bounce rate",
+            "gap": "No CDN",
+            "impact": 7,
+            "effort": 3,
+            "time": "1 день",
+            "priority": "MEDIUM"
+          }
+        ],
+        "expected_impact": "Производительность, SEO улучшения"
+      },
+      "month_1": {
+        "title": "Месяц 1: Долгосрочные преимущества",
+        "actions": [],
+        "expected_impact": "Устойчивое конкурентное преимущество"
+      },
+      "summary": "План из 7 действий для обхода конкурентов"
+    }
+  },
+  "financial_analysis": {
+    "estimated_monthly_min": 5000,
+    "estimated_monthly_max": 20000,
+    "budget_level": "medium",
+    "maturity": "Средняя компания, стандартный бюджет",
+    "signals": [
+      {
+        "category": "CMS",
+        "item": "Custom",
+        "min": 5000,
+        "max": 20000,
+        "signal": "Высокий бюджет - custom разработка"
+      }
+    ],
+    "interpretation": "Конкурент тратит $5,000-$20,000/мес на технологии"
+  },
+  "competitive_gaps": [
+    {
+      "gap": "No FAQ Schema",
+      "opportunity": "Появляться в AI ответах на вопросы пользователей",
+      "impact": 10,
+      "effort": 1,
+      "priority": "CRITICAL",
+      "time_to_implement": "2 часа",
+      "competitive_advantage_months": 12,
+      "why_critical": "ChatGPT, Perplexity, Google AI берут ответы из FAQ Schema. Это новый канал трафика!",
+      "priority_score": 10.0
+    },
+    {
+      "gap": "No analytics",
+      "opportunity": "Data-driven решения vs слепые решения конкурента",
+      "impact": 9,
+      "effort": 1,
+      "priority": "CRITICAL",
+      "time_to_implement": "1 час",
+      "competitive_advantage_months": 999,
+      "why_critical": "Конкурент работает вслепую - не знает откуда клиенты, что работает, что нет",
+      "priority_score": 9.0
+    },
+    {
+      "gap": "No meta description",
+      "opportunity": "Лучшие сниппеты в поиске → выше CTR",
+      "impact": 6,
+      "effort": 1,
+      "priority": "HIGH",
+      "time_to_implement": "2 часа",
+      "competitive_advantage_months": 3,
+      "priority_score": 6.0
+    },
+    {
+      "gap": "No Schema.org markup",
+      "opportunity": "Захватить AI трафик (Google AI Overviews, ChatGPT)",
+      "impact": 9,
+      "effort": 2,
+      "priority": "CRITICAL",
+      "time_to_implement": "1 день",
+      "competitive_advantage_months": 12,
+      "why_critical": "Google AI Overviews используют Schema.org для ответов. Кто первый добавит - получит весь AI трафик.",
+      "priority_score": 4.5
+    },
+    {
+      "gap": "No LocalBusiness Schema",
+      "opportunity": "Локальное SEO + карты Google",
+      "impact": 8,
+      "effort": 2,
+      "priority": "HIGH",
+      "time_to_implement": "3 часа",
+      "competitive_advantage_months": 6,
+      "priority_score": 4.0
+    },
+    {
+      "gap": "No minification",
+      "opportunity": "Быстрее загружаться → лучше Core Web Vitals",
+      "impact": 5,
+      "effort": 2,
+      "priority": "MEDIUM",
+      "time_to_implement": "4 часа",
+      "competitive_advantage_months": 3,
+      "priority_score": 2.5
+    },
+    {
+      "gap": "No CDN",
+      "opportunity": "Быстрее загружаться → меньше bounce rate",
+      "impact": 7,
+      "effort": 3,
+      "priority": "MEDIUM",
+      "time_to_implement": "1 день",
+      "competitive_advantage_months": 6,
+      "priority_score": 2.3333333333333335
+    }
+  ],
+  "industry_benchmarks": {
+    "industry": "medical",
+    "seo": {
+      "competitor_score": 33.3,
+      "industry_avg": 45,
+      "difference": -11.700000000000003,
+      "position": "Ниже среднего",
+      "verdict": "Можно обойти"
+    },
+    "geo": {
+      "competitor_score": 0.0,
+      "industry_avg": 15,
+      "difference": -15.0,
+      "position": "Значительно ниже среднего",
+      "verdict": "Огромная возможность в AI/GEO"
+    },
+    "benchmarks": {
+      "avg_seo_score": 45,
+      "avg_geo_score": 15,
+      "schema_adoption": 10,
+      "online_booking_adoption": 40,
+      "analytics_adoption": 60,
+      "cdn_adoption": 30
+    },
+    "overall_verdict": "Можно обойти по SEO, Огромная возможность в AI/GEO"
+  },
+  "tech_debt": {
+    "debt_items": [
+      {
+        "issue": "CSS not minified",
+        "problem": "Нет build процесса",
+        "impact": "Медленная загрузка, плохой DX",
+        "severity": "low"
+      },
+      {
+        "issue": "No CDN",
+        "problem": "Все файлы с одного сервера",
+        "impact": "Медленно в регионах, высокая нагрузка на сервер",
+        "severity": "medium"
+      }
+    ],
+    "total_debt_score": 4,
+    "debt_level": "low",
+    "interpretation": "Низкий технический долг - конкурент в хорошей форме"
+  },
+  "attack_roadmap": {
+    "week_1": {
+      "title": "Неделя 1: Quick Wins (критические возможности)",
+      "actions": [],
+      "expected_impact": "Захват AI трафика, базовая аналитика"
+    },
+    "week_2": {
+      "title": "Неделя 2: Техническая оптимизация",
+      "actions": [],
+      "expected_impact": "Производительность, SEO улучшения"
+    },
+    "month_1": {
+      "title": "Месяц 1: Долгосрочные преимущества",
+      "actions": [],
+      "expected_impact": "Устойчивое конкурентное преимущество"
+    },
+    "summary": "План из 0 действий для обхода конкурентов"
+  }
+}

@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Центр семейной психологии Выставкиной Т.А. — Липецк</title>
+<style>
+  /* ── Design Tokens ── */
+  :root {
+    --ink: #14181C;
+    --ink-secondary: #4A5058;
+    --ink-muted: #7A828C;
+    --surface: #FFFFFF;
+    --bg: #F6F4F0;
+    --bg-warm: #EDE8E1;
+    --primary: #1A5C3E;
+    --primary-light: #2E8B5E;
+    --accent: #B8860B;
+    --accent-light: #D4A832;
+    --success: #2E7D32;
+    --font-display: 'Formular', 'Futura PT', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-body: 'Formular', 'Futura PT', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+    /* ── Type Scale (1.25 ratio, fluid display + fixed body) ── */
+    --text-display: clamp(3rem, 7vw, 5rem);       /* Hero — fluid */
+    --text-h1: clamp(2rem, 4vw, 3rem);             /* Page title — fluid */
+    --text-h2: clamp(1.5rem, 3vw, 2.25rem);        /* Section heading — fluid */
+    --text-h3: 1.25rem;                              /* Card title */
+    --text-body: 1rem;                               /* 16px base */
+    --text-body-sm: 0.875rem;                        /* Description, secondary */
+    --text-caption: 0.75rem;                         /* Meta, badges */
+    --text-eyebrow: 0.75rem;                         /* Section eyebrow */
+
+    /* ── Type Weights ── */
+    --weight-regular: 400;
+    --weight-medium: 500;
+    --weight-semibold: 600;
+    --weight-bold: 700;
+
+    /* ── Type Line Heights ── */
+    --leading-display: 1.1;
+    --leading-heading: 1.2;
+    --leading-body: 1.6;
+    --leading-caption: 1.4;
+
+    /* ── Type Tracking ── */
+    --tracking-display: -0.025em;
+    --tracking-eyebrow: 0.12em;
+    --tracking-normal: 0;
+
+    /* ── Spacing ── */
+    --space-3xs: 4px; --space-2xs: 8px; --space-xs: 12px; --space-sm: 16px;
+    --space-md: 24px; --space-lg: 32px; --space-xl: 48px; --space-2xl: 64px;
+    --space-3xl: 96px; --space-4xl: 128px;
+
+    /* ── Radii ── */
+    --radius-sm: 4px; --radius-md: 8px; --radius-lg: 16px;
+
+    /* ── Shadows ── */
+    --shadow-card: 0 2px 10px rgba(0,0,0,0.06);
+    --shadow-card-hover: 0 8px 30px rgba(0,0,0,0.10);
+
+    /* ── Motion ── */
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 400ms;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-body);
+    font-size: 16px; line-height: 1.6; color: var(--ink);
+    background: var(--surface);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
+  /* ── Typography ── */
+  h1, h2, h3, h4 { font-family: var(--font-display); text-wrap: balance; }
+  .display { font-size: var(--text-display); font-weight: var(--weight-bold); line-height: var(--leading-display); letter-spacing: var(--tracking-display); }
+  h2 { font-size: var(--text-h2); font-weight: var(--weight-bold); line-height: var(--leading-heading); }
+  h3 { font-size: var(--text-h3); font-weight: var(--weight-semibold); line-height: var(--leading-heading); }
+  .eyebrow { font-size: var(--text-eyebrow); font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: var(--tracking-eyebrow); color: var(--primary); }
+  p { max-width: 65ch; text-wrap: pretty; }
+  .text-body-sm { font-size: var(--text-body-sm); color: var(--ink-secondary); }
+
+  /* ── Layout ── */
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 var(--space-lg); }
+  section { padding: var(--space-3xl) 0; }
+
+  /* ── Header ── */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    padding: var(--space-sm) 0;
+  }
+  .header .container { display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-family: var(--font-display); font-size: 1.125rem; font-weight: 700; color: var(--ink); text-decoration: none; }
+  .nav { display: flex; gap: var(--space-lg); list-style: none; }
+  .nav a { color: var(--ink-secondary); text-decoration: none; font-size: 0.9375rem; transition: color var(--duration-normal) var(--ease-out); }
+  .nav a:hover { color: var(--ink); }
+  .header-phone { font-weight: 600; color: var(--ink); text-decoration: none; }
+
+  /* ── Hero ── */
+  .hero {
+    background: var(--bg-warm);
+    padding: var(--space-4xl) 0 var(--space-3xl);
+    position: relative; overflow: hidden;
+  }
+  .hero .container { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3xl); align-items: center; }
+  .hero-stats { display: flex; gap: var(--space-xl); margin: var(--space-xl) 0; }
+  .hero-stat-value { font-family: var(--font-display); font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; color: var(--primary); line-height: 1; }
+  .hero-stat-label { font-size: 0.875rem; color: var(--ink-secondary); margin-top: var(--space-2xs); }
+  .hero-visual {
+    background: var(--primary); border-radius: var(--radius-lg);
+    aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 1.25rem; font-weight: 600;
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 14px 32px; border-radius: var(--radius-md);
+    font-family: var(--font-body); font-size: 1rem; font-weight: 600;
+    text-decoration: none; cursor: pointer; border: none;
+    transition: all var(--duration-normal) var(--ease-out);
+    min-height: 48px;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-light); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(26,92,62,0.25); }
+  .btn-accent { background: var(--accent); color: var(--ink); }
+  .btn-accent:hover { background: var(--accent-light); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(184,134,11,0.25); }
+  .btn-outline { background: transparent; color: var(--ink); border: 2px solid var(--ink); }
+  .btn-outline:hover { background: var(--ink); color: white; }
+  .btn-group { display: flex; gap: var(--space-sm); flex-wrap: wrap; }
+
+  /* ── Trust Strip ── */
+  .trust-strip {
+    background: var(--primary); color: white;
+    padding: var(--space-lg) 0; text-align: center;
+  }
+  .trust-strip .container { display: flex; justify-content: center; gap: var(--space-3xl); flex-wrap: wrap; }
+  .trust-item { font-weight: 500; font-size: 0.9375rem; }
+
+  /* ── Directions Grid ── */
+  .directions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-md); margin-top: var(--space-xl); }
+  .direction-card {
+    background: var(--surface); border: 1px solid rgba(0,0,0,0.08);
+    border-radius: var(--radius-lg); padding: var(--space-xl);
+    transition: all var(--duration-normal) var(--ease-out);
+    text-decoration: none; color: var(--ink);
+  }
+  .direction-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-card-hover); border-color: var(--primary); }
+  .direction-card h3 { margin-bottom: var(--space-2xs); }
+
+  /* ── Specialists ── */
+  .specialist-filters { display: flex; gap: var(--space-xs); margin: var(--space-xl) 0; flex-wrap: wrap; }
+  .filter-btn {
+    padding: 8px 20px; border-radius: 999px; border: 1px solid rgba(0,0,0,0.15);
+    background: transparent; font-size: 0.875rem; font-weight: 500; cursor: pointer;
+    transition: all var(--duration-normal) var(--ease-out);
+    color: var(--ink-secondary);
+  }
+  .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .filter-btn:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+
+  .specialists-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--space-md); }
+  .specialist-card {
+    background: var(--surface); border: 1px solid rgba(0,0,0,0.08);
+    border-radius: var(--radius-lg); padding: var(--space-xl);
+    transition: all var(--duration-normal) var(--ease-out);
+    display: flex; flex-direction: column; gap: var(--space-sm);
+  }
+  .specialist-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-card-hover); }
+  .specialist-header { display: flex; align-items: center; gap: var(--space-md); }
+  .specialist-avatar {
+    width: 64px; height: 64px; border-radius: 999px;
+    background: var(--bg-warm); display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; font-weight: 700; color: var(--primary); flex-shrink: 0;
+  }
+  .specialist-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 999px;
+    font-size: 0.75rem; font-weight: 600;
+    background: rgba(26,92,62,0.08); color: var(--primary);
+  }
+  .specialist-name { font-size: 1.125rem; font-weight: 700; }
+  .specialist-title { font-size: 0.875rem; color: var(--ink-secondary); }
+  .specialist-desc { font-size: 0.875rem; color: var(--ink-muted); line-height: 1.5; }
+  .specialist-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.06); }
+  .specialist-price { font-weight: 700; font-size: 1.125rem; color: var(--ink); }
+
+  /* ── FAQ ── */
+  .faq-list { display: flex; flex-direction: column; gap: var(--space-sm); margin-top: var(--space-xl); max-width: 800px; }
+  details {
+    border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-md);
+    padding: var(--space-md); cursor: pointer;
+  }
+  details summary { font-weight: 600; font-size: 1.0625rem; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  details summary::after { content: '+'; font-size: 1.5rem; font-weight: 300; color: var(--primary); transition: transform var(--duration-normal); }
+  details[open] summary::after { content: '−'; }
+  details .answer { padding-top: var(--space-sm); color: var(--ink-secondary); font-size: 0.9375rem; line-height: 1.6; }
+
+  /* ── CTA Strip ── */
+  .cta-strip {
+    background: var(--bg-warm); text-align: center; padding: var(--space-3xl) 0;
+  }
+  .cta-strip h2 { margin-bottom: var(--space-sm); }
+
+  /* ── Footer ── */
+  .footer {
+    background: var(--ink); color: rgba(255,255,255,0.7);
+    padding: var(--space-3xl) 0 var(--space-xl);
+  }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--space-2xl); }
+  .footer h4 { color: white; margin-bottom: var(--space-md); font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.08em; }
+  .footer a { color: rgba(255,255,255,0.6); text-decoration: none; transition: color var(--duration-normal); }
+  .footer a:hover { color: white; }
+  .footer-bottom { margin-top: var(--space-2xl); padding-top: var(--space-md); border-top: 1px solid rgba(255,255,255,0.1); text-align: center; font-size: 0.8125rem; }
+
+  /* ── Harden: Text Overflow ── */
+  .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .line-clamp { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+  .line-clamp-2 { -webkit-line-clamp: 2; }
+  .line-clamp-3 { -webkit-line-clamp: 3; }
+  .break-word { word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; }
+
+  /* ── Harden: Empty State ── */
+  .empty-state {
+    text-align: center; padding: var(--space-3xl) var(--space-lg);
+    color: var(--ink-muted);
+  }
+  .empty-state-icon { font-size: 3rem; margin-bottom: var(--space-md); opacity: 0.3; }
+
+  /* ── Harden: Form ── */
+  .form-group { margin-bottom: var(--space-md); }
+  .form-label { display: block; font-size: var(--text-body-sm); font-weight: var(--weight-medium); margin-bottom: var(--space-2xs); color: var(--ink); }
+  .form-input {
+    width: 100%; padding: 12px 16px; border: 1px solid rgba(0,0,0,0.15);
+    border-radius: var(--radius-sm); font-family: var(--font-body); font-size: var(--text-body);
+    color: var(--ink); background: var(--surface);
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+  .form-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,92,62,0.15); }
+  .form-input[aria-invalid="true"] { border-color: #D32F2F; box-shadow: 0 0 0 3px rgba(211,47,47,0.12); }
+  .form-error { font-size: var(--text-caption); color: #D32F2F; margin-top: var(--space-2xs); display: none; }
+  .form-error[data-visible] { display: block; }
+  .form-hint { font-size: var(--text-caption); color: var(--ink-muted); margin-top: var(--space-2xs); }
+
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+  /* ── Harden: Skeleton Loading ── */
+  @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+  .skeleton {
+    background: linear-gradient(90deg, var(--bg) 25%, var(--bg-warm) 50%, var(--bg) 75%);
+    background-size: 200% 100%; animation: shimmer 1.5s infinite;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ── Harden: Focus Visible ── */
+  :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 2px; }
+
+  /* ── Clarify: Floating Contact Bar ── */
+  .floating-contact {
+    position: fixed; bottom: var(--space-md); right: var(--space-md); z-index: 200;
+    display: flex; flex-direction: column; gap: var(--space-xs);
+  }
+  .floating-btn {
+    display: flex; align-items: center; gap: var(--space-xs);
+    padding: 10px 20px; border-radius: 999px;
+    font-family: var(--font-body); font-size: 0.875rem; font-weight: 600;
+    text-decoration: none; color: white; cursor: pointer; border: none;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    transition: all var(--duration-normal) var(--ease-out);
+    min-height: 44px;
+  }
+  .floating-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+  .floating-btn-tg { background: #0088CC; }
+  .floating-btn-wa { background: #25D366; }
+  .floating-btn-call { background: var(--primary); }
+  .floating-icon { font-size: 1.25rem; line-height: 1; }
+
+  /* ── Clarify: Specialist Search ── */
+  .specialist-search {
+    width: 100%; max-width: 400px; padding: 12px 16px 12px 44px;
+    border: 1px solid rgba(0,0,0,0.12); border-radius: 999px;
+    font-family: var(--font-body); font-size: var(--text-body);
+    color: var(--ink); background: var(--surface);
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+  .specialist-search:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,92,62,0.12); }
+  .search-wrapper { position: relative; display: inline-block; }
+  .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--ink-muted); pointer-events: none; }
+
+  /* ── Mobile ── */
+  @media (max-width: 768px) {
+    .nav { display: none; }
+    .hero .container { grid-template-columns: 1fr; }
+    .hero-stats { gap: var(--space-lg); }
+    .footer-grid { grid-template-columns: 1fr; gap: var(--space-xl); }
+    .specialists-grid { grid-template-columns: 1fr; }
+    .directions-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="container">
+    <a href="/" class="logo">ЦСП Выставкиной Т.А.</a>
+    <nav>
+      <ul class="nav">
+        <li><a href="#directions">Направления</a></li>
+        <li><a href="#specialists">Психологи</a></li>
+        <li><a href="#reviews">Отзывы</a></li>
+        <li><a href="#faq">Вопросы</a></li>
+        <li><a href="#contacts">Контакты</a></li>
+      </ul>
+    </nav>
+    <a href="tel:78003018912" class="header-phone">8 800 301-89-12</a>
+  </div>
+</header>
+
+<main>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div>
+        <p class="eyebrow">Центр семейной психологии · Липецк</p>
+        <h1 class="display">Найдите своего психолога</h1>
+        <p style="font-size: 1.125rem; color: var(--ink-secondary); margin-top: var(--space-md); max-width: 32ch;">
+          32 года опыта. 26 проверенных специалистов. Кандидаты наук. Индивидуальный подход без спешки и шаблонов.
+        </p>
+        <div class="hero-stats">
+          <div>
+            <div class="hero-stat-value">2009</div>
+            <div class="hero-stat-label">год основания</div>
+          </div>
+          <div>
+            <div class="hero-stat-value">26</div>
+            <div class="hero-stat-label">специалистов</div>
+          </div>
+          <div>
+            <div class="hero-stat-value">5,0</div>
+            <div class="hero-stat-label">рейтинг на Яндексе</div>
+          </div>
+        </div>
+        <div class="btn-group" style="margin-top: var(--space-lg);">
+          <a href="#specialists" class="btn btn-primary">Подобрать специалиста</a>
+          <a href="tel:78003018912" class="btn btn-outline">Позвонить</a>
+        </div>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        Центр семейной психологии
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust Strip -->
+  <div class="trust-strip">
+    <div class="container">
+      <span class="trust-item">✓ Проверенные квалифицированные специалисты</span>
+      <span class="trust-item">✓ Полная конфиденциальность</span>
+      <span class="trust-item">✓ Онлайн и очно в Липецке</span>
+      <span class="trust-item">✓ Основано в 2009 году</span>
+    </div>
+  </div>
+
+  <!-- Directions -->
+  <section id="directions">
+    <div class="container">
+      <h2>Направления работы</h2>
+      <div class="directions-grid">
+        <a href="#" class="direction-card">
+          <h3>Психолог для взрослых</h3>
+          <p style="color: var(--ink-muted); font-size: 0.9375rem;">Тревога, депрессия, отношения, self-development</p>
+        </a>
+        <a href="#" class="direction-card">
+          <h3>Детский психолог</h3>
+          <p style="color: var(--ink-muted); font-size: 0.9375rem;">Поведение, развитие, адаптация, страхи</p>
+        </a>
+        <a href="#" class="direction-card">
+          <h3>Подростковый психолог</h3>
+          <p style="color: var(--ink-muted); font-size: 0.9375rem;">Самооценка, конфликты, профориентация</p>
+        </a>
+        <a href="#" class="direction-card">
+          <h3>Семейный психолог</h3>
+          <p style="color: var(--ink-muted); font-size: 0.9375rem;">Отношения, кризисы, развод, коммуникация</p>
+        </a>
+        <a href="#" class="direction-card">
+          <h3>Психологическая экспертиза</h3>
+          <p style="color: var(--ink-muted); font-size: 0.9375rem;">Судебная, досудебная, заключения специалиста</p>
+        </a>
+        <a href="#" class="direction-card">
+          <h3>Онлайн-консультации</h3>
+          <p style="color: var(--ink-muted); font-size: 0.9375rem;">Из любой точки мира, удобное время</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Specialists -->
+  <section id="specialists" style="background: var(--bg);">
+    <div class="container">
+      <h2>Психологи центра</h2>
+      <p style="color: var(--ink-secondary); margin-top: var(--space-sm);">Выберите направление или найдите по имени</p>
+      <div class="search-wrapper" style="margin: var(--space-md) 0 var(--space-lg);">
+        <span class="search-icon" aria-hidden="true">🔍</span>
+        <input type="search" class="specialist-search" placeholder="Поиск по имени специалиста..." aria-label="Поиск специалиста по имени">
+      </div>
+      <div class="specialist-filters">
+        <button class="filter-btn active">Все</button>
+        <button class="filter-btn">Семейный</button>
+        <button class="filter-btn">Для взрослых</button>
+        <button class="filter-btn">Подростковый</button>
+        <button class="filter-btn">Детский</button>
+        <button class="filter-btn">Перинатальный</button>
+        <button class="filter-btn">Сексолог</button>
+      </div>
+      <div class="specialists-grid">
+        <article class="specialist-card">
+          <div class="specialist-header">
+            <div class="specialist-avatar">ТВ</div>
+            <div>
+              <div class="specialist-name">Выставкина Татьяна Александровна</div>
+              <div class="specialist-title">Психоаналитик · 32 года</div>
+            </div>
+          </div>
+          <span class="specialist-badge">Кандидат наук</span>
+          <p class="specialist-desc">Глубинная психоаналитическая работа. Специализация: тревожные расстройства, депрессия, личностные кризисы.</p>
+          <div class="specialist-footer">
+            <span class="specialist-price">2 000 ₽</span>
+            <a href="#" class="btn btn-primary" style="padding: 10px 24px; font-size: 0.875rem;">Записаться</a>
+          </div>
+        </article>
+        <article class="specialist-card">
+          <div class="specialist-header">
+            <div class="specialist-avatar">ДЛ</div>
+            <div>
+              <div class="specialist-name">Джерджей Людмила Петровна</div>
+              <div class="specialist-title">Психолог · 7 лет</div>
+            </div>
+          </div>
+          <p class="specialist-desc">Индивидуальное консультирование. Работа с самооценкой, отношениями, жизненными кризисами.</p>
+          <div class="specialist-footer">
+            <span class="specialist-price">1 500 ₽</span>
+            <a href="#" class="btn btn-primary" style="padding: 10px 24px; font-size: 0.875rem;">Записаться</a>
+          </div>
+        </article>
+        <article class="specialist-card">
+          <div class="specialist-header">
+            <div class="specialist-avatar">РЮ</div>
+            <div>
+              <div class="specialist-name">Родионова Алла Юрьевна</div>
+              <div class="specialist-title">Психолог · 2 года</div>
+            </div>
+          </div>
+          <p class="specialist-desc">Поддерживающая терапия, работа с эмоциональным выгоранием и стрессом. Бережный подход.</p>
+          <div class="specialist-footer">
+            <span class="specialist-price">1 200 ₽</span>
+            <a href="#" class="btn btn-primary" style="padding: 10px 24px; font-size: 0.875rem;">Записаться</a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="container">
+      <h2>Частые вопросы</h2>
+      <div class="faq-list">
+        <details>
+          <summary>Как подобрать специалиста?</summary>
+          <div class="answer">Расскажите о своей ситуации администратору по телефону 8 800 301-89-12 — он порекомендует подходящего специалиста. Или воспользуйтесь фильтром по направлениям выше.</div>
+        </details>
+        <details>
+          <summary>Что делать, если психолог мне не подойдёт?</summary>
+          <div class="answer">Это нормально. Терапевтический альянс — основа успешной работы. Мы предложим другого специалиста центра. Вы не обязаны объяснять причину.</div>
+        </details>
+        <details>
+          <summary>Сколько длится консультация?</summary>
+          <div class="answer">Стандартная консультация длится 50–60 минут. Семейная консультация — до 90 минут. Первая встреча часто длится дольше для сбора анамнеза.</div>
+        </details>
+        <details>
+          <summary>Какова стоимость консультации?</summary>
+          <div class="answer">Стоимость зависит от специалиста и формата. Индивидуальная консультация: от 1 200 ₽. Семейная: от 2 000 ₽. Диагностическая консультация: 2 000 ₽. Точную стоимость уточняйте при записи.</div>
+        </details>
+        <details>
+          <summary>Гарантируете ли вы результат?</summary>
+          <div class="answer">Психотерапия — это совместная работа. Мы гарантируем профессионализм, конфиденциальность и этичность. Результат зависит от многих факторов, включая вашу вовлечённость. Мы не даём пустых обещаний — и в этом наша честность.</div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final CTA with Hardened Form -->
+  <section class="cta-strip">
+    <div class="container" style="max-width: 600px;">
+      <h2>Сделайте первый шаг</h2>
+      <p style="color: var(--ink-secondary); margin-bottom: var(--space-lg);">Оставьте контакты — администратор перезвонит в удобное время. Это бесплатно и ни к чему не обязывает.</p>
+      <form id="contact-form" novalidate style="text-align: left;">
+        <div class="form-group">
+          <label class="form-label" for="name">Ваше имя</label>
+          <input class="form-input" type="text" id="name" name="name" placeholder="Иван" maxlength="100" autocomplete="name" aria-describedby="name-hint">
+          <small class="form-hint" id="name-hint">Как к вам обращаться?</small>
+          <span class="form-error" id="name-error" role="alert"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="phone">Телефон <span aria-hidden="true">*</span></label>
+          <input class="form-input" type="tel" id="phone" name="phone" placeholder="+7 900 000-00-00" required maxlength="18" autocomplete="tel" aria-required="true">
+          <span class="form-error" id="phone-error" role="alert"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="message">Удобное время или комментарий</label>
+          <textarea class="form-input" id="message" name="message" rows="3" placeholder="Вечером после 18:00" maxlength="500" style="resize: vertical;"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: var(--space-sm);" id="submit-btn">
+          <span id="submit-text">Свяжитесь со мной</span>
+          <span id="submit-loading" style="display: none;" aria-hidden="true">Отправляем...</span>
+        </button>
+        <p style="font-size: var(--text-caption); color: var(--ink-muted); text-align: center; margin-top: var(--space-sm);">
+          Нажимая кнопку, вы соглашаетесь на обработку персональных данных
+        </p>
+        <div id="form-success" style="display: none; text-align: center; padding: var(--space-xl) 0;" role="status">
+          <div class="empty-state-icon">✓</div>
+          <h3>Спасибо за обращение!</h3>
+          <p style="color: var(--ink-secondary);">Администратор свяжется с вами в ближайшее время.</p>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+
+<!-- Floating Contact Bar -->
+<nav class="floating-contact" aria-label="Способы связи">
+  <a href="https://t.me/psyhologionline48" class="floating-btn floating-btn-tg" target="_blank" rel="noopener">
+    <span class="floating-icon">✈</span> Чат в Telegram
+  </a>
+  <a href="https://wa.me/79001234567" class="floating-btn floating-btn-wa" target="_blank" rel="noopener">
+    <span class="floating-icon">💬</span> WhatsApp
+  </a>
+  <a href="tel:78003018912" class="floating-btn floating-btn-call">
+    <span class="floating-icon">📞</span> Позвонить
+  </a>
+</nav>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <h4>Центр семейной психологии Выставкиной Т.А.</h4>
+        <p style="line-height: 1.8;">г. Липецк, ул. Неделина, 12<br>с 9:00 до 21:00<br>8 800 301-89-12<br>psyholog48@mail.ru</p>
+      </div>
+      <div>
+        <h4>Услуги</h4>
+        <p style="line-height: 2;"><a href="#">Психолог для взрослых</a><br>
+        <a href="#">Детский психолог</a><br>
+        <a href="#">Подростковый психолог</a><br>
+        <a href="#">Семейный психолог</a><br>
+        <a href="#">Онлайн-консультации</a></p>
+      </div>
+      <div>
+        <h4>Информация</h4>
+        <p style="line-height: 2;"><a href="#">О центре</a><br>
+        <a href="#">Отзывы</a><br>
+        <a href="#">Контакты</a><br>
+        <a href="#">Политика конфиденциальности</a></p>
+      </div>
+    </div>
+    <div class="footer-bottom">&copy; 2009–2026 Центр семейной психологии Выставкиной Т.А. Все права защищены.</div>
+  </div>
+</footer>
+
+<script>
+  // ── Form Validation & Submit Protection ──
+  const form = document.getElementById('contact-form');
+  const phoneInput = document.getElementById('phone');
+  const submitBtn = document.getElementById('submit-btn');
+  const submitText = document.getElementById('submit-text');
+  const submitLoading = document.getElementById('submit-loading');
+  const formSuccess = document.getElementById('form-success');
+
+  function showError(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.setAttribute('data-visible', '');
+    const input = el.previousElementSibling?.previousElementSibling;
+    if (input) input.setAttribute('aria-invalid', 'true');
+  }
+
+  function clearError(id) {
+    const el = document.getElementById(id);
+    el.textContent = '';
+    el.removeAttribute('data-visible');
+    const input = el.previousElementSibling?.previousElementSibling;
+    if (input) input.removeAttribute('aria-invalid');
+  }
+
+  function validatePhone(v) {
+    const digits = v.replace(/\D/g, '');
+    if (digits.length < 10) return 'Введите номер телефона полностью';
+    return '';
+  }
+
+  function validateName(v) {
+    if (v.trim().length > 0 && v.trim().length < 2) return 'Имя слишком короткое';
+    return '';
+  }
+
+  phoneInput.addEventListener('blur', function() {
+    const err = validatePhone(this.value);
+    if (err) showError('phone-error', err);
+    else clearError('phone-error');
+  });
+
+  phoneInput.addEventListener('input', function(e) {
+    let digits = this.value.replace(/\D/g, '').slice(0, 11);
+    if (digits.startsWith('8')) digits = '7' + digits.slice(1);
+    if (digits.length === 0) this.value = '';
+    else if (digits.length <= 1) this.value = '+7';
+    else if (digits.length <= 4) this.value = '+7 ' + digits.slice(1, 4);
+    else if (digits.length <= 7) this.value = '+7 ' + digits.slice(1, 4) + ' ' + digits.slice(4, 7);
+    else if (digits.length <= 9) this.value = '+7 ' + digits.slice(1, 4) + ' ' + digits.slice(4, 7) + '-' + digits.slice(7, 9);
+    else this.value = '+7 ' + digits.slice(1, 4) + ' ' + digits.slice(4, 7) + '-' + digits.slice(7, 9) + '-' + digits.slice(9, 11);
+  });
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const phoneErr = validatePhone(phoneInput.value);
+    const nameErr = validateName(document.getElementById('name').value);
+    if (phoneErr) showError('phone-error', phoneErr);
+    if (nameErr) showError('name-error', nameErr);
+    if (phoneErr || nameErr) return;
+
+    // Double-submit prevention
+    submitBtn.disabled = true;
+    submitText.style.display = 'none';
+    submitLoading.style.display = 'inline';
+
+    // Simulate network request
+    setTimeout(function() {
+      form.querySelectorAll('.form-group').forEach(g => g.style.display = 'none');
+      submitBtn.style.display = 'none';
+      formSuccess.style.display = 'block';
+    }, 800);
+  });
+
+  // ── Specialist Filters ──
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

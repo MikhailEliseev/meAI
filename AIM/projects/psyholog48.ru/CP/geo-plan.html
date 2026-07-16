@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Гео-контент-план — Центр семейной психологии Выставкиной Т.А.</title>
+<style>
+  :root {
+    --ink: #1a1a2e;
+    --muted: #6b7280;
+    --accent: #7c3aed;
+    --green: #059669;
+    --red: #dc2626;
+    --amber: #d97706;
+    --surface: #f8f7ff;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --radius: 12px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--ink); background: var(--surface); line-height: 1.6; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  .hero { background: linear-gradient(135deg, #1a1a2e 0%, #2d1b69 100%); color: white; padding: 60px 0 50px; text-align: center; }
+  .hero .back { display: inline-block; color: #a78bfa; font-size: 14px; margin-bottom: 20px; text-decoration: none; }
+  .hero .back:hover { color: #c4b5fd; }
+  .hero h1 { font-size: 36px; font-weight: 800; line-height: 1.2; margin-bottom: 12px; }
+  .hero h1 span { color: #a78bfa; }
+  .hero .subtitle { font-size: 16px; color: #c4b5fd; }
+  .hero .meta { display: flex; justify-content: center; gap: 32px; margin-top: 24px; flex-wrap: wrap; }
+  .hero .meta-item { text-align: center; }
+  .hero .meta-item .num { font-size: 28px; font-weight: 700; color: #a78bfa; }
+  .hero .meta-item .label { font-size: 12px; color: #c4b5fd; }
+
+  section { padding: 56px 0; }
+  section:nth-child(even) { background: white; }
+  h2 { font-size: 26px; font-weight: 700; margin-bottom: 12px; }
+  .cluster-goal { font-size: 14px; color: var(--muted); margin-bottom: 24px; font-style: italic; }
+
+  .content-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 20px 0; }
+  .content-table th { background: var(--ink); color: white; padding: 10px 12px; text-align: left; font-size: 13px; font-weight: 600; }
+  .content-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .content-table tr:hover td { background: #f5f3ff; }
+  .content-table .num { color: var(--accent); font-weight: 700; width: 32px; }
+  .content-table .topic { font-weight: 500; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .tag-blog { background: #ede9fe; color: #7c3aed; }
+  .tag-video { background: #fef3c7; color: #d97706; }
+  .tag-social { background: #dbeafe; color: #2563eb; }
+  .tag-local { background: #d1fae5; color: #059669; }
+  .cta-cell { font-size: 12px; color: var(--accent); white-space: nowrap; }
+
+  .formats-section { margin-top: 48px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 20px 0; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .card h4 { font-size: 15px; margin-bottom: 8px; }
+  .card p { font-size: 13px; color: var(--muted); }
+
+  .calendar { margin-top: 48px; }
+  .calendar-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .calendar-table th { background: var(--ink); color: white; padding: 10px 12px; text-align: left; font-size: 13px; }
+  .calendar-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .calendar-table tr:nth-child(even) td { background: #fafafa; }
+
+  .team-section { margin-top: 48px; }
+  .team-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .team-table th { background: var(--ink); color: white; padding: 10px 12px; text-align: left; font-size: 13px; }
+  .team-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+
+  .summary { background: linear-gradient(135deg, #1a1a2e 0%, #2d1b69 100%); color: white; padding: 48px 0; text-align: center; margin-top: 48px; }
+  .summary h2 { color: white; }
+  .summary .big-num { font-size: 48px; font-weight: 800; color: #a78bfa; }
+  .summary .big-label { color: #c4b5fd; font-size: 14px; }
+
+  footer { background: var(--ink); color: var(--muted); padding: 24px 0; text-align: center; font-size: 13px; }
+  footer a { color: #a78bfa; text-decoration: none; }
+  footer a:hover { color: #c4b5fd; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="container">
+    <a href="index.html" class="back">← На главную</a>
+    <h1>Гео-контент-план: <span>55 тем</span></h1>
+    <p class="subtitle">Контент-стратегия для сайта, VK, Telegram, YouTube с фокусом на Липецк</p>
+    <div class="meta">
+      <div class="meta-item"><div class="num">55</div><div class="label">тем в 8 кластерах</div></div>
+      <div class="meta-item"><div class="num">36</div><div class="label">статей в блог</div></div>
+      <div class="meta-item"><div class="num">10</div><div class="label">видео-сценариев</div></div>
+      <div class="meta-item"><div class="num">5</div><div class="label">локальных SEO-тем</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Кластер 1 -->
+<section>
+  <div class="container">
+    <h2>Кластер 1: Онлайн-формат, доверие и безопасность</h2>
+    <p class="cluster-goal">Цель: Снять барьер недоверия к психологической помощи, особенно онлайн.</p>
+    <table class="content-table">
+      <thead><tr><th>#</th><th>Тема</th><th>Формат</th><th>Канал</th><th>CTA</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td class="topic">Онлайн-психотерапия: когда работает не хуже очной, а когда лучше прийти лично</td><td><span class="tag tag-blog">Статья 2500 слов</span></td><td>Блог + VK</td><td class="cta-cell">Диагностическая консультация</td></tr>
+        <tr><td class="num">2</td><td class="topic">5 мифов об онлайн-психологах: от «это не серьёзно» до «это просто поболтать»</td><td><span class="tag tag-blog">Статья 1500 слов</span></td><td>Блог</td><td class="cta-cell">Квиз «Подобрать специалиста»</td></tr>
+        <tr><td class="num">3</td><td class="topic">Конфиденциальность в психотерапии: что защищает закон и как это работает на практике</td><td><span class="tag tag-blog">Статья 2000 слов</span></td><td>Блог</td><td class="cta-cell">Запись на консультацию</td></tr>
+        <tr><td class="num">4</td><td class="topic">Первая консультация: что будет происходить и как к ней подготовиться</td><td><span class="tag tag-blog">Статья 1800 слов</span></td><td>Блог + VK</td><td class="cta-cell">Чек-лист «Готов к первой сессии»</td></tr>
+        <tr><td class="num">5</td><td class="topic">«Я боюсь, что меня осудят»: как психолог работает со стыдом и страхом</td><td><span class="tag tag-blog">Статья 1500 слов</span></td><td>Блог</td><td class="cta-cell">Бесплатный разбор ситуации</td></tr>
+        <tr><td class="num">6</td><td class="topic">Отзывы о психологах: как читать между строк и на что обращать внимание</td><td><span class="tag tag-blog">Статья 1200 слов</span></td><td>Блог + Telegram</td><td class="cta-cell">Подборка проверенных отзывов</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Кластер 2 -->
+<section>
+  <div class="container">
+    <h2>Кластер 2: Выбор психолога и сервиса</h2>
+    <p class="cluster-goal">Цель: Позиционировать Центр как эталонный выбор специалиста.</p>
+    <table class="content-table">
+      <thead><tr><th>#</th><th>Тема</th><th>Формат</th><th>Канал</th><th>CTA</th></tr></thead>
+      <tbody>
+        <tr><td class="num">7</td><td class="topic">Как выбрать психолога: пошаговый алгоритм от запроса до первой сессии</td><td><span class="tag tag-blog">Лонгрид 3000 слов</span></td><td>Блог (якорная SEO-статья)</td><td class="cta-cell">Квиз «Подобрать специалиста»</td></tr>
+        <tr><td class="num">8</td><td class="topic">Красные флаги психолога: эзотерика, обесценивание, нарушение границ</td><td><span class="tag tag-blog">Статья 2000 слов</span></td><td>Блог + VK</td><td class="cta-cell">Каталог проверенных психологов</td></tr>
+        <tr><td class="num">9</td><td class="topic">Когда стоит сменить психолога: 7 признаков, что это не ваш специалист</td><td><span class="tag tag-blog">Статья 1800 слов</span></td><td>Блог + Telegram</td><td class="cta-cell">Подбор специалиста</td></tr>
+        <tr><td class="num">10</td><td class="topic">Психолог, психотерапевт, психиатр: в чём разница и к кому идти</td><td><span class="tag tag-blog">Статья 2500 слов</span></td><td>Блог (SEO-якорь)</td><td class="cta-cell">Диагностическая консультация</td></tr>
+        <tr><td class="num">11</td><td class="topic">Методы психотерапии: КПТ, гештальт, психоанализ — что выбрать</td><td><span class="tag tag-blog">Статья 2000 слов</span></td><td>Блог</td><td class="cta-cell">Квиз «Какой метод вам подходит»</td></tr>
+        <tr><td class="num">12</td><td class="topic">Сколько стоит психолог и почему: из чего складывается цена консультации</td><td><span class="tag tag-blog">Статья 1500 слов</span></td><td>Блог + VK</td><td class="cta-cell">Диагностика за 2000 руб.</td></tr>
+        <tr><td class="num">13</td><td class="topic">Образование психолога: какие дипломы имеют значение, а какие — нет</td><td><span class="tag tag-blog">Статья 1800 слов</span></td><td>Блог</td><td class="cta-cell">Страница «Наши психологи»</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Кластер 3 -->
+<section>
+  <div class="container">
+    <h2>Кластер 3: Отношения, семья, дети</h2>
+    <p class="cluster-goal">Цель: Привлечь самую большую аудиторию — семейные запросы.</p>
+    <table class="content-table">
+      <thead><tr><th>#</th><th>Тема</th><th>Формат</th><th>Канал</th><th>CTA</th></tr></thead>
+      <tbody>
+        <tr><td class="num">14</td><td class="topic">Как пережить развод: 7 шагов от острой боли к новой жизни</td><td><span class="tag tag-blog">Лонгрид 3000 слов</span></td><td>Блог (SEO-якорь)</td><td class="cta-cell">Консультация семейного психолога</td></tr>
+        <tr><td class="num">15</td><td class="topic">Конфликты в паре: 5 паттернов, которые разрушают отношения</td><td><span class="tag tag-blog">Статья 2000 слов</span></td><td>Блог + VK</td><td class="cta-cell">Семейная консультация</td></tr>
+        <tr><td class="num">16</td><td class="topic">Детская тревожность и буллинг: как родителю заметить проблему и когда обращаться к специалисту</td><td><span class="tag tag-blog">Статья 2500 слов</span></td><td>Блог + школы</td><td class="cta-cell">Консультация детского психолога</td></tr>
+        <tr><td class="num">17</td><td class="topic">Ребёнок не хочет учиться: что делать родителям (не «заставлять»)</td><td><span class="tag tag-blog">Статья 2000 слов</span></td><td>Блог</td><td class="cta-cell">Диагностика для детей и подростков</td></tr>
+        <tr><td class="num">18</td><td class="topic">Подросток и гаджеты: где грань между нормой и зависимостью</td><td><span class="tag tag-blog">Статья 1800 слов</span></td><td>Блог + VK</td><td class="cta-cell">Консультация подросткового психолога</td></tr>
+        <tr><td class="num">19</td><td class="topic">Кризис 3 лет, 7 лет, подростковый: памятка для родителей</td><td><span class="tag tag-blog">Статья-памятка</span></td><td>Блог</td><td class="cta-cell">Чек-лист «Норма или пора к психологу»</td></tr>
+        <tr><td class="num">20</td><td class="topic">Семейная терапия: не «кто виноват», а «как нам стать лучше вместе»</td><td><span class="tag tag-blog">Статья 2000 слов</span></td><td>Блог + ЗАГСы</td><td class="cta-cell">Семейная консультация</td></tr>
+        <tr><td class="num">21</td><td class="topic">Измена: можно ли восстановить доверие и что говорит наука</td><td><span class="tag tag-blog">Статья 2500 слов</span></td><td>Блог (SEO-якорь)</td><td class="cta-cell">Консультация</td></tr>
+        <tr><td class="num">22</td><td class="topic">Брачная диагностика: научный подход к совместимости</td><td><span class="tag tag-video">Видео 15 мин</span></td><td>YouTube + VK</td><td class="cta-cell">Диагностика пары</td></tr>
+        <tr><td class="num">23</td><td class="topic">Как говорить с ребёнком о разводе: руководство для родителей</td><td><span class="tag tag-blog">Статья 2000 слов</span></td><td>Блог + детсады</td><td class="cta-cell">Консультация детского психолога</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Кластер 4 -->
+<section>
+  <div class="container">
+    <h2>Кластер 4: Личные темы — тревога, депрессия, выгорание, самооценка</h2>
+    <p class="cluster-goal">Цель: Привлечь самую мотивированную аудиторию — людей в остром состоянии.</p>
+    <table class="content-table">
+      <thead><tr><th>#</th><th>Тема</th><th>Формат</th><th>Канал</th><th>CTA</th></tr></thead>
+      <tbody>
+        <tr><td class="num">24</td><td class="topic">Панические атаки: что это, почему происходит и как терапия помогает с ними справиться</td><td><span class="tag tag-blog">Лонгрид 3000 слов</span></td><td>Блог (SEO-якорь)</td><td class="cta-cell">Диагностическая консультация</td></tr>
+        <tr><td class="num">25</td><td class="topic">Как отличить депрессию от плохого настроения: 9 признаков</td><td><span class="tag tag-blog">Статья 2000 слов</span></td><td>Блог + VK</td><td class="cta-cell">Консультация клинического психолога</td></tr>
+        <tr><td class="num">26</td><td class="topic">Выгорание: когда «просто отдохнуть» уже не помогает</td><td><span class="tag tag-blog">Статья 2500 слов</span></td><td>Блог + корпораты</td><td class="cta-cell">Программа «Анти-выгорание»</td></tr>
+        <tr><td class="num">27</td><td class="topic">Самооценка: почему «просто полюбить себя» не работает и что работает</td><td><span class="tag tag-blog">Статья 2000 слов</span></td><td>Блог + Instagram</td><td class="cta-cell">Консультация</td></tr>
+        <tr><td class="num">28</td><td class="topic">Тревога и контроль: как перестать пытаться всё предусмотреть</td><td><span class="tag tag-video">Видео 12 мин</span></td><td>YouTube</td><td class="cta-cell">Бесплатный разбор ситуации</td></tr>
+        <tr><td class="num">29</td><td class="topic">Психосоматика: когда тело говорит о том, о чём молчит душа</td><td><span class="tag tag-blog">Статья 2500 слов</span></td><td>Блог + врачи</td><td class="cta-cell">Консультация + обследование</td></tr>
+        <tr><td class="num">30</td><td class="topic">Бессонница: психологические причины и что с ними делать</td><td><span class="tag tag-blog">Статья 1800 слов</span></td><td>Блог</td><td class="cta-cell">Консультация</td></tr>
+        <tr><td class="num">31</td><td class="topic">Хронический стресс: что происходит с организмом и как терапия это лечит</td><td><span class="tag tag-blog">Статья 2000 слов</span></td><td>Блог + врачи</td><td class="cta-cell">Диагностическая консультация</td></tr>
+        <tr><td class="num">32</td><td class="topic">Травма насилия: путь восстановления (осторожный контент)</td><td><span class="tag tag-blog">Статья 2500 слов</span></td><td>Блог</td><td class="cta-cell">Консультация (безопасный контакт)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Кластер 5 -->
+<section>
+  <div class="container">
+    <h2>Кластер 5: Деньги, сроки и формат работы</h2>
+    <p class="cluster-goal">Цель: Снять барьер «терапия — это дорого и долго».</p>
+    <table class="content-table">
+      <thead><tr><th>#</th><th>Тема</th><th>Формат</th><th>Канал</th><th>CTA</th></tr></thead>
+      <tbody>
+        <tr><td class="num">33</td><td class="topic">Сколько нужно сессий, чтобы стало лучше: честный разговор о длительности терапии</td><td><span class="tag tag-blog">Статья 2000 слов</span></td><td>Блог</td><td class="cta-cell">Диагностическая консультация</td></tr>
+        <tr><td class="num">34</td><td class="topic">Онлайн vs очно: сравниваем форматы честно (плюсы и минусы каждого)</td><td><span class="tag tag-blog">Статья 1800 слов</span></td><td>Блог</td><td class="cta-cell">Запись (очно или онлайн)</td></tr>
+        <tr><td class="num">35</td><td class="topic">Терапия раз в неделю или раз в месяц: что эффективнее</td><td><span class="tag tag-blog">Статья 1500 слов</span></td><td>Блог + Telegram</td><td class="cta-cell">План терапии</td></tr>
+        <tr><td class="num">36</td><td class="topic">«Мне стало хуже после первой сессии» — нормально ли это?</td><td><span class="tag tag-blog">Статья 1500 слов</span></td><td>Блог + VK</td><td class="cta-cell">Поддержка координатора</td></tr>
+        <tr><td class="num">37</td><td class="topic">Почему терапия стоит своих денег: инвестиция, которая окупается</td><td><span class="tag tag-blog">Статья 1800 слов</span></td><td>Блог + VK</td><td class="cta-cell">Диагностика за 2000 руб.</td></tr>
+        <tr><td class="num">38</td><td class="topic">Подарочный сертификат на консультацию: кому, когда и как подарить</td><td><span class="tag tag-social">Пост + сторис</span></td><td>VK + Instagram + Telegram</td><td class="cta-cell">Купить сертификат</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Кластер 6 -->
+<section>
+  <div class="container">
+    <h2>Кластер 6: Специализированные направления</h2>
+    <p class="cluster-goal">Цель: Показать глубину экспертизы Центра.</p>
+    <table class="content-table">
+      <thead><tr><th>#</th><th>Тема</th><th>Формат</th><th>Канал</th><th>CTA</th></tr></thead>
+      <tbody>
+        <tr><td class="num">39</td><td class="topic">Перинатальная психология: подготовка к беременности и родам</td><td><span class="tag tag-blog">Статья 2000 слов</span></td><td>Блог + ЖК</td><td class="cta-cell">Консультация перинатального психолога</td></tr>
+        <tr><td class="num">40</td><td class="topic">Послеродовая депрессия: это не «капризы», это медицинский факт</td><td><span class="tag tag-blog">Статья 2500 слов</span></td><td>Блог + ЖК</td><td class="cta-cell">Консультация</td></tr>
+        <tr><td class="num">41</td><td class="topic">Сексология: когда «просто поговорить» недостаточно</td><td><span class="tag tag-blog">Статья 2000 слов</span></td><td>Блог</td><td class="cta-cell">Консультация сексолога</td></tr>
+        <tr><td class="num">42</td><td class="topic">Судебная психологическая экспертиза: что это и когда нужна</td><td><span class="tag tag-blog">Статья 1500 слов</span></td><td>Блог + юристы</td><td class="cta-cell">Консультация судебного эксперта</td></tr>
+        <tr><td class="num">43</td><td class="topic">Дети с ОВЗ: как специальный психолог помогает семье</td><td><span class="tag tag-blog">Статья 2000 слов</span></td><td>Блог + детсады</td><td class="cta-cell">Консультация специального психолога</td></tr>
+        <tr><td class="num">44</td><td class="topic">ПТСР: когда прошлое не отпускает (EMDR, ДПДГ и другие подходы)</td><td><span class="tag tag-blog">Статья 2500 слов</span></td><td>Блог</td><td class="cta-cell">Консультация</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Кластер 7 -->
+<section>
+  <div class="container">
+    <h2>Кластер 7: Профессиональный взгляд и «закулисье»</h2>
+    <p class="cluster-goal">Цель: Укрепить экспертный статус и личный бренд.</p>
+    <table class="content-table">
+      <thead><tr><th>#</th><th>Тема</th><th>Формат</th><th>Канал</th><th>CTA</th></tr></thead>
+      <tbody>
+        <tr><td class="num">45</td><td class="topic">Один день психолога: как устроена работа изнутри</td><td><span class="tag tag-video">Видео 10 мин</span></td><td>YouTube + VK</td><td class="cta-cell">Запись к специалисту</td></tr>
+        <tr><td class="num">46</td><td class="topic">«А вы сами к психологу ходите?» — личная терапия психологов</td><td><span class="tag tag-blog">Статья-интервью</span></td><td>Блог + VK</td><td class="cta-cell">Каталог психологов</td></tr>
+        <tr><td class="num">47</td><td class="topic">История центра: от одного кабинета до 21 специалиста (интервью с Татьяной Выставкиной)</td><td><span class="tag tag-video">Видео 20 мин</span></td><td>YouTube</td><td class="cta-cell">Страница «О центре»</td></tr>
+        <tr><td class="num">48</td><td class="topic">Страсбургская декларация 1990: почему сессия длится 45-50 минут</td><td><span class="tag tag-social">Пост + сторис</span></td><td>VK + Telegram</td><td class="cta-cell">Запись на консультацию</td></tr>
+        <tr><td class="num">49</td><td class="topic">Как психологи учатся: супервизия, интервизия, личная терапия</td><td><span class="tag tag-blog">Статья 1500 слов</span></td><td>Блог + VK</td><td class="cta-cell">Каталог психологов</td></tr>
+        <tr><td class="num">50</td><td class="topic">Отзыв клиента: «Я пришёл с тревогой, а нашёл себя» (реальная история с разрешения)</td><td><span class="tag tag-blog">Лонгрид-кейс</span></td><td>Блог + все соцсети</td><td class="cta-cell">Диагностическая консультация</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Кластер 8 -->
+<section>
+  <div class="container">
+    <h2>Кластер 8: Липецк и локальная аудитория</h2>
+    <p class="cluster-goal">Цель: Захватить локальный поиск и укрепить связь с городом. Ключевые SEO-страницы для геотаргетинга.</p>
+    <table class="content-table">
+      <thead><tr><th>#</th><th>Тема</th><th>Формат</th><th>Канал</th><th>CTA</th></tr></thead>
+      <tbody>
+        <tr><td class="num">51</td><td class="topic">Психолог в Липецке: как выбрать своего специалиста в нашем городе</td><td><span class="tag tag-local">Статья 2000 слов (локальный SEO)</span></td><td>Блог (SEO-якорь)</td><td class="cta-cell">Квиз «Подобрать специалиста»</td></tr>
+        <tr><td class="num">52</td><td class="topic">Семейный психолог в Липецке: почему липчане выбирают наш центр</td><td><span class="tag tag-local">Статья 1500 слов</span></td><td>Блог</td><td class="cta-cell">Семейная консультация</td></tr>
+        <tr><td class="num">53</td><td class="topic">Детский психолог Липецк: когда вести ребёнка и как подготовить</td><td><span class="tag tag-local">Статья 1800 слов</span></td><td>Блог + детсады</td><td class="cta-cell">Консультация детского психолога</td></tr>
+        <tr><td class="num">54</td><td class="topic">Стресс в большом городе. Липецк — не Москва, но стресс тот же</td><td><span class="tag tag-local">Статья 1500 слов</span></td><td>Блог + городские паблики</td><td class="cta-cell">Чек-лист «Уровень стресса»</td></tr>
+        <tr><td class="num">55</td><td class="topic">Куда пойти за психологической помощью в Липецке: честный обзор</td><td><span class="tag tag-local">Статья 2000 слов (локальный SEO)</span></td><td>Блог (SEO-якорь)</td><td class="cta-cell">Запись в Центр Выставкиной</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Форматы контента -->
+<section class="formats-section">
+  <div class="container">
+    <h2>Форматы контента — спецификации</h2>
+    <div class="cards">
+      <div class="card">
+        <h4>Статья для блога</h4>
+        <p><strong>Объём:</strong> 1 500–3 000 слов<br>
+        <strong>Структура:</strong> проблема → почему важно → наука → шаги → CTA<br>
+        <strong>SEO:</strong> H1 с ключом, H2/H3 по семантике, meta 150 знаков<br>
+        <strong>Лид-магнит:</strong> чек-лист, памятка или бесплатная диагностика<br>
+        <strong>Частота:</strong> 3 статьи в неделю</p>
+      </div>
+      <div class="card">
+        <h4>Видео (YouTube / VK)</h4>
+        <p><strong>Длительность:</strong> 8–20 минут<br>
+        <strong>Структура:</strong> крюк (5 сек) → проблема → разбор → решение → CTA<br>
+        <strong>Обязательно:</strong> субтитры, таймкоды, ссылка на сайт<br>
+        <strong>Частота:</strong> 2 видео в неделю</p>
+      </div>
+      <div class="card">
+        <h4>Пост (VK / Telegram)</h4>
+        <p><strong>Длина:</strong> 500–1 500 знаков<br>
+        <strong>Структура:</strong> история/вопрос → разбор → вывод → обсуждение<br>
+        <strong>Визуал:</strong> фото психолога или карточка с цитатой<br>
+        <strong>Частота:</strong> 5 постов в неделю</p>
+      </div>
+      <div class="card">
+        <h4>Сторис / VK Клипы</h4>
+        <p><strong>Длительность:</strong> 15–60 секунд<br>
+        <strong>Формат:</strong> «Вопрос-ответ», «Миф-разрушение», «Совет дня», «Закулисье»<br>
+        <strong>Частота:</strong> 3–5 сторис в день</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Редакционный календарь -->
+<div class="calendar">
+  <div class="container">
+    <h2>Редакционный календарь — первый месяц</h2>
+    <table class="calendar-table">
+      <thead><tr><th>Неделя</th><th>Статьи в блог</th><th>Видео</th><th>Посты VK/Tg</th><th>Спецпроект</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1</strong></td><td>#24 Панические атаки<br>#7 Как выбрать психолога<br>#14 Как пережить развод</td><td>#47 Интервью с Татьяной Выставкиной</td><td>5 постов</td><td>Запуск блога</td></tr>
+        <tr><td><strong>2</strong></td><td>#16 Детская тревожность и буллинг<br>#1 Онлайн-психотерапия<br>#25 Депрессия vs настроение</td><td>#28 Тревога и контроль</td><td>5 постов</td><td>Анонс YouTube-канала</td></tr>
+        <tr><td><strong>3</strong></td><td>#33 Сколько нужно сессий<br>#4 Первая консультация<br>#8 Красные флаги психолога</td><td>#22 Брачная диагностика</td><td>5 постов</td><td>Квиз-марафон</td></tr>
+        <tr><td><strong>4</strong></td><td>#10 Психолог vs психотерапевт<br>#51 Психолог в Липецке<br>#15 Конфликты в паре</td><td>#45 Один день психолога</td><td>5 постов</td><td>Итоги месяца</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Вовлечение команды -->
+<div class="team-section">
+  <div class="container">
+    <h2>Вовлечение команды: кто что пишет</h2>
+    <p style="color:var(--muted); margin-bottom:20px;">Каждый из 21 психолога генерирует контент в своей нише. Пример распределения:</p>
+    <table class="team-table">
+      <thead><tr><th>Психолог</th><th>Специализация</th><th>Тип контента</th><th>Частота</th></tr></thead>
+      <tbody>
+        <tr><td>Выставкина Т.А.</td><td>Психоанализ, семья</td><td>Стратегические лонгриды, интервью</td><td>1 статья/мес</td></tr>
+        <tr><td>Бобровских М.А.</td><td>Сексология</td><td>Статьи + рубрика «Вопрос сексологу»</td><td>2 статьи/мес</td></tr>
+        <tr><td>Сошнина А.Д.</td><td>Системная терапия</td><td>Статьи о семейных отношениях</td><td>2 статьи/мес</td></tr>
+        <tr><td>Басинская В.Л.</td><td>Дети с ОВЗ</td><td>Специализированные статьи</td><td>1 статья/мес</td></tr>
+        <tr><td>Болдырева О.А.</td><td>Перинатальная психология</td><td>Статьи + вебинары для будущих мам</td><td>2 статьи/мес</td></tr>
+        <tr><td>Гусева Е.Ю.</td><td>Юнгианский подход</td><td>Статьи + сценарии видео</td><td>2 статьи/мес</td></tr>
+        <tr><td>Крутых Ю.А.</td><td>Клиническая психология</td><td>Статьи о депрессии, тревоге, ПТСР</td><td>2 статьи/мес</td></tr>
+        <tr><td>Кононова Н.В.</td><td>Судебная экспертиза</td><td>Статьи для юристов</td><td>1 статья/мес</td></tr>
+        <tr><td>Пашкова Т.А.</td><td>Детская психология</td><td>Статьи + рубрика «Детский вопрос»</td><td>2 статьи/мес</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Итого -->
+<div class="summary">
+  <div class="container">
+    <h2>Суммарный охват контент-стратегии</h2>
+    <div style="display:flex; justify-content:center; gap:48px; flex-wrap:wrap; margin-top:24px;">
+      <div><div class="big-num">156</div><div class="big-label">статей в год (3/нед)</div></div>
+      <div><div class="big-num">104</div><div class="big-label">видео в год (2/нед)</div></div>
+      <div><div class="big-num">260</div><div class="big-label">постов в год (5/нед)</div></div>
+    </div>
+    <p style="color:#c4b5fd; margin-top:24px; max-width:600px; margin-left:auto; margin-right:auto;">
+      При полном запуске контент-машины: ~1 200–1 500 уникальных посетителей блога в месяц из органики.
+      Плюс охват соцсетей: 3 000–5 000 подписчиков в VK к концу 6-го месяца.
+    </p>
+  </div>
+</div>
+
+<footer>
+  <div class="container">
+    <p><a href="index.html">← Вернуться на главную</a> &nbsp;·&nbsp; <a href="direct.html">Стратегия Яндекс.Директ →</a></p>
+    <p style="margin-top:12px;">AIM — AI-first медицинское маркетинговое агентство. Июнь 2026.</p>
+  </div>
+</footer>
+
+</body>
+</html>

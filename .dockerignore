@@ -1,0 +1,62 @@
+# macOS resource fork files
+._*
+.DS_Store
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+__MACOSX
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.eggs/
+*.egg-info/
+dist/
+build/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+.gitmodules
+
+# Environment & secrets
+.env
+.env.*
+!.env.production
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Node
+node_modules/
+.pnpm-store/
+
+# Project planning (not needed at runtime)
+.planning/
+.planning-old/
+
+# Session & task files
+.current-task
+SESSION.md
+CHECKPOINTS.md
+BACKLOG.md
+
+# Memory
+memory/
+.claude/
+
+# Backups
+hermes-backup*/
+*.tar.gz
+
+# Misc
+*.md
+!AIM/hermes/README.md
+Thumbs.db
