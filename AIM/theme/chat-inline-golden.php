@@ -260,6 +260,58 @@
             font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
         }
 
+        /* === Report Components (Design System) === */
+
+        /* Section number label */
+        .message-bubble .section-num {
+            font-size: 0.72em;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+            font-weight: 700;
+            margin-bottom: 2px;
+            line-height: 1;
+        }
+
+        /* Surface Block — accent left-border block (NOT italic) */
+        .message-bubble .surface-block {
+            border-left: 3px solid var(--accent);
+            background: var(--accent-soft);
+            padding: 10px 14px;
+            margin: 8px 0;
+            border-radius: 0 6px 6px 0;
+            font-style: normal;
+            font-size: 0.92em;
+            line-height: 1.6;
+        }
+        .message-bubble .surface-block strong { color: var(--accent); }
+        .message-bubble .surface-block p { margin: 2px 0; }
+
+        /* Stat Card — hero number */
+        .message-bubble .stat-card {
+            display: inline-block;
+            padding: 6px 14px;
+            margin: 4px 6px 4px 0;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            font-style: normal;
+            vertical-align: top;
+        }
+        .message-bubble .stat-card p:first-child {
+            font-size: 1.35em;
+            font-weight: 700;
+            color: var(--accent);
+            margin: 0;
+            line-height: 1.2;
+        }
+        .message-bubble .stat-card p:last-child {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            margin: 2px 0 0 0;
+            line-height: 1;
+        }
+
         /* Markdown: blockquotes */
         .message-bubble blockquote {
             border-left: 3px solid var(--accent);
@@ -943,10 +995,16 @@
         }
 
         function parseMarkdown(text) {
+            // 0. :::class ... ::: → <div class="class"> (custom blocks)
+            const blockPattern = /:::(\w+(?:-\w+)*)\s*\n([\s\S]*?)\n:::/g;
+            let cleaned = text.replace(blockPattern, (m, cls, content) => {
+                return `%%BLOCK_${cls}%%\n${content}\n%%ENDBLOCK%%`;
+            });
+
             // 1. Extract [REPORT_READY] blocks → render as cards
             const reportPattern = /\[REPORT_READY\]\s*([\s\S]*?)\s*\[\/REPORT_READY\]/g;
             let reportCards = [];
-            let cleaned = text.replace(reportPattern, (match, jsonStr) => {
+            cleaned = cleaned.replace(reportPattern, (match, jsonStr) => {
                 try {
                     const data = JSON.parse(jsonStr);
                     reportCards.push(renderReportCard(data));
@@ -968,6 +1026,10 @@
 
             // 4. Restore report cards
             html = html.replace(/%%REPORT_CARD_(\d+)%%/g, (m, idx) => reportCards[parseInt(idx)] || '');
+
+            // 5. Restore custom blocks ::: → <div class="...">
+            html = html.replace(/%%BLOCK_(\w+(?:-\w+)*)%%([\s\S]*?)%%ENDBLOCK%%/g,
+                (m, cls, content) => `<div class="${cls}">${content}</div>`);
 
             return html;
         }
@@ -1437,7 +1499,7 @@
                                             if (assistantMessage.length !== lastRenderedLen) {
                                                 lastRenderedLen = assistantMessage.length;
                                                 try {
-                                                    streamSpan.innerHTML = DOMPurify.sanitize(marked.parse(assistantMessage));
+                                                    streamSpan.innerHTML = parseMarkdown(assistantMessage);
                                                 } catch(e) {
                                                     streamSpan.textContent = assistantMessage;
                                                 }

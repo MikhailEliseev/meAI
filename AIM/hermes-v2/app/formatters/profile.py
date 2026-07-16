@@ -1,6 +1,6 @@
-"""Форматтер профиля клиники — нарративный стиль.
+"""Форматтер профиля клиники — стиль эталонного отчёта.
 
-Не просто ИНН/город, а история бизнеса: возраст, масштаб, позиции.
+Карточки-цифры, эмодзи-префиксы, пронумерованные секции.
 Данные из ФНС (точные), не Perplexity-оценки.
 """
 
@@ -60,7 +60,7 @@ def _okved_human(okved: str | None) -> str | None:
 
 
 def format_profile(result: str, client_data: dict | None = None) -> tuple[str, dict]:
-    """Формирует Markdown блок профиля клиники — нарративный стиль.
+    """Формирует Markdown блок профиля — стиль эталонного отчёта.
 
     Args:
         result: JSON строка от extract_clinic_profile.
@@ -84,7 +84,7 @@ def format_profile(result: str, client_data: dict | None = None) -> tuple[str, d
             if client_data.get(key) and not data.get(key):
                 data[key] = client_data[key]
 
-    parts = []
+    lines = []
 
     name = data.get("company_name") or data.get("brand_name") or ""
     legal = data.get("legal_name") or ""
@@ -95,75 +95,95 @@ def format_profile(result: str, client_data: dict | None = None) -> tuple[str, d
     services = data.get("services") or []
     website_platform = data.get("website_platform") or ""
 
-    # ── Заголовок-нарратив ──
+    # ── 01 — Заголовок ──
+    lines.append(":::section-num")
+    lines.append("01 — О КЛИНИКЕ")
+    lines.append(":::")
+    lines.append("")
+
     if name:
-        parts.append(f"## 🏥 {name}\n")
+        lines.append(f"### {name}")
     else:
-        parts.append("## 🏥 Профиль клиники\n")
+        lines.append("### Профиль клиники")
 
-    # ── Строка масштаба (как в старом отчёте) ──
-    scale_parts = []
-    age = _format_age(data.get("registration_date"))
-    if age:
-        scale_parts.append(f"**{age} на рынке**")
-    rev = data.get("revenue") or data.get("revenue_year")
-    if rev:
-        scale_parts.append(f"выручка {_format_money(rev)}")
-    emp = data.get("employee_count")
-    if emp:
-        scale_parts.append(f"{emp} сотрудников")
-    okved_h = _okved_human(data.get("okved") or data.get("okved_main"))
-    if okved_h:
-        scale_parts.append(okved_h)
+    # ── Surface Block: ключевая информация ──
+    quick = []
+    if city and address:
+        quick.append(f"📍 {city}, {address}")
+    elif city:
+        quick.append(f"📍 {city}")
 
-    if scale_parts:
-        parts.append(" | ".join(scale_parts) + "\n")
-
-    # ── Детали ──
-    if legal and legal != name:
-        parts.append(f"**Юрлицо:** {legal}")
-    if inn:
-        parts.append(f"**ИНН:** {inn}")
-    if city:
-        parts.append(f"**Город:** {city}")
-    if specialization:
-        parts.append(f"**Специализация:** {specialization}")
-    if address:
-        parts.append(f"**Адрес:** {address}")
-    if website_platform:
-        parts.append(f"**Сайт:** {website_platform}")
-
-    # ── Врачи (из Firecrawl скрапа, если есть) ──
     doctors_count = data.get("doctors_count")
     if doctors_count:
-        parts.append(f"**Врачей:** {doctors_count}")
+        quick.append(f"🔬 {doctors_count} врачей")
 
-    # ── Соцсети (из Firecrawl скрапа, если есть) ──
-    socials_found = data.get("socials_found")
-    if socials_found and isinstance(socials_found, dict):
-        social_parts = []
-        for platform, url in socials_found.items():
-            emoji = {"instagram": "📸", "vk": "🔵", "telegram": "✈️", "youtube": "▶️"}.get(platform, "🔗")
-            social_parts.append(f"{emoji} [{platform}]({url})")
-        if social_parts:
-            parts.append(f"**Соцсети:** {' | '.join(social_parts)}")
+    age = _format_age(data.get("registration_date"))
+    if age:
+        quick.append(f"📅 С {data.get('registration_date', '')[:4]} · {age} на рынке")
 
-    # ── Финансовая динамика ──
+    if quick:
+        lines.append("")
+        lines.append(":::surface-block")
+        lines.append("  \n".join(quick))
+        lines.append(":::")
+
+    # ── Stat Cards: выручка, прибыль ──
+    rev = data.get("revenue") or data.get("revenue_year")
     profit = data.get("profit") or data.get("profit_year")
     trend = data.get("revenue_trend") or data.get("trend")
     trend_emoji = {"growing": "📈", "stable": "➡️", "declining": "📉"}.get(trend, "")
 
-    fin_lines = []
-    if profit:
-        fin_lines.append(f"чистая прибыль {_format_money(profit)}")
-    if trend and trend_emoji:
-        fin_lines.append(f"тренд {trend_emoji}")
+    if rev or profit:
+        lines.append("")
+        if rev:
+            lines.append(":::stat-card")
+            lines.append(f"**{_format_money(rev)}**")
+            lines.append("выручка")
+            lines.append(":::")
+        if profit:
+            trend_part = f" {trend_emoji}" if trend_emoji else ""
+            lines.append(":::stat-card")
+            lines.append(f"**{_format_money(profit)}**")
+            lines.append(f"прибыль{trend_part}")
+            lines.append(":::")
+        lines.append("")
 
-    if fin_lines:
-        parts.append(f"\n**Финансы:** {', '.join(fin_lines)}")
+    # ── Реквизиты (компактно) ──
+    details = []
+    if legal and legal != name:
+        details.append(legal)
+    if inn:
+        details.append(f"ИНН: {inn}")
+    okved_h = _okved_human(data.get("okved") or data.get("okved_main"))
+    if okved_h:
+        details.append(okved_h)
+    if specialization:
+        details.append(specialization)
+    if website_platform:
+        details.append(f"сайт на {website_platform}")
+
+    if details:
+        lines.append(" · ".join(details))
+        lines.append("")
+
+    # ── Соцсети (компактная строка) ──
+    socials_found = data.get("socials_found")
+    if socials_found and isinstance(socials_found, dict):
+        social_parts = []
+        emoji_map = {"instagram": "📸", "vk": "🔵", "telegram": "✈️", "youtube": "▶️"}
+        for platform, url in socials_found.items():
+            emoji = emoji_map.get(platform, "🔗")
+            label = platform.upper() if platform in ("vk",) else platform.capitalize()
+            social_parts.append(f"{emoji} [{label}]({url})")
+        if social_parts:
+            lines.append("**Соцсети:** " + " | ".join(social_parts))
+            lines.append("")
 
     # ── Услуги ──
     if services:
-        parts.append(f"\n**Услуги:** {', '.join(services[:8])}")
+        lines.append(f"**Услуги:** {', '.join(services[:8])}")
+        lines.append("")
 
-    return "\n".join(parts), data
+    lines.append("---")
+
+    return "\n".join(lines), data

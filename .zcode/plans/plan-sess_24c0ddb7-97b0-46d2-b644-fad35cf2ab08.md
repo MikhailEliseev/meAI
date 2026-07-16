@@ -1,57 +1,115 @@
-## План: 5 конкурентов + отзывы клиента по площадкам
+## План: новые CSS классы для верстки отчёта
 
-### Цель
-Перераспределить Firecrawl/Perplexity бюджет: меньше на конкурентов (10→5), больше на отзывы клиента. Клиент видит таблицу конкурентов + блок «О чём говорят люди» (темы положительных/отрицательных отзывов с Яндекс.Карты, ProDoctorov, 2ГИС).
+### Механизм
+В `parseMarkdown()` (inline-golden.php) добавить препроцессор: паттерн `:::class ... :::` → `<div class="class">...</div>`. DOMPurify уже разрешает `div` + `class`.
 
----
+### Шаг 1: CSS классы (inline-golden.php)
+Добавить стили для новых компонентов:
 
-### Задача 1: count 10→5 (быстро)
-**Файлы:** `AIM/src/aim/api/competitors.py` (default=10→5), `AIM/hermes-v2/app/tools/competitors.py` (count=10→5 в прокси)
+```css
+/* Surface Block — акцентный блок с левой границей (не italic!) */
+.message-bubble .surface-block {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 10px 14px;
+    margin: 8px 0;
+    border-radius: 0 6px 6px 0;
+    font-style: normal;  /* НЕ italic */
+}
+.message-bubble .surface-block strong { color: var(--accent); }
 
-### Задача 2: Создать `run_review_platforms.py` в hermes-v2 (ключевая)
-**Новый файл:** `AIM/hermes-v2/app/tools/run_review_platforms.py`
+/* Stat Card — крупная цифра */
+.message-bubble .stat-card {
+    display: inline-block;
+    padding: 8px 14px;
+    margin: 4px 6px 4px 0;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    font-style: normal;
+}
+.message-bubble .stat-card .stat-value {
+    font-size: 1.4em;
+    font-weight: 700;
+    color: var(--accent);
+    display: block;
+}
+.message-bubble .stat-card .stat-label {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+}
 
-Адаптировать Perplexity-подход из старого `hermes/app/tools/run_review_platforms.py`. Perplexity `sonar` ищет отзывы на 3 ключевых площадках (Яндекс.Карты, ProDoctorov, 2ГИС) и возвращает:
-- Рейтинг + кол-во отзывов по каждой площадке
-- **Темы положительных отзывов** (с примерами)
-- **Темы отрицательных отзывов** (с примерами)
-- Отвечает ли клиника на отзывы
-
-Возвращает структурированный JSON, кэш 10 минут.
-
-### Задача 3: Регистрация tool + автовызов
-**Файлы:** `AIM/hermes-v2/app/tools/__init__.py` — регистрация `run_review_platforms`
-
-**Файл:** `AIM/hermes-v2/app/llm.py` — автовызыв `run_review_platforms` параллельно с `find_competitors` и `quick_overview` когда клиент прислал URL (через механизм parallel execution, как сейчас 3 тулза запускаются вместе).
-
-### Задача 4: Блок «Отзывы» в formatted_blocks
-**Файл:** `AIM/hermes-v2/app/llm.py` — добавить `_format_reviews_block()` в `_build_formatted_blocks()`
-
-Новый форматтер-блок (после конкурентов, перед тех.аудитом):
+/* Section header — пронумерованная секция */
+.message-bubble .section-num {
+    font-size: 0.75em;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    font-weight: 600;
+}
 ```
-## ⭐ Отзывы клиентов
 
-**Яндекс.Карты:** 4.9 ★ (681 отзыв)
-**ProDoctorov:** 4.5 ★ (234 отзыва)
-
-**✅ Хвалят:**
-- Профессионализм врачей (особенно Юцковская Е.В.)
-- Чистота и современное оборудование
-
-**⚠️ Критикуют:**
-- Долгое ожидание приёма
-- Высокие цены на косметологию
+### Шаг 2: Препроцессор в parseMarkdown()
+```js
+// :::class ... ::: → <div class="class">...</div>
+const blockPattern = /:::(\w+)\s*\n([\s\S]*?)\n:::/g;
+cleaned = cleaned.replace(blockPattern, (m, cls, content) => {
+    return `<div class="${cls}">\n${content}\n</div>`;
+});
 ```
 
-### Задача 5: Обновить промпт — отзывы в анализе
-**Файл:** `AIM/hermes-v2/app/prompts/dialogue.py` — добавить в структуру ответа пункт про отзывы: «что говорят пациенты» (хвалят/критикуют, из блока отзывов).
+### Шаг 3: Форматтеры используют ::: паттерны
 
-### Задача 6: Деплой + тест
-aim-app rebuild (count change) + hermes-v2 rebuild (reviews tool + formatter).
+**profile.py**:
+```
+:::section-num
+01 — О КЛИНИКЕ
+:::
 
----
+### ООО «Огни Олимпа»
 
-### Что НЕ делаем (осознанно)
-- **Playwright review_collector** — тяжёлый (запуск Chromium), даёт только числа без текстов. Perplexity быстрее и даёт темы отзывов.
-- **Apify google-maps-scraper для текстов** — стоит денег, Google Maps ~20-30% отзывов в РФ.
-- **Рейтинги для конкурентов** — ты сказал, что отзывы накрученные. Оставляем rating=null для конкурентов.
+:::surface-block
+📍 Москва, Чапаевский пер. 3
+🔬 120 врачей
+📅 С 2019 года · 6 лет на рынке
+:::
+
+:::stat-card
+**1.9 млрд ₽**
+выручка
+:::
+:::stat-card
+**137 млн ₽**
+прибыль 📈
+:::
+```
+
+**competitors.py** — таблица остаётся, вывод в `:::surface-block`:
+```
+:::surface-block
+**Главный вывод:** Ближайший конкурент...
+:::
+```
+
+**llm.py _format_audit_block** — GEO в stat-card, проблемы в surface-block:
+```
+:::stat-card
+**70/100**
+GEO Score 🟢
+:::
+
+:::surface-block
+✅ AI-краулеры открыты
+❌ MedicalBusiness Schema отсутствует
+⚠️ SEO: нет meta description
+:::
+```
+
+### Шаг 4: blockquote CSS — убрать italic
+Старый blockquote оставить (для настоящих цитат), но `font-style: normal` убрать не будем — просто не используем `>` в форматтерах.
+
+### Файлы
+1. `AIM/theme/chat-inline-golden.php` — CSS классы + препроцессор `:::`
+2. `AIM/hermes-v2/app/formatters/profile.py` — `:::surface-block`, `:::stat-card`
+3. `AIM/hermes-v2/app/formatters/competitors.py` — `:::surface-block` для вывода
+4. `AIM/hermes-v2/app/llm.py` — `_format_audit_block`, `_format_reviews_block`

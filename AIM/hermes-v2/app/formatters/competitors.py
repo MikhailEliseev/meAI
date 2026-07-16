@@ -88,9 +88,9 @@ def format_competitors(result: str, client_revenue: int | None = None,
     if not comps:
         return "📊 Конкуренты: данные не найдены."
 
-    lines = ["## 📊 Конкуренты (данные ФНС)\n"]
+    lines = [":::section-num", "02 — КОНКУРЕНТЫ", ":::", ""]
 
-    lines.append("| Конкурент | Выручка | Прибыль | Тренд | Лет | Врачей | IG подп. | Сайт |")
+    lines.append("| Конкурент | Выручка | Прибыль | Тренд | Лет | Врачей | IG | Сайт |")
     lines.append("|---|---|---|---|---|---|---|---|")
 
     # Строка клиента (позиционирование в таблице)
@@ -99,15 +99,14 @@ def format_competitors(result: str, client_revenue: int | None = None,
         client_age = _format_age(client_reg_date)
         client_scl_str = str(client_scl) if client_scl else "—"
         lines.append(
-            f"| **ВЫ (клиент)** | **{_format_revenue(client_revenue)}** "
+            f"| **ВЫ** | **{_format_revenue(client_revenue)}** "
             f"| {client_profit_str} | — | {client_age} | {client_scl_str} | — | — |"
         )
 
     for c in comps:
         brand = (c.get("brand_name") or c.get("legal_name") or "?").strip()
-        # Укорачиваем длинные названия
-        if len(brand) > 25:
-            brand = brand[:22] + "…"
+        if len(brand) > 22:
+            brand = brand[:19] + "…"
 
         rev = c.get("revenue_year")
         rev_str = _format_revenue(rev)
@@ -119,7 +118,7 @@ def format_competitors(result: str, client_revenue: int | None = None,
 
         age_str = _format_age(c.get("registration_date"))
 
-        docs = c.get("surgeons_count")
+        docs = c.get("surgeons_count") or c.get("employee_count")
         docs_str = str(docs) if docs else "—"
 
         ig = c.get("instagram_followers")
@@ -130,5 +129,25 @@ def format_competitors(result: str, client_revenue: int | None = None,
             cms = cms[:10] + "…"
 
         lines.append(f"| {brand} | {rev_str} | {profit_str} | {trend} | {age_str} | {docs_str} | {ig_str} | {cms} |")
+
+    # ── Главный вывод в blockquote-плашке ──
+    lines.append("")
+    comp_revs = [(c.get("brand_name") or c.get("legal_name", "?")[:15],
+                  c.get("revenue_year") or 0) for c in comps]
+    if comp_revs and client_revenue:
+        closest = min(comp_revs, key=lambda x: abs(x[1] - client_revenue))
+        ratio = closest[1] / client_revenue if client_revenue else 0
+        if 0.5 < ratio < 2:
+            conclusion = f"Ближайший конкурент — {closest[0]}, выручка {ratio:.1f}× от вашей."
+        elif closest[1] > client_revenue:
+            conclusion = f"Все конкуренты крупнее. Ближайший — {closest[0]} ({_format_revenue(closest[1])})."
+        else:
+            conclusion = "Вы лидер по выручке среди найденных конкурентов."
+        lines.append(":::surface-block")
+        lines.append(f"**Главный вывод:** {conclusion}")
+        lines.append(":::")
+
+    lines.append("")
+    lines.append("---")
 
     return "\n".join(lines)

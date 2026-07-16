@@ -294,9 +294,9 @@ def _format_reviews_block(reviews_raw: str) -> str:
         return ""
 
     platforms = data.get("platforms", {})
-    lines = ["## ⭐ Отзывы пациентов\n"]
+    lines = [":::section-num", "04 — ОТЗЫВЫ ПАЦИЕНТОВ", ":::", ""]
 
-    # Рейтинги по площадкам
+    # Рейтинги по площадкам в stat-cards
     platform_labels = {
         "yandex": "Яндекс.Карты",
         "prodoctorov": "ПроДокторов",
@@ -309,11 +309,17 @@ def _format_reviews_block(reviews_raw: str) -> str:
         reviews = p.get("reviews")
         if rating:
             found_any = True
-            rev_str = f" ({reviews} отзывов)" if reviews else ""
-            lines.append(f"**{label}:** {rating} ★{rev_str}\n")
+            rev_str = f" ({reviews})" if reviews else ""
+            lines.append(":::stat-card")
+            lines.append(f"**{rating} ★**")
+            lines.append(f"{label}{rev_str}")
+            lines.append(":::")
+
+    if found_any:
+        lines.append("")
 
     if not found_any:
-        return ""  # нет данных — не показываем блок
+        return ""
 
     # Темы: хвалят
     praise = data.get("praise_summary", "")
@@ -342,95 +348,94 @@ def _format_reviews_block(reviews_raw: str) -> str:
 
 
 def _format_audit_block(audit: dict) -> str:
-    """Форматирует SEO+GEO аудит в Markdown блок."""
+    """Форматирует SEO+GEO аудит — структурированные секции как в эталоне."""
     if not audit:
         return ""
 
     geo = audit.get("geo_score", 0)
     geo_emoji = "🔴" if geo < 30 else ("🟡" if geo < 60 else "🟢")
 
-    lines = [f"## 🔍 Технический аудит + GEO\n"]
-    lines.append(f"**GEO Score: {geo_emoji} {geo}/100** — готовность к AI-поиску (ChatGPT, Perplexity)\n")
+    lines = [":::section-num", "03 — ТЕХНИЧЕСКИЙ АУДИТ", ":::", ""]
 
-    # AI Crawlers
+    # ── GEO Score в stat-card ──
+    lines.append(":::stat-card")
+    lines.append(f"**{geo}/100**")
+    lines.append(f"GEO Score {geo_emoji}")
+    lines.append(":::")
+    lines.append("")
+
+    # ── AI-готовность + Schema + SEO в surface-block ──
+    audit_items = []
     ai = audit.get("ai_crawlers", {})
-    blocked = [k for k, v in ai.items() if isinstance(v, dict) and v.get("blocked")]
     open_ = [k for k, v in ai.items() if isinstance(v, dict) and not v.get("blocked")]
-    if blocked:
-        lines.append(f"❌ **AI-краулеры заблокированы:** {', '.join(blocked[:4])}")
+    blocked = [k for k, v in ai.items() if isinstance(v, dict) and v.get("blocked")]
     if open_:
-        lines.append(f"✅ **AI-краулеры открыты:** {', '.join(open_[:4])}")
+        audit_items.append(f"✅ AI-краулеры: {', '.join(open_[:5])}")
+    if blocked:
+        audit_items.append(f"❌ Заблокированы: {', '.join(blocked[:3])}")
+    audit_items.append("✅ llms.txt" if audit.get("llms_txt") else "❌ llms.txt отсутствует")
 
-    # llms.txt
-    if audit.get("llms_txt"):
-        lines.append("✅ **llms.txt:** найден")
-    else:
-        lines.append("❌ **llms.txt:** отсутствует (рекомендуется создать)")
-
-    # Schema
     schema = audit.get("schema", {})
     med = schema.get("medical", [])
-    org = schema.get("organization", [])
     if med:
-        lines.append(f"✅ **Medical Schema:** {', '.join(med[:3])}")
+        audit_items.append(f"✅ Medical Schema: {', '.join(med[:2])}")
     else:
-        lines.append("❌ **MedicalBusiness Schema:** отсутствует (критично для клиник)")
-    if org:
-        lines.append(f"✅ **Organization Schema:** {', '.join(org[:3])}")
-    else:
-        lines.append("⚠️ **Organization Schema:** отсутствует")
+        audit_items.append("❌ MedicalBusiness Schema отсутствует")
 
-    # H1 + meta + OG
     issues = []
     if not audit.get("h1"):
-        issues.append("нет H1 на главной")
+        issues.append("нет H1")
     if not audit.get("meta_description"):
         issues.append("нет meta description")
     if not audit.get("og_tags"):
-        issues.append("нет Open Graph тегов")
+        issues.append("нет Open Graph")
     if issues:
-        lines.append(f"⚠️ **SEO проблемы:** {', '.join(issues)}")
+        audit_items.append(f"⚠️ SEO: {', '.join(issues)}")
 
-    # SSR
-    if audit.get("ssr"):
-        lines.append("✅ **SSR:** контент доступен без JavaScript")
-    else:
-        lines.append("❌ **SSR:** контент требует JavaScript (AI-краулеры не увидят)")
-
-    # Размер страницы + скрипты + перформанс
+    tech = []
+    tech.append("SSR ✅" if audit.get("ssr") else "SSR ❌")
     if audit.get("page_size_kb"):
-        size = audit["page_size_kb"]
-        size_note = "тяжёлая" if size > 500 else ("большая" if size > 200 else "нормальная")
-        scripts = audit.get("scripts_count")
-        perf = audit.get("perf_estimate")
-        perf_emoji = {"высокая": "🟢", "средняя": "🟡", "низкая": "🔴"}.get(perf, "")
-        script_str = f", {scripts} скриптов" if scripts else ""
-        lines.append(f"📏 **Размер:** {size:.0f} KB{script_str} ({size_note})")
-        if perf:
-            lines.append(f"{perf_emoji} **Скорость (оценка):** {perf}")
+        tech.append(f"{audit['page_size_kb']:.0f} KB")
+    if audit.get("perf_estimate"):
+        perf_emoji = {"высокая": "🟢", "средняя": "🟡", "низкая": "🔴"}.get(audit["perf_estimate"], "")
+        tech.append(f"{perf_emoji} {audit['perf_estimate']}")
+    if tech:
+        audit_items.append(f"📊 {' · '.join(tech)}")
 
-    # СМИ публикации
-    media = audit.get("media_mentions", 0)
-    if media and media > 0:
-        lines.append(f"📰 **Публикации в СМИ:** {media}+ (Forbes, RBC, Vademecum)")
-    else:
-        lines.append("📰 **Публикации в СМИ:** не обнаружены")
+    if audit_items:
+        lines.append(":::surface-block")
+        lines.append("  \n".join(audit_items))
+        lines.append(":::")
+        lines.append("")
 
-    # Рейтинг Я.Карт
+    # ── Репутация в stat-cards ──
     yandex_rating = audit.get("yandex_rating")
     yandex_reviews = audit.get("yandex_reviews")
     if yandex_rating:
-        reviews_str = f" ({yandex_reviews} оценок)" if yandex_reviews else ""
-        lines.append(f"⭐ **Яндекс.Карты:** {yandex_rating}{reviews_str}")
-    else:
-        lines.append("⭐ **Яндекс.Карты:** рейтинг не найден")
+        rev_str = f" ({yandex_reviews} отзывов)" if yandex_reviews else ""
+        lines.append(":::stat-card")
+        lines.append(f"**{yandex_rating} ★**")
+        lines.append(f"Яндекс{rev_str}")
+        lines.append(":::")
 
-    # VK подписчики
     vk_followers = audit.get("vk_followers")
     if vk_followers:
-        lines.append(f"🔵 **VK:** {vk_followers:,} подписчиков")
+        lines.append(":::stat-card")
+        lines.append(f"**{vk_followers:,}**")
+        lines.append("VK подписчиков")
+        lines.append(":::")
 
-    lines.append("")
+    media = audit.get("media_mentions", 0)
+    if media and media > 0:
+        lines.append(":::stat-card")
+        lines.append(f"**{media}+**")
+        lines.append("СМИ публикаций")
+        lines.append(":::")
+
+    if yandex_rating or vk_followers:
+        lines.append("")
+
+    lines.append("---")
     return "\n".join(lines)
 
 
@@ -599,22 +604,27 @@ async def chat_with_tools(history: list[dict]):
                 messages.append({
                     "role": "system",
                     "content": (
-                        "Выше показаны ТОЧНЫЕ данные (из ФНС, Apify). "
-                        "Твоя задача — нарративный анализ:\n\n"
-                        "1. 💡 Позиция на рынке (1-2 предложения: лидер/середняк/аутсайдер)\n"
-                        "2. ✅ Сильные стороны (2-3: что лучше конкурентов)\n"
-                        "3. ⚠️ Точки роста (2-3: где отстаёшь)\n"
-                        "4. 🎯 Рекомендации (1-2 конкретных действия)\n"
-                        "5. 🗣️ Что говорят пациенты (если есть блок отзывов — хвалят/критикуют)\n"
-                        "6. [SUGGESTIONS] кнопки: 📸 Анализ соцсетей|run_instagram_content, 🔍 SEO-аудит|seo_audit\n\n"
+                        "Выше показаны ТОЧНЫЕ данные (секции 01-04 уже отображены). "
+                        "Твоя задача — ТОЛЬКО аналитический нарратив. "
+                        "КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО:\n"
+                        "- Повторять данные из секций выше (ИНН, выручку, адреса, услуги, рейтинги)\n"
+                        "- Дублировать таблицу конкурентов или блок отзывов\n"
+                        "- Создавать заголовки ## — ты пишешь выводы, не данные\n\n"
+                        "Структура ответа (БЕЗ заголовков ##, просто текст):\n\n"
+                        "**💡 Позиция:** 1-2 предложения — лидер/середняк/аутсайдер рынка.\n\n"
+                        "**✅ Сильные:** 2-3 пункта маркированным списком.\n\n"
+                        "**⚠️ Рост:** 2-3 конкретных пробела. НЕ рекомендуй то что уже есть.\n\n"
+                        "**🎯 Рекомендации:** 1-2 действия на основе РЕАЛЬНЫХ пробелов.\n\n"
+                        "**🗣️ Отзывы:** 2-3 предложения — главные темы из блока 04.\n\n"
+                        "[SUGGESTIONS]\n"
+                        "📸 Анализ соцсетей конкурентов|run_instagram_content\n"
+                        "🔍 Глубокий SEO-аудит сайта|seo_audit\n"
+                        "[/SUGGESTIONS]\n\n"
                         "КРИТИЧНО:\n"
-                        "- НЕ повторяй таблицы — они уже показаны\n"
-                        "- НЕ выдумывай цифры — только из таблиц\n"
-                        "- Рейтинг Яндекс.Карт, VK, GEO Score КЛИЕНТА — ЕСТЬ в блоке аудита. Используй!\n"
-                        "- Отзывы КЛИЕНТА — ЕСТЬ в блоке «Отзывы пациентов» (если показан)\n"
-                        "- НЕ упоминай отзывы/рейтинг/трафик КОНКУРЕНТОВ — этих данных нет\n"
-                        "- Сравнивай КОНКРЕТНО: «крупнее в X раз», «нет VK (у конкурентов по 30K)»\n"
-                        "- ⚖️ НЕ рекомендуй Instagram, Telegram и другие запрещённые/Meta платформы (148-ФЗ). Можно: VK, RuTube, Яндекс.Дзен, TenChat"
+                        "- НЕ повторяй НИ ОДНОЙ цифры из секций выше в своём тексте\n"
+                        "- НЕ выдумывай цифры\n"
+                        "- Сравнивай КОНКРЕТНО: «крупнее в X раз»\n"
+                        "- ⚖️ НЕ рекомендуй Instagram/Telegram (148-ФЗ). Можно: VK, RuTube, Дзен"
                     ),
                 })
 
