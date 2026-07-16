@@ -18,10 +18,6 @@ logger = logging.getLogger(__name__)
 FIRECRAWL_SCRAPE = "https://api.firecrawl.dev/v1/scrape"
 REQUEST_TIMEOUT = 25.0
 
-# Ленивая загрузка ключей (shared с firecrawl_enricher)
-_fc_keys: list[str] = []
-_fc_idx = 0
-
 # AI Crawlers для проверки в robots.txt
 _AI_CRAWLERS = {
     "GPTBot": "ChatGPT (OpenAI)",
@@ -42,43 +38,16 @@ _ORG_SCHEMAS = ["Organization", "LocalBusiness", "Place", "WebSite", "WebPage"]
 _PERSON_SCHEMAS = ["Person", "ProfilePage"]
 
 
-def _load_keys() -> list[str]:
-    """Загружает Firecrawl ключи из env/JSON."""
-    global _fc_keys
-    if _fc_keys:
-        return _fc_keys
-    import os, json
-    keys = set()
-    for prefix in ("FIRECRAWL_API_KEY_", "FIRECRAWL_KEY_"):
-        for i in range(1, 21):
-            k = os.getenv(f"{prefix}{i:02d}", "") or os.getenv(f"{prefix}{i}", "")
-            if k:
-                keys.add(k)
-    single = os.getenv("FIRECRAWL_API_KEY", "")
-    if single:
-        keys.add(single)
-    pool_path = os.getenv("FIRECRAWL_KEYS_FILE", "/opt/keys/firecrawl.json")
-    try:
-        if os.path.exists(pool_path):
-            with open(pool_path) as f:
-                data = json.load(f)
-            for entry in data.get("keys", []):
-                if entry.get("status") == "active":
-                    keys.add(entry.get("token", ""))
-    except Exception:
-        pass
-    _fc_keys = [k for k in keys if k]
-    return _fc_keys
-
-
 async def _fc_scrape(url: str, formats: list[str] = None) -> Optional[dict]:
-    """Firecrawl scrape с ротацией ключей."""
-    global _fc_idx
-    keys = _load_keys()
-    if not keys:
+    """Firecrawl scrape с ротацией ключей через UnifiedKeyPool."""
+    from src.aim.services.lib.firecrawl_key_pool import get_firecrawl_pool
+
+    pool = get_firecrawl_pool()
+    try:
+        key = await pool.get_next_key()
+    except RuntimeError:
+        logger.warning("FC scrape: all Firecrawl keys exhausted")
         return None
-    key = keys[_fc_idx % len(keys)]
-    _fc_idx += 1
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
         try:
             r = await client.post(FIRECRAWL_SCRAPE,
@@ -86,6 +55,12 @@ async def _fc_scrape(url: str, formats: list[str] = None) -> Optional[dict]:
                 json={"url": url, "formats": formats or ["markdown", "html"], "onlyMainContent": False, "waitFor": 3000})
             if r.status_code == 200:
                 return r.json().get("data", {})
+            if r.status_code == 402:
+                await pool.mark_exhausted(key, "insufficient_credits")
+                logger.warning("FC scrape: key 402 exhausted")
+            elif r.status_code == 429:
+                await pool.mark_exhausted(key, "rate_limited")
+                logger.warning("FC scrape: key 429 rate limited")
         except Exception as e:
             logger.debug("FC scrape failed %s: %s", url[:40], str(e)[:80])
     return None

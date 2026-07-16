@@ -6,7 +6,7 @@
 - scrape_doctors(url) → количество врачей (по /vrachi или /team)
 - search_instagram_handle(brand, city) → IG handle через поиск
 
-Использует UnifiedKeyPool (через FirecrawlKeyBank) для ротации ключей.
+Использует UnifiedKeyPool (через firecrawl_key_pool singleton) для ротации.
 """
 
 import asyncio
@@ -24,82 +24,18 @@ FIRECRAWL_SEARCH = "https://api.firecrawl.dev/v1/search"
 FIRECRAWL_MAP = "https://api.firecrawl.dev/v1/map"
 REQUEST_TIMEOUT = 30.0
 
-# Ключи Firecrawl — UnifiedKeyPool через env
-_fc_keys: list[str] = []
-_fc_idx = 0
-_fc_exhausted: dict[str, float] = {}  # key → expiry timestamp
-_EXHAUSTED_TTL = 3600  # 1 hour
-_fc_lock = __import__("threading").Lock()
-
-
-import time as _time
-
-
-def _load_firecrawl_keys() -> list[str]:
-    """Загружает Firecrawl ключи из env или JSON пула."""
-    global _fc_keys
-    if _fc_keys:
-        return _fc_keys
-
-    keys = set()
-    for prefix in ("FIRECRAWL_API_KEY_", "FIRECRAWL_KEY_"):
-        for i in range(1, 21):
-            k = os.getenv(f"{prefix}{i:02d}", "") or os.getenv(f"{prefix}{i}", "")
-            if k:
-                keys.add(k)
-    single = os.getenv("FIRECRAWL_API_KEY", "")
-    if single:
-        keys.add(single)
-
-    pool_path = os.getenv("FIRECRAWL_KEYS_FILE", "/opt/keys/firecrawl.json")
-    try:
-        import json
-        if os.path.exists(pool_path):
-            with open(pool_path) as f:
-                data = json.load(f)
-            for entry in data.get("keys", []):
-                if entry.get("status") == "active":
-                    keys.add(entry.get("token", ""))
-    except Exception:
-        pass
-
-    _fc_keys = [k for k in keys if k]
-    logger.info("Firecrawl enricher: %d keys loaded", len(_fc_keys))
-    return _fc_keys
-
-
-def _get_next_key() -> Optional[str]:
-    """Round-robin по активным ключам (исключая exhausted с TTL)."""
-    global _fc_idx
-    with _fc_lock:
-        now = _time.time()
-        # Clear expired exhaustion entries
-        expired = [k for k, t in _fc_exhausted.items() if t < now]
-        for k in expired:
-            del _fc_exhausted[k]
-        keys = [k for k in _load_firecrawl_keys() if k not in _fc_exhausted]
-        if not keys:
-            return None
-        key = keys[_fc_idx % len(keys)]
-        _fc_idx += 1
-        return key
-
-
-def _mark_key_exhausted(key: str):
-    """Помечает ключ исчерпанным на _EXHAUSTED_TTL секунд."""
-    with _fc_lock:
-        _fc_exhausted[key] = _time.time() + _EXHAUSTED_TTL
-    logger.warning("Firecrawl key exhausted …%s (TTL %ds, total: %d)",
-                   key[-4:], _EXHAUSTED_TTL, len(_fc_exhausted))
-
 
 async def _firecrawl_request(endpoint: str, payload: dict, max_retries: int = 3) -> Optional[dict]:
-    """Вызывает Firecrawl API с ротацией ключей."""
+    """Вызывает Firecrawl API с ротацией ключей через UnifiedKeyPool."""
+    from src.aim.services.lib.firecrawl_key_pool import get_firecrawl_pool
+
+    pool = get_firecrawl_pool()
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
         for attempt in range(max_retries):
-            key = _get_next_key()
-            if not key:
-                logger.warning("Firecrawl: no active keys available")
+            try:
+                key = await pool.get_next_key()
+            except RuntimeError:
+                logger.warning("Firecrawl: all keys exhausted — no active keys")
                 return None
             try:
                 resp = await client.post(
@@ -108,12 +44,12 @@ async def _firecrawl_request(endpoint: str, payload: dict, max_retries: int = 3)
                     json=payload,
                 )
                 if resp.status_code == 402:
-                    _mark_key_exhausted(key)
+                    await pool.mark_exhausted(key, "insufficient_credits")
                     logger.warning("Firecrawl key exhausted 402 (attempt %d)", attempt + 1)
                     continue
                 if resp.status_code == 429:
-                    # Transient rate limit — НЕ убиваем ключ, просто retry
-                    logger.warning("Firecrawl rate limited 429 (attempt %d) — retrying", attempt + 1)
+                    await pool.mark_exhausted(key, "rate_limited")
+                    logger.warning("Firecrawl rate limited 429 (attempt %d) — key paused 30min", attempt + 1)
                     continue
                 resp.raise_for_status()
                 return resp.json()
@@ -297,6 +233,32 @@ async def scrape_doctors(url: str, brand_name: str = "") -> Optional[int]:
         count = await _count_doctors_on_page(doc_url)
         if count:
             return count
+
+    # Шаг 3: Perplexity fallback — когда Firecrawl ключи исчерпаны или
+    # страница JS-heavy. Спрашиваем сколько врачей работает в клинике.
+    try:
+        from src.aim.services.lib.perplexity_client import perplexity_chat, is_configured as _ppx_ok
+        if _ppx_ok():
+            from urllib.parse import urlparse
+            domain = urlparse(url).netloc.replace("www.", "")
+            brand = domain.split(".")[0]
+            raw = await perplexity_chat(
+                [{"role": "user", "content": (
+                    f"Сколько врачей/хирургов/специалистов работает в клинике {brand}? "
+                    f"Посчитай по странице /specialisty или /vrachi сайта {domain}. "
+                    "Верни ТОЛЬКО целое число или null."
+                )}],
+                temperature=0.0,
+            )
+            import re as _re
+            numbers = _re.findall(r"\b(\d+)\b", raw.strip())
+            if numbers:
+                count = int(numbers[0])
+                if 1 <= count <= 500:
+                    logger.info("doctors_perplexity_fallback: %s → %d", domain, count)
+                    return count
+    except Exception as e:
+        logger.debug("doctors_perplexity_fallback failed: %s", e)
 
     return None
 
