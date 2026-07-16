@@ -181,6 +181,46 @@ def _street_match(addr1: str, addr2: str) -> bool:
     return True  # если не определили улицу — не блокируем
 
 
+# Карта соответствия город → ключевые слова региона в ФНС-адресе.
+# bo.nalog отдаёт region как "МОСКВА", "САНКТ-ПЕТЕРБУРГ", "МОСКОВСКАЯ" и т.д.
+_CITY_REGION_KEYWORDS: dict[str, list[str]] = {
+    "москва": ["МОСКВА", "МОСКОВСКАЯ"],
+    "санкт-петербург": ["САНКТ-ПЕТЕРБУРГ", "ЛЕНИНГРАДСКАЯ"],
+    "спб": ["САНКТ-ПЕТЕРБУРГ", "ЛЕНИНГРАДСКАЯ"],
+    "питер": ["САНКТ-ПЕТЕРБУРГ", "ЛЕНИНГРАДСКАЯ"],
+    "новосибирск": ["НОВОСИБИРСК"],
+    "екатеринбург": ["СВЕРДЛОВСК", "ЕКАТЕРИНБУРГ"],
+    "казань": ["ТАТАРСТАН", "КАЗАНЬ"],
+    "нижний новгород": ["НИЖЕГОРОДСК", "НИЖНИЙ НОВГОРОД"],
+    "краснодар": ["КРАСНОДАР"],
+    "самара": ["САМАРА"],
+    "ростов-на-дону": ["РОСТОВСК"],
+    "уфа": ["БАШКОРТОСТАН", "УФА"],
+    "красноярск": ["КРАСНОЯРСК"],
+    "воронеж": ["ВОРОНЕЖ"],
+    "пермь": ["ПЕРМСК"],
+    "волгоград": ["ВОЛГОГРАД"],
+}
+
+
+def _is_same_city(address: str, city: str) -> bool:
+    """Проверяет что ФНС-адрес конкурента в том же городе/регионе, что и клиент.
+
+    address: legal_address из ФНС (например "634029, ТОМСКАЯ, ТОМСК, ГОГОЛЯ, 65")
+    city: город клиента (например "Москва")
+
+    Возвращает True если город неизвестен или не в карте (permissive),
+    либо если адрес содержит ключевое слово региона города.
+    """
+    if not address or not city:
+        return True  # не можем проверить — пропускаем
+    keywords = _CITY_REGION_KEYWORDS.get(city.lower().strip())
+    if not keywords:
+        return True  # город не в карте — не блокируем (перmissive)
+    addr_upper = address.upper()
+    return any(kw in addr_upper for kw in keywords)
+
+
 def _is_related_entity(competitor_name: str, client_name: str) -> bool:
     """Проверяет, является ли конкурент связанным юрлицом клиента.
 
@@ -348,7 +388,9 @@ class CompetitorMatcherV2:
             return []
 
         # ── STAGE 2: Resolve brands → ИНН (bo.nalog) ──────────────────
-        resolved = await resolve_brands_batch(all_brands, max_brands=40)
+        # max_brands=25: each resolved brand costs 2 ФНС API calls in enrichment.
+        # Top-25 Perplexity brands is more than enough to pick 10 competitors.
+        resolved = await resolve_brands_batch(all_brands, max_brands=25)
         valid = [r for r in resolved if r is not None]
         rejected = len(all_brands) - len(valid)
         logger.info(
@@ -365,6 +407,20 @@ class CompetitorMatcherV2:
 
         # Dedup by ИНН
         enriched = self._dedup_by_inn(enriched)
+
+        # Geo filter: keep only competitors in the client's city/region.
+        # brand_resolver may resolve a brand to a company registered elsewhere.
+        before_geo = len(enriched)
+        enriched = [
+            c for c in enriched
+            if _is_same_city(c.profile.legal_address or "", city)
+        ]
+        geo_dropped = before_geo - len(enriched)
+        if geo_dropped:
+            logger.info(
+                "geo_filter: city=%s dropped=%d competitors from other regions",
+                city, geo_dropped,
+            )
 
         # Filter out competitors related to client (same INN, same address, or name overlap)
         if client_inn:
@@ -425,13 +481,23 @@ class CompetitorMatcherV2:
             result.extend(backfill)
             logger.info("backfill_from_okved: added %d competitors (total now %d)", len(backfill), len(result))
 
+        # ── STAGE 3.4: Deep ФНС enrichment for final top-N only ──────────
+        # Fetch registration_date + scl_count via get_organization. This is a
+        # second ФНС call per competitor, so we run it only for the final list
+        # (typically 6-10) instead of all resolved brands (up to 25).
+        await self._enrich_deep_batch(result)
+
         # ── STAGE 3.5b: Post-selection enrichment (doctors + Instagram + website) ─
+        # Budget: enrich only top-5 to keep Firecrawl scrape volume low (~26% of
+        # pipeline time was spent here on 10 competitors). Remaining competitors
+        # still have full ФНС financials — just no website/CMS enrichment.
+        _ENRICH_BUDGET = min(5, len(result))
         if result:
             from src.aim.services.lib.firecrawl_enricher import enrich_websites_batch
             await asyncio.gather(
-                self._enrich_doctors_batch(result, city, count),
-                enrich_instagram_batch(result, count, city),
-                enrich_websites_batch(result, count),
+                self._enrich_doctors_batch(result, city, _ENRICH_BUDGET),
+                enrich_instagram_batch(result, _ENRICH_BUDGET, city),
+                enrich_websites_batch(result, _ENRICH_BUDGET),
                 return_exceptions=True,
             )
 
@@ -776,8 +842,71 @@ class CompetitorMatcherV2:
                     type(e).__name__, str(e)[:100])
         return [e for e in enriched if isinstance(e, CompetitorMatch)]
 
+    async def _enrich_deep_batch(
+        self, competitors: list[CompetitorMatch]
+    ) -> None:
+        """Fetch deep ФНС org data (registration_date, scl_count) for top-N.
+
+        Modifies competitors in place. Only calls get_organization for companies
+        that don't already have registration_date (e.g. backfill results already
+        have it). Uses a semaphore to avoid hammering the ФНС API.
+        """
+        semaphore = asyncio.Semaphore(10)
+
+        async def _deep_one(comp: CompetitorMatch) -> None:
+            # Skip if already enriched or no INN
+            if comp.profile.registration_date or not comp.profile.inn:
+                return
+            async with semaphore:
+                try:
+                    # Use saved org_id if available (avoids redundant nalog.search)
+                    org_id = getattr(comp, "_org_id", None)
+                    if not org_id:
+                        results = await asyncio.to_thread(self.nalog.search, comp.profile.inn)
+                        if not results:
+                            return
+                        org_id = results[0].id
+                    org_raw = await asyncio.to_thread(
+                        self.nalog.get_organization, org_id
+                    )
+                    if org_raw and isinstance(org_raw, dict):
+                        reg = (
+                            org_raw.get("registrationDate")
+                            or org_raw.get("dtRegister")
+                            or org_raw.get("regDate")
+                        )
+                        if reg:
+                            comp.profile.registration_date = reg
+                        scl = (
+                            org_raw.get("sclCount")
+                            or org_raw.get("averageEmployees")
+                            or org_raw.get("employeeCount")
+                        )
+                        if scl is not None:
+                            try:
+                                scl_int = int(scl)
+                                if scl_int > 0:
+                                    comp.profile.employee_count = (
+                                        scl_int or comp.profile.employee_count
+                                    )
+                            except (ValueError, TypeError):
+                                pass
+                except Exception as e:
+                    logger.debug("deep_enrich failed for inn=%s: %s", comp.profile.inn, e)
+
+        await asyncio.gather(
+            *[_deep_one(c) for c in competitors],
+            return_exceptions=True,
+        )
+
     async def _enrich_one(self, resolved: ResolvedBrand) -> CompetitorMatch:
-        """Enrich a single resolved brand with ФНС financials + deep org data."""
+        """Enrich a single resolved brand with ФНС financials only (fast phase).
+
+        Deep org data (registration_date, scl_count via get_organization) is
+        deferred to _enrich_deep() which runs only for the final top-N after
+        corridor + geo filtering. This halves the ФНС API calls for large brand
+        lists (e.g. 38 brands → 38 financials instead of 38×2).
+        """
         # Get financial statements (sync → thread)
         try:
             statements = await asyncio.to_thread(
@@ -792,33 +921,9 @@ class CompetitorMatcherV2:
         trend = latest.revenue_trend if latest else ""
         profit = latest.net_profit_rub if latest else None
 
-        # ── Deep org data: registration_date + СЧЛ ──
+        # Deep org data deferred to _enrich_deep (top-N only)
         registration_date = None
-        scl_count = None  # среднесписочная численность (все сотрудники)
-        try:
-            org_raw = await asyncio.to_thread(
-                self.nalog.get_organization, resolved.org_id
-            )
-            if org_raw and isinstance(org_raw, dict):
-                # bo.nalog.gov.ru: registrationDate (подтверждено из raw dict)
-                registration_date = (
-                    org_raw.get("registrationDate")
-                    or org_raw.get("dtRegister")
-                    or org_raw.get("regDate")
-                )
-                # СЧЛ: нет в get_organization, проверяем bfo/msp категории
-                scl_count = (
-                    org_raw.get("sclCount")
-                    or org_raw.get("averageEmployees")
-                    or org_raw.get("employeeCount")
-                )
-                if scl_count is not None:
-                    try:
-                        scl_count = int(scl_count)
-                    except (ValueError, TypeError):
-                        scl_count = None
-        except Exception as e:
-            logger.debug("get_organization failed for org_id=%s: %s", resolved.org_id, e)
+        scl_count = None
 
         # ── Multi-year revenue dynamics ──
         from src.aim.services.nalog.models import compute_revenue_dynamics
@@ -868,12 +973,15 @@ class CompetitorMatcherV2:
         # Сохраняем dynamics в profile
         profile.revenue_history = dynamics.get("history", [])
 
-        return CompetitorMatch(
+        match = CompetitorMatch(
             profile=profile,
             match_reason=", ".join(reason_parts),
             data_quality=0.95 if latest else 0.6,
             total_score=1.0 if latest else 0.5,  # placeholder; revenue_proximity used for sorting
         )
+        # Save org_id for deep enrichment (avoids redundant nalog.search)
+        match._org_id = resolved.org_id  # type: ignore[attr-defined]
+        return match
 
     async def _enrich_doctors_batch(
         self,
@@ -955,28 +1063,53 @@ class CompetitorMatcherV2:
         spec = specialization or "медицина"
         # Map specializations to search terms
         search_terms_map = {
-            "пластическая хирургия": ["пластик", "хирург", "косметолог", "эстет"],
-            "косметология": ["косметолог", "эстет", "клиник"],
+            "пластическая хирургия": ["пластик", "хирург", "косметолог", "эстет", "красот", "клиник"],
+            "косметология": ["косметолог", "эстет", "клиник", "красот"],
             "стоматология": ["стоматолог", "дент", "зуб"],
             "наркология": ["нарколог", "наркот"],
             "гинекология": ["гинеколог", "женск"],
         }
         terms = search_terms_map.get(spec.lower(), ["клиник", "медиц"])
 
-        # Region code (77=Москва, 78=СПб, etc.)
-        region_map = {"москва": "77", "санкт-петербург": "78", "спб": "78"}
-        region = region_map.get((city or "").lower(), "77")
+        # bo.nalog API ignores the region query parameter — it returns companies
+        # from all regions. We must filter client-side by the `region` field.
+        # Region values for federal cities == city name (МОСКВА, САНКТ-ПЕТЕРБУРГ);
+        # for oblast cities the region is the oblast name (МОСКОВСКАЯ, etc.).
+        _CITY_REGION_MAP = {
+            "москва": ["МОСКВА", "МОСКОВСКАЯ"],
+            "санкт-петербург": ["САНКТ-ПЕТЕРБУРГ", "ЛЕНИНГРАДСКАЯ"],
+            "спб": ["САНКТ-ПЕТЕРБУРГ", "ЛЕНИНГРАДСКАЯ"],
+            "питер": ["САНКТ-ПЕТЕРБУРГ", "ЛЕНИНГРАДСКАЯ"],
+            "новосибирск": ["НОВОСИБИРСКАЯ"],
+            "екатеринбург": ["СВЕРДЛОВСКАЯ"],
+            "казань": ["ТАТАРСТАН"],
+            "нижний новгород": ["НИЖЕГОРОДСКАЯ"],
+            "краснодар": ["КРАСНОДАРСКИЙ"],
+            "самара": ["САМАРСКАЯ"],
+            "ростов-на-дону": ["РОСТОВСКАЯ"],
+            "уфа": ["БАШКОРТОСТАН"],
+            "красноярск": ["КРАСНОЯРСКИЙ"],
+            "воронеж": ["ВОРОНЕЖСКАЯ"],
+            "пермь": ["ПЕРМСКИЙ"],
+            "волгоград": ["ВОЛГОГРАДСКАЯ"],
+        }
+        city_key = (city or "").lower().strip()
+        allowed_regions = _CITY_REGION_MAP.get(city_key)
+        # Region code for the API query (best-effort; API often ignores it)
+        _region_code_map = {"москва": "77", "санкт-петербург": "78", "спб": "78"}
+        region_code = _region_code_map.get(city_key, "77")
 
         # Collect orgs from multiple broad queries
         all_orgs: dict[str, dict] = {}  # inn → org dict (dedup by INN)
+        geo_rejected = 0
         from urllib.parse import quote_plus
 
         for term in terms:
             try:
                 path = (
                     f"/advanced-search/organizations/search?"
-                    f"query={quote_plus(term)}&okved=86.&region={region}"
-                    f"&page=0&size=20"
+                    f"query={quote_plus(term)}&okved=86.&region={region_code}"
+                    f"&page=0&size=50"
                 )
                 data = await asyncio.to_thread(self.nalog._get, path)
                 for org in data.get("content", []):
@@ -985,6 +1118,13 @@ class CompetitorMatcherV2:
                         bfo = org.get("bfo") or {}
                         gain = bfo.get("gainSum") or 0
                         if gain > 0:  # only companies with actual revenue
+                            # Geo filter: API ignores region param, so verify
+                            org_region = (org.get("region") or "").upper().strip()
+                            if allowed_regions and not any(
+                                org_region.startswith(ar) for ar in allowed_regions
+                            ):
+                                geo_rejected += 1
+                                continue
                             all_orgs[inn] = {
                                 "inn": inn,
                                 "org_id": org.get("id"),
@@ -995,6 +1135,11 @@ class CompetitorMatcherV2:
                             }
             except Exception as e:
                 logger.warning("okved_registry query failed for '%s': %s", term, e)
+
+        logger.info(
+            "backfill_geo_filter: city=%s allowed_regions=%s kept=%d rejected=%d",
+            city, allowed_regions, len(all_orgs), geo_rejected,
+        )
 
         if not all_orgs:
             logger.info("backfill_from_okved: no companies found")
@@ -1019,53 +1164,33 @@ class CompetitorMatcherV2:
             len(all_orgs), len(sorted_orgs), len(selected),
         )
 
-        # Convert to CompetitorMatch — enrich each with full ФНС data
-        result: list[CompetitorMatch] = []
-        for org in selected:
+        # Convert to CompetitorMatch — fetch financials concurrently.
+        # Deep org data (registration_date, scl_count) is handled by
+        # _enrich_deep_batch() which runs after backfill — avoids duplicate
+        # get_organization calls.
+        _bf_sem = asyncio.Semaphore(10)
+
+        async def _build_match(org: dict) -> CompetitorMatch:
             org_id = org.get("org_id")
             revenue_rub = org["gain"] * 1000  # тыс.руб → RUB
             profit = None
             trend = ""
-            reg_date = None
-            scl_count = None
-            revenue_source = "estimated"  # gainSum is approximate
+            revenue_source = "estimated"
 
-            # Enrich with get_financials + get_organization (same as _enrich_one)
             if org_id:
-                try:
-                    statements = await asyncio.to_thread(
-                        self.nalog.get_financials, org_id
-                    )
-                    if statements:
-                        latest_fin = statements[0]
-                        revenue_rub = latest_fin.revenue_rub or revenue_rub
-                        profit = latest_fin.net_profit_rub
-                        trend = latest_fin.revenue_trend
-                        revenue_source = "tax_filed"
-                except Exception as e:
-                    logger.debug("backfill get_financials failed org_id=%s: %s", org_id, e)
-
-                try:
-                    org_raw = await asyncio.to_thread(
-                        self.nalog.get_organization, org_id
-                    )
-                    if org_raw and isinstance(org_raw, dict):
-                        reg_date = (
-                            org_raw.get("registrationDate")
-                            or org_raw.get("dtRegister")
+                async with _bf_sem:
+                    try:
+                        statements = await asyncio.to_thread(
+                            self.nalog.get_financials, org_id
                         )
-                        scl_count = (
-                            org_raw.get("sclCount")
-                            or org_raw.get("averageEmployees")
-                            or org_raw.get("employeeCount")
-                        )
-                        if scl_count is not None:
-                            try:
-                                scl_count = int(scl_count)
-                            except (ValueError, TypeError):
-                                scl_count = None
-                except Exception as e:
-                    logger.debug("backfill get_organization failed org_id=%s: %s", org_id, e)
+                        if statements:
+                            latest_fin = statements[0]
+                            revenue_rub = latest_fin.revenue_rub or revenue_rub
+                            profit = latest_fin.net_profit_rub
+                            trend = latest_fin.revenue_trend
+                            revenue_source = "tax_filed"
+                    except Exception as e:
+                        logger.debug("backfill get_financials failed org_id=%s: %s", org_id, e)
 
             profile = CompanyProfile(
                 inn=org["inn"],
@@ -1077,8 +1202,8 @@ class CompetitorMatcherV2:
                 revenue_trend=trend if trend else None,
                 revenue_source=revenue_source,
                 legal_address=org["address"],
-                employee_count=scl_count,
-                registration_date=reg_date,
+                employee_count=None,  # filled by _enrich_deep_batch
+                registration_date=None,  # filled by _enrich_deep_batch
                 data_source="okved_registry",
                 confidence=0.85 if revenue_source == "tax_filed" else 0.7,
             )
@@ -1087,17 +1212,20 @@ class CompetitorMatcherV2:
                 reason += f", прибыль {_format_revenue(profit)}"
             if trend and trend in _TREND_RU:
                 reason += f", тренд: {_TREND_RU[trend]}"
-            if reg_date:
-                reason += f", рег: {reg_date[:4]}"
-            if scl_count:
-                reason += f", СЧЛ: {scl_count}"
 
-            result.append(CompetitorMatch(
+            return CompetitorMatch(
                 profile=profile,
                 match_reason=reason,
                 data_quality=0.8 if revenue_source == "tax_filed" else 0.6,
                 total_score=0.5,
-            ))
+            )
+
+        result = list(await asyncio.gather(
+            *[_build_match(org) for org in selected],
+            return_exceptions=True,
+        ))
+        # Filter out exceptions
+        result = [r for r in result if isinstance(r, CompetitorMatch)]
 
         return result
 

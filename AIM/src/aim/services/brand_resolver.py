@@ -538,3 +538,4 @@ async def resolve_brands_batch(
 
     # Convert exceptions to None
     return [r if isinstance(r, ResolvedBrand) else None for r in results]
+
