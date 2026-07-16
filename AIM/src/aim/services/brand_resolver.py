@@ -382,27 +382,24 @@ async def _scrape_inn_from_website(website_url: str) -> Optional[str]:
     """
     import httpx  # lazy import
 
-    # Загружаем Firecrawl ключи
-    fc_key = _get_firecrawl_key()
-    if not fc_key:
-        return None
-
     inn_patterns = [
         re.compile(r"[Ии][Нн][Нн][^0-9]*?(\d{10})"),  # ИНН 1234567890
         re.compile(r"INN[^0-9]*?(\d{10})", re.I),       # INN: 1234567890
     ]
 
+    from src.aim.services.lib.firecrawl_enricher import _firecrawl_request, FIRECRAWL_SCRAPE
+
     async with httpx.AsyncClient(timeout=15) as http:  # 15s per-request, 20s aggregate
         # Стратегические URL для проверки
         candidate_urls = [website_url]  # главная
 
-        # Шаг 1: скрапить главную, найти ссылки на политику/реквизиты
+        # Шаг 1: скрапить главную через UnifiedKeyPool (ротация + exhaustion tracking)
         try:
-            r = await http.post("https://api.firecrawl.dev/v1/scrape",
-                headers={"Authorization": f"Bearer {fc_key}", "Content-Type": "application/json"},
-                json={"url": website_url, "formats": ["markdown"], "onlyMainContent": False, "waitFor": 3000})
-            if r.status_code == 200:
-                md = r.json().get("data", {}).get("markdown", "")
+            result = await _firecrawl_request(FIRECRAWL_SCRAPE, {
+                "url": website_url, "formats": ["markdown"], "onlyMainContent": False, "waitFor": 3000,
+            })
+            if result and result.get("success", True):
+                md = result.get("data", {}).get("markdown", "")
                 # ИНН на главной?
                 for pat in inn_patterns:
                     m = pat.search(md)
@@ -430,11 +427,11 @@ async def _scrape_inn_from_website(website_url: str) -> Optional[str]:
         # Шаг 2: скрапить каждую кандидатную страницу (максимум 3 — экономия ключей)
         for curl in candidate_urls[1:4]:  # пропускаем главную (уже проверили)
             try:
-                r = await http.post("https://api.firecrawl.dev/v1/scrape",
-                    headers={"Authorization": f"Bearer {fc_key}", "Content-Type": "application/json"},
-                    json={"url": curl, "formats": ["markdown"], "onlyMainContent": False})
-                if r.status_code == 200:
-                    md = r.json().get("data", {}).get("markdown", "")
+                result = await _firecrawl_request(FIRECRAWL_SCRAPE, {
+                    "url": curl, "formats": ["markdown"], "onlyMainContent": False,
+                })
+                if result and result.get("success", True):
+                    md = result.get("data", {}).get("markdown", "")
                     for pat in inn_patterns:
                         m = pat.search(md)
                         if m:
@@ -443,17 +440,6 @@ async def _scrape_inn_from_website(website_url: str) -> Optional[str]:
                 continue
 
     return None
-
-
-def _get_firecrawl_key() -> Optional[str]:
-    """Возвращает первый доступный Firecrawl ключ."""
-    for prefix in ("FIRECRAWL_API_KEY_", "FIRECRAWL_KEY_"):
-        for i in range(1, 21):
-            k = os.getenv(f"{prefix}{i:02d}", "") or os.getenv(f"{prefix}{i}", "")
-            if k:
-                return k
-    k = os.getenv("FIRECRAWL_API_KEY", "")
-    return k if k else None
 
 
 async def _validate_inn_in_fns(

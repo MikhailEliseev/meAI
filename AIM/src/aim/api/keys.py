@@ -32,12 +32,10 @@ async def keys_health():
     except Exception as e:
         result["apify"] = {"error": str(e)}
 
-    # Firecrawl (lazy init)
+    # Firecrawl (singleton — НЕ создавать новый пул на каждый запрос)
     try:
-        import os
-        from src.aim.services.key_pool import UnifiedKeyPool
-        fc_path = os.getenv("FIRECRAWL_KEYS_FILE", "/opt/keys/firecrawl.json")
-        fc_pool = UnifiedKeyPool("firecrawl", fc_path)
+        from src.aim.services.lib.firecrawl_key_pool import get_firecrawl_pool
+        fc_pool = get_firecrawl_pool()
         result["firecrawl"] = fc_pool.get_stats()
     except Exception as e:
         result["firecrawl"] = {"error": str(e)}
