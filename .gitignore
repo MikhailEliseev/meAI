@@ -131,3 +131,5 @@ med-det-report-v2.png
 .dockerignore
 hermes-backup-*/*.tar.gz
 hermes-backup-*/
+meAI_1-backups/
+meAI_research/
