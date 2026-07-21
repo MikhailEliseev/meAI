@@ -153,12 +153,30 @@ async def handle_run_review_platforms(url: str = "", company_name: str = "", cit
             "reviews": gis2_result.get("reviews", 0),
         }
 
-    # Темы из реальных текстов отзывов Яндекса (2ГИС тексты не отдаёт)
-    all_reviews = []
-    if yandex_result and yandex_result.get("review_texts"):
-        all_reviews.extend(yandex_result["review_texts"])
+    # Темы отзывов: приоритет — структурированные аспекты Яндекса (точные),
+    # fallback — извлечение из текстов отзывов через эвристику
+    praise: list[str] = []
+    criticism: list[str] = []
 
-    praise, criticism = _extract_themes(all_reviews)
+    # Яндекс отдаёт структурированные аспекты: [{name: "Персонал", count: 294}]
+    if yandex_result and yandex_result.get("aspects"):
+        for aspect in yandex_result["aspects"][:6]:
+            name = aspect.get("name", "")
+            count = aspect.get("count", 0)
+            if name and count > 0:
+                praise.append(f"{name} ({count} упоминаний)")
+
+    # Fallback: эвристика по текстам отзывов (если аспектов нет)
+    if not praise:
+        all_reviews = []
+        if yandex_result and yandex_result.get("review_texts"):
+            all_reviews.extend(yandex_result["review_texts"])
+        if gis2_result and gis2_result.get("review_texts"):
+            all_reviews.extend(gis2_result["review_texts"])
+        praise, criticism = _extract_themes(all_reviews)
+
+    # Нейросводка Яндекса (AI-резюме отзывов от самой площадки)
+    neuro_summary = yandex_result.get("neuro_summary", "") if yandex_result else ""
 
     result = {
         "clinic": company_name or url,
@@ -166,6 +184,7 @@ async def handle_run_review_platforms(url: str = "", company_name: str = "", cit
         "praise_summary": " | ".join(praise) if praise else "",
         "criticism_summary": " | ".join(criticism) if criticism else "",
         "reputation_summary": _build_summary(yandex_result, gis2_result, company_name or url),
+        "neuro_summary": neuro_summary,
         "source": "apify",
         "searched_at": time.strftime("%Y-%m-%d %H:%M"),
     }

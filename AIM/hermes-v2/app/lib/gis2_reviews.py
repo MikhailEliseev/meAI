@@ -1,8 +1,13 @@
-"""2ГИС reviews через Apify actor (m_mamaev/2gis-places-scraper).
+"""2ГИС places через Apify actor (m_mamaev/2gis-places-scraper).
 
-Прямой скрапинг рейтингов с 2ГИС — часть гибридного подхода для блока отзывов.
-Аналогичен yandex_reviews.py, но проще: 2ГИС actor возвращает place data
-(рейтинг + кол-во отзывов), без глубокого парсинга текстов отзывов.
+Прямой скрапинг рейтингов + отзывов с 2ГИС — часть гибридного подхода для
+блока отзывов. Этот actor сам отдаёт тексты отзывов через maxReviewsPerPlace.
+
+Input schema (проверено 21 июля 2026 через API):
+  - query: array — поисковые запросы
+  - locationQuery: string — город
+  - maxItems: int — лимит результатов
+  - maxReviewsPerPlace: int — сколько отзывов тянуть ($)
 
 Ротация ключей через UnifiedKeyPool (14 ключей).
 """
@@ -15,17 +20,22 @@ from app.lib.apify_client import APIFY_BASE, REQUEST_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
-# m_mamaev/2gis-places-scraper — структурированные данные заведений 2ГИС
+# m_mamaev/2gis-places-scraper — структурированные данные + отзывы 2ГИС
 GIS2_ACTOR_ID = "m_mamaev~2gis-places-scraper"
 
 _POLL_ATTEMPTS = 12
 _POLL_INTERVAL = 5
 
 
-async def _run_actor(api_key: str, search_query: str) -> dict | None:
+async def _run_actor(api_key: str, query: str, location: str) -> dict | None:
     """Запустить Apify actor для 2ГИС → дождаться → вернуть первый item."""
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
-        run_input = {"search": search_query, "limit": 1}
+        run_input = {
+            "query": [query],
+            "locationQuery": location or "Москва",
+            "maxItems": 1,
+            "maxReviewsPerPlace": 20,  # тащим до 20 отзывов для тем
+        }
         start_url = f"{APIFY_BASE}/acts/{GIS2_ACTOR_ID}/runs?token={api_key}"
         try:
             start_resp = await client.post(start_url, json=run_input)
@@ -66,12 +76,12 @@ async def _run_actor(api_key: str, search_query: str) -> dict | None:
         return items[0] if items else None
 
 
-def _normalize(raw: dict, search_query: str) -> dict | None:
+def _normalize(raw: dict, query: str) -> dict | None:
     """Привести ответ 2ГИС к единому формату."""
     if not raw:
         return None
 
-    rating = raw.get("rating") or raw.get("rating_value")
+    rating = raw.get("rating") or raw.get("totalScore")
     if rating is None:
         return None
 
@@ -80,29 +90,44 @@ def _normalize(raw: dict, search_query: str) -> dict | None:
     except (TypeError, ValueError):
         return None
 
-    reviews_count = raw.get("reviews_count") or raw.get("reviewsCount") or 0
+    reviews_count = raw.get("reviewCount") or raw.get("ratingCount") or raw.get("reviewsCount") or 0
     try:
         reviews_count = int(reviews_count)
     except (TypeError, ValueError):
         reviews_count = 0
 
+    # 2ГИС actor отдаёт тексты отзывов через reviews
+    raw_reviews = raw.get("reviews") or []
+    review_texts = []
+    for r in raw_reviews[:20]:
+        if isinstance(r, dict):
+            text = r.get("text") or r.get("comment") or ""
+        else:
+            text = str(r)
+        if text:
+            review_texts.append(text.strip()[:500])
+
     return {
         "rating": rating,
         "reviews": reviews_count,
-        "review_texts": [],  # 2ГИС actor не отдаёт тексты отзывов
-        "address": raw.get("address") or raw.get("full_address") or "",
-        "categories": raw.get("categories") or [],
-        "name": raw.get("name") or search_query,
+        "review_texts": review_texts,
+        "address": raw.get("address") or raw.get("fullAddress") or "",
+        "categories": raw.get("rubrics") or raw.get("categories") or [],
+        "name": raw.get("name") or raw.get("title") or query,
         "source": "2gis",
     }
 
 
 async def search(company_name: str, city: str, url: str | None = None) -> dict | None:
-    """Найти клинику на 2ГИС → точный рейтинг + кол-во отзывов.
+    """Найти клинику на 2ГИС → точный рейтинг + отзывы.
+
+    Args:
+        company_name: название клиники
+        city: город
+        url: (не используется, для совместимости)
 
     Returns:
-        {rating, reviews, review_texts: [], address, categories, name, source}
-        или None если не найдено.
+        {rating, reviews, review_texts, address, name, source} или None.
     """
     if not company_name and not url:
         return None
@@ -110,8 +135,8 @@ async def search(company_name: str, city: str, url: str | None = None) -> dict |
     from app.lib.apify_client import get_apify_pool
     pool = get_apify_pool()
 
-    location = f", {city}" if city else ""
-    search_query = f"{company_name}{location}" if company_name else url or ""
+    query = company_name or url or ""
+    location = city or "Москва"
 
     last_error = None
     for attempt in range(5):
@@ -121,17 +146,18 @@ async def search(company_name: str, city: str, url: str | None = None) -> dict |
             logger.error("gis2_reviews: all Apify keys exhausted")
             return None
         try:
-            raw = await _run_actor(key, search_query)
+            raw = await _run_actor(key, query, location)
             if raw:
-                normalized = _normalize(raw, search_query)
+                normalized = _normalize(raw, query)
                 if normalized:
                     logger.info(
-                        "gis2_reviews OK: %s — rating=%s reviews=%d",
-                        search_query, normalized["rating"], normalized["reviews"],
+                        "gis2_reviews OK: %s — rating=%s reviews=%d texts=%d",
+                        query, normalized["rating"], normalized["reviews"],
+                        len(normalized["review_texts"]),
                     )
                     return normalized
                 return None
-            logger.info("gis2: not found: %s", search_query)
+            logger.info("gis2: not found: %s", query)
             return None
         except httpx.HTTPStatusError as e:
             if e.response.status_code in (402, 429):
@@ -142,11 +168,11 @@ async def search(company_name: str, city: str, url: str | None = None) -> dict |
                     key[:20], e.response.status_code, attempt + 1,
                 )
                 continue
-            last_error = str(e)
-            logger.warning("gis2: key %s… failed: %s", key[:20], e)
+            last_error = f"{e.response.status_code}: {e.response.text[:200]}"
+            logger.warning("gis2: key %s… failed: %s", key[:20], last_error)
         except Exception as e:
             last_error = str(e)
             logger.warning("gis2: key %s… failed: %s", key[:20], e)
 
-    logger.error("gis2_reviews: all attempts failed: %s — %s", search_query, last_error)
+    logger.error("gis2_reviews: all attempts failed: %s — %s", query, last_error)
     return None

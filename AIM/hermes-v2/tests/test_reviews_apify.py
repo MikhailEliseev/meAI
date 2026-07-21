@@ -73,66 +73,103 @@ class _SequenceResponse:
 
 
 def _patch_ac_httpx(monkeypatch, module, responses):
-    """Подменить httpx.AsyncClient в модуле на _SequenceResponse."""
-    seq = _SequenceResponse(responses)
-    monkeypatch.setattr(module.httpx, "AsyncClient", lambda *a, **kw: seq)
-    return seq
+    """Подменить httpx.AsyncClient в модуле на _SequenceResponse.
+
+    responses — список ответов (post/get). Каждый новый AsyncClient()
+    продолжает с того места, где остановился предыдущий (общий счётчик),
+    что важно для тестов ротации ключей, где _run_actor вызывается多次.
+    """
+    shared_seq = {"responses": list(responses), "idx": 0}
+
+    class _SharedSequenceResponse(_SequenceResponse):
+        def __init__(self):
+            self._responses = shared_seq["responses"]
+            self._idx = shared_seq["idx"]
+            self.calls = []
+
+        def _next(self):
+            shared_seq["idx"] = self._idx
+            return super()._next()
+
+    def factory(*a, **kw):
+        return _SharedSequenceResponse()
+
+    monkeypatch.setattr(module.httpx, "AsyncClient", factory)
+    return shared_seq
 
 
 # --- Yandex нормализация ---------------------------------------------------
 
 class TestYandexNormalize:
     def test_basic_rating_and_reviews(self):
-        raw = {"rating": 4.2, "reviewsCount": 47, "address": "СПб, Невский 1"}
-        result = yandex_reviews._normalize(raw, "ARclinic, СПб")
+        """Реальный формат m_mamaev/yandex-maps-places-scraper (проверено 21 июля)."""
+        raw = {"totalScore": 5, "ratingCount": 562, "reviewsCount": 311, "address": "Верейская 44"}
+        result = yandex_reviews._normalize(raw, "ARclinic")
         assert result is not None
-        assert result["rating"] == 4.2
-        assert result["reviews"] == 47
-        assert result["address"] == "СПб, Невский 1"
+        assert result["rating"] == 5.0
+        assert result["reviews"] == 562  # ratingCount берём как основное
+        assert result["address"] == "Верейская 44"
         assert result["source"] == "yandex_maps"
 
-    def test_alternative_field_names(self):
-        """Actor может вернуть ratingValue/reviewsCount вместо rating."""
-        raw = {"ratingValue": "3.8", "reviewsCount": "12", "title": "СтомСмайл"}
+    def test_aspects_and_neurosummary(self):
+        """Actor отдаёт структурированные аспекты + AI-сводку от Яндекса."""
+        raw = {
+            "totalScore": 4.8,
+            "ratingCount": 100,
+            "reviewAspects": [
+                {"name": "Персонал", "count": 294},
+                {"name": "Атмосфера", "count": 64},
+            ],
+            "neurosummary": "Отличная клиника, компетентные врачи",
+            "title": "АРклиник",
+        }
+        result = yandex_reviews._normalize(raw, "test")
+        assert len(result["aspects"]) == 2
+        assert result["aspects"][0] == {"name": "Персонал", "count": 294}
+        assert "Отличная клиника" in result["neuro_summary"]
+        assert result["name"] == "АРклиник"
+
+    def test_alternative_rating_field(self):
+        """Если totalScore нет — пробуем rating."""
+        raw = {"rating": "3.8", "ratingCount": "12", "title": "СтомСмайл"}
         result = yandex_reviews._normalize(raw, "СтомСмайл")
         assert result["rating"] == 3.8
         assert result["reviews"] == 12
-        assert result["name"] == "СтомСмайл"
-
-    def test_review_texts_extracted(self):
-        raw = {
-            "rating": 4.5,
-            "reviewsCount": 100,
-            "reviews": [
-                {"text": "Спасибо большое, вылечили зуб!"},
-                {"text": "Ужас, грубое отношение."},
-                {"comment": "Отличный врач, рекомендую."},
-            ],
-        }
-        result = yandex_reviews._normalize(raw, "test")
-        assert len(result["review_texts"]) == 3
-        assert "Спасибо" in result["review_texts"][0]
 
     def test_no_rating_returns_none(self):
         """Без рейтинга отзыв бесполезен — возвращаем None."""
-        assert yandex_reviews._normalize({"reviewsCount": 5}, "test") is None
+        assert yandex_reviews._normalize({"ratingCount": 5}, "test") is None
         assert yandex_reviews._normalize({}, "test") is None
         assert yandex_reviews._normalize(None, "test") is None
 
     def test_invalid_rating_type_returns_none(self):
-        assert yandex_reviews._normalize({"rating": "не число"}, "test") is None
+        assert yandex_reviews._normalize({"totalScore": "не число"}, "test") is None
 
 
 # --- 2ГИС нормализация -----------------------------------------------------
 
 class TestGis2Normalize:
     def test_basic(self):
-        raw = {"rating": 4.5, "reviews_count": 23, "name": "ARclinic"}
+        """2gis-places-scraper: rating + reviewCount + reviews[].text."""
+        raw = {"rating": 4.5, "reviewCount": 23, "name": "ARclinic"}
         result = gis2_reviews._normalize(raw, "ARclinic")
         assert result["rating"] == 4.5
         assert result["reviews"] == 23
-        assert result["review_texts"] == []  # 2ГИС не отдаёт тексты
         assert result["source"] == "2gis"
+
+    def test_reviews_texts_extracted(self):
+        """2ГИС actor отдаёт тексты отзывов через reviews[].text."""
+        raw = {
+            "rating": 4.0,
+            "reviewCount": 2,
+            "reviews": [
+                {"text": "Хороший врач"},
+                {"text": "Долгое ожидание"},
+            ],
+        }
+        result = gis2_reviews._normalize(raw, "test")
+        assert len(result["review_texts"]) == 2
+        assert "Хороший врач" in result["review_texts"][0]
 
     def test_no_rating(self):
         assert gis2_reviews._normalize({"name": "test"}, "test") is None
@@ -283,19 +320,10 @@ class TestCache:
 
 class TestKeyRotation:
     def test_429_triggers_next_key(self, monkeypatch):
-        """402/429 на первом ключе → берётся второй → успех."""
-        # первый start run → 429, второй start run → 200
-        responses = [
-            _FakeResponse({"error": "rate limited"}, status_code=429),  # первый POST
-            _FakeResponse({"data": {"id": "run1"}}, 200),                # второй POST
-            _FakeResponse({"data": {"status": "SUCCEEDED", "defaultDatasetId": "ds1"}}, 200),
-            _FakeResponse([{"rating": 4.0, "reviewsCount": 10}], 200),   # dataset items
-        ]
-        _patch_ac_httpx(monkeypatch, yandex_reviews, responses)
-
-        # мок пула ключей — патчим В apify_client (откуда импортирует search)
+        """402/429 на первом ключе → mark_exhausted → второй ключ → успех."""
         from app.lib import apify_client
 
+        # Мок пула: 2 ключа
         class _FakePool:
             def __init__(self):
                 self._keys = ["key1", "key2"]
@@ -313,13 +341,40 @@ class TestKeyRotation:
         fake_pool = _FakePool()
         monkeypatch.setattr(apify_client, "get_apify_pool", lambda: fake_pool)
 
+        # Мок httpx: различаем по token в URL — key1 → 429, key2 → успех
+        class _TokenAwareClient:
+            def __init__(self, *a, **kw):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *exc):
+                return False
+
+            async def post(self, url, json=None, **kw):
+                if "key1" in url:
+                    raise httpx.HTTPStatusError(
+                        "rate limited", request=None,
+                        response=_FakeResponse({"error": "rl"}, status_code=429),
+                    )
+                return _FakeResponse({"data": {"id": "run_ok"}}, 200)
+
+            async def get(self, url, **kw):
+                if "run_ok" in url and "status" not in url:
+                    return _FakeResponse({"data": {"status": "SUCCEEDED", "defaultDatasetId": "ds1"}}, 200)
+                if "datasets" in url:
+                    return _FakeResponse([{"totalScore": 4.0, "ratingCount": 10}], 200)
+                return _FakeResponse({"data": {"status": "SUCCEEDED"}}, 200)
+
+        monkeypatch.setattr(yandex_reviews.httpx, "AsyncClient", _TokenAwareClient)
+
         import asyncio
         result = asyncio.run(yandex_reviews.search("Test", "Москва"))
 
         # первый ключ помечен исчерпанным
         assert len(fake_pool.exhausted) == 1
-        assert fake_pool.exhausted[0][0] == "key1"
-        assert fake_pool.exhausted[0][1] == "rate_limited"
+        assert fake_pool.exhausted[0] == ("key1", "rate_limited")
         # результат получен со второго ключа
         assert result is not None
         assert result["rating"] == 4.0
