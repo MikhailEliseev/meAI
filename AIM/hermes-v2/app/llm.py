@@ -247,7 +247,14 @@ def _build_formatted_blocks(
             profile_result = json.dumps(pdata, ensure_ascii=False) if isinstance(profile_result, str) else pdata
         except (json.JSONDecodeError, TypeError):
             pass
-        profile_md, profile_data = format_profile(profile_result)
+        # Передаём выручку/прибыль/trend из profile_cache (от auto-call company_financials)
+        # в format_profile — иначе обогащение мёртвым кодом (выручка не доходит до блока 01).
+        client_data = {
+            k: profile_cache[k]
+            for k in ("revenue", "profit", "revenue_trend")
+            if profile_cache.get(k)
+        }
+        profile_md, profile_data = format_profile(profile_result, client_data=client_data or None)
         if profile_md:
             blocks.append(profile_md)
 
@@ -600,8 +607,16 @@ async def chat_with_tools(history: list[dict]):
                             )
                         except (json.JSONDecodeError, TypeError):
                             pass
+                        # Честное сообщение: проверяем что ФНС реально отдала выручку,
+                        # иначе при aim-app 404 / ненайденном ИНН лжём про "успех".
+                        try:
+                            fin_data_check = json.loads(fin_result)
+                            has_revenue = bool(fin_data_check.get("revenue"))
+                        except (json.JSONDecodeError, TypeError):
+                            has_revenue = False
                         yield ("tool_result", "company_financials", fin_result,
-                               "✅ Финансы из ФНС получены")
+                               "✅ Финансы из ФНС получены" if has_revenue
+                               else "⚠️ Финансы из ФНС недоступны")
                 except Exception as e:
                     logger.warning("auto company_financials failed: %s", e)
 

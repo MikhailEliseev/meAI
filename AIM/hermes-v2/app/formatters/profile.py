@@ -80,7 +80,7 @@ def format_profile(result: str, client_data: dict | None = None) -> tuple[str, d
 
     # Merge client_data (from pipeline) если есть — они точнее
     if client_data:
-        for key in ("revenue", "profit", "registration_date", "employee_count", "okved"):
+        for key in ("revenue", "profit", "revenue_trend", "registration_date", "employee_count", "okved"):
             if client_data.get(key) and not data.get(key):
                 data[key] = client_data[key]
 

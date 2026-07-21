@@ -71,6 +71,32 @@ class TestAutoCallFinancials:
         client_inn = comp_data.get("client_inn")
         assert not client_inn, "Пустой ИНН не должен триггерить financials"
 
+    def test_financials_reach_profile_block(self):
+        """После auto-call выручка из ФНС должна попасть в блок 01 (профиль)."""
+        from app.llm import _build_formatted_blocks
+
+        # Симулируем post-auto-call состояние:
+        # - find_competitors отдал client_inn
+        # - company_financials отдал выручку, и она легла в profile_cache
+        collected = {
+            "find_competitors": '{"client_inn": "7801234567", "competitors": []}',
+            "company_financials": '{"inn": "7801234567", "revenue": 50000000, "name": "Test"}',
+        }
+        profile_cache = {
+            "_raw_result": '{"city": "Москва", "specialization": "стоматология"}',
+            "revenue": 50000000,
+            "revenue_trend": "growing",
+            "company_name": "Test Clinic",
+        }
+        blocks = _build_formatted_blocks(collected, profile_cache)
+        # Блок 01 (профиль) — должен содержать выручку
+        profile_block = blocks[0] if blocks else ""
+        # _format_money форматирует 50000000 как "50 млн ₽"
+        assert "50" in profile_block or "млн" in profile_block, (
+            f"Выручка из financials должна попасть в профиль-блок. "
+            f"Got: {profile_block[:200]}"
+        )
+
 
 from app.tools.run_review_platforms import handle_run_review_platforms, _build_summary
 
