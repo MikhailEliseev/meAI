@@ -1,5 +1,0 @@
-Backup created: 20260515_094249
-Database: aim_db_20260515_094249.db.gz
-Config: config_20260515_094249.tar.gz
-Vaults: vaults_20260515_094249.tar.gz
-Logs: logs_20260515_094249.tar.gz
