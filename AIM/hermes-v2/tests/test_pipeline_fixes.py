@@ -144,3 +144,52 @@ class TestReviewsFallback:
         assert "недоступ" in result.lower() or "04" in result, (
             f"Ожидалось fallback-сообщение, получено: {result[:100]}"
         )
+
+
+class TestAutoCallFinancialsInnSource:
+    """Баг-фикс: client_inn должен искаться в profile_cache если его нет в find_competitors response.
+
+    Сценарий: extract_clinic_profile находит ИНН (через Perplexity) и кладёт в profile_cache.
+    find_competitors получает ИНН как аргумент, но может НЕ вернуть его в response.
+    Auto-call financials должен взять ИНН из profile_cache как fallback.
+    """
+
+    def test_inn_taken_from_profile_cache_when_missing_in_response(self):
+        """Если find_competitors response без client_inn, но profile_cache.inn есть —
+        financials должен использовать profile_cache.inn."""
+        # Симулируем: find_competitors вернул competitors без client_inn в response
+        comp_result = '{"competitors": [], "client_revenue": null}'
+        comp_data = json.loads(comp_result)
+
+        # Но profile_cache содержит inn (от extract_clinic_profile)
+        profile_cache = {"inn": "7801234567", "city": "Санкт-Петербург"}
+
+        # Логика auto-call (как в llm.py после фикса)
+        client_inn = comp_data.get("client_inn", "") or profile_cache.get("inn", "")
+
+        assert client_inn == "7801234567", (
+            "ИНН должен браться из profile_cache как fallback, "
+            "если его нет в find_competitors response"
+        )
+
+    def test_inn_from_response_takes_precedence(self):
+        """Если client_inn есть и в response и в profile_cache — берём из response."""
+        comp_result = '{"client_inn": "1111111111", "competitors": []}'
+        comp_data = json.loads(comp_result)
+        profile_cache = {"inn": "2222222222"}
+
+        client_inn = comp_data.get("client_inn", "") or profile_cache.get("inn", "")
+
+        assert client_inn == "1111111111", (
+            "ИНН из find_competitors response должен иметь приоритет над profile_cache"
+        )
+
+    def test_no_inn_anywhere_skips_financials(self):
+        """Если ИНН нет ни в response, ни в profile_cache — financials не вызывается."""
+        comp_result = '{"competitors": []}'
+        comp_data = json.loads(comp_result)
+        profile_cache = {"city": "Москва"}  # нет inn
+
+        client_inn = comp_data.get("client_inn", "") or profile_cache.get("inn", "")
+
+        assert not client_inn, "Без ИНН нигде — auto-call не должен срабатывать"

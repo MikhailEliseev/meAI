@@ -295,9 +295,11 @@ def _build_formatted_blocks(
 
 def _format_reviews_block(reviews_raw: str) -> str:
     """Форматирует отзывы с площадок в Markdown блок."""
+    logger.info("=== DEBUG _format_reviews_block INPUT: %d chars ===", len(reviews_raw or ""))
     try:
         data = json.loads(reviews_raw) if isinstance(reviews_raw, str) else reviews_raw
     except (json.JSONDecodeError, TypeError):
+        logger.warning("=== DEBUG _format_reviews_block: JSON parse failed ===")
         return ""
 
     platforms = data.get("platforms", {})
@@ -363,7 +365,13 @@ def _format_reviews_block(reviews_raw: str) -> str:
     if summary:
         lines.append(f"\n**📋 Репутация:** {summary[:300]}\n")
 
-    return "\n".join(lines)
+    result_md = "\n".join(lines)
+    logger.info(
+        "=== DEBUG _format_reviews_block OUTPUT: %d chars, has_newlines=%s ===\n%s",
+        len(result_md), "\\n" if "\n" in result_md else "NO",
+        result_md[:300].replace("\n", "\\n"),
+    )
+    return result_md
 
 
 def _format_audit_block(audit: dict) -> str:
@@ -574,16 +582,22 @@ async def chat_with_tools(history: list[dict]):
                             "content": _filtered_tool_content(tool_name, result_str),
                         })
 
-            # ── AUTO-CALL: company_financials если есть client_inn из find_competitors ──
-            # Perplexity (extract_clinic_profile) почти не находит ИНН, но find_competitors
-            # (через aim-app→ФНС) часто определяет client_inn. Используем его для финансов.
+            # ── AUTO-CALL: company_financials если есть client_inn ──
+            # Perplexity (extract_clinic_profile) почти не находит ИНН в response,
+            # но может вернуть его в profile_cache. find_competitors (через aim-app)
+            # тоже может вернуть client_inn в response. Проверяем оба источника.
             if (
                 "find_competitors" in collected_results
                 and "company_financials" not in collected_results
             ):
                 try:
                     comp_data = json.loads(collected_results["find_competitors"])
-                    client_inn = comp_data.get("client_inn", "")
+                    # ИНН может быть в response find_competitors ИЛИ в profile_cache
+                    # (extract_clinic_profile записывает его туда через auto-inject)
+                    client_inn = (
+                        comp_data.get("client_inn", "")
+                        or profile_cache.get("inn", "")
+                    )
                     if client_inn and len(client_inn) >= 10:
                         yield ("tool_start", "company_financials",
                                {"inn": client_inn}, "💰 Запрашиваю выручку из ФНС…")
@@ -662,7 +676,17 @@ async def chat_with_tools(history: list[dict]):
                     formatted_shown = True
                 # Показываем таблицы пользователю (как formatted event —
                 # отличается от LLM text, чтобы main.py мог сохранить в историю)
-                for block in formatted_blocks:
+                logger.info(
+                    "=== DEBUG FORMATTED BLOCKS: %d blocks ===", len(formatted_blocks)
+                )
+                for i, block in enumerate(formatted_blocks):
+                    # Логируем первые 200 символов + наличие переносов
+                    has_newlines = "\\n" if "\n" in block else "NO_NEWLINES"
+                    logger.info(
+                        "=== DEBUG BLOCK[%d] (%s, %d chars, %s) ===\n%s",
+                        i, type(block).__name__, len(block), has_newlines,
+                        block[:200].replace("\n", "\\n"),
+                    )
                     yield ("formatted", block + "\n\n")
 
                 # Instruction для LLM: данные выше — факты, делай только выводы
