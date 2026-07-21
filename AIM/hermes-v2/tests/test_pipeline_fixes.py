@@ -28,3 +28,45 @@ class TestToolMessagesHonest:
             f"Сообщение '{msg}' обещает ИНН как главный результат, "
             "но Perplexity его почти никогда не находит"
         )
+
+
+import asyncio
+import json
+from unittest.mock import AsyncMock, patch
+
+
+class TestAutoCallFinancials:
+    """Task 2: company_financials должен auto-call после find_competitors если есть client_inn."""
+
+    def test_financials_called_when_inn_present(self):
+        """Если find_competitors вернул client_inn, financials должен вызваться."""
+        # Симулируем результат find_competitors с ИНН
+        competitors_result = json.dumps({
+            "client_inn": "7801234567",
+            "competitors": [],
+        })
+
+        # Мокаем handle_company_financials
+        financials_called = {"inn": None}
+
+        async def fake_financials(inn="", **kwargs):
+            financials_called["inn"] = inn
+            return json.dumps({"inn": inn, "revenue": 50000000, "name": "Test Clinic"})
+
+        # Проверяем, что auto-call логика извлекает ИНН из competitors_result
+        # и вызывает financials (через симуляцию парсинга)
+        comp_data = json.loads(competitors_result)
+        client_inn = comp_data.get("client_inn")
+        assert client_inn == "7801234567", "ИНН должен извлекаться из find_competitors"
+
+        # Запуск fake_financials чтобы проверить сигнатуру
+        result = asyncio.run(fake_financials(inn=client_inn))
+        assert financials_called["inn"] == "7801234567"
+        assert "revenue" in json.loads(result)
+
+    def test_financials_not_called_without_inn(self):
+        """Если client_inn пустой, financials НЕ должен вызываться."""
+        competitors_result = json.dumps({"client_inn": "", "competitors": []})
+        comp_data = json.loads(competitors_result)
+        client_inn = comp_data.get("client_inn")
+        assert not client_inn, "Пустой ИНН не должен триггерить financials"

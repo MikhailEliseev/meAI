@@ -555,6 +555,44 @@ async def chat_with_tools(history: list[dict]):
                             "content": _filtered_tool_content(tool_name, result_str),
                         })
 
+            # ── AUTO-CALL: company_financials если есть client_inn из find_competitors ──
+            # Perplexity (extract_clinic_profile) почти не находит ИНН, но find_competitors
+            # (через aim-app→ФНС) часто определяет client_inn. Используем его для финансов.
+            if (
+                "find_competitors" in collected_results
+                and "company_financials" not in collected_results
+            ):
+                try:
+                    comp_data = json.loads(collected_results["find_competitors"])
+                    client_inn = comp_data.get("client_inn", "")
+                    if client_inn and len(client_inn) >= 10:
+                        yield ("tool_start", "company_financials",
+                               {"inn": client_inn}, "💰 Запрашиваю выручку из ФНС…")
+                        from app.tools.aim_app_tools import handle_company_financials
+                        fin_result = await handle_company_financials(inn=client_inn)
+                        collected_results["company_financials"] = fin_result
+                        # Обогатить profile_cache выручкой для блока 01
+                        try:
+                            fin_data = json.loads(fin_result)
+                            if fin_data.get("revenue"):
+                                profile_cache["revenue"] = fin_data["revenue"]
+                            if fin_data.get("revenue_trend"):
+                                profile_cache["revenue_trend"] = fin_data["revenue_trend"]
+                            if fin_data.get("profit"):
+                                profile_cache["profit"] = fin_data["profit"]
+                            if fin_data.get("name") and not profile_cache.get("company_name"):
+                                profile_cache["company_name"] = fin_data["name"]
+                            logger.info(
+                                "auto company_financials OK: inn=%s revenue=%s",
+                                client_inn, fin_data.get("revenue"),
+                            )
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+                        yield ("tool_result", "company_financials", fin_result,
+                               "✅ Финансы из ФНС получены")
+                except Exception as e:
+                    logger.warning("auto company_financials failed: %s", e)
+
             # ── AUTO-INJECT: run_review_platforms если LLM не вызовала ──
             # LLM упрямо игнорирует 4-й тул. Запускаем принудительно —
             # отзывы ключевая ценность продукта.
