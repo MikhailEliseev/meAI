@@ -110,9 +110,10 @@ VK: https://vk.com/iphk
         assert "Instagram" in md
 
     def test_extracts_platform(self):
-        """Платформа сайта детектится."""
+        """Платформа сайта НЕ показывается в overview — она в SEO аудит блоке (Firecrawl точнее)."""
         md = format_overview(self.SAMPLE_OVERVIEW)
-        assert "Tilda" in md
+        # Intentional: platform moved to audit block (Firecrawl data is more accurate)
+        assert "Tilda" not in md
 
     def test_strips_hallucinated_visits(self):
         """Оценка «~19 000 визитов» вырезается (источник галлюцинаций)."""

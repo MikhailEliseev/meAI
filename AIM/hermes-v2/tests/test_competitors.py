@@ -65,7 +65,7 @@ def _patch_asyncclient(monkeypatch, response):
 @pytest.mark.asyncio
 async def test_proxy_calls_correct_url(monkeypatch):
     """find_competitors стучится ровно на {AIM_API_BASE}/api/competitors/find
-    с телом {"url", "count"} — AIM_API_BASE переопределён на тестовый."""
+    с телом {"url", "count", "strategy": "v2"} — AIM_API_BASE переопределён на тестовый."""
     monkeypatch.setattr(competitors, "AIM_API_BASE", "http://test-aim-app:9999")
     captured = _patch_asyncclient(
         monkeypatch, _FakeResponse({"success": True, "competitors": []})
@@ -74,7 +74,7 @@ async def test_proxy_calls_correct_url(monkeypatch):
     await competitors.find_competitors(url="https://clinic.ru", count=3)
 
     assert captured["url"] == "http://test-aim-app:9999/api/competitors/find"
-    assert captured["json"] == {"url": "https://clinic.ru", "count": 3}
+    assert captured["json"] == {"url": "https://clinic.ru", "count": 3, "strategy": "v2"}
 
 
 @pytest.mark.asyncio
