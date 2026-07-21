@@ -344,7 +344,7 @@ def _format_reviews_block(reviews_raw: str) -> str:
     if summary:
         lines.append(f"\n**📋 Репутация:** {summary[:300]}\n")
 
-    return "".join(lines)
+    return "\n".join(lines)
 
 
 def _format_audit_block(audit: dict) -> str:
