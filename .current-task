@@ -1,1 +1,3 @@
-Pipeline v5 E2E WORKING. 3 clients tested (arclinic.ru, mira-med.ru, iphk.ru). State fixed: git tag pipeline-v5-working-e2e + backup at ~/Desktop/Dev/meAI_1-backups/pipeline-v5-working-20260703/
+Уборка завершена 21 июля 2026. Рабочее состояние: tag known-good-17jul-0104 (ace9d62b).
+hermes v1 обслуживает прод (nginx→hermes:8000). hermes-v2 — Walking Skeleton, НЕ подключён к nginx.
+См. PROJECT_MAP.md для полной карты проекта и СЛЕДУЮЩИХ ШАГОВ.
