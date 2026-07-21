@@ -722,6 +722,113 @@ async def chat_with_tools(history: list[dict]):
 
             continue  # следующий раунд
 
+        # ════════════════════════════════════════════════════════════════════
+        # LLM НЕ вызвала тулы → хочет дать финальный ответ (streaming).
+        # Но перед этим: выполняем auto-calls (financials, reviews) и
+        # показываем formatted blocks, ЕСЛИ find_competitors уже выполнен
+        # и блоки ещё не показаны. Это страховка для случая, когда LLM
+        # вызвала find_competitors в turn 0, а в turn 1 сразу решила отвечать
+        # без вызова extract_clinic_profile / run_review_platforms.
+        # ════════════════════════════════════════════════════════════════════
+        if not formatted_shown and "find_competitors" in collected_results:
+            # Auto-call financials (если ещё не вызван)
+            if "company_financials" not in collected_results:
+                try:
+                    comp_data = json.loads(collected_results["find_competitors"])
+                    client_inn = (
+                        comp_data.get("client_inn", "")
+                        or profile_cache.get("inn", "")
+                    )
+                    if client_inn and len(client_inn) >= 10:
+                        yield ("tool_start", "company_financials",
+                               {"inn": client_inn}, "💰 Запрашиваю выручку из ФНС…")
+                        from app.tools.aim_app_tools import handle_company_financials
+                        fin_result = await handle_company_financials(inn=client_inn)
+                        collected_results["company_financials"] = fin_result
+                        try:
+                            fin_data = json.loads(fin_result)
+                            if fin_data.get("revenue"):
+                                profile_cache["revenue"] = fin_data["revenue"]
+                            if fin_data.get("revenue_trend"):
+                                profile_cache["revenue_trend"] = fin_data["revenue_trend"]
+                            if fin_data.get("profit"):
+                                profile_cache["profit"] = fin_data["profit"]
+                            if fin_data.get("name") and not profile_cache.get("company_name"):
+                                profile_cache["company_name"] = fin_data["name"]
+                            logger.info("auto company_financials OK: inn=%s revenue=%s",
+                                        client_inn, fin_data.get("revenue"))
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+                        try:
+                            fin_data_check = json.loads(fin_result)
+                            has_revenue = bool(fin_data_check.get("revenue"))
+                        except (json.JSONDecodeError, TypeError):
+                            has_revenue = False
+                        yield ("tool_result", "company_financials", fin_result,
+                               "✅ Финансы из ФНС получены" if has_revenue
+                               else "⚠️ Финансы из ФНС недоступны")
+                except Exception as e:
+                    logger.warning("auto company_financials (pre-stream) failed: %s", e)
+
+            # Auto-call reviews (если ещё не вызван)
+            if "run_review_platforms" not in collected_results:
+                review_url = profile_cache.get("url", "")
+                if not review_url:
+                    for m in reversed(messages):
+                        if m.get("role") == "user" and "http" in (m.get("content") or ""):
+                            import re as _re
+                            url_match = _re.search(r"https?://[^\s]+", m["content"])
+                            if url_match:
+                                review_url = url_match.group(0)
+                                break
+                if review_url:
+                    yield ("tool_start", "run_review_platforms",
+                           {"url": review_url}, "⭐ Собираю отзывы с площадок…")
+                    try:
+                        from app.tools.run_review_platforms import handle_run_review_platforms
+                        review_result = await handle_run_review_platforms(
+                            url=review_url,
+                            company_name=profile_cache.get("company_name", ""),
+                            city=profile_cache.get("city", ""),
+                        )
+                        collected_results["run_review_platforms"] = review_result
+                        yield ("tool_result", "run_review_platforms", review_result, "✅ Отзывы собраны")
+                    except Exception as e:
+                        logger.warning("auto run_review_platforms (pre-stream) failed: %s", e)
+
+            # Показать formatted blocks
+            formatted_blocks = _build_formatted_blocks(collected_results, profile_cache)
+            if formatted_blocks:
+                formatted_shown = True
+            for block in formatted_blocks:
+                yield ("formatted", block + "\n\n")
+            messages.append({
+                "role": "system",
+                "content": (
+                    "Выше показаны ТОЧНЫЕ данные (секции 01-04 уже отображены). "
+                    "Твоя задача — ТОЛЬКО аналитический нарратив. "
+                    "КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО:\n"
+                    "- Повторять данные из секций выше (ИНН, выручку, адреса, услуги, рейтинги)\n"
+                    "- Дублировать таблицу конкурентов или блок отзывов\n"
+                    "- Создавать заголовки ## — ты пишешь выводы, не данные\n\n"
+                    "Структура ответа (БЕЗ заголовков ##, просто текст):\n\n"
+                    "**💡 Позиция:** 1-2 предложения — лидер/середняк/аутсайдер рынка.\n\n"
+                    "**✅ Сильные:** 2-3 пункта маркированным списком.\n\n"
+                    "**⚠️ Рост:** 2-3 конкретных пробела. НЕ рекомендуй то что уже есть.\n\n"
+                    "**🎯 Рекомендации:** 1-2 действия на основе РЕАЛЬНЫХ пробелов.\n\n"
+                    "**🗣️ Отзывы:** 2-3 предложения — главные темы из блока 04.\n\n"
+                    "[SUGGESTIONS]\n"
+                    "📸 Анализ соцсетей конкурентов|run_instagram_content\n"
+                    "🔍 Глубокий SEO-аудит сайта|seo_audit\n"
+                    "[/SUGGESTIONS]\n\n"
+                    "КРИТИЧНО:\n"
+                    "- НЕ повторяй НИ ОДНОЙ цифры из секций выше в своём тексте\n"
+                    "- НЕ выдумывай цифры\n"
+                    "- Сравнивай КОНКРЕТНО: «крупнее в X раз»\n"
+                    "- ⚖️ НЕ рекомендуй Instagram/Telegram (148-ФЗ). Можно: VK, RuTube, Дзен"
+                ),
+            })
+
         # Нет tool_calls (или тулов нет) → streaming финального ответа
         stream = await client.chat.completions.create(
             model=LLM_MODEL, messages=messages, stream=True,
