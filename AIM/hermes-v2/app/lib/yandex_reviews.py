@@ -192,6 +192,14 @@ async def search(company_name: str, city: str, url: str | None = None) -> dict |
                     key[:20], e.response.status_code, attempt + 1,
                 )
                 continue
+            # 500/502/503/504 — серверная ошибка Apify, НЕ ретраить другие ключи
+            # (они дадут тот же 500), сразу выходим с None
+            if e.response.status_code >= 500:
+                logger.warning(
+                    "yandex: Apify server error %d — skipping retries (platform issue)",
+                    e.response.status_code,
+                )
+                return None
             last_error = f"{e.response.status_code}: {e.response.text[:200]}"
             logger.warning("yandex: key %s… failed: %s", key[:20], last_error)
         except Exception as e:
