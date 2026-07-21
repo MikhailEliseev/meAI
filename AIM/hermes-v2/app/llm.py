@@ -319,7 +319,19 @@ def _format_reviews_block(reviews_raw: str) -> str:
         lines.append("")
 
     if not found_any:
-        return ""
+        # Fallback: не исчезаем полностью — показываем сообщение
+        # (Apify может лежать, или клиники нет на Яндекс.Картах/2ГИС)
+        summary = data.get("reputation_summary", "")
+        return (
+            "\n".join([
+                ":::section-num",
+                "04 — ОТЗЫВЫ ПАЦИЕНТОВ",
+                ":::",
+                "",
+                summary if summary else "Отзывы временно недоступны.",
+                "",
+            ])
+        )
 
     # Темы: хвалят
     praise = data.get("praise_summary", "")

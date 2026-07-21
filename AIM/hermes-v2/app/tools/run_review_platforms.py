@@ -93,7 +93,7 @@ def _build_summary(yandex: dict | None, gis2: dict | None, company_name: str) ->
     if gis2 and gis2.get("rating"):
         parts.append(f"2ГИС: {gis2['rating']}★ ({gis2['reviews']} отз.)")
     if not parts:
-        return f"По клинике «{company_name}» отзывы на Яндекс.Картах и 2ГИС не найдены."
+        return f"Отзывы для «{company_name}» временно недоступны — площадки отзывов не отвечают."
     return " · ".join(parts) + "."
 
 

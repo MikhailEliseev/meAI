@@ -70,3 +70,51 @@ class TestAutoCallFinancials:
         comp_data = json.loads(competitors_result)
         client_inn = comp_data.get("client_inn")
         assert not client_inn, "Пустой ИНН не должен триггерить financials"
+
+
+from app.tools.run_review_platforms import handle_run_review_platforms, _build_summary
+
+
+class TestReviewsFallback:
+    """Task 3: при падении Apify блок отзывов должен показывать дружелюбное сообщение."""
+
+    def test_build_summary_apify_down(self):
+        """Когда обе платформы None, summary должно говорить 'недоступны', не 'не найдены'."""
+        summary = _build_summary(None, None, "ARclinic")
+        # Должно быть дружелюбное сообщение про недоступность, не про отсутствие
+        assert "недоступ" in summary.lower() or "не отвечают" in summary.lower(), (
+            f"Summary '{summary}' должен говорить про недоступность платформ, "
+            "не про отсутствие отзывов у клиники"
+        )
+
+    def test_build_summary_partial_data(self):
+        """Когда одна платформа есть, а другая None — показываем что есть."""
+        yandex = {"rating": 5.0, "reviews": 562}
+        summary = _build_summary(yandex, None, "ARclinic")
+        assert "5.0" in summary
+        assert "562" in summary
+
+    def test_format_reviews_block_shows_message_when_empty(self):
+        """Блок 04 не должен полностью исчезать — показываем fallback."""
+        # Это требует изменения в _format_reviews_block (llm.py)
+        # Сейчас при found_any=False возвращается "" — блок исчезает
+        # Должен возвращать минимальный блок с сообщением
+        import app.llm as llm_mod
+
+        # Мокаем данные где все platforms пустые
+        empty_result = json.dumps({
+            "clinic": "TestClinic",
+            "platforms": {"yandex": {}, "twogis": {}, "prodoctorov": {}},
+            "praise_summary": "",
+            "criticism_summary": "",
+            "reputation_summary": "Отзывы временно недоступны",
+            "source": "apify",
+        })
+        result = llm_mod._format_reviews_block(empty_result)
+        # Должен вернуть НЕ пустую строку — fallback сообщение
+        assert result != "", (
+            "Блок отзывов не должен исчезать полностью при падении Apify"
+        )
+        assert "недоступ" in result.lower() or "04" in result, (
+            f"Ожидалось fallback-сообщение, получено: {result[:100]}"
+        )
