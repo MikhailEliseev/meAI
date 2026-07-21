@@ -484,6 +484,7 @@ async def chat_with_tools(history: list[dict]):
     tools = get_openai_tools()
     client = get_client()
     profile_cache: dict = {}  # caches extract_clinic_profile result for auto-inject
+    collected_results: dict = {}  # накапливает результаты тулов ВСЕХ раундов (fix: было reset каждый раунд)
     formatted_shown = False  # prevent showing data blocks twice across turns
 
     for turn in range(5):  # максимум 5 раундов tool-calling
@@ -545,7 +546,9 @@ async def chat_with_tools(history: list[dict]):
                 })
 
             # Фаза 2: остальные тулы параллельно
-            collected_results = {}  # всегда инициализируем (fix NameError)
+            # ВАЖНО: collected_results инициализируется ДО цикла (строка ~487) и
+            # накапливает результаты всех раундов. НЕ сбрасываем здесь — иначе
+            # auto-calls (financials, reviews) не видят результаты прошлых раундов.
             if other_tcs:
                 # Отправляем tool_start события для всех
                 for tc in other_tcs:
