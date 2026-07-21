@@ -1,14 +1,22 @@
 """run_review_platforms — Hermes-v2 tool: отзывы клиники по площадкам.
 
-Использует Perplexity (sonar) для поиска реальных рейтингов и ТЕМ отзывов
-на Яндекс.Картах, ПроДокторов и 2ГИС. Возвращает структурированный JSON с
-темами (хвалят/критикуют) для отображения в блоке «Отзывы».
+Гибридный подход (замена Perplexity):
+- Яндекс.Карты → Apify zen-studio/yandex-maps-reviews-scraper (точные рейтинги + тексты)
+- 2ГИС → Apify m_mamaev/2gis-places-scraper (точные рейтинги)
+- ПроДокторов → пропускаем (нет готового Apify actor)
+
+Perplexity раньше галлюцинировал рейтинги (4.9 вместо 4.2, выдуманные кол-ва
+отзывов). Apify берёт данные напрямую с площадок — точные цифры.
+
+Возвращает JSON в ТОМ ЖЕ формате, что и старая версия (обратная совместимость
+с _format_reviews_block в llm.py): {platforms, praise_summary, criticism_summary,
+reputation_summary}.
 """
+import asyncio
 import json
 import logging
 import time
 
-from app.lib.perplexity import USE_PERPLEXITY, perplexity_chat
 from app.tools.registry import register
 
 logger = logging.getLogger(__name__)
@@ -17,117 +25,85 @@ _cache: dict[str, tuple[float, str]] = {}
 _CACHE_TTL = 600  # 10 минут
 
 
-def _build_query(company_name: str, city: str, url: str) -> str:
-    """Построить Perplexity-запрос для сбора отзывов по 3 площадкам."""
-    target = company_name or url
-    location = f" (г. {city})" if city else ""
+def _normalize_args(**kwargs) -> tuple[str, str, str]:
+    """Привести url/company_name/city к строкам (могут прийти dict из LLM)."""
+    def _str(v):
+        if isinstance(v, dict):
+            # берём первое строковое значение (url/company_name/city)
+            return str(next(iter(v.values()), ""))
+        return str(v or "").strip()
 
-    return (
-        f"Найди отзывы о клинике «{target}»{location} на платформах.\n\n"
-        "Для каждой платформы укажи рейтинг, кол-во отзывов и ГЛАВНЫЕ ТЕМЫ.\n\n"
-        "## Яндекс.Карты\n"
-        "- Рейтинг (звёзды) и кол-во отзывов\n"
-        "- За что хвалят (2-3 конкретные темы с примерами)\n"
-        "- За что критикуют (2-3 темы)\n\n"
-        "## ПроДокторов\n"
-        "- Рейтинг и кол-во отзывов\n"
-        "- Каких врачей хвалят (по именам)\n"
-        "- Жалобы\n\n"
-        "## 2ГИС\n"
-        "- Рейтинг и кол-во отзывов\n"
-        "- Темы положительных и отрицательных\n\n"
-        "Формат ответа:\n"
-        "ЯНДЕКС: рейтинг X.X, отзывов N\n"
-        "Хвалят: тема1, тема2\n"
-        "Критикуют: тема1, тема2\n"
-        "ПРОДОКТОРОВ: рейтинг X.X, отзывов N\n"
-        "Хвалят: ...\n"
-        "Критикуют: ...\n"
-        "2ГИС: рейтинг X.X, отзывов N\n"
-        "Хвалят: ...\n"
-        "Критикуют: ...\n"
-        "ОБЩИЙ ВЫВОД: 2-3 предложения о репутации клиники"
-    )
+    return _str(kwargs.get("url")), _str(kwargs.get("company_name")), _str(kwargs.get("city"))
 
 
-def _parse_response(raw: str, company_name: str) -> dict:
-    """Парсит текстовый ответ Perplexity в структурированный dict."""
-    import re
+def _extract_themes(review_texts: list[str]) -> tuple[list[str], list[str]]:
+    """Грубое извлечение тем «хвалят/критикуют» из реальных текстов отзывов.
 
-    sections = {"yandex": {}, "prodoctorov": {}, "twogis": {}}
-    text = raw.strip()
+    Не заменяет LLM-анализ, но даёт конкретику из настоящих отзывов —
+    лучше выдуманных Perplexity тем. Простая эвристика по позитивным/
+    негативным маркерам.
+    """
+    if not review_texts:
+        return [], []
 
-    # Рейтинги: "ЯНДЕКС: рейтинг 4.9, отзывов 681"
-    # Ограничиваем .*? до конца строки рейтинга (не перескакивает через другие секции)
-    yandex_match = re.search(r"ЯНДЕКС[^\n]*?рейтинг\s*(\d+[.,]?\d*)[^\n]*?отзывов?\s*(\d+)", text, re.I)
-    if yandex_match:
-        sections["yandex"]["rating"] = float(yandex_match.group(1).replace(",", "."))
-        sections["yandex"]["reviews"] = int(yandex_match.group(2))
+    positive_markers = [
+        "спасибо", "отлично", "профессионал", "внимательн", "рекомендую",
+        "довольн", "помогл", "вежлив", "чисто", "удобно", "быстро",
+        "вылечил", "спас", "лучший", "добрый", "забот",
+    ]
+    negative_markers = [
+        "ужас", "больше не", "не рекомендую", "дорог", "очередь",
+        "груб", "хам", "некомпетент", "гряз", "обман", "развод",
+        "деньги впустую", "не помог", "халатн", "бестолков",
+    ]
 
-    pd_match = re.search(r"ПРОДОКТОРОВ[^\n]*?рейтинг\s*(\d+[.,]?\d*)[^\n]*?отзывов?\s*(\d+)", text, re.I)
-    if pd_match:
-        sections["prodoctorov"]["rating"] = float(pd_match.group(1).replace(",", "."))
-        sections["prodoctorov"]["reviews"] = int(pd_match.group(2))
+    praise: list[str] = []
+    criticism: list[str] = []
 
-    twogis_match = re.search(r"2ГИС[^\n]*?рейтинг\s*(\d+[.,]?\d*)[^\n]*?отзывов?\s*(\d+)", text, re.I)
-    if twogis_match:
-        sections["twogis"]["rating"] = float(twogis_match.group(1).replace(",", "."))
-        sections["twogis"]["reviews"] = int(twogis_match.group(2))
+    for text in review_texts:
+        text_lower = text.lower()
+        for marker in positive_markers:
+            if marker in text_lower and len(praise) < 6:
+                # вырезаем предложение с маркером (до 120 символов)
+                idx = text_lower.find(marker)
+                start = text_lower.rfind(". ", 0, idx) + 2 if idx > 0 else 0
+                snippet = text[start:idx + 100].strip().rstrip(".")[:120]
+                if snippet and snippet not in praise:
+                    praise.append(snippet)
+                break
+        for marker in negative_markers:
+            if marker in text_lower and len(criticism) < 6:
+                idx = text_lower.find(marker)
+                start = text_lower.rfind(". ", 0, idx) + 2 if idx > 0 else 0
+                snippet = text[start:idx + 100].strip().rstrip(".")[:120]
+                if snippet and snippet not in criticism:
+                    criticism.append(snippet)
+                break
 
-    # Темы: "Хвалят: ..." и "Критикуют: ..."
-    for platform_key, platform_name in [("yandex", "ЯНДЕКС"), ("prodoctorov", "ПРОДОКТОРОВ"), ("twogis", "2ГИС")]:
-        # Найти секцию платформы
-        platform_start = text.upper().find(platform_name)
-        if platform_start == -1:
-            continue
-        # Секция заканчивается на начале следующей платформы или "ОБЩИЙ"
-        next_sections = []
-        for pn in ["ПРОДОКТОРОВ", "2ГИС", "ОБЩИЙ"]:
-            pos = text.upper().find(pn, platform_start + len(platform_name))
-            if pos != -1:
-                next_sections.append(pos)
-        platform_end = min(next_sections) if next_sections else len(text)
-        section = text[platform_start:platform_end]
+    return praise, criticism
 
-        praise_match = re.search(r"Хвалят[:\s]*(.+?)(?:Критикуют|ПРОДОКТОРОВ|2ГИС|ОБЩИЙ|$)", section, re.I | re.S)
-        if praise_match:
-            sections[platform_key]["praise"] = praise_match.group(1).strip()[:300]
 
-        crit_match = re.search(r"Критикуют[:\s]*(.+?)(?:ПРОДОКТОРОВ|2ГИС|ОБЩИЙ|$)", section, re.I | re.S)
-        if crit_match:
-            sections[platform_key]["criticism"] = crit_match.group(1).strip()[:300]
-
-    # Общий вывод
-    summary_match = re.search(r"ОБЩИЙ ВЫВОД[:\s]*(.+)", text, re.I | re.S)
-    summary = summary_match.group(1).strip()[:500] if summary_match else ""
-
-    # Агрегированные темы (объединяем по всем платформам)
-    all_praise = [s["praise"] for s in sections.values() if s.get("praise")]
-    all_crit = [s["criticism"] for s in sections.values() if s.get("criticism")]
-
-    return {
-        "clinic": company_name,
-        "platforms": sections,
-        "praise_summary": " | ".join(all_praise) if all_praise else "",
-        "criticism_summary": " | ".join(all_crit) if all_crit else "",
-        "reputation_summary": summary,
-        "source": "perplexity",
-        "searched_at": time.strftime("%Y-%m-%d %H:%M"),
-    }
+def _build_summary(yandex: dict | None, gis2: dict | None, company_name: str) -> str:
+    """Короткая текстовая сводка репутации из точных данных."""
+    parts = []
+    if yandex and yandex.get("rating"):
+        rating = yandex["rating"]
+        tone = "сильная" if rating >= 4.5 else ("средняя" if rating >= 3.8 else "слабая")
+        parts.append(f"Яндекс.Карты: {rating}★ ({yandex['reviews']} отз.) — репутация {tone}")
+    if gis2 and gis2.get("rating"):
+        parts.append(f"2ГИС: {gis2['rating']}★ ({gis2['reviews']} отз.)")
+    if not parts:
+        return f"По клинике «{company_name}» отзывы на Яндекс.Картах и 2ГИС не найдены."
+    return " · ".join(parts) + "."
 
 
 async def handle_run_review_platforms(url: str = "", company_name: str = "", city: str = "", **kwargs) -> str:
-    """Сбор отзывов клиники по площадкам через Perplexity."""
-    if not USE_PERPLEXITY:
-        return json.dumps({"error": "PERPLEXITY_API_KEY not configured"})
+    """Сбор отзывов клиники с Яндекс.Карт и 2ГИС через Apify actors.
 
-    # Нормализация
-    if isinstance(url, dict):
-        url = url.get("url", "")
-    if isinstance(company_name, dict):
-        company_name = company_name.get("company_name", "")
-    if isinstance(city, dict):
-        city = city.get("city", "")
+    Вызывает 2 actor'а параллельно через asyncio.gather. Возвращает JSON
+    в формате, совместимом с _format_reviews_block (llm.py).
+    """
+    url, company_name, city = _normalize_args(url=url, company_name=company_name, city=city)
 
     cache_key = f"{company_name or url}:{city}"
     cached = _cache.get(cache_key)
@@ -135,28 +111,77 @@ async def handle_run_review_platforms(url: str = "", company_name: str = "", cit
         logger.info("review_platforms cache hit: %s", cache_key[:40])
         return cached[1]
 
-    # Periodic cleanup of expired entries (prevents unbounded growth)
+    # Периодическая чистка кэша (предотвращает безлимитный рост)
     if len(_cache) > 50:
         now = time.time()
         expired = [k for k, (ts, _) in _cache.items() if now - ts > _CACHE_TTL]
         for k in expired:
             del _cache[k]
 
-    try:
-        query = _build_query(company_name, city, url)
-        raw = await perplexity_chat(
-            [{"role": "user", "content": query}],
-            model="sonar",  # sonar даёт URL источников
-        )
-        result = _parse_response(raw, company_name or url)
-        result_json = json.dumps(result, ensure_ascii=False, indent=2)
-        _cache[cache_key] = (time.time(), result_json)
-        platforms_found = sum(1 for p in result["platforms"].values() if p.get("rating"))
-        logger.info("review_platforms OK: %s — %d platforms found", company_name or url, platforms_found)
-        return result_json
-    except Exception as e:
-        logger.error("review_platforms failed: %s", e)
-        return json.dumps({"error": str(e), "clinic": company_name or url})
+    from app.lib import gis2_reviews, yandex_reviews
+
+    # Параллельный вызов 2 площадок (return_exceptions чтобы одна не роняла вторую)
+    yandex_result, gis2_result = await asyncio.gather(
+        yandex_reviews.search(company_name, city, url or None),
+        gis2_reviews.search(company_name, city, url or None),
+        return_exceptions=True,
+    )
+
+    # Обработка исключений из gather
+    if isinstance(yandex_result, Exception):
+        logger.error("yandex_reviews raised: %s", yandex_result)
+        yandex_result = None
+    if isinstance(gis2_result, Exception):
+        logger.error("gis2_reviews raised: %s", gis2_result)
+        gis2_result = None
+
+    # Сборка в формат, совместимый с _format_reviews_block
+    platforms: dict[str, dict] = {
+        "yandex": {},
+        "twogis": {},
+        "prodoctorov": {},  # пропускаем — нет готового Apify actor
+    }
+
+    if yandex_result:
+        platforms["yandex"] = {
+            "rating": yandex_result.get("rating"),
+            "reviews": yandex_result.get("reviews", 0),
+        }
+    if gis2_result:
+        platforms["twogis"] = {
+            "rating": gis2_result.get("rating"),
+            "reviews": gis2_result.get("reviews", 0),
+        }
+
+    # Темы из реальных текстов отзывов Яндекса (2ГИС тексты не отдаёт)
+    all_reviews = []
+    if yandex_result and yandex_result.get("review_texts"):
+        all_reviews.extend(yandex_result["review_texts"])
+
+    praise, criticism = _extract_themes(all_reviews)
+
+    result = {
+        "clinic": company_name or url,
+        "platforms": platforms,
+        "praise_summary": " | ".join(praise) if praise else "",
+        "criticism_summary": " | ".join(criticism) if criticism else "",
+        "reputation_summary": _build_summary(yandex_result, gis2_result, company_name or url),
+        "source": "apify",
+        "searched_at": time.strftime("%Y-%m-%d %H:%M"),
+    }
+
+    result_json = json.dumps(result, ensure_ascii=False, indent=2)
+    _cache[cache_key] = (time.time(), result_json)
+
+    platforms_found = sum(1 for p in result["platforms"].values() if p.get("rating"))
+    logger.info(
+        "review_platforms OK: %s — %d platforms (yandex=%s gis2=%s)",
+        company_name or url,
+        platforms_found,
+        yandex_result.get("rating") if yandex_result else None,
+        gis2_result.get("rating") if gis2_result else None,
+    )
+    return result_json
 
 
 register(
@@ -166,8 +191,9 @@ register(
         "function": {
             "name": "run_review_platforms",
             "description": (
-                "Собрать отзывы и рейтинги клиники с Яндекс.Карт, ПроДокторов, 2ГИС. "
-                "Возвращает темы: за что хвалят, за что критикуют. "
+                "Собрать отзывы и рейтинги клиники с Яндекс.Карт и 2ГИС (через Apify). "
+                "Возвращает ТОЧНЫЕ рейтинги с площадок и темы: за что хвалят, за что критикуют "
+                "(извлечённые из реальных текстов отзывов). "
                 "ВЫЗЫВАЙ когда клиент прислал URL сайта (параллельно с конкурентами)."
             ),
             "parameters": {
