@@ -5,27 +5,33 @@
 
 ---
 
-## ⚠️ КРИТИЧЕСКОЕ ОТКРЫТИЕ (корень «бардака»)
+## ⚠️ РЕАЛЬНОЕ СОСТОЯНИЕ ПРОДА (проверено 21 июля на сервере aim)
 
-**Весь фреш-код 14-17 июля писали в `hermes-v2/`, но в проде бегает `hermes/` v1.**
+> **ВНИМАНИЕ:** Предыдущая версия этого документа утверждала «nginx на v1». Это было НЕВЕРНО —
+> вывод сделан из git-истории локального репо, а на сервере конфиг правили напрямую без коммита.
+> Ниже — реальные данные из `ssh aim` (сервер `78.17.128.169`, Ubuntu `AIM-Server-PL`).
 
 ```
-ПРОД (iamaim.ru):
-  PHP-фронт (chat-inline-golden.php)
-    → nginx: proxy_pass http://hermes:8000/api/chat/stream     ← v1
-  docker: подняты ОБА сервиса (hermes + hermes-v2), но nginx ходит только на v1
+ПРОД (iamaim.ru) — ПРОВЕРЕНО 21 июля:
+  PHP-фронт → nginx: set $hermes "aim-hermes-v2:8000"     ← v2 УЖЕ В ПРОДЕ
+  docker: aim-hermes-v2 Up 3 days (healthy), образ собран 2026-07-16T21:47
+  v1 (aim-hermes) — ПОЛНОСТЬЮ УДАЛЁН (нет контейнера, нет образа aim-hermes:latest)
 
-КОД (git):
-  AIM/hermes/      — v1, ПОЛНАЯ прод-система (77 tools), последний коммит 16 июля 03:09
-  AIM/hermes-v2/   — Walking Skeleton Phase 1 (6 tools), последний коммит 17 июля 01:04
+СЛЕДСТВИЕ: откатиться к v1 НЕЛЬЗЯ (его нет). Только git known-good-17jul-0104 для кода.
 ```
 
-**Следствие:** правки дизайн-системы, отзывов, форматтеров (коммит `ace9d62b`) **не видны пользователям**.
-docker-compose прямо комментирует: «Старый сервис hermes НЕ трогаем — страховка отката».
+### РЕАЛЬНЫЕ ПРОБЛЕМЫ (что чинить, приоритизировано):
 
-### СЛЕДУЮЩИЙ ШАГ (главный)
-Решить: доделать v2 и переключить nginx `$hermes = "hermes-v2:8000"`, ИЛИ отказаться от v2 и вернуться к правкам v1.
-Файл: `AIM/deploy/nginx/iamaim.conf:44` (`set $hermes "hermes:8000";`).
+| # | Проблема | Когда | Влияние |
+|---|---|---|---|
+| 🔴 1 | **Perplexity quota exhausted** | упал **17 июля 23:59** (работал до 23:39) | 5 из 13 тулов падают 401: `extract_clinic_profile`, `quick_overview`, `run_review_platforms`, `perplexity_search`, `run_smi_mentions`. Профиль/отзывы/обзор клиентов не работают. Ключ `pplx-GQ5...c0Hb`, тариф `sonar-pro`, ОДИН ключ (нет пула). |
+| 🟡 2 | Telegram webhook → 404 | с 16 июля | v2 не имеет `/telegram/webhook` роута. **Трафика нет в логах** — бот не используется. Низкий приоритет. |
+| 🟡 3 | Образ v2 устарел | собран 16 июля 21:47 | Не содержит `ace9d62b` (17 июля 01:04): дизайн-система `:::section-num`, отзывы в чате, форматтеры. **Правки не видны пользователям.** |
+
+### КОРЕНЬ «СЛОМАЛОСЬ» = Perplexity
+Чат работает (LLM через z.ai отвечает), но при URL от клиента:
+- ✅ `find_competitors` — работает (через aim-app)
+- ❌ `extract_clinic_profile`, `quick_overview`, `run_review_platforms` — **401 Perplexity**
 
 ---
 
@@ -107,8 +113,33 @@ meAI_1-backups/    ← UNTRACKED (gitignored), 32M, tar.gz от 14 июля. П�
 
 ## Открытые вопросы (на следующую сессию)
 
-1. **ГЛАВНОЕ:** v1 или v2 — какой hermes развивать дальше?
-2. Если v2 — переключить nginx и протестировать end-to-end.
-3. Если v1 — перенести правки дизайн-системы/отзывов из v2 в v1.
+1. **🔴 Perplexity quota** — пополнить баланс perplexity.ai ИЛИ дать новый ключ ИЛИ отключить Perplexity-тулы (`USE_PERPLEXITY=false`). Решение за Михаилом (платный сервис).
+2. **🟡 Пересобрать образ v2** из `ace9d62b` (дизайн-система, отзывы, форматтеры) — после решения по Perplexity, одним деплоем.
+3. **🟡 Telegram** — добавить заглушку `/telegram/webhook` в v2 ИЛИ убрать location из nginx. Трафика сейчас нет, низкий приоритет.
 4. Что делать с 3 старыми бэкап-ветками (backup/*, feature/chat-ux)?
 5. `meAI_1-backups/` (32M) — оставить или удалить?
+
+---
+
+## Команды для работы с сервером
+
+```bash
+# SSH
+ssh aim                                    # root@78.17.128.169 (AIM-Server-PL, Ubuntu)
+
+# v2 логи (живой трафик, без health-noise)
+ssh aim "docker logs aim-hermes-v2 --tail 50 -f 2>&1 | grep -v 'GET /health'"
+
+# Проверить health v2
+ssh aim "docker exec aim-hermes-v2 curl -s http://localhost:8000/health"
+
+# Пересобрать и перезапустить v2 (после git pull на сервере)
+ssh aim "cd /opt/aim/AIM && docker compose build hermes-v2 && docker compose up -d hermes-v2"
+
+# Проверить Perplexity ключ
+ssh aim "grep PERPLEXITY /opt/aim/AIM/.env.production"
+
+# Откатить код v2 к известному-хорошему (ОСТОРОЖНО: v1 уже удалён, отката к v1 нет)
+ssh aim "cd /opt/aim/AIM && git fetch && git checkout known-good-17jul-0104 -- AIM/hermes-v2/"
+ssh aim "cd /opt/aim/AIM && docker compose build hermes-v2 && docker compose up -d hermes-v2"
+```
