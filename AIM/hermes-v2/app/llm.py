@@ -76,7 +76,7 @@ def _check_hallucinations(llm_text: str, formatted_shown: bool) -> None:
 # Человекочитаемые сообщения прогресса для каждого тула (для UX)
 _TOOL_MESSAGES = {
     "extract_clinic_profile": {
-        "start": "📋 Определяю клинику: ИНН, юрлицо, адрес…",
+        "start": "📋 Определяю клинику: адрес, специализация, услуги…",
         "done": "✅ Профиль клиники готов",
     },
     "quick_overview": {
@@ -84,7 +84,7 @@ _TOOL_MESSAGES = {
         "done": "✅ Обзор готов",
     },
     "find_competitors": {
-        "start": "🗺️ Ищу конкурентов рядом через Google Maps (это ~1-2 минуты)…",
+        "start": "🗺️ Ищу конкурентов через Perplexity и ФНС (это ~1-2 минуты)…",
         "done": "✅ Конкуренты найдены",
     },
     "enrich_competitors": {
