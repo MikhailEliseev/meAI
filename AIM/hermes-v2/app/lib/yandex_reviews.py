@@ -26,8 +26,8 @@ logger = logging.getLogger(__name__)
 # m_mamaev/yandex-maps-places-scraper — тянет рейтинг + нейросводку + аспекты
 YANDEX_ACTOR_ID = "m_mamaev~yandex-maps-places-scraper"
 
-# Лимит попыток polling (12 × 5с = 60с max)
-_POLL_ATTEMPTS = 12
+# Лимит попыток polling (24 × 5с = 120с max) — Apify actors иногда тормозят
+_POLL_ATTEMPTS = 24
 _POLL_INTERVAL = 5
 
 

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # m_mamaev/2gis-places-scraper — структурированные данные + отзывы 2ГИС
 GIS2_ACTOR_ID = "m_mamaev~2gis-places-scraper"
 
-_POLL_ATTEMPTS = 12
+_POLL_ATTEMPTS = 24
 _POLL_INTERVAL = 5
 
 
