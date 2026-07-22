@@ -1424,6 +1424,7 @@
                 const decoder = new TextDecoder();
                 let assistantMessage = '';
                 let sseBuffer = '';
+                let pendingReportReady = null;  // W-2: Phase 11 — вставляется после стрима
 
                 while (true) {
                     const { done, value } = await reader.read();
@@ -1480,19 +1481,17 @@
                                     renderMessages();
                                 }
 
-                                // Handle report-ready (Phase 11) — inject [REPORT_READY] marker
-                                // parseMarkdown() уже умеет рендерить его в карточку через renderReportCard()
+                                // Handle report-ready (Phase 11) — сохраняем URL для post-stream insert
+                                // W-2 fix: НЕ добавляем маркер в assistantMessage пока RAF-loop активен.
+                                // Вставка делается после streaming-bubble cleanup (ниже в коде).
                                 if (data.type === 'report-ready' && data.url) {
-                                    const cardData = {
+                                    pendingReportReady = {
                                         summary: data.summary || data.title || 'Полный разбор сайта, конкурентов и рынка',
                                         session_url: data.url,
                                         archived_at: new Date().toLocaleDateString('ru-RU'),
                                     };
-                                    // Вставляем маркер — parseMarkdown() превратит его в карточку
-                                    assistantMessage += '\n\n[REPORT_READY]' + JSON.stringify(cardData) + '[/REPORT_READY]';
                                     // Скрыть прогресс-доты если ещё видны
                                     messages.forEach(m => { if (m.role === 'assistant-progress' && !m.done) m.done = true; });
-                                    renderMessages();
                                 }
 
                                 // Handle text streaming — RAF + textContent, no innerHTML flicker
@@ -1537,6 +1536,12 @@
                     rafId = null;
                 }
                 removeStreamingBubble();
+                // W-2 fix: вставляем [REPORT_READY] маркер ПОСЛЕ остановки RAF-loop.
+                // Теперь RAF-loop завершён → рэйса с streaming-bubble не будет.
+                if (pendingReportReady) {
+                    assistantMessage += '\n\n[REPORT_READY]' + JSON.stringify(pendingReportReady) + '[/REPORT_READY]';
+                    pendingReportReady = null;
+                }
                 // Push final assistant message and render ONCE with markdown parsing
                 if (assistantMessage) {
                     messages.push({ role: 'assistant', content: assistantMessage });

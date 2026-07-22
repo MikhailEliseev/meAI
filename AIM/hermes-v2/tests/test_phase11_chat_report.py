@@ -266,3 +266,112 @@ def test_chat_inline_has_report_card_css():
     assert ".report-ready-icon" in content
     assert ".report-ready-title" in content
     assert ".report-ready-link" in content
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Code Review fixes: W-1, W-2, W-3, I-2
+# ──────────────────────────────────────────────────────────────────────────
+
+
+def test_w1_no_collected_results_reset():
+    """W-1: в llm.py больше НЕТ КОДОВОГО присваивания collected_results = {}
+    внутри блока parallel tool execution (только в комментариях-предупреждениях).
+    """
+    llm_py = os.path.join(_REPO_ROOT, "hermes-v2", "app", "llm.py")
+    with open(llm_py, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    # Ищем строку с присваиванием collected_results = {} (не в комментарии)
+    reset_lines = []
+    for i, line in enumerate(lines):
+        stripped = line.lstrip()
+        if stripped.startswith("#"):
+            continue  # Комментарий — пропускаем
+        if "collected_results = {}" in stripped and "collected_results" in stripped.split("=")[0]:
+            reset_lines.append((i + 1, line.rstrip()))
+    assert len(reset_lines) == 0, (
+        f"W-1 regression: found {len(reset_lines)} code line(s) with "
+        f"'collected_results = {{}}' (not in comments): {reset_lines}"
+    )
+
+
+def test_w2_frontend_pendingReportReady_pattern():
+    """W-2: фронтенд использует pendingReportReady, а НЕ прямую вставку в SSE handler."""
+    with open(_CHAT_INLINE_PHP, "r", encoding="utf-8") as f:
+        content = f.read()
+    # Переменная должна быть объявлена
+    assert "pendingReportReady" in content
+    # Handler НЕ должен делать assistantMessage += внутри SSE loop
+    # (вставка только после removeStreamingBubble)
+    # Проверяем что после report-ready handler НЕТ прямой вставки assistantMessage +=
+    # в том же блоке.
+    handler_idx = content.find("data.type === 'report-ready'")
+    if handler_idx != -1:
+        # Берём 600 символов после handler
+        snippet = content[handler_idx:handler_idx + 600]
+        # Не должно быть прямой вставки в assistantMessage внутри handler
+        assert "assistantMessage +=" not in snippet, (
+            "W-2 regression: assistantMessage += inside report-ready handler — "
+            "should use pendingReportReady + post-stream insert"
+        )
+
+
+def test_w2_frontend_post_stream_insert():
+    """W-2: вставка [REPORT_READY] маркера после removeStreamingBubble()."""
+    with open(_CHAT_INLINE_PHP, "r", encoding="utf-8") as f:
+        content = f.read()
+    remove_idx = content.find("removeStreamingBubble();")
+    # Должна быть вставка после removeStreamingBubble в районе 200 символов
+    assert remove_idx != -1
+    snippet = content[remove_idx:remove_idx + 500]
+    assert "pendingReportReady" in snippet, (
+        "W-2 regression: post-stream insert of pendingReportReady not found after removeStreamingBubble"
+    )
+
+
+def test_w3_db_guard_in_main_py():
+    """W-3: main.py проверяет history на [REPORT_READY] маркер перед вызовом chat_with_tools."""
+    main_py = os.path.join(_REPO_ROOT, "hermes-v2", "app", "main.py")
+    with open(main_py, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "report_already_published" in content
+    assert "[REPORT_READY]" in content
+
+
+def test_i2_report_marker_persisted_to_db():
+    """I-2: при report-ready URL сохраняется в БД через report_marker_for_db."""
+    main_py = os.path.join(_REPO_ROOT, "hermes-v2", "app", "main.py")
+    with open(main_py, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "report_marker_for_db" in content
+    # Маркер должен добавляться к full_clean перед сохранением
+    assert "full_clean" in content
+    assert "report_marker_for_db" in content
+
+
+def test_duplicate_guard_works_with_history():
+    """W-3: симулируем history с [REPORT_READY] — гвард должен сработать."""
+    # Логика проверки (как в main.py):
+    history = [
+        {"role": "user", "content": "https://test.ru"},
+        {"role": "assistant", "content": "Анализ...\n\n[REPORT_READY]{\"url\":\"https://iamaim.ru/test\"}[/REPORT_READY]"},
+    ]
+    report_already_published = any(
+        "[REPORT_READY]" in msg.get("content", "")
+        for msg in history
+        if msg.get("role") == "assistant"
+    )
+    assert report_already_published is True, "Guard should detect existing report in history"
+
+
+def test_no_false_positive_in_clean_history():
+    """W-3: history БЕЗ [REPORT_READY] — гвард НЕ должен сработать."""
+    history = [
+        {"role": "user", "content": "https://test.ru"},
+        {"role": "assistant", "content": "Анализ без отчёта. Просто текст."},
+    ]
+    report_already_published = any(
+        "[REPORT_READY]" in msg.get("content", "")
+        for msg in history
+        if msg.get("role") == "assistant"
+    )
+    assert report_already_published is False

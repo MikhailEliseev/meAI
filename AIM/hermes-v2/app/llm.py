@@ -632,8 +632,10 @@ async def chat_with_tools(history: list[dict]):
                     return_exceptions=True,
                 )
 
-                # Обрабатываем результаты (в порядке тулов)
-                collected_results = {}  # tool_name → result_str (for formatting)
+                # Обрабатываем результаты (в порядке тулов).
+                # ВАЖНО: НЕ делаем collected_results = {} — это уничтожит
+                # extract_clinic_profile (из Фазы 1) и результаты прошлых раундов.
+                # Только обновляем/добавляем ключи.
                 for tc, result in zip(other_tcs, results):
                     tool_name = tc.function.name
                     if isinstance(result, Exception):

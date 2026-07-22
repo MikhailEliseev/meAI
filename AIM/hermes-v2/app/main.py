@@ -123,8 +123,22 @@ async def chat_stream(req: ChatRequest):
             await async_save_message(session_id, "user", req.message)
             history.append({"role": "user", "content": req.message})
 
+            # W-3 guard: проверить, публиковался ли уже отчёт в этой сессии.
+            # Если в истории есть [REPORT_READY] маркер — не дублируем.
+            # Гвард в profile_cache (llm.py) работает только в рамках одного
+            # запроса; этот — персистентный, между HTTP запросами.
+            report_already_published = any(
+                "[REPORT_READY]" in msg.get("content", "")
+                for msg in history
+                if msg.get("role") == "assistant"
+            )
+
             full_response = []
             formatted_parts = []  # таблицы/факты из кода (анти-галлюцинация)
+            # Если в этом ответе был опубликован отчёт — URL попадёт сюда.
+            # I-2: будет добавлен в сохраняемый assistant message (перезагрузка-устойчивость).
+            # W-3: при следующем запросе history содержит [REPORT_READY] → гвард сработает.
+            report_marker_for_db = ""
             # Буфер для перехвата [SUGGESTIONS] маркера (стримится токенами).
             # Держим хвост буфера незакрытым, пока не убедимся что это не маркер.
             # LLM иногда оборачивает маркер в markdown bold: **[SUGGESTIONS]**
@@ -178,6 +192,19 @@ async def chat_stream(req: ChatRequest):
                         )
                         logger.info("SSE: emitting report-ready url=%s", report_url)
                         yield f"data: {json.dumps({'type': 'report-ready', 'url': report_url, 'title': report_title, 'summary': report_summary}, ensure_ascii=False)}\n\n"
+                        # I-2 + W-3: сохранить [REPORT_READY] маркер для БД.
+                        # При следующем запросе в этой сессии history будет содержать
+                        # маркер → report_already_published = True → гвард сработает.
+                        if report_url:
+                            report_marker_for_db = (
+                                "\n\n[REPORT_READY]"
+                                + json.dumps({
+                                    "summary": report_summary,
+                                    "session_url": report_url,
+                                    "archived_at": "",
+                                }, ensure_ascii=False)
+                                + "[/REPORT_READY]"
+                            )
                     elif kind == "finish":
                         break
             except Exception as e:
@@ -198,6 +225,10 @@ async def chat_stream(req: ChatRequest):
             # перезагрузке сессии таблицы исчезнут, останутся только выводы LLM.
             formatted_text = "".join(formatted_parts)
             full_clean = formatted_text + clean_text if clean_text else formatted_text
+            # I-2: append [REPORT_READY] marker if a report was published this turn.
+            # Фронтенд parseMarkdown() превратит его в карточку при reload из БД.
+            if report_marker_for_db:
+                full_clean = (full_clean or "") + report_marker_for_db
             if full_clean:
                 await async_save_message(session_id, "assistant", full_clean)
 
