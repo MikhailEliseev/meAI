@@ -105,19 +105,19 @@ def build_revenue_vs_competitors_block(
                 )
 
     # Строим таблицу — простой минималистичный стиль как в чате
+    # БЕЗ медальности (ранги #1/2/3 без золотого/серебряного/бронзового цвета)
     rows_html = []
     for i, row in enumerate(all_rows, 1):
         revenue_str = _fmt_revenue_short(row["revenue"])
         trend_symbol, trend_class = _trend_marker(row["trend"])
         client_class = " rev-row-client" if row["is_client"] else ""
-        rank_class = f" rev-rank-{i}" if i <= 3 else ""
         trend_html = (
             f'<span class="rev-trend {trend_class}">{trend_symbol}</span>'
             if trend_symbol else '<span class="rev-trend">—</span>'
         )
         rows_html.append(
             f'<tr class="rev-row{client_class}">'
-            f'<td class="rev-position{rank_class}">{i}</td>'
+            f'<td class="rev-position">{i}</td>'
             f'<td class="rev-name">{_esc(row["name"])}</td>'
             f'<td class="rev-revenue">{revenue_str}</td>'
             f'<td class="rev-trend-cell">{trend_html}</td>'

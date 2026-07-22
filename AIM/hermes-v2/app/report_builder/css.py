@@ -123,14 +123,19 @@ html[data-theme="dark"] .aim-report-scope .water-ripples { display: none; }
 .aim-report-scope ul, .aim-report-scope ol { margin: 12px 0 16px 24px; }
 .aim-report-scope li { margin: 6px 0; color: var(--text-sec-rp); }
 
-/* === RIPPLE — КРУГИ НА ВОДЕ (из дизайн-системы) === */
+/* === RIPPLE — КРУГИ НА ВОДЕ (GPU-only, не вызывает repaint) ===
+ * Ключевая оптимизация: анимируем ТОЛЬКО transform: scale() и opacity.
+ * Не трогаем width/height/border-width (это вызывало layout и мерцание
+ * таблиц/кнопок/карточек с backdrop-filter).
+ * Каждый ring живёт в своём GPU-слое (will-change: transform, opacity).
+ */
 @keyframes aim-water-ripple {
-  0% { width: 0; height: 0; opacity: 0.77; border-width: 1.4px; }
-  15% { opacity: 0.48; border-width: 1.0px; }
-  35% { opacity: 0.28; border-width: 0.7px; }
-  60% { opacity: 0.11; border-width: 0.4px; }
-  85% { opacity: 0.035; border-width: 0.25px; }
-  100% { width: 850px; height: 850px; opacity: 0; border-width: 0.12px; }
+  0%   { transform: translate(-50%, -50%) scale(0);    opacity: 0.77; }
+  15%  { opacity: 0.48; }
+  35%  { opacity: 0.28; }
+  60%  { opacity: 0.11; }
+  85%  { opacity: 0.035; }
+  100% { transform: translate(-50%, -50%) scale(1);    opacity: 0; }
 }
 
 @keyframes aim-card-breathe {
@@ -144,13 +149,18 @@ html[data-theme="dark"] .aim-report-scope .water-ripples { display: none; }
 }
 
 @keyframes aim-pulse-ring {
-  0%, 100% { opacity: 0.03; transform: scale(1); }
-  50% { opacity: 0.07; transform: scale(1.15); }
+  0%, 100% { opacity: 0.03; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.07; transform: translate(-50%, -50%) scale(1.15); }
 }
 
+/* water-ripples: изолированный fixed-слой. contain: strict не даёт
+ * потомкам влиять на layout остальной страницы. transform: translateZ(0)
+ * поднимает в GPU-слой. */
 .aim-report-scope .water-ripples {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   pointer-events: none; z-index: 0; overflow: hidden;
+  contain: strict;
+  transform: translateZ(0);
 }
 .aim-report-scope[data-theme="dark"] .water-ripples { display: none; }
 html[data-theme="dark"] .aim-report-scope .water-ripples { display: none; }
@@ -160,13 +170,18 @@ html[data-theme="dark"] .aim-report-scope .water-ripples { display: none; }
   border-radius: 50%; background: var(--text-rp);
   opacity: 0.08; transform: translate(-50%, -50%);
 }
+/* ripple-ring: фиксированный размер 850px, масштабируется через transform.
+ * will-change поднимает в GPU-слой — не вызывает repaint соседей. */
 .aim-report-scope .ripple-origin .ripple-ring {
   position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%; border-style: solid;
-  border-color: var(--text-rp); background: none;
-  opacity: 0; width: 0; height: 0;
+  width: 850px; height: 850px;
+  border-radius: 50%;
+  border: 1px solid var(--text-rp);
+  background: none;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0);
   animation: aim-water-ripple cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+  will-change: transform, opacity;
 }
 
 .aim-report-scope .ripple-origin-1 { top: 50%; left: 50%; }
@@ -593,9 +608,6 @@ html[data-theme="dark"] .aim-report-scope .metric-tag-blue .metric-tag-dot { bac
   text-align: center; font-weight: 600;
   color: var(--text-dim-rp); width: 40px;
 }
-.aim-report-scope .revenue-block .rev-rank-1 { color: var(--gold-rp); font-weight: 700; }
-.aim-report-scope .revenue-block .rev-rank-2 { color: var(--silver-rp); font-weight: 700; }
-.aim-report-scope .revenue-block .rev-rank-3 { color: var(--bronze-rp); font-weight: 700; }
 
 .aim-report-scope .revenue-block .rev-name {
   color: var(--text-rp); font-weight: 500;

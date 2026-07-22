@@ -444,12 +444,14 @@ def test_build_report_html_revenue_block_present():
     html = build_report_html(_full_data(), "ACME")
     assert '<section class="revenue-block">' in html
     assert "ACME vs" in html  # заголовок
-    # Новая минималистичная таблица (без comp-table)
+    # Минималистичная таблица
     assert "rev-table-wrap" in html
     # Акцентная подсветка строки клиента
     assert "rev-row-client" in html
-    # Ранги (золото/серебро/бронза)
-    assert "rev-rank-1" in html
+    # БЕЗ медальности (ранги без золотого/серебряного/бронзового цвета)
+    assert "rev-rank-1" not in html
+    assert "rev-rank-2" not in html
+    assert "rev-rank-3" not in html
 
 
 def test_build_report_html_revenue_block_absent():

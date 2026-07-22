@@ -54,7 +54,8 @@ def _build_ripple_html() -> str:
     """Построить HTML для анимации «круги на воде».
 
     6 origin × 5 колец в каждом = 30 ripple-ring элементов.
-    CSS (aim-water-ripple) делает остальное.
+    Анимация полностью на GPU (transform: scale) через CSS — не вызывает
+    repaint других элементов (в отличие от width/height анимации).
     """
     origins = []
     for i in range(1, 7):
