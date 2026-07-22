@@ -730,7 +730,41 @@ async def chat_with_tools(history: list[dict]):
         # вызвала find_competitors в turn 0, а в turn 1 сразу решила отвечать
         # без вызова extract_clinic_profile / run_review_platforms.
         # ════════════════════════════════════════════════════════════════════
-        if not formatted_shown and "find_competitors" in collected_results:
+        if "find_competitors" in collected_results and (
+            "extract_clinic_profile" not in collected_results
+            or "company_financials" not in collected_results
+            or "run_review_platforms" not in collected_results
+            or not formatted_shown
+        ):
+            # Auto-call extract_clinic_profile если не был вызван (для ИНН/города/профиля)
+            if "extract_clinic_profile" not in collected_results:
+                user_url = ""
+                for m in reversed(messages):
+                    if m.get("role") == "user" and "http" in (m.get("content") or ""):
+                        import re as _re2
+                        url_m = _re2.search(r"https?://[^\s]+", m["content"])
+                        if url_m:
+                            user_url = url_m.group(0)
+                            break
+                if user_url:
+                    yield ("tool_start", "extract_clinic_profile",
+                           {"url": user_url}, "📋 Определяю клинику…")
+                    try:
+                        from app.tools.perplexity_tools import handle_extract_clinic_profile
+                        profile_result = await handle_extract_clinic_profile(url=user_url)
+                        collected_results["extract_clinic_profile"] = profile_result
+                        try:
+                            profile_cache.update(json.loads(profile_result))
+                            profile_cache["_raw_result"] = profile_result
+                            logger.info("auto extract_clinic_profile OK: inn=%s city=%s",
+                                        profile_cache.get("inn"), profile_cache.get("city"))
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+                        yield ("tool_result", "extract_clinic_profile", profile_result,
+                               "✅ Профиль клиники готов")
+                    except Exception as e:
+                        logger.warning("auto extract_clinic_profile (pre-stream) failed: %s", e)
+
             # Auto-call financials (если ещё не вызван)
             if "company_financials" not in collected_results:
                 try:
@@ -796,13 +830,14 @@ async def chat_with_tools(history: list[dict]):
                     except Exception as e:
                         logger.warning("auto run_review_platforms (pre-stream) failed: %s", e)
 
-            # Показать formatted blocks
-            formatted_blocks = _build_formatted_blocks(collected_results, profile_cache)
-            if formatted_blocks:
-                formatted_shown = True
-            for block in formatted_blocks:
-                yield ("formatted", block + "\n\n")
-            messages.append({
+            # Показать formatted blocks (только если ещё не показаны)
+            if not formatted_shown:
+                formatted_blocks = _build_formatted_blocks(collected_results, profile_cache)
+                if formatted_blocks:
+                    formatted_shown = True
+                for block in formatted_blocks:
+                    yield ("formatted", block + "\n\n")
+                messages.append({
                 "role": "system",
                 "content": (
                     "Выше показаны ТОЧНЫЕ данные (секции 01-04 уже отображены). "
