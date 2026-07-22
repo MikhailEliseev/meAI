@@ -1512,7 +1512,7 @@
                                             if (assistantMessage.length !== lastRenderedLen) {
                                                 lastRenderedLen = assistantMessage.length;
                                                 try {
-                                                    streamSpan.innerHTML = DOMPurify.sanitize(marked.parse(assistantMessage));
+                                                    streamSpan.innerHTML = parseMarkdown(assistantMessage);
                                                 } catch(e) {
                                                     streamSpan.textContent = assistantMessage;
                                                 }
