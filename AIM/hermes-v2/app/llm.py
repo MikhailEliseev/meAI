@@ -466,6 +466,28 @@ def _format_audit_block(audit: dict) -> str:
     return "\n".join(lines)
 
 
+def _extract_url_from_messages(messages: list[dict]) -> str:
+    """Ищет URL в сообщениях пользователя. Поддерживает как http(s):// так и
+    голые домены (arclinic.ru, mira-med.ru). Возвращает URL с https:// или ''.
+    """
+    import re as _re
+    for m in reversed(messages):
+        if m.get("role") != "user":
+            continue
+        content = m.get("content") or ""
+        # Сначала полный URL с протоколом
+        url_m = _re.search(r"https?://[^\s]+", content)
+        if not url_m:
+            # Потом голый домен (.ru, .com, и т.д.)
+            url_m = _re.search(r"\b[\w-]+\.(ru|com|org|net|su|рф|io|me|pro)\b", content)
+        if url_m:
+            url = url_m.group(0)
+            if not url.startswith("http"):
+                url = "https://" + url
+            return url
+    return ""
+
+
 async def chat_with_tools(history: list[dict]):
     """Диалог с tool-calling. Возвращает генератор событий для SSE.
 
@@ -642,16 +664,7 @@ async def chat_with_tools(history: list[dict]):
             # отзывы ключевая ценность продукта.
             if "find_competitors" in collected_results and "run_review_platforms" not in collected_results:
                 # Получить URL из profile_cache или из сообщений
-                review_url = profile_cache.get("url", "")
-                if not review_url:
-                    # Поискать URL в последнем сообщении пользователя
-                    for m in reversed(messages):
-                        if m.get("role") == "user" and "http" in (m.get("content") or ""):
-                            import re as _re
-                            url_match = _re.search(r"https?://[^\s]+", m["content"])
-                            if url_match:
-                                review_url = url_match.group(0)
-                                break
+                review_url = profile_cache.get("url", "") or _extract_url_from_messages(messages)
                 if review_url:
                     yield ("tool_start", "run_review_platforms",
                            {"url": review_url}, "⭐ Собираю отзывы с площадок…")
@@ -730,22 +743,25 @@ async def chat_with_tools(history: list[dict]):
         # вызвала find_competitors в turn 0, а в turn 1 сразу решила отвечать
         # без вызова extract_clinic_profile / run_review_platforms.
         # ════════════════════════════════════════════════════════════════════
+        logger.info(
+            "=== PRE-STREAM CHECK: find_competitors=%s collected=%s formatted_shown=%s ===",
+            "find_competitors" in collected_results,
+            list(collected_results.keys()),
+            formatted_shown,
+        )
         if "find_competitors" in collected_results and (
             "extract_clinic_profile" not in collected_results
             or "company_financials" not in collected_results
             or "run_review_platforms" not in collected_results
             or not formatted_shown
         ):
+            logger.info(
+                "=== PRE-STREAM AUTO-CALLS: enter (collected=%s formatted_shown=%s) ===",
+                list(collected_results.keys()), formatted_shown,
+            )
             # Auto-call extract_clinic_profile если не был вызван (для ИНН/города/профиля)
             if "extract_clinic_profile" not in collected_results:
-                user_url = ""
-                for m in reversed(messages):
-                    if m.get("role") == "user" and "http" in (m.get("content") or ""):
-                        import re as _re2
-                        url_m = _re2.search(r"https?://[^\s]+", m["content"])
-                        if url_m:
-                            user_url = url_m.group(0)
-                            break
+                user_url = _extract_url_from_messages(messages)
                 if user_url:
                     yield ("tool_start", "extract_clinic_profile",
                            {"url": user_url}, "📋 Определяю клинику…")
@@ -806,15 +822,7 @@ async def chat_with_tools(history: list[dict]):
 
             # Auto-call reviews (если ещё не вызван)
             if "run_review_platforms" not in collected_results:
-                review_url = profile_cache.get("url", "")
-                if not review_url:
-                    for m in reversed(messages):
-                        if m.get("role") == "user" and "http" in (m.get("content") or ""):
-                            import re as _re
-                            url_match = _re.search(r"https?://[^\s]+", m["content"])
-                            if url_match:
-                                review_url = url_match.group(0)
-                                break
+                review_url = profile_cache.get("url", "") or _extract_url_from_messages(messages)
                 if review_url:
                     yield ("tool_start", "run_review_platforms",
                            {"url": review_url}, "⭐ Собираю отзывы с площадок…")
