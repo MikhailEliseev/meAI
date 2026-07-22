@@ -684,7 +684,13 @@ async def chat_with_tools(history: list[dict]):
             # Формируем готовые Markdown блоки из tool results и показываем
             # пользователю ДО того как LLM начнёт генерировать ответ.
             # LLM получает instruction делать только выводы по этим данным.
-            if not formatted_shown:
+            if not formatted_shown and (
+                # Показываем blocks только когда есть данные для блока 01 (профиль).
+                # Раньше показывали после первого find_competitors — блок 01 был пустым.
+                "extract_clinic_profile" in collected_results
+                or "company_financials" in collected_results
+                or profile_cache.get("_raw_result")  # профиль из auto-call
+            ):
                 formatted_blocks = _build_formatted_blocks(
                     collected_results, profile_cache
                 )
