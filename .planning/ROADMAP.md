@@ -70,3 +70,51 @@
 - QC coverage ≥ 80%
 - Деплой на прод
 - Smoke-тест через браузер
+
+---
+
+# Milestone 3: Chat Report Delivery
+
+> **Создан:** 2026-07-22
+> **Предыдущие фазы:** 1-10 (Milestones 1-2, completed)
+
+## Phases
+
+| Phase | Название | Описание | Зависимости | Статус |
+|-------|----------|----------|-------------|--------|
+| 11 | Chat Report Integration | Автопубликация отчёта + SSE + карточка в чате | Phase 10 | 🔄 Planned |
+| 12 | Report Download | Кнопка «Скачать отчёт» (PDF/HTML) + эндпоинт | Phase 11 | ⏳ Pending |
+| 13 | QC Critique | 18-пунктный чеклист качества перед публикацией | Phase 9 | ⏳ Pending (optional) |
+
+## Phase Details
+
+### Phase 11: Chat Report Integration
+**Цель:** Чат автоматически публикует отчёт и показывает ссылку.
+
+**Задачи:**
+- В `chat_with_tools()`: перед `yield("finish",)` вызвать build_data_dict + build_report_html + publish_report
+- Гвард: только при наличии `find_competitors` в collected_results
+- Гвард дубликатов: `profile_cache["_report_published_url"]`
+- Новый SSE event `report-ready` с `{url, title, summary}`
+- Фронтенд: handler для `report-ready` → renderReportCard (CSS уже есть)
+- Smoke-тест: URL клиники → карточка с кнопкой
+
+**Подробный план:** `.planning/phases/11-chat-report-integration/PLAN.md`
+
+### Phase 12: Report Download
+**Цель:** Кнопка «Скачать отчёт» (HTML файл или PDF).
+
+**Задачи:**
+- Эндпоинт `/api/report/{slug}/download` → отдаёт HTML с `<meta name="content-disposition" content="attachment">`
+- Кнопка в `.report-ready-card`
+- (Опционально) PDF через headless Chrome / weasyprint
+
+### Phase 13: QC Critique (optional)
+**Цель:** Проверка качества отчёта перед публикацией.
+
+**Задачи:**
+- Перенести `qc_checklist.py` (342 строки)
+- 18 пунктов чеклиста
+- PASS_THRESHOLD = 80%
+- Блокировка публикации при FAIL
+
