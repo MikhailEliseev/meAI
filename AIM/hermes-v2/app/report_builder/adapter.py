@@ -138,6 +138,101 @@ def _extract_llm_section(llm_text: str, tool_name: str) -> str:
     return ""
 
 
+def _build_hero_meta(
+    profile_raw: str,
+    finance_raw: str,
+    reviews_raw: str,
+    profile_cache: dict,
+    company_name: str,
+) -> dict:
+    """Собрать метаданные для hero-секции отчёта.
+
+    Источники (приоритет точных данных):
+      1. profile_cache (из pipeline — содержит url, city, inn)
+      2. extract_clinic_profile JSON (address, doctors_count, reg_date)
+      3. company_financials JSON (revenue, profit)
+      4. run_review_platforms JSON (rating, reviews count)
+
+    Returns:
+        dict с ключами: city, address, founded_year, doctors_count,
+        rating, reviews_count, revenue_str, subtitle (готовый для hero),
+        nav_sections (список ID→label для навигации).
+    """
+    meta = {
+        "city": "", "address": "", "founded_year": "",
+        "doctors_count": None, "rating": None, "reviews_count": None,
+        "revenue_str": "", "subtitle": "", "nav_sections": [],
+    }
+
+    cache = profile_cache or {}
+
+    # 1. city/address — приоритет profile_cache, fallback на extract_clinic_profile
+    meta["city"] = cache.get("city", "") or ""
+    meta["address"] = cache.get("address", "") or ""
+
+    profile_obj = _safe_load_json(profile_raw)
+    if profile_obj:
+        if not meta["city"]:
+            meta["city"] = profile_obj.get("city", "") or ""
+        if not meta["address"]:
+            meta["address"] = profile_obj.get("address", "") or ""
+        if profile_obj.get("doctors_count"):
+            try:
+                meta["doctors_count"] = int(profile_obj["doctors_count"])
+            except (ValueError, TypeError):
+                pass
+        reg_date = profile_obj.get("registration_date", "") or ""
+        if reg_date and len(reg_date) >= 4:
+            meta["founded_year"] = str(reg_date)[:4]
+
+    # 2. revenue_str — из finance_raw
+    fin_obj = _safe_load_json(finance_raw)
+    if fin_obj:
+        rev = fin_obj.get("revenue") or fin_obj.get("latest_revenue")
+        if rev:
+            try:
+                rev_num = float(rev)
+                if rev_num >= 1_000_000_000:
+                    meta["revenue_str"] = f"{rev_num/1_000_000_000:.1f} млрд ₽ выручки"
+                elif rev_num >= 1_000_000:
+                    meta["revenue_str"] = f"{int(rev_num/1_000_000)} млн ₽ выручки"
+            except (ValueError, TypeError):
+                pass
+
+    # 3. rating/reviews — из run_review_platforms
+    rev_obj = _safe_load_json(reviews_raw)
+    if rev_obj:
+        platforms = rev_obj.get("platforms", {}) if isinstance(rev_obj, dict) else {}
+        yandex = platforms.get("yandex", {}) if isinstance(platforms, dict) else {}
+        if isinstance(yandex, dict):
+            rating = yandex.get("rating")
+            if rating and isinstance(rating, (int, float)):
+                meta["rating"] = float(rating)
+                reviews = yandex.get("reviews", 0)
+                if reviews:
+                    try:
+                        meta["reviews_count"] = int(reviews)
+                    except (ValueError, TypeError):
+                        pass
+
+    # 4. Subtitle для hero: короткое позиционирование
+    parts = []
+    if meta["city"]:
+        parts.append(meta["city"])
+    if meta["doctors_count"]:
+        parts.append(f"{meta['doctors_count']} врачей")
+    if meta["revenue_str"]:
+        parts.append(meta["revenue_str"])
+    if meta["rating"]:
+        rating_str = f"{meta['rating']:.1f}★"
+        if meta["reviews_count"]:
+            rating_str += f" ({meta['reviews_count']} отзывов)"
+        parts.append(rating_str)
+    meta["subtitle"] = " · ".join(parts) if parts else "Маркетинговый аудит и точки роста"
+
+    return meta
+
+
 def build_data_dict(
     collected_results: dict[str, str],
     profile_cache: dict,
@@ -231,5 +326,32 @@ def build_data_dict(
     data["COMPETITORS"] = {
         "find_competitors": collected_results.get("find_competitors", "{}"),
     }
+
+    # ── HERO metadata (для новой вёрстки hero-секции) ────────────────────────
+    hero_meta = _build_hero_meta(
+        profile_raw=collected_results.get("extract_clinic_profile", "{}"),
+        finance_raw=collected_results.get("company_financials", "{}"),
+        reviews_raw=collected_results.get("run_review_platforms", "{}"),
+        profile_cache=profile_cache,
+        company_name=company_name,
+    )
+
+    # nav_sections: только те секции, для которых есть контент
+    # (slug, label) — slug это HTML-якорь (id секции)
+    nav_labels = {
+        "PROFILE": "О клинике",
+        "OVERVIEW": "Обзор рынка",
+        "COMPETITORS": "Конкуренты",
+        "REVIEWS": "Отзывы",
+    }
+    nav_sections: list[dict] = []
+    for tool_name, phase_key, _ in _TOOL_TO_SECTION:
+        if f"{phase_key}_interp" in data:
+            nav_sections.append({
+                "id": f"sec-{phase_key.lower()}",
+                "label": nav_labels.get(phase_key, phase_key),
+            })
+    hero_meta["nav_sections"] = nav_sections
+    data["hero_meta"] = hero_meta
 
     return data
