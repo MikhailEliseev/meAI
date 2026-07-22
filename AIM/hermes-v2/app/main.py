@@ -113,6 +113,7 @@ async def chat_stream(req: ChatRequest):
       error        — ошибка.
     """
     session_id = req.session_id or str(uuid.uuid4())
+    logger.info("=== DEBUG chat_stream START: session=%s msg=%r ===", session_id[:8], req.message[:100])
     lock = get_session_lock(session_id)
 
     async def event_generator():
@@ -166,6 +167,17 @@ async def chat_stream(req: ChatRequest):
                     elif kind == "tool_result":
                         tool_name, result, human_msg = event[1], event[2], event[3] if len(event) > 3 else ""
                         yield f"data: {json.dumps({'type': 'tool-progress', 'tool': tool_name, 'status': 'done', 'result': result, 'message': human_msg}, ensure_ascii=False)}\n\n"
+                    elif kind == "report_ready":
+                        # ("report_ready", url, title) — Phase 11: авто-публикация отчёта
+                        report_url = event[1] if len(event) > 1 else ""
+                        report_title = event[2] if len(event) > 2 else ""
+                        report_summary = (
+                            f"Полный разбор: {report_title}"
+                            if report_title else
+                            "Полный разбор сайта, конкурентов и рынка"
+                        )
+                        logger.info("SSE: emitting report-ready url=%s", report_url)
+                        yield f"data: {json.dumps({'type': 'report-ready', 'url': report_url, 'title': report_title, 'summary': report_summary}, ensure_ascii=False)}\n\n"
                     elif kind == "finish":
                         break
             except Exception as e:

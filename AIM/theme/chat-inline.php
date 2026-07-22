@@ -1480,6 +1480,21 @@
                                     renderMessages();
                                 }
 
+                                // Handle report-ready (Phase 11) — inject [REPORT_READY] marker
+                                // parseMarkdown() уже умеет рендерить его в карточку через renderReportCard()
+                                if (data.type === 'report-ready' && data.url) {
+                                    const cardData = {
+                                        summary: data.summary || data.title || 'Полный разбор сайта, конкурентов и рынка',
+                                        session_url: data.url,
+                                        archived_at: new Date().toLocaleDateString('ru-RU'),
+                                    };
+                                    // Вставляем маркер — parseMarkdown() превратит его в карточку
+                                    assistantMessage += '\n\n[REPORT_READY]' + JSON.stringify(cardData) + '[/REPORT_READY]';
+                                    // Скрыть прогресс-доты если ещё видны
+                                    messages.forEach(m => { if (m.role === 'assistant-progress' && !m.done) m.done = true; });
+                                    renderMessages();
+                                }
+
                                 // Handle text streaming — RAF + textContent, no innerHTML flicker
                                 if (data.type === 'text-delta' && data.textDelta) {
                                     if (!assistantMessage) {

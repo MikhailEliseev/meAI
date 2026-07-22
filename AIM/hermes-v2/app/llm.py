@@ -488,6 +488,51 @@ def _extract_url_from_messages(messages: list[dict]) -> str:
     return ""
 
 
+async def _auto_publish_report(
+    collected_results: dict,
+    profile_cache: dict,
+    llm_text: str,
+):
+    """Сгенерировать и опубликовать HTML-отчёт (Phase 11).
+
+    Вызывается из chat_with_tools() перед завершением стрима, если
+    collected_results содержит find_competitors (полный анализ выполнен).
+
+    Yield-ит ("report_ready", url, title) при успехе. При ошибке —
+    логирует warning (без raise — вызываетющий код уже обёрнут в try).
+
+    Гвард дубликатов: записывает URL в profile_cache["_report_published_url"].
+    """
+    from app.report_builder import build_data_dict, build_report_html, publish_report
+
+    # Сборка data dict + HTML
+    data = build_data_dict(collected_results, profile_cache, llm_text)
+    title = (
+        profile_cache.get("company_name")
+        or data.get("metadata", {}).get("company_name")
+        or "Клиника"
+    )
+    html = build_report_html(data, title)
+
+    # Публикация (async, MySQL INSERT)
+    result = await publish_report(html, title)
+
+    if result.get("url"):
+        url = result["url"]
+        # Защита от дубликатов в этой сессии
+        profile_cache["_report_published_url"] = url
+        logger.info("Auto-publish: report ready at %s (title=%r)", url, title)
+        yield ("report_ready", url, title)
+    elif result.get("status") == "saved_locally":
+        logger.info("Auto-publish: saved locally (no DB): %s", result.get("path"))
+    else:
+        logger.warning(
+            "Auto-publish: publish_report returned status=%s err=%s",
+            result.get("status"),
+            result.get("error", "")[:120],
+        )
+
+
 async def chat_with_tools(history: list[dict]):
     """Диалог с tool-calling. Возвращает генератор событий для SSE.
 
@@ -899,6 +944,23 @@ async def chat_with_tools(history: list[dict]):
         # Текст уже отправлен — не блокируем. Но логируем подозрительные
         # числа которых нет в formatted blocks (телеметрия для итерации).
         _check_hallucinations("".join(llm_text), formatted_shown)
+
+        # ── Авто-публикация отчёта (Phase 11) ─────────────────────────
+        # Если собран конкурентный анализ — публикуем красивый отчёт на
+        # iamaim.ru/{slug} и шлём SSE event report-ready с URL.
+        # Гварды: (1) есть find_competitors, (2) ещё не публиковали в сессии.
+        if (
+            "find_competitors" in collected_results
+            and not profile_cache.get("_report_published_url")
+        ):
+            try:
+                async for report_event in _auto_publish_report(
+                    collected_results, profile_cache, "".join(llm_text)
+                ):
+                    yield report_event
+            except Exception as e:
+                logger.warning("Auto-publish report failed: %s", e)
+                # Не блокируем finish при ошибке публикации
 
         yield ("finish",)
         return
