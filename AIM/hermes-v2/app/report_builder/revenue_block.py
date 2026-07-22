@@ -1,10 +1,10 @@
-"""Блок «Выручка vs Конкуренты» — вау-блок в начале отчёта.
+"""Блок «Выручка vs Конкуренты» — минималистичный стиль чата.
 
-Перенесено из v1 build_report.py (строки 1327-1482) с адаптацией:
-- v1 читал data["FINANCE"]["find_company_financials"] (вложенный JSON с company.latest_revenue)
-- v2: client_revenue и client_profit передаются напрямую (уже извлечены в адаптере)
-- Конкуренты: competitors_result — JSON-строка от find_competitors
-  (та же структура competitors[].revenue_year, brand_name, inn)
+Переделано из v1-стиля (большие .comp-table с золотыми рангами) под
+дизайн-систему: простая таблица как в чате (border-collapse, тонкие бордеры,
+компактный padding), плюс акцентная подсветка строки клиента.
+
+Совпадает с CSS таблиц в chat-inline.php (.message-bubble table).
 """
 
 import json
@@ -18,20 +18,18 @@ def build_revenue_vs_competitors_block(
     competitors_result: str,
     company_name: str,
 ) -> str:
-    """Построить блок «Выручка vs Конкуренты» для вау-эффекта в начале отчёта.
+    """Построить блок «Выручка vs Конкуренты» — минималистичный стиль чата.
 
     Args:
-        client_revenue: Выручка клиента (уже извлечена из collected_results
-            или profile_cache; None если данных нет).
+        client_revenue: Выручка клиента (None если данных нет).
         client_profit: Прибыль клиента (None если нет).
-        competitors_result: JSON-строка от find_competitors. Ожидается структура
-            ``{"competitors": [{"brand_name", "inn", "revenue_year", "revenue_trend"}]}``.
-        company_name: Имя клиента (для строки «Вы» в таблице и заголовка).
+        competitors_result: JSON-строка от find_competitors.
+        company_name: Имя клиента.
 
     Returns:
         HTML блока или пустая строка если данных нет.
     """
-    # 1. Парсим конкурентов из JSON-строки
+    # 1. Парсим конкурентов
     competitors: list = []
     if competitors_result and isinstance(competitors_result, str):
         try:
@@ -40,12 +38,10 @@ def build_revenue_vs_competitors_block(
         except (json.JSONDecodeError, TypeError):
             competitors = []
     elif isinstance(competitors_result, list):
-        # На случай если передали уже распарсенный список
         competitors = competitors_result
     elif isinstance(competitors_result, dict):
         competitors = competitors_result.get("competitors", [])
 
-    # Оставляем только конкурентов с реальной выручкой
     competitors_with_rev = [
         c for c in competitors
         if isinstance(c, dict) and c.get("revenue_year") and c.get("revenue_year") > 0
@@ -54,9 +50,6 @@ def build_revenue_vs_competitors_block(
     if not client_revenue and not competitors_with_rev:
         return ""
 
-    # Тренд клиента: в v2 он не передаётся напрямую (оставлено для совместимости)
-    client_trend = None
-
     # 2. Сортируем по убыванию выручки — клиент + конкуренты вместе
     all_rows = []
     if client_revenue:
@@ -64,7 +57,7 @@ def build_revenue_vs_competitors_block(
             "name": company_name,
             "is_client": True,
             "revenue": client_revenue,
-            "trend": client_trend,
+            "trend": None,
             "inn": None,
         })
     for c in competitors_with_rev:
@@ -84,20 +77,20 @@ def build_revenue_vs_competitors_block(
         None,
     )
 
-    # Парсим trend → emoji/цвет
+    # Парсим trend → символ/цвет
     def _trend_marker(t):
         if not t:
-            return ("—", "")
+            return ("", "")
         t_lower = str(t).lower()
         if "grow" in t_lower or t_lower == "растущий":
-            return ("▲", "trend-up")
+            return ("▲", "rev-trend-up")
         if "declining" in t_lower or "fall" in t_lower or "пад" in t_lower:
-            return ("▼", "trend-down")
+            return ("▼", "rev-trend-down")
         if "stable" in t_lower or "стаб" in t_lower:
-            return ("▬", "trend-stable")
-        return ("—", "")
+            return ("▬", "rev-trend-stable")
+        return ("", "")
 
-    # Считаем VAU-инсайт: кратность лидера к ближайшему конкуренту
+    # VAU-инсайт: кратность лидера к ближайшему конкуренту
     wow_html = ""
     if client_revenue and len(competitors_with_rev) > 0:
         top_comp_revenue = max(c.get("revenue_year", 0) for c in competitors_with_rev)
@@ -105,41 +98,39 @@ def build_revenue_vs_competitors_block(
             ratio = client_revenue / top_comp_revenue
             if ratio >= 1.2 and client_position == 1:
                 wow_html = (
-                    f'<div class="wow-banner">'
+                    f'<div class="rev-wow">'
                     f'<strong>ВАУ:</strong> {_esc(company_name)} в '
                     f'<strong>{ratio:.1f} раза</strong> больше ближайшего конкурента.'
                     f'</div>'
                 )
 
-    # Строим таблицу
+    # Строим таблицу — простой минималистичный стиль как в чате
     rows_html = []
     for i, row in enumerate(all_rows, 1):
         revenue_str = _fmt_revenue_short(row["revenue"])
-        trend_emoji, trend_class = _trend_marker(row["trend"])
-        client_class = " row-client" if row["is_client"] else ""
-        rank_class = (
-            " rank-gold" if i == 1
-            else (" rank-silver" if i == 2
-                  else (" rank-bronze" if i == 3 else ""))
+        trend_symbol, trend_class = _trend_marker(row["trend"])
+        client_class = " rev-row-client" if row["is_client"] else ""
+        rank_class = f" rev-rank-{i}" if i <= 3 else ""
+        trend_html = (
+            f'<span class="rev-trend {trend_class}">{trend_symbol}</span>'
+            if trend_symbol else '<span class="rev-trend">—</span>'
         )
         rows_html.append(
-            f'<tr class="comp-row{client_class}">'
-            f'<td class="comp-rank{rank_class}">{i}</td>'
-            f'<td class="comp-name">{_esc(row["name"])}</td>'
-            f'<td class="comp-revenue">{revenue_str}</td>'
-            f'<td class="comp-trend {trend_class}">{trend_emoji}</td>'
+            f'<tr class="rev-row{client_class}">'
+            f'<td class="rev-position{rank_class}">{i}</td>'
+            f'<td class="rev-name">{_esc(row["name"])}</td>'
+            f'<td class="rev-revenue">{revenue_str}</td>'
+            f'<td class="rev-trend-cell">{trend_html}</td>'
             f'</tr>'
         )
     rows_html_str = "".join(rows_html)
 
-    # Если клиент не найден — показываем только конкурентов
     title_str = (
-        f"{company_name} vs {len(competitors_with_rev)} главных конкурента"
+        f"{company_name} vs {len(competitors_with_rev)} главных конкурентов"
         if client_revenue
         else f"Топ-{len(competitors_with_rev)} конкурентов {company_name}"
     )
 
-    subtitle = ""
     if client_revenue and client_position == 1 and len(competitors_with_rev) >= 2:
         subtitle = "Лидер рынка. Выручка 2025 по данным ФНС."
     elif client_revenue and client_position:
@@ -147,29 +138,29 @@ def build_revenue_vs_competitors_block(
     else:
         subtitle = "Выручка конкурентов 2025 по данным ФНС (bo.nalog.gov.ru)."
 
-    # profit не отображается в этом блоке отдельно (клиент = в общей таблице),
-    # но логируем доступность для будущих расширений.
-    _ = client_profit
+    _ = client_profit  # зарезервировано для будущих расширений
 
     return f"""
 <section class="revenue-block">
-  <span class="sec-tag sec-tag-highlight">СРАВНЕНИЕ С КОНКУРЕНТАМИ</span>
+  <div class="rev-section-label">СРАВНЕНИЕ С КОНКУРЕНТАМИ</div>
   <h2>{_esc(title_str)}</h2>
-  <p class="text-dim">{_esc(subtitle)}</p>
+  <p class="rev-subtitle">{_esc(subtitle)}</p>
   {wow_html}
-  <table class="comp-table">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Клиника</th>
-        <th>Выручка</th>
-        <th>Тренд</th>
-      </tr>
-    </thead>
-    <tbody>
-      {rows_html_str}
-    </tbody>
-  </table>
-  <p class="text-dim comp-source">Источник: ФНС, bo.nalog.gov.ru (налоговая отчётность)</p>
+  <div class="rev-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="rev-th-pos">#</th>
+          <th>Клиника</th>
+          <th class="rev-th-num">Выручка</th>
+          <th class="rev-th-num">Тренд</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows_html_str}
+      </tbody>
+    </table>
+  </div>
+  <p class="rev-source">Источник: ФНС, bo.nalog.gov.ru</p>
 </section>
 """

@@ -66,28 +66,16 @@ def _build_ripple_html() -> str:
 
 
 def _build_nav_html(nav_sections: list[dict], company_name: str) -> str:
-    """Построить плавающую навигацию (sticky).
+    """Построить плавающую кнопку переключения темы.
 
-    Args:
-        nav_sections: список {id, label} — только те секции, что есть в отчёте.
-        company_name: для логотипа (короткая форма).
+    НЕ создаём отдельную nav-панель — шапка сайта iamaim.ru уже есть сверху.
+    Только компактная кнопка theme-toggle в углу (fixed).
     """
-    links_html = "".join(
-        f'<a href="#{_esc(s["id"])}">{_esc(s["label"])}</a>'
-        for s in nav_sections
-    )
     return (
-        '<nav class="report-nav">'
-        '<div class="logo-block">'
-        '<div class="logo">AIM</div>'
-        '<div class="tag">Marketing Agency</div>'
-        '</div>'
-        f'<div class="nav-links">{links_html}</div>'
         '<button class="theme-toggle-report" '
         'onclick="this.closest(\'.aim-report-scope\').dataset.theme='
         'this.closest(\'.aim-report-scope\').dataset.theme===\'dark\'?\'light\':\'dark\'" '
         'aria-label="Переключить тему">🌓</button>'
-        '</nav>'
     )
 
 

@@ -235,7 +235,7 @@ def test_canonical_css_contains_key_classes():
         ".aim-report-scope",
         ".water-ripples",
         ".ripple-ring",
-        ".report-nav",
+        ".theme-toggle-report",
         ".hero",
         ".section",
         ".section-label",
@@ -248,7 +248,7 @@ def test_canonical_css_contains_key_classes():
         ".btn-primary",
         ".report-footer",
         ".revenue-block",
-        ".comp-table",
+        ".rev-table-wrap",
         ".metric-tag",
     ]:
         assert cls in _CANONICAL_CSS, f"Missing CSS class: {cls}"
@@ -293,27 +293,24 @@ def test_ripple_html_structure():
 # ──────────────────────────────────────────────────────────────────────────
 
 def test_nav_html_with_sections():
-    """Nav содержит ссылки на все переданные секции."""
+    """Nav теперь только кнопка theme-toggle (шапка сайта уже есть)."""
     sections = [
         {"id": "sec-profile", "label": "О клинике"},
         {"id": "sec-reviews", "label": "Отзывы"},
     ]
     html = _build_nav_html(sections, "Test")
-    assert '<nav class="report-nav">' in html
-    assert 'href="#sec-profile"' in html
-    assert "О клинике" in html
-    assert 'href="#sec-reviews"' in html
-    assert "AIM" in html  # логотип
-    assert "theme-toggle-report" in html  # кнопка темы
+    # Больше нет полноценной nav-панели
+    assert '<nav class="report-nav">' not in html
+    # Только кнопка переключения темы
+    assert "theme-toggle-report" in html
+    assert "dataset.theme" in html  # JS для переключения
 
 
 def test_nav_html_empty_sections():
-    """Nav без секций — всё равно рендерится (только лого + toggle)."""
+    """Nav без секций — всё равно рендерится кнопка theme-toggle."""
     html = _build_nav_html([], "Test")
-    assert '<nav class="report-nav">' in html
     assert "theme-toggle-report" in html
-    # nav-links есть, но пустые
-    assert 'class="nav-links">' in html
+    assert '<nav class="report-nav">' not in html
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -412,9 +409,9 @@ def test_build_report_html_structure():
     # Ripple
     assert 'class="water-ripples"' in html
     assert html.count('<div class="ripple-ring"></div>') == 30
-    # Nav
-    assert '<nav class="report-nav">' in html
-    assert 'href="#sec-profile"' in html
+    # Theme toggle (только кнопка, без nav-панели)
+    assert "theme-toggle-report" in html
+    assert '<nav class="report-nav">' not in html
     # Hero
     assert '<div class="hero">' in html
     assert "ACME" in html
@@ -438,14 +435,16 @@ def test_build_report_html_structure():
 
 
 def test_build_report_html_revenue_block_present():
-    """Revenue block рендерится при наличии FINANCE данных."""
+    """Revenue block рендерится при наличии FINANCE данных — минималистичный стиль."""
     html = build_report_html(_full_data(), "ACME")
     assert '<section class="revenue-block">' in html
     assert "ACME vs" in html  # заголовок
-    assert "comp-table" in html  # таблица
-    # highlight клиент + конкуренты
-    assert "row-client" in html
-    assert "rank-gold" in html
+    # Новая минималистичная таблица (без comp-table)
+    assert "rev-table-wrap" in html
+    # Акцентная подсветка строки клиента
+    assert "rev-row-client" in html
+    # Ранги (золото/серебро/бронза)
+    assert "rev-rank-1" in html
 
 
 def test_build_report_html_revenue_block_absent():
@@ -463,7 +462,7 @@ def test_build_report_html_revenue_block_absent():
     html = build_report_html(data, "ACME")
     # HTML-элемент не отрендерился (CSS может содержать класс)
     assert '<section class="revenue-block">' not in html
-    assert "comp-table" not in html.split("</style>")[-1]  # в контенте (после CSS)
+    assert "rev-table-wrap" not in html.split("</style>")[-1]  # в контенте (после CSS)
 
 
 def test_build_report_html_empty_data():
@@ -471,7 +470,9 @@ def test_build_report_html_empty_data():
     data = {"metadata": {}, "hero_meta": {"nav_sections": []}}
     html = build_report_html(data, "Empty")
     assert 'class="aim-report-scope"' in html
-    assert '<nav class="report-nav">' in html
+    # Больше нет nav-панели, только theme-toggle
+    assert "theme-toggle-report" in html
+    assert '<nav class="report-nav">' not in html
     assert '<div class="hero">' in html
     assert "Empty" in html
     assert '<div class="cta-box">' in html
@@ -559,7 +560,9 @@ def test_end_to_end_adapter_to_builder():
     # Все ключевые элементы присутствуют
     assert "E2E Clinic" in html
     assert '<div class="hero">' in html
-    assert '<nav class="report-nav">' in html
+    # Больше нет nav-панели, только theme-toggle
+    assert "theme-toggle-report" in html
+    assert '<nav class="report-nav">' not in html
     assert "4.7" in html  # rating из reviews
     assert "200" in html  # reviews count
     assert "20" in html  # doctors_count

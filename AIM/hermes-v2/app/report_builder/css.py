@@ -190,51 +190,27 @@ _CANONICAL_CSS = """<style>
 .aim-report-scope .ripple-origin-6 .ripple-ring:nth-child(4) { animation-delay: 9.6s; }
 .aim-report-scope .ripple-origin-6 .ripple-ring:nth-child(5) { animation-delay: 11.3s; }
 
-/* === NAV (плавающая навигация — НЕ конфликтует с WP header) === */
-.aim-report-scope .report-nav {
-  position: sticky; top: 0; z-index: 50;
-  padding: 14px 32px;
-  background: var(--glass-bg-rp);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  border-bottom: 1px solid var(--border-rp);
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 16px; flex-wrap: wrap;
-}
-
-.aim-report-scope .report-nav .logo-block {
-  display: flex; align-items: center; gap: 12px;
-}
-.aim-report-scope .report-nav .logo {
-  font-family: 'Playfair Display', serif;
-  font-size: 20px; font-weight: 700; color: var(--text-rp);
-}
-.aim-report-scope .report-nav .tag {
-  font-size: 11px; color: var(--text-dim-rp);
-  letter-spacing: 1.5px; text-transform: uppercase;
-}
-
-.aim-report-scope .report-nav .nav-links {
-  display: flex; gap: 4px; flex-wrap: wrap;
-}
-.aim-report-scope .report-nav .nav-links a {
-  padding: 6px 12px; font-size: 12px; font-weight: 500;
-  color: var(--text-sec-rp); text-decoration: none;
-  border-radius: 16px; transition: all .2s;
-}
-.aim-report-scope .report-nav .nav-links a:hover {
-  background: var(--surface-rp); color: var(--text-rp);
-}
-
+/* === THEME TOGGLE (плавающая кнопка в углу) === */
+/* Шапка сайта iamaim.ru уже есть — НЕ создаём свою nav-панель. */
 .aim-report-scope .theme-toggle-report {
-  width: 36px; height: 36px; border-radius: 18px;
-  background: var(--surface-rp);
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  width: 40px; height: 40px; border-radius: 20px;
+  background: var(--glass-bg-rp);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
   border: 1px solid var(--border-rp);
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  font-size: 16px; transition: all .2s; flex-shrink: 0;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; transition: all .2s;
+  z-index: 100;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
 }
 .aim-report-scope .theme-toggle-report:hover {
-  background: var(--hover-rp); transform: scale(1.08);
+  background: var(--hover-rp);
+  transform: scale(1.08);
+  border-color: var(--accent-rp);
 }
 
 /* === CONTAINER === */
@@ -526,87 +502,107 @@ _CANONICAL_CSS = """<style>
 }
 .aim-report-scope .metric-tag-gray .metric-tag-dot { background: var(--text-sec-rp); }
 
-/* === REVENUE vs COMPETITORS BLOCK (вау-блок) === */
+/* === REVENUE vs COMPETITORS BLOCK (стиль чата — минимализм) === */
 .aim-report-scope .revenue-block {
   margin: 40px 0 60px;
-  padding: 32px 28px;
-  background: var(--surface-rp);
-  border-radius: 16px;
-  border-left: 4px solid var(--accent-rp);
-  position: relative;
+  padding: 28px 0;
+}
+.aim-report-scope .rev-section-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--text-dim-rp); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 12px;
+}
+.aim-report-scope .rev-section-label::before {
+  content: ''; display: block;
+  width: 28px; height: 1px; background: var(--accent-rp);
 }
 .aim-report-scope .revenue-block h2 {
   font-family: 'Playfair Display', serif;
-  font-size: 28px; font-weight: 400;
-  line-height: 1.2; margin-bottom: 8px;
+  font-size: 26px; font-weight: 400;
+  line-height: 1.2; margin-bottom: 8px; color: var(--text-rp);
 }
-.aim-report-scope .revenue-block .text-dim {
-  font-size: 14px; color: var(--text-dim-rp); margin-bottom: 16px;
+.aim-report-scope .rev-subtitle {
+  font-size: 14px; color: var(--text-dim-rp);
+  margin-bottom: 20px; margin-top: 4px;
 }
-.aim-report-scope .wow-banner {
-  background: linear-gradient(90deg, var(--accent-rp), transparent);
-  color: var(--bg-rp);
-  padding: 12px 20px; border-radius: 8px;
-  margin: 16px 0; font-size: 16px; font-weight: 500;
-}
-.aim-report-scope[data-theme="dark"] .wow-banner {
-  color: #0d0d0d;
-  background: linear-gradient(90deg, var(--accent-rp), rgba(255,255,255,0.05));
-}
-.aim-report-scope .wow-banner strong { letter-spacing: 0.05em; }
 
-.aim-report-scope .comp-table {
-  width: 100%; border-collapse: collapse;
-  margin: 20px 0; font-size: 14px;
+.aim-report-scope .rev-wow {
+  background: var(--surface-rp);
+  border-left: 3px solid var(--accent-rp);
+  padding: 14px 18px; border-radius: 0 8px 8px 0;
+  margin: 16px 0; font-size: 14px; color: var(--text-rp);
+  font-weight: 500;
 }
-.aim-report-scope .comp-table thead th {
-  text-align: left; padding: 12px 14px;
-  border-bottom: 2px solid var(--border-strong-rp);
-  font-size: 11px; font-weight: 600;
-  letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--text-dim-rp);
-}
-.aim-report-scope .comp-table thead th:nth-child(3),
-.aim-report-scope .comp-table thead th:nth-child(4) { text-align: center; }
+.aim-report-scope .rev-wow strong { color: var(--accent-rp); }
 
-.aim-report-scope .comp-row {
-  border-bottom: 1px solid var(--border-rp);
-  transition: background .2s;
+.aim-report-scope .rev-table-wrap {
+  overflow-x: auto;
+  margin: 16px 0 12px;
+  -webkit-overflow-scrolling: touch;
 }
-.aim-report-scope .comp-row:hover { background: var(--hover-rp); }
-.aim-report-scope .comp-row.row-client {
-  background: var(--hover-rp); font-weight: 600;
+
+.aim-report-scope .revenue-block table {
+  border-collapse: collapse;
+  width: 100%; margin: 0;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
 }
-.aim-report-scope .comp-row.row-client .comp-name,
-.aim-report-scope .comp-row.row-client .comp-revenue {
+
+.aim-report-scope .revenue-block th,
+.aim-report-scope .revenue-block td {
+  border: 1px solid var(--border-rp);
+  padding: 10px 14px;
+  text-align: left;
+  vertical-align: middle;
+}
+.aim-report-scope .revenue-block th {
+  background: var(--surface-rp);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--text-sec-rp);
+  text-transform: uppercase;
+}
+.aim-report-scope .revenue-block .rev-th-pos { width: 40px; text-align: center; }
+.aim-report-scope .revenue-block .rev-th-num { text-align: center; }
+
+.aim-report-scope .revenue-block .rev-position {
+  text-align: center; font-weight: 600;
+  color: var(--text-dim-rp); width: 40px;
+}
+.aim-report-scope .revenue-block .rev-rank-1 { color: var(--gold-rp); font-weight: 700; }
+.aim-report-scope .revenue-block .rev-rank-2 { color: var(--silver-rp); font-weight: 700; }
+.aim-report-scope .revenue-block .rev-rank-3 { color: var(--bronze-rp); font-weight: 700; }
+
+.aim-report-scope .revenue-block .rev-name {
+  color: var(--text-rp); font-weight: 500;
+}
+.aim-report-scope .revenue-block .rev-revenue {
+  text-align: center; font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-rp);
+}
+.aim-report-scope .revenue-block .rev-trend-cell { text-align: center; }
+.aim-report-scope .revenue-block .rev-trend { font-size: 14px; }
+.aim-report-scope .revenue-block .rev-trend.rev-trend-up { color: var(--green-rp); }
+.aim-report-scope .revenue-block .rev-trend.rev-trend-down { color: var(--red-rp); }
+.aim-report-scope .revenue-block .rev-trend.rev-trend-stable { color: var(--text-dim-rp); }
+
+/* Строка клиента — акцентная подсветка */
+.aim-report-scope .revenue-block .rev-row-client {
+  background: var(--surface-rp);
+}
+.aim-report-scope .revenue-block .rev-row-client .rev-name,
+.aim-report-scope .revenue-block .rev-row-client .rev-revenue {
   color: var(--accent-rp); font-weight: 700;
 }
-.aim-report-scope .comp-row td { padding: 14px; vertical-align: middle; }
 
-.aim-report-scope .comp-rank {
-  width: 40px; text-align: center;
-  font-weight: 700; font-size: 16px; color: var(--text-dim-rp);
-}
-.aim-report-scope .comp-rank.rank-gold { color: var(--gold-rp); }
-.aim-report-scope .comp-rank.rank-silver { color: var(--silver-rp); }
-.aim-report-scope .comp-rank.rank-bronze { color: var(--bronze-rp); }
-
-.aim-report-scope .comp-name { font-size: 15px; color: var(--text-rp); }
-.aim-report-scope .comp-revenue {
-  text-align: center; font-size: 18px;
-  font-weight: 500; font-variant-numeric: tabular-nums; color: var(--text-rp);
-}
-.aim-report-scope .comp-trend { text-align: center; font-size: 18px; }
-.aim-report-scope .comp-trend.trend-up { color: var(--green-rp); }
-.aim-report-scope .comp-trend.trend-down { color: var(--red-rp); }
-.aim-report-scope .comp-trend.trend-stable { color: var(--text-dim-rp); }
-.aim-report-scope .comp-source {
-  font-size: 11px !important; color: var(--text-dim-rp);
-  margin-top: 12px !important; text-align: right;
-}
-.aim-report-scope .sec-tag-highlight {
-  background: var(--accent-rp) !important;
-  color: var(--bg-rp) !important; font-weight: 600;
+.aim-report-scope .rev-source {
+  font-size: 11px; color: var(--text-dim-rp);
+  margin-top: 10px !important; margin-bottom: 0 !important;
+  text-align: right; font-style: italic;
 }
 
 /* === SEC-TAG === */
