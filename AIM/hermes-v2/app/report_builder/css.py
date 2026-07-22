@@ -58,6 +58,33 @@ _CANONICAL_CSS = """<style>
   --bronze-rp: #b87333;
 }
 
+/* Когда шапка сайта iamaim.ru переключает тему через html[data-theme],
+   отчёт тоже должен переходить в тёмную тему. */
+html[data-theme="dark"] .aim-report-scope {
+  --bg-rp: #0d0d0d;
+  --surface-rp: #1a1a1a;
+  --hover-rp: #262626;
+  --border-rp: rgba(201,169,110,.18);
+  --border-strong-rp: rgba(201,169,110,.35);
+  --text-rp: #f5f0e8;
+  --text-sec-rp: #9e9489;
+  --text-dim-rp: #7a7268;
+  --accent-rp: #c9a96e;
+  --accent-hov-rp: #e8cfa0;
+  --glass-bg-rp: rgba(13,13,13,0.85);
+  --glass-border-rp: rgba(201,169,110,.10);
+  --glow-out-rp: rgba(201,169,110,0.08);
+  --glow-in-rp: rgba(201,169,110,0.03);
+  --green-rp: #66BB6A;
+  --red-rp: #EF5350;
+  --gold-rp: #c9a96e;
+  --silver-rp: #9e9489;
+  --bronze-rp: #b87333;
+}
+
+/* Когда сайт переключает тему — скрыть ripple (как в эталоне ИПХиК) */
+html[data-theme="dark"] .aim-report-scope .water-ripples { display: none; }
+
 .aim-report-scope *, .aim-report-scope *::before, .aim-report-scope *::after {
   box-sizing: border-box; margin: 0; padding: 0;
 }
@@ -126,6 +153,7 @@ _CANONICAL_CSS = """<style>
   pointer-events: none; z-index: 0; overflow: hidden;
 }
 .aim-report-scope[data-theme="dark"] .water-ripples { display: none; }
+html[data-theme="dark"] .aim-report-scope .water-ripples { display: none; }
 
 .aim-report-scope .ripple-origin {
   position: absolute; width: 4px; height: 4px;
@@ -190,34 +218,19 @@ _CANONICAL_CSS = """<style>
 .aim-report-scope .ripple-origin-6 .ripple-ring:nth-child(4) { animation-delay: 9.6s; }
 .aim-report-scope .ripple-origin-6 .ripple-ring:nth-child(5) { animation-delay: 11.3s; }
 
-/* === THEME TOGGLE (плавающая кнопка в углу) === */
-/* Шапка сайта iamaim.ru уже есть — НЕ создаём свою nav-панель. */
-.aim-report-scope .theme-toggle-report {
-  position: fixed;
-  top: 24px;
-  right: 24px;
-  width: 40px; height: 40px; border-radius: 20px;
-  background: var(--glass-bg-rp);
-  backdrop-filter: blur(12px) saturate(1.3);
-  -webkit-backdrop-filter: blur(12px) saturate(1.3);
-  border: 1px solid var(--border-rp);
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; transition: all .2s;
-  z-index: 100;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-}
-.aim-report-scope .theme-toggle-report:hover {
-  background: var(--hover-rp);
-  transform: scale(1.08);
-  border-color: var(--accent-rp);
-}
+/* Тема переключается кнопкой шапки сайта iamaim.ru (#theme-toggle-btn).
+   Она меняет html[data-theme]. Мы НЕ рендерим свою кнопку. */
 
 /* === CONTAINER === */
 .aim-report-scope .report-container {
   max-width: 920px; margin: 0 auto;
-  padding: 64px 32px 48px;
+  padding: 64px 32px 0;
   position: relative; z-index: 1;
+}
+/* Футер за пределами container — обеспечивает полноцветный фон до низа */
+.aim-report-scope .report-footer {
+  max-width: 920px; margin: 64px auto 0;
+  padding: 32px 32px 48px;
 }
 
 /* === HERO === */
@@ -478,23 +491,31 @@ _CANONICAL_CSS = """<style>
 
 .aim-report-scope .metric-tag-green { background: #E8F5E9; color: #2E7D32; }
 .aim-report-scope .metric-tag-green .metric-tag-dot { background: #2E7D32; }
-.aim-report-scope[data-theme="dark"] .metric-tag-green { background: #1B5E20; color: #81C784; }
-.aim-report-scope[data-theme="dark"] .metric-tag-green .metric-tag-dot { background: #81C784; }
+.aim-report-scope[data-theme="dark"] .metric-tag-green,
+html[data-theme="dark"] .aim-report-scope .metric-tag-green { background: #1B5E20; color: #81C784; }
+.aim-report-scope[data-theme="dark"] .metric-tag-green .metric-tag-dot,
+html[data-theme="dark"] .aim-report-scope .metric-tag-green .metric-tag-dot { background: #81C784; }
 
 .aim-report-scope .metric-tag-yellow { background: #FFF9C4; color: #F57F17; }
 .aim-report-scope .metric-tag-yellow .metric-tag-dot { background: #F57F17; }
-.aim-report-scope[data-theme="dark"] .metric-tag-yellow { background: #F57F17; color: #FFF9C4; }
-.aim-report-scope[data-theme="dark"] .metric-tag-yellow .metric-tag-dot { background: #FFF9C4; }
+.aim-report-scope[data-theme="dark"] .metric-tag-yellow,
+html[data-theme="dark"] .aim-report-scope .metric-tag-yellow { background: #F57F17; color: #FFF9C4; }
+.aim-report-scope[data-theme="dark"] .metric-tag-yellow .metric-tag-dot,
+html[data-theme="dark"] .aim-report-scope .metric-tag-yellow .metric-tag-dot { background: #FFF9C4; }
 
 .aim-report-scope .metric-tag-red { background: #FFEBEE; color: #C62828; }
 .aim-report-scope .metric-tag-red .metric-tag-dot { background: #C62828; }
-.aim-report-scope[data-theme="dark"] .metric-tag-red { background: #C62828; color: #FFCDD2; }
-.aim-report-scope[data-theme="dark"] .metric-tag-red .metric-tag-dot { background: #FFCDD2; }
+.aim-report-scope[data-theme="dark"] .metric-tag-red,
+html[data-theme="dark"] .aim-report-scope .metric-tag-red { background: #C62828; color: #FFCDD2; }
+.aim-report-scope[data-theme="dark"] .metric-tag-red .metric-tag-dot,
+html[data-theme="dark"] .aim-report-scope .metric-tag-red .metric-tag-dot { background: #FFCDD2; }
 
 .aim-report-scope .metric-tag-blue { background: #E3F2FD; color: #1565C0; }
 .aim-report-scope .metric-tag-blue .metric-tag-dot { background: #1565C0; }
-.aim-report-scope[data-theme="dark"] .metric-tag-blue { background: #1A237E; color: #90CAF9; }
-.aim-report-scope[data-theme="dark"] .metric-tag-blue .metric-tag-dot { background: #90CAF9; }
+.aim-report-scope[data-theme="dark"] .metric-tag-blue,
+html[data-theme="dark"] .aim-report-scope .metric-tag-blue { background: #1A237E; color: #90CAF9; }
+.aim-report-scope[data-theme="dark"] .metric-tag-blue .metric-tag-dot,
+html[data-theme="dark"] .aim-report-scope .metric-tag-blue .metric-tag-dot { background: #90CAF9; }
 
 .aim-report-scope .metric-tag-gray {
   background: var(--surface-rp); color: var(--text-sec-rp);
@@ -667,7 +688,6 @@ _CANONICAL_CSS = """<style>
 
 /* === FOOTER === */
 .aim-report-scope .report-footer {
-  margin-top: 64px; padding: 32px 0;
   border-top: 1px solid var(--border-rp);
   text-align: center; color: var(--text-dim-rp);
   font-size: 12px; line-height: 1.7;

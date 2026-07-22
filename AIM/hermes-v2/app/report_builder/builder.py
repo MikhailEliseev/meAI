@@ -66,17 +66,12 @@ def _build_ripple_html() -> str:
 
 
 def _build_nav_html(nav_sections: list[dict], company_name: str) -> str:
-    """Построить плавающую кнопку переключения темы.
+    """Шапка сайта iamaim.ru уже содержит кнопку переключения темы.
 
-    НЕ создаём отдельную nav-панель — шапка сайта iamaim.ru уже есть сверху.
-    Только компактная кнопка theme-toggle в углу (fixed).
+    Возвращаем пустую строку — не дублируем toggle. Тема отчёта синхронизирована
+    с темой сайта через CSS (html[data-theme="dark"] → .aim-report-scope).
     """
-    return (
-        '<button class="theme-toggle-report" '
-        'onclick="this.closest(\'.aim-report-scope\').dataset.theme='
-        'this.closest(\'.aim-report-scope\').dataset.theme===\'dark\'?\'light\':\'dark\'" '
-        'aria-label="Переключить тему">🌓</button>'
-    )
+    return ""
 
 
 def _build_hero_html(data: dict, title: str) -> str:

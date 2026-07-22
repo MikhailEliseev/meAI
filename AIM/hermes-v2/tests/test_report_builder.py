@@ -235,7 +235,6 @@ def test_canonical_css_contains_key_classes():
         ".aim-report-scope",
         ".water-ripples",
         ".ripple-ring",
-        ".theme-toggle-report",
         ".hero",
         ".section",
         ".section-label",
@@ -252,6 +251,13 @@ def test_canonical_css_contains_key_classes():
         ".metric-tag",
     ]:
         assert cls in _CANONICAL_CSS, f"Missing CSS class: {cls}"
+
+
+def test_canonical_css_responds_to_site_theme():
+    """CSS реагирует на переключение темы сайтом (html[data-theme=dark])."""
+    # Шапка сайта iamaim.ru переключает html[data-theme], не наш scope.
+    # Наш CSS должен это поддерживать.
+    assert 'html[data-theme="dark"] .aim-report-scope' in _CANONICAL_CSS
 
 
 def test_canonical_css_has_dark_theme():
@@ -293,24 +299,23 @@ def test_ripple_html_structure():
 # ──────────────────────────────────────────────────────────────────────────
 
 def test_nav_html_with_sections():
-    """Nav теперь только кнопка theme-toggle (шапка сайта уже есть)."""
+    """Шапка сайта уже содержит кнопку темы — _build_nav_html возвращает пустую строку."""
     sections = [
         {"id": "sec-profile", "label": "О клинике"},
         {"id": "sec-reviews", "label": "Отзывы"},
     ]
     html = _build_nav_html(sections, "Test")
-    # Больше нет полноценной nav-панели
+    # Нет своей nav-панели
     assert '<nav class="report-nav">' not in html
-    # Только кнопка переключения темы
-    assert "theme-toggle-report" in html
-    assert "dataset.theme" in html  # JS для переключения
+    # Нет своей кнопки toggle (используем кнопку сайта)
+    assert "theme-toggle-report" not in html
+    assert html == ""
 
 
 def test_nav_html_empty_sections():
-    """Nav без секций — всё равно рендерится кнопка theme-toggle."""
+    """Пустые секции — тоже пустая строка."""
     html = _build_nav_html([], "Test")
-    assert "theme-toggle-report" in html
-    assert '<nav class="report-nav">' not in html
+    assert html == ""
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -409,8 +414,8 @@ def test_build_report_html_structure():
     # Ripple
     assert 'class="water-ripples"' in html
     assert html.count('<div class="ripple-ring"></div>') == 30
-    # Theme toggle (только кнопка, без nav-панели)
-    assert "theme-toggle-report" in html
+    # Theme toggle — нет своего (используем кнопку сайта)
+    assert "theme-toggle-report" not in html
     assert '<nav class="report-nav">' not in html
     # Hero
     assert '<div class="hero">' in html
@@ -470,8 +475,8 @@ def test_build_report_html_empty_data():
     data = {"metadata": {}, "hero_meta": {"nav_sections": []}}
     html = build_report_html(data, "Empty")
     assert 'class="aim-report-scope"' in html
-    # Больше нет nav-панели, только theme-toggle
-    assert "theme-toggle-report" in html
+    # Нет своей nav-панели и нет своего toggle (используем сайт)
+    assert "theme-toggle-report" not in html
     assert '<nav class="report-nav">' not in html
     assert '<div class="hero">' in html
     assert "Empty" in html
@@ -510,10 +515,16 @@ def test_build_report_html_is_wpautop_safe():
 
 
 def test_build_report_html_theme_toggle_works():
-    """Theme-toggle onclick переключает data-theme на .aim-report-scope."""
+    """Тема отчёта управляется кнопкой сайта (html[data-theme]), не нашей.
+
+    Наш CSS должен иметь правило html[data-theme=dark] .aim-report-scope,
+    чтобы при клике на #theme-toggle-btn в шапке сайта отчёт тоже менял тему.
+    """
     html = build_report_html(_full_data(), "ACME")
-    assert "theme-toggle-report" in html
-    assert "dataset.theme" in html  # JS переключения
+    # Нашей кнопки toggle нет — используем кнопку сайта
+    assert "theme-toggle-report" not in html
+    # CSS содержит правило для html[data-theme=dark]
+    assert 'html[data-theme="dark"] .aim-report-scope' in _CANONICAL_CSS
 
 
 def test_build_report_html_escapes_company_name():
@@ -560,8 +571,8 @@ def test_end_to_end_adapter_to_builder():
     # Все ключевые элементы присутствуют
     assert "E2E Clinic" in html
     assert '<div class="hero">' in html
-    # Больше нет nav-панели, только theme-toggle
-    assert "theme-toggle-report" in html
+    # Нет своего toggle — используем кнопку сайта
+    assert "theme-toggle-report" not in html
     assert '<nav class="report-nav">' not in html
     assert "4.7" in html  # rating из reviews
     assert "200" in html  # reviews count
