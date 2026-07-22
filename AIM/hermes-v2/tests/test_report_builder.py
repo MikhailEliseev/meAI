@@ -286,11 +286,14 @@ def test_fonts_import_returns_link_tags():
 # ──────────────────────────────────────────────────────────────────────────
 
 def test_ripple_html_structure():
-    """6 origin × 5 колец = 30 ripple-ring."""
+    """3 origin × 5 колец = 15 ripple-ring (сбалансированно, не перегружает взгляд)."""
     html = _build_ripple_html()
-    assert html.count('<div class="ripple-ring"></div>') == 30
-    for i in range(1, 7):
+    assert html.count('<div class="ripple-ring"></div>') == 15
+    for i in range(1, 4):  # origins 1, 2, 3
         assert f"ripple-origin-{i}" in html
+    # origins 4, 5, 6 больше не рендерятся
+    for i in (4, 5, 6):
+        assert f"ripple-origin-{i}" not in html
     assert 'class="water-ripples"' in html
 
 
@@ -413,7 +416,7 @@ def test_build_report_html_structure():
     assert "<style>" in html
     # Ripple
     assert 'class="water-ripples"' in html
-    assert html.count('<div class="ripple-ring"></div>') == 30
+    assert html.count('<div class="ripple-ring"></div>') == 15
     # Theme toggle — нет своего (используем кнопку сайта)
     assert "theme-toggle-report" not in html
     assert '<nav class="report-nav">' not in html

@@ -53,12 +53,12 @@ def _extract_client_financials(data: dict) -> tuple[float | None, float | None]:
 def _build_ripple_html() -> str:
     """Построить HTML для анимации «круги на воде».
 
-    6 origin × 5 колец в каждом = 30 ripple-ring элементов.
-    Анимация полностью на GPU (transform: scale) через CSS — не вызывает
-    repaint других элементов (в отличие от width/height анимации).
+    3 origin × 5 колец = 15 ripple-ring элементов.
+    Сбалансированный треугольник: центр + верх-лево + низ-право.
+    Анимация полностью на GPU (transform: scale) через CSS.
     """
     origins = []
-    for i in range(1, 7):
+    for i in range(1, 4):  # origins 1, 2, 3
         rings = "".join(['<div class="ripple-ring"></div>'] * 5)
         origins.append(
             f'<div class="ripple-origin ripple-origin-{i}">{rings}</div>'

@@ -123,11 +123,14 @@ html[data-theme="dark"] .aim-report-scope .water-ripples { display: none; }
 .aim-report-scope ul, .aim-report-scope ol { margin: 12px 0 16px 24px; }
 .aim-report-scope li { margin: 6px 0; color: var(--text-sec-rp); }
 
-/* === RIPPLE — КРУГИ НА ВОДЕ (GPU-only, не вызывает repaint) ===
- * Ключевая оптимизация: анимируем ТОЛЬКО transform: scale() и opacity.
- * Не трогаем width/height/border-width (это вызывало layout и мерцание
- * таблиц/кнопок/карточек с backdrop-filter).
- * Каждый ring живёт в своём GPU-слое (will-change: transform, opacity).
+/* === RIPPLE — КРУГИ НА ВОДЕ ===
+ * Глобальные классы (без .aim-report-scope префикса) — это критично.
+ * Со scoped-префиксом Chrome не запускает keyframes-анимацию внутри
+ * <style> в <main>. Используем уникальные имена классов чтобы не
+ * конфликтовать с WP темой.
+ *
+ * GPU-оптимизация: анимируем transform: scale() + opacity (не width/height,
+ * что вызывало layout reflow и мерцание таблиц/кнопок/карточек).
  */
 @keyframes aim-water-ripple {
   0%   { transform: translate(-50%, -50%) scale(0);    opacity: 0.77; }
@@ -148,35 +151,29 @@ html[data-theme="dark"] .aim-report-scope .water-ripples { display: none; }
   50% { box-shadow: 0 0 22px var(--glow-out-rp), inset 0 0 30px var(--glow-in-rp); }
 }
 
-@keyframes aim-pulse-ring {
-  0%, 100% { opacity: 0.03; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 0.07; transform: translate(-50%, -50%) scale(1.15); }
-}
-
-/* water-ripples: изолированный fixed-слой. contain: strict не даёт
- * потомкам влиять на layout остальной страницы. transform: translateZ(0)
- * поднимает в GPU-слой. */
-.aim-report-scope .water-ripples {
+/* ГЛОБАЛЬНЫЕ ripple-классы (без scope) */
+.water-ripples {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   pointer-events: none; z-index: 0; overflow: hidden;
   contain: strict;
   transform: translateZ(0);
 }
-.aim-report-scope[data-theme="dark"] .water-ripples { display: none; }
-html[data-theme="dark"] .aim-report-scope .water-ripples { display: none; }
+[data-theme="dark"] .water-ripples { display: none; }
 
-.aim-report-scope .ripple-origin {
+.ripple-origin {
   position: absolute; width: 4px; height: 4px;
-  border-radius: 50%; background: var(--text-rp);
+  border-radius: 50%; background: var(--text-rp, #1A1A1A);
   opacity: 0.08; transform: translate(-50%, -50%);
 }
-/* ripple-ring: фиксированный размер 850px, масштабируется через transform.
- * will-change поднимает в GPU-слой — не вызывает repaint соседей. */
-.aim-report-scope .ripple-origin .ripple-ring {
+
+/* ring: фиксированный 850px, масштабируется через transform (GPU only).
+ * Если читать через .aim-report-scope CSS variables — они наследуются. */
+.ripple-origin .ripple-ring {
   position: absolute; top: 50%; left: 50%;
   width: 850px; height: 850px;
   border-radius: 50%;
-  border: 1px solid var(--text-rp);
+  border: 1px solid currentColor;
+  color: inherit;
   background: none;
   opacity: 0;
   transform: translate(-50%, -50%) scale(0);
@@ -184,54 +181,33 @@ html[data-theme="dark"] .aim-report-scope .water-ripples { display: none; }
   will-change: transform, opacity;
 }
 
-.aim-report-scope .ripple-origin-1 { top: 50%; left: 50%; }
-.aim-report-scope .ripple-origin-2 { top: 18%; left: 14%; }
-.aim-report-scope .ripple-origin-3 { top: 72%; right: 12%; left: auto; }
-.aim-report-scope .ripple-origin-4 { top: 30%; right: 18%; left: auto; }
-.aim-report-scope .ripple-origin-5 { top: 62%; left: 20%; }
-.aim-report-scope .ripple-origin-6 { top: 44%; right: 28%; left: auto; }
+/* Установка цвета через scope: ring наследует --text-rp */
+.aim-report-scope .ripple-origin { color: var(--text-rp); }
 
-.aim-report-scope .ripple-origin-1 .ripple-ring { animation-duration: 10s; }
-.aim-report-scope .ripple-origin-1 .ripple-ring:nth-child(1) { animation-delay: 0s; }
-.aim-report-scope .ripple-origin-1 .ripple-ring:nth-child(2) { animation-delay: 2s; }
-.aim-report-scope .ripple-origin-1 .ripple-ring:nth-child(3) { animation-delay: 4s; }
-.aim-report-scope .ripple-origin-1 .ripple-ring:nth-child(4) { animation-delay: 6s; }
-.aim-report-scope .ripple-origin-1 .ripple-ring:nth-child(5) { animation-delay: 8s; }
+.ripple-origin-1 { top: 50%; left: 50%; }
+.ripple-origin-2 { top: 18%; left: 14%; }
+.ripple-origin-3 { top: 72%; right: 12%; }
 
-.aim-report-scope .ripple-origin-2 .ripple-ring { animation-duration: 11s; }
-.aim-report-scope .ripple-origin-2 .ripple-ring:nth-child(1) { animation-delay: 1.5s; }
-.aim-report-scope .ripple-origin-2 .ripple-ring:nth-child(2) { animation-delay: 3.7s; }
-.aim-report-scope .ripple-origin-2 .ripple-ring:nth-child(3) { animation-delay: 5.9s; }
-.aim-report-scope .ripple-origin-2 .ripple-ring:nth-child(4) { animation-delay: 8.1s; }
-.aim-report-scope .ripple-origin-2 .ripple-ring:nth-child(5) { animation-delay: 10.3s; }
+.ripple-origin-1 .ripple-ring { animation-duration: 10s; }
+.ripple-origin-1 .ripple-ring:nth-child(1) { animation-delay: 0s; }
+.ripple-origin-1 .ripple-ring:nth-child(2) { animation-delay: 2s; }
+.ripple-origin-1 .ripple-ring:nth-child(3) { animation-delay: 4s; }
+.ripple-origin-1 .ripple-ring:nth-child(4) { animation-delay: 6s; }
+.ripple-origin-1 .ripple-ring:nth-child(5) { animation-delay: 8s; }
 
-.aim-report-scope .ripple-origin-3 .ripple-ring { animation-duration: 9s; }
-.aim-report-scope .ripple-origin-3 .ripple-ring:nth-child(1) { animation-delay: 0.8s; }
-.aim-report-scope .ripple-origin-3 .ripple-ring:nth-child(2) { animation-delay: 2.6s; }
-.aim-report-scope .ripple-origin-3 .ripple-ring:nth-child(3) { animation-delay: 4.4s; }
-.aim-report-scope .ripple-origin-3 .ripple-ring:nth-child(4) { animation-delay: 6.2s; }
-.aim-report-scope .ripple-origin-3 .ripple-ring:nth-child(5) { animation-delay: 8s; }
+.ripple-origin-2 .ripple-ring { animation-duration: 11s; }
+.ripple-origin-2 .ripple-ring:nth-child(1) { animation-delay: 1.5s; }
+.ripple-origin-2 .ripple-ring:nth-child(2) { animation-delay: 3.7s; }
+.ripple-origin-2 .ripple-ring:nth-child(3) { animation-delay: 5.9s; }
+.ripple-origin-2 .ripple-ring:nth-child(4) { animation-delay: 8.1s; }
+.ripple-origin-2 .ripple-ring:nth-child(5) { animation-delay: 10.3s; }
 
-.aim-report-scope .ripple-origin-4 .ripple-ring { animation-duration: 12s; }
-.aim-report-scope .ripple-origin-4 .ripple-ring:nth-child(1) { animation-delay: 0s; }
-.aim-report-scope .ripple-origin-4 .ripple-ring:nth-child(2) { animation-delay: 2.4s; }
-.aim-report-scope .ripple-origin-4 .ripple-ring:nth-child(3) { animation-delay: 4.8s; }
-.aim-report-scope .ripple-origin-4 .ripple-ring:nth-child(4) { animation-delay: 7.2s; }
-.aim-report-scope .ripple-origin-4 .ripple-ring:nth-child(5) { animation-delay: 9.6s; }
-
-.aim-report-scope .ripple-origin-5 .ripple-ring { animation-duration: 10.5s; }
-.aim-report-scope .ripple-origin-5 .ripple-ring:nth-child(1) { animation-delay: 2.2s; }
-.aim-report-scope .ripple-origin-5 .ripple-ring:nth-child(2) { animation-delay: 4.3s; }
-.aim-report-scope .ripple-origin-5 .ripple-ring:nth-child(3) { animation-delay: 6.4s; }
-.aim-report-scope .ripple-origin-5 .ripple-ring:nth-child(4) { animation-delay: 8.5s; }
-.aim-report-scope .ripple-origin-5 .ripple-ring:nth-child(5) { animation-delay: 10.6s; }
-
-.aim-report-scope .ripple-origin-6 .ripple-ring { animation-duration: 8.5s; }
-.aim-report-scope .ripple-origin-6 .ripple-ring:nth-child(1) { animation-delay: 4.5s; }
-.aim-report-scope .ripple-origin-6 .ripple-ring:nth-child(2) { animation-delay: 6.2s; }
-.aim-report-scope .ripple-origin-6 .ripple-ring:nth-child(3) { animation-delay: 7.9s; }
-.aim-report-scope .ripple-origin-6 .ripple-ring:nth-child(4) { animation-delay: 9.6s; }
-.aim-report-scope .ripple-origin-6 .ripple-ring:nth-child(5) { animation-delay: 11.3s; }
+.ripple-origin-3 .ripple-ring { animation-duration: 9s; }
+.ripple-origin-3 .ripple-ring:nth-child(1) { animation-delay: 0.8s; }
+.ripple-origin-3 .ripple-ring:nth-child(2) { animation-delay: 2.6s; }
+.ripple-origin-3 .ripple-ring:nth-child(3) { animation-delay: 4.4s; }
+.ripple-origin-3 .ripple-ring:nth-child(4) { animation-delay: 6.2s; }
+.ripple-origin-3 .ripple-ring:nth-child(5) { animation-delay: 8s; }
 
 /* Тема переключается кнопкой шапки сайта iamaim.ru (#theme-toggle-btn).
    Она меняет html[data-theme]. Мы НЕ рендерим свою кнопку. */
@@ -740,7 +716,7 @@ html[data-theme="dark"] .aim-report-scope .metric-tag-blue .metric-tag-dot { bac
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .aim-report-scope .ripple-ring,
+  .ripple-ring,
   .aim-report-scope .card-glass,
   .aim-report-scope .glass-stat,
   .aim-report-scope .glass-table-wrap { animation: none !important; }
