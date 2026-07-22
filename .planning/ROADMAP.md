@@ -1,121 +1,72 @@
-# ROADMAP.md — Гермес v2
+# ROADMAP.md — Milestone 2: v3 Feature Parity
 
-**Дата:** 2026-07-14
-**Режим:** Vertical MVP (каждая фаза — end-to-end срез)
-**Гранулярность:** standard
-**Спека:** `docs/superpowers/specs/2026-07-14-hermes-interactive-redesign-design.md`
+> **Создан:** 2026-07-22
+> **Предыдущие фазы:** 1-8 (Milestone 1, completed)
 
 ---
 
 ## Phases
 
-| # | Phase | Goal | Requirements |
-|---|-------|------|--------------|
-| 1 | Walking Skeleton: контейнер + health + 1 тул | Минимальный end-to-end: контейнер v2 поднимается, отвечает /health, один тул (find_competitors) реально зовёт aim-app и возвращает данные | INFRA-01..05, TOLS-02 |
-| 2 | Диалоговый сервер + промпт | FastAPI /api/chat/stream + deepseek-chat + системный промпт. Гермес отвечает на сообщения, хранит сессии в SQLite | DIALOG-01..05, TOLS-11 |
-| 3 | Перенос всех 10 тулов | 7 толстых тулов перенесены из бэкапа + 3 прокси. Модель может их вызывать по запросу | TOLS-01,03..10,12 |
-| 4 | Базовый сценарий (база → кнопки → по запросу) | URL → quick_overview + find_competitors → рынок + top-3 за ≤4 мин. Кнопки suggestions в SSE | FLOW-01..04, CHAT-01,05 |
-| 5 | Кнопки в Theme-чате + сборка отчёта | Фронтенд рендерит кнопки, клик шлёт текст. generate_html_report собирает отчёт из сессии | CHAT-02..04, FLOW-05,06, REPORT-01..03 |
-| 6 | Деплой на прод + переключение nginx | v2 на проде, nginx переключён, старый контейнер выключен но готов к откату | DEPLOY-01..05 |
-| 7 | V2 Competitor Pipeline: точность данных | Доработка v2 пайплайна конкурентов: резолв ИНН клиента, Instagram/хирурги колонки, нормализация брендов. Полная таблица как эталон | COMP-01..04 |
-| 8 | V2 Pipeline: стабильность и покрытие | Retry при пустом Perplexity, больше кандидатов (10→5), кэш результатов, дедуп юрлиц одной сети. Стабильный результат между запусками | STAB-01..04 |
+| Phase | Название | Описание | Зависимости |
+|-------|----------|----------|-------------|
+| 9 | HTML Builder Migration | Перенос build_report.py из v1 → v2, адаптация под формат v2 | — |
+| 10 | WordPress Publisher | Публикация HTML-отчёта на iamaim.ru/{slug} через MySQL | Phase 9 |
+| 11 | Chat Integration | Интеграция отчёта в чат: SSE report-ready, кнопка, placeholder | Phase 10 |
+| 12 | QC Critique | 18-пунктный чеклист качества + интеграция в отчёт | Phase 9 |
+| 13 | E2E + Deploy | Полный тест: чат → отчёт → ссылка → качество | Phases 9-12 |
 
 ---
 
 ## Phase Details
 
-### Phase 1: Walking Skeleton — контейнер + health + 1 тул
-**Goal:** Минимальный end-to-end рабочий срез. Новый контейнер aim-hermes-v2 поднимается, проходит healthcheck, и ОДИН тул (find_competitors) реально делает HTTP к aim-app:8000 и возвращает данные конкурентов. Доказывает, что вся инфраструктура (docker network, env, aim-app доступность) работает.
-**Mode:** mvp
-**Requirements:** INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-05, TOLS-02
-**Plans:** 1 plan
-Plans:
-- [ ] 01-01-PLAN.md — FastAPI-приложение hermes-v2 + thin-wrapper find_competitors + Dockerfile + сервис в docker-compose + деплой на ssh aim с end-to-end верификацией
-**Success Criteria:**
-1. `docker compose up -d hermes-v2` поднимает контейнер без ошибок
-2. `curl http://aim-hermes-v2:8000/health` (из docker network) → 200
-3. `curl http://aim-hermes-v2:8000/tools/find-competitors?url=<тестовый>` возвращает JSON с массивом конкурентов (brand_name, rating) — реальный ответ от aim-app
-4. Логи контейнера показывают успешный HTTP-запрос к aim-app:8000
+### Phase 9: HTML Builder Migration
+**Цель:** Перенести HTML builder из v1 в v2, адаптировать под v2 данные.
 
-### Phase 2: Диалоговый сервер + промпт
-**Goal:** Контейнер принимает чат-сообщения через POST /api/chat/stream (SSE), ведёт диалог через deepseek-chat с системным промптом «база → кнопки → по запросу». История сессий в SQLite. На этой фазе модель общается текстом, но тулзы пока не подключены (кроме одного из Phase 1).
-**Mode:** mvp
-**Requirements:** DIALOG-01, DIALOG-02, DIALOG-03, DIALOG-04, DIALOG-05, TOLS-11
-**Success Criteria:**
-1. `POST /api/chat/stream` с {message: "привет"} возвращает SSE-стрим с text-delta + finish
-2. Гермес отвечает осмысленно (по промпту — что он AI-ассистент AIM)
-3. Повторный запрос с тем же session_id — модель помнит контекст (SQLite)
-4. Разные session_id не смешиваются (per-session, не глобальная очередь)
+**Задачи:**
+- Создать `hermes-v2/app/report_builder/` модуль
+- Перенести `build_report.py` (1580 строк) → адаптировать
+- Заменить v1 pipeline data format на v2 collected_results format
+- Сохранить AIM Design System (14 canonical классов, шрифты, theme toggle)
+- Тесты: unit-тесты на builder (мок данных → HTML)
 
-### Phase 3: Перенос всех 10 тулов
-**Goal:** Все 10 инструментов доступны модели через tool-calling. 7 толстых перенесены из бэкапа (hermes-container-code/app/tools/) с адаптацией импортов. Модель может вызывать любой тул по описанию.
-**Mode:** mvp
-**Requirements:** TOLS-01, TOLS-03, TOLS-04, TOLS-05, TOLS-06, TOLS-07, TOLS-08, TOLS-09, TOLS-10, TOLS-12
-**Success Criteria:**
-1. Каждый из 10 тулов зарегистрирован в OpenAI function-schema
-2. Тестовый запрос «проверь упоминания в СМИ для <url>» → модель вызывает run_smi_mentions → реальный ответ
-3. Каждый tool-schema содержит «когда вызывать» (when to call)
-4. find_competitors вызывается не более одного раза за сессию
+### Phase 10: WordPress Publisher
+**Цель:** Публикация HTML-отчёта как страницы WordPress.
 
-### Phase 4: Базовый сценарий (база → кнопки → по запросу)
-**Goal:** Клиент присылает URL → Гермес за ≤4 минуты делает базу (quick_overview + find_competitors) → показывает рынок + top-3 конкурента → эмитит SSE-событие suggestions с 2-4 релевантными кнопками. Питч услуг AIM в конце.
-**Mode:** mvp
-**Requirements:** FLOW-01, FLOW-02, FLOW-03, FLOW-04, CHAT-01, CHAT-05
-**Success Criteria:**
-1. URL → базовый ответ за ≤4 минуты (стримится прогресс)
-2. База содержит: чем занимается клиника, город, специализация, ключевые цифры рынка, top-3 конкурента (имя+rating+match_reason)
-3. SSE содержит событие suggestions с 2-4 кнопками
-4. Кнопки адаптивны (плохой сайт → «тех.аудит» в списке)
-5. В конце базы — короткий питч услуг AIM
+**Задачи:**
+- Перенести `publish_scout_report.py` (237 строк)
+- Адаптировать под v2 (убрать session_archive, брать HTML напрямую)
+- pymysql → wp_posts insert (status=publish, type=page)
+- Генерация slug (6 символов)
+- Возврат `https://iamaim.ru/{slug}`
+- Тесты: мок MySQL → проверка insert
 
-### Phase 5: Кнопки в Theme-чате + сборка отчёта
-**Goal:** Фронтенд Theme-чата рендерит кнопки под сообщениями, клик шлёт текстом → Гермес вызывает тул. generate_html_report собирает отчёт из session_archive и публикует в WordPress.
-**Mode:** mvp
-**Requirements:** CHAT-02, CHAT-03, CHAT-04, FLOW-05, FLOW-06, REPORT-01, REPORT-02, REPORT-03
-**Success Criteria:**
-1. useStreamChat.js обрабатывает suggestions → рендерит кнопки
-2. Клик по кнопке → новое сообщение → модель вызывает соответствующий тул
-3. «Собрать отчёт» → generate_html_report → HTML-отчёт с публичным URL
-4. Tool-results пишутся в /opt/hermes-v2-data/sessions-archive/{hash}/
+### Phase 11: Chat Integration
+**Цель:** Чат автоматически публикует отчёт и показывает ссылку.
 
-### Phase 6: Деплой на прод + переключение nginx
-**Goal:** v2 полностью на проде: rsync, build, up. nginx переключён на aim-hermes-v2:8000. Старый aim-hermes выключен, но контейнер и образ сохранены для отката.
-**Mode:** mvp
-**Requirements:** DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05
-**Success Criteria:**
-1. rsync переносит код на сервер без ошибок
-2. docker compose build hermes-v2 && docker compose up -d hermes-v2 на проде работает
-3. nginx конфиг переключён, https://iamaim.ru чат ходит в v2
-4. Старый aim-hermes остановлен (docker ps не показывает), но образ aim-hermes:latest сохранён
-5. Откат: переключение nginx обратно + docker compose up -d hermes за <2 минуты
+**Задачи:**
+- В `chat_with_tools`: после streaming, вызвать publish_report
+- SSE-событие `report-ready` с URL
+- Фронтенд `chat-inline.php`: обработка `report-ready` → кнопка
+- Placeholder-страница при первом ответе (опционально)
+- Тесты: e2e (мок → SSE → URL)
 
-### Phase 7: V2 Competitor Pipeline — точность данных
-**Goal:** Доработка гибридного пайплайна (Perplexity + SearXNG + bo.nalog) до полной таблицы конкурентов: резолв ИНН клиента для коридора выручки, Instagram-подписчики, число хирургов, нормализация брендов. Тест: IPHK → таблица из 8 конкурентов со всеми 5 колонками заполненными (Конкурент, Выручка, Тренд, Хирургов, Instagram).
-**Mode:** standard
-**Depends on:** Phase 6
-**Requirements:** COMP-01, COMP-02, COMP-03, COMP-04
-**Plans:** 1 plan
-Plans:
-- [ ] 07-01-PLAN.md — 4 доработки v2 пайплайна (ИНН клиента, Instagram, хирурги, нормализация брендов)
-**Success Criteria:**
-1. IPHK: клиентская выручка резолвится из ФНС (не оценка), коридор 0.3×–3× работает
-2. Топ-5 конкурентов имеют surgeons_count (не None)
-3. Топ-5 конкурентов имеют instagram_followers (не None)
-4. Нормализация: «Медиал на Ленинском» → «Медиал» перед резолвом
-5. strategy=v2 отдаёт таблицу с 5 заполненными колонками для всех топ-5
+### Phase 12: QC Critique
+**Цель:** Проверка качества отчёта перед публикацией.
 
-### Phase 8: V2 Pipeline — стабильность и покрытие
-**Goal:** Сделать v2 пайплайн детерминированным и надёжным. Сейчас Perplexity недетерминирован — один запуск даёт 0 брендов (пусто), другой — 8. Нужно: retry при пустом результате, запрос 10+ кандидатов (оставлять топ-5), кэш результатов bo.nalog, дедуп юрлиц одной сети (СМ-Клиника Волгоградский = СМ-Клиника Сенежская).
-**Mode:** standard
-**Depends on:** Phase 7
-**Requirements:** STAB-01, STAB-02, STAB-03, STAB-04
-**Plans:** 1 plan
-Plans:
-- [ ] 08-01-PLAN.md — retry + overfetch + кэш + дедуп сетей
-**Success Criteria:**
-1. 3 последовательных запуска IPHK → каждый раз ≥5 конкурентов (0 пустых результатов)
-2. Perplexity запрашивает 12 брендов → резолвятся → топ-5 (overfetch для стабильности)
-3. bo.nalog запросы кешируются (повторный IPHK за <5с вместо 15с)
-4. Дедуп: две точки одной сети (один ИНН) → одна запись в результате
+**Задачи:**
+- Перенести `qc_checklist.py` (342 строки)
+- Адаптировать под v2 collected_results
+- 18 пунктов: about, market, competitors, experts, instagram, content, media, forum, financials, strategy, offer, reputation
+- PASS_THRESHOLD = 80%
+- Включить QC-секцию в HTML-отчёт
+- Тесты: unit-тесты на чеклист (мок данных → PASS/FAIL)
 
----
+### Phase 13: E2E + Deploy
+**Цель:** Полный тест пайплайна: чат → данные → отчёт → ссылка → QC.
+
+**Задачи:**
+- E2E тест: отправить URL в чат → получить ссылку на отчёт
+- Проверить отчёт на реальной клинике (arclinic.ru)
+- QC coverage ≥ 80%
+- Деплой на прод
+- Smoke-тест через браузер
