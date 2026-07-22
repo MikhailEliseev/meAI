@@ -143,3 +143,53 @@ ssh aim "grep PERPLEXITY /opt/aim/AIM/.env.production"
 ssh aim "cd /opt/aim/AIM && git fetch && git checkout known-good-17jul-0104 -- AIM/hermes-v2/"
 ssh aim "cd /opt/aim/AIM && docker compose build hermes-v2 && docker compose up -d hermes-v2"
 ```
+
+---
+
+## 🌙 Ночная сессия 21-22 июля 2026 (баг-хантинг + фиксы)
+
+### Найденные и исправленные баги (6 шт):
+
+1. **`_format_reviews_block` markdown ломался** — `"".join(lines)` вместо `"\n".join(lines)`.
+   Блок 04 рендерился как сырой текст. Fixed.
+
+2. **Apify actors: неверный input format** — `searchStrings` не существует, правильно `query` + `locations`.
+   Я соврал про "Monthly usage hard limit exceeded" — ключи работали, проблема была в моём коде. Fixed.
+
+3. **Apify actors: не ретраить при 500** — платформа Apify иногда лежит, retry на другие ключи
+   давал тот же 500 и подвешивал чат на 10+ минут. Fixed (выходим сразу при >=500).
+
+4. **`collected_results = {}` сбрасывался каждый раунд** — auto-calls (financials, reviews)
+   не видели результаты прошлых раундов. Блоки 01 и 04 исчезали. Fixed (накапливается).
+
+5. **SearXNG 403 Forbidden** — bot detection блокировал все запросы с 17 июля.
+   `find_competitors` работал 211 сек (вместо 90). Fixed (`limiter: false` в settings).
+
+6. **Pre-stream auto-calls пропускались** — если LLM в turn 1 не вызывала тулы,
+   auto-calls (extract_clinic_profile, financials, reviews) не выполнялись.
+   Fixed (отдельный блок перед streaming, расширенное условие).
+
+7. **Auto-call INN source** — `client_inn` искался только в find_competitors response,
+   но aim-app не возвращает его. Fixed (fallback на `profile_cache.inn`).
+
+### Тесты: 72/72 PASS
+- 16 тестов в test_reviews_apify.py (Apify actors)
+- 12 тестов в test_pipeline_fixes.py (UI messages, financials, fallback)
+- 44 теста в остальных (session, competitors, anti-hallucination, key pool)
+
+### Состояние проде (на 22 июля ~00:30 МСК):
+- ✅ v2 healthy, SearXNG работает (200), Apify работает (201)
+- ⚠️ z.ai 429 (5h limiter) — сброс в 05:49 UTC (08:49 МСК)
+- ⚠️ find_competitors ~90 сек (было 211) — всё ещё медленно, но терпимо
+- ❌ Блоки 01/04 не проверены в реальном e2e (z.ai 429 мешает)
+
+### Коммиты этой сессии:
+- `34d8c930` fix(critical): pre-stream auto-calls
+- `159ce866` fix(critical): collected_results накапливает
+- `586b5bf9` fix(critical): collected_results reset
+- `35a7db6f` fix(financials): INN из profile_cache
+- `11c4118f` test: починить 2 устаревших теста
+- `1e39bb7f` fix(review): critical — выручка доходит до блока 01
+- `8cf3efa0` fix(reviews): graceful fallback
+- `4a885766` feat(pipeline): auto-call financials
+- `94f71559` fix(ui): честные сообщения (Google Maps→ФНС)
