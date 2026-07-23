@@ -249,35 +249,47 @@ async def chat_stream(req: ChatRequest):
 @app.get("/report/{slug}/download")
 async def download_report_pdf(slug: str):
     """Скачивание отчёта как PDF через WeasyPrint (Phase 12).
-    
+
     Читает HTML из MySQL wp_posts, конвертирует в PDF через WeasyPrint.
     Возвращает PDF с Content-Disposition: attachment.
-    
+
     Args:
         slug: URL slug отчёта (например 'btu2vneu')
-    
+
     Returns:
         Response с PDF (application/pdf)
-    
+
     Raises:
+        HTTPException 400: Невалидный slug (path traversal / спецсимволы)
         HTTPException 404: Отчёт не найден
         HTTPException 500: Ошибка PDF-конвертации
     """
+    import re as _re
+
+    # W-CRITICAL: slug validation — предотвращает path traversal в local fallback.
+    # Разрешаем только lowercase буквы, цифры, дефисы (8-20 символов).
+    if not _re.match(r'^[a-z0-9-]{1,32}$', slug):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid report slug. Only lowercase letters, digits and hyphens are allowed."
+        )
+
     from app.report_builder.publisher import get_report_html_by_slug
     from app.report_builder.pdf_converter import html_to_pdf
-    
+    import asyncio
+
     # Читаем HTML из MySQL
     html = await get_report_html_by_slug(slug)
     if not html:
         raise HTTPException(status_code=404, detail=f"Report not found: {slug}")
-    
-    # HTML→PDF через WeasyPrint
+
+    # HTML→PDF через WeasyPrint (CPU-bound → run in thread pool, не блокирует event loop)
     try:
-        pdf_bytes = html_to_pdf(html)
+        pdf_bytes = await asyncio.to_thread(html_to_pdf, html)
     except Exception as e:
         logger.error("PDF generation failed for slug=%s: %s", slug, e)
-        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
-    
+        raise HTTPException(status_code=500, detail=f"PDF generation failed")
+
     # Возвращаем PDF как attachment
     headers = {
         "Content-Disposition": f'attachment; filename="report-{slug}.pdf"',

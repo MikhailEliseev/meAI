@@ -131,7 +131,12 @@ async def get_report_html_by_slug(slug: str) -> str | None:
     """
     if not WP_DB_PASSWORD:
         # Fallback: читаем из локального файла
-        report_path = f"/opt/data/reports/{slug}.html"
+        # W-CRITICAL: validate slug to prevent path traversal (../../etc/passwd)
+        import re as _re
+        if not _re.match(r'^[a-z0-9-]{1,32}$', slug):
+            logger.warning("Rejected suspicious slug in local fallback: %r", slug)
+            return None
+        report_path = os.path.join("/opt/data/reports", f"{slug}.html")
         if os.path.exists(report_path):
             with open(report_path, "r", encoding="utf-8") as f:
                 return f.read()
