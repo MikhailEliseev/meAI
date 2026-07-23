@@ -868,27 +868,32 @@
         .message-bubble .surface-block strong { color: var(--accent, #c9a55a); }
         .message-bubble .surface-block p { margin: 2px 0; }
         .message-bubble .stat-card {
-            display: inline-block;
-            padding: 6px 14px;
-            margin: 4px 6px 4px 0;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 8px;
+            display: inline-flex;
+            flex-direction: column;
+            padding: 12px 18px;
+            margin: 6px 8px 6px 0;
+            background: var(--surface, #f8f8f8);
+            border: 1px solid var(--glass-border, rgba(0,0,0,0.08));
+            border-radius: 4px;
             font-style: normal;
             vertical-align: top;
+            min-width: 100px;
         }
         .message-bubble .stat-card p:first-child {
-            font-size: 1.35em;
+            font-size: 1.5em;
             font-weight: 700;
             color: var(--accent, #c9a55a);
             margin: 0;
             line-height: 1.2;
+            font-family: 'Playfair Display', Georgia, serif;
         }
         .message-bubble .stat-card p:last-child {
-            font-size: 0.8em;
-            opacity: 0.7;
-            margin: 2px 0 0 0;
-            line-height: 1;
+            font-size: 0.85em;
+            color: var(--text-secondary, #888);
+            margin: 4px 0 0 0;
+            line-height: 1.2;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 </style>
 
