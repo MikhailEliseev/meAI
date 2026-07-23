@@ -312,13 +312,13 @@
             opacity: 0.6;
         }
 
-        /* Report Ready Card */
+        /* Report Ready Card — по дизайн-системе AIM */
         .report-ready-card {
-            margin: 8px 0;
-            padding: 24px 28px;
-            background: linear-gradient(135deg, rgba(201,169,110,0.08) 0%, rgba(201,169,110,0.03) 100%);
-            border: 1px solid var(--accent-soft);
-            border-radius: 16px;
+            margin: 12px 0;
+            padding: 20px 24px;
+            background: var(--surface);
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
             position: relative;
             overflow: hidden;
         }
@@ -326,28 +326,28 @@
         .report-ready-card::before {
             content: '';
             position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--accent), transparent);
-            opacity: 0.4;
+            top: 0; left: 0; bottom: 0;
+            width: 3px;
+            background: var(--accent);
         }
 
         .report-ready-icon {
-            font-size: 32px;
-            margin-bottom: 12px;
+            font-size: 24px;
+            margin-bottom: 8px;
             display: block;
         }
 
         .report-ready-title {
             font-family: 'Playfair Display', serif;
-            font-size: 18px;
-            font-weight: 600;
+            font-size: 16px;
+            font-weight: 500;
             color: var(--text);
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+            letter-spacing: -.01em;
         }
 
         .report-ready-summary {
-            font-size: 14px;
+            font-size: 13px;
             color: var(--text-secondary);
             line-height: 1.6;
             margin-bottom: 16px;
@@ -357,25 +357,25 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 12px 24px;
+            padding: 10px 20px;
             background: var(--accent);
             color: var(--bg);
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 500;
+            border-radius: 1px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: .1em;
+            text-transform: uppercase;
             text-decoration: none;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
 
         .report-ready-link:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 16px var(--shadow);
-            opacity: 0.95;
+            background: var(--text-secondary);
             color: var(--bg);
             text-decoration: none;
         }
 
-        /* Phase 12: Actions container для двух кнопок */
+        /* Actions container */
         .report-ready-actions {
             display: flex;
             gap: 8px;
@@ -383,18 +383,22 @@
             margin-top: 16px;
         }
 
-        /* Phase 12: Кнопка "Скачать PDF" */
+        /* Кнопка "Скачать PDF" — outline стиль (как в дизайн-системе) */
         .report-ready-download {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--glass-border);
         }
 
         .report-ready-download:hover {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            border-color: var(--accent);
+            color: var(--accent);
+            background: transparent;
         }
 
         .report-ready-meta {
             margin-top: 12px;
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-dim);
             display: flex;
             gap: 16px;
