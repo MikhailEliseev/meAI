@@ -544,6 +544,80 @@ async def _auto_publish_report(
         )
 
 
+# ════════════════════════════════════════════════════════════════════════
+# Phase 14: Параллельные auto-call helper'ы
+# Каждая функция возвращает (result_str, human_msg) или None при ошибке
+# ════════════════════════════════════════════════════════════════════════
+
+async def _do_scrape(url: str, collected_results: dict, profile_cache: dict) -> tuple[str, str] | None:
+    """Scrape clinic website — врачи, соцсети."""
+    try:
+        from app.tools.website_scraper import handle_scrape_clinic_website
+        result = await handle_scrape_clinic_website(url=url)
+        collected_results["scrape_clinic_website"] = result
+        try:
+            data = json.loads(result)
+            if data.get("doctors"):
+                profile_cache["doctors"] = data["doctors"]
+            if data.get("socials"):
+                profile_cache["socials"] = data["socials"]
+            if data.get("cms") and not profile_cache.get("website_platform"):
+                profile_cache["website_platform"] = data["cms"]
+            if data.get("phone"):
+                profile_cache["phone"] = data["phone"]
+            logger.info("parallel scrape OK: doctors=%d socials=%d cms=%s",
+                        len(data.get("doctors", [])),
+                        len(data.get("socials", {})),
+                        data.get("cms", ""))
+        except (json.JSONDecodeError, TypeError):
+            pass
+        return (result, "✅ Сайт просканирован")
+    except Exception as e:
+        logger.warning("parallel scrape failed: %s", e)
+        return None
+
+
+async def _do_financials(inn: str, collected_results: dict, profile_cache: dict) -> tuple[str, str] | None:
+    """Company financials — ФНС."""
+    try:
+        from app.tools.aim_app_tools import handle_company_financials
+        result = await handle_company_financials(inn=inn)
+        collected_results["company_financials"] = result
+        try:
+            data = json.loads(result)
+            if data.get("revenue"):
+                profile_cache["revenue"] = data["revenue"]
+            if data.get("revenue_trend"):
+                profile_cache["revenue_trend"] = data["revenue_trend"]
+            if data.get("profit"):
+                profile_cache["profit"] = data["profit"]
+            if data.get("name") and not profile_cache.get("company_name"):
+                profile_cache["company_name"] = data["name"]
+            logger.info("parallel financials OK: inn=%s revenue=%s", inn, data.get("revenue"))
+            has_revenue = bool(data.get("revenue"))
+        except (json.JSONDecodeError, TypeError):
+            has_revenue = False
+        return (result, "✅ Финансы из ФНС получены" if has_revenue else "⚠️ Финансы из ФНС недоступны")
+    except Exception as e:
+        logger.warning("parallel financials failed: %s", e)
+        return None
+
+
+async def _do_reviews(url: str, company_name: str, city: str,
+                       collected_results: dict) -> tuple[str, str] | None:
+    """Reviews — Apify Yandex + 2GIS."""
+    try:
+        from app.tools.run_review_platforms import handle_run_review_platforms
+        result = await handle_run_review_platforms(
+            url=url, company_name=company_name, city=city,
+        )
+        collected_results["run_review_platforms"] = result
+        return (result, "✅ Отзывы собраны")
+    except Exception as e:
+        logger.warning("parallel reviews failed: %s", e)
+        return None
+
+
 async def chat_with_tools(history: list[dict]):
     """Диалог с tool-calling. Возвращает генератор событий для SSE.
 
@@ -825,6 +899,7 @@ async def chat_with_tools(history: list[dict]):
                 list(collected_results.keys()), formatted_shown,
             )
             # Auto-call extract_clinic_profile если не был вызван (для ИНН/города/профиля)
+            # Фаза 1: extract — нужен ИНН для остальных тулов
             if "extract_clinic_profile" not in collected_results:
                 user_url = _extract_url_from_messages(messages)
                 if user_url:
@@ -846,108 +921,73 @@ async def chat_with_tools(history: list[dict]):
                     except Exception as e:
                         logger.warning("auto extract_clinic_profile (pre-stream) failed: %s", e)
 
-            # Phase 13: Auto-call scrape_clinic_website (врачи, соцсети — с САЙТА)
-            if "scrape_clinic_website" not in collected_results:
-                user_url = profile_cache.get("url", "") or _extract_url_from_messages(messages)
-                if user_url:
-                    yield ("tool_start", "scrape_clinic_website",
-                           {"url": user_url}, "🌐 Сканирую сайт: врачи, соцсети…")
-                    try:
-                        from app.tools.website_scraper import handle_scrape_clinic_website
-                        scrape_result = await handle_scrape_clinic_website(url=user_url)
-                        collected_results["scrape_clinic_website"] = scrape_result
-                        # Обогатить profile_cache данными со скрапа
-                        try:
-                            scrape_data = json.loads(scrape_result)
-                            if scrape_data.get("doctors"):
-                                profile_cache["doctors"] = scrape_data["doctors"]
-                            if scrape_data.get("socials"):
-                                profile_cache["socials"] = scrape_data["socials"]
-                            if scrape_data.get("cms") and not profile_cache.get("website_platform"):
-                                profile_cache["website_platform"] = scrape_data["cms"]
-                            if scrape_data.get("phone"):
-                                profile_cache["phone"] = scrape_data["phone"]
-                            logger.info("auto scrape_clinic_website OK: doctors=%d socials=%d cms=%s",
-                                        len(scrape_data.get("doctors", [])),
-                                        len(scrape_data.get("socials", {})),
-                                        scrape_data.get("cms", ""))
-                        except (json.JSONDecodeError, TypeError):
-                            pass
-                        yield ("tool_result", "scrape_clinic_website", scrape_result,
-                               "✅ Сайт просканирован")
-                    except Exception as e:
-                        logger.warning("auto scrape_clinic_website (pre-stream) failed: %s", e)
+            # ════════════════════════════════════════════════════════════════
+            # Phase 14: ПАРАЛЛЕЛЬНЫЕ AUTO-CALLS (asyncio.gather)
+            # Было: 4 последовательных вызова (~2.5 мин)
+            # Стало: все параллельно (~90 сек максимум)
+            # ════════════════════════════════════════════════════════════════
+            user_url = profile_cache.get("url", "") or _extract_url_from_messages(messages)
+            client_inn = profile_cache.get("inn", "")
+            try:
+                comp_data = json.loads(collected_results.get("find_competitors", "{}"))
+                client_inn = comp_data.get("client_inn", "") or client_inn
+            except (json.JSONDecodeError, TypeError):
+                pass
 
-            # Auto-call financials (если ещё не вызван)
-            if "company_financials" not in collected_results:
+            # Brand name fallback
+            company_name = profile_cache.get("company_name", "")
+            if not company_name and user_url:
                 try:
-                    comp_data = json.loads(collected_results["find_competitors"])
-                    client_inn = (
-                        comp_data.get("client_inn", "")
-                        or profile_cache.get("inn", "")
-                    )
-                    if client_inn and len(client_inn) >= 10:
-                        yield ("tool_start", "company_financials",
-                               {"inn": client_inn}, "💰 Запрашиваю выручку из ФНС…")
-                        from app.tools.aim_app_tools import handle_company_financials
-                        fin_result = await handle_company_financials(inn=client_inn)
-                        collected_results["company_financials"] = fin_result
-                        try:
-                            fin_data = json.loads(fin_result)
-                            if fin_data.get("revenue"):
-                                profile_cache["revenue"] = fin_data["revenue"]
-                            if fin_data.get("revenue_trend"):
-                                profile_cache["revenue_trend"] = fin_data["revenue_trend"]
-                            if fin_data.get("profit"):
-                                profile_cache["profit"] = fin_data["profit"]
-                            if fin_data.get("name") and not profile_cache.get("company_name"):
-                                profile_cache["company_name"] = fin_data["name"]
-                            logger.info("auto company_financials OK: inn=%s revenue=%s",
-                                        client_inn, fin_data.get("revenue"))
-                        except (json.JSONDecodeError, TypeError):
-                            pass
-                        try:
-                            fin_data_check = json.loads(fin_result)
-                            has_revenue = bool(fin_data_check.get("revenue"))
-                        except (json.JSONDecodeError, TypeError):
-                            has_revenue = False
-                        yield ("tool_result", "company_financials", fin_result,
-                               "✅ Финансы из ФНС получены" if has_revenue
-                               else "⚠️ Финансы из ФНС недоступны")
-                except Exception as e:
-                    logger.warning("auto company_financials (pre-stream) failed: %s", e)
+                    from urllib.parse import urlparse as _up
+                    domain = _up(user_url).netloc.replace("www.", "")
+                    brand = domain.split(".")[0]
+                    if brand and len(brand) > 2:
+                        company_name = brand
+                        profile_cache["company_name"] = brand
+                except Exception:
+                    pass
 
-            # Auto-call reviews (если ещё не вызван)
-            if "run_review_platforms" not in collected_results:
-                review_url = profile_cache.get("url", "") or _extract_url_from_messages(messages)
-                if review_url:
-                    yield ("tool_start", "run_review_platforms",
-                           {"url": review_url}, "⭐ Собираю отзывы с площадок…")
-                    try:
-                        from app.tools.run_review_platforms import handle_run_review_platforms
-                        # Phase 13: если company_name пустой — извлечь из URL
-                        company_name = profile_cache.get("company_name", "")
-                        if not company_name:
-                            # Извлечь бренд из URL (arclinic.ru → "arclinic")
-                            try:
-                                from urllib.parse import urlparse
-                                domain = urlparse(review_url).netloc.replace("www.", "")
-                                brand = domain.split(".")[0]
-                                if brand and len(brand) > 2:
-                                    company_name = brand
-                                    profile_cache["company_name"] = brand
-                                    logger.info("Phase 13: extracted brand from URL: %s", brand)
-                            except Exception:
-                                pass
-                        review_result = await handle_run_review_platforms(
-                            url=review_url,
-                            company_name=company_name,
-                            city=profile_cache.get("city", ""),
-                        )
-                        collected_results["run_review_platforms"] = review_result
-                        yield ("tool_result", "run_review_platforms", review_result, "✅ Отзывы собраны")
-                    except Exception as e:
-                        logger.warning("auto run_review_platforms (pre-stream) failed: %s", e)
+            parallel_tasks = []
+            task_names = []
+
+            # Task: scrape_clinic_website
+            if "scrape_clinic_website" not in collected_results and user_url:
+                parallel_tasks.append(_do_scrape(user_url, collected_results, profile_cache))
+                task_names.append("scrape_clinic_website")
+
+            # Task: company_financials
+            if "company_financials" not in collected_results and client_inn and len(client_inn) >= 10:
+                parallel_tasks.append(_do_financials(client_inn, collected_results, profile_cache))
+                task_names.append("company_financials")
+
+            # Task: run_review_platforms
+            if "run_review_platforms" not in collected_results and user_url:
+                parallel_tasks.append(_do_reviews(user_url, company_name,
+                                                   profile_cache.get("city", ""),
+                                                   collected_results))
+                task_names.append("run_review_platforms")
+
+            # Запускаем все параллельно, yield'им tool_start заранее
+            for name in task_names:
+                msg_map = {
+                    "scrape_clinic_website": "🌐 Сканирую сайт: врачи, соцсети…",
+                    "company_financials": "💰 Запрашиваю выручку из ФНС…",
+                    "run_review_platforms": "⭐ Собираю отзывы с площадок…",
+                }
+                yield ("tool_start", name, {"url": user_url}, msg_map.get(name, "⏳ Выполняю…"))
+
+            if parallel_tasks:
+                logger.info("Phase 14: parallel auto-calls: %s", task_names)
+                results = await asyncio.gather(*parallel_tasks, return_exceptions=True)
+                for name, result in zip(task_names, results):
+                    if isinstance(result, Exception):
+                        logger.warning("Phase 14: %s failed: %s", name, result)
+                        yield ("tool_result", name, json.dumps({"error": str(result)}), "⚠️ Ошибка")
+                    elif result:
+                        result_str, msg = result
+                        yield ("tool_result", name, result_str, msg)
+                    else:
+                        yield ("tool_result", name, "{}", "⚠️ Нет данных")
 
             # Показать formatted blocks (только если ещё не показаны)
             if not formatted_shown:

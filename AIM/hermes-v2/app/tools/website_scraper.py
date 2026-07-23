@@ -1,14 +1,16 @@
-"""scrape_clinic_website — скрейпит реальный сайт клиники (Phase 13).
+"""scrape_clinic_website — скрейпит реальный сайт клиники.
 
 Извлекает: врачей, соцсети, услуги, контакты, CMS.
 Использует httpx + BeautifulSoup (не Perplexity!).
 
 Подход:
-1. Скрейпить главную страницу
-2. Найти ссылки на /vrachi, /doctors, /team, /specialists
-3. Скрейпить страницы врачей
-4. Извлечь имена врачей, соцсети, услуги
+1. Проверка SSRF (блокировка internal IPs)
+2. Скрейпить главную страницу
+3. Найти ссылки на /vrachi, /doctors, /team, /specialists
+4. Скрейпить страницы врачей
+5. Извлечь имена врачей, соцсети, услуги
 """
+import ipaddress
 import json
 import logging
 import re
@@ -23,11 +25,51 @@ logger = logging.getLogger(__name__)
 
 # Таймауты и заголовки
 _TIMEOUT = httpx.Timeout(15.0, connect=10.0)
+_MAX_RESPONSE_SIZE = 5_000_000  # 5MB лимит (DoS защита)
 _HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
 }
+
+# Паттерны городов/мусора в специализации врачей (Phase 14 Task 3)
+_CITY_JUNK_RE = re.compile(
+    r'\b(?:Санкт-Петербург|Москва|Россия|Екатеринбург|Новосибирск|'
+    r'Казань|Нижний\s+Новгород|Самара|Ростов-на-Дону|Уфа|'
+    r'Краснодар|Челябинск|Воронеж|Пермь|г\.?)\b',
+    re.IGNORECASE,
+)
+
+
+def _is_safe_url(url: str) -> bool:
+    """Проверить что URL не указывает на internal ресурсы (SSRF защита).
+
+    Блокирует:
+    - Private IPs (10.x, 172.16-31.x, 192.168.x)
+    - Loopback (127.x, ::1)
+    - Link-local (169.254.x — AWS metadata)
+    - localhost, 0.0.0.0
+    """
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        # Попытаться распарсить как IP
+        try:
+            ip = ipaddress.ip_address(hostname)
+            if ip.is_private or ip.is_loopback or ip.is_link_local:
+                logger.warning("SSRF blocked: %s (internal IP)", url)
+                return False
+        except ValueError:
+            pass  # Не IP — домен, OK
+        # Блокировать localhost variants
+        if hostname.lower() in ("localhost", "0.0.0.0", "::1"):
+            logger.warning("SSRF blocked: %s (localhost)", url)
+            return False
+        return True
+    except Exception:
+        return False
 
 # Паттерны для поиска страниц врачей
 DOCTOR_URL_PATTERNS = [
@@ -51,10 +93,17 @@ SOCIAL_PATTERNS = {
 
 
 async def _fetch_page(url: str, client: httpx.AsyncClient) -> str | None:
-    """Скачать HTML страницу."""
+    """Скачать HTML страницу (с SSRF проверкой и размер-лимитом)."""
+    if not _is_safe_url(url):
+        logger.warning("scrape: SSRF blocked URL: %s", url)
+        return None
     try:
         resp = await client.get(url, follow_redirects=True)
         if resp.status_code == 200:
+            # DoS защита: ограничить размер
+            if len(resp.content) > _MAX_RESPONSE_SIZE:
+                logger.warning("scrape: %s too large (%d bytes), truncating", url, len(resp.content))
+                return resp.text[:_MAX_RESPONSE_SIZE]
             # Попробовать разные кодировки
             if resp.encoding is None or resp.encoding == "ascii":
                 resp.encoding = resp.charset_encoding or "utf-8"
@@ -102,9 +151,15 @@ def _extract_doctors(soup: BeautifulSoup, url: str = "") -> list[dict]:
                 parts = re.split(r'\s*[-–—]\s*', content, maxsplit=1)
                 if len(parts) > 1:
                     spec_part = parts[1].strip()
-                    # Убрать название клиники и город
-                    spec_part = re.sub(r'\b(?:врач|ARclinic|клиник[аи]?)\b', '', spec_part, flags=re.I).strip(" ,.-")
-                    if spec_part:
+                    # Убрать название клиники, город, мусор
+                    spec_part = re.sub(
+                        r'\b(?:врач|ARclinic|клиник[аи]?|центр)\b',
+                        '', spec_part, flags=re.I
+                    ).strip(" ,.-")
+                    # Phase 14: убрать города и гео-мусор
+                    spec_part = _CITY_JUNK_RE.sub('', spec_part).strip(" ,.-")
+                    # Если осталась пустота — специализация не найдена
+                    if spec_part and len(spec_part) >= 3 and not spec_part.lower().startswith("спб"):
                         spec = spec_part[:80]
             doctors.append({"name": name, "specialization": spec})
             return doctors  # Страница одного врача — возвращаем сразу

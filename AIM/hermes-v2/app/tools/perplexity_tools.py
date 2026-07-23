@@ -256,8 +256,18 @@ EXTRACT_PROFILE_PROMPT = """Изучи клинику по URL {url}. Верни
   "city": "город",
   "address": "полный физический адрес клиники (улица, дом, корпус)",
   "services": ["услуга1", "услуга2"],
-  "website_platform": "Tilda/Bitrix/WordPress/SiteEdit/другое или null"
+  "website_platform": "Tilda/Bitrix/WordPress/SiteEdit/другое или null",
+  "doctors": [{{"name": "ФИО врача", "specialization": "специализация"}}],
+  "social_media": {{
+    "instagram": "username или null",
+    "vk": "username или null",
+    "telegram": "username или null",
+    "youtube": "channel или null"
+  }},
+  "founded_year": "год основания или null"
 }}
+Найди 3-5 ключевых врачей клиники (имя, специализация).
+Найди ссылки на соцсети клиники.
 Если ИНН не найден на сайте — попробуй найти по названию юрлица в открытых источниках.
 НЕ выдумывай данные — ставь null если не уверен.
 Верни ТОЛЬКО JSON объект, без пояснений."""
