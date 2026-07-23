@@ -83,11 +83,45 @@ def _find_doctor_pages(base_url: str, soup: BeautifulSoup) -> list[str]:
     return list(doctor_urls)[:5]  # Максимум 5 страниц врачей
 
 
-def _extract_doctors(soup: BeautifulSoup) -> list[dict]:
+def _extract_doctors(soup: BeautifulSoup, url: str = "") -> list[dict]:
     """Извлечь имена врачей из страницы."""
     doctors = []
 
-    # Попытка 1: CSS классы (типичные для медицинских сайтов)
+    # Попытка 0: meta og:title (Tilda и другие — имя врача в meta)
+    og_title = soup.find("meta", attrs={"property": "og:title"})
+    if og_title and og_title.get("content"):
+        content = og_title["content"].strip()
+        # "Батиенко Дарья Дмитриевна - врач ARclinic, Санкт-Петербург"
+        # Извлечь имя до первого " - "
+        name = content.split(" - ")[0].split(" — ")[0].strip()
+        if name and _looks_like_doctor_name(name):
+            # Попытка извлечь специализацию
+            spec = ""
+            if "врач" in content.lower():
+                # "Батиенко Д.Д. - врач-косметолог"
+                parts = re.split(r'\s*[-–—]\s*', content, maxsplit=1)
+                if len(parts) > 1:
+                    spec_part = parts[1].strip()
+                    # Убрать название клиники и город
+                    spec_part = re.sub(r'\b(?:врач|ARclinic|клиник[аи]?)\b', '', spec_part, flags=re.I).strip(" ,.-")
+                    if spec_part:
+                        spec = spec_part[:80]
+            doctors.append({"name": name, "specialization": spec})
+            return doctors  # Страница одного врача — возвращаем сразу
+
+    # Попытка 1: Tilda-классы (t-name, t-title)
+    tilda_selectors = ["t-name", "t-name_xl", "t-name_md", "t-title", "t-heading"]
+    for cls in tilda_selectors:
+        elements = soup.find_all(class_=cls)
+        for el in elements:
+            text = el.get_text(strip=True)
+            if text and _looks_like_doctor_name(text) and len(text) < 80:
+                if text not in [d["name"] for d in doctors]:
+                    doctors.append({"name": text, "specialization": ""})
+        if len(doctors) >= 15:
+            return doctors
+
+    # Попытка 2: CSS классы (типичные для медицинских сайтов)
     doctor_selectors = [
         {"name": "div", "class_": re.compile(r"doctor|vrach|specialist|team-member|card-doctor", re.I)},
         {"name": "div", "class_": re.compile(r"team-item|staff-item|person", re.I)},
@@ -105,21 +139,18 @@ def _extract_doctors(soup: BeautifulSoup) -> list[dict]:
         if len(doctors) >= 15:
             break
 
-    # Попытка 2: Заголовки h2-h4 в контейнерах
+    # Попытка 3: Заголовки h1-h4
     if not doctors:
-        for tag in soup.find_all(["h2", "h3", "h4"]):
+        for tag in soup.find_all(["h1", "h2", "h3", "h4"]):
             text = tag.get_text(strip=True)
-            # Имя врача: 2-4 слова, с инициалами или фамилией
-            if _looks_like_doctor_name(text):
-                if text not in [d["name"] for d in doctors]:
-                    spec = ""
-                    # Попытаться найти специализацию рядом
-                    sibling = tag.find_next_sibling()
-                    if sibling:
-                        spec_text = sibling.get_text(strip=True)[:100]
-                        if len(spec_text) < 100:
-                            spec = spec_text
-                    doctors.append({"name": text, "specialization": spec})
+            if _looks_like_doctor_name(text) and text not in [d["name"] for d in doctors]:
+                spec = ""
+                sibling = tag.find_next_sibling()
+                if sibling:
+                    spec_text = sibling.get_text(strip=True)[:100]
+                    if len(spec_text) < 100:
+                        spec = spec_text
+                doctors.append({"name": text, "specialization": spec})
             if len(doctors) >= 15:
                 break
 
