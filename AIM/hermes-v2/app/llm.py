@@ -77,35 +77,35 @@ def _check_hallucinations(llm_text: str, formatted_shown: bool) -> None:
 _TOOL_MESSAGES = {
     "extract_clinic_profile": {
         "start": "📋 Определяю клинику: адрес, специализация, услуги…",
-        "done": "✅ Профиль клиники готов",
+        "done": "✅ Профиль готов",
     },
     "quick_overview": {
-        "start": "🔍 Собираю обзор: врачи, услуги, соцсети…",
+        "start": "🔍 Собираю данные о клинике…",
         "done": "✅ Обзор готов",
     },
     "find_competitors": {
-        "start": "🗺️ Ищу конкурентов через Perplexity и ФНС (это ~1-2 минуты)…",
+        "start": "🗺️ Ищу конкурентов в вашем районе…",
         "done": "✅ Конкуренты найдены",
     },
     "enrich_competitors": {
-        "start": "💰 Получаю выручку конкурентов из ФНС…",
+        "start": "💰 Собираю финансовые данные…",
         "done": "✅ Финансовые данные готовы",
     },
     "company_financials": {
-        "start": "💰 Запрашиваю финансовые данные из налоговой…",
+        "start": "💰 Собираю финансовые данные…",
         "done": "✅ Финансы получены",
     },
     "company_profile": {
-        "start": "📄 Загружаю профиль из базы…",
+        "start": "📄 Загружаю профиль…",
         "done": "✅ Профиль готов",
     },
     "analyze_website": {
-        "start": "🔬 Глубокий аудит сайта: SEO, UX, репутация (~30 сек)…",
-        "done": "✅ Аудит завершён",
+        "start": "🔬 Анализирую сайт клиники…",
+        "done": "✅ Анализ завершён",
     },
     "seo_audit": {
-        "start": "🔎 Анализирую SEO…",
-        "done": "✅ SEO-анализ готов",
+        "start": "🔎 Анализирую видимость в поиске…",
+        "done": "✅ Анализ готов",
     },
     "perplexity_search": {
         "start": "🌐 Ищу актуальные данные…",
@@ -120,12 +120,16 @@ _TOOL_MESSAGES = {
         "done": "✅ Отзывы готовы",
     },
     "run_instagram_content": {
-        "start": "📸 Анализирую Instagram…",
-        "done": "✅ Instagram проанализирован",
+        "start": "📸 Анализирую соцсети…",
+        "done": "✅ Соцсети проанализированы",
     },
     "run_ads_intelligence": {
         "start": "📢 Проверяю рекламную активность…",
         "done": "✅ Реклама проверена",
+    },
+    "scrape_clinic_website": {
+        "start": "🌐 Сканирую сайт клиники…",
+        "done": "✅ Сайт просканирован",
     },
 }
 
@@ -597,7 +601,7 @@ async def _do_financials(inn: str, collected_results: dict, profile_cache: dict)
             has_revenue = bool(data.get("revenue"))
         except (json.JSONDecodeError, TypeError):
             has_revenue = False
-        return (result, "✅ Финансы из ФНС получены" if has_revenue else "⚠️ Финансы из ФНС недоступны")
+        return (result, "✅ Финансы получены" if has_revenue else "⚠️ Финансы недоступны")
     except Exception as e:
         logger.warning("parallel financials failed: %s", e)
         return None
@@ -757,7 +761,7 @@ async def chat_with_tools(history: list[dict]):
                     )
                     if client_inn and len(client_inn) >= 10:
                         yield ("tool_start", "company_financials",
-                               {"inn": client_inn}, "💰 Запрашиваю выручку из ФНС…")
+                               {"inn": client_inn}, "💰 Собираю финансовые данные…")
                         from app.tools.aim_app_tools import handle_company_financials
                         fin_result = await handle_company_financials(inn=client_inn)
                         collected_results["company_financials"] = fin_result
@@ -786,8 +790,8 @@ async def chat_with_tools(history: list[dict]):
                         except (json.JSONDecodeError, TypeError):
                             has_revenue = False
                         yield ("tool_result", "company_financials", fin_result,
-                               "✅ Финансы из ФНС получены" if has_revenue
-                               else "⚠️ Финансы из ФНС недоступны")
+                               "✅ Финансы получены" if has_revenue
+                               else "⚠️ Финансы недоступны")
                 except Exception as e:
                     logger.warning("auto company_financials failed: %s", e)
 
@@ -848,7 +852,7 @@ async def chat_with_tools(history: list[dict]):
                     "role": "system",
                     "content": (
                         "Выше показаны ТОЧНЫЕ данные (секции 01-04 уже отображены). "
-                        "Эти данные — ФАКТЫ из ФНС, Яндекс.Карт, 2ГИС. "
+                        "Эти данные — ФАКТЫ из открытых источников. "
                         "ОПИРАЙСЯ на них активно. Приводи конкретные числа, имена врачей, ссылки.\n\n"
                         "Структура ответа (БЕЗ заголовков ##, просто текст):\n\n"
                         "**💡 Позиция:** 1-2 предложения — лидер/середняк/аутсайдер рынка. "
@@ -971,7 +975,7 @@ async def chat_with_tools(history: list[dict]):
             for name in task_names:
                 msg_map = {
                     "scrape_clinic_website": "🌐 Сканирую сайт: врачи, соцсети…",
-                    "company_financials": "💰 Запрашиваю выручку из ФНС…",
+                    "company_financials": "💰 Собираю финансовые данные…",
                     "run_review_platforms": "⭐ Собираю отзывы с площадок…",
                 }
                 yield ("tool_start", name, {"url": user_url}, msg_map.get(name, "⏳ Выполняю…"))
