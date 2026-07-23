@@ -75,9 +75,12 @@ _FALLBACK_SUGGESTIONS = [
 
 # Regex tolerant of markdown bold wrappers (LLM sometimes emits **[SUGGESTIONS]**)
 _SUGGESTIONS_RE = re.compile(
-    r"\*{0,2}\[SUGGESTIONS\]\*{0,2}\s*\n(.*?)\*{0,2}\[/SUGGESTIONS\]\*{0,2}",
+    r"\*{0,2}\[SUGGESTIONS\]\*{0,2}\s*\n?(.*?)\*{0,2}\[/SUGGESTIONS\]\*{0,2}",
     re.DOTALL,
 )
+
+# Citation markers: [1], [2], [3][5] — Perplexity-style references
+_CITATION_RE = re.compile(r'\[\d+\](?:\[\d+\])*')
 
 
 def extract_suggestions(text: str) -> tuple[str, list[dict]]:
@@ -99,6 +102,10 @@ def extract_suggestions(text: str) -> tuple[str, list[dict]]:
     clean = _SUGGESTIONS_RE.sub("", text).rstrip()
     # Also strip leftover markdown (--- separators, empty lines before marker)
     clean = re.sub(r"\n---\s*$", "", clean)
+    # Phase 13: Убрать citation markers [1], [2] из финального текста
+    clean = _CITATION_RE.sub('', clean)
+    # Нормализовать пустые строки
+    clean = re.sub(r'\n{3,}', '\n\n', clean).strip()
     return clean, (buttons if buttons else _FALLBACK_SUGGESTIONS)
 
 
@@ -174,6 +181,8 @@ async def chat_stream(req: ChatRequest):
                             safe_end = max(sent_idx, len(accumulated) - hold_back + 1)
                         if safe_end > sent_idx:
                             chunk = accumulated[sent_idx:safe_end]
+                            # Phase 13: убрать citation markers [1], [2] из стрима
+                            chunk = _CITATION_RE.sub('', chunk)
                             yield f"data: {json.dumps({'type': 'text-delta', 'textDelta': chunk}, ensure_ascii=False)}\n\n"
                             sent_idx = safe_end
                     elif kind == "tool_start":

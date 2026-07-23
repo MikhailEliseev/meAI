@@ -204,6 +204,9 @@ def _convert_interp_html(html: str) -> str:
 
     result = html
 
+    # Phase 13: убрать citation markers [1], [2] из PDF
+    result = re.sub(r'\[\d+\](?:\[\d+\])*', '', result)
+
     # glass-stats-wrap → stats-table
     result = re.sub(
         r'<div class="glass-stats-wrap">(.*?)</div>',

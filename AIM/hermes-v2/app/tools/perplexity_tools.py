@@ -5,11 +5,53 @@
 """
 import json
 import logging
+import re
 
 from app.lib.perplexity import USE_PERPLEXITY, perplexity_chat
 from app.tools.registry import register
 
 logger = logging.getLogger(__name__)
+
+
+# Regex для очистки сносок Perplexity: [1], [2], [3][5], etc.
+_CITATION_RE = re.compile(r'\[\d+\](?:\[\d+\])*')
+# Regex для очистки [SUGGESTIONS]...[/SUGGESTIONS] из текста
+_SUGGESTIONS_BLOCK_RE = re.compile(
+    r'\*{0,2}\[SUGGESTIONS\]\*{0,2}\s*.*?\*{0,2}\[/SUGGESTIONS\]\*{0,2}',
+    re.DOTALL,
+)
+# Мусорные паттерны
+_JUNK_PATTERNS = [
+    re.compile(r'^\s*\[\d+\]\s*$', re.MULTILINE),  # строки только со сносками
+    re.compile(r'\n{3,}'),  # 3+ пустых строк подряд
+]
+
+
+def _clean_perplexity_text(text: str) -> str:
+    """Очистить текст от сносок Perplexity и мусора.
+
+    Убирает:
+    - [1], [2], [3][5] — citation markers
+    - [SUGGESTIONS]...[/SUGGESTIONS] — маркеры кнопок
+    - Лишние пустые строки
+    """
+    if not text:
+        return text
+
+    # 1. Убрать citation markers [1], [2], [3][5]
+    text = _CITATION_RE.sub('', text)
+
+    # 2. Убрать [SUGGESTIONS] блоки целиком
+    text = _SUGGESTIONS_BLOCK_RE.sub('', text)
+
+    # 3. Убрать строки состоящие только из сносок
+    for pattern in _JUNK_PATTERNS:
+        text = pattern.sub('\n\n' if pattern is _JUNK_PATTERNS[1] else '', text)
+
+    # 4. Нормализовать пустые строки
+    text = re.sub(r'\n{3,}', '\n\n', text)
+
+    return text.strip()
 
 
 def _normalize_url(url) -> str:
@@ -50,7 +92,7 @@ async def handle_quick_overview(url=None, **kwargs) -> str:
             {"role": "user", "content": prompt},
         ])
         logger.info("quick_overview OK: %s (%d chars)", url, len(text))
-        return text
+        return _clean_perplexity_text(text)
     except Exception as e:
         logger.exception("quick_overview failed: %s", url)
         return json.dumps({"error": str(e)})
@@ -98,7 +140,7 @@ async def handle_perplexity_search(question=None, **kwargs) -> str:
             {"role": "user", "content": question},
         ])
         logger.info("perplexity_search OK: %s (%d chars)", question[:60], len(text))
-        return text
+        return _clean_perplexity_text(text)
     except Exception as e:
         logger.exception("perplexity_search failed")
         return json.dumps({"error": str(e)})
@@ -144,7 +186,7 @@ async def handle_run_smi_mentions(url=None, query=None, **kwargs) -> str:
             {"role": "user", "content": f"Найди упоминания в СМИ, статьях, новостях: {search_query}. Перечисли найденные упоминания с источниками и датой."},
         ])
         logger.info("run_smi_mentions OK: %s (%d chars)", search_query[:60], len(text))
-        return text
+        return _clean_perplexity_text(text)
     except Exception as e:
         logger.exception("run_smi_mentions failed")
         return json.dumps({"error": str(e)})
@@ -191,7 +233,7 @@ async def handle_run_review_platforms(url=None, query=None, **kwargs) -> str:
             {"role": "user", "content": f"Найди отзывы и рейтинги: {search_query}. Укажи платформу, рейтинг, кол-во отзывов, типичные плюсы/минусы."},
         ])
         logger.info("run_review_platforms OK: %s (%d chars)", search_query[:60], len(text))
-        return text
+        return _clean_perplexity_text(text)
     except Exception as e:
         logger.exception("run_review_platforms failed")
         return json.dumps({"error": str(e)})
