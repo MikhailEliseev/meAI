@@ -312,7 +312,7 @@
             opacity: 0.6;
         }
 
-        /* Report Ready Card — по дизайн-системе AIM */
+        /* Report Ready Card */
         .report-ready-card {
             margin: 12px 0;
             padding: 20px 24px;
@@ -326,28 +326,28 @@
         .report-ready-card::before {
             content: '';
             position: absolute;
-            top: 0; left: 0; bottom: 0;
-            width: 3px;
-            background: var(--accent);
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.4;
         }
 
         .report-ready-icon {
-            font-size: 24px;
-            margin-bottom: 8px;
+            font-size: 32px;
+            margin-bottom: 12px;
             display: block;
         }
 
         .report-ready-title {
             font-family: 'Playfair Display', serif;
-            font-size: 16px;
-            font-weight: 500;
+            font-size: 18px;
+            font-weight: 600;
             color: var(--text);
-            margin-bottom: 6px;
-            letter-spacing: -.01em;
+            margin-bottom: 8px;
         }
 
         .report-ready-summary {
-            font-size: 13px;
+            font-size: 14px;
             color: var(--text-secondary);
             line-height: 1.6;
             margin-bottom: 16px;
@@ -366,16 +366,17 @@
             letter-spacing: .1em;
             text-transform: uppercase;
             text-decoration: none;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
         }
 
         .report-ready-link:hover {
-            background: var(--text-secondary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px var(--shadow);
+            opacity: 0.95;
             color: var(--bg);
             text-decoration: none;
         }
 
-        /* Actions container */
         .report-ready-actions {
             display: flex;
             gap: 8px;
@@ -383,7 +384,6 @@
             margin-top: 16px;
         }
 
-        /* Кнопка "Скачать PDF" — outline стиль (как в дизайн-системе) */
         .report-ready-download {
             background: transparent;
             color: var(--text);
@@ -398,7 +398,7 @@
 
         .report-ready-meta {
             margin-top: 12px;
-            font-size: 11px;
+            font-size: 12px;
             color: var(--text-dim);
             display: flex;
             gap: 16px;
@@ -998,9 +998,8 @@
             const summary = data.summary || 'Полный разбор сайта, конкурентов и рынка';
             const url = data.session_url || '#';
             const archivedAt = data.archived_at || '';
-            // Phase 12: извлекаем slug для PDF download
-            const slug = url.split('/').filter(s => s).pop();
 
+            const slug = url.split('/').filter(s => s).pop();
             return `
                 <div class="report-ready-card">
                     <span class="report-ready-icon">${icon}</span>
@@ -1062,10 +1061,6 @@
             html = html.replace(/%%BLOCK_(\d+)%%/g, (m, idx) => {
                 const b = customBlocks[parseInt(idx)];
                 return `<div class="${b.cls}">${b.content}</div>`;
-            });
-
-            // 6. Объединить соседние stat-card div'ы в одну строку-обёртку
-            html = html.replace(/(<div class="stat-card">[\s\S]*?<\/div>)\s*(<div class="stat-card">)/g, '$1$2');
             });
 
             return html;
@@ -1685,4 +1680,4 @@
         }
     };
     </script></body>
-</html>
+</script>
