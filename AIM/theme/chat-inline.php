@@ -237,7 +237,7 @@
         /* Markdown: code blocks */
         .message-bubble pre {
             background: rgba(0,0,0,0.25);
-            border-radius: 10px;
+            border-radius: 4px;
             padding: 14px 16px;
             overflow-x: auto;
             margin: 10px 0;
@@ -274,13 +274,11 @@
         .message-bubble table {
             border-collapse: collapse;
             width: 100%;
-            margin: 16px 0;
-            font-size: 13px;
-            overflow: hidden;
-            border-radius: 4px;
+            margin: 12px 0;
+            font-size: 14px;
         }
-        .message-bubble th, .message-bubble td {
-            border: 1px solid var(--glass-border, rgba(128,128,128,0.15));
+        .message-bubble th,.message-bubble td {
+            border: 1px solid rgba(128,128,128,0.2);
             padding: 10px 14px;
             text-align: left;
         }
@@ -292,9 +290,6 @@
             letter-spacing: 0.05em;
             color: var(--text-secondary, #888);
         }
-        .message-bubble td {
-            color: var(--text-secondary, #666);
-        }
 
         /* Markdown: horizontal rule */
         .message-bubble h2 {
@@ -303,7 +298,6 @@
             font-weight: 500;
             margin: 16px 0 8px;
             color: var(--text);
-            line-height: 1.2;
         }
         .message-bubble h3 {
             font-family: 'Playfair Display', serif;
@@ -312,22 +306,9 @@
             margin: 14px 0 6px;
             color: var(--text);
         }
-        .message-bubble p {
-            margin: 8px 0;
-            line-height: 1.7;
-        }
-        .message-bubble strong {
-            color: var(--text);
-            font-weight: 600;
-        }
-        .message-bubble ul, .message-bubble ol {
-            margin: 8px 0;
-            padding-left: 20px;
-        }
-        .message-bubble li {
-            margin: 4px 0;
-            line-height: 1.6;
-        }
+        .message-bubble p { margin: 8px 0; line-height: 1.7; }
+        .message-bubble strong { color: var(--text); font-weight: 600; }
+        .message-bubble li { margin: 4px 0; line-height: 1.6; }
         .message-bubble hr {
             border: none;
             border-top: 1px solid var(--glass-border, rgba(128,128,128,0.15));
@@ -337,7 +318,7 @@
         /* Markdown: images */
         .message-bubble img {
             max-width: 100%;
-            border-radius: 10px;
+            border-radius: 4px;
             margin: 8px 0;
         }
 
@@ -477,9 +458,8 @@
             color: var(--text-dim);
             font-size: 13px;
             line-height: 1.5;
-            max-width: 80%;
-            padding: 12px 18px;
-            border-radius: 4px;
+            max-width: 70%;
+            padding: 10px 16px;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -592,7 +572,7 @@
             background: var(--glass-bg);
             backdrop-filter: blur(10px);
             border: 1px solid var(--glass-border);
-            border-radius: 16px;
+            border-radius: 4px;
             color: var(--text);
             font-family: 'Jost', sans-serif;
             font-size: 15px;
@@ -614,7 +594,7 @@
             background: var(--accent);
             color: var(--bg);
             border: none;
-            border-radius: 16px;
+            border-radius: 4px;
             font-family: 'Jost', sans-serif;
             font-size: 15px;
             font-weight: 600;
@@ -779,7 +759,7 @@
             background: var(--accent);
             color: var(--bg);
             border: none;
-            border-radius: 12px;
+            border-radius: 4px;
             font-family: 'Jost', sans-serif;
             font-size: 14px;
             font-weight: 600;
@@ -799,7 +779,7 @@
             align-items: center;
             gap: 0;
             padding: 2px;
-            border-radius: 12px;
+            border-radius: 4px;
             border: 1px solid var(--glass-border);
             background: var(--surface);
         }
@@ -809,7 +789,7 @@
             align-items: center;
             gap: 0;
             padding: 3px 6px;
-            border-radius: 10px;
+            border-radius: 4px;
             border: none;
             background: transparent;
             color: var(--text-dim);
@@ -875,7 +855,7 @@
             background: var(--surface);
             backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
-            border-radius: 16px;
+            border-radius: 4px;
             padding: 12px;
             box-shadow: 0 8px 24px var(--shadow);
             display: none;
@@ -888,9 +868,9 @@
 
         /* === DESIGN SYSTEM: ::: blocks (stat-card, surface-block, section-num) === */
         .message-bubble .section-num {
-            font-size: 0.7em;
+            font-size: 0.72em;
             text-transform: uppercase;
-            letter-spacing: 0.15em;
+            letter-spacing: 0.12em;
             color: var(--accent, #c9a55a);
             font-weight: 700;
             margin-bottom: 8px;
@@ -909,13 +889,13 @@
         }
         .message-bubble .surface-block {
             border-left: 3px solid var(--accent, #c9a55a);
-            background: rgba(201, 165, 90, 0.06);
+            background: rgba(201, 165, 90, 0.08);
             padding: 14px 20px;
             margin: 12px 0;
             border-radius: 0 4px 4px 0;
             font-style: normal;
-            font-size: 0.95em;
-            line-height: 1.7;
+            font-size: 0.92em;
+            line-height: 1.6;
         }
         .message-bubble .surface-block strong { color: var(--accent, #c9a55a); }
         .message-bubble .surface-block p { margin: 2px 0; }
@@ -1259,7 +1239,7 @@
                             </div>
                         </div>
                         <button onclick="loadSession('${session.sessionId}')"
-                                style="padding: 8px 16px; background: var(--accent); color: var(--bg); border: none; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Jost', sans-serif; transition: all .2s ease;">
+                                style="padding: 8px 16px; background: var(--accent); color: var(--bg); border: none; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Jost', sans-serif; transition: all .2s ease;">
                             Загрузить
                         </button>
                     </div>
@@ -1732,4 +1712,4 @@
         }
     };
     </script></body>
-</script>
+</html>
