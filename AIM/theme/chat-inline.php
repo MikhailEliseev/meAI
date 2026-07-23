@@ -870,8 +870,8 @@
         .message-bubble .stat-card {
             display: inline-flex;
             flex-direction: column;
-            padding: 12px 18px;
-            margin: 6px 8px 6px 0;
+            padding: 10px 16px;
+            margin: 4px 6px 4px 0;
             background: var(--surface, #f8f8f8);
             border: 1px solid var(--glass-border, rgba(0,0,0,0.08));
             border-radius: 4px;
