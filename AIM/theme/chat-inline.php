@@ -1064,6 +1064,10 @@
                 return `<div class="${b.cls}">${b.content}</div>`;
             });
 
+            // 6. Объединить соседние stat-card div'ы в одну строку-обёртку
+            html = html.replace(/(<div class="stat-card">[\s\S]*?<\/div>)\s*(<div class="stat-card">)/g, '$1$2');
+            });
+
             return html;
         }
 
