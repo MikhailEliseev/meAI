@@ -375,6 +375,23 @@
             text-decoration: none;
         }
 
+        /* Phase 12: Actions container для двух кнопок */
+        .report-ready-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+
+        /* Phase 12: Кнопка "Скачать PDF" */
+        .report-ready-download {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .report-ready-download:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        }
+
         .report-ready-meta {
             margin-top: 12px;
             font-size: 12px;
@@ -972,17 +989,25 @@
             const summary = data.summary || 'Полный разбор сайта, конкурентов и рынка';
             const url = data.session_url || '#';
             const archivedAt = data.archived_at || '';
+            // Phase 12: извлекаем slug для PDF download
+            const slug = url.split('/').filter(s => s).pop();
 
             return `
                 <div class="report-ready-card">
                     <span class="report-ready-icon">${icon}</span>
                     <div class="report-ready-title">${title}</div>
                     <div class="report-ready-summary">${summary}</div>
-                    <a href="${url}" target="_blank" class="report-ready-link">
-                        <span>📋</span>
-                        <span>Открыть полный отчёт</span>
-                        <span>→</span>
-                    </a>
+                    <div class="report-ready-actions">
+                        <a href="${url}" target="_blank" class="report-ready-link">
+                            <span>📋</span>
+                            <span>Открыть отчёт</span>
+                            <span>→</span>
+                        </a>
+                        <a href="/api/report/${slug}/download" class="report-ready-link report-ready-download">
+                            <span>📥</span>
+                            <span>Скачать PDF</span>
+                        </a>
+                    </div>
                     ${archivedAt ? `<div class="report-ready-meta"><span>🕐 ${archivedAt}</span><span>🔗 Ссылка сохранится навсегда</span></div>` : ''}
                 </div>
             `;

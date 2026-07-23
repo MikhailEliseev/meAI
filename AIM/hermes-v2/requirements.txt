@@ -1,7 +1,10 @@
 # Phase 1 Walking Skeleton + Phase 2 Диалог.
 # Phase 10: pymysql для публикации отчётов в WordPress.
+# Phase 12: weasyprint для PDF-конвертации отчётов.
 fastapi
 uvicorn
 httpx==0.28.1
 openai
 pymysql
+weasyprint==60.2
+aiomysql==0.2.0

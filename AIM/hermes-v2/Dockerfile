@@ -1,11 +1,17 @@
 # Гермес v2 — Walking Skeleton (Phase 1)
-# Минимальный образ: только fastapi + uvicorn + httpx.
-# Тяжёлые deps (playwright/apify/pymysql/lighthouse) НЕ здесь — это Phase 3.
+# Phase 12: WeasyPrint для PDF-конвертации отчётов (Cairo, Pango).
 
 FROM python:3.11-slim
 
-# curl ОБЯЗАТЕЛЕН — нужен для HEALTHCHECK (в slim его нет по умолчанию).
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
+# curl для HEALTHCHECK + WeasyPrint зависимости (Cairo, Pango)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/hermes-v2

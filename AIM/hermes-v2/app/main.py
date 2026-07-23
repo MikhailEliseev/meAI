@@ -1,18 +1,19 @@
 """FastAPI-приложение Гермес v2 — Phase 7.
 
 Маршруты:
-  GET  /health                 — healthcheck
-  POST /tools/find-competitors — прозрачный прокси к aim-app:8000
-  POST /api/chat/stream        — SSE-диалог через LLM с tool-calling
+  GET  /health                       — healthcheck
+  POST /tools/find-competitors       — прозрачный прокси к aim-app:8000
+  POST /api/chat/stream              — SSE-диалог через LLM с tool-calling
+  GET  /api/report/{slug}/download   — скачивание отчёта как PDF (Phase 12)
 """
 import json
 import logging
 import re
 import uuid
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 
 from app.llm import chat_with_tools
 from app.session import (
@@ -239,3 +240,47 @@ async def chat_stream(req: ChatRequest):
             yield f"data: {json.dumps({'type': 'finish', 'session_id': session_id}, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Phase 12: Report Download (PDF)
+# ──────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/report/{slug}/download")
+async def download_report_pdf(slug: str):
+    """Скачивание отчёта как PDF через WeasyPrint (Phase 12).
+    
+    Читает HTML из MySQL wp_posts, конвертирует в PDF через WeasyPrint.
+    Возвращает PDF с Content-Disposition: attachment.
+    
+    Args:
+        slug: URL slug отчёта (например 'btu2vneu')
+    
+    Returns:
+        Response с PDF (application/pdf)
+    
+    Raises:
+        HTTPException 404: Отчёт не найден
+        HTTPException 500: Ошибка PDF-конвертации
+    """
+    from app.report_builder.publisher import get_report_html_by_slug
+    from app.report_builder.pdf_converter import html_to_pdf
+    
+    # Читаем HTML из MySQL
+    html = await get_report_html_by_slug(slug)
+    if not html:
+        raise HTTPException(status_code=404, detail=f"Report not found: {slug}")
+    
+    # HTML→PDF через WeasyPrint
+    try:
+        pdf_bytes = html_to_pdf(html)
+    except Exception as e:
+        logger.error("PDF generation failed for slug=%s: %s", slug, e)
+        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+    
+    # Возвращаем PDF как attachment
+    headers = {
+        "Content-Disposition": f'attachment; filename="report-{slug}.pdf"',
+        "Content-Type": "application/pdf",
+    }
+    return Response(content=pdf_bytes, headers=headers, media_type="application/pdf")

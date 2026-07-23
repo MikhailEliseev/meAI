@@ -4,6 +4,7 @@
 - HTML приходит готовым (от build_report_html Phase 9)
 - Нет session_archive (v2 не использует файлы сессий)
 - push_report_ready → Phase 11 (Chat Integration)
+- Phase 12: get_report_html_by_slug для PDF download
 
 MySQL: INSERT INTO wp_posts (post_content, post_status=publish, post_type=page).
 Возвращает URL: https://iamaim.ru/{random-slug}.
@@ -21,6 +22,18 @@ WP_DB_HOST = os.getenv("WP_DB_HOST", "aim-mysql")
 WP_DB_USER = os.getenv("WP_DB_USER", "wp_user")
 WP_DB_PASSWORD = os.getenv("WP_DB_PASSWORD", "")
 WP_DB_NAME = os.getenv("WP_DB_NAME", "wordpress")
+
+
+def _get_wp_db_config() -> dict:
+    """Возвращает конфиг для MySQL подключения."""
+    return {
+        "host": WP_DB_HOST,
+        "user": WP_DB_USER,
+        "password": WP_DB_PASSWORD,
+        "db": WP_DB_NAME,
+        "charset": "utf8mb4",
+        "connect_timeout": 5,
+    }
 
 
 def _random_slug(length: int = 8) -> str:
@@ -105,3 +118,40 @@ async def publish_report(html: str, title: str) -> dict:
     finally:
         if conn:
             conn.close()
+
+
+async def get_report_html_by_slug(slug: str) -> str | None:
+    """Читает HTML отчёта из MySQL по slug (Phase 12).
+    
+    Args:
+        slug: URL slug отчёта (например 'btu2vneu')
+    
+    Returns:
+        HTML-строка отчёта или None если не найден
+    """
+    if not WP_DB_PASSWORD:
+        # Fallback: читаем из локального файла
+        report_path = f"/opt/data/reports/{slug}.html"
+        if os.path.exists(report_path):
+            with open(report_path, "r", encoding="utf-8") as f:
+                return f.read()
+        return None
+    
+    import aiomysql
+    
+    config = _get_wp_db_config()
+    try:
+        conn = await aiomysql.connect(**config)
+        try:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    "SELECT post_content FROM wp_posts WHERE post_name = %s AND post_type = 'page' LIMIT 1",
+                    (slug,)
+                )
+                row = await cur.fetchone()
+                return row[0] if row else None
+        finally:
+            conn.close()
+    except Exception as e:
+        logger.error("Failed to read report HTML for slug=%s: %s", slug, e)
+        return None

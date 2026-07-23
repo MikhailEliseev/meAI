@@ -1,0 +1,186 @@
+/* PDF-оптимизация через @media print (Phase 12)
+ * 
+ * WeasyPrint рендерит HTML с этими стилями для создания профессионального PDF.
+ * Особенности:
+ * - Page setup: A4, margins, footer с нумерацией
+ * - Page breaks: избегаем разрывов внутри карточек
+ * - Упрощённые шрифты (system fonts, не CDN)
+ * - Скрытие интерактивных элементов (кнопок, theme toggle)
+ */
+
+@media print {
+    /* ── Page Setup ────────────────────────────────────────────────── */
+    @page {
+        size: A4;
+        margin: 2cm 1.5cm;
+        
+        /* Footer с нумерацией страниц */
+        @bottom-center {
+            content: "AIM — Presale Intelligence Report  |  Страница " counter(page);
+            font-size: 9pt;
+            color: #64748b;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+    }
+    
+    /* ── Page Breaks ───────────────────────────────────────────────── */
+    /* Избегаем разрывов внутри карточек, таблиц, секций */
+    .surface-block,
+    .stat-card,
+    .section,
+    .revenue-block,
+    .competitor-card,
+    table {
+        page-break-inside: avoid;
+    }
+    
+    /* Разрывы перед крупными секциями */
+    .section {
+        page-break-before: auto;
+    }
+    
+    /* ── Скрыть интерактивные элементы ─────────────────────────────── */
+    .cta-box,
+    .theme-toggle,
+    button,
+    .ripple-container,
+    .report-actions {
+        display: none !important;
+    }
+    
+    /* ── Цветовая схема для печати ─────────────────────────────────── */
+    /* Всегда светлая тема, чёрный текст на белом фоне */
+    body,
+    html {
+        background: white !important;
+        color: #1e293b !important;
+    }
+    
+    .report-container {
+        max-width: 100%;
+        box-shadow: none;
+        background: white !important;
+    }
+    
+    /* ── Упростить шрифты для WeasyPrint ───────────────────────────── */
+    /* WeasyPrint не загружает CDN шрифты → используем system fonts */
+    * {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    }
+    
+    /* ── Hero ──────────────────────────────────────────────────────── */
+    .report-hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        padding: 1.5cm 1cm;
+        margin-bottom: 1cm;
+    }
+    
+    .hero-title {
+        font-size: 28pt;
+        font-weight: bold;
+    }
+    
+    .hero-subtitle {
+        font-size: 12pt;
+        opacity: 0.9;
+    }
+    
+    /* ── Секции ────────────────────────────────────────────────────── */
+    .section-label {
+        font-size: 14pt;
+        font-weight: bold;
+        color: #1e293b !important;
+        margin-top: 1cm;
+        margin-bottom: 0.5cm;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 0.3cm;
+    }
+    
+    /* ── Карточки ──────────────────────────────────────────────────── */
+    .surface-block {
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px;
+        padding: 0.5cm;
+        margin-bottom: 0.5cm;
+    }
+    
+    .stat-card {
+        background: white !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 0.4cm;
+        margin: 0.3cm 0;
+    }
+    
+    /* ── Таблицы ───────────────────────────────────────────────────── */
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 0.5cm 0;
+    }
+    
+    th {
+        background: #f1f5f9 !important;
+        color: #1e293b !important;
+        font-weight: bold;
+        padding: 0.3cm;
+        border: 1px solid #cbd5e1;
+        text-align: left;
+    }
+    
+    td {
+        padding: 0.3cm;
+        border: 1px solid #e2e8f0;
+        color: #334155 !important;
+    }
+    
+    /* ── Заголовки ─────────────────────────────────────────────────── */
+    h1, h2, h3, h4 {
+        color: #1e293b !important;
+        page-break-after: avoid;
+    }
+    
+    h1 { font-size: 20pt; }
+    h2 { font-size: 16pt; }
+    h3 { font-size: 14pt; }
+    h4 { font-size: 12pt; }
+    
+    /* ── Текст ─────────────────────────────────────────────────────── */
+    p, li {
+        color: #475569 !important;
+        line-height: 1.6;
+        font-size: 10pt;
+    }
+    
+    /* ── Ссылки ────────────────────────────────────────────────────── */
+    a {
+        color: #3b82f6 !important;
+        text-decoration: underline;
+    }
+    
+    /* ── Footer (report-footer) ────────────────────────────────────── */
+    .report-footer {
+        margin-top: 2cm;
+        padding-top: 0.5cm;
+        border-top: 1px solid #e2e8f0;
+        font-size: 9pt;
+        color: #64748b !important;
+        text-align: center;
+    }
+    
+    /* ── Revenue Block ─────────────────────────────────────────────── */
+    .revenue-block {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        padding: 0.8cm;
+        margin: 1cm 0;
+        border-radius: 8px;
+    }
+    
+    .revenue-block h2,
+    .revenue-block h3,
+    .revenue-block p {
+        color: white !important;
+    }
+}
