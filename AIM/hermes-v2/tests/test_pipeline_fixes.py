@@ -13,11 +13,11 @@ class TestToolMessagesHonest:
             "но код использует Perplexity+SearXNG→ФНС стратегию"
         )
 
-    def test_find_competitors_message_mentions_fns(self):
-        """Сообщение должно честно говорить про ФНС/налоговую."""
+    def test_find_competitors_message_neutral(self):
+        """Сообщение не должно палить конкретные инструменты."""
         msg = _TOOL_MESSAGES["find_competitors"]["start"]
-        assert "ФНС" in msg or "налогов" in msg or "Perplexity" in msg, (
-            f"Сообщение '{msg}' не объясняет реальный источник данных"
+        assert "ФНС" not in msg and "Perplexity" not in msg, (
+            f"Сообщение '{msg}' палит инструменты"
         )
 
     def test_extract_clinic_profile_message_honest_about_inn(self):

@@ -333,9 +333,10 @@ def _format_reviews_block(reviews_raw: str) -> str:
         reviews = p.get("reviews")
         if rating:
             found_any = True
+            rating_clean = f"{float(rating):.1f}"
             rev_str = f" ({reviews})" if reviews else ""
             lines.append(":::stat-card")
-            lines.append(f"**{rating} ★**")
+            lines.append(f"**{rating_clean} ★**")
             lines.append(f"{label}{rev_str}")
             lines.append(":::")
 

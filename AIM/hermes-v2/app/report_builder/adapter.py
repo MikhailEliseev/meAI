@@ -72,10 +72,12 @@ def _format_tool_result_as_markdown(tool_name: str, raw: str) -> str:
             return md
         if tool_name == "find_competitors":
             from app.formatters.competitors import format_competitors
-            # client_revenue/profit передаются отдельно в revenue_block;
-            # здесь таблица конкурентов без строки «ВЫ» (она дублирует блок).
             md = format_competitors(raw)
             return md
+        if tool_name == "run_review_platforms":
+            return _format_reviews_markdown(raw)
+        if tool_name == "scrape_clinic_website":
+            return _format_scrape_markdown(raw)
     except Exception as e:  # pragma: no cover — defensive
         logger.warning("adapter: formatter for %s failed: %s", tool_name, e)
 
@@ -85,6 +87,99 @@ def _format_tool_result_as_markdown(tool_name: str, raw: str) -> str:
     if parsed and isinstance(parsed, dict):
         return _dump_dict_as_markdown(parsed)
     return raw.strip()
+
+
+def _format_reviews_markdown(raw: str) -> str:
+    """Форматировать отзывы из JSON в Markdown для отчёта."""
+    data = _safe_load_json(raw)
+    if not data or not isinstance(data, dict):
+        return ""
+
+    platforms = data.get("platforms", {})
+    lines = []
+
+    platform_labels = {
+        "yandex": "Яндекс.Карты",
+        "prodoctorov": "ПроДокторов",
+        "twogis": "2ГИС",
+    }
+
+    for key, label in platform_labels.items():
+        p = platforms.get(key, {})
+        rating = p.get("rating")
+        reviews = p.get("reviews")
+        if rating and isinstance(rating, (int, float)):
+            rating_clean = f"{rating:.1f}"
+            rev_str = f" ({reviews})" if reviews else ""
+            lines.append(f"- **{label}:** {rating_clean}★{rev_str}")
+
+    if not lines:
+        summary = data.get("reputation_summary", "")
+        return summary if summary else "Отзывы не найдены на доступных площадках."
+
+    praise = data.get("praise_summary", "")
+    if praise:
+        lines.append("")
+        lines.append("**Что хвалят:**")
+        for topic in praise.split("|")[:4]:
+            topic = topic.strip()
+            if topic:
+                lines.append(f"- {topic[:120]}")
+
+    criticism = data.get("criticism_summary", "")
+    if criticism:
+        lines.append("")
+        lines.append("**Что критикуют:**")
+        for topic in criticism.split("|")[:4]:
+            topic = topic.strip()
+            if topic:
+                lines.append(f"- {topic[:120]}")
+
+    summary = data.get("reputation_summary", "")
+    if summary:
+        lines.append("")
+        lines.append(f"> {summary[:300]}")
+
+    return "\n".join(lines)
+
+
+def _format_scrape_markdown(raw: str) -> str:
+    """Форматировать данные скрапа сайта в Markdown."""
+    data = _safe_load_json(raw)
+    if not data or not isinstance(data, dict):
+        return ""
+
+    lines = []
+
+    doctors = data.get("doctors", [])
+    if doctors:
+        lines.append("**Врачи на сайте:**")
+        for doc in doctors[:8]:
+            if isinstance(doc, dict):
+                name = doc.get("name", "")
+                spec = doc.get("specialization", "")
+                if name:
+                    lines.append(f"- {name}" + (f" — {spec[:60]}" if spec else ""))
+        lines.append("")
+
+    socials = data.get("socials", {})
+    if socials:
+        parts = []
+        emoji_map = {"instagram": "📸", "vk": "🔵", "telegram": "✈️",
+                     "youtube": "▶️", "rutube": "🎬", "dzen": "📰"}
+        for platform, handle in socials.items():
+            emoji = emoji_map.get(platform, "🔗")
+            parts.append(f"{emoji} {platform}")
+        if parts:
+            lines.append("**Соцсети:** " + " · ".join(parts))
+            lines.append("")
+
+    services = data.get("services", [])
+    if services:
+        lines.append("**Услуги:** " + ", ".join(services[:8]))
+        lines.append("")
+
+    return "\n".join(lines)
 
 
 def _dump_dict_as_markdown(d: dict, max_items: int = 12) -> str:
