@@ -33,7 +33,7 @@ async def _search_facebook_ads(client: httpx.AsyncClient, company: str) -> dict:
 
     fc_pool = get_key_bank()
     for attempt in range(MAX_RETRIES):
-        key = fc_pool.get_key()
+        key = await fc_pool.get_key_async()
         if not key:
             return {"platforms": ["facebook", "instagram"], "active_ads_count": 0,
                     "ads": [], "note": "Нет доступных ключей Firecrawl"}

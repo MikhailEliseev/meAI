@@ -70,7 +70,7 @@ services:
       - ./logs:/app/logs
       - ./obsidian:/app/AIM/obsidian
       - ./data:/app/AIM/data
-      - /opt/aim-keys:/opt/keys:rw
+      - /opt/aim-keys:/opt/keys:ro
     depends_on:
       postgres:
         condition: service_healthy

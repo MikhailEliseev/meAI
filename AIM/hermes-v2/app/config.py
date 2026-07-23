@@ -17,10 +17,10 @@ OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "")
 LLM_MODEL = os.getenv("LLM_MODEL", "glm-5.2")
 SESSIONS_DB_PATH = os.getenv("SESSIONS_DB_PATH", "/opt/data/sessions.db")
 
-# --- Phase 3: ключи внешних сервисов (заготовки) ---------------------------
-PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY", "")
-APIFY_API_TOKEN = os.getenv("APIFY_API_TOKEN", "")
-FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY", "")
+# --- Phase 3: ключи внешних сервисов ---
+# Perplexity: single key, читается напрямую в perplexity.py
+# Apify/Firecrawl: JSON pool files, управляются UnifiedKeyPool
+# (нет через env vars — см. APIFY_KEYS_FILE / FIRECRAWL_KEYS_FILE)
 
 # --- Phase 5: WordPress DB для публикации отчётов --------------------------
 WP_DB_HOST = os.getenv("WP_DB_HOST", "")

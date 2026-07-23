@@ -266,32 +266,8 @@ def filter_competitors(client_revenue, competitors: list,
 
 # --- register tools -----------------------------------------------------------
 
-register(
-    name="find_competitors",
-    schema={
-        "type": "function",
-        "function": {
-            "name": "find_competitors",
-            "description": (
-                "Найти конкурентов для сайта клиники через Google Maps. "
-                "Возвращает до 5 конкурентов с ИНН, рейтингом, отзывами. "
-                "ВЫЗЫВАЙ ОДИН РАЗ на старте, ОДНОВРЕМЕННО с extract_clinic_profile и quick_overview. "
-                "Обязательно передай client_inn и client_address если они известны."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "url": {"type": "string", "description": "URL сайта клиники"},
-                    "count": {"type": "integer", "description": "Сколько конкурентов (max 5, default 5)", "default": 5},
-                    "client_inn": {"type": "string", "description": "ИНН клиента (для точного поиска)"},
-                    "client_address": {"type": "string", "description": "Адрес клиента"},
-                },
-                "required": ["url"],
-            },
-        },
-    },
-    handler=find_competitors,
-)
+# NOTE: find_competitors регистрируется в __init__.py (_register_find_competitors).
+# Дубликат убран для избежания double-registration warning.
 
 register(
     name="enrich_competitors",

@@ -239,30 +239,10 @@ async def handle_run_review_platforms(url=None, query=None, **kwargs) -> str:
         return json.dumps({"error": str(e)})
 
 
-register(
-    name="run_review_platforms",
-    schema={
-        "type": "function",
-        "function": {
-            "name": "run_review_platforms",
-            "description": (
-                "Анализ отзывов и рейтингов клиники по платформам "
-                "(Яндекс.Карты, 2ГИС, Google, ПроДокторов). "
-                "Возвращает рейтинги, кол-во отзывов, типичные плюсы/минусы. "
-                "ВЫЗЫВАЙ когда клиент попросил 'проверить отзывы'."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "url": {"type": "string", "description": "URL сайта клиники"},
-                    "query": {"type": "string", "description": "Поисковый запрос"},
-                },
-            },
-        },
-    },
-    handler=handle_run_review_platforms,
-    check_fn=lambda: USE_PERPLEXITY,
-)
+# NOTE: run_review_platforms регистрация убрана — используется Apify-версия
+# из app/tools/run_review_platforms.py (точные данные через Yandex Maps + 2GIS).
+# Perplexity-версия (handle_run_review_platforms выше) — dead code, оставлена
+# только для обратной совместимости, но НЕ регистрируется.
 
 
 # --- extract_clinic_profile (structured) -----------------------------------
