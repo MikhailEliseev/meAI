@@ -515,7 +515,7 @@
             backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
             border-left: 3px solid var(--accent);
-            border-radius: 20px;
+            border-radius: 4px;
             border-bottom-left-radius: 2px;
             max-width: 75%;
             min-height: 52px;
@@ -700,7 +700,7 @@
             gap: 6px;
             padding: 8px 16px;
             border: 1px solid var(--accent-soft);
-            border-radius: 20px;
+            border-radius: 4px;
             background: transparent;
             color: var(--accent);
             font-family: 'Jost', sans-serif;
