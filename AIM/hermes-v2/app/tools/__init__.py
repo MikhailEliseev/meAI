@@ -48,4 +48,6 @@ def register_all():
     from app.tools import run_review_platforms  # noqa: F401
     # aim-app proxy tools (financials, content analysis, SEO)
     from app.tools import aim_app_tools  # noqa: F401
+    # Phase 13: Website scraper (врачи, соцсети — напрямую с сайта)
+    from app.tools import website_scraper  # noqa: F401
     logger.info("register_all: %d tools — %s", len(list_tool_names()), list_tool_names())

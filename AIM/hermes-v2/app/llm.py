@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # (выручка, ИНН, визиты), только таблицу из кода + качественный обзор.
 # Качественные тулы (quick_overview, perplexity_search) — НЕ скрыты: из них
 # LLM берёт врачей, соцсети, услуги.
-_FORMATTED_TOOLS = frozenset({"find_competitors", "extract_clinic_profile"})
+_FORMATTED_TOOLS = frozenset({"find_competitors", "extract_clinic_profile", "scrape_clinic_website"})
 
 _TOOL_RESULT_HIDDEN = (
     "[Данные получены и отображены пользователю в виде таблицы выше. "
@@ -248,12 +248,23 @@ def _build_formatted_blocks(
         except (json.JSONDecodeError, TypeError):
             pass
         # Передаём выручку/прибыль/trend из profile_cache (от auto-call company_financials)
-        # в format_profile — иначе обогащение мёртвым кодом (выручка не доходит до блока 01).
+        # + данные скрапа сайта (врачи, соцсети — Phase 13) в format_profile.
         client_data = {
             k: profile_cache[k]
             for k in ("revenue", "profit", "revenue_trend")
             if profile_cache.get(k)
         }
+        # Phase 13: Merge scrape data (doctors, socials, cms) into profile JSON
+        if profile_cache.get("doctors") or profile_cache.get("socials"):
+            try:
+                pdata2 = json.loads(profile_result) if isinstance(profile_result, str) else profile_result
+                if profile_cache.get("doctors"):
+                    pdata2["doctors"] = profile_cache["doctors"]
+                if profile_cache.get("socials"):
+                    pdata2["socials"] = profile_cache["socials"]
+                profile_result = json.dumps(pdata2, ensure_ascii=False) if isinstance(profile_result, str) else pdata2
+            except (json.JSONDecodeError, TypeError):
+                pass
         profile_md, profile_data = format_profile(profile_result, client_data=client_data or None)
         if profile_md:
             blocks.append(profile_md)
@@ -758,30 +769,31 @@ async def chat_with_tools(history: list[dict]):
                     )
                     yield ("formatted", block + "\n\n")
 
-                # Instruction для LLM: данные выше — факты, делай только выводы
+                # Instruction для LLM: данные выше — факты, ОПИРАЙСЯ на них
                 messages.append({
                     "role": "system",
                     "content": (
                         "Выше показаны ТОЧНЫЕ данные (секции 01-04 уже отображены). "
-                        "Твоя задача — ТОЛЬКО аналитический нарратив. "
-                        "КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО:\n"
-                        "- Повторять данные из секций выше (ИНН, выручку, адреса, услуги, рейтинги)\n"
-                        "- Дублировать таблицу конкурентов или блок отзывов\n"
-                        "- Создавать заголовки ## — ты пишешь выводы, не данные\n\n"
+                        "Эти данные — ФАКТЫ из ФНС, Яндекс.Карт, 2ГИС. "
+                        "ОПИРАЙСЯ на них активно. Приводи конкретные числа, имена врачей, ссылки.\n\n"
                         "Структура ответа (БЕЗ заголовков ##, просто текст):\n\n"
-                        "**💡 Позиция:** 1-2 предложения — лидер/середняк/аутсайдер рынка.\n\n"
-                        "**✅ Сильные:** 2-3 пункта маркированным списком.\n\n"
-                        "**⚠️ Рост:** 2-3 конкретных пробела. НЕ рекомендуй то что уже есть.\n\n"
+                        "**💡 Позиция:** 1-2 предложения — лидер/середняк/аутсайдер рынка. "
+                        "С конкретными числами из данных.\n\n"
+                        "**✅ Сильные:** 2-3 пункта. Что лучше конкурентов? С цифрами. "
+                        "Назови имена врачей если найдены. Назови соцсети если есть.\n\n"
+                        "**⚠️ Рост:** 2-3 конкретных пробела. Где отстаёте? С цифрами. "
+                        "НЕ рекомендуй то что уже есть.\n\n"
                         "**🎯 Рекомендации:** 1-2 действия на основе РЕАЛЬНЫХ пробелов.\n\n"
-                        "**🗣️ Отзывы:** 2-3 предложения — главные темы из блока 04.\n\n"
+                        "**🗣️ Отзывы:** 2-3 предложения — главные темы. Назови рейтинг.\n\n"
                         "[SUGGESTIONS]\n"
                         "📸 Анализ соцсетей конкурентов|run_instagram_content\n"
                         "🔍 Глубокий SEO-аудит сайта|seo_audit\n"
                         "[/SUGGESTIONS]\n\n"
-                        "КРИТИЧНО:\n"
-                        "- НЕ повторяй НИ ОДНОЙ цифры из секций выше в своём тексте\n"
-                        "- НЕ выдумывай цифры\n"
-                        "- Сравнивай КОНКРЕТНО: «крупнее в X раз»\n"
+                        "ПРАВИЛА:\n"
+                        "- ОПИРАЙСЯ на данные выше — это факты\n"
+                        "- ПРИВОДИ конкретные числа из данных\n"
+                        "- Если данных НЕТ — скажи «информация не найдена», НЕ выдумывай\n"
+                        "- НЕ упоминай трафик/визиты/посетителей — этих данных нет\n"
                         "- ⚖️ НЕ рекомендуй Instagram/Telegram (148-ФЗ). Можно: VK, RuTube, Дзен"
                     ),
                 })
@@ -834,6 +846,38 @@ async def chat_with_tools(history: list[dict]):
                     except Exception as e:
                         logger.warning("auto extract_clinic_profile (pre-stream) failed: %s", e)
 
+            # Phase 13: Auto-call scrape_clinic_website (врачи, соцсети — с САЙТА)
+            if "scrape_clinic_website" not in collected_results:
+                user_url = profile_cache.get("url", "") or _extract_url_from_messages(messages)
+                if user_url:
+                    yield ("tool_start", "scrape_clinic_website",
+                           {"url": user_url}, "🌐 Сканирую сайт: врачи, соцсети…")
+                    try:
+                        from app.tools.website_scraper import handle_scrape_clinic_website
+                        scrape_result = await handle_scrape_clinic_website(url=user_url)
+                        collected_results["scrape_clinic_website"] = scrape_result
+                        # Обогатить profile_cache данными со скрапа
+                        try:
+                            scrape_data = json.loads(scrape_result)
+                            if scrape_data.get("doctors"):
+                                profile_cache["doctors"] = scrape_data["doctors"]
+                            if scrape_data.get("socials"):
+                                profile_cache["socials"] = scrape_data["socials"]
+                            if scrape_data.get("cms") and not profile_cache.get("website_platform"):
+                                profile_cache["website_platform"] = scrape_data["cms"]
+                            if scrape_data.get("phone"):
+                                profile_cache["phone"] = scrape_data["phone"]
+                            logger.info("auto scrape_clinic_website OK: doctors=%d socials=%d cms=%s",
+                                        len(scrape_data.get("doctors", [])),
+                                        len(scrape_data.get("socials", {})),
+                                        scrape_data.get("cms", ""))
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+                        yield ("tool_result", "scrape_clinic_website", scrape_result,
+                               "✅ Сайт просканирован")
+                    except Exception as e:
+                        logger.warning("auto scrape_clinic_website (pre-stream) failed: %s", e)
+
             # Auto-call financials (если ещё не вызван)
             if "company_financials" not in collected_results:
                 try:
@@ -881,9 +925,23 @@ async def chat_with_tools(history: list[dict]):
                            {"url": review_url}, "⭐ Собираю отзывы с площадок…")
                     try:
                         from app.tools.run_review_platforms import handle_run_review_platforms
+                        # Phase 13: если company_name пустой — извлечь из URL
+                        company_name = profile_cache.get("company_name", "")
+                        if not company_name:
+                            # Извлечь бренд из URL (arclinic.ru → "arclinic")
+                            try:
+                                from urllib.parse import urlparse
+                                domain = urlparse(review_url).netloc.replace("www.", "")
+                                brand = domain.split(".")[0]
+                                if brand and len(brand) > 2:
+                                    company_name = brand
+                                    profile_cache["company_name"] = brand
+                                    logger.info("Phase 13: extracted brand from URL: %s", brand)
+                            except Exception:
+                                pass
                         review_result = await handle_run_review_platforms(
                             url=review_url,
-                            company_name=profile_cache.get("company_name", ""),
+                            company_name=company_name,
                             city=profile_cache.get("city", ""),
                         )
                         collected_results["run_review_platforms"] = review_result

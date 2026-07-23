@@ -184,6 +184,50 @@ def format_profile(result: str, client_data: dict | None = None) -> tuple[str, d
         lines.append(f"**Услуги:** {', '.join(services[:8])}")
         lines.append("")
 
+    # ── Врачи (из website_scraper — Phase 13) ──
+    doctors = data.get("doctors")
+    if doctors and isinstance(doctors, list) and len(doctors) > 0:
+        lines.append("")
+        lines.append("**Врачи на сайте:**")
+        for doc in doctors[:8]:
+            if isinstance(doc, dict):
+                doc_name = doc.get("name", "")
+                doc_spec = doc.get("specialization", "")
+                if doc_name:
+                    if doc_spec:
+                        lines.append(f"- {doc_name} — {doc_spec[:60]}")
+                    else:
+                        lines.append(f"- {doc_name}")
+            elif isinstance(doc, str) and len(doc) > 3:
+                lines.append(f"- {doc}")
+        lines.append("")
+
+    # ── Соцсети (из website_scraper — Phase 13) ──
+    socials = data.get("socials")
+    if socials and isinstance(socials, dict) and socials:
+        social_parts = []
+        emoji_map = {"instagram": "📸", "vk": "🔵", "telegram": "✈️",
+                     "youtube": "▶️", "rutube": "🎬", "whatsapp": "💬",
+                     "dzen": "📰", "tenchat": "💼"}
+        for platform, handle in socials.items():
+            emoji = emoji_map.get(platform, "🔗")
+            label = platform.upper() if platform in ("vk",) else platform.capitalize()
+            # Формируем полную ссылку
+            if platform == "instagram":
+                url = f"https://instagram.com/{handle}"
+            elif platform == "vk":
+                url = f"https://vk.com/{handle}"
+            elif platform == "telegram":
+                url = f"https://t.me/{handle}"
+            elif platform == "youtube":
+                url = f"https://youtube.com/@{handle}"
+            else:
+                url = handle if handle.startswith("http") else f"https://{platform}.com/{handle}"
+            social_parts.append(f"{emoji} [{label}]({url})")
+        if social_parts:
+            lines.append("**Соцсети (найдены на сайте):** " + " | ".join(social_parts))
+            lines.append("")
+
     lines.append("---")
 
     return "\n".join(lines), data
