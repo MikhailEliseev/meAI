@@ -4,7 +4,7 @@
   GET  /health                       — healthcheck
   POST /tools/find-competitors       — прозрачный прокси к aim-app:8000
   POST /api/chat/stream              — SSE-диалог через LLM с tool-calling
-  GET  /api/report/{slug}/download   — скачивание отчёта как PDF (Phase 12)
+  GET  /report/{slug}/download       — скачивание отчёта как PDF (Phase 12)
 """
 import json
 import logging
@@ -246,7 +246,7 @@ async def chat_stream(req: ChatRequest):
 # Phase 12: Report Download (PDF)
 # ──────────────────────────────────────────────────────────────────────────
 
-@app.get("/api/report/{slug}/download")
+@app.get("/report/{slug}/download")
 async def download_report_pdf(slug: str):
     """Скачивание отчёта как PDF через WeasyPrint (Phase 12).
     

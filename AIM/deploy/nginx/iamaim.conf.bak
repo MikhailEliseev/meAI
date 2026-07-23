@@ -1,0 +1,260 @@
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+# Rate limiting
+limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+limit_req_zone $binary_remote_addr zone=health_limit:10m rate=100r/s;
+
+
+# HTTP -> HTTPS redirect
+server {
+    listen 80;
+    server_name iamaim.ru www.iamaim.ru;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location /health {
+        access_log off;
+        return 200 "OK";
+    }
+
+    location / {
+        return 301 https://$server_name$request_uri;
+    }
+}
+
+# HTTPS server
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name iamaim.ru www.iamaim.ru;
+
+    ssl_certificate /etc/letsencrypt/live/iamaim.ru/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/iamaim.ru/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    # Runtime DNS resolution (Docker DNS)
+    set $backend "app:8000";
+    set $hermes "hermes:8000";
+    set $wp "wordpress:9000";
+
+    # Security headers
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # === Backend API routes ===
+
+    # Chat API → Hermes (SSE streaming)
+    # /api/chat/send (legacy Next.js route) → Hermes /api/chat
+    location = /api/chat/send {
+        limit_req zone=api_limit burst=20 nodelay;
+        proxy_pass http://$hermes/api/chat;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Authorization "Bearer hmr_anbjfKH_hqaZIU9Z2vaF8f0t-nrDJGlv-nWfEhRuxP4";
+        proxy_read_timeout 600s;
+        proxy_buffering off;
+        proxy_cache off;
+        chunked_transfer_encoding on;
+        proxy_set_header Connection '';
+    }
+
+    # /api/chat/stream → Hermes
+    location = /api/chat/stream {
+        limit_req zone=api_limit burst=20 nodelay;
+        proxy_pass http://$hermes/api/chat/stream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Authorization "Bearer hmr_anbjfKH_hqaZIU9Z2vaF8f0t-nrDJGlv-nWfEhRuxP4";
+        proxy_read_timeout 600s;
+        proxy_buffering off;
+        proxy_cache off;
+        chunked_transfer_encoding on;
+        proxy_set_header Connection '';
+    }
+
+    # Generic /api/chat prefix → Hermes
+    location /api/chat {
+        limit_req zone=api_limit burst=20 nodelay;
+        proxy_pass http://$hermes;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Authorization "Bearer hmr_anbjfKH_hqaZIU9Z2vaF8f0t-nrDJGlv-nWfEhRuxP4";
+        proxy_read_timeout 600s;
+        proxy_buffering off;
+        proxy_cache off;
+        chunked_transfer_encoding on;
+        proxy_set_header Connection '';
+    }
+
+    # Backend API
+    location /api/ {
+        limit_req zone=api_limit burst=20 nodelay;
+        proxy_pass http://$backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 600s;
+    }
+
+    # Backend health/metrics
+    location /health {
+        limit_req zone=health_limit burst=20 nodelay;
+        proxy_pass http://$backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /ready {
+        limit_req zone=health_limit burst=20 nodelay;
+        proxy_pass http://$backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /metrics {
+        limit_req zone=api_limit burst=20 nodelay;
+        proxy_pass http://$backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Telegram test webhook → Hermes Test
+    location /telegram/test-webhook {
+        limit_req zone=api_limit burst=20 nodelay;
+        proxy_pass http://$hermes/telegram/webhook;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+    }
+
+    # Telegram webhook → Hermes
+    location /telegram/webhook {
+        limit_req zone=api_limit burst=20 nodelay;
+        proxy_pass http://$hermes;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+    }
+
+    # === Next.js Frontend (test pages) ===
+    set $frontend "frontend:3099";
+
+    # Next.js static assets
+    location /_next/ {
+        proxy_pass http://$frontend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800, immutable";
+    }
+
+    # Chat test pages (Next.js)
+    location /chat-test {
+        proxy_pass http://$frontend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /chat-old {
+        proxy_pass http://$frontend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /chat-new {
+        proxy_pass http://$frontend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # === WordPress (PHP-FPM) ===
+
+    # Static assets from wp-content — serve directly, cache aggressively
+    location /wp-content/ {
+        root /var/www/html;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000";
+
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp|avif)$ {
+            expires 1y;
+            add_header Cache-Control "public, max-age=31536000, immutable";
+        }
+
+        try_files $uri =404;
+    }
+
+    # WordPress admin + PHP files
+    location /wp-admin {
+        index index.php;
+        try_files $uri $uri/ /wp-admin/index.php?$args;
+
+        location ~ \.php$ {
+            fastcgi_split_path_info ^(.+\.php)(/.+)$;
+            fastcgi_pass $wp;
+            fastcgi_index index.php;
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME /var/www/html$fastcgi_script_name;
+            fastcgi_param PATH_INFO $fastcgi_path_info;
+            fastcgi_param HTTPS on;
+            fastcgi_read_timeout 1200s;  # 20 min — покрывает полный pipeline (~14-16 мин)
+        }
+    }
+
+    # Main WordPress frontend
+    location / {
+        limit_req zone=api_limit burst=30 nodelay;
+        try_files $uri $uri/ /index.php?$args;
+
+        location ~ \.php$ {
+            fastcgi_split_path_info ^(.+\.php)(/.+)$;
+            fastcgi_pass $wp;
+            fastcgi_index index.php;
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME /var/www/html$fastcgi_script_name;
+            fastcgi_param PATH_INFO $fastcgi_path_info;
+            fastcgi_read_timeout 1200s;  # 20 min — покрывает полный pipeline (~14-16 мин)
+        }
+    }
+
+    # Telegram chat exports (static)
+    location /chat-exports/ {
+        alias /var/www/html/chat-exports/;
+        autoindex on;
+        add_header Cache-Control "no-cache";
+    }
+}

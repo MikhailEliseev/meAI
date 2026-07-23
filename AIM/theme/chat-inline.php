@@ -1003,7 +1003,7 @@
                             <span>Открыть отчёт</span>
                             <span>→</span>
                         </a>
-                        <a href="/api/report/${slug}/download" class="report-ready-link report-ready-download">
+                        <a href="/report/${slug}/download" class="report-ready-link report-ready-download">
                             <span>📥</span>
                             <span>Скачать PDF</span>
                         </a>
