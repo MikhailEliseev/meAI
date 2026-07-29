@@ -598,27 +598,64 @@ async def _do_scrape(url: str, collected_results: dict, profile_cache: dict) -> 
         return None
 
 
+def _is_useful_result(result: str, tool_name: str) -> bool:
+    """Проверить, содержит ли результат тулза полезные данные.
+
+    Возвращает False для error/пустых результатов, чтобы позволить retry.
+    Task 1: предотвращает сохранение бесполезных данных в collected_results.
+    """
+    if not result or not isinstance(result, str):
+        return False
+    try:
+        data = json.loads(result)
+    except (json.JSONDecodeError, TypeError):
+        return False
+    if not isinstance(data, dict):
+        return False
+    if data.get("error"):
+        return False
+    # Tool-specific checks:
+    if tool_name == "company_financials":
+        return bool(data.get("revenue"))
+    if tool_name == "run_review_platforms":
+        platforms = data.get("platforms", {})
+        if isinstance(platforms, dict):
+            return any(
+                isinstance(p, dict) and p.get("rating")
+                for p in platforms.values()
+            )
+        return False
+    if tool_name == "find_competitors":
+        comps = data.get("competitors", [])
+        return isinstance(comps, list) and len(comps) >= 1
+    return True  # другие тулы — считаем полезными если нет error
+
+
 async def _do_financials(inn: str, collected_results: dict, profile_cache: dict) -> tuple[str, str] | None:
     """Company financials — ФНС."""
     try:
         from app.tools.aim_app_tools import handle_company_financials
         result = await handle_company_financials(inn=inn)
-        collected_results["company_financials"] = result
-        try:
-            data = json.loads(result)
-            if data.get("revenue"):
-                profile_cache["revenue"] = data["revenue"]
-            if data.get("revenue_trend"):
-                profile_cache["revenue_trend"] = data["revenue_trend"]
-            if data.get("profit"):
-                profile_cache["profit"] = data["profit"]
-            if data.get("name") and not profile_cache.get("company_name"):
-                profile_cache["company_name"] = data["name"]
-            logger.info("parallel financials OK: inn=%s revenue=%s", inn, data.get("revenue"))
-            has_revenue = bool(data.get("revenue"))
-        except (json.JSONDecodeError, TypeError):
-            has_revenue = False
-        return (result, "✅ Финансы получены" if has_revenue else "⚠️ Финансы недоступны")
+        # Task 1: не сохраняем пустые/error результаты (retry possible)
+        if _is_useful_result(result, "company_financials"):
+            collected_results["company_financials"] = result
+            try:
+                data = json.loads(result)
+                if data.get("revenue"):
+                    profile_cache["revenue"] = data["revenue"]
+                if data.get("revenue_trend"):
+                    profile_cache["revenue_trend"] = data["revenue_trend"]
+                if data.get("profit"):
+                    profile_cache["profit"] = data["profit"]
+                if data.get("name") and not profile_cache.get("company_name"):
+                    profile_cache["company_name"] = data["name"]
+                logger.info("parallel financials OK: inn=%s revenue=%s", inn, data.get("revenue"))
+            except (json.JSONDecodeError, TypeError):
+                pass
+            return (result, "✅ Финансы получены")
+        else:
+            logger.warning("parallel financials: empty/error result, NOT stored (retry possible)")
+            return None
     except Exception as e:
         logger.warning("parallel financials failed: %s", e)
         return None
@@ -632,10 +669,36 @@ async def _do_reviews(url: str, company_name: str, city: str,
         result = await handle_run_review_platforms(
             url=url, company_name=company_name, city=city,
         )
-        collected_results["run_review_platforms"] = result
-        return (result, "✅ Отзывы собраны")
+        # Task 1: не сохраняем пустые/error результаты (retry possible)
+        if _is_useful_result(result, "run_review_platforms"):
+            collected_results["run_review_platforms"] = result
+            return (result, "✅ Отзывы собраны")
+        else:
+            logger.warning("parallel reviews: empty/error result, NOT stored (retry possible)")
+            return None
     except Exception as e:
         logger.warning("parallel reviews failed: %s", e)
+        return None
+
+
+async def _do_enrich(collected_results: dict) -> tuple[str, str] | None:
+    """Task 2: Auto-enrich competitors with revenue data.
+
+    Вызывается если find_competitors вернул конкурентов без revenue_year.
+    """
+    try:
+        from app.tools.competitors import handle_enrich_competitors
+        comp_json = collected_results.get("find_competitors", "")
+        result = await handle_enrich_competitors(competitors_json=comp_json)
+        # Проверить что результат имеет enriched data
+        if _is_useful_result(result, "find_competitors"):
+            collected_results["find_competitors"] = result  # обновляем с enriched данными
+            return (result, "✅ Конкуренты обогащены")
+        else:
+            logger.warning("enrich_competitors: no useful data returned")
+            return None
+    except Exception as e:
+        logger.warning("auto enrich_competitors failed: %s", e)
         return None
 
 
@@ -781,24 +844,26 @@ async def chat_with_tools(history: list[dict]):
                                {"inn": client_inn}, "💰 Собираю финансовые данные…")
                         from app.tools.aim_app_tools import handle_company_financials
                         fin_result = await handle_company_financials(inn=client_inn)
-                        collected_results["company_financials"] = fin_result
-                        # Обогатить profile_cache выручкой для блока 01
-                        try:
-                            fin_data = json.loads(fin_result)
-                            if fin_data.get("revenue"):
-                                profile_cache["revenue"] = fin_data["revenue"]
-                            if fin_data.get("revenue_trend"):
-                                profile_cache["revenue_trend"] = fin_data["revenue_trend"]
-                            if fin_data.get("profit"):
-                                profile_cache["profit"] = fin_data["profit"]
-                            if fin_data.get("name") and not profile_cache.get("company_name"):
-                                profile_cache["company_name"] = fin_data["name"]
-                            logger.info(
-                                "auto company_financials OK: inn=%s revenue=%s",
-                                client_inn, fin_data.get("revenue"),
-                            )
-                        except (json.JSONDecodeError, TypeError):
-                            pass
+                        # Task 1: не сохраняем пустые результаты (retry possible)
+                        if _is_useful_result(fin_result, "company_financials"):
+                            collected_results["company_financials"] = fin_result
+                            # Обогатить profile_cache выручкой для блока 01
+                            try:
+                                fin_data = json.loads(fin_result)
+                                if fin_data.get("revenue"):
+                                    profile_cache["revenue"] = fin_data["revenue"]
+                                if fin_data.get("revenue_trend"):
+                                    profile_cache["revenue_trend"] = fin_data["revenue_trend"]
+                                if fin_data.get("profit"):
+                                    profile_cache["profit"] = fin_data["profit"]
+                                if fin_data.get("name") and not profile_cache.get("company_name"):
+                                    profile_cache["company_name"] = fin_data["name"]
+                                logger.info(
+                                    "auto company_financials OK: inn=%s revenue=%s",
+                                    client_inn, fin_data.get("revenue"),
+                                )
+                            except (json.JSONDecodeError, TypeError):
+                                pass
                         # Честное сообщение: проверяем что ФНС реально отдала выручку,
                         # иначе при aim-app 404 / ненайденном ИНН лжём про "успех".
                         try:
@@ -828,8 +893,13 @@ async def chat_with_tools(history: list[dict]):
                             company_name=profile_cache.get("company_name", ""),
                             city=profile_cache.get("city", ""),
                         )
-                        collected_results["run_review_platforms"] = review_result
-                        yield ("tool_result", "run_review_platforms", review_result, "✅ Отзывы собраны")
+                        # Task 1: не сохраняем пустые результаты (retry possible)
+                        if _is_useful_result(review_result, "run_review_platforms"):
+                            collected_results["run_review_platforms"] = review_result
+                            yield ("tool_result", "run_review_platforms", review_result, "✅ Отзывы собраны")
+                        else:
+                            logger.warning("auto run_review_platforms: empty result, NOT stored (retry possible)")
+                            yield ("tool_result", "run_review_platforms", review_result, "⚠️ Отзывы не найдены")
                     except Exception as e:
                         logger.warning("auto run_review_platforms failed: %s", e)
 
@@ -988,12 +1058,28 @@ async def chat_with_tools(history: list[dict]):
                                                    collected_results))
                 task_names.append("run_review_platforms")
 
+            # Task 2: enrich_competitors — если конкуренты найдены, но без выручки
+            if "find_competitors" in collected_results and "enrich_competitors" not in collected_results:
+                try:
+                    comp_data = json.loads(collected_results["find_competitors"])
+                    needs_enrich = any(
+                        not c.get("revenue_year") and not c.get("revenue")
+                        for c in comp_data.get("competitors", [])
+                        if isinstance(c, dict)
+                    )
+                    if needs_enrich:
+                        parallel_tasks.append(_do_enrich(collected_results))
+                        task_names.append("enrich_competitors")
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
             # Запускаем все параллельно, yield'им tool_start заранее
             for name in task_names:
                 msg_map = {
                     "scrape_clinic_website": "🌐 Сканирую сайт: врачи, соцсети…",
                     "company_financials": "💰 Собираю финансовые данные…",
                     "run_review_platforms": "⭐ Собираю отзывы с площадок…",
+                    "enrich_competitors": "📊 Обогащаю конкурентов выручкой…",
                 }
                 yield ("tool_start", name, {"url": user_url}, msg_map.get(name, "⏳ Выполняю…"))
 
@@ -1009,6 +1095,37 @@ async def chat_with_tools(history: list[dict]):
                         yield ("tool_result", name, result_str, msg)
                     else:
                         yield ("tool_result", name, "{}", "⚠️ Нет данных")
+
+            # Task 4: Retry упавших тулов (exception or None → нет в collected_results)
+            # Max 1 retry — для reviews и financials которые часто падают на первом вызове
+            retry_tasks = []
+            retry_names = []
+            if ("run_review_platforms" not in collected_results
+                    and user_url):
+                retry_tasks.append(_do_reviews(user_url, company_name,
+                                                profile_cache.get("city", ""),
+                                                collected_results))
+                retry_names.append("run_review_platforms (retry)")
+            if ("company_financials" not in collected_results
+                    and client_inn and len(client_inn) >= 10):
+                retry_tasks.append(_do_financials(client_inn, collected_results, profile_cache))
+                retry_names.append("company_financials (retry)")
+
+            if retry_tasks:
+                logger.info("Phase 14: retry failed tools: %s", retry_names)
+                for rn in retry_names:
+                    yield ("tool_start", rn.split(" ")[0], {},
+                           "🔄 Повторяю поиск…" if "reviews" in rn else "🔄 Повторяю запрос…")
+                retry_results = await asyncio.gather(*retry_tasks, return_exceptions=True)
+                for rn, rresult in zip(retry_names, retry_results):
+                    base_name = rn.split(" ")[0]
+                    if isinstance(rresult, Exception):
+                        logger.warning("Phase 14 retry: %s failed again: %s", rn, rresult)
+                    elif rresult:
+                        r_str, r_msg = rresult
+                        yield ("tool_result", base_name, r_str, r_msg)
+                    else:
+                        logger.info("Phase 14 retry: %s still no data", rn)
 
             # Показать formatted blocks (только если ещё не показаны)
             if not formatted_shown:

@@ -1,25 +1,20 @@
-"""QC Gate — проверка качества данных перед публикацией отчёта.
+"""QC Gate -- проверка качества данных перед публикацией отчета.
 
 Адаптация v1 qc_checklist.py (18 пунктов) под v2 архитектуру.
-В v2 данные хранятся в collected_results (dict[str, str] — JSON строки)
-и profile_cache (dict с метаданными клиента).
+Проверяет 4 блока: профиль, выручка, конкуренты, отзывы.
 
-Проверяет:
-1. Профиль клиники (ИНН, название, город)
-2. Выручка (ФНС данные)
-3. Конкуренты (≥3 с выручкой)
-4. Отзывы (рейтинг на ≥1 платформе)
-
-PASS_THRESHOLD = 60% — минимум 2 из 4 критических блоков заполнены.
-Если FAIL → отчёт НЕ публикуется (пользователь видит только чат-ответ).
+PASS_THRESHOLD = 75% -- минимум 3 из 4 пунктов.
+Fallback для города: если city пустой, извлекаем из address.
+Если FAIL -- отчет НЕ публикуется.
 """
 
 import json
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
-PASS_THRESHOLD = 0.60  # 60% — минимум для публикации
+PASS_THRESHOLD = 0.75  # 75% -- минимум 3 из 4 пунктов
 
 
 def _safe_json(raw: str) -> dict | list | None:
@@ -56,6 +51,26 @@ def _check_profile(
             name = name or data.get("company_name") or data.get("brand_name") or ""
             inn = inn or data.get("inn", "") or ""
             city = city or data.get("city", "") or ""
+
+    # Task 3: Fallback — извлечь город из address (website_scraper данные)
+    if not city:
+        address = profile_cache.get("address", "") or ""
+        if address:
+            # Эвристика: "г. Москва", "Москва,", "Санкт-Петербург,"
+            city_match = re.search(
+                r'(?:г\.?\s*|г\.?\s+)([А-ЯЁ][а-яё]+(?:[-\s][А-ЯЁа-яё]+)*)',
+                address
+            )
+            if city_match:
+                city = city_match.group(1)
+            else:
+                # Попробовать извлечь первое слово с заглавной (Москва, Казань)
+                city_match2 = re.match(r'^([А-ЯЁ][а-яё]+(?:[-\s][А-ЯЁа-яё]+)*)', address.strip())
+                if city_match2:
+                    candidate = city_match2.group(1)
+                    # Фильтр: не "ул.", "пр.", "пер."
+                    if candidate.lower() not in ("ул", "пр", "пер", "ш", "наб"):
+                        city = candidate
 
     has_name = bool(name and len(name) > 2)
     has_identifier = bool(inn or city)
@@ -99,9 +114,9 @@ def _check_financials(collected_results: dict, profile_cache: dict) -> dict:
 
 
 def _check_competitors(collected_results: dict) -> dict:
-    """Пункт 3: Конкуренты (≥3 с выручкой).
+    """Пункт 3: Конкуренты (>=3 с выручкой).
 
-    PASS: find_competitors вернул ≥3 конкурента с revenue_year > 0.
+    PASS: find_competitors вернул >=3 конкурента с revenue_year > 0.
     """
     raw = collected_results.get("find_competitors", "")
     data = _safe_json(raw)
@@ -134,7 +149,7 @@ def _check_competitors(collected_results: dict) -> dict:
 
 
 def _check_reviews(collected_results: dict) -> dict:
-    """Пункт 4: Отзывы (рейтинг на ≥1 платформе).
+    """Пункт 4: Отзывы (рейтинг на >=1 платформе).
 
     PASS: run_review_platforms вернул рейтинг хотя бы на одной платформе.
     """

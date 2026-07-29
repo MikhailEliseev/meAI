@@ -168,9 +168,9 @@ def test_qc_gate_all_pass():
     assert len(result["items"]) == 4
 
 
-def test_qc_gate_threshold_60pct():
-    """PASS_THRESHOLD = 0.60 → нужно минимум 2 из 4 пунктов."""
-    assert PASS_THRESHOLD == 0.60
+def test_qc_gate_threshold_75pct():
+    """PASS_THRESHOLD = 0.75 -- нужно минимум 3 из 4 пунктов."""
+    assert PASS_THRESHOLD == 0.75
 
 
 def test_qc_gate_partial_pass_50pct():
