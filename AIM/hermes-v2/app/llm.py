@@ -586,10 +586,18 @@ async def _do_scrape(url: str, collected_results: dict, profile_cache: dict) -> 
                 profile_cache["website_platform"] = data["cms"]
             if data.get("phone"):
                 profile_cache["phone"] = data["phone"]
-            logger.info("parallel scrape OK: doctors=%d socials=%d cms=%s",
+            # Fix 1: ИНН из подвала сайта -> в profile_cache (критично для financials)
+            if data.get("inn") and not profile_cache.get("inn"):
+                profile_cache["inn"] = data["inn"]
+                logger.info("parallel scrape: INN from website = %s", data["inn"])
+            # Fix 3: Адрес из сайта -> в profile_cache (для QC city fallback)
+            if data.get("address") and not profile_cache.get("address"):
+                profile_cache["address"] = data["address"]
+            logger.info("parallel scrape OK: doctors=%d socials=%d cms=%s inn=%s",
                         len(data.get("doctors", [])),
                         len(data.get("socials", {})),
-                        data.get("cms", ""))
+                        data.get("cms", ""),
+                        data.get("inn", "—"))
         except (json.JSONDecodeError, TypeError):
             pass
         return (result, "✅ Сайт просканирован")
@@ -1046,6 +1054,31 @@ async def chat_with_tools(history: list[dict]):
                 parallel_tasks.append(_do_scrape(user_url, collected_results, profile_cache))
                 task_names.append("scrape_clinic_website")
 
+            # Fix 4: company_profile (aim-app) — если ИНН всё ещё нет, пробуем БД aim-app
+            client_inn_check = (
+                profile_cache.get("inn", "")
+                or json.loads(collected_results.get("find_competitors", "{}")).get("client_inn", "")
+                if collected_results.get("find_competitors")
+                else profile_cache.get("inn", "")
+            )
+            if not client_inn_check and user_url and "company_profile" not in collected_results:
+                async def _do_company_profile(url, cr, pc):
+                    try:
+                        from app.tools.aim_app_tools import handle_company_profile
+                        result = await handle_company_profile(url=url)
+                        data = json.loads(result)
+                        if data.get("inn"):
+                            pc["inn"] = data["inn"]
+                            cr["company_profile"] = result
+                            logger.info("company_profile: INN from aim-app DB = %s", data["inn"])
+                            return (result, "✅ Профиль из БД")
+                        return None
+                    except Exception as e:
+                        logger.warning("company_profile failed: %s", e)
+                        return None
+                parallel_tasks.append(_do_company_profile(user_url, collected_results, profile_cache))
+                task_names.append("company_profile")
+
             # Task: company_financials
             if "company_financials" not in collected_results and client_inn and len(client_inn) >= 10:
                 parallel_tasks.append(_do_financials(client_inn, collected_results, profile_cache))
@@ -1080,6 +1113,7 @@ async def chat_with_tools(history: list[dict]):
                     "company_financials": "💰 Собираю финансовые данные…",
                     "run_review_platforms": "⭐ Собираю отзывы с площадок…",
                     "enrich_competitors": "📊 Обогащаю конкурентов выручкой…",
+                    "company_profile": "📋 Ищу компанию в базе…",
                 }
                 yield ("tool_start", name, {"url": user_url}, msg_map.get(name, "⏳ Выполняю…"))
 

@@ -326,6 +326,83 @@ def _detect_cms(soup: BeautifulSoup) -> str:
     return ""
 
 
+# ── Fix 1: ИНН из подвала/копирайта сайта ──────────────────────────────────
+_INN_RE = re.compile(r'\b(\d{10}|\d{12})\b')
+_OGRN_RE = re.compile(r'[Оо]ГРН(?:ИП)?\s*(?::|-)?\s*(\d{13,15})', re.U)
+
+
+def _extract_inn(soup: BeautifulSoup) -> str:
+    """Извлечь ИНН из подвала сайта.
+
+    Российские сайты обязаны публиковать ИНН в футере.
+    Ищем: текст рядом с 'ИНН', потом regex по всему тексту.
+    """
+    text = soup.get_text(separator=" ", strip=True)
+
+    # 1. Контекстный поиск: "ИНН: 7701234567" или "ИНН 7701234567"
+    inn_context = re.search(r'[Ии]НН\s*(?::|-)?\s*(\d{10,12})', text)
+    if inn_context:
+        inn = inn_context.group(1)
+        if len(inn) in (10, 12):
+            return inn
+
+    # 2. Regex по всему тексту — ищем 10-значные числа рядом со словами юр. лица
+    footer = soup.find("footer")
+    if footer:
+        footer_text = footer.get_text(separator=" ", strip=True)
+        inn_match = _INN_RE.search(footer_text)
+        if inn_match:
+            return inn_match.group(1)
+
+    # 3. По всему тексту (последний шанс — много ложных срабатываний)
+    # Ищем только если рядом есть слова ООО/АО/ИП/Компания
+    legal_context = re.search(
+        r'(?:ООО|АО|ОАО|ИП|Компания|Общество)[^<]{0,200}?(\d{10})\b',
+        text
+    )
+    if legal_context:
+        return legal_context.group(1)
+
+    return ""
+
+
+def _extract_address(soup: BeautifulSoup) -> str:
+    """Извлечь адрес клиники из сайта.
+
+    Ищем в footer, контактах, блоке address.
+    """
+    # 1. <address> тег
+    addr_tag = soup.find("address")
+    if addr_tag:
+        addr_text = addr_tag.get_text(separator=" ", strip=True)
+        if len(addr_text) > 10:
+            return addr_text[:300]
+
+    # 2. Footer — обычно там адрес
+    footer = soup.find("footer")
+    if footer:
+        footer_text = footer.get_text(separator=" ", strip=True)
+        # Ищем паттерн адреса: "г. Москва" или "ул." или индекс
+        addr_match = re.search(
+            r'((?:г\.?\s*|гор\.?\s*)?[А-ЯЁ][а-яё]+(?:[-\s][А-ЯЁа-яё]+)*[,\s]+'
+            r'(?:ул\.?|пр\.?|пер\.?|наб\.?|ш\.?|б-р\.?)\s*'
+            r'[А-ЯЁа-яё]+\s*\d*[а-я]?[,\s]*\d+[а-я]?)',
+            footer_text
+        )
+        if addr_match:
+            return addr_match.group(1)[:300]
+
+    # 3. По тексту — индекс + город
+    postal_match = re.search(
+        r'(\d{6}[,\s]+(?:г\.?\s*)?[А-ЯЁ][а-яё]+[,\s]+(?:ул\.?|пр\.?)\s*[А-ЯЁа-яё]+[^<]{0,50})',
+        soup.get_text(separator=" ", strip=True)
+    )
+    if postal_match:
+        return postal_match.group(1)[:300]
+
+    return ""
+
+
 def _extract_phone(soup: BeautifulSoup) -> str:
     """Извлечь телефон."""
     for link in soup.find_all("a", href=re.compile(r"tel:", re.I)):
@@ -391,6 +468,18 @@ async def scrape_clinic_website(url: str) -> str:
 
         # Извлечь телефон
         result["phone"] = _extract_phone(soup)
+
+        # Fix 1: Извлечь ИНН из подвала/копирайта сайта
+        inn = _extract_inn(soup)
+        if inn:
+            result["inn"] = inn
+            logger.info("scrape: INN found from website: %s", inn)
+
+        # Fix 3: Извлечь адрес из footer/address тегов
+        address = _extract_address(soup)
+        if address:
+            result["address"] = address
+            logger.info("scrape: address found: %s", address[:60])
 
         # 2. Найти страницы врачей
         doctor_pages = _find_doctor_pages(base_url, soup)

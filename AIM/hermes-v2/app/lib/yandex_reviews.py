@@ -140,12 +140,14 @@ def _normalize(raw: dict, query: str) -> dict | None:
 
 
 async def search(company_name: str, city: str, url: str | None = None) -> dict | None:
-    """Найти клинику на Яндекс.Картах → точный рейтинг + отзывы.
+    """Найти клинику на Яндекс.Картах -- точный рейтинг + отзывы.
+
+    Fix 2: Если поиск по имени не удался -- пробуем по URL (домену).
 
     Args:
         company_name: название клиники ("ARclinic")
-        city: город ("Санкт-Петербург")
-        url: (не используется, для совместимости интерфейса)
+        city: город ("Москва")
+        url: URL сайта (для fallback поиска по домену)
 
     Returns:
         {rating, reviews, aspects, neuro_summary, address, name, yandex_url, source}
@@ -157,53 +159,67 @@ async def search(company_name: str, city: str, url: str | None = None) -> dict |
     from app.lib.apify_client import get_apify_pool
     pool = get_apify_pool()
 
-    query = company_name or url or ""
+    # Fix 2: Стратегия поиска -- сначала по имени, потом по домену
+    queries = []
+    if company_name:
+        queries.append(company_name)
+    if url:
+        # Извлечь домен из URL для fallback поиска
+        from urllib.parse import urlparse
+        domain = urlparse(url if "://" in url else "https://" + url).netloc.replace("www.", "")
+        if domain and domain not in queries:
+            queries.append(domain)
+
+    if not queries:
+        return None
+
     location = city or "None"
 
     last_error = None
-    for attempt in range(5):
-        try:
-            key = await pool.get_next_key()
-        except RuntimeError:
-            logger.error("yandex_reviews: all Apify keys exhausted")
-            return None
-        try:
-            raw = await _run_actor(key, query, location)
-            if raw:
-                normalized = _normalize(raw, query)
-                if normalized:
-                    logger.info(
-                        "yandex_reviews OK: %s — rating=%s reviews=%d aspects=%d",
-                        query, normalized["rating"], normalized["reviews"],
-                        len(normalized["aspects"]),
+    for query in queries:
+        logger.info("yandex_reviews: searching query=%r location=%r", query, location)
+        for attempt in range(3):  # 3 попытки на каждый query (было 5 на один)
+            try:
+                key = await pool.get_next_key()
+            except RuntimeError:
+                logger.error("yandex_reviews: all Apify keys exhausted")
+                return None
+            try:
+                raw = await _run_actor(key, query, location)
+                if raw:
+                    normalized = _normalize(raw, query)
+                    if normalized:
+                        logger.info(
+                            "yandex_reviews OK: %s — rating=%s reviews=%d aspects=%d",
+                            query, normalized["rating"], normalized["reviews"],
+                            len(normalized["aspects"]),
+                        )
+                        return normalized
+                    logger.info("yandex: item found but no rating: %s", query)
+                    # Попробовать следующий query
+                    break
+                # пустой результат -- попробовать следующий query
+                logger.info("yandex: not found by query=%r, trying next...", query)
+                break
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code in (402, 429):
+                    reason = "insufficient_credits" if e.response.status_code == 402 else "rate_limited"
+                    await pool.mark_exhausted(key, reason)
+                    logger.warning(
+                        "yandex: key %s... exhausted (%d, attempt %d)",
+                        key[:20], e.response.status_code, attempt + 1,
                     )
-                    return normalized
-                logger.info("yandex: item found but no rating: %s", query)
-                return None
-            # пустой результат — клиники нет в Яндексе
-            logger.info("yandex: not found: %s", query)
-            return None
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code in (402, 429):
-                reason = "insufficient_credits" if e.response.status_code == 402 else "rate_limited"
-                await pool.mark_exhausted(key, reason)
-                logger.warning(
-                    "yandex: key %s… exhausted (%d, attempt %d)",
-                    key[:20], e.response.status_code, attempt + 1,
-                )
-                continue
-            # 500/502/503/504 — серверная ошибка Apify, НЕ ретраить другие ключи
-            # (они дадут тот же 500), сразу выходим с None
-            if e.response.status_code >= 500:
-                logger.warning(
-                    "yandex: Apify server error %d — skipping retries (platform issue)",
-                    e.response.status_code,
-                )
-                return None
-            last_error = f"{e.response.status_code}: {e.response.text[:200]}"
-            logger.warning("yandex: key %s… failed: %s", key[:20], last_error)
-        except Exception as e:
-            last_error = str(e)
+                    continue
+                if e.response.status_code >= 500:
+                    logger.warning(
+                        "yandex: Apify server error %d -- skipping retries",
+                        e.response.status_code,
+                    )
+                    return None
+                last_error = f"{e.response.status_code}: {e.response.text[:200]}"
+                logger.warning("yandex: key %s... failed: %s", key[:20], last_error)
+            except Exception as e:
+                last_error = str(e)
             logger.warning("yandex: key %s… failed: %s", key[:20], e)
 
     logger.error("yandex_reviews: all attempts failed: %s — %s", query, last_error)
