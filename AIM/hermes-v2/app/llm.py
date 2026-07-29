@@ -514,12 +514,28 @@ async def _auto_publish_report(
     Вызывается из chat_with_tools() перед завершением стрима, если
     collected_results содержит find_competitors (полный анализ выполнен).
 
+    QC Gate (Phase 13): перед публикацией проверяет качество данных.
+    Если coverage < 60% — отчёт НЕ публикуется (только чат-ответ).
+
     Yield-ит ("report_ready", url, title) при успехе. При ошибке —
     логирует warning (без raise — вызываетющий код уже обёрнут в try).
 
     Гвард дубликатов: записывает URL в profile_cache["_report_published_url"].
     """
     from app.report_builder import build_data_dict, build_report_html, publish_report
+    from app.qc_gate import run_qc_gate
+
+    # ── QC Gate: проверка качества данных перед публикацией ──────────────
+    qc = run_qc_gate(collected_results, profile_cache)
+    if not qc["passed"]:
+        logger.warning(
+            "QC Gate FAIL: coverage=%d%% (threshold=%d%%). Отчёт НЕ опубликован. "
+            "Провалено: %s",
+            qc["coverage_pct"],
+            int(qc["threshold"] * 100),
+            qc["critical_failures"],
+        )
+        return  # Не публикуем — данные недостаточны
 
     # Сборка data dict + HTML
     data = build_data_dict(collected_results, profile_cache, llm_text)

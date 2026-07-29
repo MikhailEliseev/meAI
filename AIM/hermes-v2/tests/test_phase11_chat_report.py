@@ -43,8 +43,21 @@ def _competitors_raw() -> str:
         {
             "competitors": [
                 {"brand_name": "Comp 1", "revenue_year": 200_000_000, "revenue_trend": "growing"},
+                {"brand_name": "Comp 2", "revenue_year": 150_000_000, "revenue_trend": "stable"},
+                {"brand_name": "Comp 3", "revenue_year": 100_000_000, "revenue_trend": "growing"},
             ]
         },
+        ensure_ascii=False,
+    )
+
+
+def _finance_raw() -> str:
+    return json.dumps({"revenue": 100_000_000, "profit": 10_000_000}, ensure_ascii=False)
+
+
+def _reviews_raw() -> str:
+    return json.dumps(
+        {"platforms": {"yandex": {"rating": 4.5, "reviews": 100}}},
         ensure_ascii=False,
     )
 
@@ -65,8 +78,10 @@ async def test_auto_publish_report_success():
     collected = {
         "find_competitors": _competitors_raw(),
         "extract_clinic_profile": _profile_raw(),
+        "company_financials": _finance_raw(),
+        "run_review_platforms": _reviews_raw(),
     }
-    profile_cache = {"company_name": "Test Clinic"}
+    profile_cache = {"company_name": "Test Clinic", "inn": "7700000000", "city": "Москва"}
 
     # Мокаем publish_report — патчим модуль, из которого импортируется publish_report
     async def fake_publish(html, title):
@@ -94,8 +109,13 @@ async def test_auto_publish_report_failure_no_crash():
     """При ошибке publish_report функция не падает — просто не yield-ит."""
     from app.llm import _auto_publish_report
 
-    collected = {"find_competitors": _competitors_raw()}
-    profile_cache = {}
+    collected = {
+        "find_competitors": _competitors_raw(),
+        "extract_clinic_profile": _profile_raw(),
+        "company_financials": _finance_raw(),
+        "run_review_platforms": _reviews_raw(),
+    }
+    profile_cache = {"company_name": "Test", "inn": "7700000000", "city": "Москва"}
 
     async def failing_publish(html, title):
         return {"status": "error", "error": "DB down"}
