@@ -549,8 +549,11 @@ async def _auto_publish_report(
 
     # Сборка data dict + HTML
     data = build_data_dict(collected_results, profile_cache, llm_text, analysis_text)
+    # Bug 1 fix: бренд (brand_name) приоритет над юрлицом (company_name).
+    # Владелец клиники знает бренд «GMT Clinic», а не «ООО ДЖИЕМТИ».
     title = (
-        profile_cache.get("company_name")
+        profile_cache.get("brand_name")
+        or profile_cache.get("company_name")
         or data.get("metadata", {}).get("company_name")
         or "Клиника"
     )
@@ -667,6 +670,9 @@ async def _do_financials(inn: str, collected_results: dict, profile_cache: dict)
                     profile_cache["profit"] = data["profit"]
                 if data.get("name") and not profile_cache.get("company_name"):
                     profile_cache["company_name"] = data["name"]
+                # Bug 1 fix: сохраняем юр. название отдельно, НЕ перезаписываем бренд
+                if data.get("name"):
+                    profile_cache["legal_name"] = data["name"]
                 logger.info("parallel financials OK: inn=%s revenue=%s", inn, data.get("revenue"))
             except (json.JSONDecodeError, TypeError):
                 pass
@@ -876,6 +882,9 @@ async def chat_with_tools(history: list[dict]):
                                     profile_cache["profit"] = fin_data["profit"]
                                 if fin_data.get("name") and not profile_cache.get("company_name"):
                                     profile_cache["company_name"] = fin_data["name"]
+                                # Bug 1 fix: сохраняем юр. название отдельно
+                                if fin_data.get("name"):
+                                    profile_cache["legal_name"] = fin_data["name"]
                                 logger.info(
                                     "auto company_financials OK: inn=%s revenue=%s",
                                     client_inn, fin_data.get("revenue"),
@@ -1043,16 +1052,18 @@ async def chat_with_tools(history: list[dict]):
             except (json.JSONDecodeError, TypeError):
                 pass
 
-            # Brand name fallback
+            # Brand name fallback — Bug 1 fix: используем brand_name приоритетно,
+            # домен как fallback (с заглавной буквы, не "frauklinik" а "Frauklinik")
+            brand_name = profile_cache.get("brand_name", "")
             company_name = profile_cache.get("company_name", "")
-            if not company_name and user_url:
+            if not brand_name and not company_name and user_url:
                 try:
                     from urllib.parse import urlparse as _up
                     domain = _up(user_url).netloc.replace("www.", "")
                     brand = domain.split(".")[0]
                     if brand and len(brand) > 2:
-                        company_name = brand
-                        profile_cache["company_name"] = brand
+                        brand = brand[0].upper() + brand[1:]  # Заглавная
+                        profile_cache["brand_name"] = brand
                 except Exception:
                     pass
 

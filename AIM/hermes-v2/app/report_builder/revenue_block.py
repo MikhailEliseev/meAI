@@ -57,6 +57,24 @@ def _fmt_profit(val) -> str:
         return "—"
 
 
+def _clean_brand_name(name: str) -> str:
+    """Bug 3 fix: очистить юр. префиксы из имени бренда.
+
+    «ООО БСС-КОСМЕТОЛОГИЯ» → «БСС-КОСМЕТОЛОГИЯ»
+    «АО "Медицинский центр"» → «Медицинский центр»
+    «ИП Иванов И.И.» → «Иванов И.И.»
+    """
+    if not name:
+        return ""
+    import re as _re
+    cleaned = name.strip()
+    # Убрать кавычки и юр. префиксы в начале
+    cleaned = _re.sub(r'^(?:ООО|ОАО|ЗАО|АО|ПАО|ИП|НАО)\s*', '', cleaned, flags=_re.IGNORECASE)
+    cleaned = cleaned.strip().strip('"').strip("'").strip('"').strip('"').strip()
+    return cleaned if cleaned else name.strip()
+
+
+
 
 # ── Очистка данных конкурентов ─────────────────────────────────────────────────
 # Защита от мусора, который утекает из Perplexity-парсера aim-app:
@@ -178,6 +196,11 @@ def build_revenue_vs_competitors_block(
     # Фильтр мусорных имён (LLM-болтовня, утекшая в brand_name из Perplexity) +
     # дедупликация по ИНН (приоритет) или по нормализованному имени.
     competitors_with_rev = _clean_competitors(competitors_with_rev)
+
+    # Bug 3 fix: очистить «ООО»/«АО» префиксы из имён брендов
+    for c in competitors_with_rev:
+        c["brand_name"] = _clean_brand_name(c.get("brand_name") or c.get("legal_name") or "")
+        c["legal_name"] = c.get("legal_name") or c.get("brand_name") or ""
 
     if not client_revenue and not competitors_with_rev:
         return ""

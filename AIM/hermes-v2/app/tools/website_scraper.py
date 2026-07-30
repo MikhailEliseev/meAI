@@ -71,12 +71,17 @@ def _is_safe_url(url: str) -> bool:
     except Exception:
         return False
 
-# Паттерны для поиска страниц врачей
+# Паттерны для поиска страниц врачей (Bug 2 fix: расширены)
 DOCTOR_URL_PATTERNS = [
     r"/vrachi", r"/doctors", r"/team", r"/specialists", r"/staff",
     r"/doctors-page", r"/our-doctors", r"/about/doctors",
     r"/klinika/vrachi", r"/klinika/doctors",
     r"/o-nas/vrachi", r"/o-klinike/vrachi",
+    # Bug 2 fix: дополнительные паттерны для русских клиник
+    r"/specialist", r"/spetsialisty", r"/sotrudniki", r"/personal",
+    r"/vrach", r"/doctor", r"/med-personal", r"/medpersonal",
+    r"/our-team", r"/our-staff", r"/o-kompanii/vrachi",
+    r"/klinika/komanda", r"/komanda", r"/about/team",
 ]
 
 # Паттерны соцсетей (Российские + международные)
@@ -115,7 +120,7 @@ async def _fetch_page(url: str, client: httpx.AsyncClient) -> str | None:
 
 
 def _find_doctor_pages(base_url: str, soup: BeautifulSoup) -> list[str]:
-    """Найти ссылки на страницы врачей."""
+    """Найти ссылки на страницы врачей (Bug 2 fix: расширен поиск + пагинация)."""
     doctor_urls = set()
     base_path = urlparse(base_url).path
 
@@ -129,7 +134,19 @@ def _find_doctor_pages(base_url: str, soup: BeautifulSoup) -> list[str]:
                     doctor_urls.add(full_url)
                 break
 
-    return list(doctor_urls)[:5]  # Максимум 5 страниц врачей
+    # Bug 2 fix: ищем пагинацию (?PAGEN_1=2, ?page=2) на главной и доп. страницах
+    pagination_patterns = [r"pagen", r"page=", r"/page/", r"?p=", r"_page="]
+    for link in soup.find_all("a", href=True):
+        href = link["href"].lower()
+        # Если ссылка содержит паттерн пагинации и ведёт на ту же секцию
+        if any(p in href for p in pagination_patterns):
+            full_url = urljoin(base_url, link["href"])
+            if urlparse(full_url).netloc == urlparse(base_url).netloc:
+                # Добавляем пагинированные страницы врачей (содержат /vrachi или /doctors)
+                if any(pat in href for pat in DOCTOR_URL_PATTERNS):
+                    doctor_urls.add(full_url)
+
+    return list(doctor_urls)[:10]  # Bug 2 fix: было 5, теперь 10
 
 
 def _extract_doctors(soup: BeautifulSoup, url: str = "") -> list[dict]:
@@ -209,7 +226,7 @@ def _extract_doctors(soup: BeautifulSoup, url: str = "") -> list[dict]:
             if len(doctors) >= 15:
                 break
 
-    return doctors[:15]
+    return doctors[:25]  # Bug 2 fix: было 15, теперь 25
 
 
 def _extract_name_from_card(card) -> str:
@@ -268,8 +285,35 @@ def _extract_socials(soup: BeautifulSoup) -> dict:
 
 
 def _extract_services(soup: BeautifulSoup) -> list[str]:
-    """Извлечь услуги клиники."""
+    """Извлечь услуги клиники (Bug 4 fix: блэклист навигационного мусора)."""
     services = []
+
+    # Bug 4 fix: блэклист навигационных/промо элементов (не услуги!)
+    _SERVICE_BLOCKLIST = {
+        # Навигация
+        "все услуги", "выберите направление", "выберите услугу", "показать все",
+        "смотреть все", "подробнее", "узнать больше", "читать далее",
+        "записаться", "записаться на прием", "записаться онлайн",
+        "заказать звонок", "обратный звонок", "оставить заявку",
+        # Промо/события
+        "день рождения", "акция", "скидка", "спецпредложение", "новости",
+        "блог", "статьи", "отзывы", "контакты", "о клинике", "о нас",
+        # Generic
+        "Главная", "Меню", "Поиск", "404",
+    }
+
+    def _is_blocked(text: str) -> bool:
+        """Проверить, является ли текст навигационным мусором, а не услугой."""
+        text_lower = text.lower().strip()
+        # Точное совпадение с блэклистом
+        if text_lower in _SERVICE_BLOCKLIST:
+            return True
+        # Содержит CTA-фразу
+        for phrase in ("записаться", "заказать", "обратный звонок", "оставить заявку",
+                        "показать все", "смотреть все", "подробнее"):
+            if phrase in text_lower:
+                return True
+        return False
 
     # По CSS классам
     service_selectors = [
@@ -281,8 +325,14 @@ def _extract_services(soup: BeautifulSoup) -> list[str]:
     for selector in service_selectors:
         items = soup.find_all(**selector)
         for item in items:
+            # Bug 4 fix: пропустить элементы внутри <nav> (навигация, не услуги)
+            if item.find_parent("nav"):
+                continue
             text = item.get_text(strip=True)
             if text and len(text) > 3 and len(text) < 100:
+                # Bug 4 fix: проверить блэклист
+                if _is_blocked(text):
+                    continue
                 # Очистить от вложенных элементов
                 clean = " ".join(text.split())[:100]
                 if clean not in services:
@@ -291,6 +341,7 @@ def _extract_services(soup: BeautifulSoup) -> list[str]:
             break
 
     return services[:10]
+
 
 
 def _detect_cms(soup: BeautifulSoup) -> str:
@@ -485,8 +536,8 @@ async def scrape_clinic_website(url: str) -> str:
         doctor_pages = _find_doctor_pages(base_url, soup)
         logger.info("scrape: found %d doctor pages: %s", len(doctor_pages), doctor_pages)
 
-        # 3. Скрейпить страницы врачей
-        for doctor_url in doctor_pages[:3]:  # Максимум 3 страницы
+        # 3. Скрейпить страницы врачей (Bug 2 fix: было 3 страницы, теперь 8)
+        for doctor_url in doctor_pages[:8]:  # Максимум 8 страниц
             doctor_html = await _fetch_page(doctor_url, client)
             if doctor_html:
                 result["pages_scraped"] += 1
@@ -502,7 +553,16 @@ async def scrape_clinic_website(url: str) -> str:
                     if k not in result["socials"]:
                         result["socials"][k] = v
 
-            if len(result["doctors"]) >= 15:
+                # Bug 2 fix: ищем пагинацию на странице врачей и переходим на след. страницу
+                for link in doctor_soup.find_all("a", href=True):
+                    href = link["href"].lower()
+                    if any(p in href for p in ["pagen", "page=", "/page/"]):
+                        next_url = urljoin(doctor_url, link["href"])
+                        if urlparse(next_url).netloc == urlparse(base_url).netloc:
+                            if next_url not in doctor_pages and len(doctor_pages) < 12:
+                                doctor_pages.append(next_url)
+
+            if len(result["doctors"]) >= 20:  # Bug 2 fix: было 15, теперь 20
                 break
 
         # Если врачи не найдены на отдельных страницах — попробовать на главной

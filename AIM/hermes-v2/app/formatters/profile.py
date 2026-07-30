@@ -86,8 +86,8 @@ def format_profile(result: str, client_data: dict | None = None) -> tuple[str, d
 
     lines = []
 
-    name = data.get("company_name") or data.get("brand_name") or ""
-    legal = data.get("legal_name") or ""
+    name = data.get("brand_name") or data.get("company_name") or ""
+    legal = data.get("legal_name") or data.get("company_name") or ""
     inn = data.get("inn") or ""
     city = data.get("city") or ""
     specialization = data.get("specialization") or ""

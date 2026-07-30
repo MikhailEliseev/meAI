@@ -1380,10 +1380,19 @@ class CompetitorMatcherV2:
             org_id = org.get("org_id")
             revenue_rub = org["gain"] * 1000  # тыс.руб → RUB
 
+            # Bug 3 fix: очистить юр. префикс из brand_name (ООО/АО/ИП)
+            import re as _re
+            brand_clean = _re.sub(
+                r'^(?:ООО|ОАО|ЗАО|АО|ПАО|ИП|НАО)\s*',
+                '', org["name"], flags=_re.IGNORECASE
+            ).strip().strip('"').strip("'").strip('"').strip('"').strip()
+            if not brand_clean:
+                brand_clean = org["name"]
+
             profile = CompanyProfile(
                 inn=org["inn"],
                 legal_name=org["name"],
-                brand_name=org["name"],
+                brand_name=brand_clean,
                 okved_main=org["okved"],
                 revenue_year=revenue_rub,
                 profit_year=None,  # filled by deep enrich for top-N
@@ -1410,6 +1419,22 @@ class CompetitorMatcherV2:
         ))
         # Filter out exceptions
         result = [r for r in result if isinstance(r, CompetitorMatch)]
+
+        # Bug 3 fix: отфильтровать немедицинские компании по ОКВЭД.
+        # Принимаем только здравоохранение (86.x), отвергаем парикмахерские (96.0x),
+        # retail (47.x), производство, и т.п.
+        medical_okveds = ("86.",)  # 86.10–86.90 — здравоохранение
+        filtered_result = []
+        for r in result:
+            okved = str(r.profile.okved_main or "")
+            if okved.startswith(medical_okveds):
+                filtered_result.append(r)
+            else:
+                logger.info(
+                    "Bug 3 fix: rejected non-medical competitor %s (ОКВЭД=%s)",
+                    r.profile.legal_name, okved,
+                )
+        result = filtered_result if filtered_result else result  # fallback if all filtered
 
         return result
 
