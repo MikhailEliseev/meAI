@@ -12,6 +12,52 @@ import json
 from app.report_builder.markdown_engine import _esc, _fmt_revenue_short
 
 
+# ── Форматтеры доп. колонок (Задача 3) ──────────────────────────────────────────
+
+def _fmt_age(reg_date) -> str:
+    """'2018-06-15' → '8 лет'. None → '—'."""
+    if not reg_date:
+        return "—"
+    try:
+        from datetime import datetime
+        dt = datetime.fromisoformat(str(reg_date)[:10])
+        years = (datetime.now() - dt).days // 365
+        return f"{years} лет" if years > 0 else "—"
+    except (ValueError, TypeError):
+        return "—"
+
+
+def _fmt_followers(val) -> str:
+    """31000 → '31K'. None → '—'."""
+    if not val:
+        return "—"
+    try:
+        n = int(val)
+        if n >= 1_000_000:
+            return f"{n/1_000_000:.1f}M"
+        if n >= 1_000:
+            return f"{n//1_000}K"
+        return str(n)
+    except (ValueError, TypeError):
+        return "—"
+
+
+def _fmt_profit(val) -> str:
+    """3_000_000 → '3 млн'. None → '—'."""
+    if not val:
+        return "—"
+    try:
+        n = float(val)
+        if n >= 1_000_000_000:
+            return f"{n/1_000_000_000:.1f} млрд"
+        if n >= 1_000_000:
+            return f"{n/1_000_000:.0f} млн"
+        return f"{n:,.0f}".replace(",", " ")
+    except (ValueError, TypeError):
+        return "—"
+
+
+
 # ── Очистка данных конкурентов ─────────────────────────────────────────────────
 # Защита от мусора, который утекает из Perplexity-парсера aim-app:
 #   - LLM-болтовня в brand_name ("Вот несколько известных клиник...")
@@ -145,6 +191,11 @@ def build_revenue_vs_competitors_block(
             "revenue": client_revenue,
             "trend": None,
             "inn": None,
+            "profit": client_profit,
+            "age": "—",
+            "instagram": "—",
+            "doctors": None,
+            "cms": "",
         })
     for c in competitors_with_rev:
         brand = c.get("brand_name") or c.get("legal_name") or "Конкурент"
@@ -154,6 +205,12 @@ def build_revenue_vs_competitors_block(
             "revenue": c.get("revenue_year", 0),
             "trend": c.get("revenue_trend"),
             "inn": c.get("inn", ""),
+            # Доп. данные для обогащённой таблицы (Задача 3)
+            "profit": c.get("profit_year"),
+            "age": _fmt_age(c.get("registration_date")),
+            "instagram": _fmt_followers(c.get("instagram_followers")),
+            "doctors": c.get("surgeons_count") or c.get("employee_count"),
+            "cms": c.get("website_cms") or "",
         })
     all_rows.sort(key=lambda r: r["revenue"], reverse=True)
 
@@ -213,8 +270,7 @@ def build_revenue_vs_competitors_block(
                     f'</div>'
                 )
 
-    # Строим таблицу — простой минималистичный стиль как в чате
-    # БЕЗ медальности (ранги #1/2/3 без золотого/серебряного/бронзового цвета)
+    # Строим таблицу — обогащённая (Задача 3: доп. колонки)
     rows_html = []
     for i, row in enumerate(all_rows, 1):
         revenue_str = _fmt_revenue_short(row["revenue"])
@@ -224,12 +280,18 @@ def build_revenue_vs_competitors_block(
             f'<span class="rev-trend {trend_class}">{trend_symbol}</span>'
             if trend_symbol else '<span class="rev-trend">—</span>'
         )
+        profit_str = _fmt_profit(row.get("profit")) if not row["is_client"] else _fmt_profit(client_profit)
+        doctors_str = str(row.get("doctors")) if row.get("doctors") else "—"
         rows_html.append(
             f'<tr class="rev-row{client_class}">'
             f'<td class="rev-position">{i}</td>'
             f'<td class="rev-name">{_esc(row["name"])}</td>'
             f'<td class="rev-revenue">{revenue_str}</td>'
+            f'<td class="rev-th-num">{profit_str}</td>'
             f'<td class="rev-trend-cell">{trend_html}</td>'
+            f'<td class="rev-th-num">{_esc(row.get("age", "—"))}</td>'
+            f'<td class="rev-th-num">{_esc(doctors_str)}</td>'
+            f'<td class="rev-th-num">{_esc(row.get("instagram", "—"))}</td>'
             f'</tr>'
         )
     rows_html_str = "".join(rows_html)
@@ -247,8 +309,6 @@ def build_revenue_vs_competitors_block(
     else:
         subtitle = "Выручка конкурентов 2025 по данным ФНС (bo.nalog.gov.ru)."
 
-    _ = client_profit  # зарезервировано для будущих расширений
-
     return f"""
 <section class="revenue-block">
   <div class="rev-section-label">СРАВНЕНИЕ С КОНКУРЕНТАМИ</div>
@@ -262,7 +322,11 @@ def build_revenue_vs_competitors_block(
           <th class="rev-th-pos">#</th>
           <th>Клиника</th>
           <th class="rev-th-num">Выручка</th>
+          <th class="rev-th-num">Прибыль</th>
           <th class="rev-th-num">Тренд</th>
+          <th class="rev-th-num">Лет</th>
+          <th class="rev-th-num">Врачей</th>
+          <th class="rev-th-num">IG</th>
         </tr>
       </thead>
       <tbody>

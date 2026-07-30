@@ -178,6 +178,23 @@ async def handle_run_review_platforms(url: str = "", company_name: str = "", cit
     # Нейросводка Яндекса (AI-резюме отзывов от самой площадки)
     neuro_summary = yandex_result.get("neuro_summary", "") if yandex_result else ""
 
+    # Топ-5 цитат пациентов (Задача 4a) — из текстов отзывов 2ГИС
+    review_quotes = []
+    if gis2_result and gis2_result.get("review_texts"):
+        for text in gis2_result["review_texts"][:5]:
+            if text and len(text) > 20:
+                review_quotes.append({
+                    "text": text[:200],
+                    "source": "2ГИС",
+                })
+    if yandex_result and yandex_result.get("review_texts"):
+        for text in yandex_result["review_texts"][:5]:
+            if text and len(text) > 20 and len(review_quotes) < 8:
+                review_quotes.append({
+                    "text": text[:200],
+                    "source": "Яндекс.Карты",
+                })
+
     result = {
         "clinic": company_name or url,
         "platforms": platforms,
@@ -185,6 +202,7 @@ async def handle_run_review_platforms(url: str = "", company_name: str = "", cit
         "criticism_summary": " | ".join(criticism) if criticism else "",
         "reputation_summary": _build_summary(yandex_result, gis2_result, company_name or url),
         "neuro_summary": neuro_summary,
+        "review_quotes": review_quotes,
         "source": "apify",
         "searched_at": time.strftime("%Y-%m-%d %H:%M"),
     }

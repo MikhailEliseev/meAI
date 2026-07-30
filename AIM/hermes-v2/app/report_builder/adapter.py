@@ -187,6 +187,26 @@ def _format_reviews_markdown(raw: str) -> str:
             if topic:
                 lines.append(f"- {topic[:120]}")
 
+    # AI-резюме отзывов от Яндекса (neuro_summary) — Задача 4b
+    neuro = data.get("neuro_summary", "")
+    if neuro:
+        lines.append("")
+        lines.append(f"> 🤖 **AI-резюме отзывов (Яндекс):** {neuro[:400]}")
+
+    # Цитаты пациентов — Задача 4b
+    quotes = data.get("review_quotes", [])
+    if quotes:
+        lines.append("")
+        lines.append("**Голоса пациентов:**")
+        for q in quotes[:5]:
+            if isinstance(q, dict):
+                text = q.get("text", "")[:200]
+                src = q.get("source", "")
+                if text:
+                    lines.append(f'> «{text}» — *{src}*')
+            elif isinstance(q, str) and len(q) > 20:
+                lines.append(f'> «{q[:200]}»')
+
     summary = data.get("reputation_summary", "")
     if summary:
         lines.append("")
@@ -429,32 +449,22 @@ def build_data_dict(
     collected_results: dict[str, str],
     profile_cache: dict,
     llm_text: str = "",
+    analysis_text: str = "",
 ) -> dict:
     """Преобразовать v2 collected_results в v1-shape data dict.
 
     Args:
         collected_results: dict tool_name → JSON-строка (или plain text).
-            Ожидаемые ключи: ``extract_clinic_profile``, ``quick_overview``,
-            ``find_competitors``, ``run_review_platforms``, ``company_financials``.
-        profile_cache: dict с метаданными клиента (``company_name``, ``url``,
-            ``inn``, ``city``…). Заполняется в pipeline.
-        llm_text: Текст анализа от LLM (опционально). Если содержит осмысленный
-            анализ по секции — используется как interpretation content вместо
-            formatted block.
+        profile_cache: dict с метаданными клиента.
+        llm_text: Краткий текст анализа из чата (опционально).
+        analysis_text: Глубокий LLM-анализ для отчёта (опционально).
+            Содержит маркеры === ПОЗИЦИЯ ===, === СИЛЬНЫЕ ===, === РОСТ ===,
+            === РЕКОМЕНДАЦИИ ===. Распределяется по секциям отчёта.
 
     Returns:
-        dict в формате, ожидаемом ``build_report_html``::
-
-            {
-              "metadata": {"company_name": ..., "url": ...},
-              "PROFILE_interp":     {"content": "...", "label": "Профиль клиники"},
-              "OVERVIEW_interp":    {"content": "...", "label": "Обзор рынка"},
-              "COMPETITORS_interp": {"content": "...", "label": "Конкуренты"},
-              "REVIEWS_interp":     {"content": "...", "label": "Отзывы пациентов"},
-              "FINANCE":      {"find_company_financials": "<json str>"},
-              "COMPETITORS":  {"find_competitors": "<json str>"},
-            }
+        dict в формате, ожидаемом ``build_report_html``.
     """
+
     profile_cache = profile_cache or {}
     collected_results = collected_results or {}
 
@@ -474,22 +484,42 @@ def build_data_dict(
         },
     }
 
+    # ── Парсинг глубокого LLM-анализа по секциям ─────────────────────────────
+    # analysis_text содержит маркеры === ПОЗИЦИЯ ===, === СИЛЬНЫЕ === и т.д.
+    # Распределяем: ПОЗИЦИЯ+СИЛЬНЫЕ → PROFILE, РОСТ+РЕКОМЕНДАЦИИ → OVERVIEW.
+    analysis_sections: dict[str, str] = {}
+    if analysis_text:
+        from app.report_builder.analysis import split_analysis_by_section
+        analysis_sections = split_analysis_by_section(analysis_text)
+
     # ── Секции (интерпретации) ────────────────────────────────────────────────
     for tool_name, phase_key, label in _TOOL_TO_SECTION:
         raw_result = collected_results.get(tool_name, "")
 
-        # 1. Пытаемся взять анализ из llm_text (если есть и релевантен)
-        llm_section = _extract_llm_section(llm_text, tool_name)
+        # Приоритет 1: глубокий LLM-анализ для отчёта (analysis_text)
+        analysis_content = ""
+        if tool_name == "extract_clinic_profile" and analysis_sections.get("profile"):
+            analysis_content = analysis_sections["profile"]
+        elif tool_name == "quick_overview" and analysis_sections.get("reviews"):
+            # OVERVIEW секция = точки роста + рекомендации (если нет quick_overview)
+            analysis_content = analysis_sections["reviews"]
 
-        # 2. Иначе — formatted block из collected_results
-        if _looks_like_markdown_or_text(llm_section):
-            content = llm_section
-            # Fix Баг 5: LLM-анализ не содержит врачей/соцсетей из скрапера —
-            # добавляем их как дополнение к PROFILE секции (если скрапер нашёл).
+        if analysis_content and analysis_content.strip():
+            content = analysis_content
+            # Для PROFILE: добавляем врачей/соцсети/услуги из скрапера
             if tool_name == "extract_clinic_profile":
                 supplement = _format_scrape_supplement(collected_results)
                 if supplement:
                     content = content.rstrip() + "\n\n" + supplement
+        # Приоритет 2: чат-анализ из llm_text
+        elif _looks_like_markdown_or_text(_extract_llm_section(llm_text, tool_name)):
+            llm_section = _extract_llm_section(llm_text, tool_name)
+            content = llm_section
+            if tool_name == "extract_clinic_profile":
+                supplement = _format_scrape_supplement(collected_results)
+                if supplement:
+                    content = content.rstrip() + "\n\n" + supplement
+        # Приоритет 3: formatted block из collected_results
         else:
             content = _format_tool_result_as_markdown(
                 tool_name, raw_result, collected_results,

@@ -537,8 +537,18 @@ async def _auto_publish_report(
         )
         return  # Не публикуем — данные недостаточны
 
+    # ── Глубокий LLM-анализ для отчёта (полные данные, не слепой) ──────────
+    # Чат-анализ llm_text — краткий и общий (LLM был «слепым» к цифрам).
+    # Для отчёта нужен развёрнутый анализ с цифрами → отдельный LLM-вызов.
+    analysis_text = ""
+    try:
+        from app.report_builder.analysis import generate_report_analysis
+        analysis_text = await generate_report_analysis(collected_results, profile_cache)
+    except Exception as e:
+        logger.warning("report analysis failed (non-fatal): %s", e)
+
     # Сборка data dict + HTML
-    data = build_data_dict(collected_results, profile_cache, llm_text)
+    data = build_data_dict(collected_results, profile_cache, llm_text, analysis_text)
     title = (
         profile_cache.get("company_name")
         or data.get("metadata", {}).get("company_name")
