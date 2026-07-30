@@ -156,9 +156,10 @@ def _parse_perplexity_competitors(answer: str) -> list:
                 website = "https://" + website
             spec = parts[2] if len(parts) > 2 else ""
 
-            # Фильтр мусора
-            bad_words = ("бренд", "brand", "клиника " if not brand.startswith("Клиника") else "___", "пример")
-            if brand and brand.lower() not in bad_words and len(brand) > 2:
+            # Фильтр мусора — усилили (Fix Баг 2):
+            # старый фильтр проверял только точное совпадение "бренд"/"brand",
+            # но LLM-болтовня ("Вот несколько известных клиник...:") проходила.
+            if brand and _is_valid_brand(brand):
                 competitors.append({
                     "brand_name": brand,
                     "website": website,
@@ -167,6 +168,37 @@ def _parse_perplexity_competitors(answer: str) -> list:
                     "revenue_source": "perplexity",
                 })
     return competitors
+
+
+# ── Валидация имени бренда (Fix Баг 2: мусор в именах) ───────────────────────
+# Фразы-маркеры болтовни LLM — не реальные бренды клиник.
+_CHATTER_WORDS = (
+    "вот ", "например", "известных", "таких как", "также ", "перейдём",
+    "перейдем", "итак", "также,", "однако", "итого", "итак,", "наконец",
+    "среди них", "список", "обратите", "стоит отметить", "важно ",
+)
+
+
+def _is_valid_brand(brand: str) -> bool:
+    """Проверить, что имя выглядит как реальный бренд, а не LLM-болтовня.
+
+    Реальные бренды клиник: 1-4 слова, ≤ 60 символов, без двоеточий,
+    без вводных слов («вот», «например», «также»).
+    """
+    if not brand or len(brand) < 2:
+        return False
+    brand = brand.strip().strip('"').strip("'")
+    if len(brand) > 60:
+        return False
+    if ":" in brand:
+        return False
+    brand_lower = brand.lower()
+    for word in _CHATTER_WORDS:
+        if word in brand_lower:
+            return False
+    if len(brand.split()) > 4:
+        return False
+    return True
 
 
 async def _enrich_competitor_with_financials(comp: dict, client_city: str = "") -> dict:

@@ -22,10 +22,13 @@ from app.report_builder.revenue_block import build_revenue_vs_competitors_block
 
 
 # phase_order: (phase_key, section_id, nav_label, default_h2)
+# COMPETITORS убран из тела отчёта — таблица конкурентов рендерится в revenue_block
+# (богаче: позиция клиента, ВАУ-инсайт, тренды). Это устраняет:
+#   - дубль таблицы конкурентов (было 2 таблицы: revenue_block + format_competitors)
+#   - баг «02 vs 03» (хардкод номера в format_competitors конфликтовал со сквозной)
 _PHASE_ORDER = [
     ("PROFILE",     "sec-profile",     "О клинике",     "Профиль клиники"),
     ("OVERVIEW",    "sec-overview",    "Рынок",         "Обзор рынка и тенденции"),
-    ("COMPETITORS", "sec-competitors", "Конкуренты",    "Конкуренты и сравнение"),
     ("REVIEWS",     "sec-reviews",     "Отзывы",        "Отзывы пациентов"),
 ]
 

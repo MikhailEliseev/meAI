@@ -88,7 +88,9 @@ def format_competitors(result: str, client_revenue: int | None = None,
     if not comps:
         return "📊 Конкуренты: данные не найдены."
 
-    lines = [":::section-num", "02 — КОНКУРЕНТЫ", ":::", ""]
+    # Нумерация секций делается в builder.py через _PHASE_ORDER.
+    # :::section-num убран — иначе печатался как текст (Fix Баг 4).
+    lines = [""]
 
     lines.append("| Конкурент | Выручка | Прибыль | Тренд | Лет | Врачей | IG | Сайт |")
     lines.append("|---|---|---|---|---|---|---|---|")
@@ -143,9 +145,8 @@ def format_competitors(result: str, client_revenue: int | None = None,
             conclusion = f"Все конкуренты крупнее. Ближайший — {closest[0]} ({_format_revenue(closest[1])})."
         else:
             conclusion = "Вы лидер по выручке среди найденных конкурентов."
-        lines.append(":::surface-block")
-        lines.append(f"**Главный вывод:** {conclusion}")
-        lines.append(":::")
+        # :::surface-block не обрабатывается в markdown_engine → используем > blockquote
+        lines.append(f"> **Главный вывод:** {conclusion}")
 
     lines.append("")
     lines.append("---")

@@ -12,6 +12,87 @@ import json
 from app.report_builder.markdown_engine import _esc, _fmt_revenue_short
 
 
+# ── Очистка данных конкурентов ─────────────────────────────────────────────────
+# Защита от мусора, который утекает из Perplexity-парсера aim-app:
+#   - LLM-болтовня в brand_name ("Вот несколько известных клиник...")
+#   - дубликаты одной компании с разной выручкой (разные ИНН-lookup'ы)
+
+# Фразы-маркеры болтовни LLM (не реальные бренды)
+_CHATTER_WORDS = (
+    "вот ", "например", "известных", "таких как", "также ", "перейдём",
+    "перейдем", "итак", "также,", "однако", "итого", "итак,", "наконец",
+    "среди них", "список", "обратите", "стоит отметить", "важно ",
+)
+
+
+def _is_valid_brand(brand: str) -> bool:
+    """Проверить, что имя выглядит как реальный бренд, а не LLM-болтовня."""
+    if not brand or len(brand) < 2:
+        return False
+    brand = brand.strip().strip('"').strip("'")
+    # Слишком длинное имя — не бренд (реальные бренды ≤ 60 символов)
+    if len(brand) > 60:
+        return False
+    # Двоеточие в конце/середине — признак болтовни ("Вот несколько...:")
+    if ":" in brand or brand.endswith(":"):
+        return False
+    # Маркеры болтовни
+    brand_lower = brand.lower()
+    for word in _CHATTER_WORDS:
+        if word in brand_lower:
+            return False
+    # 5+ слов подряд — почти наверняка предложение, не бренд
+    if len(brand.split()) > 4:
+        return False
+    return True
+
+
+def _clean_competitors(competitors: list) -> list:
+    """Отфильтровать мусор и дедуплицировать список конкурентов.
+
+    1. Убрать конкурентов с мусорными именами (_is_valid_brand).
+    2. Дедупликация: приоритет по ИНН (разные ИНН = разные юрлица, оставляем),
+       fallback по нормализованному имени (ООО "ЭСТЕТ" == ООО «ЭСТЕТ»).
+    3. При дубликате по имени — оставить запись с большей выручкой.
+    """
+    # 1. Фильтр мусорных имён
+    valid = []
+    for c in competitors:
+        brand = c.get("brand_name") or c.get("legal_name") or ""
+        if _is_valid_brand(brand):
+            valid.append(c)
+
+    # 2. Дедупликация (приоритет ИНН, fallback — имя)
+    seen_keys: dict[str, dict] = {}  # key → best competitor
+    for c in valid:
+        inn = str(c.get("inn", "") or "").strip()
+        brand = (c.get("brand_name") or c.get("legal_name") or "").strip()
+        # Нормализованное имя: нижний регистр, убрать кавычки/пробелы/ООО/пунктуацию
+        name_norm = brand.lower()
+        for ch in ('"', "'", "«", "»", ".", ",", " "):
+            name_norm = name_norm.replace(ch, "")
+        for prefix in ("ооо", "зао", "ао", "ип", "пао"):
+            if name_norm.startswith(prefix):
+                name_norm = name_norm[len(prefix):]
+
+        # Ключ дедупликации: ИНН если валиден, иначе нормализованное имя
+        if inn and inn != "0" and len(inn) >= 10:
+            key = f"inn:{inn}"
+        elif name_norm and len(name_norm) >= 3:
+            key = f"name:{name_norm}"
+        else:
+            # Нет ни ИНН, ни внятного имени — пропускаем (не дедуплицируем,
+            # но такие записи уже отфильтрованы _is_valid_brand выше)
+            key = f"raw:{id(c)}"
+
+        rev = c.get("revenue_year", 0) or 0
+        if key not in seen_keys or rev > (seen_keys[key].get("revenue_year", 0) or 0):
+            seen_keys[key] = c
+
+    return list(seen_keys.values())
+
+
+
 def build_revenue_vs_competitors_block(
     client_revenue: float | None,
     client_profit: float | None,
@@ -47,6 +128,11 @@ def build_revenue_vs_competitors_block(
         if isinstance(c, dict) and c.get("revenue_year") and c.get("revenue_year") > 0
     ]
 
+    # ── Очистка конкурентов (Fix 2+3) ──────────────────────────────────────────
+    # Фильтр мусорных имён (LLM-болтовня, утекшая в brand_name из Perplexity) +
+    # дедупликация по ИНН (приоритет) или по нормализованному имени.
+    competitors_with_rev = _clean_competitors(competitors_with_rev)
+
     if not client_revenue and not competitors_with_rev:
         return ""
 
@@ -70,6 +156,29 @@ def build_revenue_vs_competitors_block(
             "inn": c.get("inn", ""),
         })
     all_rows.sort(key=lambda r: r["revenue"], reverse=True)
+
+    # ── Disambiguation: одинаковые имена, разные ИНН (Fix Баг 3 v2) ─────────────
+    # Если два конкурента с одинаковым именем но разными ИНН (реально разные
+    # юрлица — «ООО ЭСТЕТ» №1 и №2), добавляем различающий суффикс с ИНН,
+    # чтобы в таблице не было визуально идентичных строк.
+    name_inn_groups: dict[str, list[int]] = {}  # name → list of row indices
+    for i, row in enumerate(all_rows):
+        if not row["is_client"]:
+            name_inn_groups.setdefault(row["name"], []).append(i)
+    for name, indices in name_inn_groups.items():
+        if len(indices) < 2:
+            continue
+        # Проверяем что ИНН действительно разные
+        inns = {all_rows[idx]["inn"] for idx in indices}
+        if len(inns) < 2:
+            continue  # одинаковые ИНН — _clean_competitors уже дедуплицировал
+        # Добавляем суффикс «… ИНН …XXXX» к каждой строке с этим именем
+        for idx in indices:
+            inn = all_rows[idx]["inn"]
+            if inn and len(str(inn)) >= 4:
+                suffix = f" (ИНН …{str(inn)[-4:]})"
+                all_rows[idx]["name"] = name + suffix
+
 
     # VAU-блок: позиция клиента
     client_position = next(

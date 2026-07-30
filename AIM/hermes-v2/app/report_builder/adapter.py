@@ -20,11 +20,13 @@ logger = logging.getLogger(__name__)
 
 # Mapping: v2 tool name → (v1 phase_key, label)
 # phase_key используется как data[f"{phase_key}_interp"]["content"]
+# COMPETITORS убран — таблица конкурентов рендерится только в revenue_block.
+# Сырой JSON find_competitors всё равно передаётся в data["COMPETITORS"] (ниже)
+# для revenue_block, но отдельная секция в теле отчёта не строится.
 _TOOL_TO_SECTION = [
-    ("extract_clinic_profile", "PROFILE",     "Профиль клиники"),
-    ("quick_overview",         "OVERVIEW",    "Обзор рынка"),
-    ("find_competitors",       "COMPETITORS", "Конкуренты"),
-    ("run_review_platforms",   "REVIEWS",     "Отзывы пациентов"),
+    ("extract_clinic_profile", "PROFILE",   "Профиль клиники"),
+    ("quick_overview",         "OVERVIEW",  "Обзор рынка"),
+    ("run_review_platforms",   "REVIEWS",   "Отзывы пациентов"),
 ]
 
 
@@ -50,11 +52,55 @@ def _looks_like_markdown_or_text(s: str) -> bool:
     return True
 
 
-def _format_tool_result_as_markdown(tool_name: str, raw: str) -> str:
+def _merge_profile_with_scrape(profile_raw: str, scrape_raw: str) -> str:
+    """Объединить профиль клиники с данными скрапера (Fix Баг 5).
+
+    format_profile() умеет рендерить врачей и соцсети, но они лежат в
+    collected_results["scrape_clinic_website"], а не в extract_clinic_profile.
+    Эта функция мерджит scrape-данные (doctors, socials, services) в profile dict
+    и возвращает обновлённый JSON для format_profile().
+
+    Args:
+        profile_raw: JSON от extract_clinic_profile.
+        scrape_raw: JSON от scrape_clinic_website (или пустая строка).
+
+    Returns:
+        JSON-строка — profile с добавленными doctors/socials/services.
+    """
+    profile = _safe_load_json(profile_raw) or {}
+    scrape = _safe_load_json(scrape_raw) or {}
+
+    if not isinstance(profile, dict):
+        return profile_raw or "{}"
+    if not isinstance(scrape, dict):
+        return json.dumps(profile, ensure_ascii=False)
+
+    # Добавляем scrape-данные только если их ещё нет в профиле
+    for key in ("doctors", "socials", "services"):
+        if not profile.get(key) and scrape.get(key):
+            profile[key] = scrape[key]
+
+    # phone/website_platform — тоже из скрапа, если в профиле нет
+    if not profile.get("phone") and scrape.get("phone"):
+        profile["phone"] = scrape["phone"]
+    if not profile.get("website_platform") and scrape.get("cms"):
+        profile["website_platform"] = scrape["cms"]
+
+    return json.dumps(profile, ensure_ascii=False)
+
+
+def _format_tool_result_as_markdown(
+    tool_name: str, raw: str, collected_results: dict | None = None,
+) -> str:
     """Преобразовать сырой результат тула в Markdown-контент для интерпретации.
 
     Используем v2 formatters для каждого тула — они уже дают готовый Markdown.
     Если formatter недоступен или упал — fallback на сырой текст.
+
+    Args:
+        tool_name: имя тула (extract_clinic_profile, find_competitors, ...).
+        raw: сырой результат тула (JSON-строка или plain text).
+        collected_results: все результаты тулов (для мерджа profile+scrape).
     """
     if not raw or not raw.strip():
         return ""
@@ -68,6 +114,11 @@ def _format_tool_result_as_markdown(tool_name: str, raw: str) -> str:
     try:
         if tool_name == "extract_clinic_profile":
             from app.formatters.profile import format_profile
+            # Fix Баг 5: мерджим scrape-данные (врачи, соцсети, услуги) в профиль,
+            # иначе они не попадают в отчёт — format_profile их не видит.
+            scrape_raw = (collected_results or {}).get("scrape_clinic_website", "")
+            if scrape_raw:
+                raw = _merge_profile_with_scrape(raw, scrape_raw)
             md, _ = format_profile(raw)
             return md
         if tool_name == "find_competitors":
@@ -87,6 +138,7 @@ def _format_tool_result_as_markdown(tool_name: str, raw: str) -> str:
     if parsed and isinstance(parsed, dict):
         return _dump_dict_as_markdown(parsed)
     return raw.strip()
+
 
 
 def _format_reviews_markdown(raw: str) -> str:
@@ -180,6 +232,51 @@ def _format_scrape_markdown(raw: str) -> str:
         lines.append("")
 
     return "\n".join(lines)
+
+
+def _format_scrape_supplement(collected_results: dict) -> str:
+    """Дополнение PROFILE секции данными скрапера (Fix Баг 5).
+
+    LLM-анализ профиля не содержит врачей и соцсетей (они из scrape_clinic_website).
+    Эта функция формирует Markdown-блок с врачами и соцсетями, который добавляется
+    к PROFILE interpretation, когда используется llm_section.
+
+    Возвращает пустую строку если скрапер ничего не нашёл.
+    """
+    scrape_raw = (collected_results or {}).get("scrape_clinic_website", "")
+    data = _safe_load_json(scrape_raw)
+    if not data or not isinstance(data, dict):
+        return ""
+
+    lines: list[str] = []
+
+    doctors = data.get("doctors", [])
+    if doctors:
+        lines.append("**Врачи на сайте:**")
+        for doc in doctors[:8]:
+            if isinstance(doc, dict):
+                name = doc.get("name", "")
+                spec = doc.get("specialization", "")
+                if name:
+                    lines.append(f"- {name}" + (f" — {spec[:60]}" if spec else ""))
+            elif isinstance(doc, str) and len(doc) > 3:
+                lines.append(f"- {doc}")
+        lines.append("")
+
+    socials = data.get("socials", {})
+    if socials and isinstance(socials, dict):
+        parts = []
+        emoji_map = {"instagram": "📸", "vk": "🔵", "telegram": "✈️",
+                     "youtube": "▶️", "rutube": "🎬", "dzen": "📰"}
+        for platform in socials:
+            emoji = emoji_map.get(platform, "🔗")
+            parts.append(f"{emoji} {platform}")
+        if parts:
+            lines.append("**Соцсети:** " + " · ".join(parts))
+            lines.append("")
+
+    return "\n".join(lines) if lines else ""
+
 
 
 def _dump_dict_as_markdown(d: dict, max_items: int = 12) -> str:
@@ -387,8 +484,16 @@ def build_data_dict(
         # 2. Иначе — formatted block из collected_results
         if _looks_like_markdown_or_text(llm_section):
             content = llm_section
+            # Fix Баг 5: LLM-анализ не содержит врачей/соцсетей из скрапера —
+            # добавляем их как дополнение к PROFILE секции (если скрапер нашёл).
+            if tool_name == "extract_clinic_profile":
+                supplement = _format_scrape_supplement(collected_results)
+                if supplement:
+                    content = content.rstrip() + "\n\n" + supplement
         else:
-            content = _format_tool_result_as_markdown(tool_name, raw_result)
+            content = _format_tool_result_as_markdown(
+                tool_name, raw_result, collected_results,
+            )
 
         if content and content.strip():
             data[f"{phase_key}_interp"] = {
@@ -436,7 +541,6 @@ def build_data_dict(
     nav_labels = {
         "PROFILE": "О клинике",
         "OVERVIEW": "Обзор рынка",
-        "COMPETITORS": "Конкуренты",
         "REVIEWS": "Отзывы",
     }
     nav_sections: list[dict] = []

@@ -95,18 +95,17 @@ def format_profile(result: str, client_data: dict | None = None) -> tuple[str, d
     services = data.get("services") or []
     website_platform = data.get("website_platform") or ""
 
-    # ── 01 — Заголовок ──
-    lines.append(":::section-num")
-    lines.append("01 — О КЛИНИКЕ")
-    lines.append(":::")
-    lines.append("")
-
+    # ── Заголовок ──
+    # Нумерация секций («01 — О КЛИНИКЕ») делается в builder.py через _PHASE_ORDER,
+    # поэтому здесь :::section-num убран — иначе он печатался как текст (Fix Баг 4).
     if name:
         lines.append(f"### {name}")
     else:
         lines.append("### Профиль клиники")
 
     # ── Surface Block: ключевая информация ──
+    # :::surface-block не обрабатывается в markdown_engine → используем > blockquote
+    # (рендерится в .surface-block через markdown_engine:427).
     quick = []
     if city and address:
         quick.append(f"📍 {city}, {address}")
@@ -123,11 +122,11 @@ def format_profile(result: str, client_data: dict | None = None) -> tuple[str, d
 
     if quick:
         lines.append("")
-        lines.append(":::surface-block")
-        lines.append("  \n".join(quick))
-        lines.append(":::")
+        lines.append("> " + " · ".join(quick))
 
     # ── Stat Cards: выручка, прибыль ──
+    # :::stat-card не обрабатывается в markdown_engine → используем формат STATS:
+    # (рендерится в .glass-stats-wrap через _extract_stats_block).
     rev = data.get("revenue") or data.get("revenue_year")
     profit = data.get("profit") or data.get("profit_year")
     trend = data.get("revenue_trend") or data.get("trend")
@@ -135,17 +134,14 @@ def format_profile(result: str, client_data: dict | None = None) -> tuple[str, d
 
     if rev or profit:
         lines.append("")
+        lines.append("STATS:")
         if rev:
-            lines.append(":::stat-card")
-            lines.append(f"**{_format_money(rev)}**")
-            lines.append("выручка")
-            lines.append(":::")
+            lines.append(f'- value: "{_format_money(rev)}"')
+            lines.append('  label: "выручка"')
         if profit:
             trend_part = f" {trend_emoji}" if trend_emoji else ""
-            lines.append(":::stat-card")
-            lines.append(f"**{_format_money(profit)}**")
-            lines.append(f"прибыль{trend_part}")
-            lines.append(":::")
+            lines.append(f'- value: "{_format_money(profit)}"')
+            lines.append(f'  label: "прибыль{trend_part}"')
         lines.append("")
 
     # ── Реквизиты (компактно) ──

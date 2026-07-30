@@ -423,17 +423,19 @@ def test_build_report_html_structure():
     # Hero
     assert '<div class="hero">' in html
     assert "ACME" in html
-    # Sections
-    assert html.count('<section class="section"') == 4
+    # Sections — COMPETITORS убран (таблица рендерится в revenue_block),
+    # теперь 3 секции: Профиль (01), Рынок (02), Отзывы (03).
+    assert html.count('<section class="section"') == 3
     assert 'id="sec-profile"' in html
     assert 'id="sec-overview"' in html
-    assert 'id="sec-competitors"' in html
+    assert 'id="sec-competitors"' not in html  # нет отдельной секции
     assert 'id="sec-reviews"' in html
-    # Section labels (01, 02, 03, 04)
+    # Section labels (01, 02, 03) — сквозная нумерация пересчиталась
     assert "01 — О КЛИНИКЕ" in html
     assert "02 — РЫНОК" in html
-    assert "03 — КОНКУРЕНТЫ" in html
-    assert "04 — ОТЗЫВЫ" in html
+    assert "03 — ОТЗЫВЫ" in html
+    # Конкуренты рендерятся только в revenue_block
+    assert '<section class="revenue-block">' in html
     # CTA
     assert '<div class="cta-box">' in html
     assert "Связаться в Telegram" in html

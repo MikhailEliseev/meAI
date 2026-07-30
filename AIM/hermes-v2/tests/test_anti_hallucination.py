@@ -192,6 +192,73 @@ class TestFormatters:
         assert "Москва" in md
         assert data["inn"] == "7708698635"
 
+    def test_format_profile_shows_doctors_from_scrape(self):
+        """Fix Баг 5: врачи из скрапера попадают в профиль отчёта.
+
+        Скрапер находит doctors/socials, но они лежат в отдельном результате
+        scrape_clinic_website. _merge_profile_with_scrape() должна перенести их
+        в profile, чтобы format_profile() их отрендерила.
+        """
+        from app.report_builder.adapter import _merge_profile_with_scrape
+
+        profile_json = json.dumps({
+            "company_name": "АРклиник",
+            "inn": "7811151654",
+            "city": "Санкт-Петербург",
+        })
+        scrape_json = json.dumps({
+            "doctors": [
+                {"name": "Иванова М.", "specialization": "косметолог"},
+                {"name": "Петров А.", "specialization": "дерматолог"},
+            ],
+            "socials": {"instagram": "arclinic", "vk": "arclinic_spb"},
+        })
+
+        merged = _merge_profile_with_scrape(profile_json, scrape_json)
+        md, data = format_profile(merged)
+
+        # Врачи должны быть в отчёте
+        assert "Иванова М." in md
+        assert "Петров А." in md
+        assert "косметолог" in md
+        # Соцсети должны быть
+        assert "instagram" in md.lower() or "📸" in md
+
+    def test_merge_profile_no_scrape_data(self):
+        """Если scrape-данных нет — профиль возвращается как есть."""
+        from app.report_builder.adapter import _merge_profile_with_scrape
+
+        profile_json = json.dumps({"company_name": "Тест", "inn": "123"})
+        merged = _merge_profile_with_scrape(profile_json, "")
+        data = json.loads(merged)
+        assert data["company_name"] == "Тест"
+        assert "doctors" not in data
+
+    def test_scrape_supplement_adds_doctors(self):
+        """Fix Баг 5: _format_scrape_supplement добавляет врачей/соцсети к профилю."""
+        from app.report_builder.adapter import _format_scrape_supplement
+
+        collected = {
+            "scrape_clinic_website": json.dumps({
+                "doctors": [
+                    {"name": "Иванова М.", "specialization": "косметолог"},
+                ],
+                "socials": {"instagram": "arclinic", "vk": "arclinic"},
+            }),
+        }
+        supplement = _format_scrape_supplement(collected)
+        assert "Иванова М." in supplement
+        assert "instagram" in supplement.lower() or "📸" in supplement
+
+    def test_scrape_supplement_empty_when_no_data(self):
+        """Пустой supplement если скрапер ничего не нашёл."""
+        from app.report_builder.adapter import _format_scrape_supplement
+
+        assert _format_scrape_supplement({}) == ""
+        assert _format_scrape_supplement({"scrape_clinic_website": "{}"}) == ""
+
+
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # P4: Пост-проверка галлюцинаций
