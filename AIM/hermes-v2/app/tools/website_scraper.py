@@ -284,8 +284,37 @@ def _extract_socials(soup: BeautifulSoup) -> dict:
     return socials
 
 
-def _extract_services(soup: BeautifulSoup) -> list[str]:
-    """Извлечь услуги клиники (Fix 6: whitelist медицинских терминов)."""
+def _find_services_page(base_url: str, soup: BeautifulSoup) -> str | None:
+    """Fix 7: найти отдельную страницу услуг (приоритет над homepage).
+    
+    Возвращает URL страницы услуг или None если не найдена.
+    """
+    # Паттерны URL страниц услуг
+    service_patterns = [
+        r"/services", r"/uslugi", r"/price", r"/prices", r"/pricelist",
+        r"/napravleniya", r"/lechenie", r"/procedury", r"/med-uslugi",
+        r"/kosmetologiya", r"/service", r"/tsenyi"
+    ]
+    
+    for link in soup.find_all("a", href=True):
+        href = link["href"].lower()
+        for pattern in service_patterns:
+            if pattern in href:
+                full_url = urljoin(base_url, link["href"])
+                # Проверить что это тот же домен
+                if urlparse(full_url).netloc == urlparse(base_url).netloc:
+                    return full_url
+    return None
+
+
+def _extract_services(soup: BeautifulSoup, require_medical_terms: bool = True) -> list[str]:
+    """Извлечь услуги клиники (Fix 7: опциональный whitelist для /services/ страниц).
+    
+    Args:
+        soup: BeautifulSoup объект страницы
+        require_medical_terms: если False, не требуем медицинские термины 
+            (используется для страниц /services/ где весь контекст медицинский)
+    """
     services = []
 
     # Bug 4 fix: блэклист навигационных/промо элементов (не услуги!)
@@ -355,8 +384,8 @@ def _extract_services(soup: BeautifulSoup) -> list[str]:
                 # Bug 4 fix: проверить блэклист
                 if _is_blocked(text):
                     continue
-                # Fix 6: принимать ТОЛЬКО если содержит медицинский термин
-                if not _has_medical_term(text):
+                # Fix 7: на странице /services/ не требуем медицинские термины
+                if require_medical_terms and not _has_medical_term(text):
                     continue
                 # Очистить от вложенных элементов
                 clean = " ".join(text.split())[:100]
@@ -536,8 +565,22 @@ async def scrape_clinic_website(url: str) -> str:
         # Извлечь соцсети с главной
         result["socials"] = _extract_socials(soup)
 
-        # Извлечь услуги с главной
-        result["services"] = _extract_services(soup)
+        # Fix 7: Найти отдельную страницу услуг (приоритет над homepage)
+        services_page_url = _find_services_page(base_url, soup)
+        if services_page_url:
+            logger.info("scrape: found services page: %s", services_page_url)
+            services_html = await _fetch_page(services_page_url, client)
+            if services_html:
+                result["pages_scraped"] += 1
+                services_soup = BeautifulSoup(services_html, "lxml")
+                # На странице услуг НЕ требуем медицинские термины — весь контекст медицинский
+                result["services"] = _extract_services(services_soup, require_medical_terms=False)
+            else:
+                # Fallback: если страница услуг недоступна, берём с homepage
+                result["services"] = _extract_services(soup, require_medical_terms=True)
+        else:
+            # Нет отдельной страницы услуг — берём с homepage (с whitelist)
+            result["services"] = _extract_services(soup, require_medical_terms=True)
 
         # Определить CMS
         result["cms"] = _detect_cms(soup)
