@@ -1030,6 +1030,15 @@ async def chat_with_tools(history: list[dict]):
                         try:
                             profile_cache.update(json.loads(profile_result))
                             profile_cache["_raw_result"] = profile_result
+                            # Fix 5: очистить ООО/АО из brand_name если Perplexity вернул юр.форму
+                            if profile_cache.get("brand_name"):
+                                import re as _re
+                                brand = profile_cache["brand_name"]
+                                cleaned = _re.sub(r'^(?:ООО|ОАО|ЗАО|АО|ПАО|ИП|НАО)\s*', '', brand, flags=_re.IGNORECASE)
+                                cleaned = cleaned.strip().strip('"').strip("'").strip('«').strip('»').strip()
+                                if cleaned and cleaned != brand:
+                                    profile_cache["brand_name"] = cleaned
+                                    logger.info("Fix 5: brand_name cleaned: %r → %r", brand, cleaned)
                             logger.info("auto extract_clinic_profile OK: inn=%s city=%s",
                                         profile_cache.get("inn"), profile_cache.get("city"))
                         except (json.JSONDecodeError, TypeError):
