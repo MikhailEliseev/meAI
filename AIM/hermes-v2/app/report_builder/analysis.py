@@ -238,27 +238,42 @@ def _build_context(collected_results: dict, profile_cache: dict) -> str:
 
 
 def _parse_analysis_sections(text: str) -> dict[str, str]:
-    """Разбить ответ LLM по маркерам === на dict.
+    """Разбить ответ LLM на секции. Формат-агностик: понимает И «=== ПОЗИЦИЯ ===»
+    (формат отчёта), И «**💡 Позиция:**» (формат чата). Один анализ → в оба места.
 
-    Возвращает {"position": "...", "strengths": "...", "growth": "...", "recommendations": "..."}.
-    Если маркер не найден — пустая строка.
+    Возвращает {"позиция","сильные","рост","рекомендации"}.
     """
     result = {key.lower(): "" for key in _SECTION_MARKERS}
     if not text:
         return result
 
-    # Разрезаем по маркерам === SECTION ===
-    pattern = r"===\s*(ПОЗИЦИЯ|СИЛЬНЫЕ|РОСТ|РЕКОМЕНДАЦИИ)\s*==="
-    parts = re.split(pattern, text)
-
-    # parts = ['', 'ПОЗИЦИЯ', 'текст...', 'СИЛЬНЫЕ', 'текст...', ...]
-    for i in range(1, len(parts) - 1, 2):
-        marker = parts[i].strip()
-        content = parts[i + 1].strip() if i + 1 < len(parts) else ""
-        key = marker.lower()
-        if key in result:
+    # Заголовок секции: любые символы/emoji/bold перед ключевым словом
+    # (пермиссивно — ловит «===», «**», «**💡», «**⚠️» с variation-selector и т.д.).
+    # «Точки роста» → РОСТ (проверяем раньше, т.к. содержит «рост»).
+    header_re = re.compile(
+        r"(?:^|\n)[^\S\n]*[^\w\n]{0,12}?\s*"
+        r"(ПОЗИЦИ[ЯИЕЮ]|СИЛЬНЫ[ЕХЙ]|ТОЧКИ\s+РОСТА|РОСТА?|РЕКОМЕНДАЦИИ)"
+        r"[^\n]*?(?:={2,}|:)",
+        re.IGNORECASE,
+    )
+    matches = list(header_re.finditer(text))
+    for idx, m in enumerate(matches):
+        kw = m.group(1).upper().replace("Ё", "Е")
+        if "ТОЧКИ" in kw or kw.startswith("РОСТ"):
+            key = "рост"
+        elif kw.startswith("ПОЗИЦИ"):
+            key = "позиция"
+        elif kw.startswith("СИЛЬН"):
+            key = "сильные"
+        elif kw.startswith("РЕКОМЕНД"):
+            key = "рекомендации"
+        else:
+            continue
+        start = m.end()
+        end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
+        content = text[start:end].strip().strip("*").strip()
+        if key in result and not result[key]:
             result[key] = content
-
     return result
 
 

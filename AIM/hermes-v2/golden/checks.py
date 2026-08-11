@@ -241,6 +241,52 @@ def check_data_completeness(tool_calls: list[dict]) -> dict:
 
 
 # ────────────────────────────────────────────────────────────────────
+# G7. CONSISTENCY — одинаковые метрики из разных источников не расходятся
+# ────────────────────────────────────────────────────────────────────
+# Ловит баг типа: «04 ОТЗЫВЫ: Яндекс 5.0★ (565)» vs «03 АУДИТ: Яндекс 4.9★ (64)».
+# Одна площадка должна показываться с одним рейтингом/числом отзывов.
+
+_CONSISTENCY_PLATFORMS = ["яндекс", "2гис", "продокторов", "zoon", "google"]
+
+# Строгая связка: «платформа: X.X★ ... (N отзывов)» в одной строке.
+# Ловит ТОЛЬКО inline-формат (где рейтинг+счётчик явно привязаны к площадке).
+# Stat-card (рейтинг отдельной строкой над названием) НЕ матчит → нет ложных
+# срабатываний на соседние карточки разных площадок.
+_INLINE_REVIEW_RE = re.compile(
+    r"(яндекс|2гис|продокторов|zoon|google)\D{0,18}?"
+    r"(\d[.,]\d)\s*★\D{0,45}?\(?\s*(\d{2,5})\s*отз",
+    re.IGNORECASE,
+)
+
+
+def check_consistency(llm_text: str, formatted_blocks: list[str]) -> dict:
+    """G7: рейтинг/отзывы по каждой площадке не должны противоречить сами себе.
+
+    Проверяем только строгую inline-связку «платформа: X.X★ (N отзывов)» в
+    formatted_blocks. Ловит баг «reviews: Яндекс 5.0/565 vs audit: 4.9/64»,
+    не ложится на stat-card и свободный текст."""
+    full = "\n".join(formatted_blocks)
+    by_platform: dict[str, dict] = {}
+    for m in _INLINE_REVIEW_RE.finditer(full):
+        plat = m.group(1).lower()
+        # нормализуем: «яндекс.карты»/«яндекс карты» → «яндекс»
+        plat = re.sub(r"[.\s]*(карт|maps|бизнес|справочник).*", "", plat).strip()
+        rating = normalize_num(m.group(2))
+        count = m.group(3)
+        d = by_platform.setdefault(plat, {"r": set(), "c": set()})
+        d["r"].add(rating)
+        d["c"].add(count)
+
+    issues: list[str] = []
+    for plat, d in by_platform.items():
+        if len(d["r"]) > 1:
+            issues.append(f"{plat}: разные рейтинги {sorted(d['r'])}")
+        if len(d["c"]) > 1:
+            issues.append(f"{plat}: разные кол-ва отзывов {sorted(d['c'])}")
+    return {"contradictions": issues, "pass": len(issues) == 0}
+
+
+# ────────────────────────────────────────────────────────────────────
 # G6. COVERAGE — использует ли LLM ключевые факты из данных (полнота)
 # ────────────────────────────────────────────────────────────────────
 # Обратный к G1: G1 = «цифры в ответе есть в данных?» (точность)
@@ -346,4 +392,5 @@ def run_all(snapshot: dict) -> dict:
         "G4_data": check_data_completeness(tool_calls),
         "G5_coherence": check_coherence(llm_text),
         "G6_coverage": check_coverage(llm_text, formatted),
+        "G7_consistency": check_consistency(llm_text, formatted),
     }

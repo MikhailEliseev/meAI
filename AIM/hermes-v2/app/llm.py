@@ -452,15 +452,10 @@ def _format_audit_block(audit: dict) -> str:
         lines.append("")
 
     # ── Репутация в stat-cards ──
-    yandex_rating = audit.get("yandex_rating")
-    yandex_reviews = audit.get("yandex_reviews")
-    if yandex_rating:
-        rev_str = f" ({yandex_reviews} отзывов)" if yandex_reviews else ""
-        lines.append(":::stat-card")
-        lines.append(f"**{yandex_rating} ★**")
-        lines.append(f"Яндекс{rev_str}")
-        lines.append(":::")
-
+    # ВНИМАНИЕ: Яндекс-рейтинг/отзывы УМЫШЛЕННО НЕ показываем в аудите.
+    # audit.yandex_rating приходит со скрапа виджета сайта и расходится с
+    # авторитетным источником review_platforms (Apify Яндекс.Карты) в секции 04 —
+    # получались противоречия (4.9/64 тут vs 5.0/565 там). Отзывы — только секция 04.
     vk_followers = audit.get("vk_followers")
     if vk_followers:
         lines.append(":::stat-card")
@@ -475,7 +470,7 @@ def _format_audit_block(audit: dict) -> str:
         lines.append("СМИ публикаций")
         lines.append(":::")
 
-    if yandex_rating or vk_followers:
+    if vk_followers:
         lines.append("")
 
     lines.append("---")
@@ -537,15 +532,13 @@ async def _auto_publish_report(
         )
         return  # Не публикуем — данные недостаточны
 
-    # ── Глубокий LLM-анализ для отчёта (полные данные, не слепой) ──────────
-    # Чат-анализ llm_text — краткий и общий (LLM был «слепым» к цифрам).
-    # Для отчёта нужен развёрнутый анализ с цифрами → отдельный LLM-вызов.
-    analysis_text = ""
-    try:
-        from app.report_builder.analysis import generate_report_analysis
-        analysis_text = await generate_report_analysis(collected_results, profile_cache)
-    except Exception as e:
-        logger.warning("report analysis failed (non-fatal): %s", e)
+    # ── ОДИН АНАЛИЗ В ОБА (чат + отчёт) ──────────────────────────────────
+    # Раньше тут был отдельный LLM-вызов generate_report_analysis — он создавал
+    # РАСХОЖДЕНИЕ между чат-ответом и отчётом (два разных анализа).
+    # После Q1-фикса (данные в контекст LLM) чат-анализ llm_text уже видит
+    # цифры и качественный → переиспользуем его. split_analysis_by_section
+    # понимает чат-формат (**💡 Позиция:**). Минус 1 LLM-вызов, ноль расхождений.
+    analysis_text = llm_text
 
     # Сборка data dict + HTML
     data = build_data_dict(collected_results, profile_cache, llm_text, analysis_text)

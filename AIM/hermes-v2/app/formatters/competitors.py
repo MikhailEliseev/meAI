@@ -6,6 +6,7 @@ LLM не участвует — данные из ФНС/SearXNG, ноль га�
 
 import json
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,28 @@ def format_competitors(result: str, client_revenue: int | None = None,
 
     if not comps:
         return "📊 Конкуренты: данные не найдены."
+
+    # Фильтр Perplexity-болтовни: иногда LLM отдаёт вступительную фразу как
+    # имя конкурента («Вот несколько известных клиник косметологии в СПб:»).
+    # ВАЖНО: одинаковые короткие имена с РАЗНЫМИ ИНН — это разные юрлица,
+    # их НЕ сливаем (отчёт различает по ИНН-суффиксу).
+    def _is_chatter(n: str) -> bool:
+        if not n:
+            return True
+        s = n.strip()
+        low = s.lower()
+        if any(p in low for p in (
+            "вот несколько", "известных клиник", "некоторых клиник", "список",
+            "санкт-петербурге", "рекоменду", "обратите", "например",
+        )):
+            return True
+        if s.endswith(":") or s.endswith(".") and len(s) > 40:
+            return True
+        if "?" in s or len(s) > 55:
+            return True
+        return False
+
+    comps = [c for c in comps if not _is_chatter(c.get("brand_name") or c.get("legal_name"))]
 
     # Нумерация секций делается в builder.py через _PHASE_ORDER.
     # :::section-num убран — иначе печатался как текст (Fix Баг 4).

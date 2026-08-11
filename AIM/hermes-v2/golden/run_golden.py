@@ -218,10 +218,11 @@ def grade(snapshot: dict) -> dict:
 def print_scorecard(results: list[tuple[str, dict, dict | None]]) -> None:
     """results: [(case_id, checks, judge_or_none)]"""
     print("\n" + "=" * 100)
-    print(f"{'CASE':<14} {'G1 ground':<12} {'G6 cover':<12} {'G2 struct':<10} {'G3 clean':<8} {'G4 data':<9} {'G5':<5} {'JUDGE':<6}")
+    print(f"{'CASE':<14} {'G1':<11} {'G6':<11} {'G2':<8} {'G3':<6} {'G4':<7} {'G5':<5} {'G7':<5} {'JUDGE':<6}")
     print("-" * 100)
     sums = {"g1": [], "g6": [], "judge": []}
     g3_pass = 0
+    g7_fail_cases = []
     for case_id, ch, jg in results:
         g1 = ch["G1_grounding"]
         g6 = ch["G6_coverage"]
@@ -229,16 +230,20 @@ def print_scorecard(results: list[tuple[str, dict, dict | None]]) -> None:
         g3 = ch["G3_clean"]
         g4 = ch["G4_data"]
         g5 = ch["G5_coherence"]
+        g7 = ch.get("G7_consistency", {"pass": True, "contradictions": []})
         g1m = "✅" if g1["pass"] else ("❌" if g1["score_pct"] < 30 else "⚠️")
         g6m = "✅" if g6["pass"] else ("❌" if g6["score_pct"] < 30 else "⚠️")
         g2m = "✅" if g2["pass"] else "⚠️"
         g3m = "✅" if g3["pass"] else "❌"
         g4m = "✅" if g4["pass"] else ("⚠️" if g4["score"] != "0/3" else "❌")
         g5m = "✅" if g5["pass"] else "❌"
+        g7m = "✅" if g7["pass"] else "❌"
+        if not g7["pass"]:
+            g7_fail_cases.append((case_id, g7.get("contradictions", [])))
         jm = f"{jg['total']:.1f}" if jg and "total" in jg else "—"
         g1_str = f"{g1['score_pct']:.0f}% {g1m}"
         g6_str = f"{g6['score_pct']:.0f}% {g6m}"
-        print(f"{case_id:<14} {g1_str:<12} {g6_str:<12} {g2['score']+' '+g2m:<10} {g3m:<8} {g4['score']+' '+g4m:<9} {g5m:<5} {jm:<6}")
+        print(f"{case_id:<14} {g1_str:<11} {g6_str:<11} {g2['score']+' '+g2m:<8} {g3m:<6} {g4['score']+' '+g4m:<7} {g5m:<5} {g7m:<5} {jm:<6}")
         sums["g1"].append(g1["score_pct"])
         sums["g6"].append(g6["score_pct"])
         if g3["pass"]:
@@ -251,12 +256,17 @@ def print_scorecard(results: list[tuple[str, dict, dict | None]]) -> None:
     avg_g1 = sum(sums["g1"]) / n if n else 0
     avg_g6 = sum(sums["g6"]) / n if n else 0
     avg_j = sum(sums["judge"]) / len(sums["judge"]) if sums["judge"] else 0
-    print(f"{'AVG':<14} {f'{avg_g1:.0f}%':<12} {f'{avg_g6:.0f}%':<12} {'':<10} {f'{g3_pass}/{n}':<8} {'':<9} {'':<5} {f'{avg_j:.1f}' if sums['judge'] else '—':<6}")
+    print(f"{'AVG':<14} {f'{avg_g1:.0f}%':<11} {f'{avg_g6:.0f}%':<11} {'':<8} {f'{g3_pass}/{n}':<6} {'':<7} {'':<5} {'':<5} {f'{avg_j:.1f}' if sums['judge'] else '—':<6}")
     print("=" * 100)
     print(f"  G1 grounding (точность): {avg_g1:.0f}%  — цитируемые числа обоснованы")
-    print(f"  G6 coverage  (полнота):  {avg_g6:.0f}%  — ключевые факты данных ИСПОЛЬЗОВАНЫ (главный сигнал качества)")
-    print(f"     ↑ baseline ~0% (выручка подавлена). После фикса данных в контекст → растёт.")
+    print(f"  G6 coverage  (полнота):  {avg_g6:.0f}%  — ключевые факты данных ИСПОЛЬЗОВАНЫ")
     print(f"  G3 clean pass: {g3_pass}/{n}")
+    if g7_fail_cases:
+        print(f"  G7 CONSISTENCY FAIL ({len(g7_fail_cases)}):")
+        for cid, contra in g7_fail_cases:
+            print(f"    {cid}: {contra}")
+    else:
+        print(f"  G7 consistency: ✅ все метрики согласованы (нет противоречий «565 vs 64»)")
     if sums["judge"]:
         print(f"  JUDGE avg: {avg_j:.1f}/5")
     print()
