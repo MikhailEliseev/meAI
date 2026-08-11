@@ -19,6 +19,30 @@ from app.prompts.report_analysis import REPORT_ANALYSIS_SYSTEM
 
 logger = logging.getLogger(__name__)
 
+# GLM иногда вклинивает латиницу в русские слова («Клиникa» с лат. a).
+# Заменяем конфузабели только внутри кириллических слов — «White Aurora», «VK» не трогаем.
+_LAT_TO_CYR = {
+    'a': 'а', 'e': 'е', 'o': 'о', 'p': 'р', 'c': 'с', 'x': 'х', 'y': 'у', 'i': 'и',
+    'A': 'А', 'E': 'Е', 'O': 'О', 'P': 'Р', 'C': 'С', 'X': 'Х', 'Y': 'У', 'I': 'И',
+}
+_CYR_SET = set("абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ")
+
+
+def _fix_cyrillic(text: str) -> str:
+    """Заменяет латинские конфузабели, окружённые кириллицей («Клиникa» → «Клиника»)."""
+    if not text:
+        return text
+    out = list(text)
+    n = len(out)
+    for i, ch in enumerate(out):
+        if ch in _LAT_TO_CYR:
+            prev_cyr = i > 0 and out[i - 1] in _CYR_SET
+            next_cyr = i + 1 < n and out[i + 1] in _CYR_SET
+            if prev_cyr or next_cyr:
+                out[i] = _LAT_TO_CYR[ch]
+    return "".join(out)
+
+
 # Маркеры секций в ответе LLM
 _SECTION_MARKERS = ["ПОЗИЦИЯ", "СИЛЬНЫЕ", "РОСТ", "РЕКОМЕНДАЦИИ"]
 
@@ -87,7 +111,7 @@ def _build_context(collected_results: dict, profile_cache: dict) -> str:
     lines: list[str] = []
 
     # ── ПРОФИЛЬ ──────────────────────────────────────────────────────────────
-    company_name = pc.get("company_name") or pc.get("brand_name") or "Клиника"
+    company_name = pc.get("brand_name") or pc.get("company_name") or "Клиника"
     lines.append("## ПРОФИЛЬ КЛИЕНТА")
     lines.append(f"Название: {company_name}")
     if pc.get("inn"):
@@ -253,7 +277,7 @@ async def generate_report_analysis(
         Пустая строка при ошибке (отчёт публикуется без анализа).
     """
     context = _build_context(collected_results, profile_cache)
-    company_name = (profile_cache or {}).get("company_name", "клиники")
+    company_name = (profile_cache or {}).get("brand_name") or (profile_cache or {}).get("company_name") or "клиники"
 
     logger.info("report_analysis: context=%d chars, generating analysis...", len(context))
 
@@ -277,7 +301,7 @@ async def generate_report_analysis(
         text = ""
         if resp.choices:
             # glm-5.2 reasoning model — content в message.content
-            text = resp.choices[0].message.content or ""
+            text = _fix_cyrillic(resp.choices[0].message.content or "")
 
         sections = _parse_analysis_sections(text)
         filled = sum(1 for v in sections.values() if v)

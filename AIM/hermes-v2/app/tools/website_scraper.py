@@ -274,12 +274,27 @@ _NON_DOCTOR_RE = re.compile(
 )
 
 
+# Брендовые слова — «Implant Dentistry», «Smile Clinic», «Стоматология Юг» — НЕ врачи.
+# Английские — с \b (не склоняются). Русские бренд-стемы — с [а-яё]* (склонения:
+# «стоматология», «клиники»). Короткие «зуб»/«мед» НЕ включаем — коллидируют с
+# фамилиями (Зубов, Медведев).
+_BRAND_KEYWORDS_RE = re.compile(
+    r"\b(dentistry|dental|clinic|clinik|implant|smile|teeth|tooth|"
+    r"medical|medicine|center|centre|hospital|care|wellness)|"
+    r"\b(стоматолог|дентал|клиник|имплант|улыбк|здоров|медиц|центральн)[а-яё]*",
+    re.IGNORECASE,
+)
+
+
 def _looks_like_doctor_name(text: str) -> bool:
     """Эвристика: похож ли текст на имя врача?"""
     if not text or len(text) < 5 or len(text) > 80:
         return False
     # Запрет футер/меню/legal-фраз («Политика конфиденциальности» и т.п.)
     if _NON_DOCTOR_RE.search(text):
+        return False
+    # Запрет брендовых названий («Implant Dentistry», «Smile Clinic»)
+    if _BRAND_KEYWORDS_RE.search(text):
         return False
     # Паттерны: "Иванов И.И.", "Иван Иванов", "Иванов Иван Иванович"
     words = text.split()

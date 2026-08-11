@@ -21,6 +21,26 @@ from app.report_builder.markdown_engine import _esc, _interpretation_to_html
 from app.report_builder.revenue_block import build_revenue_vs_competitors_block
 
 
+# Perplexity иногда отдаёт фразы-заглушки вместо null в company_name:
+# «Не найдено достоверно», «нет данных», «unknown», «n/a» и т.п.
+# Санируем → None, чтобы сработал or-fallback на title/brand_name.
+_NOT_FOUND_RE = re.compile(
+    r"^\s*(не\s+найден|нет\s+данных|нет\s+информаци|н/д|n/?a|unknown|"
+    r"неизвестн|не\s+удалось|-\s*-)\s*\D*$",
+    re.IGNORECASE,
+)
+
+
+def _clean_optional(value) -> str | None:
+    """None/пусто для фраз-заглушек 'не найдено' и пустых значений."""
+    if not value or not isinstance(value, str):
+        return None
+    v = value.strip()
+    if not v or _NOT_FOUND_RE.match(v):
+        return None
+    return v
+
+
 # phase_order: (phase_key, section_id, nav_label, default_h2)
 # COMPETITORS убран из тела отчёта — таблица конкурентов рендерится в revenue_block
 # (богаче: позиция клиента, ВАУ-инсайт, тренды). Это устраняет:
@@ -85,7 +105,7 @@ def _build_hero_html(data: dict, title: str) -> str:
     """
     meta = data.get("metadata", {}) or {}
     hero_meta = data.get("hero_meta", {}) or {}
-    company_name = meta.get("company_name") or title
+    company_name = _clean_optional(meta.get("company_name")) or title
 
     # Подзаголовок h1 <em>: короткая характеристика (subtitle из hero_meta)
     subtitle_text = hero_meta.get("subtitle", "") or "Маркетинговый аудит и точки роста"
@@ -160,7 +180,7 @@ def build_report_html(data: dict, title: str) -> str:
         каждый блочный элемент в одну строку).
     """
     meta = data.get("metadata", {}) or {}
-    company_name = meta.get("company_name") or title
+    company_name = _clean_optional(meta.get("company_name")) or title
     hero_meta = data.get("hero_meta", {}) or {}
     nav_sections = hero_meta.get("nav_sections", []) or []
 
