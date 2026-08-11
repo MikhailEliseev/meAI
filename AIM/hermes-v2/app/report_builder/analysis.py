@@ -14,7 +14,7 @@ import re
 
 import openai
 
-from app.config import LLM_MODEL, OMNIROUTE_AUTH, OMNIROUTE_URL
+from app.config import LLM_MODEL, LLM_TEMPERATURE, OMNIROUTE_AUTH, OMNIROUTE_URL
 from app.prompts.report_analysis import REPORT_ANALYSIS_SYSTEM
 
 logger = logging.getLogger(__name__)
@@ -272,6 +272,7 @@ async def generate_report_analysis(
             model=LLM_MODEL,
             messages=messages,
             max_tokens=4096,
+            temperature=LLM_TEMPERATURE,
         )
         text = ""
         if resp.choices:

@@ -15,6 +15,9 @@ OMNIROUTE_URL = os.getenv("OMNIROUTE_URL", "")
 # OMNIROUTE_AUTH — отдельный Z.AI токен (из .env.production), НЕ DeepSeek-ключ.
 OMNIROUTE_AUTH = os.getenv("OMNIROUTE_AUTH", "")
 LLM_MODEL = os.getenv("LLM_MODEL", "glm-5.2")
+# Q4 (Phase 14): temperature для фактического анализа. Дефолт 0.7-1.0 даёт
+# разброс и галлюцинации. 0.25 = стабильно, фактологично, детерминированно.
+LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.25"))
 SESSIONS_DB_PATH = os.getenv("SESSIONS_DB_PATH", "/opt/data/sessions.db")
 
 # --- Phase 3: ключи внешних сервисов ---
