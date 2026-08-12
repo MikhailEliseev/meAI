@@ -293,6 +293,28 @@ def print_ungrounded_details(results: list[tuple[str, dict, dict | None]]) -> No
     print("=" * 92 + "\n")
 
 
+def _print_g8_details(results: list[tuple[str, dict, dict | None]]) -> None:
+    """G8: классификация ungrounded — derived (производные) vs fabricated (выдумки)."""
+    print("=" * 92)
+    print("G8 КЛАССИФИКАЦИЯ UNFOUNDED (derived = производные от данных, fabricated = выдумки):")
+    print("-" * 92)
+    any_ = False
+    for case_id, ch, _ in results:
+        g1 = ch["G1_grounding"]
+        derived = g1.get("derived", [])
+        fabricated = g1.get("fabricated", [])
+        if derived or fabricated:
+            any_ = True
+            d = ", ".join(derived) if derived else "—"
+            f = ", ".join(fabricated) if fabricated else "—"
+            print(f"  {case_id}:")
+            print(f"    derived (легитимно): {d}")
+            print(f"    FABRICATED (выдумки): {f}")
+    if not any_:
+        print("  (все ungrounded обоснованы или отсутствуют)")
+    print("=" * 92 + "\n")
+
+
 # ────────────────────────────────────────────────────────────────────
 # main
 # ────────────────────────────────────────────────────────────────────
@@ -357,6 +379,7 @@ def cmd_assert(cases: list[dict], out: str) -> int:
         return 1
     print_scorecard(results)
     print_ungrounded_details(results)
+    _print_g8_details(results)
     return 0
 
 

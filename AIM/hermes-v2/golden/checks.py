@@ -114,18 +114,73 @@ def check_grounding(llm_text: str, formatted_blocks: list[str]) -> dict:
     inn_ungrounded = [i for i in claims["inn"] if i not in corpus]
     ogrn_ungrounded = [o for o in claims["ogrn"] if o not in corpus]
 
+    # G8: классификация ungrounded — derived (производные) vs fabricated (выдумки)
+    grounded_floats = _extract_corpus_numbers(corpus)
+    derived: list[str] = []
+    fabricated: list[str] = []
+    for n in sorted(set(ungrounded)):
+        if _is_derived(n, grounded_floats):
+            derived.append(n)
+        else:
+            fabricated.append(n)
+
     total = len(all_nums)
-    score = round(len(grounded) / total * 100, 1) if total else 0.0
+    # Скор G1: grounded + derived считаем обоснованными
+    trustworthy = len(grounded) + len(derived)
+    score = round(trustworthy / total * 100, 1) if total else 0.0
 
     return {
         "score_pct": score,
         "total_claims": total,
         "grounded_count": len(grounded),
         "ungrounded": sorted(set(ungrounded))[:20],
+        "derived": derived[:15],
+        "fabricated": fabricated[:15],
         "inn_ungrounded": inn_ungrounded[:5],
         "ogrn_ungrounded": ogrn_ungrounded[:5],
         "pass": score >= 60 and not inn_ungrounded and not ogrn_ungrounded,
     }
+
+
+def _extract_corpus_numbers(corpus: str) -> list[float]:
+    """Извлечь все числа из корпуса данных (для derivability-проверки)."""
+    nums = []
+    for m in re.finditer(r"\d[\d\s.,]*\d|\d", corpus):
+        n = normalize_num(m.group(0))
+        try:
+            nums.append(float(n))
+        except ValueError:
+            pass
+    return nums
+
+
+def _is_derived(num_str: str, corpus_nums: list[float], tol: float = 0.08) -> bool:
+    """Является ли число производным от данных (отношение/процент/разница)?
+
+    Производные — легитимные: «в 2.6 раза» (a/b), «маржа 2.8%» (a/b×100),
+    «на 11 млн больше» (a−b). Проверяем похожесть num на a/b, a±b, a/b×100
+    для пар corpus_nums в пределах tol (8%).
+    """
+    if not corpus_nums:
+        return False
+    try:
+        x = float(num_str)
+    except ValueError:
+        return False
+    if x <= 0:
+        return False
+    # короткий список без dup-ов и без нулей
+    basis = [n for n in corpus_nums if n > 0]
+    for i, a in enumerate(basis):
+        for b in basis[i + 1:]:
+            for cand in (a / b, b / a, abs(a - b) / 1e6, a / b * 100, b / a * 100):
+                if cand > 0 and abs(cand - x) / max(cand, x) < tol:
+                    return True
+        # производные от одного числа (доля, процент)
+        for cand in (a / 1e6, a / 1e9, a / sum(basis) * 100 if sum(basis) else 0):
+            if cand > 0 and abs(cand - x) / max(cand, x) < tol:
+                return True
+    return False
 
 
 # ────────────────────────────────────────────────────────────────────
