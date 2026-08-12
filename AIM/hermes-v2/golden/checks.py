@@ -344,19 +344,67 @@ def check_coverage(llm_text: str, formatted_blocks: list[str]) -> dict:
 # G5. COHERENCE — нет внутренних противоречий
 # ────────────────────────────────────────────────────────────────────
 
-_LEADER = re.compile(r"\b(лидер|лидиру|впереди|крупнейш|топ|первое место)", re.I)
-_LOSER = re.compile(r"\b(отстае|отстаю|отстаем|аутсайдер|позади|слабее|хуже всех)", re.I)
+_LEADER = re.compile(r"\b(лидер|лидиру|впереди|крупнейш|топ\b|первое место)", re.I)
+_LOSER = re.compile(r"\b(отстае|отстаю|отстаем|аутсайдер|позади|слабее|хуже всех|недотягива)", re.I)
+
+# Метрики, к которым привязывается позиция (выручка/прибыль/маркетинг/...).
+# Если «лидер» и «отстаёт» по РАЗНЫМ метрикам — это НЕ противоречие
+# («лидер по выручке, отстаёт по цифровому маркетинге» = нормальный бизнес-вывод).
+_METRIC_KEYS = [
+    "выруч", "прибыл", "марж", "рентабел", "доход", "эффективн", "производит",
+    "маркетинг", "seo", "сайт", "цифров", "онлайн", "реклам", "техническ",
+    "рейтинг", "отзыв", "репутаци", "лоял",
+    "врач", "персонал", "команда", "специалист",
+    "соцсет", "instagram", "вконтакте", "\\bvk\\b", "telegram",
+    "услуг", "ассортим", "направлен",
+    "филиал", "адрес", "локаци", "охват", "масштаб",
+    "имплант", "стоматолог", "косметолог",
+]
+_METRIC_RE = re.compile("|".join(_METRIC_KEYS), re.I)
+
+
+def _metric_near(text: str, pos: int, window: int = 22) -> str | None:
+    """Найти БЛИЖАЙШУЮ метрику в малом окне (±window).
+    Узкое окно = метрика относится именно к этому «лидер/отстает»."""
+    # ищем в окне после слова (чаще «по ВЫРУЧКЕ», «по МАРКЕТИНГУ»)
+    after = text[pos: pos + window]
+    m = _METRIC_RE.search(after)
+    if m:
+        return m.group(0).lower()
+    # реже — до слова («ВЫРУЧКА: лидер»)
+    before = text[max(0, pos - window): pos]
+    m = _METRIC_RE.search(before)
+    return m.group(0).lower() if m else None
 
 
 def check_coherence(llm_text: str) -> dict:
-    """G5: текст не утверждает одновременно «лидер» и «отстаём».
-    Нормализуем ё→е (тексты часто пишут «отстает» вместо «отстаёт»)."""
+    """G5: «лидер» и «отстаёт» про ОДНУ И ТУ ЖЕ метрику = противоречие.
+    Разные метрики («лидер по выручке, отстаёт по маркетингу») — НЕ противоречие,
+    это нормальный бизнес-анализ. Без явной метрики — считаем «общая позиция»."""
     t = llm_text.lower().replace("ё", "е")
-    has_leader = bool(_LEADER.search(t))
-    has_loser = bool(_LOSER.search(t))
-    contradictory = has_leader and has_loser
+    leader_metrics: set[str] = set()
+    loser_metrics: set[str] = set()
+    for m in _LEADER.finditer(t):
+        met = _metric_near(t, m.start())
+        leader_metrics.add(met or "_общая_")
+    for m in _LOSER.finditer(t):
+        met = _metric_near(t, m.start())
+        loser_metrics.add(met or "_общая_")
+
+    # Противоречие = пересечение метрик (одна и та же).
+    # Если есть ХОТЯ БЫ ОДНА конкретная метрика и у leader, и у loser, и они НЕ
+    # пересекаются → LLM явно развёл по разным метрикам → не противоречие.
+    # Флаг только если пересечение есть, либо НЕТ ни одной конкретной метрики
+    # у обеих сторон (полностью общие «лидер» + «отстает» без контекста).
+    common = leader_metrics & loser_metrics
+    has_specific_leader = any(m != "_общая_" for m in leader_metrics)
+    has_specific_loser = any(m != "_общая_" for m in loser_metrics)
+    both_general = (not has_specific_leader) and (not has_specific_loser)
+    contradictory = bool(common) or both_general
     return {
-        "signals": {"leader": has_leader, "loser": has_loser},
+        "leader_metrics": sorted(x for x in leader_metrics if x != "_общая_")[:6],
+        "loser_metrics": sorted(x for x in loser_metrics if x != "_общая_")[:6],
+        "shared": sorted(common)[:4],
         "contradictory": contradictory,
         "pass": not contradictory,
     }
