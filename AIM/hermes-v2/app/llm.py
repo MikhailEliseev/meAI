@@ -198,6 +198,56 @@ async def _execute_single_tool(tc, profile_cache: dict):
     return tc, result_str
 
 
+def _build_comparison_block(
+    comp_data: dict, client_rev, client_profit,
+) -> str:
+    """W2: готовый сравнительный абзац клиент vs каждый конкурент (кодом, не LLM).
+
+    Даёт LLM готовые формулировки «в X раз больше/меньше», «на Y млн ₽» для
+    КАЖДОГО конкурента → LLM не «ленится» и цитирует всех → G6 coverage ↑.
+    """
+    comps = comp_data.get("competitors", []) if isinstance(comp_data, dict) else []
+    if not comps or not client_rev:
+        return ""
+    try:
+        cr = float(client_rev)
+    except (TypeError, ValueError):
+        return ""
+
+    lines = [":::surface-block", "📊 **СРАВНЕНИЕ С КОНКУРЕНТАМИ (для анализа):**"]
+    for c in comps[:8]:
+        if not isinstance(c, dict):
+            continue
+        brand = (c.get("brand_name") or c.get("legal_name") or "?").strip()
+        if len(brand) > 28:
+            brand = brand[:25] + "…"
+        rev = c.get("revenue_year") or c.get("revenue")
+        try:
+            rev_f = float(rev)
+        except (TypeError, ValueError):
+            continue
+        if rev_f <= 0:
+            continue
+        diff = cr - rev_f
+        if rev_f > 0:
+            ratio = cr / rev_f
+            if ratio >= 1.05:
+                rel = f"в {ratio:.1f}× больше"
+            elif ratio <= 0.95:
+                rel = f"в {1/ratio:.1f}× меньше"
+            else:
+                rel = "на одном уровне"
+        else:
+            rel = "—"
+        sign = "+" if diff >= 0 else "−"
+        lines.append(
+            f"- **{brand}** (выручка {int(rev_f/1e6)} млн ₽): "
+            f"клиент {rel}, разница {sign}{int(abs(diff)/1e6)} млн ₽."
+        )
+    lines.append(":::")
+    return "\n".join(lines)
+
+
 def _build_formatted_blocks(
     collected_results: dict[str, str],
     profile_cache: dict,
@@ -291,6 +341,12 @@ def _build_formatted_blocks(
         )
         if comp_md:
             blocks.append(comp_md)
+            # W2: кодогенерация «сравнительного абзаца» — клиент vs каждый конкурент.
+            # LLM часто ленится цитировать всех; даём готовую фактуру в текст,
+            # на которую он опирается → G6 coverage растёт.
+            comp_block = _build_comparison_block(comp_data, client_rev, client_profit)
+            if comp_block:
+                blocks.append(comp_block)
 
     # ── Reviews block (отзывы клиента по площадкам) ──
     reviews_result = collected_results.get("run_review_platforms")
