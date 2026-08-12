@@ -226,13 +226,17 @@ _DIRECTIVES = re.compile(r"::+\s*[a-z\-]+", re.I)
 # Утёкший маркер кнопок
 _LEAKED_MARKER = re.compile(r"\[/?SUGGESTIONS\]", re.I)
 # Запрещённые данные (нет в источниках): веб-аналитика. «трафик», «визиты сайта»,
-# «посетители сайта» — нет в данных. Но «визит к врачу» / «визитки» — легитимны
-# для медклиники → НЕ ловим. Только явный контекст сайта/веб-аналитики.
-_BANNED_TERMS = re.compile(
-    r"\b(трафик(?!\s+(?:пациент|клиент))|"
-    r"визит\w*\s+(?:на\s+)?сайт|"
-    r"посетител\w*\s+сайта|"
-    r"просмотр\w*\s+страниц)\b",
+# «трафик» — разрешён в SEO-контексте (органический/поисковый трафик — это
+# легитимная тема для секции «Сайт»), запрещён только как веб-аналитика
+# («трафик сайта 500 человек» — данных которых нет). Проверяем контекст в check_clean.
+_BANNED_TERMS_RAW = re.compile(r"\bтрафик\b", re.I)
+_BANNED_TERMS_OTHER = re.compile(
+    r"\b(визит\w*\s+(?:на\s+)?сайт|посетител\w*\s+сайта|просмотр\w*\s+страниц)\b",
+    re.I,
+)
+_TRAFFIC_OK = re.compile(
+    r"(?:органический|поисковый|seo|из\s+поиск|пациент|клиент)[\s-]*трафик|"
+    r"трафик\s+(?:пациент|клиент|из\s+поиск)",
     re.I,
 )
 # Запрещённые рекомендации (148-ФЗ) — в контексте «рекомендуйте/создайте»
@@ -256,8 +260,14 @@ def check_clean(llm_text: str) -> dict:
         violations.append(f"markdown directive ::: ({_DIRECTIVE_FIND(llm_text)})")
     if _LEAKED_MARKER.search(llm_text):
         violations.append("leaked [SUGGESTIONS] marker")
-    if _BANNED_TERMS.search(llm_text):
-        violations.append(f"banned term (трафик/визиты): {_BANNED_TERMS.search(llm_text).group()}")
+    # «трафик» — проверяем контекст: разрешён в SEO (органический/поисковый)
+    if _BANNED_TERMS_RAW.search(llm_text):
+        # вырезаем легитимные SEO-упоминания и проверяем остался ли «голый» трафик
+        traffic_cleaned = _TRAFFIC_OK.sub("", llm_text)
+        if _BANNED_TERMS_RAW.search(traffic_cleaned):
+            violations.append(f"banned term (трафик без SEO-контекста)")
+    if _BANNED_TERMS_OTHER.search(llm_text):
+        violations.append(f"banned term: {_BANNED_TERMS_OTHER.search(llm_text).group()}")
     if _BANNED_RECS.search(llm_text):
         violations.append(f"148-ФЗ violation: {_BANNED_RECS.search(llm_text).group()}")
 
