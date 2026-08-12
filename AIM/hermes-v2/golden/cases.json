@@ -36,6 +36,36 @@
       "url": "https://arclinic.ru",
       "profile": "ООО МЦ АРклиник — антивозрастная косметология, Спб",
       "notes": "кейс с найденным противоречием отзывов (565 vs 64) и дублём конкурента ЭСТЕТ"
+    },
+    {
+      "id": "erasmile",
+      "url": "https://erasmile.ru",
+      "profile": "erasmile — стоматология/элайнеры",
+      "notes": "новая клиника для stress-test (из запроса пользователя)"
+    },
+    {
+      "id": "toriclinic",
+      "url": "https://toriclinic.ru",
+      "profile": "Toriclinic — клиника",
+      "notes": "новая клиника для stress-test"
+    },
+    {
+      "id": "yutskovskaya",
+      "url": "https://yutskovskaya.ru",
+      "profile": "Юцковская — клиника эстетической медицины",
+      "notes": "новая клиника для stress-test"
+    },
+    {
+      "id": "delight",
+      "url": "https://delight-lancette.ru",
+      "profile": "Delight & Lancette — клиника",
+      "notes": "новая клиника для stress-test"
+    },
+    {
+      "id": "olymp",
+      "url": "https://olymp.clinic",
+      "profile": "Olymp Clinic — клиника",
+      "notes": "новая клиника для stress-test"
     }
   ]
 }
