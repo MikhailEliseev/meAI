@@ -258,6 +258,11 @@ def build_report_html(data: dict, title: str) -> str:
     hero_html = _build_hero_html(data, title)
     sections_html = "".join(phase_sections)
 
+    # ── Рекомендации услуг AIM (слабое место → услуга) ──
+    service_recs_html = ""
+    if data.get("SERVICE_RECS"):
+        service_recs_html = _interpretation_to_html(data["SERVICE_RECS"])
+
     body_inner = (
         ripple_html
         + nav_html
@@ -265,6 +270,7 @@ def build_report_html(data: dict, title: str) -> str:
         + hero_html
         + (_flatten(revenue_block_html) if revenue_block_html else "")
         + _flatten(sections_html)
+        + (_flatten(service_recs_html) if service_recs_html else "")
         + _flatten(cta_html)
         + _flatten(footer_html)
         + '</div>'

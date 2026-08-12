@@ -597,4 +597,20 @@ def build_data_dict(
     hero_meta["nav_sections"] = nav_sections
     data["hero_meta"] = hero_meta
 
+    # ── Рекомендации услуг AIM (слабое место → услуга из прайса) ──────────────
+    from app.report_builder.service_recs import recommend_services, format_service_recommendations
+    # audit лежит в find_competitors → client_audit (geo_score, schema, ...)
+    comp_obj = _safe_load_json(collected_results.get("find_competitors", "{}"))
+    audit_data = (comp_obj or {}).get("client_audit", {}) if isinstance(comp_obj, dict) else {}
+    if isinstance(audit_data, str):
+        audit_data = _safe_load_json(audit_data) or {}
+    reviews_data = _safe_load_json(collected_results.get("run_review_platforms", "{}")) or {}
+    try:
+        recs = recommend_services(audit_data, profile_cache, reviews_data, comp_obj or {})
+        if recs:
+            data["SERVICE_RECS"] = format_service_recommendations(recs)
+            hero_meta["nav_sections"].append({"id": "sec-services", "label": "Как поможем"})
+    except Exception as e:
+        logger.warning("service_recs failed (non-fatal): %s", e)
+
     return data
