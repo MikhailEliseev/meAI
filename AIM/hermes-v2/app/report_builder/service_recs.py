@@ -170,16 +170,19 @@ def recommend_services(
 
 
 def format_service_recommendations(recs: list[dict]) -> str:
-    """Форматировать рекомендации как блок для отчёта (Markdown)."""
+    """Форматировать рекомендации как блок для отчёта (Markdown).
+    ВАЖНО: используем обычный markdown (##, **, списки) — НЕ :::директивы,
+    т.к. этот текст рендерится через _interpretation_to_html, который
+    :::директивы не понимает (они вылезают как сырой текст)."""
     if not recs:
         return ""
-    lines = [":::section-num", "05 — КАК МЫ ПОМОЖЕМ", ":::", ""]
-    lines.append(":::surface-block")
-    lines.append("**На основе найденных слабых мест — какие услуги AIM их закроют:**\n")
+    lines = ["## Как мы поможем", ""]
+    lines.append("**На основе найденных слабых мест — какие услуги AIM их закроют:**")
+    lines.append("")
     for r in recs:
         lines.append(f"- **{r['name']}** — {r['price']}")
-        lines.append(f"  {r['rationale']}")
-        lines.append(f"  _{r['desc']}_\n")
-    lines.append("Полный список услуг: [iamaim.ru/prices](https://iamaim.ru/prices/)")
-    lines.append(":::")
+        lines.append(f"  {r['rationale']}.")
+        lines.append(f"  *{r['desc']}*")
+        lines.append("")
+    lines.append("**Полный список услуг:** [iamaim.ru/prices](https://iamaim.ru/prices/)")
     return "\n".join(lines)
