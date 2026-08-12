@@ -468,10 +468,24 @@ def build_data_dict(
     profile_cache = profile_cache or {}
     collected_results = collected_results or {}
 
+    # Unified-анализ: отчёт переиспользует чат-текст (llm_text), который может
+    # содержать чат-маркеры [SUGGESTIONS] и citations [1][2] — стрипаем их,
+    # чтобы они не утекли в публикуемый HTML отчёта.
+    import re as _re
+    _SUGG = _re.compile(r"\*{0,2}\[SUGGESTIONS\]\*{0,2}.*?\*{0,2}\[/SUGGESTIONS\]\*{0,2}", _re.S | _re.I)
+    # fallback: незакрытый [SUGGESTIONS] до конца текста
+    _SUGG_OPEN = _re.compile(r"\*{0,2}\[SUGGESTIONS\]\*{0,2}.*$", _re.S | _re.I)
+    _CITE = _re.compile(r"\[\d+\](?:\[\d+\])*")
+    if analysis_text:
+        analysis_text = _CITE.sub("", _SUGG_OPEN.sub("", _SUGG.sub("", analysis_text))).strip()
+    if llm_text:
+        llm_text = _CITE.sub("", _SUGG_OPEN.sub("", _SUGG.sub("", llm_text))).strip()
+
     # ── Metadata ──────────────────────────────────────────────────────────────
+    # Bug 1 fix: бренд приоритет над юрлицом
     company_name = (
-        profile_cache.get("company_name")
-        or profile_cache.get("brand_name")
+        profile_cache.get("brand_name")
+        or profile_cache.get("company_name")
         or "Клиника"
     )
     url = profile_cache.get("url") or profile_cache.get("website") or ""
