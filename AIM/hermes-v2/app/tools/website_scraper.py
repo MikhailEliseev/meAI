@@ -98,24 +98,63 @@ SOCIAL_PATTERNS = {
 
 
 async def _fetch_page(url: str, client: httpx.AsyncClient) -> str | None:
-    """Скачать HTML страницу (с SSRF проверкой и размер-лимитом)."""
+    """Скачать HTML страницу (с SSRF проверкой и размер-лимитом).
+    Fallback: если прямой запрос не удался — Jina Reader (r.jina.ai)."""
     if not _is_safe_url(url):
         logger.warning("scrape: SSRF blocked URL: %s", url)
         return None
+
+    # 1. Прямой запрос (оригинальная логика)
     try:
         resp = await client.get(url, follow_redirects=True)
         if resp.status_code == 200:
-            # DoS защита: ограничить размер
             if len(resp.content) > _MAX_RESPONSE_SIZE:
                 logger.warning("scrape: %s too large (%d bytes), truncating", url, len(resp.content))
                 return resp.text[:_MAX_RESPONSE_SIZE]
-            # Попробовать разные кодировки
             if resp.encoding is None or resp.encoding == "ascii":
                 resp.encoding = resp.charset_encoding or "utf-8"
             return resp.text
         logger.warning("scrape: %s returned %d", url, resp.status_code)
     except Exception as e:
         logger.warning("scrape: %s failed: %s", url, str(e)[:100])
+
+    # 2. FALLBACK: Jina Reader (бесплатно, r.jina.ai)
+    html = await _fetch_page_jina(url)
+    if html:
+        logger.info("scrape: %s — got content via Jina Reader fallback", url)
+        return html
+    return None
+
+
+async def _fetch_page_jina(url: str) -> str | None:
+    """Fallback: прочитать страницу через Jina Reader (r.jina.ai).
+    Возвращает Markdown → конвертируем в HTML для BS4.
+    Бесплатно, без API-ключа, обходит антибот-защиту."""
+    jina_url = f"https://r.jina.ai/{url}"
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(20.0, connect=10.0)) as jc:
+            jresp = await jc.get(
+                jina_url,
+                headers={
+                    "User-Agent": "Mozilla/5.0",
+                    "Accept": "text/plain",
+                },
+            )
+            if jresp.status_code != 200:
+                return None
+            markdown = jresp.text[:_MAX_RESPONSE_SIZE]
+            if not markdown.strip() or len(markdown) < 50:
+                return None
+            # Конвертировать Markdown → минимальный HTML для BS4
+            # [text](url) → <a href="url">text</a>
+            html_body = re.sub(
+                r"\[([^\]]+)\]\(([^)]+)\)",
+                r'<a href="\2">\1</a>',
+                markdown,
+            )
+            return f"<html><body>{html_body}</body></html>"
+    except Exception as e:
+        logger.warning("scrape: Jina fallback failed for %s: %s", url, str(e)[:80])
     return None
 
 
