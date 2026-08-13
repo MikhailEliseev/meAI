@@ -1477,7 +1477,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': 'Bearer hmr_anbjfKH_hqaZIU9Z2vaF8f0t-nrDJGlv-nWfEhRuxP4'
+                        'Authorization': 'Bearer 5682583d31774991a7162b3da796c517.qbP20k6DeCNXC2X3'
                     },
                     body: JSON.stringify({
                         session_id: sessionId,
