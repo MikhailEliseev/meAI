@@ -855,6 +855,48 @@ async def chat_with_tools(history: list[dict]):
                     "content": _filtered_tool_content(tool_name, profile_result),
                 })
 
+            # ── Фаза 1.5: scrape_clinic_website ДО find_competitors ──────────
+            # КРИТИЧНО: скрапер находит ИНН на сайте клиники (Perplexity часто не
+            # находит inn=None). Без этого find_competitors ищет вслепую → нереле-
+            # вантные конкуренты (крупные московские сети вместо локальных).
+            if (
+                "scrape_clinic_website" not in collected_results
+                and not any(tc.function.name == "scrape_clinic_website" for tc in other_tcs)
+            ):
+                scrape_url = profile_cache.get("url") or _extract_url_from_messages(messages)
+                if scrape_url:
+                    yield ("tool_start", "scrape_clinic_website",
+                           {"url": scrape_url},
+                           "🔍 Сканирую сайт клиники (врачи, соцсети, ИНН)…")
+                    try:
+                        from app.tools.website_scraper import scrape_clinic_website
+                        scrape_result = await scrape_clinic_website(scrape_url)
+                        if _is_useful_result(scrape_result, "scrape_clinic_website"):
+                            collected_results["scrape_clinic_website"] = scrape_result
+                            # извлечь ИНН из результата скрапа → profile_cache
+                            try:
+                                scrape_data = json.loads(scrape_result)
+                                scrape_inn = scrape_data.get("inn")
+                                if scrape_inn and len(str(scrape_inn)) >= 10:
+                                    profile_cache["inn"] = str(scrape_inn)
+                                    logger.info(
+                                        "scrape Phase 1.5: INN found from website = %s",
+                                        scrape_inn,
+                                    )
+                                # Doctors/socials для profile_cache
+                                if scrape_data.get("doctors"):
+                                    profile_cache["doctors"] = scrape_data["doctors"]
+                                if scrape_data.get("socials"):
+                                    profile_cache["socials"] = scrape_data["socials"]
+                            except (json.JSONDecodeError, TypeError):
+                                pass
+                        yield ("tool_result", "scrape_clinic_website",
+                               scrape_result, "✅ Сайт просканирован")
+                    except Exception as e:
+                        logger.warning("Phase 1.5 scrape failed: %s", e)
+                        yield ("tool_result", "scrape_clinic_website",
+                               json.dumps({"error": str(e)}), "⚠️ Скрап сайта не удался")
+
             # Фаза 2: остальные тулы параллельно
             # ВАЖНО: collected_results инициализируется ДО цикла (строка ~487) и
             # накапливает результаты всех раундов. НЕ сбрасываем здесь — иначе
