@@ -273,7 +273,7 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.time=14d'
     networks:
       - aim-network
 
@@ -381,7 +381,6 @@ volumes:
   redis-data:
   prometheus-data:
   grafana-data:
-  hermes_data:
   aim_wp_content:
     external: true
   aim_wp_db:
