@@ -871,7 +871,7 @@
             font-size: 0.72em;
             text-transform: uppercase;
             letter-spacing: 0.12em;
-            color: var(--accent, #c9a55a);
+            color: var(--accent);
             font-weight: 700;
             margin-bottom: 8px;
             margin-top: 16px;
@@ -885,11 +885,11 @@
             display: block;
             width: 20px;
             height: 1px;
-            background: var(--accent, #c9a55a);
+            background: var(--accent);
         }
         .message-bubble .surface-block {
-            border-left: 3px solid var(--accent, #c9a55a);
-            background: rgba(201, 165, 90, 0.08);
+            border-left: 3px solid var(--accent);
+            background: rgba(0,0,0,0.04);  /* fallback: нет color-mix */
             padding: 14px 20px;
             margin: 12px 0;
             border-radius: 0 4px 4px 0;
@@ -897,7 +897,9 @@
             font-size: 0.92em;
             line-height: 1.6;
         }
-        .message-bubble .surface-block strong { color: var(--accent, #c9a55a); }
+        [data-theme="dark"] .message-bubble .surface-block { background: rgba(255,255,255,0.05); }  /* fallback: тёмная */
+        .message-bubble .surface-block { background: color-mix(in srgb, var(--accent) 8%, transparent); }  /* следит за --accent/темой */
+        .message-bubble .surface-block strong { color: var(--accent); }
         .message-bubble .surface-block p { margin: 2px 0; }
         .message-bubble .stat-card {
             display: inline-flex;
@@ -914,7 +916,7 @@
         .message-bubble .stat-card p:first-child {
             font-size: 1.5em;
             font-weight: 700;
-            color: var(--accent, #c9a55a);
+            color: var(--accent);
             margin: 0;
             line-height: 1.2;
             font-family: 'Playfair Display', Georgia, serif;
