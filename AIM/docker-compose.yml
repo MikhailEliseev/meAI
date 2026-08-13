@@ -85,59 +85,9 @@ services:
       retries: 3
       start_period: 40s
 
-  hermes:
-    build: ./hermes
-    image: aim-hermes:latest
-    container_name: aim-hermes
-    restart: unless-stopped
-    expose:
-      - "8000"
-    environment:
-      - HERMES_HOME=/opt/data
-      - HERMES_CACHE_DIR=/opt/data/cache
-      - PYTHONUNBUFFERED=1
-      - OMNIROUTE_URL=https://api.deepseek.com/v1
-      # WordPress DB — for HTML report publishing
-      - WP_DB_HOST=aim-mysql
-      - WP_DB_USER=wp_user
-      - WP_DB_PASSWORD=${WP_DB_PASSWORD}
-      - WP_DB_NAME=wordpress
-      - SESSIONS_ROOT=/opt/data/sessions-archive
-      - ARCHIVE_BASE_URL=https://iamaim.ru/wp-json/aim/v1/session
-    env_file:
-      - .env.production
-    volumes:
-      - hermes_data:/opt/data
-      - ./hermes/skills:/opt/hermes/skills:ro
-    networks:
-      - aim-network
-    depends_on:
-      redis:
-        condition: service_healthy
-      app:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 2G
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    sysctls:
-      - net.ipv6.conf.all.disable_ipv6=1
-
   # Гермес v2 — интерактивная переработка (Walking Skeleton, Phase 1).
   # Тонкий «мозг»: FastAPI + один тул find_competitors (прокси к aim-app).
-  # Старый сервис hermes НЕ трогаем — страховка отката.
+  # Старый hermes v1 удалён 2026-08-13: зомби (наружу не роутится, бот 0 сообщений). Код в git.
   hermes-v2:
     build: ./hermes-v2
     image: aim-hermes-v2:latest
@@ -249,7 +199,7 @@ services:
       WORDPRESS_CONFIG_EXTRA: |
         define('WP_HOME', 'https://iamaim.ru');
         define('WP_SITEURL', 'https://iamaim.ru');
-        define('HERMES_API_URL', 'http://hermes:8000');
+        define('HERMES_API_URL', 'http://hermes-v2:8000');
     volumes:
       - aim_wp_content:/var/www/html/wp-content
       # aim-theme is in wp_content volume — no local mount needed

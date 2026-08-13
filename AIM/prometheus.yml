@@ -46,12 +46,6 @@ scrape_configs:
     static_configs:
       - targets: ['postgres-exporter:9187']
 
-  # Hermes Agent (Phase 15)
-  - job_name: 'aim-hermes'
-    static_configs:
-      - targets: ['hermes:8000']
-    metrics_path: '/metrics'
-    scrape_interval: 10s
 
   # Node Exporter
   - job_name: 'aim-node-exporter'
