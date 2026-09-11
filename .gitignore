@@ -133,3 +133,14 @@ hermes-backup-*/*.tar.gz
 hermes-backup-*/
 meAI_1-backups/
 meAI_research/
+
+# OS junk
+.DS_Store
+
+# Runtime logs
+*.log
+logs/
+
+# Tool caches
+.mypy_cache/
+.playwright-mcp/
